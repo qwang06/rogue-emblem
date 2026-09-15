@@ -15,3 +15,7 @@ export const TERRAIN_FRAMES = {
 export const UNIT_FRAMES = {
   placeholder: 124, // green soldier sprite
 };
+
+export const UI_FRAMES = {
+  cursor: 61,
+};

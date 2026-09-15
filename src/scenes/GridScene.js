@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import tilesetUrl from '../assets/kenney_tiny-battle/Tilemap/tilemap_packed.png';
+import { createCursor, moveCursor } from '../game/cursor.js';
 import { createGrid, gridToWorld, setTerrain, setUnit } from '../game/grid.js';
-import { TERRAIN_FRAMES, TILESET_KEY, TILE_SIZE, UNIT_FRAMES } from '../game/tileset.js';
+import { TERRAIN_FRAMES, TILESET_KEY, TILE_SIZE, UI_FRAMES, UNIT_FRAMES } from '../game/tileset.js';
 
 export const CANVAS_WIDTH = 800;
 export const CANVAS_HEIGHT = 600;
@@ -41,13 +42,45 @@ export class GridScene extends Phaser.Scene {
   }
 
   create() {
-    const grid = buildDemoGrid();
+    this.grid = buildDemoGrid();
 
-    this.renderTerrain(grid);
-    this.renderUnits(grid);
+    this.renderTerrain(this.grid);
+    this.renderUnits(this.grid);
+    this.createCursor();
 
     this.cameras.main.setZoom(ZOOM);
-    this.cameras.main.centerOn((grid.width * TILE_SIZE) / 2, (grid.height * TILE_SIZE) / 2);
+    this.cameras.main.centerOn(
+      (this.grid.width * TILE_SIZE) / 2,
+      (this.grid.height * TILE_SIZE) / 2,
+    );
+
+    this.keys = this.input.keyboard.createCursorKeys();
+  }
+
+  update() {
+    const dx = Number(Phaser.Input.Keyboard.JustDown(this.keys.right)) -
+      Number(Phaser.Input.Keyboard.JustDown(this.keys.left));
+    const dy = Number(Phaser.Input.Keyboard.JustDown(this.keys.down)) -
+      Number(Phaser.Input.Keyboard.JustDown(this.keys.up));
+
+    if (dx === 0 && dy === 0) return;
+
+    this.cursor = moveCursor(this.grid, this.cursor, dx, dy);
+    this.updateCursorSprite();
+  }
+
+  createCursor() {
+    this.cursor = createCursor(0, 0);
+    const { x, y } = gridToWorld(this.cursor.x, this.cursor.y, TILE_SIZE);
+    this.cursorSprite = this.add
+      .sprite(x, y, TILESET_KEY, UI_FRAMES.cursor)
+      .setOrigin(0, 0)
+      .setDepth(1);
+  }
+
+  updateCursorSprite() {
+    const { x, y } = gridToWorld(this.cursor.x, this.cursor.y, TILE_SIZE);
+    this.cursorSprite.setPosition(x, y);
   }
 
   renderTerrain(grid) {

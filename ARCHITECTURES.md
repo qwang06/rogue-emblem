@@ -33,10 +33,13 @@ Key functions: `createGrid`, `isInBounds`, `getCell`, `setTerrain`, `setUnit`, `
 Tested in `src/game/grid.test.js`.
 
 ### `src/game/tileset.js`
-Constants describing the active tileset: tile size (16px), sheet dimensions, and named frame-index lookups (`TERRAIN_FRAMES`, `UNIT_FRAMES`) so scenes reference terrain/units by name instead of magic frame numbers.
+Constants describing the active tileset: tile size (16px), sheet dimensions, and named frame-index lookups (`TERRAIN_FRAMES`, `UNIT_FRAMES`, `UI_FRAMES`) so scenes reference terrain/units/UI elements by name instead of magic frame numbers.
+
+### `src/game/cursor.js`
+Pure logic for the map cursor: a `{ x, y }` grid position. `moveCursor` takes a delta and clamps the result to the grid bounds; it never mutates the cursor it's given. Tested in `src/game/cursor.test.js`.
 
 ### `src/scenes/GridScene.js`
-The Phaser scene that renders a grid. Loads the tileset spritesheet, builds/receives grid state from `src/game/grid.js`, converts it into a Phaser tilemap for terrain, and places sprites for occupied cells using `gridToWorld` for positioning. Runs at 4x zoom with `pixelArt: true` (set in `main.js`) for crisp scaling of 16x16 art.
+The Phaser scene that renders a grid. Loads the tileset spritesheet, builds/receives grid state from `src/game/grid.js`, converts it into a Phaser tilemap for terrain, and places sprites for occupied cells using `gridToWorld` for positioning. Also renders a cursor sprite (same tileset spritesheet, frame from `UI_FRAMES.cursor`) and moves it one tile per keypress by calling `src/game/cursor.js` from `update()` and re-rendering the sprite at the new position — the scene holds no movement rules itself. Runs at 4x zoom with `pixelArt: true` (set in `main.js`) for crisp scaling of 16x16 art.
 
 ### `src/main.js`
 Composition root. Constructs the single `Phaser.Game` instance and registers the scene list. Should stay free of game logic.
