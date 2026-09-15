@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
-import { GridScene } from './scenes/GridScene.js';
+import { CANVAS_HEIGHT, CANVAS_WIDTH, GridScene } from './scenes/GridScene.js';
 
 new Phaser.Game({
   type: Phaser.AUTO,
-  width: 800,
-  height: 600,
+  width: CANVAS_WIDTH,
+  height: CANVAS_HEIGHT,
   parent: 'game',
   backgroundColor: '#1d1d1d',
   pixelArt: true,

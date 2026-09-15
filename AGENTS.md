@@ -13,6 +13,7 @@ Turn-based tactical strategy, in the vein of Fire Emblem and Advance Wars: top-d
 - **Modular, composable pieces.** Build features as independent modules (map/grid, units, turn order, combat, AI, UI) that combine rather than reach into each other's internals. Favor small, focused files over large ones that accumulate unrelated responsibilities.
 - **Decouple logic into pure functions.** Game rules and calculations (movement range, attack damage, hit/crit chance, turn order, pathfinding, win/loss conditions, etc.) should be plain functions: given the same inputs, always the same outputs, no hidden state, no reaching into Phaser objects. Phaser scenes/game objects are the thin layer that calls these functions and renders the result — they should not contain the rules themselves.
 - **Unit test the pure functions.** Every pure function implementing a game rule gets unit tests covering normal cases and edge cases (e.g. zero movement, blocked tiles, unit death, boundary of the map). Tests should not require Phaser or a running game instance to execute.
+- **Don't rely on visual/browser testing to verify game logic.** As game rules grow more complex, eyeballing a rendered scene stops being a tractable way to confirm correctness. Unit tests on the pure functions are the source of truth — run those to verify a change instead of launching the game in a browser.
 
 ## Architecture docs
 

@@ -3,8 +3,14 @@ import tilesetUrl from '../assets/kenney_tiny-battle/Tilemap/tilemap_packed.png'
 import { createGrid, gridToWorld, setTerrain, setUnit } from '../game/grid.js';
 import { TERRAIN_FRAMES, TILESET_KEY, TILE_SIZE, UNIT_FRAMES } from '../game/tileset.js';
 
-const GRID_WIDTH = 12;
-const GRID_HEIGHT = 9;
+export const CANVAS_WIDTH = 800;
+export const CANVAS_HEIGHT = 600;
+const ZOOM = 2;
+
+// Size the grid to fully cover the canvas at the current zoom, rounding up so
+// there's no gap of background visible at the edges.
+const GRID_WIDTH = Math.ceil(CANVAS_WIDTH / (TILE_SIZE * ZOOM));
+const GRID_HEIGHT = Math.ceil(CANVAS_HEIGHT / (TILE_SIZE * ZOOM));
 
 // A small demo layout so the grid has more than one terrain type and a unit
 // to render. Real level data will replace this once maps are loaded from data.
@@ -40,8 +46,7 @@ export class GridScene extends Phaser.Scene {
     this.renderTerrain(grid);
     this.renderUnits(grid);
 
-    const zoom = 4;
-    this.cameras.main.setZoom(zoom);
+    this.cameras.main.setZoom(ZOOM);
     this.cameras.main.centerOn((grid.width * TILE_SIZE) / 2, (grid.height * TILE_SIZE) / 2);
   }
 
