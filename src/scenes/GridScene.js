@@ -4,8 +4,8 @@ import { createCursor, moveCursor } from '../game/cursor.js';
 import { createGrid, gridToWorld, setTerrain, setUnit } from '../game/grid.js';
 import { TERRAIN_FRAMES, TILESET_KEY, TILE_SIZE, UI_FRAMES, UNIT_FRAMES } from '../game/tileset.js';
 
-export const CANVAS_WIDTH = 800;
-export const CANVAS_HEIGHT = 600;
+export const CANVAS_WIDTH = 640;
+export const CANVAS_HEIGHT = 480;
 const ZOOM = 2;
 
 // Size the grid to fully cover the canvas at the current zoom, rounding up so
