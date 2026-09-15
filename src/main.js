@@ -1,18 +1,5 @@
 import Phaser from 'phaser';
-
-class HelloWorldScene extends Phaser.Scene {
-  constructor() {
-    super('HelloWorld');
-  }
-
-  create() {
-    this.add.text(this.scale.width / 2, this.scale.height / 2, 'Hello World', {
-      fontFamily: 'monospace',
-      fontSize: '48px',
-      color: '#ffffff',
-    }).setOrigin(0.5);
-  }
-}
+import { GridScene } from './scenes/GridScene.js';
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -20,5 +7,6 @@ new Phaser.Game({
   height: 600,
   parent: 'game',
   backgroundColor: '#1d1d1d',
-  scene: [HelloWorldScene],
+  pixelArt: true,
+  scene: [GridScene],
 });
