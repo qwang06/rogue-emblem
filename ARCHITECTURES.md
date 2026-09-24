@@ -54,6 +54,9 @@ Pure logic for the map cursor: a `{ x, y }` grid position. `moveCursor` takes a 
 ### `src/game/actionMenu.js`
 Pure state for the unit action menu. `UNIT_ACTIONS` lists the offered actions (Move, Attack, Item, Wait) as `{ id, label }`; a menu is a frozen `{ actions, selectedIndex }`. `moveSelection` moves the highlight with wrap-around and returns a new menu (or the same one if nothing changed); `getSelectedAction` reads the highlighted action. The module only tracks selection — carrying out an action belongs to whoever consumes the choice. Tested in `src/game/actionMenu.test.js`.
 
+### `src/game/movement.js`
+Pure movement-range rules. `TERRAIN_MOVE_COSTS` maps terrain to the movement points spent entering it (`Infinity` = impassable; unlisted terrain costs 1). `getMovementRange(grid, origin, movement, { terrainCosts, canPassThrough })` runs Dijkstra over orthogonal neighbors and returns every reachable destination as `[{ x, y, cost }]`, including the origin at cost 0. Other units block unless `canPassThrough(unitId)` allows them, and occupied tiles are never destinations. Tested in `src/game/movement.test.js`.
+
 ### `src/game/Unit.js`
 Base `Unit` class that specific unit types extend. Holds stats (`name`, `health`/`maxHealth`, `attack`, `defense`, `movement`, `range`, `team`) and the state changes every unit shares: `isAlive()`, `takeDamage(amount)`, `heal(amount)` (both clamp health between `0` and `maxHealth`). No Phaser dependency — subclasses add unit-specific abilities on top. Tested in `src/game/Unit.test.js`.
 
@@ -62,7 +65,7 @@ The Phaser scene that renders a grid. Loads the tileset spritesheet, builds/rece
 
 Occupied cells are backed by `src/game/Unit.js` instances held in a `unitId -> Unit` registry (`this.units`) built alongside the grid; `cell.unitId` stays a plain string so grid data remains Phaser-free, and the registry is where actual stats/behavior live. Each frame, `updateHoveredUnit()` looks up the unit (if any) under the cursor and, only when it changes, publishes `toUnitView(unit)` (or `null`) to `gameStore` as `hoveredUnit`. GridScene has no knowledge of React — it only writes plain state.
 
-Pressing confirm (Enter/Z) while hovering a player unit opens the action menu: GridScene creates it with `src/game/actionMenu.js` and publishes it to `gameStore` as `actionMenu`. While it's open the menu owns input — up/down call `moveSelection`, cancel (Esc/X) closes it, and confirm reads `getSelectedAction`. The actions themselves aren't implemented yet, so confirming just closes the menu.
+Pressing confirm (Enter/Z) while hovering a player unit opens the action menu: GridScene creates it with `src/game/actionMenu.js` and publishes it to `gameStore` as `actionMenu`. While it's open the menu owns input — up/down call `moveSelection`, cancel (Esc/X) closes it, and confirm reads `getSelectedAction`. The scene remembers the unit and tile the menu was opened for (`activeUnit`). Choosing **Move** closes the menu, puts the cursor back on that unit, and draws the tiles from `getMovementRange` as translucent overlays (allies pass through, anyone else blocks). While the range is shown the cursor moves freely; cancel clears it and reopens the menu. Actually moving the unit isn't implemented yet, and the other actions just close the menu.
 
 ### `src/bridge/store.js`
 `createStore(initialState)` → `{ getState, setState, subscribe }`. A minimal observable store: `setState` takes a partial object or `(state) => partial`, shallow-merges into a **new** state object, and notifies subscribers only if a top-level value actually changed. Its shape matches React's `useSyncExternalStore` contract. Tested in `src/bridge/store.test.js`.
