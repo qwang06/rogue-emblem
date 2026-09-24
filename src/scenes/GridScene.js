@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import tilesetUrl from '../assets/kenney_tiny-battle/Tilemap/tilemap_packed.png';
 import { gameStore } from '../bridge/gameStore.js';
 import { toUnitView } from '../bridge/views.js';
+import { createActionMenu, getSelectedAction, moveSelection } from '../game/actionMenu.js';
 import { createCursor, moveCursor } from '../game/cursor.js';
 import { createGrid, getCell, gridToWorld, setTerrain, setUnit } from '../game/grid.js';
 import { TERRAIN_FRAMES, TILESET_KEY, TILE_SIZE, UI_FRAMES, UNIT_FRAMES } from '../game/tileset.js';
@@ -78,22 +79,65 @@ export class GridScene extends Phaser.Scene {
     );
 
     this.keys = this.input.keyboard.createCursorKeys();
+    this.actionKeys = this.input.keyboard.addKeys({
+      confirm: Phaser.Input.Keyboard.KeyCodes.ENTER,
+      confirmAlt: Phaser.Input.Keyboard.KeyCodes.Z,
+      cancel: Phaser.Input.Keyboard.KeyCodes.ESC,
+      cancelAlt: Phaser.Input.Keyboard.KeyCodes.X,
+    });
 
+    this.actionMenu = null;
     this.hoveredUnit = null;
     this.updateHoveredUnit();
   }
 
   update() {
-    const dx = Number(Phaser.Input.Keyboard.JustDown(this.keys.right)) -
-      Number(Phaser.Input.Keyboard.JustDown(this.keys.left));
-    const dy = Number(Phaser.Input.Keyboard.JustDown(this.keys.down)) -
-      Number(Phaser.Input.Keyboard.JustDown(this.keys.up));
+    const { JustDown } = Phaser.Input.Keyboard;
+    const dx = Number(JustDown(this.keys.right)) - Number(JustDown(this.keys.left));
+    const dy = Number(JustDown(this.keys.down)) - Number(JustDown(this.keys.up));
+    const confirm = JustDown(this.actionKeys.confirm) || JustDown(this.actionKeys.confirmAlt);
+    const cancel = JustDown(this.actionKeys.cancel) || JustDown(this.actionKeys.cancelAlt);
+
+    if (this.actionMenu) {
+      this.updateActionMenu(dy, confirm, cancel);
+      return;
+    }
+
+    if (confirm && this.hoveredUnit?.team === 'player') {
+      this.setActionMenu(createActionMenu());
+      return;
+    }
 
     if (dx === 0 && dy === 0) return;
 
     this.cursor = moveCursor(this.grid, this.cursor, dx, dy);
     this.updateCursorSprite();
     this.updateHoveredUnit();
+  }
+
+  // While the action menu is open it owns input: up/down move the
+  // highlight, confirm picks an action, cancel closes the menu.
+  updateActionMenu(dy, confirm, cancel) {
+    if (cancel) {
+      this.setActionMenu(null);
+      return;
+    }
+
+    if (confirm) {
+      const action = getSelectedAction(this.actionMenu);
+      // Actions aren't implemented yet — choosing one just closes the menu.
+      console.info(`Action selected: ${action?.id}`);
+      this.setActionMenu(null);
+      return;
+    }
+
+    if (dy !== 0) this.setActionMenu(moveSelection(this.actionMenu, dy));
+  }
+
+  setActionMenu(menu) {
+    if (menu === this.actionMenu) return;
+    this.actionMenu = menu;
+    gameStore.setState({ actionMenu: menu });
   }
 
   // Looks up the unit (if any) under the cursor and, only on change,

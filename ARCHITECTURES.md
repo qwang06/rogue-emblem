@@ -51,6 +51,9 @@ Constants describing the active tileset: tile size (16px), sheet dimensions, and
 ### `src/game/cursor.js`
 Pure logic for the map cursor: a `{ x, y }` grid position. `moveCursor` takes a delta and clamps the result to the grid bounds; it never mutates the cursor it's given. Tested in `src/game/cursor.test.js`.
 
+### `src/game/actionMenu.js`
+Pure state for the unit action menu. `UNIT_ACTIONS` lists the offered actions (Move, Attack, Item, Wait) as `{ id, label }`; a menu is a frozen `{ actions, selectedIndex }`. `moveSelection` moves the highlight with wrap-around and returns a new menu (or the same one if nothing changed); `getSelectedAction` reads the highlighted action. The module only tracks selection — carrying out an action belongs to whoever consumes the choice. Tested in `src/game/actionMenu.test.js`.
+
 ### `src/game/Unit.js`
 Base `Unit` class that specific unit types extend. Holds stats (`name`, `health`/`maxHealth`, `attack`, `defense`, `movement`, `range`, `team`) and the state changes every unit shares: `isAlive()`, `takeDamage(amount)`, `heal(amount)` (both clamp health between `0` and `maxHealth`). No Phaser dependency — subclasses add unit-specific abilities on top. Tested in `src/game/Unit.test.js`.
 
@@ -58,6 +61,8 @@ Base `Unit` class that specific unit types extend. Holds stats (`name`, `health`
 The Phaser scene that renders a grid. Loads the tileset spritesheet, builds/receives grid state from `src/game/grid.js`, converts it into a Phaser tilemap for terrain, and places sprites for occupied cells using `gridToWorld` for positioning. Also renders a cursor sprite (same tileset spritesheet, frame from `UI_FRAMES.cursor`) and moves it one tile per keypress by calling `src/game/cursor.js` from `update()` and re-rendering the sprite at the new position — the scene holds no movement rules itself. Runs at 2x zoom with `pixelArt: true` (set in `main.js`) for crisp scaling of 16x16 art.
 
 Occupied cells are backed by `src/game/Unit.js` instances held in a `unitId -> Unit` registry (`this.units`) built alongside the grid; `cell.unitId` stays a plain string so grid data remains Phaser-free, and the registry is where actual stats/behavior live. Each frame, `updateHoveredUnit()` looks up the unit (if any) under the cursor and, only when it changes, publishes `toUnitView(unit)` (or `null`) to `gameStore` as `hoveredUnit`. GridScene has no knowledge of React — it only writes plain state.
+
+Pressing confirm (Enter/Z) while hovering a player unit opens the action menu: GridScene creates it with `src/game/actionMenu.js` and publishes it to `gameStore` as `actionMenu`. While it's open the menu owns input — up/down call `moveSelection`, cancel (Esc/X) closes it, and confirm reads `getSelectedAction`. The actions themselves aren't implemented yet, so confirming just closes the menu.
 
 ### `src/bridge/store.js`
 `createStore(initialState)` → `{ getState, setState, subscribe }`. A minimal observable store: `setState` takes a partial object or `(state) => partial`, shallow-merges into a **new** state object, and notifies subscribers only if a top-level value actually changed. Its shape matches React's `useSyncExternalStore` contract. Tested in `src/bridge/store.test.js`.
@@ -69,7 +74,7 @@ The single app-wide store instance and its initial state shape. New UI-facing st
 Pure snapshot functions (`toUnitView`) that turn live game objects into frozen plain objects for the UI. React never holds live `Unit` instances — a mutation like `takeDamage()` must be followed by publishing a fresh snapshot, which is what triggers the re-render. Tested in `src/bridge/views.test.js`.
 
 ### `src/ui/`
-React HUD, mounted by `mountUI(container)` into `#ui`, a DOM element absolutely positioned over the Phaser canvas inside `#stage` (see `index.html`). The HUD root has `pointer-events: none` so input falls through to the canvas; interactive panels (`.panel`) opt back in. Components read state through `useGameStore(selector)` — a thin `useSyncExternalStore` wrapper; selectors must return stored references, not freshly built objects. Current components: `App` (HUD root), `UnitPanel` (stats of the unit under the cursor). Styles live in `ui.css`.
+React HUD, mounted by `mountUI(container)` into `#ui`, a DOM element absolutely positioned over the Phaser canvas inside `#stage` (see `index.html`). The HUD root has `pointer-events: none` so input falls through to the canvas; interactive panels (`.panel`) opt back in. Components read state through `useGameStore(selector)` — a thin `useSyncExternalStore` wrapper; selectors must return stored references, not freshly built objects. Current components: `App` (HUD root), `UnitPanel` (stats of the unit under the cursor), `ActionMenu` (the open action menu with its highlighted entry; display only, input is handled by GridScene). Styles live in `ui.css`.
 
 ### `src/main.js`
 Composition root. Constructs the single `Phaser.Game` instance, registers the scene list, and mounts the React UI. Phaser and React are started independently here and only communicate through `src/bridge/`. Should stay free of game logic.

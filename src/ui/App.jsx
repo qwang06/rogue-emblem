@@ -1,3 +1,4 @@
+import { ActionMenu } from './ActionMenu.jsx';
 import { UnitPanel } from './UnitPanel.jsx';
 
 // Root of the HUD overlay. Sits on top of the Phaser canvas; the root
@@ -7,6 +8,7 @@ export function App() {
   return (
     <div className="hud">
       <UnitPanel />
+      <ActionMenu />
     </div>
   );
 }
