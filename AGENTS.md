@@ -17,8 +17,10 @@ Turn-based tactical strategy, in the vein of Fire Emblem and Advance Wars: top-d
 
 ## Git workflow
 
-- Never commit directly to `main`. Every feature or fix gets its own branch created off `main` (e.g. `feature/grid-cursor`, `fix/combat-crit-calc`).
-- When a feature on a branch is complete — code written, tests passing, `ARCHITECTURES.md` updated if the change warrants it — push the branch and open a pull request against `main` on GitHub (`gh pr create`) instead of merging locally.
+- Don't create branches, commit, push, or open pull requests on your own initiative. Work on whatever branch is currently checked out; the user will explicitly say when to create a branch and when to open a PR.
+- Never commit directly to `main`. If you're on `main` when asked to commit, say so and ask for a branch name rather than committing there.
+- When asked to branch, create it off `main` with a descriptive name (e.g. `feature/grid-cursor`, `fix/combat-crit-calc`) unless told otherwise.
+- When asked to open a PR, make sure tests pass and `ARCHITECTURES.md` is updated if the change warrants it, then push the branch and open the PR against `main` with `gh pr create`.
 - Don't merge the PR yourself; merging into `main` happens through the PR on GitHub, not a local `git merge`.
 
 ## Architecture docs
