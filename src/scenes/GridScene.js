@@ -1,8 +1,11 @@
 import Phaser from 'phaser';
 import tilesetUrl from '../assets/kenney_tiny-battle/Tilemap/tilemap_packed.png';
+import { gameStore } from '../bridge/gameStore.js';
+import { toUnitView } from '../bridge/views.js';
 import { createCursor, moveCursor } from '../game/cursor.js';
-import { createGrid, gridToWorld, setTerrain, setUnit } from '../game/grid.js';
+import { createGrid, getCell, gridToWorld, setTerrain, setUnit } from '../game/grid.js';
 import { TERRAIN_FRAMES, TILESET_KEY, TILE_SIZE, UI_FRAMES, UNIT_FRAMES } from '../game/tileset.js';
+import { Unit } from '../game/Unit.js';
 
 export const CANVAS_WIDTH = 640;
 export const CANVAS_HEIGHT = 480;
@@ -29,6 +32,25 @@ function buildDemoGrid() {
   return grid;
 }
 
+// Unit instances backing the demo grid's unitIds, keyed the same way as
+// cell.unitId. Grid data stays plain/serializable; stats and behavior live
+// on the Unit instances looked up from this registry.
+function buildDemoUnits() {
+  return new Map([
+    [
+      'placeholder',
+      new Unit({
+        name: 'Soldier',
+        health: 10,
+        attack: 4,
+        defense: 2,
+        movement: 5,
+        team: 'player',
+      }),
+    ],
+  ]);
+}
+
 export class GridScene extends Phaser.Scene {
   constructor() {
     super('Grid');
@@ -43,6 +65,7 @@ export class GridScene extends Phaser.Scene {
 
   create() {
     this.grid = buildDemoGrid();
+    this.units = buildDemoUnits();
 
     this.renderTerrain(this.grid);
     this.renderUnits(this.grid);
@@ -55,6 +78,9 @@ export class GridScene extends Phaser.Scene {
     );
 
     this.keys = this.input.keyboard.createCursorKeys();
+
+    this.hoveredUnit = null;
+    this.updateHoveredUnit();
   }
 
   update() {
@@ -67,6 +93,20 @@ export class GridScene extends Phaser.Scene {
 
     this.cursor = moveCursor(this.grid, this.cursor, dx, dy);
     this.updateCursorSprite();
+    this.updateHoveredUnit();
+  }
+
+  // Looks up the unit (if any) under the cursor and, only on change,
+  // publishes a snapshot to the game store for the React HUD to render.
+  // GridScene doesn't know React exists — it only writes plain state.
+  updateHoveredUnit() {
+    const cell = getCell(this.grid, this.cursor.x, this.cursor.y);
+    const unit = cell?.unitId ? this.units.get(cell.unitId) : null;
+
+    if (unit === this.hoveredUnit) return;
+
+    this.hoveredUnit = unit;
+    gameStore.setState({ hoveredUnit: toUnitView(unit) });
   }
 
   createCursor() {
@@ -98,10 +138,12 @@ export class GridScene extends Phaser.Scene {
   renderUnits(grid) {
     for (const cell of grid.cells) {
       if (!cell.unitId) continue;
+      const unit = this.units.get(cell.unitId);
       const { x, y } = gridToWorld(cell.x, cell.y, TILE_SIZE);
       this.add
         .sprite(x, y, TILESET_KEY, UNIT_FRAMES[cell.unitId] ?? UNIT_FRAMES.placeholder)
-        .setOrigin(0, 0);
+        .setOrigin(0, 0)
+        .setData('unit', unit);
     }
   }
 }
