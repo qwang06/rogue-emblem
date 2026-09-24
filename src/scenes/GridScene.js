@@ -5,12 +5,15 @@ import { toUnitView } from '../bridge/views.js';
 import { createActionMenu, getSelectedAction, moveSelection } from '../game/actionMenu.js';
 import { createCursor, moveCursor } from '../game/cursor.js';
 import { createGrid, getCell, gridToWorld, setTerrain, setUnit } from '../game/grid.js';
+import { getMovementRange } from '../game/movement.js';
 import { TERRAIN_FRAMES, TILESET_KEY, TILE_SIZE, UI_FRAMES, UNIT_FRAMES } from '../game/tileset.js';
 import { Unit } from '../game/Unit.js';
 
 export const CANVAS_WIDTH = 640;
 export const CANVAS_HEIGHT = 480;
 const ZOOM = 2;
+const MOVE_RANGE_COLOR = 0x3b82f6;
+const MOVE_RANGE_ALPHA = 0.45;
 
 // Size the grid to fully cover the canvas at the current zoom, rounding up so
 // there's no gap of background visible at the edges.
@@ -87,6 +90,8 @@ export class GridScene extends Phaser.Scene {
     });
 
     this.actionMenu = null;
+    this.activeUnit = null; // { unit, x, y } the menu / move range belongs to
+    this.moveRangeTiles = null; // highlight rectangles while choosing a destination
     this.hoveredUnit = null;
     this.updateHoveredUnit();
   }
@@ -103,16 +108,24 @@ export class GridScene extends Phaser.Scene {
       return;
     }
 
-    if (confirm && this.hoveredUnit?.team === 'player') {
+    if (this.moveRangeTiles) {
+      // Moving to the chosen tile isn't implemented yet, so confirm does
+      // nothing here; cancel backs out to the action menu.
+      if (cancel) {
+        this.hideMoveRange();
+        this.setCursor(this.activeUnit.x, this.activeUnit.y);
+        this.setActionMenu(createActionMenu());
+        return;
+      }
+    } else if (confirm && this.hoveredUnit?.team === 'player') {
+      this.activeUnit = { unit: this.hoveredUnit, x: this.cursor.x, y: this.cursor.y };
       this.setActionMenu(createActionMenu());
       return;
     }
 
     if (dx === 0 && dy === 0) return;
 
-    this.cursor = moveCursor(this.grid, this.cursor, dx, dy);
-    this.updateCursorSprite();
-    this.updateHoveredUnit();
+    this.setCursor(this.cursor.x + dx, this.cursor.y + dy);
   }
 
   // While the action menu is open it owns input: up/down move the
@@ -120,14 +133,21 @@ export class GridScene extends Phaser.Scene {
   updateActionMenu(dy, confirm, cancel) {
     if (cancel) {
       this.setActionMenu(null);
+      this.activeUnit = null;
       return;
     }
 
     if (confirm) {
       const action = getSelectedAction(this.actionMenu);
-      // Actions aren't implemented yet — choosing one just closes the menu.
-      console.info(`Action selected: ${action?.id}`);
       this.setActionMenu(null);
+      if (action?.id === 'move') {
+        this.setCursor(this.activeUnit.x, this.activeUnit.y);
+        this.showMoveRange();
+      } else {
+        // Other actions aren't implemented yet — choosing one just closes the menu.
+        console.info(`Action selected: ${action?.id}`);
+        this.activeUnit = null;
+      }
       return;
     }
 
@@ -138,6 +158,35 @@ export class GridScene extends Phaser.Scene {
     if (menu === this.actionMenu) return;
     this.actionMenu = menu;
     gameStore.setState({ actionMenu: menu });
+  }
+
+  // Highlights every tile the active unit can reach. The range itself comes
+  // from src/game/movement.js; this only draws it. Allies can be walked
+  // through, anyone else blocks.
+  showMoveRange() {
+    const { unit, x, y } = this.activeUnit;
+    const range = getMovementRange(this.grid, { x, y }, unit.movement, {
+      canPassThrough: (unitId) => this.units.get(unitId)?.team === unit.team,
+    });
+
+    this.moveRangeTiles = range.map((tile) => {
+      const pos = gridToWorld(tile.x, tile.y, TILE_SIZE);
+      return this.add
+        .rectangle(pos.x, pos.y, TILE_SIZE, TILE_SIZE, MOVE_RANGE_COLOR, MOVE_RANGE_ALPHA)
+        .setOrigin(0, 0)
+        .setDepth(0.5);
+    });
+  }
+
+  hideMoveRange() {
+    for (const tile of this.moveRangeTiles ?? []) tile.destroy();
+    this.moveRangeTiles = null;
+  }
+
+  setCursor(x, y) {
+    this.cursor = moveCursor(this.grid, this.cursor, x - this.cursor.x, y - this.cursor.y);
+    this.updateCursorSprite();
+    this.updateHoveredUnit();
   }
 
   // Looks up the unit (if any) under the cursor and, only on change,
@@ -187,6 +236,7 @@ export class GridScene extends Phaser.Scene {
       this.add
         .sprite(x, y, TILESET_KEY, UNIT_FRAMES[cell.unitId] ?? UNIT_FRAMES.placeholder)
         .setOrigin(0, 0)
+        .setDepth(0.75)
         .setData('unit', unit);
     }
   }
