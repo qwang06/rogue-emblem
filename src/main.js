@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { CANVAS_HEIGHT, CANVAS_WIDTH, GridScene } from './scenes/GridScene.js';
+import { mountUI } from './ui/mountUI.jsx';
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -10,3 +11,5 @@ new Phaser.Game({
   pixelArt: true,
   scene: [GridScene],
 });
+
+mountUI(document.getElementById('ui'));

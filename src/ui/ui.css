@@ -1,0 +1,39 @@
+.hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-family: ui-monospace, 'Courier New', monospace;
+  color: #fff;
+}
+
+.panel {
+  pointer-events: auto;
+  background: rgb(0 0 0 / 75%);
+  border: 1px solid #fff;
+  padding: 8px;
+}
+
+.unit-panel {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  width: 140px;
+  box-sizing: border-box;
+}
+
+.unit-panel__name {
+  margin: 0 0 6px;
+  font-size: 12px;
+}
+
+.unit-panel__stats {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  margin: 0;
+  font-size: 10px;
+}
+
+.unit-panel__stats dd {
+  margin: 0;
+}

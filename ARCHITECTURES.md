@@ -4,23 +4,36 @@ Living documentation of how Rogue Emblem is structured. This tracks the *shape* 
 
 ## Stack
 
-- [Phaser 3](https://phaser.io/) for rendering, scenes, and the game loop.
+- [Phaser 3](https://phaser.io/) for the game world: tilemap, sprites, animations, camera, map input, and the game loop.
+- [React](https://react.dev/) for UI: HUD panels, menus, dialogs — anything that's DOM-shaped rather than world-shaped. Rendered as a DOM overlay on top of the Phaser canvas.
 - [Vite](https://vitejs.dev/) for dev server (hot reload) and production bundling.
 - [Vitest](https://vitest.dev/) for unit tests.
 
 ## Layering
 
-The codebase is split into two layers that don't reach into each other's internals:
+The codebase is split into layers that don't reach into each other's internals:
 
 - **Pure game logic** (`src/game/`) — plain JS functions and data, no Phaser imports, no rendering, no hidden state. Every rule of the game (grid layout, movement, combat, turn order, etc.) belongs here so it can be unit tested without spinning up a `Phaser.Game`.
 - **Phaser presentation** (`src/scenes/`) — Scenes are the thin glue layer. They call into `src/game/` for state and rules, then use Phaser APIs to draw the result and handle input. Game rules should never be implemented inline in a scene.
+- **Bridge** (`src/bridge/`) — framework-agnostic store that Phaser writes to and React reads from. Neither Phaser nor React imports the other; this is the only point of contact.
+- **React UI** (`src/ui/`) — components that render UI state from the bridge store. No game rules here either; components display snapshots and (in future) send commands back through the bridge.
+
+```
+ src/game/  ◄── scenes call rules
+     ▲
+     │
+ src/scenes/ ──setState(snapshot)──► src/bridge/gameStore ──useSyncExternalStore──► src/ui/
+  (Phaser)                            (plain JS store)                              (React)
+```
 
 ```
 src/
   game/       pure logic + data (tested with Vitest, no Phaser dependency)
   scenes/     Phaser.Scene subclasses (rendering + input, calls into src/game/)
+  bridge/     Phaser → React state channel (plain JS, tested with Vitest)
+  ui/         React components for the HUD overlay
   assets/     art/tileset source files
-  main.js     composition root — builds Phaser.Game, lists scenes
+  main.js     composition root — builds Phaser.Game, mounts the React UI
 ```
 
 ## Modules
@@ -42,10 +55,24 @@ Pure logic for the map cursor: a `{ x, y }` grid position. `moveCursor` takes a 
 Base `Unit` class that specific unit types extend. Holds stats (`name`, `health`/`maxHealth`, `attack`, `defense`, `movement`, `range`, `team`) and the state changes every unit shares: `isAlive()`, `takeDamage(amount)`, `heal(amount)` (both clamp health between `0` and `maxHealth`). No Phaser dependency — subclasses add unit-specific abilities on top. Tested in `src/game/Unit.test.js`.
 
 ### `src/scenes/GridScene.js`
-The Phaser scene that renders a grid. Loads the tileset spritesheet, builds/receives grid state from `src/game/grid.js`, converts it into a Phaser tilemap for terrain, and places sprites for occupied cells using `gridToWorld` for positioning. Also renders a cursor sprite (same tileset spritesheet, frame from `UI_FRAMES.cursor`) and moves it one tile per keypress by calling `src/game/cursor.js` from `update()` and re-rendering the sprite at the new position — the scene holds no movement rules itself. Runs at 4x zoom with `pixelArt: true` (set in `main.js`) for crisp scaling of 16x16 art.
+The Phaser scene that renders a grid. Loads the tileset spritesheet, builds/receives grid state from `src/game/grid.js`, converts it into a Phaser tilemap for terrain, and places sprites for occupied cells using `gridToWorld` for positioning. Also renders a cursor sprite (same tileset spritesheet, frame from `UI_FRAMES.cursor`) and moves it one tile per keypress by calling `src/game/cursor.js` from `update()` and re-rendering the sprite at the new position — the scene holds no movement rules itself. Runs at 2x zoom with `pixelArt: true` (set in `main.js`) for crisp scaling of 16x16 art.
+
+Occupied cells are backed by `src/game/Unit.js` instances held in a `unitId -> Unit` registry (`this.units`) built alongside the grid; `cell.unitId` stays a plain string so grid data remains Phaser-free, and the registry is where actual stats/behavior live. Each frame, `updateHoveredUnit()` looks up the unit (if any) under the cursor and, only when it changes, publishes `toUnitView(unit)` (or `null`) to `gameStore` as `hoveredUnit`. GridScene has no knowledge of React — it only writes plain state.
+
+### `src/bridge/store.js`
+`createStore(initialState)` → `{ getState, setState, subscribe }`. A minimal observable store: `setState` takes a partial object or `(state) => partial`, shallow-merges into a **new** state object, and notifies subscribers only if a top-level value actually changed. Its shape matches React's `useSyncExternalStore` contract. Tested in `src/bridge/store.test.js`.
+
+### `src/bridge/gameStore.js`
+The single app-wide store instance and its initial state shape. New UI-facing state gets added here as plain, serializable values.
+
+### `src/bridge/views.js`
+Pure snapshot functions (`toUnitView`) that turn live game objects into frozen plain objects for the UI. React never holds live `Unit` instances — a mutation like `takeDamage()` must be followed by publishing a fresh snapshot, which is what triggers the re-render. Tested in `src/bridge/views.test.js`.
+
+### `src/ui/`
+React HUD, mounted by `mountUI(container)` into `#ui`, a DOM element absolutely positioned over the Phaser canvas inside `#stage` (see `index.html`). The HUD root has `pointer-events: none` so input falls through to the canvas; interactive panels (`.panel`) opt back in. Components read state through `useGameStore(selector)` — a thin `useSyncExternalStore` wrapper; selectors must return stored references, not freshly built objects. Current components: `App` (HUD root), `UnitPanel` (stats of the unit under the cursor). Styles live in `ui.css`.
 
 ### `src/main.js`
-Composition root. Constructs the single `Phaser.Game` instance and registers the scene list. Should stay free of game logic.
+Composition root. Constructs the single `Phaser.Game` instance, registers the scene list, and mounts the React UI. Phaser and React are started independently here and only communicate through `src/bridge/`. Should stay free of game logic.
 
 ### `src/assets/kenney_tiny-battle/`
 Source art: a 16x16 tileset (18 cols x 11 rows, CC0 licensed, see `License.txt`) covering terrain, buildings, vehicles, and unit sprites for multiple factions (color-coded). `Tilemap/tilemap_packed.png` is the version loaded at runtime (no spacing between tiles); the other files (`Tiles/`, `Tiled/`, `Tilesheet.txt`) are reference/source material from the asset pack, not loaded directly.
