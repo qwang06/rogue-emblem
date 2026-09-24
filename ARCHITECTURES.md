@@ -38,6 +38,9 @@ Constants describing the active tileset: tile size (16px), sheet dimensions, and
 ### `src/game/cursor.js`
 Pure logic for the map cursor: a `{ x, y }` grid position. `moveCursor` takes a delta and clamps the result to the grid bounds; it never mutates the cursor it's given. Tested in `src/game/cursor.test.js`.
 
+### `src/game/Unit.js`
+Base `Unit` class that specific unit types extend. Holds stats (`name`, `health`/`maxHealth`, `attack`, `defense`, `movement`, `range`, `team`) and the state changes every unit shares: `isAlive()`, `takeDamage(amount)`, `heal(amount)` (both clamp health between `0` and `maxHealth`). No Phaser dependency — subclasses add unit-specific abilities on top. Tested in `src/game/Unit.test.js`.
+
 ### `src/scenes/GridScene.js`
 The Phaser scene that renders a grid. Loads the tileset spritesheet, builds/receives grid state from `src/game/grid.js`, converts it into a Phaser tilemap for terrain, and places sprites for occupied cells using `gridToWorld` for positioning. Also renders a cursor sprite (same tileset spritesheet, frame from `UI_FRAMES.cursor`) and moves it one tile per keypress by calling `src/game/cursor.js` from `update()` and re-rendering the sprite at the new position — the scene holds no movement rules itself. Runs at 4x zoom with `pixelArt: true` (set in `main.js`) for crisp scaling of 16x16 art.
 
