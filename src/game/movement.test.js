@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createGrid, setTerrain, setUnit } from './grid.js';
-import { getMoveCost, getMovementRange } from './movement.js';
+import { getMoveCost, getMovePath, getMovementRange } from './movement.js';
 
 // Sorted "x,y" strings so assertions don't depend on traversal order.
 function tiles(range) {
@@ -107,5 +107,119 @@ describe('getMovementRange', () => {
   it('returns nothing for an out-of-bounds origin', () => {
     const grid = createGrid(3, 3, 'grass');
     expect(getMovementRange(grid, { x: 5, y: 5 }, 3)).toEqual([]);
+  });
+});
+
+// True if every consecutive pair of tiles is one orthogonal step apart.
+function isStepByStep(path) {
+  return path.every((tile, i) => {
+    if (i === 0) return true;
+    const prev = path[i - 1];
+    return Math.abs(tile.x - prev.x) + Math.abs(tile.y - prev.y) === 1;
+  });
+}
+
+describe('getMovePath', () => {
+  it('returns just the origin when the destination is the origin', () => {
+    const grid = createGrid(3, 3, 'grass');
+    expect(getMovePath(grid, { x: 1, y: 1 }, { x: 1, y: 1 }, 3)).toEqual([{ x: 1, y: 1 }]);
+  });
+
+  it('walks a straight line one tile at a time', () => {
+    const grid = createGrid(5, 1, 'grass');
+    expect(getMovePath(grid, { x: 0, y: 0 }, { x: 3, y: 0 }, 5)).toEqual([
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+      { x: 2, y: 0 },
+      { x: 3, y: 0 },
+    ]);
+  });
+
+  it('takes a shortest step-by-step route to diagonal targets', () => {
+    const grid = createGrid(5, 5, 'grass');
+    const path = getMovePath(grid, { x: 0, y: 0 }, { x: 2, y: 3 }, 5);
+    expect(path).toHaveLength(6);
+    expect(path[0]).toEqual({ x: 0, y: 0 });
+    expect(path.at(-1)).toEqual({ x: 2, y: 3 });
+    expect(isStepByStep(path)).toBe(true);
+  });
+
+  it('routes around impassable terrain', () => {
+    let grid = createGrid(3, 3, 'grass');
+    grid = setTerrain(grid, 1, 0, 'water');
+    grid = setTerrain(grid, 1, 1, 'water');
+    const path = getMovePath(grid, { x: 0, y: 0 }, { x: 2, y: 0 }, 6);
+    expect(path).toHaveLength(7);
+    expect(isStepByStep(path)).toBe(true);
+    expect(path.some(({ x, y }) => grid.cells[y * 3 + x].terrain === 'water')).toBe(false);
+  });
+
+  it('prefers cheaper terrain over fewer steps', () => {
+    let grid = createGrid(3, 2, 'grass');
+    grid = setTerrain(grid, 1, 0, 'forest');
+    const terrainCosts = { grass: 1, forest: 5 };
+    const path = getMovePath(grid, { x: 0, y: 0 }, { x: 2, y: 0 }, 5, { terrainCosts });
+    expect(path).toEqual([
+      { x: 0, y: 0 },
+      { x: 0, y: 1 },
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+      { x: 2, y: 0 },
+    ]);
+  });
+
+  it('walks through units canPassThrough allows', () => {
+    let grid = createGrid(3, 1, 'grass');
+    grid = setUnit(grid, 0, 0, 'mover');
+    grid = setUnit(grid, 1, 0, 'ally');
+    const path = getMovePath(grid, { x: 0, y: 0 }, { x: 2, y: 0 }, 2, {
+      canPassThrough: (id) => id === 'ally',
+    });
+    expect(path).toEqual([
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+      { x: 2, y: 0 },
+    ]);
+  });
+
+  it('returns null for a tile beyond the movement range', () => {
+    const grid = createGrid(5, 1, 'grass');
+    expect(getMovePath(grid, { x: 0, y: 0 }, { x: 4, y: 0 }, 3)).toBeNull();
+  });
+
+  it('returns null for impassable or unreachable tiles', () => {
+    let grid = createGrid(3, 1, 'grass');
+    grid = setTerrain(grid, 1, 0, 'water');
+    expect(getMovePath(grid, { x: 0, y: 0 }, { x: 1, y: 0 }, 5)).toBeNull();
+    expect(getMovePath(grid, { x: 0, y: 0 }, { x: 2, y: 0 }, 5)).toBeNull();
+  });
+
+  it('returns null for a tile occupied by another unit', () => {
+    let grid = createGrid(3, 1, 'grass');
+    grid = setUnit(grid, 0, 0, 'mover');
+    grid = setUnit(grid, 1, 0, 'ally');
+    const options = { canPassThrough: () => true };
+    expect(getMovePath(grid, { x: 0, y: 0 }, { x: 1, y: 0 }, 3, options)).toBeNull();
+  });
+
+  it('returns null for out-of-bounds origin or destination', () => {
+    const grid = createGrid(3, 3, 'grass');
+    expect(getMovePath(grid, { x: 9, y: 9 }, { x: 0, y: 0 }, 3)).toBeNull();
+    expect(getMovePath(grid, { x: 0, y: 0 }, { x: -1, y: 0 }, 3)).toBeNull();
+  });
+
+  it('agrees with getMovementRange on which tiles are reachable', () => {
+    let grid = createGrid(6, 6, 'grass');
+    grid = setTerrain(grid, 2, 2, 'water');
+    grid = setTerrain(grid, 3, 2, 'water');
+    grid = setUnit(grid, 1, 3, 'enemy');
+    const origin = { x: 1, y: 1 };
+    const range = getMovementRange(grid, origin, 4);
+    for (const cell of grid.cells) {
+      const inRange = range.some((t) => t.x === cell.x && t.y === cell.y);
+      const path = getMovePath(grid, origin, cell, 4);
+      expect(path !== null).toBe(inRange);
+      if (path) expect(isStepByStep(path)).toBe(true);
+    }
   });
 });

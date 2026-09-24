@@ -4,8 +4,8 @@ import { gameStore } from '../bridge/gameStore.js';
 import { toUnitView } from '../bridge/views.js';
 import { createActionMenu, getSelectedAction, moveSelection } from '../game/actionMenu.js';
 import { createCursor, moveCursor } from '../game/cursor.js';
-import { createGrid, getCell, gridToWorld, setTerrain, setUnit } from '../game/grid.js';
-import { getMovementRange } from '../game/movement.js';
+import { createGrid, getCell, gridToWorld, moveUnit, setTerrain, setUnit } from '../game/grid.js';
+import { getMovePath, getMovementRange } from '../game/movement.js';
 import { TERRAIN_FRAMES, TILESET_KEY, TILE_SIZE, UI_FRAMES, UNIT_FRAMES } from '../game/tileset.js';
 import { Unit } from '../game/Unit.js';
 
@@ -14,6 +14,8 @@ export const CANVAS_HEIGHT = 480;
 const ZOOM = 2;
 const MOVE_RANGE_COLOR = 0x3b82f6;
 const MOVE_RANGE_ALPHA = 0.45;
+// Pause between each tile a unit steps through when it moves.
+const MOVE_STEP_DELAY_MS = 80;
 
 // Size the grid to fully cover the canvas at the current zoom, rounding up so
 // there's no gap of background visible at the edges.
@@ -90,8 +92,9 @@ export class GridScene extends Phaser.Scene {
     });
 
     this.actionMenu = null;
-    this.activeUnit = null; // { unit, x, y } the menu / move range belongs to
+    this.activeUnit = null; // { unitId, unit, x, y } the menu / move range belongs to
     this.moveRangeTiles = null; // highlight rectangles while choosing a destination
+    this.isUnitMoving = false; // input is ignored while a unit walks its path
     this.hoveredUnit = null;
     this.updateHoveredUnit();
   }
@@ -103,14 +106,20 @@ export class GridScene extends Phaser.Scene {
     const confirm = JustDown(this.actionKeys.confirm) || JustDown(this.actionKeys.confirmAlt);
     const cancel = JustDown(this.actionKeys.cancel) || JustDown(this.actionKeys.cancelAlt);
 
+    if (this.isUnitMoving) return;
+
     if (this.actionMenu) {
       this.updateActionMenu(dy, confirm, cancel);
       return;
     }
 
     if (this.moveRangeTiles) {
-      // Moving to the chosen tile isn't implemented yet, so confirm does
-      // nothing here; cancel backs out to the action menu.
+      // Confirm moves to the tile under the cursor if it's in range (other
+      // tiles are ignored); cancel backs out to the action menu.
+      if (confirm) {
+        this.tryMoveActiveUnit();
+        return;
+      }
       if (cancel) {
         this.hideMoveRange();
         this.setCursor(this.activeUnit.x, this.activeUnit.y);
@@ -118,7 +127,8 @@ export class GridScene extends Phaser.Scene {
         return;
       }
     } else if (confirm && this.hoveredUnit?.team === 'player') {
-      this.activeUnit = { unit: this.hoveredUnit, x: this.cursor.x, y: this.cursor.y };
+      const { unitId } = getCell(this.grid, this.cursor.x, this.cursor.y);
+      this.activeUnit = { unitId, unit: this.hoveredUnit, x: this.cursor.x, y: this.cursor.y };
       this.setActionMenu(createActionMenu());
       return;
     }
@@ -160,14 +170,19 @@ export class GridScene extends Phaser.Scene {
     gameStore.setState({ actionMenu: menu });
   }
 
+  // Options for src/game/movement.js: allies can be walked through, anyone
+  // else blocks.
+  movementOptions(unit) {
+    return {
+      canPassThrough: (unitId) => this.units.get(unitId)?.team === unit.team,
+    };
+  }
+
   // Highlights every tile the active unit can reach. The range itself comes
-  // from src/game/movement.js; this only draws it. Allies can be walked
-  // through, anyone else blocks.
+  // from src/game/movement.js; this only draws it.
   showMoveRange() {
     const { unit, x, y } = this.activeUnit;
-    const range = getMovementRange(this.grid, { x, y }, unit.movement, {
-      canPassThrough: (unitId) => this.units.get(unitId)?.team === unit.team,
-    });
+    const range = getMovementRange(this.grid, { x, y }, unit.movement, this.movementOptions(unit));
 
     this.moveRangeTiles = range.map((tile) => {
       const pos = gridToWorld(tile.x, tile.y, TILE_SIZE);
@@ -181,6 +196,49 @@ export class GridScene extends Phaser.Scene {
   hideMoveRange() {
     for (const tile of this.moveRangeTiles ?? []) tile.destroy();
     this.moveRangeTiles = null;
+  }
+
+  // Moves the active unit to the tile under the cursor, if that tile is in
+  // its range. The route comes from getMovePath, so the unit walks there
+  // tile by tile rather than jumping.
+  tryMoveActiveUnit() {
+    const { unitId, unit, x, y } = this.activeUnit;
+    const from = { x, y };
+    const to = { x: this.cursor.x, y: this.cursor.y };
+    const path = getMovePath(this.grid, from, to, unit.movement, this.movementOptions(unit));
+    if (!path) return;
+
+    this.hideMoveRange();
+    this.isUnitMoving = true;
+    this.walkSprite(this.unitSprites.get(unitId), path, () => {
+      this.grid = moveUnit(this.grid, from, to);
+      this.activeUnit = null;
+      this.isUnitMoving = false;
+      this.updateHoveredUnit();
+    });
+  }
+
+  // Steps a sprite through each tile of path (path[0] is where it already
+  // is), pausing between steps, then calls onDone. No tweening yet — the
+  // sprite snaps from tile to tile.
+  walkSprite(sprite, path, onDone) {
+    const steps = path.slice(1);
+    if (steps.length === 0) {
+      onDone();
+      return;
+    }
+
+    let next = 0;
+    this.time.addEvent({
+      delay: MOVE_STEP_DELAY_MS,
+      repeat: steps.length - 1,
+      callback: () => {
+        const { x, y } = gridToWorld(steps[next].x, steps[next].y, TILE_SIZE);
+        sprite.setPosition(x, y);
+        next += 1;
+        if (next === steps.length) onDone();
+      },
+    });
   }
 
   setCursor(x, y) {
@@ -228,16 +286,20 @@ export class GridScene extends Phaser.Scene {
     map.createLayer(0, tileset, 0, 0);
   }
 
+  // Draws a sprite per unit and keeps them in this.unitSprites (unitId ->
+  // sprite) so later moves can find the sprite to reposition.
   renderUnits(grid) {
+    this.unitSprites = new Map();
     for (const cell of grid.cells) {
       if (!cell.unitId) continue;
       const unit = this.units.get(cell.unitId);
       const { x, y } = gridToWorld(cell.x, cell.y, TILE_SIZE);
-      this.add
+      const sprite = this.add
         .sprite(x, y, TILESET_KEY, UNIT_FRAMES[cell.unitId] ?? UNIT_FRAMES.placeholder)
         .setOrigin(0, 0)
         .setDepth(0.75)
         .setData('unit', unit);
+      this.unitSprites.set(cell.unitId, sprite);
     }
   }
 }

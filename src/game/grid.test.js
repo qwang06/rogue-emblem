@@ -5,6 +5,7 @@ import {
   getNeighbors,
   gridToWorld,
   isInBounds,
+  moveUnit,
   setTerrain,
   setUnit,
   worldToGrid,
@@ -93,6 +94,45 @@ describe('setUnit', () => {
   it('throws for out-of-bounds coordinates', () => {
     const grid = createGrid(2, 2);
     expect(() => setUnit(grid, -1, 0, 'unit-1')).toThrow(RangeError);
+  });
+});
+
+describe('moveUnit', () => {
+  it('moves the unit id to the target cell and clears the source', () => {
+    const grid = setUnit(createGrid(3, 3, 'grass'), 0, 0, 'unit-1');
+    const next = moveUnit(grid, { x: 0, y: 0 }, { x: 2, y: 1 });
+
+    expect(getCell(next, 0, 0).unitId).toBeNull();
+    expect(getCell(next, 2, 1)).toEqual({ x: 2, y: 1, terrain: 'grass', unitId: 'unit-1' });
+  });
+
+  it('does not mutate the original grid', () => {
+    const grid = setUnit(createGrid(3, 3), 0, 0, 'unit-1');
+    moveUnit(grid, { x: 0, y: 0 }, { x: 1, y: 0 });
+
+    expect(getCell(grid, 0, 0).unitId).toBe('unit-1');
+    expect(getCell(grid, 1, 0).unitId).toBeNull();
+  });
+
+  it('returns the same grid when moving onto its own tile', () => {
+    const grid = setUnit(createGrid(3, 3), 1, 1, 'unit-1');
+    expect(moveUnit(grid, { x: 1, y: 1 }, { x: 1, y: 1 })).toBe(grid);
+  });
+
+  it('throws when there is no unit to move', () => {
+    const grid = createGrid(3, 3);
+    expect(() => moveUnit(grid, { x: 0, y: 0 }, { x: 1, y: 0 })).toThrow(/No unit/);
+  });
+
+  it('throws when the target is occupied', () => {
+    let grid = setUnit(createGrid(3, 3), 0, 0, 'unit-1');
+    grid = setUnit(grid, 1, 0, 'unit-2');
+    expect(() => moveUnit(grid, { x: 0, y: 0 }, { x: 1, y: 0 })).toThrow(/occupied/);
+  });
+
+  it('throws when the target is out of bounds', () => {
+    const grid = setUnit(createGrid(3, 3), 0, 0, 'unit-1');
+    expect(() => moveUnit(grid, { x: 0, y: 0 }, { x: 5, y: 0 })).toThrow(RangeError);
   });
 });
 

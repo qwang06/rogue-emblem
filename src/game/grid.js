@@ -43,6 +43,21 @@ export function setUnit(grid, x, y, unitId) {
   return withCell(grid, x, y, { unitId });
 }
 
+// Moves the unit on `from` to `to`, leaving `from` empty. Throws if there's
+// no unit to move or `to` is already occupied — callers should only ask
+// for moves the movement rules allow.
+export function moveUnit(grid, from, to) {
+  const unitId = getCell(grid, from.x, from.y)?.unitId;
+  if (!unitId) {
+    throw new Error(`No unit at (${from.x}, ${from.y}) to move`);
+  }
+  if (from.x === to.x && from.y === to.y) return grid;
+  if (getCell(grid, to.x, to.y)?.unitId) {
+    throw new Error(`(${to.x}, ${to.y}) is already occupied`);
+  }
+  return setUnit(setUnit(grid, from.x, from.y, null), to.x, to.y, unitId);
+}
+
 // Orthogonal neighbors only — this is a Fire Emblem/Advance Wars style
 // grid, not one with diagonal movement.
 export function getNeighbors(grid, x, y) {
