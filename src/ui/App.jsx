@@ -1,4 +1,5 @@
 import { ActionMenu } from './ActionMenu.jsx';
+import { DamagePopups } from './DamagePopups.jsx';
 import { UnitPanel } from './UnitPanel.jsx';
 
 // Root of the HUD overlay. Sits on top of the Phaser canvas; the root
@@ -9,6 +10,7 @@ export function App() {
     <div className="hud">
       <UnitPanel />
       <ActionMenu />
+      <DamagePopups />
     </div>
   );
 }

@@ -69,3 +69,30 @@
   font-size: 8px;
   line-height: 16px;
 }
+
+.damage-popup {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  font-size: 18px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow:
+    -2px 0 #1f1f1f,
+    2px 0 #1f1f1f,
+    0 -2px #1f1f1f,
+    0 2px #1f1f1f;
+  animation-name: damage-popup-rise;
+  animation-timing-function: ease-in;
+  animation-fill-mode: forwards;
+}
+
+@keyframes damage-popup-rise {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -100%);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 16px));
+  }
+}
