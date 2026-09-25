@@ -5,9 +5,20 @@
 export const UNIT_ACTIONS = Object.freeze([
   Object.freeze({ id: 'move', label: 'Move' }),
   Object.freeze({ id: 'attack', label: 'Attack' }),
+  Object.freeze({ id: 'skill', label: 'Skill' }),
   Object.freeze({ id: 'item', label: 'Item' }),
   Object.freeze({ id: 'wait', label: 'Wait' }),
 ]);
+
+// The unit actions for a particular unit. Skill is disabled when the unit
+// knows no skills; the caller decides what disabled means for input.
+export function getUnitActions({ hasSkills }) {
+  return Object.freeze(
+    UNIT_ACTIONS.map((action) =>
+      action.id === 'skill' && !hasSkills ? Object.freeze({ ...action, disabled: true }) : action,
+    ),
+  );
+}
 
 export function createActionMenu(actions = UNIT_ACTIONS) {
   return Object.freeze({ actions, selectedIndex: 0 });

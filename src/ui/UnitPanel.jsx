@@ -8,9 +8,15 @@ export function UnitPanel() {
     <section className="panel unit-panel">
       <h2 className="unit-panel__name">{unit.name}</h2>
       <dl className="unit-panel__stats">
+        <dt>LV</dt>
+        <dd>{unit.level}</dd>
         <dt>HP</dt>
         <dd>
           {unit.health}/{unit.maxHealth}
+        </dd>
+        <dt>MP</dt>
+        <dd>
+          {unit.mana}/{unit.maxMana}
         </dd>
         <dt>ATK</dt>
         <dd>{unit.attack}</dd>

@@ -8,8 +8,11 @@ export function toUnitView(unit) {
   return Object.freeze({
     name: unit.name,
     team: unit.team,
+    level: unit.level,
     health: unit.health,
     maxHealth: unit.maxHealth,
+    mana: unit.mana,
+    maxMana: unit.maxMana,
     attack: unit.attack,
     defense: unit.defense,
     movement: unit.movement,

@@ -74,6 +74,18 @@
   color: rgb(255 255 255 / 40%);
 }
 
+/* ---- Skill menu ------------------------------------------------------- */
+
+.skill-menu__item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.skill-menu__cost {
+  opacity: 0.7;
+}
+
 /* ---- Deployment phase ------------------------------------------------- */
 
 .deployment-banner {

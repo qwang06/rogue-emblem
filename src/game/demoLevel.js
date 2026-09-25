@@ -4,12 +4,10 @@
 // once maps are loaded from data.
 
 import { createGrid, getCornerTiles, setTerrain, setUnit } from './grid.js';
-import { Unit } from './Unit.js';
+import { Soldier } from './Soldier.js';
 
 export const DEPLOYMENT_ZONE_SIZE = 3;
 export const ENEMY_COUNT = 3;
-
-const soldierStats = { health: 10, attack: 4, defense: 2, movement: 5 };
 
 // Returns { grid, units, roster, deploymentZone }. `units` maps every
 // unitId (player and enemy) to its Unit; `roster` lists the player unitIds
@@ -24,12 +22,12 @@ export function createDemoLevel(width, height) {
   }
 
   const units = new Map([
-    ['soldier', new Unit({ name: 'Soldier', ...soldierStats, team: 'player' })],
+    ['soldier', new Soldier({ team: 'player' })],
   ]);
 
   getCornerTiles(grid, 'bottom-right', ENEMY_COUNT).forEach(({ x, y }, i) => {
     const unitId = `enemy-${i + 1}`;
-    units.set(unitId, new Unit({ name: 'Enemy Soldier', ...soldierStats, team: 'enemy' }));
+    units.set(unitId, new Soldier({ name: 'Enemy Soldier', team: 'enemy' }));
     grid = setUnit(grid, x, y, unitId);
   });
 
