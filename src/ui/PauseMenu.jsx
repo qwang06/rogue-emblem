@@ -1,6 +1,6 @@
 import { useGameStore } from './useGameStore.js';
 
-// The Main Menu / Settings menu opened with Esc on the bare map. Display
+// The End Turn / Main Menu / Settings menu opened with Esc on the bare map. Display
 // only — GridScene handles the input.
 export function PauseMenu() {
   const menu = useGameStore((state) => state.pauseMenu);

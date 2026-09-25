@@ -198,6 +198,104 @@
   }
 }
 
+/* ---- Turns --------------------------------------------------------- */
+
+.turn-indicator {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  padding: 4px 12px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.turn-indicator__turn {
+  color: rgb(255 255 255 / 70%);
+}
+
+.turn-indicator--player .turn-indicator__phase {
+  color: #93c5fd;
+}
+
+.turn-indicator--enemy .turn-indicator__phase {
+  color: #fca5a5;
+}
+
+.phase-banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 14px 0;
+  text-align: center;
+  font-size: 28px;
+  font-weight: bold;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  text-shadow: 0 2px 0 rgb(0 0 0 / 60%);
+  animation-name: phase-banner-sweep;
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: forwards;
+}
+
+.phase-banner--player {
+  background: linear-gradient(90deg, transparent, rgb(37 99 235 / 80%) 20%, rgb(37 99 235 / 80%) 80%, transparent);
+}
+
+.phase-banner--enemy {
+  background: linear-gradient(90deg, transparent, rgb(185 28 28 / 80%) 20%, rgb(185 28 28 / 80%) 80%, transparent);
+}
+
+/* Slides in from the left, holds, and slides out to the right. */
+@keyframes phase-banner-sweep {
+  0% {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+  }
+  20%,
+  80% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+  100% {
+    opacity: 0;
+    clip-path: inset(0 0 0 100%);
+  }
+}
+
+.battle-result {
+  position: static;
+  min-width: 200px;
+  padding: 16px 24px;
+  text-align: center;
+}
+
+.battle-result__title {
+  margin: 0;
+  font-size: 32px;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+}
+
+.battle-result--victory .battle-result__title {
+  color: #fde68a;
+}
+
+.battle-result--defeat .battle-result__title {
+  color: #fca5a5;
+}
+
+.battle-result__hint {
+  margin: 8px 0 0;
+  font-size: 10px;
+  color: rgb(255 255 255 / 70%);
+}
+
 /* ---- Title screen ---------------------------------------------------- */
 
 .title-screen {

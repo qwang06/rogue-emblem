@@ -1,12 +1,20 @@
 import Phaser from 'phaser';
 import tilesetUrl from '../assets/kenney_tiny-battle/Tilemap/tilemap_packed.png';
 import { BATTLE_STATE_DEFAULTS, gameStore } from '../bridge/gameStore.js';
-import { toDamagePopupView, toRosterEntryView, toUnitView, worldToScreen } from '../bridge/views.js';
+import {
+  toDamagePopupView,
+  toPhaseBannerView,
+  toRosterEntryView,
+  toTurnView,
+  toUnitView,
+  worldToScreen,
+} from '../bridge/views.js';
 import { createActionMenu, getSelectedAction, getUnitActions, moveSelection, selectIndex } from '../game/actionMenu.js';
 import { calculateSkillDamage, findLearnedSkill, getLearnedSkills, getSkillActions } from '../game/skills.js';
 import { calculateDamage, getAttackRange, getAttackTargets } from '../game/combat.js';
 import { createCursor, moveCursor } from '../game/cursor.js';
 import { createDemoLevel } from '../game/demoLevel.js';
+import { planRushAction } from '../game/enemyAI.js';
 import {
   canPlaceUnit,
   canStartBattle,
@@ -19,6 +27,17 @@ import { findUnit, getCell, gridToWorld, moveUnit, setUnit } from '../game/grid.
 import { getArrowPieces } from '../game/moveArrow.js';
 import { extendMovePath, getMovementRange } from '../game/movement.js';
 import { PAUSE_ACTIONS } from '../game/pauseMenu.js';
+import {
+  createTurnState,
+  getBattleOutcome,
+  hasMoved,
+  isDone,
+  isPhaseOver,
+  markDone,
+  markMoved,
+  nextPhase,
+  unmarkMoved,
+} from '../game/turns.js';
 import {
   ARROW_FRAMES,
   TERRAIN_FRAMES,
@@ -47,6 +66,13 @@ const START_INDEX = 1;
 const MOVE_STEP_DELAY_MS = 80;
 // How long a damage number stays on screen (the React HUD animates it).
 const DAMAGE_POPUP_DURATION_MS = 700;
+// How long the "Player Phase" / "Enemy Phase" banner holds the screen.
+const PHASE_BANNER_DURATION_MS = 1200;
+// Pauses in the enemy phase: on each enemy before it moves, and between enemies.
+const ENEMY_FOCUS_DELAY_MS = 250;
+const ENEMY_ACTION_DELAY_MS = 300;
+// Tint for units that are done for the phase.
+const DONE_TINT = 0x808080;
 
 // Size the grid to fully cover the canvas at the current zoom, rounding up so
 // there's no gap of background visible at the edges.
@@ -99,7 +125,7 @@ export class GridScene extends Phaser.Scene {
     this.skillMenu = null; // the active unit's skills, opened from the action menu
     this.deploymentMenu = null; // Place Units / Start
     this.rosterMenu = null; // units to pick from when placing
-    this.pauseMenu = null; // Main Menu / Settings, opened with cancel on the bare map
+    this.pauseMenu = null; // End Turn / Main Menu / Settings, opened with cancel on the bare map
     this.placingUnitId = null; // unit being placed while choosing its tile
     this.zoneTiles = null; // highlight rectangles for the deployment zone
     this.activeUnit = null; // { unitId, unit, x, y } the menu / range belongs to
@@ -109,7 +135,10 @@ export class GridScene extends Phaser.Scene {
     this.moveRange = null; // [{ x, y, cost }] the active unit can end its move on
     this.movePath = null; // planned route [{ x, y }] from the active unit to the cursor
     this.arrowSprites = []; // arrow pieces drawn along movePath
-    this.inputLocked = false; // input is ignored while a move or hit plays out
+    this.inputLocked = false; // input is ignored while a move, hit, banner, or the enemy phase plays out
+    this.turnState = null; // from src/game/turns.js once the battle starts
+    this.battleOutcome = null; // 'victory' | 'defeat' once the battle is decided
+    this.nextBannerId = 1;
     this.hoveredUnit = null;
     this.nextPopupId = 1;
     this.updateHoveredUnit();
@@ -124,6 +153,11 @@ export class GridScene extends Phaser.Scene {
     const cancel = JustDown(this.actionKeys.cancel) || JustDown(this.actionKeys.cancelAlt);
 
     if (this.inputLocked) return;
+
+    if (this.battleOutcome) {
+      if (confirm) this.exitToTitle();
+      return;
+    }
 
     if (this.pauseMenu) {
       this.updatePauseMenu(dy, confirm, cancel);
@@ -168,7 +202,9 @@ export class GridScene extends Phaser.Scene {
         return;
       }
     } else if (confirm && this.hoveredUnit?.team === 'player') {
+      // Units that are done for the phase can't be picked again.
       const { unitId } = getCell(this.grid, this.cursor.x, this.cursor.y);
+      if (isDone(this.turnState, unitId)) return;
       this.activeUnit = { unitId, unit: this.hoveredUnit, x: this.cursor.x, y: this.cursor.y };
       this.openActionMenu();
       return;
@@ -189,6 +225,7 @@ export class GridScene extends Phaser.Scene {
   updateActionMenu(dy, confirm, cancel) {
     if (cancel) {
       this.setActionMenu(null);
+      if (this.activeUnit.origin) this.undoMove();
       this.activeUnit = null;
       return;
     }
@@ -205,8 +242,12 @@ export class GridScene extends Phaser.Scene {
         this.showAttackRange();
       } else if (action?.id === 'skill') {
         this.openSkillMenu();
+      } else if (action?.id === 'wait') {
+        const { unitId } = this.activeUnit;
+        this.activeUnit = null;
+        this.finishPlayerAction(unitId);
       } else {
-        // Other actions aren't implemented yet — choosing one just closes the menu.
+        // Item isn't implemented yet — choosing it just closes the menu.
         console.info(`Action selected: ${action?.id}`);
         this.activeUnit = null;
       }
@@ -221,11 +262,12 @@ export class GridScene extends Phaser.Scene {
   }
 
   // Opens the action menu for the active unit. Skill is only available
-  // once the unit has learned a skill.
+  // once the unit has learned a skill, and Move until it has moved.
   openActionMenu() {
-    const { unit } = this.activeUnit;
+    const { unit, unitId } = this.activeUnit;
     const hasSkills = getLearnedSkills(unit.unitClass, unit.level).length > 0;
-    this.setActionMenu(createActionMenu(getUnitActions({ hasSkills })));
+    const moved = hasMoved(this.turnState, unitId);
+    this.setActionMenu(createActionMenu(getUnitActions({ hasSkills, hasMoved: moved })));
   }
 
   openSkillMenu() {
@@ -266,8 +308,9 @@ export class GridScene extends Phaser.Scene {
     gameStore.setState({ [key]: menu });
   }
 
-  // While the pause menu is open it owns input: cancel closes it, Main Menu
-  // leaves the battle for the title screen. Settings isn't built yet.
+  // While the pause menu is open it owns input: cancel closes it, End Turn
+  // hands over to the enemy phase, Main Menu leaves the battle for the
+  // title screen. Settings isn't built yet.
   updatePauseMenu(dy, confirm, cancel) {
     if (cancel) {
       this.publishMenu('pauseMenu', null);
@@ -276,7 +319,8 @@ export class GridScene extends Phaser.Scene {
 
     if (confirm) {
       const action = getSelectedAction(this.pauseMenu);
-      if (action?.id === 'main-menu') this.exitToTitle();
+      if (action?.id === 'end-turn') this.endPlayerPhase();
+      else if (action?.id === 'main-menu') this.exitToTitle();
       else console.info(`Pause action selected: ${action?.id}`);
       return;
     }
@@ -428,8 +472,8 @@ export class GridScene extends Phaser.Scene {
     this.openDeploymentMenu(START_INDEX);
   }
 
-  // Ends deployment: clears the zone and hands input to the battle, with
-  // the cursor on the first deployed unit.
+  // Ends deployment: clears the zone, drops roster units left off the map
+  // (they sit this battle out), and starts turn 1.
   startBattle() {
     for (const tile of this.zoneTiles ?? []) tile.destroy();
     this.zoneTiles = null;
@@ -437,9 +481,139 @@ export class GridScene extends Phaser.Scene {
     this.phase = 'battle';
     gameStore.setState({ phase: 'battle', deploymentStep: null });
 
-    const first = this.roster.map((id) => findUnit(this.grid, id)).find(Boolean);
-    if (first) this.setCursor(first.x, first.y);
+    for (const unitId of this.roster) {
+      if (!isPlaced(this.grid, unitId)) this.units.delete(unitId);
+    }
+
     this.setCursorVisible(true);
+    this.startPhase(createTurnState());
+  }
+
+  // ---- Turns ------------------------------------------------------------
+  // The battle alternates a player phase and an enemy phase (rules in
+  // src/game/turns.js). In the player phase each unit may move, then act
+  // (attack, skill, or wait); acting finishes it and greys it out. Once all
+  // are finished the enemy phase runs on its own, each enemy acting in turn
+  // with the plan from src/game/enemyAI.js. After every action the battle
+  // checks for victory or defeat.
+
+  // Announces the phase with a banner (input locked meanwhile), then either
+  // hands input to the player or runs the enemies.
+  startPhase(turnState) {
+    this.turnState = turnState;
+    for (const sprite of this.unitSprites.values()) sprite.clearTint();
+    gameStore.setState({ turn: toTurnView(turnState) });
+
+    this.inputLocked = true;
+    this.showPhaseBanner(turnState, () => {
+      if (turnState.team === 'enemy') {
+        this.runEnemyPhase();
+        return;
+      }
+      // Hand the cursor back to the player on their first unit.
+      const first = findUnit(this.grid, this.teamUnitIds('player')[0]);
+      if (first) this.setCursor(first.x, first.y);
+      this.inputLocked = false;
+    });
+  }
+
+  showPhaseBanner(turnState, onDone) {
+    const banner = toPhaseBannerView({
+      id: this.nextBannerId++,
+      turnState,
+      durationMs: PHASE_BANNER_DURATION_MS,
+    });
+    gameStore.setState({ phaseBanner: banner });
+    this.time.delayedCall(PHASE_BANNER_DURATION_MS, () => {
+      gameStore.setState({ phaseBanner: null });
+      onDone();
+    });
+  }
+
+  // Marks a unit done for the phase and greys out its sprite.
+  finishUnit(unitId) {
+    this.turnState = markDone(this.turnState, unitId);
+    this.unitSprites.get(unitId)?.setTint(DONE_TINT);
+  }
+
+  // Called once a player unit's action has fully played out: finishes the
+  // unit, then ends the battle or the phase if that action decided it.
+  finishPlayerAction(unitId) {
+    this.finishUnit(unitId);
+    this.inputLocked = false;
+    this.updateHoveredUnit();
+    if (this.checkOutcome()) return;
+    if (isPhaseOver(this.turnState, this.teamUnitIds('player'))) {
+      this.startPhase(nextPhase(this.turnState));
+    }
+  }
+
+  // Ends the player phase early from the pause menu: any units that haven't
+  // acted simply forfeit their action, and the enemy phase begins.
+  endPlayerPhase() {
+    this.publishMenu('pauseMenu', null);
+    this.startPhase(nextPhase(this.turnState));
+  }
+
+  teamUnitIds(team) {
+    return [...this.units].filter(([, unit]) => unit.team === team).map(([unitId]) => unitId);
+  }
+
+  // Ends the battle if one side has been wiped out, publishing the result
+  // for React; confirm then returns to the title. Returns whether it ended.
+  checkOutcome() {
+    const outcome = getBattleOutcome(this.units.values());
+    if (!outcome) return false;
+    this.battleOutcome = outcome;
+    this.inputLocked = false;
+    this.setCursorVisible(false);
+    gameStore.setState({ battleOutcome: outcome });
+    return true;
+  }
+
+  // Each enemy (in registry order) plans and carries out its action, one
+  // after another, then the player phase begins.
+  runEnemyPhase() {
+    const queue = this.teamUnitIds('enemy');
+    const next = () => {
+      if (this.checkOutcome()) return;
+      const unitId = queue.shift();
+      if (!unitId) {
+        this.startPhase(nextPhase(this.turnState));
+        return;
+      }
+      this.takeEnemyAction(unitId, () => this.time.delayedCall(ENEMY_ACTION_DELAY_MS, next));
+    };
+    next();
+  }
+
+  // Puts the cursor on the enemy, walks it along its planned route, and
+  // attacks the planned target from the end of it.
+  takeEnemyAction(unitId, onDone) {
+    const unit = this.units.get(unitId);
+    const from = findUnit(this.grid, unitId);
+    const { path, target } = planRushAction(
+      this.grid,
+      from,
+      unit,
+      this.isHostileTo(unit),
+      this.movementOptions(unit),
+    );
+    const to = path[path.length - 1];
+    const finish = () => {
+      this.finishUnit(unitId);
+      onDone();
+    };
+
+    this.setCursor(from.x, from.y);
+    this.time.delayedCall(ENEMY_FOCUS_DELAY_MS, () => {
+      this.walkSprite(this.unitSprites.get(unitId), path, () => {
+        this.grid = moveUnit(this.grid, from, to);
+        this.setCursor(to.x, to.y);
+        if (target) this.resolveAttack(unitId, target, finish);
+        else finish();
+      });
+    });
   }
 
   // Options for src/game/movement.js: allies can be walked through, anyone
@@ -552,38 +726,59 @@ export class GridScene extends Phaser.Scene {
     this.inputLocked = true;
     this.walkSprite(this.unitSprites.get(unitId), path, () => {
       this.grid = moveUnit(this.grid, from, to);
-      this.activeUnit = null;
+      this.turnState = markMoved(this.turnState, unitId);
+      // Remember where it came from so cancelling the menu can undo the move.
+      this.activeUnit = { ...this.activeUnit, x: to.x, y: to.y, origin: from };
       this.inputLocked = false;
-      this.updateHoveredUnit();
+      this.setCursor(to.x, to.y);
+      // Straight on to the rest of the unit's action, with Move now used up.
+      this.openActionMenu();
     });
   }
 
+  // Puts the active unit back where it stood before its move this phase
+  // and gives it the move back.
+  undoMove() {
+    const { unitId, x, y, origin } = this.activeUnit;
+    this.grid = moveUnit(this.grid, { x, y }, origin);
+    this.turnState = unmarkMoved(this.turnState, unitId);
+    const pos = gridToWorld(origin.x, origin.y, TILE_SIZE);
+    this.unitSprites.get(unitId).setPosition(pos.x, pos.y);
+    this.setCursor(origin.x, origin.y);
+  }
+
   // Attacks the unit under the cursor, if it's a hostile unit in range.
-  // Damage comes from src/game/combat.js and is applied right away so the
-  // HUD shows the new health while the target's sprite flashes and a damage
-  // number pops over it; a unit
-  // brought to 0 health is removed once the flash finishes.
   tryAttackWithActiveUnit() {
-    const { unit, x, y } = this.activeUnit;
+    const { unit, unitId, x, y } = this.activeUnit;
     const target = getAttackTargets(this.grid, { x, y }, unit.range, this.isHostileTo(unit)).find(
       (t) => t.x === this.cursor.x && t.y === this.cursor.y,
     );
     if (!target) return;
 
+    this.hideRange();
+    this.activeUnit = null;
+    this.resolveAttack(unitId, target, () => this.finishPlayerAction(unitId));
+  }
+
+  // One unit attacks another ({ x, y, unitId } target), for either side.
+  // Damage comes from src/game/combat.js and is applied right away so the
+  // HUD shows the new health while the target's sprite flashes and a damage
+  // number pops over it; a unit brought to 0 health is removed once the
+  // flash finishes. Input stays locked until onDone.
+  resolveAttack(attackerId, target, onDone) {
+    const attacker = this.units.get(attackerId);
     const defender = this.units.get(target.unitId);
-    const damage = calculateDamage(unit, defender);
+    const damage = calculateDamage(attacker, defender);
     defender.takeDamage(damage);
     this.publishHoveredUnit();
 
-    this.hideRange();
     this.inputLocked = true;
     const defenderSprite = this.unitSprites.get(target.unitId);
     this.showDamagePopup(defenderSprite, damage);
     playHitFlash(this, defenderSprite, () => {
       if (!defender.isAlive()) this.removeUnit(target);
-      this.activeUnit = null;
-      this.inputLocked = false;
       this.updateHoveredUnit();
+      onDone();
     });
   }
 
@@ -618,8 +813,7 @@ export class GridScene extends Phaser.Scene {
       playFireBurst(this, defenderSprite, center(defenderSprite), () => {
         if (!defender.isAlive()) this.removeUnit(target);
         this.activeUnit = null;
-        this.inputLocked = false;
-        this.updateHoveredUnit();
+        this.finishPlayerAction(unitId);
       });
     });
   }

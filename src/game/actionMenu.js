@@ -11,12 +11,12 @@ export const UNIT_ACTIONS = Object.freeze([
 ]);
 
 // The unit actions for a particular unit. Skill is disabled when the unit
-// knows no skills; the caller decides what disabled means for input.
-export function getUnitActions({ hasSkills }) {
+// knows no skills, and Move once the unit has already moved this phase;
+// the caller decides what disabled means for input.
+export function getUnitActions({ hasSkills, hasMoved = false }) {
+  const disabled = (id) => (id === 'skill' && !hasSkills) || (id === 'move' && hasMoved);
   return Object.freeze(
-    UNIT_ACTIONS.map((action) =>
-      action.id === 'skill' && !hasSkills ? Object.freeze({ ...action, disabled: true }) : action,
-    ),
+    UNIT_ACTIONS.map((action) => (disabled(action.id) ? Object.freeze({ ...action, disabled: true }) : action)),
   );
 }
 

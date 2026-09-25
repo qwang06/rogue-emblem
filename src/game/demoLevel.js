@@ -8,6 +8,12 @@ import { Soldier } from './Soldier.js';
 
 export const DEPLOYMENT_ZONE_SIZE = 3;
 export const ENEMY_COUNT = 3;
+// The player's roster, by unitId -> name. One unit per deployment tile.
+export const PLAYER_ROSTER = Object.freeze({
+  'soldier-1': 'Alden',
+  'soldier-2': 'Bryn',
+  'soldier-3': 'Cato',
+});
 
 // Returns { grid, units, roster, deploymentZone }. `units` maps every
 // unitId (player and enemy) to its Unit; `roster` lists the player unitIds
@@ -21,9 +27,9 @@ export function createDemoLevel(width, height) {
     }
   }
 
-  const units = new Map([
-    ['soldier', new Soldier({ team: 'player' })],
-  ]);
+  const units = new Map(
+    Object.entries(PLAYER_ROSTER).map(([unitId, name]) => [unitId, new Soldier({ name, team: 'player' })]),
+  );
 
   getCornerTiles(grid, 'bottom-right', ENEMY_COUNT).forEach(({ x, y }, i) => {
     const unitId = `enemy-${i + 1}`;
@@ -34,7 +40,7 @@ export function createDemoLevel(width, height) {
   return {
     grid,
     units,
-    roster: ['soldier'],
+    roster: Object.keys(PLAYER_ROSTER),
     deploymentZone: getCornerTiles(grid, 'top-left', DEPLOYMENT_ZONE_SIZE),
   };
 }

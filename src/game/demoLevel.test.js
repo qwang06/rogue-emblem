@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { canPlaceUnit } from './deployment.js';
-import { createDemoLevel, DEPLOYMENT_ZONE_SIZE, ENEMY_COUNT } from './demoLevel.js';
+import { createDemoLevel, DEPLOYMENT_ZONE_SIZE, ENEMY_COUNT, PLAYER_ROSTER } from './demoLevel.js';
 import { findUnit, getCell } from './grid.js';
 import { Soldier } from './Soldier.js';
 
@@ -11,9 +11,16 @@ describe('createDemoLevel', () => {
     for (const unitId of level.roster) expect(findUnit(level.grid, unitId)).toBeNull();
   });
 
-  it('offers the soldier for deployment', () => {
-    expect(level.roster).toEqual(['soldier']);
-    expect(level.units.get('soldier').team).toBe('player');
+  it('offers three named player soldiers for deployment', () => {
+    expect(level.roster).toEqual(['soldier-1', 'soldier-2', 'soldier-3']);
+    for (const unitId of level.roster) {
+      expect(level.units.get(unitId).team).toBe('player');
+      expect(level.units.get(unitId).name).toBe(PLAYER_ROSTER[unitId]);
+    }
+  });
+
+  it('has room in the deployment zone for the whole roster', () => {
+    expect(level.roster.length).toBeLessThanOrEqual(level.deploymentZone.length);
   });
 
   it('places the enemies on the last tiles of the bottom-right', () => {
@@ -51,12 +58,12 @@ describe('createDemoLevel', () => {
   it('leaves the whole deployment zone open and placeable', () => {
     for (const { x, y } of level.deploymentZone) {
       expect(getCell(level.grid, x, y).terrain).toBe('grass');
-      expect(canPlaceUnit(level.grid, level.deploymentZone, 'soldier', x, y)).toBe(true);
+      expect(canPlaceUnit(level.grid, level.deploymentZone, 'soldier-1', x, y)).toBe(true);
     }
   });
 
   it('builds a fresh level each call', () => {
     const other = createDemoLevel(20, 15);
-    expect(other.units.get('soldier')).not.toBe(level.units.get('soldier'));
+    expect(other.units.get('soldier-1')).not.toBe(level.units.get('soldier-1'));
   });
 });
