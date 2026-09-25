@@ -134,6 +134,31 @@
   image-rendering: pixelated;
 }
 
+/* ---- Pause menu ------------------------------------------------------ */
+
+.pause-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 45%);
+}
+
+.pause-menu {
+  position: static;
+  min-width: 140px;
+}
+
+.pause-menu__title {
+  margin: 0 0 6px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-align: center;
+  color: rgb(255 255 255 / 70%);
+}
+
 .damage-popup {
   position: absolute;
   transform: translate(-50%, -100%);

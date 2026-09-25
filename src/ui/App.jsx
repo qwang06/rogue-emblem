@@ -2,6 +2,7 @@ import { ActionMenu } from './ActionMenu.jsx';
 import { DamagePopups } from './DamagePopups.jsx';
 import { DeploymentBanner } from './DeploymentBanner.jsx';
 import { DeploymentMenu } from './DeploymentMenu.jsx';
+import { PauseMenu } from './PauseMenu.jsx';
 import { RosterMenu } from './RosterMenu.jsx';
 import { TitleScreen } from './TitleScreen.jsx';
 import { UnitPanel } from './UnitPanel.jsx';
@@ -25,6 +26,7 @@ export function App() {
           <RosterMenu />
           <ActionMenu />
           <DamagePopups />
+          <PauseMenu />
         </>
       )}
     </div>

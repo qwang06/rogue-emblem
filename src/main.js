@@ -15,9 +15,14 @@ const game = new Phaser.Game({
   scene: [],
 });
 
+// The map scene lives only while the battle screen is up: added (and so
+// started fresh) on Play, removed when the player returns to the title.
 gameStore.subscribe((state) => {
-  if (state.screen === 'battle' && !game.scene.getScene('Grid')) {
+  const running = Boolean(game.scene.getScene('Grid'));
+  if (state.screen === 'battle' && !running) {
     game.scene.add('Grid', GridScene, true);
+  } else if (state.screen === 'title' && running) {
+    game.scene.remove('Grid');
   }
 });
 

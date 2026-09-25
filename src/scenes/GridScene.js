@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import tilesetUrl from '../assets/kenney_tiny-battle/Tilemap/tilemap_packed.png';
-import { gameStore } from '../bridge/gameStore.js';
+import { BATTLE_STATE_DEFAULTS, gameStore } from '../bridge/gameStore.js';
 import { toDamagePopupView, toRosterEntryView, toUnitView, worldToScreen } from '../bridge/views.js';
 import { createActionMenu, getSelectedAction, moveSelection, selectIndex } from '../game/actionMenu.js';
 import { calculateDamage, getAttackRange, getAttackTargets } from '../game/combat.js';
@@ -16,6 +16,7 @@ import {
 } from '../game/deployment.js';
 import { findUnit, getCell, gridToWorld, moveUnit, setUnit } from '../game/grid.js';
 import { getMovePath, getMovementRange } from '../game/movement.js';
+import { PAUSE_ACTIONS } from '../game/pauseMenu.js';
 import { TERRAIN_FRAMES, TILESET_KEY, TILE_SIZE, UI_FRAMES, UNIT_FRAMES } from '../game/tileset.js';
 import { playHitFlash } from './effects.js';
 
@@ -56,15 +57,7 @@ export class GridScene extends Phaser.Scene {
   create() {
     // Every battle starts from a clean slate: clear anything a previous
     // battle left in the store, then enter the deployment phase.
-    gameStore.setState({
-      phase: 'deployment',
-      deploymentStep: null,
-      hoveredUnit: null,
-      actionMenu: null,
-      deploymentMenu: null,
-      rosterMenu: null,
-      damagePopups: [],
-    });
+    gameStore.setState({ ...BATTLE_STATE_DEFAULTS, phase: 'deployment' });
 
     const level = createDemoLevel(GRID_WIDTH, GRID_HEIGHT);
     this.grid = level.grid;
@@ -94,6 +87,7 @@ export class GridScene extends Phaser.Scene {
     this.actionMenu = null;
     this.deploymentMenu = null; // Place Units / Start
     this.rosterMenu = null; // units to pick from when placing
+    this.pauseMenu = null; // Main Menu / Settings, opened with cancel on the bare map
     this.placingUnitId = null; // unit being placed while choosing its tile
     this.zoneTiles = null; // highlight rectangles for the deployment zone
     this.activeUnit = null; // { unitId, unit, x, y } the menu / range belongs to
@@ -114,6 +108,11 @@ export class GridScene extends Phaser.Scene {
     const cancel = JustDown(this.actionKeys.cancel) || JustDown(this.actionKeys.cancelAlt);
 
     if (this.inputLocked) return;
+
+    if (this.pauseMenu) {
+      this.updatePauseMenu(dy, confirm, cancel);
+      return;
+    }
 
     if (this.phase === 'deployment') {
       this.updateDeployment(dx, dy, confirm, cancel);
@@ -143,6 +142,10 @@ export class GridScene extends Phaser.Scene {
       const { unitId } = getCell(this.grid, this.cursor.x, this.cursor.y);
       this.activeUnit = { unitId, unit: this.hoveredUnit, x: this.cursor.x, y: this.cursor.y };
       this.setActionMenu(createActionMenu());
+      return;
+    } else if (cancel) {
+      // Nothing to back out of on the bare map, so cancel opens the pause menu.
+      this.publishMenu('pauseMenu', createActionMenu(PAUSE_ACTIONS));
       return;
     }
 
@@ -192,6 +195,31 @@ export class GridScene extends Phaser.Scene {
     gameStore.setState({ [key]: menu });
   }
 
+  // While the pause menu is open it owns input: cancel closes it, Main Menu
+  // leaves the battle for the title screen. Settings isn't built yet.
+  updatePauseMenu(dy, confirm, cancel) {
+    if (cancel) {
+      this.publishMenu('pauseMenu', null);
+      return;
+    }
+
+    if (confirm) {
+      const action = getSelectedAction(this.pauseMenu);
+      if (action?.id === 'main-menu') this.exitToTitle();
+      else console.info(`Pause action selected: ${action?.id}`);
+      return;
+    }
+
+    if (dy !== 0) this.publishMenu('pauseMenu', moveSelection(this.pauseMenu, dy));
+  }
+
+  // Clears the battle's UI state and switches to the title screen, which
+  // makes main.js remove this scene. The next Play starts a fresh battle.
+  exitToTitle() {
+    this.inputLocked = true;
+    gameStore.setState({ ...BATTLE_STATE_DEFAULTS, screen: 'title' });
+  }
+
   // ---- Deployment phase -------------------------------------------------
   // Before the battle, the player picks units from the roster and places
   // them on the deployment zone. Three steps, each owning input in turn:
@@ -208,7 +236,9 @@ export class GridScene extends Phaser.Scene {
       DEPLOYMENT_ZONE_COLOR,
       DEPLOYMENT_ZONE_ALPHA,
     );
-    this.setCursor(this.deploymentZone[0].x, this.deploymentZone[0].y);
+    // The cursor stays hidden while a deployment menu has input; it only
+    // appears once there's a tile to choose.
+    this.setCursorVisible(false);
     this.openDeploymentMenu(PLACE_UNITS_INDEX);
   }
 
@@ -234,6 +264,7 @@ export class GridScene extends Phaser.Scene {
     }
     if (cancel) {
       this.placingUnitId = null;
+      this.setCursorVisible(false);
       this.openRosterMenu();
       return;
     }
@@ -303,6 +334,7 @@ export class GridScene extends Phaser.Scene {
       getFirstOpenTile(this.grid, this.deploymentZone) ??
       this.deploymentZone[0];
     this.setCursor(tile.x, tile.y);
+    this.setCursorVisible(true);
     this.setDeploymentStep('placing');
   }
 
@@ -321,7 +353,7 @@ export class GridScene extends Phaser.Scene {
     }
 
     this.placingUnitId = null;
-    this.updateHoveredUnit();
+    this.setCursorVisible(false);
     this.openDeploymentMenu(START_INDEX);
   }
 
@@ -336,6 +368,7 @@ export class GridScene extends Phaser.Scene {
 
     const first = this.roster.map((id) => findUnit(this.grid, id)).find(Boolean);
     if (first) this.setCursor(first.x, first.y);
+    this.setCursorVisible(true);
   }
 
   // Options for src/game/movement.js: allies can be walked through, anyone
@@ -503,11 +536,11 @@ export class GridScene extends Phaser.Scene {
     this.updateHoveredUnit();
   }
 
-  // Looks up the unit (if any) under the cursor and, only on change,
+  // Looks up the unit (if any) under the visible cursor and, only on change,
   // publishes a snapshot to the game store for the React HUD to render.
   // GridScene doesn't know React exists — it only writes plain state.
   updateHoveredUnit() {
-    const cell = getCell(this.grid, this.cursor.x, this.cursor.y);
+    const cell = this.cursorSprite.visible ? getCell(this.grid, this.cursor.x, this.cursor.y) : null;
     const unit = cell?.unitId ? this.units.get(cell.unitId) : null;
 
     if (unit === this.hoveredUnit) return;
@@ -529,6 +562,12 @@ export class GridScene extends Phaser.Scene {
       .sprite(x, y, TILESET_KEY, UI_FRAMES.cursor)
       .setOrigin(0, 0)
       .setDepth(1);
+  }
+
+  // A hidden cursor hovers nothing, so the unit panel clears with it.
+  setCursorVisible(visible) {
+    this.cursorSprite.setVisible(visible);
+    this.updateHoveredUnit();
   }
 
   updateCursorSprite() {
