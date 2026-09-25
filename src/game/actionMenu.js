@@ -22,6 +22,14 @@ export function moveSelection(menu, delta) {
   return Object.freeze({ ...menu, selectedIndex });
 }
 
+// Jumps the highlight straight to index (e.g. on mouse hover). Out-of-range
+// indices and no-op changes return the same menu.
+export function selectIndex(menu, index) {
+  if (!Number.isInteger(index) || index < 0 || index >= menu.actions.length) return menu;
+  if (index === menu.selectedIndex) return menu;
+  return Object.freeze({ ...menu, selectedIndex: index });
+}
+
 export function getSelectedAction(menu) {
   return menu.actions[menu.selectedIndex] ?? null;
 }

@@ -21,3 +21,9 @@ export const UNIT_FRAMES = {
 export const UI_FRAMES = {
   cursor: 61,
 };
+
+// Column/row of a frame in the sheet, so non-Phaser code (e.g. the React UI
+// cropping a sprite out of the sheet image) can locate it.
+export function getFramePosition(frame, columns = TILESET_COLUMNS) {
+  return { col: frame % columns, row: Math.floor(frame / columns) };
+}
