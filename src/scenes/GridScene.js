@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import tilesetUrl from '../assets/kenney_tiny-battle/Tilemap/tilemap_packed.png';
 import { BATTLE_STATE_DEFAULTS, gameStore } from '../bridge/gameStore.js';
 import { toDamagePopupView, toRosterEntryView, toUnitView, worldToScreen } from '../bridge/views.js';
-import { createActionMenu, getSelectedAction, moveSelection, selectIndex } from '../game/actionMenu.js';
+import { createActionMenu, getSelectedAction, getUnitActions, moveSelection, selectIndex } from '../game/actionMenu.js';
+import { calculateSkillDamage, findLearnedSkill, getLearnedSkills, getSkillActions } from '../game/skills.js';
 import { calculateDamage, getAttackRange, getAttackTargets } from '../game/combat.js';
 import { createCursor, moveCursor } from '../game/cursor.js';
 import { createDemoLevel } from '../game/demoLevel.js';
@@ -26,7 +27,7 @@ import {
   UI_FRAMES,
   UNIT_FRAMES,
 } from '../game/tileset.js';
-import { playHitFlash } from './effects.js';
+import { playFireBurst, playGrenadeThrow, playHitFlash } from './effects.js';
 
 export const CANVAS_WIDTH = 640;
 export const CANVAS_HEIGHT = 480;
@@ -35,6 +36,8 @@ const MOVE_RANGE_COLOR = 0x3b82f6;
 const MOVE_RANGE_ALPHA = 0.45;
 const ATTACK_RANGE_COLOR = 0xef4444;
 const ATTACK_RANGE_ALPHA = 0.45;
+const SKILL_RANGE_COLOR = 0xf97316;
+const SKILL_RANGE_ALPHA = 0.45;
 const DEPLOYMENT_ZONE_COLOR = 0xfacc15;
 const DEPLOYMENT_ZONE_ALPHA = 0.4;
 // Deployment menu entries, by index, for re-opening it on a given one.
@@ -93,13 +96,15 @@ export class GridScene extends Phaser.Scene {
 
     this.phase = 'deployment'; // 'deployment' | 'battle'
     this.actionMenu = null;
+    this.skillMenu = null; // the active unit's skills, opened from the action menu
     this.deploymentMenu = null; // Place Units / Start
     this.rosterMenu = null; // units to pick from when placing
     this.pauseMenu = null; // Main Menu / Settings, opened with cancel on the bare map
     this.placingUnitId = null; // unit being placed while choosing its tile
     this.zoneTiles = null; // highlight rectangles for the deployment zone
     this.activeUnit = null; // { unitId, unit, x, y } the menu / range belongs to
-    this.rangeMode = null; // 'move' | 'attack' while choosing a destination or target
+    this.rangeMode = null; // 'move' | 'attack' | 'skill' while choosing a destination or target
+    this.activeSkill = null; // the skill being aimed while rangeMode is 'skill'
     this.rangeTiles = null; // highlight rectangles for the current range
     this.moveRange = null; // [{ x, y, cost }] the active unit can end its move on
     this.movePath = null; // planned route [{ x, y }] from the active unit to the cursor
@@ -130,6 +135,11 @@ export class GridScene extends Phaser.Scene {
       return;
     }
 
+    if (this.skillMenu) {
+      this.updateSkillMenu(dy, confirm, cancel);
+      return;
+    }
+
     if (this.actionMenu) {
       this.updateActionMenu(dy, confirm, cancel);
       return;
@@ -140,19 +150,27 @@ export class GridScene extends Phaser.Scene {
       // tiles are ignored); cancel backs out to the action menu.
       if (confirm) {
         if (this.rangeMode === 'move') this.tryMoveActiveUnit();
+        else if (this.rangeMode === 'skill') this.tryUseSkill();
         else this.tryAttackWithActiveUnit();
+        return;
+      }
+      if (cancel && this.rangeMode === 'skill') {
+        // Back out of aiming to the skill menu the skill was picked from.
+        this.hideRange();
+        this.setCursor(this.activeUnit.x, this.activeUnit.y);
+        this.openSkillMenu();
         return;
       }
       if (cancel) {
         this.hideRange();
         this.setCursor(this.activeUnit.x, this.activeUnit.y);
-        this.setActionMenu(createActionMenu());
+        this.openActionMenu();
         return;
       }
     } else if (confirm && this.hoveredUnit?.team === 'player') {
       const { unitId } = getCell(this.grid, this.cursor.x, this.cursor.y);
       this.activeUnit = { unitId, unit: this.hoveredUnit, x: this.cursor.x, y: this.cursor.y };
-      this.setActionMenu(createActionMenu());
+      this.openActionMenu();
       return;
     } else if (cancel) {
       // Nothing to back out of on the bare map, so cancel opens the pause menu.
@@ -177,6 +195,7 @@ export class GridScene extends Phaser.Scene {
 
     if (confirm) {
       const action = getSelectedAction(this.actionMenu);
+      if (action?.disabled) return;
       this.setActionMenu(null);
       if (action?.id === 'move') {
         this.setCursor(this.activeUnit.x, this.activeUnit.y);
@@ -184,6 +203,8 @@ export class GridScene extends Phaser.Scene {
       } else if (action?.id === 'attack') {
         this.setCursor(this.activeUnit.x, this.activeUnit.y);
         this.showAttackRange();
+      } else if (action?.id === 'skill') {
+        this.openSkillMenu();
       } else {
         // Other actions aren't implemented yet — choosing one just closes the menu.
         console.info(`Action selected: ${action?.id}`);
@@ -199,8 +220,46 @@ export class GridScene extends Phaser.Scene {
     this.publishMenu('actionMenu', menu);
   }
 
+  // Opens the action menu for the active unit. Skill is only available
+  // once the unit has learned a skill.
+  openActionMenu() {
+    const { unit } = this.activeUnit;
+    const hasSkills = getLearnedSkills(unit.unitClass, unit.level).length > 0;
+    this.setActionMenu(createActionMenu(getUnitActions({ hasSkills })));
+  }
+
+  openSkillMenu() {
+    const { unit } = this.activeUnit;
+    const skills = getLearnedSkills(unit.unitClass, unit.level);
+    this.publishMenu('skillMenu', createActionMenu(getSkillActions(unit, skills)));
+  }
+
+  // While the skill menu is open it owns input: up/down move the
+  // highlight, cancel goes back to the action menu, and confirm picks a
+  // skill the unit can afford and shows its range to aim it.
+  updateSkillMenu(dy, confirm, cancel) {
+    if (cancel) {
+      this.publishMenu('skillMenu', null);
+      this.openActionMenu();
+      return;
+    }
+
+    if (confirm) {
+      const skill = getSelectedAction(this.skillMenu);
+      if (!skill || skill.disabled) return;
+      this.publishMenu('skillMenu', null);
+      const { unit, x, y } = this.activeUnit;
+      this.activeSkill = findLearnedSkill(unit.unitClass, unit.level, skill.id);
+      this.setCursor(x, y);
+      this.showRange('skill', getAttackRange(this.grid, { x, y }, this.activeSkill.range), SKILL_RANGE_COLOR, SKILL_RANGE_ALPHA);
+      return;
+    }
+
+    if (dy !== 0) this.publishMenu('skillMenu', moveSelection(this.skillMenu, dy));
+  }
+
   // Keeps a menu on the scene and mirrors it to the store field of the same
-  // name (actionMenu, deploymentMenu, rosterMenu) for React to draw.
+  // name (actionMenu, skillMenu, deploymentMenu, rosterMenu) for React to draw.
   publishMenu(key, menu) {
     if (menu === this[key]) return;
     this[key] = menu;
@@ -472,6 +531,7 @@ export class GridScene extends Phaser.Scene {
     for (const tile of this.rangeTiles ?? []) tile.destroy();
     this.rangeTiles = null;
     this.rangeMode = null;
+    this.activeSkill = null;
     this.clearMoveArrow();
     this.moveRange = null;
     this.movePath = null;
@@ -524,6 +584,43 @@ export class GridScene extends Phaser.Scene {
       this.activeUnit = null;
       this.inputLocked = false;
       this.updateHoveredUnit();
+    });
+  }
+
+  // Uses the aimed skill on the unit under the cursor, if it's a hostile
+  // unit in the skill's range. Mana is spent and damage from
+  // src/game/skills.js applied right away; then the skill's animation plays
+  // (a grenade lobbed onto the target, bursting into fire) and a unit
+  // brought to 0 health is removed once it finishes.
+  tryUseSkill() {
+    const { unit, unitId, x, y } = this.activeUnit;
+    const skill = this.activeSkill;
+    const target = getAttackTargets(this.grid, { x, y }, skill.range, this.isHostileTo(unit)).find(
+      (t) => t.x === this.cursor.x && t.y === this.cursor.y,
+    );
+    if (!target) return;
+
+    const defender = this.units.get(target.unitId);
+    const damage = calculateSkillDamage(skill, defender);
+    unit.spendMana(skill.manaCost);
+    defender.takeDamage(damage);
+
+    this.hideRange();
+    this.inputLocked = true;
+    const userSprite = this.unitSprites.get(unitId);
+    const defenderSprite = this.unitSprites.get(target.unitId);
+    const center = (sprite) => ({ x: sprite.x + TILE_SIZE / 2, y: sprite.y + TILE_SIZE / 2 });
+
+    playGrenadeThrow(this, center(userSprite), center(defenderSprite), () => {
+      // The HUD only shows the new health once the grenade lands.
+      this.publishHoveredUnit();
+      this.showDamagePopup(defenderSprite, damage);
+      playFireBurst(this, defenderSprite, center(defenderSprite), () => {
+        if (!defender.isAlive()) this.removeUnit(target);
+        this.activeUnit = null;
+        this.inputLocked = false;
+        this.updateHoveredUnit();
+      });
     });
   }
 

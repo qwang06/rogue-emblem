@@ -3,7 +3,7 @@ import { Unit } from '../game/Unit.js';
 import { toDamagePopupView, toRosterEntryView, toUnitView, worldToScreen } from './views.js';
 
 const makeUnit = () =>
-  new Unit({ name: 'Soldier', health: 10, attack: 4, defense: 2, movement: 5, team: 'player' });
+  new Unit({ name: 'Soldier', health: 10, mana: 5, attack: 4, defense: 2, movement: 5, team: 'player' });
 
 describe('toUnitView', () => {
   it('returns null for no unit', () => {
@@ -15,8 +15,11 @@ describe('toUnitView', () => {
     expect(toUnitView(makeUnit())).toEqual({
       name: 'Soldier',
       team: 'player',
+      level: 1,
       health: 10,
       maxHealth: 10,
+      mana: 5,
+      maxMana: 5,
       attack: 4,
       defense: 2,
       movement: 5,

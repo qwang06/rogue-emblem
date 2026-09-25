@@ -4,6 +4,7 @@ import { DeploymentBanner } from './DeploymentBanner.jsx';
 import { DeploymentMenu } from './DeploymentMenu.jsx';
 import { PauseMenu } from './PauseMenu.jsx';
 import { RosterMenu } from './RosterMenu.jsx';
+import { SkillMenu } from './SkillMenu.jsx';
 import { TitleScreen } from './TitleScreen.jsx';
 import { UnitPanel } from './UnitPanel.jsx';
 import { useGameStore } from './useGameStore.js';
@@ -25,6 +26,7 @@ export function App() {
           <DeploymentMenu />
           <RosterMenu />
           <ActionMenu />
+          <SkillMenu />
           <DamagePopups />
           <PauseMenu />
         </>

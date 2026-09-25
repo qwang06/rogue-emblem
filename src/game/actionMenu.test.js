@@ -3,13 +3,38 @@ import {
   UNIT_ACTIONS,
   createActionMenu,
   getSelectedAction,
+  getUnitActions,
   moveSelection,
   selectIndex,
 } from './actionMenu.js';
 
 describe('UNIT_ACTIONS', () => {
-  it('lists Move, Attack, Item, Wait in order', () => {
-    expect(UNIT_ACTIONS.map((a) => a.label)).toEqual(['Move', 'Attack', 'Item', 'Wait']);
+  it('lists Move, Attack, Skill, Item, Wait in order', () => {
+    expect(UNIT_ACTIONS.map((a) => a.label)).toEqual(['Move', 'Attack', 'Skill', 'Item', 'Wait']);
+  });
+});
+
+describe('getUnitActions', () => {
+  it('disables Skill when the unit has no skills', () => {
+    const actions = getUnitActions({ hasSkills: false });
+    expect(actions.find((a) => a.id === 'skill').disabled).toBe(true);
+    expect(actions.filter((a) => a.disabled).map((a) => a.id)).toEqual(['skill']);
+  });
+
+  it('enables Skill when the unit has skills', () => {
+    const actions = getUnitActions({ hasSkills: true });
+    expect(actions.some((a) => a.disabled)).toBe(false);
+  });
+
+  it('keeps the unit action order', () => {
+    expect(getUnitActions({ hasSkills: false }).map((a) => a.id)).toEqual(UNIT_ACTIONS.map((a) => a.id));
+  });
+
+  it('returns frozen entries without touching UNIT_ACTIONS', () => {
+    const actions = getUnitActions({ hasSkills: false });
+    expect(Object.isFrozen(actions)).toBe(true);
+    expect(actions.every(Object.isFrozen)).toBe(true);
+    expect(UNIT_ACTIONS.find((a) => a.id === 'skill').disabled).toBeUndefined();
   });
 });
 
@@ -31,6 +56,9 @@ describe('createActionMenu', () => {
 });
 
 describe('moveSelection', () => {
+  const count = UNIT_ACTIONS.length;
+  const lastIndex = count - 1;
+
   it('moves the selection down and up', () => {
     const menu = createActionMenu();
     expect(moveSelection(menu, 1).selectedIndex).toBe(1);
@@ -38,18 +66,18 @@ describe('moveSelection', () => {
   });
 
   it('wraps from the last item to the first', () => {
-    const last = moveSelection(createActionMenu(), 3);
-    expect(last.selectedIndex).toBe(3);
+    const last = moveSelection(createActionMenu(), lastIndex);
+    expect(last.selectedIndex).toBe(lastIndex);
     expect(moveSelection(last, 1).selectedIndex).toBe(0);
   });
 
   it('wraps from the first item to the last', () => {
-    expect(moveSelection(createActionMenu(), -1).selectedIndex).toBe(3);
+    expect(moveSelection(createActionMenu(), -1).selectedIndex).toBe(lastIndex);
   });
 
   it('handles deltas larger than the list', () => {
-    expect(moveSelection(createActionMenu(), 9).selectedIndex).toBe(1);
-    expect(moveSelection(createActionMenu(), -9).selectedIndex).toBe(3);
+    expect(moveSelection(createActionMenu(), 2 * count + 1).selectedIndex).toBe(1);
+    expect(moveSelection(createActionMenu(), -(2 * count + 1)).selectedIndex).toBe(lastIndex);
   });
 
   it('does not mutate the input menu', () => {
@@ -61,7 +89,7 @@ describe('moveSelection', () => {
   it('returns the same menu when the selection does not change', () => {
     const menu = createActionMenu();
     expect(moveSelection(menu, 0)).toBe(menu);
-    expect(moveSelection(menu, 4)).toBe(menu);
+    expect(moveSelection(menu, count)).toBe(menu);
   });
 
   it('returns the same menu when there are no actions', () => {
@@ -90,7 +118,7 @@ describe('selectIndex', () => {
   it('ignores out-of-range and non-integer indices', () => {
     const menu = createActionMenu();
     expect(selectIndex(menu, -1)).toBe(menu);
-    expect(selectIndex(menu, 4)).toBe(menu);
+    expect(selectIndex(menu, UNIT_ACTIONS.length)).toBe(menu);
     expect(selectIndex(menu, 1.5)).toBe(menu);
   });
 

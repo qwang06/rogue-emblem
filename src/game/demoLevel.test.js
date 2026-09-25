@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { canPlaceUnit } from './deployment.js';
 import { createDemoLevel, DEPLOYMENT_ZONE_SIZE, ENEMY_COUNT } from './demoLevel.js';
 import { findUnit, getCell } from './grid.js';
+import { Soldier } from './Soldier.js';
 
 describe('createDemoLevel', () => {
   const level = createDemoLevel(20, 15);
@@ -24,6 +25,13 @@ describe('createDemoLevel', () => {
     ]);
     expect(enemies).toHaveLength(ENEMY_COUNT);
     for (const { unitId } of enemies) expect(level.units.get(unitId).team).toBe('enemy');
+  });
+
+  it('makes every unit a level 1 soldier', () => {
+    for (const unit of level.units.values()) {
+      expect(unit).toBeInstanceOf(Soldier);
+      expect(unit.level).toBe(1);
+    }
   });
 
   it('gives every enemy its own Unit', () => {

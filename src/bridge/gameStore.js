@@ -10,6 +10,7 @@ export const BATTLE_STATE_DEFAULTS = Object.freeze({
   pauseMenu: null, // frozen Main Menu / Settings menu while open, or null
   hoveredUnit: null, // UnitView from toUnitView(), or null
   actionMenu: null, // frozen menu from src/game/actionMenu.js while open, or null
+  skillMenu: null, // frozen menu of the active unit's skills (from getSkillActions) while open, or null
   damagePopups: [], // DamagePopupViews from toDamagePopupView() currently on screen
 });
 
