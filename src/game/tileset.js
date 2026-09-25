@@ -22,6 +22,20 @@ export const UI_FRAMES = {
   cursor: 61,
 };
 
+// Movement arrow pieces, keyed by the piece names from src/game/moveArrow.js.
+export const ARROW_FRAMES = {
+  'head-up': 40,
+  'head-left': 41,
+  'head-right': 43,
+  'head-down': 76,
+  'left-right': 42,
+  'up-down': 58,
+  'down-right': 59,
+  'down-left': 60,
+  'up-right': 77,
+  'up-left': 78,
+};
+
 // Column/row of a frame in the sheet, so non-Phaser code (e.g. the React UI
 // cropping a sprite out of the sheet image) can locate it.
 export function getFramePosition(frame, columns = TILESET_COLUMNS) {

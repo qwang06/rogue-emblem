@@ -15,9 +15,17 @@ import {
   placeUnit,
 } from '../game/deployment.js';
 import { findUnit, getCell, gridToWorld, moveUnit, setUnit } from '../game/grid.js';
-import { getMovePath, getMovementRange } from '../game/movement.js';
+import { getArrowPieces } from '../game/moveArrow.js';
+import { extendMovePath, getMovementRange } from '../game/movement.js';
 import { PAUSE_ACTIONS } from '../game/pauseMenu.js';
-import { TERRAIN_FRAMES, TILESET_KEY, TILE_SIZE, UI_FRAMES, UNIT_FRAMES } from '../game/tileset.js';
+import {
+  ARROW_FRAMES,
+  TERRAIN_FRAMES,
+  TILESET_KEY,
+  TILE_SIZE,
+  UI_FRAMES,
+  UNIT_FRAMES,
+} from '../game/tileset.js';
 import { playHitFlash } from './effects.js';
 
 export const CANVAS_WIDTH = 640;
@@ -93,6 +101,9 @@ export class GridScene extends Phaser.Scene {
     this.activeUnit = null; // { unitId, unit, x, y } the menu / range belongs to
     this.rangeMode = null; // 'move' | 'attack' while choosing a destination or target
     this.rangeTiles = null; // highlight rectangles for the current range
+    this.moveRange = null; // [{ x, y, cost }] the active unit can end its move on
+    this.movePath = null; // planned route [{ x, y }] from the active unit to the cursor
+    this.arrowSprites = []; // arrow pieces drawn along movePath
     this.inputLocked = false; // input is ignored while a move or hit plays out
     this.hoveredUnit = null;
     this.nextPopupId = 1;
@@ -152,6 +163,7 @@ export class GridScene extends Phaser.Scene {
     if (dx === 0 && dy === 0) return;
 
     this.setCursor(this.cursor.x + dx, this.cursor.y + dy);
+    if (this.rangeMode === 'move') this.updateMovePath();
   }
 
   // While the action menu is open it owns input: up/down move the
@@ -387,12 +399,48 @@ export class GridScene extends Phaser.Scene {
     };
   }
 
-  // Highlights every tile the active unit can reach. The range itself comes
-  // from src/game/movement.js; this only draws it.
+  // Highlights every tile the active unit can reach and starts the planned
+  // route at the unit. The range itself comes from src/game/movement.js;
+  // this only draws it.
   showMoveRange() {
     const { unit, x, y } = this.activeUnit;
-    const range = getMovementRange(this.grid, { x, y }, unit.movement, this.movementOptions(unit));
-    this.showRange('move', range, MOVE_RANGE_COLOR, MOVE_RANGE_ALPHA);
+    this.moveRange = getMovementRange(this.grid, { x, y }, unit.movement, this.movementOptions(unit));
+    this.movePath = [{ x, y }];
+    this.showRange('move', this.moveRange, MOVE_RANGE_COLOR, MOVE_RANGE_ALPHA);
+  }
+
+  // Follows the cursor with the planned route (extendMovePath keeps the
+  // way the player traced it where it can) and redraws the arrow along it.
+  updateMovePath() {
+    const { unit } = this.activeUnit;
+    const path = extendMovePath(
+      this.grid,
+      this.movePath,
+      this.cursor,
+      unit.movement,
+      this.movementOptions(unit),
+    );
+    if (path === this.movePath) return;
+    this.movePath = path;
+    this.drawMoveArrow(path);
+  }
+
+  // Draws the arrow pieces from src/game/moveArrow.js above the range
+  // highlight and below units.
+  drawMoveArrow(path) {
+    this.clearMoveArrow();
+    this.arrowSprites = getArrowPieces(path).map(({ x, y, piece }) => {
+      const pos = gridToWorld(x, y, TILE_SIZE);
+      return this.add
+        .sprite(pos.x, pos.y, TILESET_KEY, ARROW_FRAMES[piece])
+        .setOrigin(0, 0)
+        .setDepth(0.6);
+    });
+  }
+
+  clearMoveArrow() {
+    for (const sprite of this.arrowSprites) sprite.destroy();
+    this.arrowSprites = [];
   }
 
   // Highlights every tile the active unit can strike, from
@@ -424,17 +472,21 @@ export class GridScene extends Phaser.Scene {
     for (const tile of this.rangeTiles ?? []) tile.destroy();
     this.rangeTiles = null;
     this.rangeMode = null;
+    this.clearMoveArrow();
+    this.moveRange = null;
+    this.movePath = null;
   }
 
   // Moves the active unit to the tile under the cursor, if that tile is in
-  // its range. The route comes from getMovePath, so the unit walks there
-  // tile by tile rather than jumping.
+  // its range. It walks the planned route the arrow shows, tile by tile.
   tryMoveActiveUnit() {
-    const { unitId, unit, x, y } = this.activeUnit;
+    const { unitId, x, y } = this.activeUnit;
     const from = { x, y };
     const to = { x: this.cursor.x, y: this.cursor.y };
-    const path = getMovePath(this.grid, from, to, unit.movement, this.movementOptions(unit));
-    if (!path) return;
+    const path = this.movePath;
+    const end = path[path.length - 1];
+    const inRange = this.moveRange.some((t) => t.x === to.x && t.y === to.y);
+    if (!inRange || end.x !== to.x || end.y !== to.y) return;
 
     this.hideRange();
     this.inputLocked = true;
