@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Unit } from '../game/Unit.js';
-import { toDamagePopupView, toUnitView, worldToScreen } from './views.js';
+import { toDamagePopupView, toRosterEntryView, toUnitView, worldToScreen } from './views.js';
 
 const makeUnit = () =>
   new Unit({ name: 'Soldier', health: 10, attack: 4, defense: 2, movement: 5, team: 'player' });
@@ -51,6 +51,14 @@ describe('toDamagePopupView', () => {
   it('copies the popup fields into a frozen snapshot', () => {
     const view = toDamagePopupView({ id: 1, amount: 3, x: 40, y: 20, durationMs: 700, extra: true });
     expect(view).toEqual({ id: 1, amount: 3, x: 40, y: 20, durationMs: 700 });
+    expect(Object.isFrozen(view)).toBe(true);
+  });
+});
+
+describe('toRosterEntryView', () => {
+  it('snapshots the unit for the roster menu', () => {
+    const view = toRosterEntryView({ id: 'soldier', unit: makeUnit(), frame: 124, placed: false });
+    expect(view).toEqual({ id: 'soldier', label: 'Soldier', frame: 124, placed: false });
     expect(Object.isFrozen(view)).toBe(true);
   });
 });

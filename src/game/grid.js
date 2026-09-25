@@ -58,6 +58,25 @@ export function moveUnit(grid, from, to) {
   return setUnit(setUnit(grid, from.x, from.y, null), to.x, to.y, unitId);
 }
 
+// Where unitId currently stands as { x, y }, or null if it isn't on the grid.
+export function findUnit(grid, unitId) {
+  const cell = grid.cells.find((c) => c.unitId === unitId);
+  return cell ? { x: cell.x, y: cell.y } : null;
+}
+
+// The first `count` tiles in reading order from a corner, as [{ x, y }]:
+// 'top-left' walks rows left to right from the top, 'bottom-right' takes the
+// last `count` tiles of the grid (still returned in reading order). Clamps
+// to the grid's size.
+export function getCornerTiles(grid, corner, count) {
+  const n = Math.max(0, Math.min(count, grid.cells.length));
+  let cells;
+  if (corner === 'top-left') cells = grid.cells.slice(0, n);
+  else if (corner === 'bottom-right') cells = grid.cells.slice(grid.cells.length - n);
+  else throw new Error(`Unknown corner: ${corner}`);
+  return cells.map(({ x, y }) => ({ x, y }));
+}
+
 // Orthogonal neighbors only — this is a Fire Emblem/Advance Wars style
 // grid, not one with diagonal movement.
 export function getNeighbors(grid, x, y) {

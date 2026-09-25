@@ -33,3 +33,9 @@ export function worldToScreen(point, camera) {
 export function toDamagePopupView({ id, amount, x, y, durationMs }) {
   return Object.freeze({ id, amount, x, y, durationMs });
 }
+
+// Snapshot of one unit in the deployment roster menu: its id, the name to
+// show, the sprite frame to draw, and whether it's already on the map.
+export function toRosterEntryView({ id, unit, frame, placed }) {
+  return Object.freeze({ id, label: unit.name, frame, placed });
+}

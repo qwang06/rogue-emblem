@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { UNIT_ACTIONS, createActionMenu, getSelectedAction, moveSelection } from './actionMenu.js';
+import {
+  UNIT_ACTIONS,
+  createActionMenu,
+  getSelectedAction,
+  moveSelection,
+  selectIndex,
+} from './actionMenu.js';
 
 describe('UNIT_ACTIONS', () => {
   it('lists Move, Attack, Item, Wait in order', () => {
@@ -61,6 +67,36 @@ describe('moveSelection', () => {
   it('returns the same menu when there are no actions', () => {
     const menu = createActionMenu([]);
     expect(moveSelection(menu, 1)).toBe(menu);
+  });
+});
+
+describe('selectIndex', () => {
+  it('jumps to the given index', () => {
+    expect(selectIndex(createActionMenu(), 2).selectedIndex).toBe(2);
+  });
+
+  it('does not mutate the input menu and returns a frozen menu', () => {
+    const menu = createActionMenu();
+    const next = selectIndex(menu, 3);
+    expect(menu.selectedIndex).toBe(0);
+    expect(Object.isFrozen(next)).toBe(true);
+  });
+
+  it('returns the same menu when the index is already selected', () => {
+    const menu = createActionMenu();
+    expect(selectIndex(menu, 0)).toBe(menu);
+  });
+
+  it('ignores out-of-range and non-integer indices', () => {
+    const menu = createActionMenu();
+    expect(selectIndex(menu, -1)).toBe(menu);
+    expect(selectIndex(menu, 4)).toBe(menu);
+    expect(selectIndex(menu, 1.5)).toBe(menu);
+  });
+
+  it('returns the same menu when there are no actions', () => {
+    const empty = createActionMenu([]);
+    expect(selectIndex(empty, 0)).toBe(empty);
   });
 });
 

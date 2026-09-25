@@ -1,14 +1,22 @@
 import Phaser from 'phaser';
 import tilesetUrl from '../assets/kenney_tiny-battle/Tilemap/tilemap_packed.png';
 import { gameStore } from '../bridge/gameStore.js';
-import { toDamagePopupView, toUnitView, worldToScreen } from '../bridge/views.js';
-import { createActionMenu, getSelectedAction, moveSelection } from '../game/actionMenu.js';
+import { toDamagePopupView, toRosterEntryView, toUnitView, worldToScreen } from '../bridge/views.js';
+import { createActionMenu, getSelectedAction, moveSelection, selectIndex } from '../game/actionMenu.js';
 import { calculateDamage, getAttackRange, getAttackTargets } from '../game/combat.js';
 import { createCursor, moveCursor } from '../game/cursor.js';
-import { createGrid, getCell, gridToWorld, moveUnit, setTerrain, setUnit } from '../game/grid.js';
+import { createDemoLevel } from '../game/demoLevel.js';
+import {
+  canPlaceUnit,
+  canStartBattle,
+  getDeploymentActions,
+  getFirstOpenTile,
+  isPlaced,
+  placeUnit,
+} from '../game/deployment.js';
+import { findUnit, getCell, gridToWorld, moveUnit, setUnit } from '../game/grid.js';
 import { getMovePath, getMovementRange } from '../game/movement.js';
 import { TERRAIN_FRAMES, TILESET_KEY, TILE_SIZE, UI_FRAMES, UNIT_FRAMES } from '../game/tileset.js';
-import { Unit } from '../game/Unit.js';
 import { playHitFlash } from './effects.js';
 
 export const CANVAS_WIDTH = 640;
@@ -18,6 +26,11 @@ const MOVE_RANGE_COLOR = 0x3b82f6;
 const MOVE_RANGE_ALPHA = 0.45;
 const ATTACK_RANGE_COLOR = 0xef4444;
 const ATTACK_RANGE_ALPHA = 0.45;
+const DEPLOYMENT_ZONE_COLOR = 0xfacc15;
+const DEPLOYMENT_ZONE_ALPHA = 0.4;
+// Deployment menu entries, by index, for re-opening it on a given one.
+const PLACE_UNITS_INDEX = 0;
+const START_INDEX = 1;
 // Pause between each tile a unit steps through when it moves.
 const MOVE_STEP_DELAY_MS = 80;
 // How long a damage number stays on screen (the React HUD animates it).
@@ -27,53 +40,6 @@ const DAMAGE_POPUP_DURATION_MS = 700;
 // there's no gap of background visible at the edges.
 const GRID_WIDTH = Math.ceil(CANVAS_WIDTH / (TILE_SIZE * ZOOM));
 const GRID_HEIGHT = Math.ceil(CANVAS_HEIGHT / (TILE_SIZE * ZOOM));
-
-// A small demo layout so the grid has more than one terrain type and a
-// player and an enemy unit to render. Real level data will replace this once maps are loaded from data.
-function buildDemoGrid() {
-  let grid = createGrid(GRID_WIDTH, GRID_HEIGHT, 'grass');
-
-  for (let y = 2; y <= 4; y++) {
-    for (let x = 5; x <= 7; x++) {
-      grid = setTerrain(grid, x, y, 'water');
-    }
-  }
-
-  grid = setUnit(grid, 1, 1, 'soldier');
-  grid = setUnit(grid, 4, 4, 'enemy-soldier');
-
-  return grid;
-}
-
-// Unit instances backing the demo grid's unitIds, keyed the same way as
-// cell.unitId. Grid data stays plain/serializable; stats and behavior live
-// on the Unit instances looked up from this registry.
-function buildDemoUnits() {
-  return new Map([
-    [
-      'soldier',
-      new Unit({
-        name: 'Soldier',
-        health: 10,
-        attack: 4,
-        defense: 2,
-        movement: 5,
-        team: 'player',
-      }),
-    ],
-    [
-      'enemy-soldier',
-      new Unit({
-        name: 'Enemy Soldier',
-        health: 10,
-        attack: 4,
-        defense: 2,
-        movement: 5,
-        team: 'enemy',
-      }),
-    ],
-  ]);
-}
 
 export class GridScene extends Phaser.Scene {
   constructor() {
@@ -88,8 +54,23 @@ export class GridScene extends Phaser.Scene {
   }
 
   create() {
-    this.grid = buildDemoGrid();
-    this.units = buildDemoUnits();
+    // Every battle starts from a clean slate: clear anything a previous
+    // battle left in the store, then enter the deployment phase.
+    gameStore.setState({
+      phase: 'deployment',
+      deploymentStep: null,
+      hoveredUnit: null,
+      actionMenu: null,
+      deploymentMenu: null,
+      rosterMenu: null,
+      damagePopups: [],
+    });
+
+    const level = createDemoLevel(GRID_WIDTH, GRID_HEIGHT);
+    this.grid = level.grid;
+    this.units = level.units; // unitId -> Unit, player roster and enemies alike
+    this.roster = level.roster; // player unitIds that can be deployed
+    this.deploymentZone = level.deploymentZone;
 
     this.renderTerrain(this.grid);
     this.renderUnits(this.grid);
@@ -109,7 +90,12 @@ export class GridScene extends Phaser.Scene {
       cancelAlt: Phaser.Input.Keyboard.KeyCodes.X,
     });
 
+    this.phase = 'deployment'; // 'deployment' | 'battle'
     this.actionMenu = null;
+    this.deploymentMenu = null; // Place Units / Start
+    this.rosterMenu = null; // units to pick from when placing
+    this.placingUnitId = null; // unit being placed while choosing its tile
+    this.zoneTiles = null; // highlight rectangles for the deployment zone
     this.activeUnit = null; // { unitId, unit, x, y } the menu / range belongs to
     this.rangeMode = null; // 'move' | 'attack' while choosing a destination or target
     this.rangeTiles = null; // highlight rectangles for the current range
@@ -117,6 +103,7 @@ export class GridScene extends Phaser.Scene {
     this.hoveredUnit = null;
     this.nextPopupId = 1;
     this.updateHoveredUnit();
+    this.startDeployment();
   }
 
   update() {
@@ -127,6 +114,11 @@ export class GridScene extends Phaser.Scene {
     const cancel = JustDown(this.actionKeys.cancel) || JustDown(this.actionKeys.cancelAlt);
 
     if (this.inputLocked) return;
+
+    if (this.phase === 'deployment') {
+      this.updateDeployment(dx, dy, confirm, cancel);
+      return;
+    }
 
     if (this.actionMenu) {
       this.updateActionMenu(dy, confirm, cancel);
@@ -189,9 +181,161 @@ export class GridScene extends Phaser.Scene {
   }
 
   setActionMenu(menu) {
-    if (menu === this.actionMenu) return;
-    this.actionMenu = menu;
-    gameStore.setState({ actionMenu: menu });
+    this.publishMenu('actionMenu', menu);
+  }
+
+  // Keeps a menu on the scene and mirrors it to the store field of the same
+  // name (actionMenu, deploymentMenu, rosterMenu) for React to draw.
+  publishMenu(key, menu) {
+    if (menu === this[key]) return;
+    this[key] = menu;
+    gameStore.setState({ [key]: menu });
+  }
+
+  // ---- Deployment phase -------------------------------------------------
+  // Before the battle, the player picks units from the roster and places
+  // them on the deployment zone. Three steps, each owning input in turn:
+  //   'menu'    — Place Units / Start
+  //   'roster'  — pick the unit to place
+  //   'placing' — move the cursor and confirm a zone tile
+  // The rules (valid tiles, when Start is allowed) live in
+  // src/game/deployment.js; this only drives input and rendering.
+
+  startDeployment() {
+    this.phase = 'deployment';
+    this.zoneTiles = this.drawTileHighlights(
+      this.deploymentZone,
+      DEPLOYMENT_ZONE_COLOR,
+      DEPLOYMENT_ZONE_ALPHA,
+    );
+    this.setCursor(this.deploymentZone[0].x, this.deploymentZone[0].y);
+    this.openDeploymentMenu(PLACE_UNITS_INDEX);
+  }
+
+  setDeploymentStep(step) {
+    gameStore.setState({ deploymentStep: step });
+  }
+
+  updateDeployment(dx, dy, confirm, cancel) {
+    if (this.deploymentMenu) {
+      this.updateDeploymentMenu(dy, confirm);
+      return;
+    }
+
+    if (this.rosterMenu) {
+      this.updateRosterMenu(dy, confirm, cancel);
+      return;
+    }
+
+    // Placing: the cursor roams the map; only valid zone tiles accept confirm.
+    if (confirm) {
+      this.tryPlaceUnit();
+      return;
+    }
+    if (cancel) {
+      this.placingUnitId = null;
+      this.openRosterMenu();
+      return;
+    }
+    if (dx !== 0 || dy !== 0) this.setCursor(this.cursor.x + dx, this.cursor.y + dy);
+  }
+
+  // Start is rebuilt each time so it enables once a unit has been placed.
+  openDeploymentMenu(selectedIndex) {
+    const actions = getDeploymentActions({ canStart: canStartBattle(this.grid, this.roster) });
+    this.publishMenu('deploymentMenu', selectIndex(createActionMenu(actions), selectedIndex));
+    this.setDeploymentStep('menu');
+  }
+
+  updateDeploymentMenu(dy, confirm) {
+    if (confirm) {
+      const action = getSelectedAction(this.deploymentMenu);
+      if (action?.id === 'place-units') {
+        this.publishMenu('deploymentMenu', null);
+        this.openRosterMenu();
+      } else if (action?.id === 'start' && !action.disabled) {
+        this.startBattle();
+      }
+      return;
+    }
+
+    if (dy !== 0) this.publishMenu('deploymentMenu', moveSelection(this.deploymentMenu, dy));
+  }
+
+  openRosterMenu() {
+    const entries = this.roster.map((id) => {
+      const unit = this.units.get(id);
+      return toRosterEntryView({
+        id,
+        unit,
+        frame: UNIT_FRAMES[unit.team] ?? UNIT_FRAMES.player,
+        placed: isPlaced(this.grid, id),
+      });
+    });
+    this.publishMenu('rosterMenu', createActionMenu(entries));
+    this.setDeploymentStep('roster');
+  }
+
+  updateRosterMenu(dy, confirm, cancel) {
+    if (cancel) {
+      this.publishMenu('rosterMenu', null);
+      this.openDeploymentMenu(PLACE_UNITS_INDEX);
+      return;
+    }
+
+    if (confirm) {
+      const entry = getSelectedAction(this.rosterMenu);
+      if (!entry) return;
+      this.publishMenu('rosterMenu', null);
+      this.beginPlacing(entry.id);
+      return;
+    }
+
+    if (dy !== 0) this.publishMenu('rosterMenu', moveSelection(this.rosterMenu, dy));
+  }
+
+  // Starts the cursor where the unit already stands, or on the first open
+  // zone tile if it hasn't been placed yet.
+  beginPlacing(unitId) {
+    this.placingUnitId = unitId;
+    const tile =
+      findUnit(this.grid, unitId) ??
+      getFirstOpenTile(this.grid, this.deploymentZone) ??
+      this.deploymentZone[0];
+    this.setCursor(tile.x, tile.y);
+    this.setDeploymentStep('placing');
+  }
+
+  tryPlaceUnit() {
+    const unitId = this.placingUnitId;
+    const { x, y } = this.cursor;
+    if (!canPlaceUnit(this.grid, this.deploymentZone, unitId, x, y)) return;
+
+    this.grid = placeUnit(this.grid, this.deploymentZone, unitId, x, y);
+    const sprite = this.unitSprites.get(unitId);
+    if (sprite) {
+      const pos = gridToWorld(x, y, TILE_SIZE);
+      sprite.setPosition(pos.x, pos.y);
+    } else {
+      this.addUnitSprite(unitId, x, y);
+    }
+
+    this.placingUnitId = null;
+    this.updateHoveredUnit();
+    this.openDeploymentMenu(START_INDEX);
+  }
+
+  // Ends deployment: clears the zone and hands input to the battle, with
+  // the cursor on the first deployed unit.
+  startBattle() {
+    for (const tile of this.zoneTiles ?? []) tile.destroy();
+    this.zoneTiles = null;
+    this.publishMenu('deploymentMenu', null);
+    this.phase = 'battle';
+    gameStore.setState({ phase: 'battle', deploymentStep: null });
+
+    const first = this.roster.map((id) => findUnit(this.grid, id)).find(Boolean);
+    if (first) this.setCursor(first.x, first.y);
   }
 
   // Options for src/game/movement.js: allies can be walked through, anyone
@@ -228,7 +372,13 @@ export class GridScene extends Phaser.Scene {
 
   showRange(mode, tiles, color, alpha) {
     this.rangeMode = mode;
-    this.rangeTiles = tiles.map((tile) => {
+    this.rangeTiles = this.drawTileHighlights(tiles, color, alpha);
+  }
+
+  // Draws a translucent square over each tile, under units and the cursor.
+  // Returns the rectangles so the caller can destroy them later.
+  drawTileHighlights(tiles, color, alpha) {
+    return tiles.map((tile) => {
       const pos = gridToWorld(tile.x, tile.y, TILE_SIZE);
       return this.add
         .rectangle(pos.x, pos.y, TILE_SIZE, TILE_SIZE, color, alpha)
@@ -398,20 +548,24 @@ export class GridScene extends Phaser.Scene {
     map.createLayer(0, tileset, 0, 0);
   }
 
-  // Draws a sprite per unit and keeps them in this.unitSprites (unitId ->
-  // sprite) so later moves can find the sprite to reposition.
+  // Draws a sprite per unit on the grid and keeps them in this.unitSprites
+  // (unitId -> sprite) so later moves can find the sprite to reposition.
+  // Units placed during deployment get theirs from addUnitSprite.
   renderUnits(grid) {
     this.unitSprites = new Map();
     for (const cell of grid.cells) {
-      if (!cell.unitId) continue;
-      const unit = this.units.get(cell.unitId);
-      const { x, y } = gridToWorld(cell.x, cell.y, TILE_SIZE);
-      const sprite = this.add
-        .sprite(x, y, TILESET_KEY, UNIT_FRAMES[unit.team] ?? UNIT_FRAMES.player)
-        .setOrigin(0, 0)
-        .setDepth(0.75)
-        .setData('unit', unit);
-      this.unitSprites.set(cell.unitId, sprite);
+      if (cell.unitId) this.addUnitSprite(cell.unitId, cell.x, cell.y);
     }
+  }
+
+  addUnitSprite(unitId, gridX, gridY) {
+    const unit = this.units.get(unitId);
+    const { x, y } = gridToWorld(gridX, gridY, TILE_SIZE);
+    const sprite = this.add
+      .sprite(x, y, TILESET_KEY, UNIT_FRAMES[unit.team] ?? UNIT_FRAMES.player)
+      .setOrigin(0, 0)
+      .setDepth(0.75)
+      .setData('unit', unit);
+    this.unitSprites.set(unitId, sprite);
   }
 }
