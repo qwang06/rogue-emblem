@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { HEALTH_POTION, MANA_POTION } from './items.js';
 import { Unit } from './Unit.js';
 
 function makeUnit(overrides = {}) {
@@ -123,6 +124,65 @@ describe('Unit', () => {
       unit.spendMana(1);
       unit.restoreMana(999);
       expect(unit.mana).toBe(unit.maxMana);
+    });
+  });
+
+  describe('items', () => {
+    it('carries no items by default', () => {
+      expect(makeUnit().items).toEqual([]);
+    });
+
+    it('starts with the items it was given, as a frozen inventory', () => {
+      const unit = makeUnit({ items: [{ item: HEALTH_POTION, quantity: 2 }] });
+      expect(unit.items).toEqual([{ item: HEALTH_POTION, quantity: 2 }]);
+      expect(Object.isFrozen(unit.items)).toBe(true);
+    });
+  });
+
+  describe('useItem', () => {
+    const stocked = () =>
+      makeUnit({
+        items: [
+          { item: HEALTH_POTION, quantity: 2 },
+          { item: MANA_POTION, quantity: 1 },
+        ],
+      });
+
+    it('restores health with a health potion and uses one up', () => {
+      const unit = stocked();
+      unit.takeDamage(7);
+      expect(unit.useItem('health-potion')).toEqual({ item: HEALTH_POTION, amount: HEALTH_POTION.amount });
+      expect(unit.health).toBe(3 + HEALTH_POTION.amount);
+      expect(unit.items[0].quantity).toBe(1);
+    });
+
+    it('restores mana with a mana potion and drops the empty entry', () => {
+      const unit = stocked();
+      unit.spendMana(5);
+      expect(unit.useItem('mana-potion').amount).toBe(MANA_POTION.amount);
+      expect(unit.mana).toBe(MANA_POTION.amount);
+      expect(unit.items.map((entry) => entry.item)).toEqual([HEALTH_POTION]);
+    });
+
+    it('reports only what was actually restored near the maximum', () => {
+      const unit = stocked();
+      unit.takeDamage(1);
+      expect(unit.useItem('health-potion').amount).toBe(1);
+      expect(unit.health).toBe(unit.maxHealth);
+    });
+
+    it('still uses the item up when it restores nothing', () => {
+      const unit = stocked();
+      expect(unit.useItem('mana-potion').amount).toBe(0);
+      expect(unit.mana).toBe(5);
+      expect(unit.items).toHaveLength(1);
+    });
+
+    it('throws for an item it does not carry, changing nothing', () => {
+      const unit = makeUnit();
+      unit.takeDamage(5);
+      expect(() => unit.useItem('health-potion')).toThrow();
+      expect(unit.health).toBe(5);
     });
   });
 

@@ -9,6 +9,7 @@ import {
   toUnitView,
   worldToScreen,
 } from './views.js';
+import { HEALTH_POTION } from '../game/items.js';
 import { createTurnState, markDone } from '../game/turns.js';
 
 const makeUnit = () =>
@@ -33,7 +34,24 @@ describe('toUnitView', () => {
       defense: 2,
       movement: 5,
       range: 1,
+      items: [],
     });
+  });
+
+  it('lists the items the unit carries', () => {
+    const unit = new Unit({
+      name: 'Soldier',
+      health: 10,
+      attack: 4,
+      defense: 2,
+      movement: 5,
+      team: 'player',
+      items: [{ item: HEALTH_POTION, quantity: 2 }],
+    });
+    const view = toUnitView(unit);
+    expect(view.items).toEqual([{ id: 'health-potion', label: 'Health Potion', quantity: 2 }]);
+    expect(Object.isFrozen(view.items)).toBe(true);
+    expect(Object.isFrozen(view.items[0])).toBe(true);
   });
 
   it('is a detached, frozen snapshot', () => {
@@ -77,8 +95,21 @@ describe('toCanvasFraction', () => {
 describe('toDamagePopupView', () => {
   it('copies the popup fields into a frozen snapshot', () => {
     const view = toDamagePopupView({ id: 1, amount: 3, x: 40, y: 20, durationMs: 700, extra: true });
-    expect(view).toEqual({ id: 1, amount: 3, x: 40, y: 20, durationMs: 700 });
+    expect(view).toEqual({ id: 1, amount: 3, kind: 'damage', text: '3', x: 40, y: 20, durationMs: 700 });
     expect(Object.isFrozen(view)).toBe(true);
+  });
+
+  it('labels health and mana recovery', () => {
+    expect(toDamagePopupView({ id: 1, amount: 5, kind: 'health', x: 0, y: 0, durationMs: 700 }).text).toBe('+5 HP');
+    expect(toDamagePopupView({ id: 1, amount: 3, kind: 'mana', x: 0, y: 0, durationMs: 700 }).text).toBe('+3 MP');
+  });
+
+  it('shows a recovery of 0 rather than hiding it', () => {
+    expect(toDamagePopupView({ id: 1, amount: 0, kind: 'health', x: 0, y: 0, durationMs: 700 }).text).toBe('+0 HP');
+  });
+
+  it('falls back to the bare number for an unknown kind', () => {
+    expect(toDamagePopupView({ id: 1, amount: 4, kind: 'poison', x: 0, y: 0, durationMs: 700 }).text).toBe('4');
   });
 });
 

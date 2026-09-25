@@ -3,7 +3,7 @@ import { UnitSprite } from './UnitSprite.jsx';
 import { useGameStore } from './useGameStore.js';
 
 // Sidebar card for the unit under the cursor: portrait, level, HP/MP
-// meters, and combat stats. Holds its place with a hint when nothing is
+// meters, combat stats, and the items it carries. Holds its place with a hint when nothing is
 // hovered, so the sidebar doesn't jump around.
 export function UnitPanel() {
   const unit = useGameStore((state) => state.hoveredUnit);
@@ -39,6 +39,20 @@ export function UnitPanel() {
         <Stat label="MOV" value={unit.movement} />
         <Stat label="RNG" value={unit.range} />
       </dl>
+
+      <h3 className="unit-panel__subtitle">Items</h3>
+      {unit.items.length > 0 ? (
+        <ul className="unit-panel__items">
+          {unit.items.map((item) => (
+            <li key={item.id} className="unit-panel__item">
+              <span>{item.label}</span>
+              <span className="unit-panel__item-quantity">×{item.quantity}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="unit-panel__no-items">None</p>
+      )}
     </section>
   );
 }

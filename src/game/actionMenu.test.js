@@ -36,6 +36,11 @@ describe('getUnitActions', () => {
     expect(actions.filter((a) => a.disabled).map((a) => a.id)).toEqual(['move', 'skill']);
   });
 
+  it('disables Item when the unit carries no items', () => {
+    const actions = getUnitActions({ hasSkills: true, hasItems: false });
+    expect(actions.filter((a) => a.disabled).map((a) => a.id)).toEqual(['item']);
+  });
+
   it('keeps the unit action order', () => {
     expect(getUnitActions({ hasSkills: false }).map((a) => a.id)).toEqual(UNIT_ACTIONS.map((a) => a.id));
   });

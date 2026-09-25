@@ -2,10 +2,25 @@
 // just stats and the state changes every unit shares (taking damage,
 // healing, dying, spending mana, leveling up). Specific unit types extend
 // this and set their own class and stats; the skills a unit knows come
-// from its class's skill tree and its level (see skills.js).
+// from its class's skill tree and its level (see skills.js). Items it
+// carries are an inventory from items.js.
+
+import { createInventory, findItem, getItemRecovery, removeItem } from './items.js';
 
 export class Unit {
-  constructor({ name, unitClass = null, level = 1, health, mana = 0, attack, defense, movement, range = 1, team }) {
+  constructor({
+    name,
+    unitClass = null,
+    level = 1,
+    health,
+    mana = 0,
+    attack,
+    defense,
+    movement,
+    range = 1,
+    team,
+    items = [],
+  }) {
     this.name = name;
     this.unitClass = unitClass;
     this.level = level;
@@ -18,6 +33,7 @@ export class Unit {
     this.movement = movement;
     this.range = range;
     this.team = team;
+    this.items = createInventory(items);
   }
 
   isAlive() {
@@ -46,6 +62,22 @@ export class Unit {
   restoreMana(amount) {
     this.mana = Math.min(this.maxMana, this.mana + amount);
     return this.mana;
+  }
+
+  // Uses one of itemId from the inventory, restoring its stat. Returns
+  // { item, amount } with the amount actually restored. Throws if the unit
+  // doesn't carry the item — check canUseItem first to avoid wasting one.
+  useItem(itemId) {
+    const entry = findItem(this.items, itemId);
+    if (!entry) {
+      throw new Error(`${this.name} has no ${itemId}`);
+    }
+    const { item } = entry;
+    const amount = getItemRecovery(this, item);
+    if (item.stat === 'health') this.heal(amount);
+    else if (item.stat === 'mana') this.restoreMana(amount);
+    this.items = removeItem(this.items, itemId);
+    return { item, amount };
   }
 
   levelUp() {

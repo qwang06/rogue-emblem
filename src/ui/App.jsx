@@ -4,6 +4,7 @@ import { ControlsPanel } from './ControlsPanel.jsx';
 import { DamagePopups } from './DamagePopups.jsx';
 import { DeploymentBanner } from './DeploymentBanner.jsx';
 import { DeploymentMenu } from './DeploymentMenu.jsx';
+import { ItemMenu } from './ItemMenu.jsx';
 import { PageHeader } from './PageHeader.jsx';
 import { PauseMenu } from './PauseMenu.jsx';
 import { PhaseBanner } from './PhaseBanner.jsx';
@@ -43,6 +44,7 @@ export function App() {
               <RosterMenu />
               <ActionMenu />
               <SkillMenu />
+              <ItemMenu />
               <DamagePopups />
               <PhaseBanner />
               <PauseMenu />
