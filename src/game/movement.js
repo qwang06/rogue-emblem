@@ -111,3 +111,44 @@ export function getMovePath(grid, origin, destination, movement, options = {}) {
   }
   return path;
 }
+
+// Total movement points spent walking path (the origin, path[0], is free).
+export function getPathCost(grid, path, terrainCosts = TERRAIN_MOVE_COSTS) {
+  let cost = 0;
+  for (const { x, y } of path.slice(1)) {
+    cost += getMoveCost(getCell(grid, x, y).terrain, terrainCosts);
+  }
+  return cost;
+}
+
+function isAdjacent(a, b) {
+  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y) === 1;
+}
+
+// Updates a planned route as the cursor moves to target, so the route
+// follows the way the player traced it rather than snapping to the
+// cheapest one. path starts at the mover's origin. In order:
+//   - target already on the path: cut the path back to it (backtracking);
+//   - target one step past the end, enterable, and still within movement:
+//     append it;
+//   - otherwise: the cheapest route to target, from getMovePath;
+//   - and if target can't be reached at all, the path is left unchanged.
+// May end on a tile the mover can pass through but not stop on (an ally);
+// callers check the end is a valid destination before moving. Takes the
+// same options as getMovementRange. Never mutates path.
+export function extendMovePath(grid, path, target, movement, options = {}) {
+  const { terrainCosts = TERRAIN_MOVE_COSTS, canPassThrough = () => false } = options;
+  if (!isInBounds(grid, target.x, target.y)) return path;
+
+  const index = path.findIndex(({ x, y }) => x === target.x && y === target.y);
+  if (index !== -1) return index === path.length - 1 ? path : path.slice(0, index + 1);
+
+  const cell = getCell(grid, target.x, target.y);
+  const enterable = !cell.unitId || canPassThrough(cell.unitId);
+  if (enterable && isAdjacent(path[path.length - 1], target)) {
+    const extended = [...path, { x: target.x, y: target.y }];
+    if (getPathCost(grid, extended, terrainCosts) <= movement) return extended;
+  }
+
+  return getMovePath(grid, path[0], target, movement, options) ?? path;
+}

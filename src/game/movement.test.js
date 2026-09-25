@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { createGrid, setTerrain, setUnit } from './grid.js';
-import { getMoveCost, getMovePath, getMovementRange } from './movement.js';
+import {
+  extendMovePath,
+  getMoveCost,
+  getMovePath,
+  getMovementRange,
+  getPathCost,
+} from './movement.js';
 
 // Sorted "x,y" strings so assertions don't depend on traversal order.
 function tiles(range) {
@@ -221,5 +227,112 @@ describe('getMovePath', () => {
       expect(path !== null).toBe(inRange);
       if (path) expect(isStepByStep(path)).toBe(true);
     }
+  });
+});
+
+describe('getPathCost', () => {
+  it('is zero for a path that stays put', () => {
+    const grid = createGrid(3, 3, 'grass');
+    expect(getPathCost(grid, [{ x: 1, y: 1 }])).toBe(0);
+  });
+
+  it('sums the cost of each tile entered, not the origin', () => {
+    let grid = createGrid(3, 1, 'grass');
+    grid = setTerrain(grid, 0, 0, 'forest');
+    grid = setTerrain(grid, 2, 0, 'forest');
+    const path = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }];
+    expect(getPathCost(grid, path, { forest: 3 })).toBe(4);
+  });
+});
+
+describe('extendMovePath', () => {
+  const origin = { x: 2, y: 2 };
+
+  it('appends a step next to the end of the path', () => {
+    const grid = createGrid(5, 5, 'grass');
+    const path = extendMovePath(grid, [origin], { x: 3, y: 2 }, 3);
+    expect(path).toEqual([origin, { x: 3, y: 2 }]);
+  });
+
+  it('follows the traced route instead of the cheapest one', () => {
+    const grid = createGrid(5, 5, 'grass');
+    let path = [origin];
+    for (const step of [{ x: 2, y: 1 }, { x: 3, y: 1 }, { x: 3, y: 2 }]) {
+      path = extendMovePath(grid, path, step, 3);
+    }
+    expect(path).toEqual([origin, { x: 2, y: 1 }, { x: 3, y: 1 }, { x: 3, y: 2 }]);
+  });
+
+  it('cuts back to a tile already on the path', () => {
+    const grid = createGrid(5, 5, 'grass');
+    const path = [origin, { x: 3, y: 2 }, { x: 4, y: 2 }];
+    expect(extendMovePath(grid, path, { x: 3, y: 2 }, 3)).toEqual([origin, { x: 3, y: 2 }]);
+    expect(extendMovePath(grid, path, origin, 3)).toEqual([origin]);
+  });
+
+  it('returns the same path when the target is already its end', () => {
+    const grid = createGrid(5, 5, 'grass');
+    const path = [origin, { x: 3, y: 2 }];
+    expect(extendMovePath(grid, path, { x: 3, y: 2 }, 3)).toBe(path);
+  });
+
+  it('falls back to the cheapest route once the trace runs out of movement', () => {
+    const grid = createGrid(5, 5, 'grass');
+    // Wandered up and over; stepping down again would cost 3 > 2.
+    const path = [origin, { x: 2, y: 1 }, { x: 3, y: 1 }];
+    const next = extendMovePath(grid, path, { x: 3, y: 2 }, 2);
+    expect(next).toEqual([origin, { x: 3, y: 2 }]);
+  });
+
+  it('falls back to the cheapest route when the target is not adjacent', () => {
+    const grid = createGrid(5, 5, 'grass');
+    const next = extendMovePath(grid, [origin], { x: 4, y: 2 }, 3);
+    expect(next).toEqual(getMovePath(grid, origin, { x: 4, y: 2 }, 3));
+  });
+
+  it('keeps the path when the target is out of range', () => {
+    const grid = createGrid(5, 5, 'grass');
+    const path = [origin, { x: 3, y: 2 }];
+    expect(extendMovePath(grid, path, { x: 4, y: 4 }, 1)).toBe(path);
+  });
+
+  it('keeps the path when the target is out of bounds', () => {
+    const grid = createGrid(5, 5, 'grass');
+    const path = [origin];
+    expect(extendMovePath(grid, path, { x: -1, y: 2 }, 3)).toBe(path);
+  });
+
+  it('never steps onto impassable terrain', () => {
+    const grid = setTerrain(createGrid(5, 5, 'grass'), 3, 2, 'water');
+    const path = [origin];
+    expect(extendMovePath(grid, path, { x: 3, y: 2 }, 3)).toBe(path);
+  });
+
+  it('does not step onto a blocking unit', () => {
+    const grid = setUnit(createGrid(5, 5, 'grass'), 3, 2, 'enemy');
+    const path = [origin];
+    expect(extendMovePath(grid, path, { x: 3, y: 2 }, 3)).toBe(path);
+  });
+
+  it('traces through units the mover may pass', () => {
+    const grid = setUnit(createGrid(5, 5, 'grass'), 3, 2, 'ally');
+    const options = { canPassThrough: (id) => id === 'ally' };
+    let path = extendMovePath(grid, [origin], { x: 3, y: 2 }, 3, options);
+    path = extendMovePath(grid, path, { x: 4, y: 2 }, 3, options);
+    expect(path).toEqual([origin, { x: 3, y: 2 }, { x: 4, y: 2 }]);
+  });
+
+  it('respects terrain costs when extending', () => {
+    const grid = setTerrain(createGrid(5, 5, 'grass'), 3, 2, 'forest');
+    const options = { terrainCosts: { forest: 2 } };
+    const path = extendMovePath(grid, [origin], { x: 3, y: 2 }, 1, options);
+    expect(path).toEqual([origin]);
+  });
+
+  it('does not mutate the path it is given', () => {
+    const grid = createGrid(5, 5, 'grass');
+    const path = [origin];
+    extendMovePath(grid, path, { x: 3, y: 2 }, 3);
+    expect(path).toEqual([origin]);
   });
 });
