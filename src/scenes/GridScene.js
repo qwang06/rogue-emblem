@@ -15,6 +15,7 @@ import { calculateSkillDamage, findLearnedSkill, getLearnedSkills, getSkillActio
 import { calculateDamage, getAttackRange, getAttackTargets } from '../game/combat.js';
 import { createCursor, moveCursor } from '../game/cursor.js';
 import { createDemoLevel } from '../game/demoLevel.js';
+import { getItemActions } from '../game/items.js';
 import { planRushAction } from '../game/enemyAI.js';
 import {
   canPlaceUnit,
@@ -47,7 +48,7 @@ import {
   UI_FRAMES,
   UNIT_FRAMES,
 } from '../game/tileset.js';
-import { playFireBurst, playGrenadeThrow, playHitFlash } from './effects.js';
+import { POTION_COLORS, playFireBurst, playGrenadeThrow, playHitFlash, playPotionGlow } from './effects.js';
 
 // 20x15 tiles of 16px art, drawn at 3x.
 export const CANVAS_WIDTH = 960;
@@ -125,6 +126,7 @@ export class GridScene extends Phaser.Scene {
     this.phase = 'deployment'; // 'deployment' | 'battle'
     this.actionMenu = null;
     this.skillMenu = null; // the active unit's skills, opened from the action menu
+    this.itemMenu = null; // the active unit's items, opened from the action menu
     this.deploymentMenu = null; // Place Units / Start
     this.rosterMenu = null; // units to pick from when placing
     this.pauseMenu = null; // End Turn / Main Menu / Settings, opened with cancel on the bare map
@@ -173,6 +175,11 @@ export class GridScene extends Phaser.Scene {
 
     if (this.skillMenu) {
       this.updateSkillMenu(dy, confirm, cancel);
+      return;
+    }
+
+    if (this.itemMenu) {
+      this.updateItemMenu(dy, confirm, cancel);
       return;
     }
 
@@ -244,14 +251,12 @@ export class GridScene extends Phaser.Scene {
         this.showAttackRange();
       } else if (action?.id === 'skill') {
         this.openSkillMenu();
+      } else if (action?.id === 'item') {
+        this.openItemMenu();
       } else if (action?.id === 'wait') {
         const { unitId } = this.activeUnit;
         this.activeUnit = null;
         this.finishPlayerAction(unitId);
-      } else {
-        // Item isn't implemented yet — choosing it just closes the menu.
-        console.info(`Action selected: ${action?.id}`);
-        this.activeUnit = null;
       }
       return;
     }
@@ -264,12 +269,14 @@ export class GridScene extends Phaser.Scene {
   }
 
   // Opens the action menu for the active unit. Skill is only available
-  // once the unit has learned a skill, and Move until it has moved.
+  // once the unit has learned a skill, Item while it carries any, and Move
+  // until it has moved.
   openActionMenu() {
     const { unit, unitId } = this.activeUnit;
     const hasSkills = getLearnedSkills(unit.unitClass, unit.level).length > 0;
+    const hasItems = unit.items.length > 0;
     const moved = hasMoved(this.turnState, unitId);
-    this.setActionMenu(createActionMenu(getUnitActions({ hasSkills, hasMoved: moved })));
+    this.setActionMenu(createActionMenu(getUnitActions({ hasSkills, hasItems, hasMoved: moved })));
   }
 
   openSkillMenu() {
@@ -302,8 +309,36 @@ export class GridScene extends Phaser.Scene {
     if (dy !== 0) this.publishMenu('skillMenu', moveSelection(this.skillMenu, dy));
   }
 
+  openItemMenu() {
+    const { unit } = this.activeUnit;
+    this.publishMenu('itemMenu', createActionMenu(getItemActions(unit, unit.items)));
+  }
+
+  // While the item menu is open it owns input: up/down move the highlight,
+  // cancel goes back to the action menu, and confirm uses an item that
+  // would restore something. Items are used on the unit itself, so there's
+  // no range to aim.
+  updateItemMenu(dy, confirm, cancel) {
+    if (cancel) {
+      this.publishMenu('itemMenu', null);
+      this.openActionMenu();
+      return;
+    }
+
+    if (confirm) {
+      const item = getSelectedAction(this.itemMenu);
+      if (!item || item.disabled) return;
+      this.publishMenu('itemMenu', null);
+      this.useItem(item.id);
+      return;
+    }
+
+    if (dy !== 0) this.publishMenu('itemMenu', moveSelection(this.itemMenu, dy));
+  }
+
   // Keeps a menu on the scene and mirrors it to the store field of the same
-  // name (actionMenu, skillMenu, deploymentMenu, rosterMenu) for React to draw.
+  // name (actionMenu, skillMenu, itemMenu, deploymentMenu, rosterMenu) for
+  // React to draw.
   publishMenu(key, menu) {
     if (menu === this[key]) return;
     this[key] = menu;
@@ -820,9 +855,29 @@ export class GridScene extends Phaser.Scene {
     });
   }
 
-  // Publishes a damage number rising from the top center of a sprite for
-  // the React HUD to draw, and takes it back down once it's run its course.
-  showDamagePopup(sprite, amount) {
+  // The active unit uses one of its items on itself. The effect (from
+  // Unit.useItem and src/game/items.js) applies right away; the unit glows
+  // in the potion's color while a "+N HP" / "+N MP" popup rises over it,
+  // and using an item ends its action.
+  useItem(itemId) {
+    const { unit, unitId } = this.activeUnit;
+    const { item, amount } = unit.useItem(itemId);
+    this.publishHoveredUnit();
+
+    this.inputLocked = true;
+    const sprite = this.unitSprites.get(unitId);
+    const center = { x: sprite.x + TILE_SIZE / 2, y: sprite.y + TILE_SIZE / 2 };
+    this.showDamagePopup(sprite, amount, item.stat);
+    playPotionGlow(this, sprite, center, POTION_COLORS[item.stat], () => {
+      this.activeUnit = null;
+      this.finishPlayerAction(unitId);
+    });
+  }
+
+  // Publishes a number rising from the top center of a sprite for the
+  // React HUD to draw — damage by default, or a recovery when `kind` is
+  // 'health' / 'mana' — and takes it back down once it's run its course.
+  showDamagePopup(sprite, amount, kind = 'damage') {
     const { worldView, zoom } = this.cameras.main;
     const { x, y } = toCanvasFraction(
       worldToScreen(
@@ -834,6 +889,7 @@ export class GridScene extends Phaser.Scene {
     const popup = toDamagePopupView({
       id: this.nextPopupId++,
       amount,
+      kind,
       x,
       y,
       durationMs: DAMAGE_POPUP_DURATION_MS,

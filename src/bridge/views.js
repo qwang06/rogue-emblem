@@ -17,6 +17,9 @@ export function toUnitView(unit) {
     defense: unit.defense,
     movement: unit.movement,
     range: unit.range,
+    items: Object.freeze(
+      (unit.items ?? []).map(({ item, quantity }) => Object.freeze({ id: item.id, label: item.label, quantity })),
+    ),
   });
 }
 
@@ -37,11 +40,22 @@ export function toCanvasFraction(point, size) {
   return { x: point.x / size.width, y: point.y / size.height };
 }
 
-// Snapshot of one floating damage number. `x`/`y` are the point the number
+// How each kind of popup reads: damage is the bare number, recovery says
+// what was restored.
+const POPUP_TEXT = Object.freeze({
+  damage: (amount) => `${amount}`,
+  health: (amount) => `+${amount} HP`,
+  mana: (amount) => `+${amount} MP`,
+});
+
+// Snapshot of one floating number over a unit: damage taken, or health or
+// mana recovered (`kind` is 'damage' | 'health' | 'mana', which the UI
+// colors by; `text` is what it shows). `x`/`y` are the point the number
 // rises from, as fractions of the canvas (see toCanvasFraction); `durationMs` is how long it stays up,
 // so the UI animation and the store entry's lifetime agree.
-export function toDamagePopupView({ id, amount, x, y, durationMs }) {
-  return Object.freeze({ id, amount, x, y, durationMs });
+export function toDamagePopupView({ id, amount, kind = 'damage', x, y, durationMs }) {
+  const text = (POPUP_TEXT[kind] ?? POPUP_TEXT.damage)(amount);
+  return Object.freeze({ id, amount, kind, text, x, y, durationMs });
 }
 
 // Snapshot of one unit in the deployment roster menu: its id, the name to

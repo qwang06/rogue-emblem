@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { HEALTH_POTION, MANA_POTION, STARTING_ITEMS } from './items.js';
 import { SOLDIER_STATS, Soldier } from './Soldier.js';
 import { Unit } from './Unit.js';
 
@@ -31,5 +32,23 @@ describe('Soldier', () => {
     const soldier = new Soldier({ name: 'Enemy Soldier', team: 'enemy', level: 3 });
     expect(soldier.name).toBe('Enemy Soldier');
     expect(soldier.level).toBe(3);
+  });
+
+  it('carries a health potion and a mana potion', () => {
+    const soldier = new Soldier({ team: 'player' });
+    expect(soldier.items).toEqual(STARTING_ITEMS);
+    expect(soldier.items.map((entry) => entry.item)).toEqual([HEALTH_POTION, MANA_POTION]);
+  });
+
+  it('can be given other items', () => {
+    expect(new Soldier({ team: 'enemy', items: [] }).items).toEqual([]);
+  });
+
+  it("doesn't share its inventory with other soldiers", () => {
+    const a = new Soldier({ team: 'player' });
+    const b = new Soldier({ team: 'player' });
+    a.health = 1;
+    a.useItem('health-potion');
+    expect(b.items).toEqual(STARTING_ITEMS);
   });
 });

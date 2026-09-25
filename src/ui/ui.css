@@ -298,6 +298,36 @@ body {
   color: #fff8e2;
 }
 
+.unit-panel__subtitle {
+  margin: 12px 0 6px;
+  font-size: 0.625rem;
+  font-weight: normal;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--parchment-dim);
+}
+
+.unit-panel__items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.unit-panel__item {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+}
+
+.unit-panel__item-quantity,
+.unit-panel__no-items {
+  color: var(--parchment-dim);
+}
+
+.unit-panel__no-items {
+  margin: 0;
+}
+
 .controls-panel__list {
   margin: 0;
 }
@@ -503,6 +533,15 @@ kbd {
   animation-name: damage-popup-rise;
   animation-timing-function: ease-in;
   animation-fill-mode: forwards;
+}
+
+/* Recovery reads in the color of the meter it fills. */
+.damage-popup--health {
+  color: #86efac;
+}
+
+.damage-popup--mana {
+  color: #93c5fd;
 }
 
 @keyframes damage-popup-rise {
