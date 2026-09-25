@@ -16,3 +16,20 @@ export function toUnitView(unit) {
     range: unit.range,
   });
 }
+
+// Converts a world-space point to screen pixels (relative to the canvas and
+// the #ui overlay that shares its box). `camera` is the visible world
+// rectangle's top-left plus the zoom: { x, y, zoom }.
+export function worldToScreen(point, camera) {
+  return {
+    x: (point.x - camera.x) * camera.zoom,
+    y: (point.y - camera.y) * camera.zoom,
+  };
+}
+
+// Snapshot of one floating damage number. `x`/`y` are screen pixels for
+// the point the number rises from; `durationMs` is how long it stays up,
+// so the UI animation and the store entry's lifetime agree.
+export function toDamagePopupView({ id, amount, x, y, durationMs }) {
+  return Object.freeze({ id, amount, x, y, durationMs });
+}

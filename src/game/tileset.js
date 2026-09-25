@@ -12,8 +12,10 @@ export const TERRAIN_FRAMES = {
   water: 37,
 };
 
+// Unit sprites keyed by team, so every unit on a side shares its faction color.
 export const UNIT_FRAMES = {
-  placeholder: 124, // green soldier sprite
+  player: 124, // green soldier sprite
+  enemy: 160, // red soldier sprite
 };
 
 export const UI_FRAMES = {

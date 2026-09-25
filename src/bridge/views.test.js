@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Unit } from '../game/Unit.js';
-import { toUnitView } from './views.js';
+import { toDamagePopupView, toUnitView, worldToScreen } from './views.js';
 
 const makeUnit = () =>
   new Unit({ name: 'Soldier', health: 10, attack: 4, defense: 2, movement: 5, team: 'player' });
@@ -29,6 +29,28 @@ describe('toUnitView', () => {
     const view = toUnitView(unit);
     unit.takeDamage(3);
     expect(view.health).toBe(10);
+    expect(Object.isFrozen(view)).toBe(true);
+  });
+});
+
+describe('worldToScreen', () => {
+  it('is the identity for an unscrolled, unzoomed camera', () => {
+    expect(worldToScreen({ x: 16, y: 32 }, { x: 0, y: 0, zoom: 1 })).toEqual({ x: 16, y: 32 });
+  });
+
+  it('offsets by the camera position and scales by zoom', () => {
+    expect(worldToScreen({ x: 16, y: 32 }, { x: 8, y: -4, zoom: 2 })).toEqual({ x: 16, y: 72 });
+  });
+
+  it('can land off screen', () => {
+    expect(worldToScreen({ x: 0, y: 0 }, { x: 10, y: 10, zoom: 2 })).toEqual({ x: -20, y: -20 });
+  });
+});
+
+describe('toDamagePopupView', () => {
+  it('copies the popup fields into a frozen snapshot', () => {
+    const view = toDamagePopupView({ id: 1, amount: 3, x: 40, y: 20, durationMs: 700, extra: true });
+    expect(view).toEqual({ id: 1, amount: 3, x: 40, y: 20, durationMs: 700 });
     expect(Object.isFrozen(view)).toBe(true);
   });
 });

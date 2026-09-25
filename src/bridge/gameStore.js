@@ -5,4 +5,5 @@ import { createStore } from './store.js';
 export const gameStore = createStore({
   hoveredUnit: null, // UnitView from toUnitView(), or null
   actionMenu: null, // frozen menu from src/game/actionMenu.js while open, or null
+  damagePopups: [], // DamagePopupViews from toDamagePopupView() currently on screen
 });
