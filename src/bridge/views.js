@@ -42,3 +42,19 @@ export function toDamagePopupView({ id, amount, x, y, durationMs }) {
 export function toRosterEntryView({ id, unit, frame, placed }) {
   return Object.freeze({ id, label: unit.name, frame, placed });
 }
+
+const PHASE_LABELS = Object.freeze({ player: 'Player Phase', enemy: 'Enemy Phase' });
+
+// Snapshot of whose phase it is, from a turn state (src/game/turns.js):
+// the turn number, the team, and the phase's display name.
+export function toTurnView(turnState) {
+  if (!turnState) return null;
+  const { turn, team } = turnState;
+  return Object.freeze({ turn, team, label: PHASE_LABELS[team] ?? team });
+}
+
+// Snapshot of the banner announcing a new phase. `id` changes per banner so
+// the UI restarts its animation; `durationMs` is how long it stays up.
+export function toPhaseBannerView({ id, turnState, durationMs }) {
+  return Object.freeze({ id, ...toTurnView(turnState), durationMs });
+}

@@ -26,6 +26,16 @@ describe('getUnitActions', () => {
     expect(actions.some((a) => a.disabled)).toBe(false);
   });
 
+  it('disables Move once the unit has moved', () => {
+    const actions = getUnitActions({ hasSkills: true, hasMoved: true });
+    expect(actions.filter((a) => a.disabled).map((a) => a.id)).toEqual(['move']);
+  });
+
+  it('can disable Move and Skill together', () => {
+    const actions = getUnitActions({ hasSkills: false, hasMoved: true });
+    expect(actions.filter((a) => a.disabled).map((a) => a.id)).toEqual(['move', 'skill']);
+  });
+
   it('keeps the unit action order', () => {
     expect(getUnitActions({ hasSkills: false }).map((a) => a.id)).toEqual(UNIT_ACTIONS.map((a) => a.id));
   });

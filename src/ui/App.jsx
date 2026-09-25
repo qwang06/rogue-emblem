@@ -1,11 +1,14 @@
 import { ActionMenu } from './ActionMenu.jsx';
+import { BattleResult } from './BattleResult.jsx';
 import { DamagePopups } from './DamagePopups.jsx';
 import { DeploymentBanner } from './DeploymentBanner.jsx';
 import { DeploymentMenu } from './DeploymentMenu.jsx';
 import { PauseMenu } from './PauseMenu.jsx';
+import { PhaseBanner } from './PhaseBanner.jsx';
 import { RosterMenu } from './RosterMenu.jsx';
 import { SkillMenu } from './SkillMenu.jsx';
 import { TitleScreen } from './TitleScreen.jsx';
+import { TurnIndicator } from './TurnIndicator.jsx';
 import { UnitPanel } from './UnitPanel.jsx';
 import { useGameStore } from './useGameStore.js';
 
@@ -22,13 +25,16 @@ export function App() {
       ) : (
         <>
           <DeploymentBanner />
+          <TurnIndicator />
           <UnitPanel />
           <DeploymentMenu />
           <RosterMenu />
           <ActionMenu />
           <SkillMenu />
           <DamagePopups />
+          <PhaseBanner />
           <PauseMenu />
+          <BattleResult />
         </>
       )}
     </div>

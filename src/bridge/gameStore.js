@@ -12,6 +12,9 @@ export const BATTLE_STATE_DEFAULTS = Object.freeze({
   actionMenu: null, // frozen menu from src/game/actionMenu.js while open, or null
   skillMenu: null, // frozen menu of the active unit's skills (from getSkillActions) while open, or null
   damagePopups: [], // DamagePopupViews from toDamagePopupView() currently on screen
+  turn: null, // TurnView from toTurnView() once the battle starts, else null
+  phaseBanner: null, // PhaseBannerView from toPhaseBannerView() while a phase is being announced, or null
+  battleOutcome: null, // 'victory' | 'defeat' once the battle is decided, else null
 });
 
 // The single app-wide store shared by Phaser (writer) and React (reader).

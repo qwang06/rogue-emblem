@@ -3,9 +3,9 @@ import { createActionMenu, getSelectedAction, moveSelection } from './actionMenu
 import { PAUSE_ACTIONS } from './pauseMenu.js';
 
 describe('PAUSE_ACTIONS', () => {
-  it('lists Main Menu then Settings', () => {
-    expect(PAUSE_ACTIONS.map((a) => a.id)).toEqual(['main-menu', 'settings']);
-    expect(PAUSE_ACTIONS.map((a) => a.label)).toEqual(['Main Menu', 'Settings']);
+  it('lists End Turn, Main Menu, then Settings', () => {
+    expect(PAUSE_ACTIONS.map((a) => a.id)).toEqual(['end-turn', 'main-menu', 'settings']);
+    expect(PAUSE_ACTIONS.map((a) => a.label)).toEqual(['End Turn', 'Main Menu', 'Settings']);
   });
 
   it('is frozen', () => {
@@ -13,10 +13,10 @@ describe('PAUSE_ACTIONS', () => {
     expect(PAUSE_ACTIONS.every(Object.isFrozen)).toBe(true);
   });
 
-  it('starts on Main Menu and wraps between the two entries', () => {
+  it('starts on End Turn and wraps around the entries', () => {
     const menu = createActionMenu(PAUSE_ACTIONS);
-    expect(getSelectedAction(menu).id).toBe('main-menu');
-    expect(getSelectedAction(moveSelection(menu, 1)).id).toBe('settings');
+    expect(getSelectedAction(menu).id).toBe('end-turn');
+    expect(getSelectedAction(moveSelection(menu, 1)).id).toBe('main-menu');
     expect(getSelectedAction(moveSelection(menu, -1)).id).toBe('settings');
   });
 });

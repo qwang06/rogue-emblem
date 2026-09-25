@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { Unit } from '../game/Unit.js';
-import { toDamagePopupView, toRosterEntryView, toUnitView, worldToScreen } from './views.js';
+import {
+  toDamagePopupView,
+  toPhaseBannerView,
+  toRosterEntryView,
+  toTurnView,
+  toUnitView,
+  worldToScreen,
+} from './views.js';
+import { createTurnState, markDone } from '../game/turns.js';
 
 const makeUnit = () =>
   new Unit({ name: 'Soldier', health: 10, mana: 5, attack: 4, defense: 2, movement: 5, team: 'player' });
@@ -62,6 +70,33 @@ describe('toRosterEntryView', () => {
   it('snapshots the unit for the roster menu', () => {
     const view = toRosterEntryView({ id: 'soldier', unit: makeUnit(), frame: 124, placed: false });
     expect(view).toEqual({ id: 'soldier', label: 'Soldier', frame: 124, placed: false });
+    expect(Object.isFrozen(view)).toBe(true);
+  });
+});
+
+describe('toTurnView', () => {
+  it('returns null before the battle starts', () => {
+    expect(toTurnView(null)).toBeNull();
+  });
+
+  it('names the player and enemy phases', () => {
+    expect(toTurnView(createTurnState(1, 'player'))).toEqual({ turn: 1, team: 'player', label: 'Player Phase' });
+    expect(toTurnView(createTurnState(4, 'enemy'))).toEqual({ turn: 4, team: 'enemy', label: 'Enemy Phase' });
+  });
+
+  it('leaves out who has moved or acted', () => {
+    expect(toTurnView(markDone(createTurnState(), 'a'))).not.toHaveProperty('done');
+  });
+
+  it('is frozen', () => {
+    expect(Object.isFrozen(toTurnView(createTurnState()))).toBe(true);
+  });
+});
+
+describe('toPhaseBannerView', () => {
+  it('carries the id, phase, and duration', () => {
+    const view = toPhaseBannerView({ id: 3, turnState: createTurnState(2, 'enemy'), durationMs: 1200 });
+    expect(view).toEqual({ id: 3, turn: 2, team: 'enemy', label: 'Enemy Phase', durationMs: 1200 });
     expect(Object.isFrozen(view)).toBe(true);
   });
 });
