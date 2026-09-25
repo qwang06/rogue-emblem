@@ -7,34 +7,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet" />
-    <style>
-      html, body {
-        margin: 0;
-        padding: 0;
-        background: #000;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100%;
-      }
-      /* Phaser canvas and React HUD share one box; #ui overlays #game. */
-      #stage {
-        position: relative;
-        width: 640px;
-        height: 480px;
-      }
-      #ui {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-      }
-    </style>
   </head>
   <body>
-    <div id="stage">
-      <div id="game"></div>
-      <div id="ui"></div>
-    </div>
+    <!-- React renders the whole page, including the #game box Phaser draws into. -->
+    <div id="root"></div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

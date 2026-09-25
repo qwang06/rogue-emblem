@@ -1,8 +1,10 @@
 import { ActionMenu } from './ActionMenu.jsx';
 import { BattleResult } from './BattleResult.jsx';
+import { ControlsPanel } from './ControlsPanel.jsx';
 import { DamagePopups } from './DamagePopups.jsx';
 import { DeploymentBanner } from './DeploymentBanner.jsx';
 import { DeploymentMenu } from './DeploymentMenu.jsx';
+import { PageHeader } from './PageHeader.jsx';
 import { PauseMenu } from './PauseMenu.jsx';
 import { PhaseBanner } from './PhaseBanner.jsx';
 import { RosterMenu } from './RosterMenu.jsx';
@@ -12,31 +14,50 @@ import { TurnIndicator } from './TurnIndicator.jsx';
 import { UnitPanel } from './UnitPanel.jsx';
 import { useGameStore } from './useGameStore.js';
 
-// Root of the UI overlay. Sits on top of the Phaser canvas; the root
+// Root of the page. The battle layout is always mounted, because #game is
+// where Phaser put its canvas at boot; the title screen covers it while
+// `screen` is 'title'.
+//
+// Inside the stage, the HUD overlay sits on top of the canvas: the overlay
 // ignores pointer events so clicks fall through to the game, and
-// individual panels opt back in via CSS.
+// individual panels opt back in via CSS. Things tied to the map (menus,
+// banners, popups) go there; readouts that don't need to cover the map go
+// in the header or sidebar.
 export function App() {
   const screen = useGameStore((state) => state.screen);
 
   return (
-    <div className="hud">
-      {screen === 'title' ? (
-        <TitleScreen />
-      ) : (
-        <>
-          <DeploymentBanner />
-          <TurnIndicator />
+    <div className="page">
+      <PageHeader>
+        <DeploymentBanner />
+        <TurnIndicator />
+      </PageHeader>
+
+      <main className="page__main">
+        {/* The stage is the largest 4:3 box that fits this area (see ui.css). */}
+        <div className="stage-area">
+          <div className="stage">
+            <div id="game" role="img" aria-label="Battle map" />
+            <div className="hud">
+              <DeploymentMenu />
+              <RosterMenu />
+              <ActionMenu />
+              <SkillMenu />
+              <DamagePopups />
+              <PhaseBanner />
+              <PauseMenu />
+              <BattleResult />
+            </div>
+          </div>
+        </div>
+
+        <aside className="sidebar">
           <UnitPanel />
-          <DeploymentMenu />
-          <RosterMenu />
-          <ActionMenu />
-          <SkillMenu />
-          <DamagePopups />
-          <PhaseBanner />
-          <PauseMenu />
-          <BattleResult />
-        </>
-      )}
+          <ControlsPanel />
+        </aside>
+      </main>
+
+      {screen === 'title' && <TitleScreen />}
     </div>
   );
 }

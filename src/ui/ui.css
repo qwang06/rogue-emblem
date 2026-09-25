@@ -1,48 +1,363 @@
-.hud {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  font-family: ui-monospace, 'Courier New', monospace;
-  color: #fff;
+/* ---- Theme ----------------------------------------------------------- */
+
+/* The title screen's navy-and-gold palette, shared by the whole page. */
+:root {
+  --gold: #e8c872;
+  --gold-dim: #a8893f;
+  --ink: #0c1226;
+  --navy: #16204a;
+  --parchment: #f3ead3;
+  --parchment-dim: rgb(243 234 211 / 65%);
+  --serif: 'Cinzel', Georgia, 'Times New Roman', serif;
+  --mono: ui-monospace, 'Courier New', monospace;
 }
 
-.panel {
-  pointer-events: auto;
-  background: rgb(0 0 0 / 75%);
-  border: 1px solid #fff;
-  padding: 8px;
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background:
+    radial-gradient(ellipse at 50% 30%, rgb(64 86 160 / 35%), transparent 70%),
+    linear-gradient(180deg, #111a3a 0%, var(--ink) 100%) fixed;
+  background-color: var(--ink);
+  color: var(--parchment);
 }
 
-.unit-panel {
-  position: absolute;
-  left: 8px;
-  bottom: 8px;
-  width: 140px;
+/* ---- Page layout ---------------------------------------------------- */
+
+/* The page fills the window exactly: the header takes its height, the
+   sidebar a fixed width, and the map scales to whatever is left. */
+.page {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
   box-sizing: border-box;
+  /* On wide windows the map is limited by height; cap the page at the width
+     the map can use at this height (plus the sidebar), so the map and sidebar
+     stay together, centered. The vertical overhead is the page padding and
+     gap, the header, and the stage area's padding. */
+  --page-overhead-y: calc(16px * 3 + 2.75rem + 13px + 12px);
+  width: 100%;
+  max-width: calc((100dvh - var(--page-overhead-y)) * 4 / 3 + 12px + 16px + 16.25rem + 32px);
+  margin: 0 auto;
+}
+
+.page-header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  /* Fits the two-line deployment status, so the map doesn't shift when the battle starts. */
+  min-height: 2.75rem;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgb(168 137 63 / 45%);
+}
+
+.page-header__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--gold);
+  text-shadow: 0 2px 0 #5a4318;
+}
+
+.page-header__gem {
+  font-size: 0.875rem;
+  text-shadow: none;
+}
+
+.page-header__status {
+  font-family: var(--serif);
+}
+
+.page__main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 16px;
+}
+
+/* A size container, so the stage can size itself from both of its dimensions.
+   The padding leaves room for the stage's frame, drawn outside its box. */
+.stage-area {
+  flex: 1;
+  min-width: 0;
+  padding: 6px;
+  container-type: size;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* The canvas and the HUD overlay share this box: the largest 4:3 rectangle
+   that fits the stage area. Phaser's FIT mode scales the canvas to fill it.
+   The frame is outline + shadow rather than a border so it takes no space
+   and doesn't throw the aspect ratio off. */
+.stage {
+  position: relative;
+  flex: none;
+  width: min(100cqw, 100cqh * 4 / 3);
+  aspect-ratio: 4 / 3;
+  line-height: 0;
+  outline: 2px solid var(--gold-dim);
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 5px var(--ink),
+    0 0 0 6px rgb(232 200 114 / 25%),
+    0 8px 24px 6px rgb(0 0 0 / 45%);
+}
+
+#game {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 16.25rem;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Narrow windows: the sidebar drops below the map, the map takes the full
+   width, and the page scrolls. */
+@media (max-width: 48rem) {
+  .page {
+    height: auto;
+    min-height: 100dvh;
+    max-width: none;
+  }
+
+  .page__main {
+    flex-direction: column;
+  }
+
+  .stage-area {
+    flex: none;
+    container-type: inline-size;
+  }
+
+  .stage {
+    width: 100cqw;
+  }
+
+  .sidebar {
+    width: auto;
+    overflow: visible;
+  }
+}
+
+/* ---- Sidebar -------------------------------------------------------- */
+
+.side-panel {
+  padding: 12px 14px;
+  background: rgb(22 32 74 / 85%);
+  border: 2px solid var(--gold-dim);
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+}
+
+.side-panel__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-family: var(--serif);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+/* A thin gold rule trailing the title, like the one on the title screen. */
+.side-panel__title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--gold-dim), transparent);
+}
+
+.unit-panel--player .side-panel__title {
+  color: #93c5fd;
+}
+
+.unit-panel--enemy .side-panel__title {
+  color: #fca5a5;
+}
+
+.unit-panel__placeholder {
+  margin: 0;
+  padding: 24px 0;
+  text-align: center;
+  color: var(--parchment-dim);
+}
+
+.unit-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.unit-panel__portrait {
+  display: flex;
+  padding: 4px;
+  background: rgb(0 0 0 / 30%);
+  border: 1px solid rgb(168 137 63 / 60%);
+  border-radius: 2px;
 }
 
 .unit-panel__name {
-  margin: 0 0 6px;
-  font-size: 12px;
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff8e2;
+}
+
+.unit-panel__level {
+  margin: 2px 0 0;
+  color: var(--parchment-dim);
+}
+
+.meter {
+  display: grid;
+  grid-template-columns: 24px 1fr 48px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.meter__label {
+  color: var(--parchment-dim);
+}
+
+.meter__track {
+  height: 8px;
+  background: rgb(0 0 0 / 45%);
+  border: 1px solid rgb(168 137 63 / 45%);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.meter__fill {
+  display: block;
+  height: 100%;
+  transition: width 200ms ease-out;
+}
+
+.meter--hp .meter__fill {
+  background: linear-gradient(180deg, #86efac, #22c55e);
+}
+
+.meter--mp .meter__fill {
+  background: linear-gradient(180deg, #93c5fd, #3b82f6);
+}
+
+.meter__value {
+  text-align: right;
 }
 
 .unit-panel__stats {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 2px 10px;
-  margin: 0;
-  font-size: 10px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 12px 0 0;
 }
 
-.unit-panel__stats dd {
+.unit-panel__stat {
+  padding: 4px 0;
+  text-align: center;
+  background: rgb(0 0 0 / 25%);
+  border-radius: 2px;
+}
+
+.unit-panel__stat dt {
+  font-size: 0.625rem;
+  color: var(--parchment-dim);
+}
+
+.unit-panel__stat dd {
+  margin: 2px 0 0;
+  font-size: 0.9375rem;
+  color: #fff8e2;
+}
+
+.controls-panel__list {
   margin: 0;
+}
+
+.controls-panel__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.controls-panel__row dt {
+  display: flex;
+  gap: 3px;
+}
+
+.controls-panel__row dd {
+  margin: 0;
+  color: var(--parchment-dim);
+}
+
+kbd {
+  min-width: 12px;
+  padding: 1px 5px;
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  text-align: center;
+  color: var(--parchment);
+  background: rgb(0 0 0 / 35%);
+  border: 1px solid var(--gold-dim);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+}
+
+/* ---- HUD overlay (on top of the canvas) ---------------------------- */
+
+.hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-family: var(--mono);
+  line-height: normal;
+  color: var(--parchment);
+}
+
+.panel {
+  pointer-events: auto;
+  background: rgb(22 32 74 / 90%);
+  border: 2px solid var(--gold-dim);
+  border-radius: 4px;
+  box-shadow: 0 6px 16px rgb(0 0 0 / 45%);
+  padding: 8px;
 }
 
 .action-menu {
   position: absolute;
-  right: 8px;
-  top: 8px;
-  min-width: 90px;
+  right: 12px;
+  top: 12px;
+  min-width: 7.5rem;
   box-sizing: border-box;
 }
 
@@ -50,28 +365,31 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  font-size: 12px;
+  font-size: 0.9375rem;
 }
 
 .action-menu__item {
-  padding: 2px 4px 2px 14px;
+  padding: 3px 8px 3px 20px;
   position: relative;
 }
 
 .action-menu__item--selected {
-  background: rgb(255 255 255 / 20%);
+  color: #fff8e2;
+  background: linear-gradient(90deg, rgb(232 200 114 / 22%), transparent);
 }
 
 .action-menu__item--selected::before {
   content: '▶';
   position: absolute;
-  left: 2px;
-  font-size: 8px;
-  line-height: 16px;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.5625rem;
+  color: var(--gold);
 }
 
 .action-menu__item--disabled {
-  color: rgb(255 255 255 / 40%);
+  color: rgb(243 234 211 / 35%);
 }
 
 /* ---- Skill menu ------------------------------------------------------- */
@@ -89,37 +407,36 @@
 /* ---- Deployment phase ------------------------------------------------- */
 
 .deployment-banner {
-  position: absolute;
-  left: 50%;
-  top: 8px;
-  transform: translateX(-50%);
-  padding: 4px 12px;
-  text-align: center;
+  text-align: right;
 }
 
 .deployment-banner__title {
   margin: 0;
-  font-size: 12px;
-  letter-spacing: 2px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 3px;
   text-transform: uppercase;
+  color: var(--gold);
 }
 
 .deployment-banner__hint {
   margin: 2px 0 0;
-  font-size: 10px;
-  color: rgb(255 255 255 / 70%);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--parchment-dim);
 }
 
 .roster-menu {
-  min-width: 140px;
+  min-width: 9rem;
 }
 
 .roster-menu__title {
   margin: 0 0 6px;
-  font-size: 10px;
-  letter-spacing: 1px;
+  font-family: var(--serif);
+  font-size: 0.75rem;
+  letter-spacing: 2px;
   text-transform: uppercase;
-  color: rgb(255 255 255 / 70%);
+  color: var(--gold);
 }
 
 .roster-menu__item {
@@ -135,8 +452,8 @@
 
 .roster-menu__tag {
   margin-left: auto;
-  font-size: 8px;
-  color: rgb(255 255 255 / 60%);
+  font-size: 0.625rem;
+  color: var(--parchment-dim);
 }
 
 .unit-sprite {
@@ -154,27 +471,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgb(0 0 0 / 45%);
+  background: rgb(12 18 38 / 55%);
 }
 
 .pause-menu {
   position: static;
-  min-width: 140px;
+  min-width: 9rem;
 }
 
 .pause-menu__title {
   margin: 0 0 6px;
-  font-size: 10px;
-  letter-spacing: 1px;
+  font-family: var(--serif);
+  font-size: 0.75rem;
+  letter-spacing: 2px;
   text-transform: uppercase;
   text-align: center;
-  color: rgb(255 255 255 / 70%);
+  color: var(--gold);
 }
 
 .damage-popup {
   position: absolute;
   transform: translate(-50%, -100%);
-  font-size: 18px;
+  font-size: 1.625rem;
   font-weight: bold;
   color: #fff;
   text-shadow:
@@ -201,20 +519,17 @@
 /* ---- Turns --------------------------------------------------------- */
 
 .turn-indicator {
-  position: absolute;
-  left: 50%;
-  top: 8px;
-  transform: translateX(-50%);
   display: flex;
-  gap: 10px;
-  padding: 4px 12px;
-  font-size: 12px;
-  letter-spacing: 1px;
+  align-items: baseline;
+  gap: 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 3px;
   text-transform: uppercase;
 }
 
 .turn-indicator__turn {
-  color: rgb(255 255 255 / 70%);
+  color: var(--parchment-dim);
 }
 
 .turn-indicator--player .turn-indicator__phase {
@@ -233,9 +548,10 @@
   transform: translateY(-50%);
   padding: 14px 0;
   text-align: center;
-  font-size: 28px;
-  font-weight: bold;
-  letter-spacing: 6px;
+  font-family: var(--serif);
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 8px;
   text-transform: uppercase;
   text-shadow: 0 2px 0 rgb(0 0 0 / 60%);
   animation-name: phase-banner-sweep;
@@ -270,14 +586,15 @@
 
 .battle-result {
   position: static;
-  min-width: 200px;
-  padding: 16px 24px;
+  min-width: 17.5rem;
+  padding: 20px 32px;
   text-align: center;
 }
 
 .battle-result__title {
   margin: 0;
-  font-size: 32px;
+  font-family: var(--serif);
+  font-size: 2.75rem;
   letter-spacing: 6px;
   text-transform: uppercase;
 }
@@ -292,31 +609,27 @@
 
 .battle-result__hint {
   margin: 8px 0 0;
-  font-size: 10px;
-  color: rgb(255 255 255 / 70%);
+  font-size: 0.75rem;
+  color: var(--parchment-dim);
 }
 
 /* ---- Title screen ---------------------------------------------------- */
 
 .title-screen {
-  --title-gold: #e8c872;
-  --title-gold-dim: #a8893f;
-  --title-ink: #0c1226;
-  --title-panel: #16204a;
-
-  position: absolute;
+  position: fixed;
   inset: 0;
+  z-index: 10;
   pointer-events: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 36px;
+  gap: 48px;
   background:
     radial-gradient(ellipse at 50% 35%, rgb(64 86 160 / 45%), transparent 65%),
-    linear-gradient(180deg, #111a3a 0%, var(--title-ink) 100%);
-  font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
-  color: #f3ead3;
+    linear-gradient(180deg, #111a3a 0%, var(--ink) 100%);
+  font-family: var(--serif);
+  color: var(--parchment);
   user-select: none;
 }
 
@@ -327,19 +640,19 @@
 }
 
 .title-screen__crest {
-  width: 56px;
-  height: 56px;
-  color: var(--title-gold);
+  width: 80px;
+  height: 80px;
+  color: var(--gold);
   margin-bottom: 12px;
   filter: drop-shadow(0 0 8px rgb(232 200 114 / 35%));
 }
 
 .title-screen__title {
   margin: 0;
-  font-size: 44px;
+  font-size: 4rem;
   font-weight: 700;
-  letter-spacing: 4px;
-  color: var(--title-gold);
+  letter-spacing: 6px;
+  color: var(--gold);
   text-shadow:
     0 2px 0 #5a4318,
     0 0 18px rgb(232 200 114 / 30%);
@@ -350,10 +663,10 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  width: 240px;
-  margin-top: 10px;
-  color: var(--title-gold);
-  font-size: 10px;
+  width: 320px;
+  margin-top: 12px;
+  color: var(--gold);
+  font-size: 0.625rem;
 }
 
 .title-screen__rule::before,
@@ -361,18 +674,18 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--title-gold-dim));
+  background: linear-gradient(90deg, transparent, var(--gold-dim));
 }
 
 .title-screen__rule::after {
-  background: linear-gradient(90deg, var(--title-gold-dim), transparent);
+  background: linear-gradient(90deg, var(--gold-dim), transparent);
 }
 
 .title-menu {
-  min-width: 180px;
-  padding: 10px 6px;
+  min-width: 14rem;
+  padding: 12px 8px;
   background: rgb(22 32 74 / 85%);
-  border: 2px solid var(--title-gold-dim);
+  border: 2px solid var(--gold-dim);
   outline: 1px solid rgb(232 200 114 / 25%);
   outline-offset: 3px;
   border-radius: 4px;
@@ -394,7 +707,7 @@
   border-radius: 2px;
   background: none;
   font: inherit;
-  font-size: 18px;
+  font-size: 1.375rem;
   letter-spacing: 2px;
   color: #cfc6ae;
   text-align: center;
@@ -406,7 +719,7 @@
 }
 
 .title-menu__item:focus-visible {
-  outline: 1px dashed var(--title-gold-dim);
+  outline: 1px dashed var(--gold-dim);
 }
 
 .title-menu__item--selected {
@@ -420,16 +733,41 @@
   left: 10px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 10px;
-  color: var(--title-gold);
+  font-size: 0.625rem;
+  color: var(--gold);
 }
 
 .title-screen__hint {
   position: absolute;
   bottom: 14px;
   margin: 0;
-  font-family: ui-monospace, 'Courier New', monospace;
-  font-size: 10px;
+  font-family: var(--mono);
+  font-size: 0.75rem;
   letter-spacing: 1px;
-  color: rgb(243 234 211 / 45%);
+  color: var(--parchment-dim);
+}
+
+/* ---- Reduced motion ------------------------------------------------- */
+
+/* No sliding or rising: banners and damage numbers just appear, hold, and
+   fade (their timing still comes from the published durations). */
+@media (prefers-reduced-motion: reduce) {
+  .phase-banner,
+  .damage-popup {
+    animation-name: fade-out-late;
+  }
+
+  .meter__fill {
+    transition: none;
+  }
+}
+
+@keyframes fade-out-late {
+  0%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }

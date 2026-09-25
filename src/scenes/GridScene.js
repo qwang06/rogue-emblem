@@ -4,6 +4,7 @@ import { BATTLE_STATE_DEFAULTS, gameStore } from '../bridge/gameStore.js';
 import {
   toDamagePopupView,
   toPhaseBannerView,
+  toCanvasFraction,
   toRosterEntryView,
   toTurnView,
   toUnitView,
@@ -48,9 +49,10 @@ import {
 } from '../game/tileset.js';
 import { playFireBurst, playGrenadeThrow, playHitFlash } from './effects.js';
 
-export const CANVAS_WIDTH = 640;
-export const CANVAS_HEIGHT = 480;
-const ZOOM = 2;
+// 20x15 tiles of 16px art, drawn at 3x.
+export const CANVAS_WIDTH = 960;
+export const CANVAS_HEIGHT = 720;
+const ZOOM = 3;
 const MOVE_RANGE_COLOR = 0x3b82f6;
 const MOVE_RANGE_ALPHA = 0.45;
 const ATTACK_RANGE_COLOR = 0xef4444;
@@ -822,9 +824,12 @@ export class GridScene extends Phaser.Scene {
   // the React HUD to draw, and takes it back down once it's run its course.
   showDamagePopup(sprite, amount) {
     const { worldView, zoom } = this.cameras.main;
-    const { x, y } = worldToScreen(
-      { x: sprite.x + sprite.displayWidth / 2, y: sprite.y },
-      { x: worldView.x, y: worldView.y, zoom },
+    const { x, y } = toCanvasFraction(
+      worldToScreen(
+        { x: sprite.x + sprite.displayWidth / 2, y: sprite.y },
+        { x: worldView.x, y: worldView.y, zoom },
+      ),
+      { width: CANVAS_WIDTH, height: CANVAS_HEIGHT },
     );
     const popup = toDamagePopupView({
       id: this.nextPopupId++,
