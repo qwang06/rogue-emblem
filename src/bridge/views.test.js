@@ -5,6 +5,7 @@ import {
   toPhaseBannerView,
   toRosterEntryView,
   toTurnView,
+  toCanvasFraction,
   toUnitView,
   worldToScreen,
 } from './views.js';
@@ -55,6 +56,21 @@ describe('worldToScreen', () => {
 
   it('can land off screen', () => {
     expect(worldToScreen({ x: 0, y: 0 }, { x: 10, y: 10, zoom: 2 })).toEqual({ x: -20, y: -20 });
+  });
+});
+
+describe('toCanvasFraction', () => {
+  it('divides by the canvas size', () => {
+    expect(toCanvasFraction({ x: 480, y: 180 }, { width: 960, height: 720 })).toEqual({ x: 0.5, y: 0.25 });
+  });
+
+  it('maps the corners to 0 and 1', () => {
+    expect(toCanvasFraction({ x: 0, y: 0 }, { width: 960, height: 720 })).toEqual({ x: 0, y: 0 });
+    expect(toCanvasFraction({ x: 960, y: 720 }, { width: 960, height: 720 })).toEqual({ x: 1, y: 1 });
+  });
+
+  it('goes outside 0–1 for points off the canvas', () => {
+    expect(toCanvasFraction({ x: -96, y: 1440 }, { width: 960, height: 720 })).toEqual({ x: -0.1, y: 2 });
   });
 });
 

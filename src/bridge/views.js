@@ -21,7 +21,7 @@ export function toUnitView(unit) {
 }
 
 // Converts a world-space point to screen pixels (relative to the canvas and
-// the #ui overlay that shares its box). `camera` is the visible world
+// the HUD overlay that shares its box), at the canvas's own resolution. `camera` is the visible world
 // rectangle's top-left plus the zoom: { x, y, zoom }.
 export function worldToScreen(point, camera) {
   return {
@@ -30,8 +30,15 @@ export function worldToScreen(point, camera) {
   };
 }
 
-// Snapshot of one floating damage number. `x`/`y` are screen pixels for
-// the point the number rises from; `durationMs` is how long it stays up,
+// Converts a point in canvas pixels to fractions (0–1) of the canvas size,
+// so map-anchored UI stays in place however large the canvas is displayed.
+// `size` is the canvas's { width, height }.
+export function toCanvasFraction(point, size) {
+  return { x: point.x / size.width, y: point.y / size.height };
+}
+
+// Snapshot of one floating damage number. `x`/`y` are the point the number
+// rises from, as fractions of the canvas (see toCanvasFraction); `durationMs` is how long it stays up,
 // so the UI animation and the store entry's lifetime agree.
 export function toDamagePopupView({ id, amount, x, y, durationMs }) {
   return Object.freeze({ id, amount, x, y, durationMs });
