@@ -42,9 +42,12 @@ src/
 ### `src/game/grid.js`
 Pure grid data structure for the tactics board. Grid state is `{ width, height, cells }`, cells stored row-major, each cell `{ x, y, terrain, unitId }`. All mutator-shaped functions (`setTerrain`, `setUnit`) return a **new** grid rather than mutating the input.
 
-Key functions: `createGrid`, `isInBounds`, `getCell`, `setTerrain`, `setUnit`, `moveUnit` (relocates a unit id, throwing if the source is empty or the target occupied), `findUnit` (where a unit id stands, or `null`), `getCornerTiles` (the first/last N tiles in reading order from the top-left/bottom-right corner — used for the deployment zone and enemy spawns), `getNeighbors` (orthogonal only — no diagonal movement), `gridToWorld` / `worldToGrid` (grid coordinates ↔ pixel coordinates).
+Key functions: `createGrid`, `isInBounds`, `getCell`, `setTerrain`, `setUnit`, `moveUnit` (relocates a unit id, throwing if the source is empty or the target occupied), `findUnit` (where a unit id stands, or `null`), `getCornerTiles` (the first/last N tiles in reading order from the top-left/bottom-right corner), `getNeighbors` (orthogonal only — no diagonal movement), `gridToWorld` / `worldToGrid` (grid coordinates ↔ pixel coordinates).
 
 Tested in `src/game/grid.test.js`.
+
+### `src/game/terrainMap.js`
+`parseTerrainMap(rows, legend)` builds a grid from a text layout — one string per row, one character per tile — so maps can be written as data that looks like the map. `DEFAULT_TERRAIN_LEGEND` maps `.` to grass and `~` to water. Throws on an empty map, ragged rows, or a character the legend doesn't define. Tested in `src/game/terrainMap.test.js`.
 
 ### `src/game/tileset.js`
 Constants describing the active tileset: tile size (16px), sheet dimensions, and named frame-index lookups (`TERRAIN_FRAMES`, `UNIT_FRAMES`, `UI_FRAMES`, `ARROW_FRAMES`) so scenes reference terrain/units/UI elements by name instead of magic frame numbers. `UNIT_FRAMES` is keyed by team, so each side shares one faction color. `getFramePosition(frame)` gives a frame's column/row on the sheet, so the React UI can crop a sprite out of the sheet image. Tested in `src/game/tileset.test.js`.
@@ -62,7 +65,7 @@ Pure state for the unit action menu. `UNIT_ACTIONS` lists the offered actions (M
 Pure rules for the **deployment phase** — the pre-battle step where the player places units from their roster onto a deployment zone (a list of `{ x, y }` tiles). `getDeploymentActions({ canStart })` builds the Place Units / Start menu entries (Start carries `disabled` until a unit is placed). `canPlaceUnit` accepts zone tiles that are empty or already hold that unit; `placeUnit` puts a unit there, lifting it off its previous tile (throws on an invalid tile). `isPlaced`, `canStartBattle(grid, roster)` (at least one roster unit on the map), and `getFirstOpenTile(grid, zone)` round it out. Tested in `src/game/deployment.test.js`.
 
 ### `src/game/demoLevel.js`
-`createDemoLevel(width, height)` builds the starting state of the demo battle as `{ grid, units, roster, deploymentZone }`: grass with a patch of water, three enemy `Soldier`s on the last three tiles of the bottom-right, the player's roster (three named `Soldier`s from `PLAYER_ROSTER`) kept off the map, and the first three tiles of the top-left as the deployment zone. `units` is the `unitId -> Unit` registry for both sides. Stand-in until levels are loaded from data. Tested in `src/game/demoLevel.test.js`.
+`createDemoLevel()` builds the starting state of the demo battle as `{ grid, units, roster, deploymentZone }`: the terrain comes from `DEMO_MAP` (a text layout parsed by `terrainMap.js`, sized to exactly fill the 20x15 tile view) — a small grass island on the left joined by a two-tile bridge to a large island on the right with arms reaching north and south, surrounded by water. Three enemy `Soldier`s stand at `ENEMY_POSITIONS` on the large island, the player's roster (three named `Soldier`s from `PLAYER_ROSTER`) is kept off the map, and `DEPLOYMENT_ZONE` (the west edge of the small island) is where they're placed. `units` is the `unitId -> Unit` registry for both sides. Stand-in until levels are loaded from data. Tested in `src/game/demoLevel.test.js`.
 
 ### `src/game/pauseMenu.js`
 `PAUSE_ACTIONS` — the pause menu's entries (End Turn, Main Menu, Settings) as frozen `{ id, label }`. Selection uses the `actionMenu.js` helpers. Tested in `src/game/pauseMenu.test.js`.
