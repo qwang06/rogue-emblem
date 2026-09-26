@@ -8,6 +8,7 @@ Living documentation of how Rogue Emblem is structured. This tracks the *shape* 
 - [React](https://react.dev/) for UI and the page around the game: the header, sidebar, HUD panels, menus, dialogs — anything that's DOM-shaped rather than world-shaped. React renders the whole page, including the box the Phaser canvas mounts into and a DOM overlay on top of it.
 - [Vite](https://vitejs.dev/) for dev server (hot reload) and production bundling.
 - [Vitest](https://vitest.dev/) for unit tests.
+- [GitHub Actions](https://docs.github.com/actions) (`.github/workflows/deploy.yml`) runs the tests, builds, and deploys to GitHub Pages on every push to `main`. Vite builds with a relative `base` so the game works from the Pages subpath.
 
 ## Layering
 
