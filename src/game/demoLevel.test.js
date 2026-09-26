@@ -1,11 +1,30 @@
 import { describe, expect, it } from 'vitest';
 import { canPlaceUnit } from './deployment.js';
-import { createDemoLevel, DEPLOYMENT_ZONE_SIZE, ENEMY_COUNT, PLAYER_ROSTER } from './demoLevel.js';
+import { createDemoLevel, DEMO_MAP, DEPLOYMENT_ZONE, ENEMY_POSITIONS, PLAYER_ROSTER } from './demoLevel.js';
 import { findUnit, getCell } from './grid.js';
+import { getMovePath } from './movement.js';
 import { Soldier } from './Soldier.js';
 
 describe('createDemoLevel', () => {
-  const level = createDemoLevel(20, 15);
+  const level = createDemoLevel();
+
+  it('builds its terrain from the demo map, sized to fill the 20x15 view', () => {
+    expect(level.grid.width).toBe(20);
+    expect(level.grid.height).toBe(15);
+    expect(level.grid.height).toBe(DEMO_MAP.length);
+  });
+
+  it('is only grass and water', () => {
+    const terrains = new Set(level.grid.cells.map((c) => c.terrain));
+    expect([...terrains].sort()).toEqual(['grass', 'water']);
+  });
+
+  it('separates the two islands with water except for the bridge', () => {
+    expect(getCell(level.grid, 7, 5).terrain).toBe('water');
+    expect(getCell(level.grid, 7, 7).terrain).toBe('grass');
+    expect(getCell(level.grid, 7, 8).terrain).toBe('grass');
+    expect(getCell(level.grid, 7, 9).terrain).toBe('water');
+  });
 
   it('starts with no player units on the map', () => {
     for (const unitId of level.roster) expect(findUnit(level.grid, unitId)).toBeNull();
@@ -23,15 +42,15 @@ describe('createDemoLevel', () => {
     expect(level.roster.length).toBeLessThanOrEqual(level.deploymentZone.length);
   });
 
-  it('places the enemies on the last tiles of the bottom-right', () => {
+  it('places the enemies on grass at their positions', () => {
     const enemies = level.grid.cells.filter((c) => c.unitId).map(({ x, y, unitId }) => ({ x, y, unitId }));
-    expect(enemies).toEqual([
-      { x: 17, y: 14, unitId: 'enemy-1' },
-      { x: 18, y: 14, unitId: 'enemy-2' },
-      { x: 19, y: 14, unitId: 'enemy-3' },
-    ]);
-    expect(enemies).toHaveLength(ENEMY_COUNT);
-    for (const { unitId } of enemies) expect(level.units.get(unitId).team).toBe('enemy');
+    expect(enemies.map(({ x, y }) => ({ x, y }))).toEqual(
+      [...ENEMY_POSITIONS].sort((a, b) => a.y - b.y || a.x - b.x),
+    );
+    for (const { x, y, unitId } of enemies) {
+      expect(getCell(level.grid, x, y).terrain).toBe('grass');
+      expect(level.units.get(unitId).team).toBe('enemy');
+    }
   });
 
   it('makes every unit a level 1 soldier', () => {
@@ -46,13 +65,9 @@ describe('createDemoLevel', () => {
     expect(a).not.toBe(b);
   });
 
-  it('makes the first tiles of the top-left the deployment zone', () => {
-    expect(level.deploymentZone).toEqual([
-      { x: 0, y: 0 },
-      { x: 1, y: 0 },
-      { x: 2, y: 0 },
-    ]);
-    expect(level.deploymentZone).toHaveLength(DEPLOYMENT_ZONE_SIZE);
+  it('uses the deployment zone tiles, as a copy', () => {
+    expect(level.deploymentZone).toEqual(DEPLOYMENT_ZONE);
+    expect(level.deploymentZone[0]).not.toBe(DEPLOYMENT_ZONE[0]);
   });
 
   it('leaves the whole deployment zone open and placeable', () => {
@@ -62,8 +77,18 @@ describe('createDemoLevel', () => {
     }
   });
 
+  it('lets every enemy walk to the deployment zone', () => {
+    for (const unitId of ['enemy-1', 'enemy-2', 'enemy-3']) {
+      const origin = findUnit(level.grid, unitId);
+      const path = getMovePath(level.grid, origin, level.deploymentZone[1], Infinity, {
+        canPassThrough: () => true,
+      });
+      expect(path).not.toBeNull();
+    }
+  });
+
   it('builds a fresh level each call', () => {
-    const other = createDemoLevel(20, 15);
+    const other = createDemoLevel();
     expect(other.units.get('soldier-1')).not.toBe(level.units.get('soldier-1'));
   });
 });

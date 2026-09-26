@@ -77,11 +77,6 @@ const ENEMY_ACTION_DELAY_MS = 300;
 // Tint for units that are done for the phase.
 const DONE_TINT = 0x808080;
 
-// Size the grid to fully cover the canvas at the current zoom, rounding up so
-// there's no gap of background visible at the edges.
-const GRID_WIDTH = Math.ceil(CANVAS_WIDTH / (TILE_SIZE * ZOOM));
-const GRID_HEIGHT = Math.ceil(CANVAS_HEIGHT / (TILE_SIZE * ZOOM));
-
 export class GridScene extends Phaser.Scene {
   constructor() {
     super('Grid');
@@ -99,7 +94,7 @@ export class GridScene extends Phaser.Scene {
     // battle left in the store, then enter the deployment phase.
     gameStore.setState({ ...BATTLE_STATE_DEFAULTS, phase: 'deployment' });
 
-    const level = createDemoLevel(GRID_WIDTH, GRID_HEIGHT);
+    const level = createDemoLevel();
     this.grid = level.grid;
     this.units = level.units; // unitId -> Unit, player roster and enemies alike
     this.roster = level.roster; // player unitIds that can be deployed
