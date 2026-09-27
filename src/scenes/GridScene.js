@@ -14,8 +14,10 @@ import {
 import { createActionMenu, getSelectedAction, getUnitActions, moveSelection, selectIndex } from '../game/actionMenu.js';
 import { calculateSkillDamage, findLearnedSkill, getLearnedSkills, getSkillActions } from '../game/skills.js';
 import { calculateDamage, getAttackRange, getAttackTargets } from '../game/combat.js';
+import { getFitZoom } from '../game/camera.js';
 import { createCursor, moveCursor } from '../game/cursor.js';
 import { createDemoLevel } from '../game/demoLevel.js';
+import { createTrainingLevel } from '../game/trainingLevel.js';
 import { getItemActions } from '../game/items.js';
 import { planRushAction } from '../game/enemyAI.js';
 import {
@@ -51,10 +53,11 @@ import {
 } from '../game/tileset.js';
 import { POTION_COLORS, playFireBurst, playGrenadeThrow, playHitFlash, playPotionGlow } from './effects.js';
 
-// 20x15 tiles of 16px art, drawn at 3x.
+// 20x15 tiles of 16px art at 3x. Maps are zoomed to fit the canvas, so the
+// 20x15 demo map draws at 3x and smaller maps (up to MAX_ZOOM) closer in.
 export const CANVAS_WIDTH = 960;
 export const CANVAS_HEIGHT = 720;
-const ZOOM = 3;
+const MAX_ZOOM = 8;
 const MOVE_RANGE_COLOR = 0x3b82f6;
 const MOVE_RANGE_ALPHA = 0.45;
 const ATTACK_RANGE_COLOR = 0xef4444;
@@ -90,12 +93,15 @@ export class GridScene extends Phaser.Scene {
     });
   }
 
-  create() {
+  // `setup` is the battle the title screen chose (gameStore's battleSetup):
+  // { mode: 'training', unitClass } for a training battle, else the demo.
+  create(setup) {
     // Every battle starts from a clean slate: clear anything a previous
-    // battle left in the store, then enter the deployment phase.
-    gameStore.setState({ ...BATTLE_STATE_DEFAULTS, phase: 'deployment' });
+    // battle left in the store.
+    gameStore.setState({ ...BATTLE_STATE_DEFAULTS });
 
-    const level = createDemoLevel();
+    const level =
+      setup?.mode === 'training' ? createTrainingLevel(setup.unitClass) : createDemoLevel();
     this.grid = level.grid;
     this.units = level.units; // unitId -> Unit, player roster and enemies alike
     this.roster = level.roster; // player unitIds that can be deployed
@@ -105,7 +111,9 @@ export class GridScene extends Phaser.Scene {
     this.renderUnits(this.grid);
     this.createCursor();
 
-    this.cameras.main.setZoom(ZOOM);
+    this.cameras.main.setZoom(
+      getFitZoom(this.grid, TILE_SIZE, { width: CANVAS_WIDTH, height: CANVAS_HEIGHT }, MAX_ZOOM),
+    );
     this.cameras.main.centerOn(
       (this.grid.width * TILE_SIZE) / 2,
       (this.grid.height * TILE_SIZE) / 2,
@@ -143,7 +151,10 @@ export class GridScene extends Phaser.Scene {
     this.hoveredUnit = null;
     this.nextPopupId = 1;
     this.updateHoveredUnit();
-    this.startDeployment();
+    // Levels with units to place open on deployment; others (e.g. training,
+    // where everyone starts on the map) go straight to the battle.
+    if (this.deploymentZone.length > 0) this.startDeployment();
+    else this.startBattle();
   }
 
   update() {
@@ -369,7 +380,7 @@ export class GridScene extends Phaser.Scene {
   // makes main.js remove this scene. The next Play starts a fresh battle.
   exitToTitle() {
     this.inputLocked = true;
-    gameStore.setState({ ...BATTLE_STATE_DEFAULTS, screen: 'title' });
+    gameStore.setState({ ...BATTLE_STATE_DEFAULTS, screen: 'title', battleSetup: null });
   }
 
   // ---- Deployment phase -------------------------------------------------
@@ -383,6 +394,7 @@ export class GridScene extends Phaser.Scene {
 
   startDeployment() {
     this.phase = 'deployment';
+    gameStore.setState({ phase: 'deployment' });
     this.zoneTiles = this.drawTileHighlights(
       this.deploymentZone,
       DEPLOYMENT_ZONE_COLOR,

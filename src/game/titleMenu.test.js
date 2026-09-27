@@ -3,9 +3,9 @@ import { createActionMenu, getSelectedAction, moveSelection } from './actionMenu
 import { TITLE_ACTIONS } from './titleMenu.js';
 
 describe('TITLE_ACTIONS', () => {
-  it('lists Play then Settings', () => {
-    expect(TITLE_ACTIONS.map((a) => a.id)).toEqual(['play', 'settings']);
-    expect(TITLE_ACTIONS.map((a) => a.label)).toEqual(['Play', 'Settings']);
+  it('lists Play, Training, then Settings', () => {
+    expect(TITLE_ACTIONS.map((a) => a.id)).toEqual(['play', 'training', 'settings']);
+    expect(TITLE_ACTIONS.map((a) => a.label)).toEqual(['Play', 'Training', 'Settings']);
   });
 
   it('is frozen', () => {
@@ -13,11 +13,11 @@ describe('TITLE_ACTIONS', () => {
     expect(TITLE_ACTIONS.every(Object.isFrozen)).toBe(true);
   });
 
-  it('starts on Play and wraps between the two entries', () => {
+  it('starts on Play and wraps around the entries', () => {
     const menu = createActionMenu(TITLE_ACTIONS);
     expect(getSelectedAction(menu).id).toBe('play');
-    expect(getSelectedAction(moveSelection(menu, 1)).id).toBe('settings');
+    expect(getSelectedAction(moveSelection(menu, 1)).id).toBe('training');
     expect(getSelectedAction(moveSelection(menu, -1)).id).toBe('settings');
-    expect(getSelectedAction(moveSelection(menu, 2)).id).toBe('play');
+    expect(getSelectedAction(moveSelection(menu, 3)).id).toBe('play');
   });
 });
