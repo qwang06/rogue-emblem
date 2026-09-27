@@ -22,8 +22,28 @@ export function getTrainingActions(classes = UNIT_CLASSES) {
   return Object.freeze(classes.map(({ id, label }) => Object.freeze({ id, label })));
 }
 
-// Returns { grid, units, roster, deploymentZone } like createDemoLevel, with
-// both units already placed and nothing to deploy (empty roster and zone).
+// The sparring partner's greeting before the bout, as a script for
+// src/game/dialog.js.
+export const TRAINING_OPENING_DIALOG = Object.freeze(
+  [
+    {
+      speaker: 'Sparring Partner',
+      team: 'enemy',
+      side: 'right',
+      text: "Ready when you are. Don't hold back on my account.",
+    },
+    {
+      speaker: 'Sparring Partner',
+      team: 'enemy',
+      side: 'right',
+      text: 'Move in close, pick your action, and show me what you can do.',
+    },
+  ].map(Object.freeze),
+);
+
+// Returns { grid, units, roster, deploymentZone, openingDialog } like
+// createDemoLevel, with both units already placed and nothing to deploy
+// (empty roster and zone).
 // Throws on an unknown unit class.
 export function createTrainingLevel(unitClass) {
   const trainee = createUnitOfClass(unitClass, { team: 'player' });
@@ -41,5 +61,6 @@ export function createTrainingLevel(unitClass) {
     ]),
     roster: [],
     deploymentZone: [],
+    openingDialog: TRAINING_OPENING_DIALOG,
   };
 }

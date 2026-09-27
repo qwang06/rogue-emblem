@@ -19,6 +19,7 @@ export const BATTLE_STATE_DEFAULTS = Object.freeze({
   turn: null, // TurnView from toTurnView() once the battle starts, else null
   phaseBanner: null, // PhaseBannerView from toPhaseBannerView() while a phase is being announced, or null
   battleOutcome: null, // 'victory' | 'defeat' once the battle is decided, else null
+  dialog: null, // DialogView from toDialogView() of the line being spoken, or null
 });
 
 // The single app-wide store shared by Phaser (writer) and React (reader).

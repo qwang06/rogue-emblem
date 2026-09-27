@@ -94,3 +94,23 @@ export function toTurnView(turnState) {
 export function toPhaseBannerView({ id, turnState, durationMs }) {
   return Object.freeze({ id, ...toTurnView(turnState), durationMs });
 }
+
+// Snapshot of the line the dialog box shows, from a dialog
+// (src/game/dialog.js). `id` changes per line so the UI restarts its
+// typing; `sprite` is the unit art standing in for the speaker's portrait
+// (null for none); `revealed` is true once the player has skipped the
+// typing, and `charsPerSecond` is how fast it types otherwise, so the UI
+// and the scene agree on when a line is fully shown.
+export function toDialogView({ id, dialog, sprite, charsPerSecond }) {
+  const { speaker, side, text } = dialog.lines[dialog.index];
+  return Object.freeze({
+    id,
+    speaker,
+    side,
+    text,
+    sprite: sprite ?? null,
+    revealed: dialog.revealed,
+    charsPerSecond,
+    isLast: dialog.index === dialog.lines.length - 1,
+  });
+}

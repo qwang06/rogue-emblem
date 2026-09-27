@@ -7,6 +7,7 @@
 //   { type: 'select-menu', menu, index } — entry `index` of `menu` was clicked
 //   { type: 'confirm' }                  — same as pressing Enter/Z
 //   { type: 'cancel' }                   — same as pressing Esc/X
+//   { type: 'main-menu' }                — leave the battle for the title screen, whatever is going on
 
 export function createCommandChannel() {
   const handlers = new Set();
