@@ -1,5 +1,6 @@
 import { useGameStore } from './useGameStore.js';
 import { menuItemPointerProps } from './menuPointer.js';
+import { useMenuBesideUnit } from './useMenuBesideUnit.js';
 
 // Displays the active unit's items, opened from the action menu. Each
 // entry shows how many are left; items that would restore nothing (e.g. a
@@ -7,10 +8,11 @@ import { menuItemPointerProps } from './menuPointer.js';
 // GridScene; the mouse is forwarded to it.
 export function ItemMenu() {
   const menu = useGameStore((state) => state.itemMenu);
+  const placement = useMenuBesideUnit(Boolean(menu));
   if (!menu) return null;
 
   return (
-    <nav className="panel action-menu" aria-label="Items">
+    <nav className="panel action-menu action-menu--beside-unit" aria-label="Items" {...placement}>
       <ul className="action-menu__list">
         {menu.actions.map((item, index) => {
           const selected = index === menu.selectedIndex;

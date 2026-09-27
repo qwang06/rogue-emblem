@@ -1,5 +1,5 @@
 const CONTROLS = [
-  { keys: ['←', '↑', '↓', '→'], action: 'Move cursor' },
+  { keys: ['←', '↑', '↓', '→'], action: 'Move cursor (hold to repeat)' },
   { keys: ['Enter', 'Z'], action: 'Confirm' },
   { keys: ['Esc', 'X'], action: 'Cancel' },
   { keys: ['Esc'], action: 'Pause (on the map)' },

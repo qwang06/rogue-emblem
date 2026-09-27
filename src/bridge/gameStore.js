@@ -3,6 +3,8 @@ import { createStore } from './store.js';
 // State that only exists while the map is running. The map scene resets
 // these when a battle starts and when it's left, so nothing carries over.
 export const BATTLE_STATE_DEFAULTS = Object.freeze({
+  mapLoadProgress: 0, // 0–1, how much of the map's art has loaded (the loading screen's bar)
+  mapReady: false, // true once the map scene has loaded and built the map, lifting the loading screen
   phase: null, // 'deployment' (placing units) | 'battle' while the map runs, else null
   deploymentStep: null, // 'menu' | 'roster' | 'placing' during deployment, else null
   deploymentMenu: null, // frozen Place Units / Start menu while open, or null
@@ -12,6 +14,7 @@ export const BATTLE_STATE_DEFAULTS = Object.freeze({
   actionMenu: null, // frozen menu from src/game/actionMenu.js while open, or null
   skillMenu: null, // frozen menu of the active unit's skills (from getSkillActions) while open, or null
   itemMenu: null, // frozen menu of the active unit's items (from getItemActions) while open, or null
+  menuAnchor: null, // TileAnchorView from toTileAnchorView() of the active unit's tile, which its menus open beside, or null
   damagePopups: [], // DamagePopupViews (damage or recovery) from toDamagePopupView() currently on screen
   turn: null, // TurnView from toTurnView() once the battle starts, else null
   phaseBanner: null, // PhaseBannerView from toPhaseBannerView() while a phase is being announced, or null

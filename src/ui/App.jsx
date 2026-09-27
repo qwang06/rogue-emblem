@@ -6,6 +6,7 @@ import { DamagePopups } from './DamagePopups.jsx';
 import { DeploymentBanner } from './DeploymentBanner.jsx';
 import { DeploymentMenu } from './DeploymentMenu.jsx';
 import { ItemMenu } from './ItemMenu.jsx';
+import { LoadingScreen } from './LoadingScreen.jsx';
 import { PageHeader } from './PageHeader.jsx';
 import { PauseMenu } from './PauseMenu.jsx';
 import { PhaseBanner } from './PhaseBanner.jsx';
@@ -18,7 +19,8 @@ import { useGameStore } from './useGameStore.js';
 
 // Root of the page. The battle layout is always mounted, because #game is
 // where Phaser put its canvas at boot; the title screen covers it while
-// `screen` is 'title'.
+// `screen` is 'title', and `LoadingScreen` covers it while a battle's map
+// loads.
 //
 // Inside the stage, the HUD overlay sits on top of the canvas: the overlay
 // ignores pointer events so clicks fall through to the game, and
@@ -67,6 +69,7 @@ export function App() {
       </main>
 
       {screen === 'title' && <TitleScreen />}
+      {screen === 'battle' && <LoadingScreen />}
     </div>
   );
 }

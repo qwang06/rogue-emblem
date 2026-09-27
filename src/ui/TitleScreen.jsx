@@ -106,8 +106,9 @@ export function TitleScreen() {
   );
 }
 
-// A simple heraldic mark: a sword laid over a diamond.
-function Crest() {
+// A simple heraldic mark: a sword laid over a diamond. Also shown on the
+// loading screen.
+export function Crest() {
   return (
     <svg className="title-screen__crest" viewBox="0 0 64 64" aria-hidden="true">
       <path d="M32 4 L58 32 L32 60 L6 32 Z" fill="none" stroke="currentColor" strokeWidth="2" />

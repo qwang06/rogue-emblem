@@ -4,6 +4,7 @@ import {
   toDamagePopupView,
   toPhaseBannerView,
   toRosterEntryView,
+  toTileAnchorView,
   toTurnView,
   toCanvasFraction,
   toUnitView,
@@ -89,6 +90,26 @@ describe('toCanvasFraction', () => {
 
   it('goes outside 0–1 for points off the canvas', () => {
     expect(toCanvasFraction({ x: -96, y: 1440 }, { width: 960, height: 720 })).toEqual({ x: -0.1, y: 2 });
+  });
+});
+
+// Compares each edge of an anchor, allowing for floating-point rounding.
+function expectAnchor(anchor, expected) {
+  for (const [edge, value] of Object.entries(expected)) expect(anchor[edge]).toBeCloseTo(value);
+}
+
+describe('toTileAnchorView', () => {
+  it('gives the tile edges as fractions of the canvas', () => {
+    // Tile (2, 1) at 32px, zoom 2, camera at the world origin, 400x200 canvas:
+    // the tile spans x 128–192 and y 64–128 canvas pixels.
+    const anchor = toTileAnchorView({ x: 2, y: 1 }, 32, { x: 0, y: 0, zoom: 2 }, { width: 400, height: 200 });
+    expectAnchor(anchor, { left: 0.32, top: 0.32, right: 0.48, bottom: 0.64 });
+    expect(Object.isFrozen(anchor)).toBe(true);
+  });
+
+  it('accounts for the camera offset', () => {
+    const anchor = toTileAnchorView({ x: 0, y: 0 }, 32, { x: -16, y: -8, zoom: 1 }, { width: 100, height: 100 });
+    expectAnchor(anchor, { left: 0.16, top: 0.08, right: 0.48, bottom: 0.4 });
   });
 });
 
