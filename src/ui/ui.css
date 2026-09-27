@@ -483,9 +483,22 @@ kbd {
 }
 
 .unit-sprite {
+  background-repeat: no-repeat;
   display: block;
   flex: none;
   image-rendering: pixelated;
+}
+
+/* Timing comes from UNIT_IDLE_ANIMATION, set inline by UnitSprite. */
+.unit-sprite--animated {
+  animation-name: unit-sprite-idle;
+  animation-iteration-count: infinite;
+}
+
+@keyframes unit-sprite-idle {
+  to {
+    background-position-x: var(--unit-sprite-end);
+  }
 }
 
 /* ---- Pause menu ------------------------------------------------------ */
