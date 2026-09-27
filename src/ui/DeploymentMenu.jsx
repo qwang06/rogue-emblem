@@ -1,7 +1,8 @@
 import { useGameStore } from './useGameStore.js';
+import { menuItemPointerProps } from './menuPointer.js';
 
 // The Place Units / Start menu of the deployment phase. Selection is driven
-// by the keyboard in GridScene; this only renders the snapshot. Start shows
+// by GridScene; this renders the snapshot and forwards the mouse. Start shows
 // as disabled until a unit has been placed.
 export function DeploymentMenu() {
   const menu = useGameStore((state) => state.deploymentMenu);
@@ -20,6 +21,7 @@ export function DeploymentMenu() {
               key={action.id}
               className={classes.join(' ')}
               aria-current={selected ? 'true' : undefined}
+              {...menuItemPointerProps('deploymentMenu', index)}
               aria-disabled={action.disabled ? 'true' : undefined}
             >
               {action.label}

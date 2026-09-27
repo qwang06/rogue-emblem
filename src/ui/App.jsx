@@ -1,3 +1,4 @@
+import { gameCommands } from '../bridge/commands.js';
 import { ActionMenu } from './ActionMenu.jsx';
 import { BattleResult } from './BattleResult.jsx';
 import { ControlsPanel } from './ControlsPanel.jsx';
@@ -24,6 +25,11 @@ import { useGameStore } from './useGameStore.js';
 // individual panels opt back in via CSS. Things tied to the map (menus,
 // banners, popups) go there; readouts that don't need to cover the map go
 // in the header or sidebar.
+function cancelOnRightClick(event) {
+  event.preventDefault();
+  gameCommands.send({ type: 'cancel' });
+}
+
 export function App() {
   const screen = useGameStore((state) => state.screen);
 
@@ -37,7 +43,8 @@ export function App() {
       <main className="page__main">
         {/* The stage is the largest 4:3 box that fits this area (see ui.css). */}
         <div className="stage-area">
-          <div className="stage">
+          {/* Right click anywhere on the map or its menus cancels, like Esc. */}
+          <div className="stage" onContextMenu={cancelOnRightClick}>
             <div id="game" role="img" aria-label="Battle map" />
             <div className="hud">
               <DeploymentMenu />

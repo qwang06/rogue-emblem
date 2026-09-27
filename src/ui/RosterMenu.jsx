@@ -1,8 +1,9 @@
 import { UnitSprite } from './UnitSprite.jsx';
 import { useGameStore } from './useGameStore.js';
+import { menuItemPointerProps } from './menuPointer.js';
 
 // The units available to deploy, each with its sprite, while the player
-// picks one to place. Display only — GridScene handles the input.
+// picks one to place. GridScene handles the input; the mouse is forwarded to it.
 export function RosterMenu() {
   const menu = useGameStore((state) => state.rosterMenu);
   if (!menu) return null;
@@ -22,6 +23,7 @@ export function RosterMenu() {
                   : 'action-menu__item roster-menu__item'
               }
               aria-current={selected ? 'true' : undefined}
+              {...menuItemPointerProps('rosterMenu', index)}
             >
               <UnitSprite frame={entry.frame} />
               <span className="roster-menu__name">{entry.label}</span>

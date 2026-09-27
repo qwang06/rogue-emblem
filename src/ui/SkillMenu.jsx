@@ -1,8 +1,9 @@
 import { useGameStore } from './useGameStore.js';
+import { menuItemPointerProps } from './menuPointer.js';
 
 // Displays the active unit's skills, opened from the action menu. Each
 // entry shows its mana cost; skills the unit can't afford are greyed out.
-// Selection is driven by the keyboard in GridScene.
+// Selection is driven by GridScene; the mouse is forwarded to it.
 export function SkillMenu() {
   const menu = useGameStore((state) => state.skillMenu);
   if (!menu) return null;
@@ -20,6 +21,7 @@ export function SkillMenu() {
               key={skill.id}
               className={classes.join(' ')}
               aria-current={selected ? 'true' : undefined}
+              {...menuItemPointerProps('skillMenu', index)}
               aria-disabled={skill.disabled ? 'true' : undefined}
             >
               <span>{skill.label}</span>
