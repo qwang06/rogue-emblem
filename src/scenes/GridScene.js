@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { SPRITE_URLS } from '../assets/sprites.js';
-import terrainTilesetUrl from '../assets/tileset-grass-water.png';
+import terrainSheetUrl from '../assets/overworld.png';
 import { gameCommands } from '../bridge/commands.js';
 import { BATTLE_STATE_DEFAULTS, gameStore } from '../bridge/gameStore.js';
 import {
@@ -31,7 +31,7 @@ import {
 } from '../game/deployment.js';
 import { findUnit, getCell, gridToWorld, isInBounds, moveUnit, setUnit, worldToGrid } from '../game/grid.js';
 import { getArrowPieces } from '../game/moveArrow.js';
-import { getTerrainFrame, getTerrainGridSize } from '../game/terrainTiles.js';
+import { getQuarterFrames, getTileFrame } from '../game/autotile.js';
 import { extendMovePath, getMovementRange } from '../game/movement.js';
 import { PAUSE_ACTIONS } from '../game/pauseMenu.js';
 import {
@@ -46,10 +46,12 @@ import {
   unmarkMoved,
 } from '../game/turns.js';
 import {
-  ARROW_SPRITES,
-  TERRAIN_TILESET_KEY,
+  ARROW_TILES,
+  CURSOR_ANIMATION,
+  TERRAIN_AUTOTILES,
+  TERRAIN_BASE_TILE,
+  TERRAIN_SHEET,
   TILE_SIZE,
-  UI_SPRITES,
   UNIT_SPRITES,
 } from '../game/tileset.js';
 import { POTION_COLORS, playFireBurst, playGrenadeThrow, playHitFlash, playPotionGlow } from './effects.js';
@@ -87,7 +89,9 @@ export class GridScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image(TERRAIN_TILESET_KEY, terrainTilesetUrl);
+    // A spritesheet so sprites (the cursor) can draw single tiles of it too;
+    // the tilemaps still use it as a whole image.
+    this.load.spritesheet(TERRAIN_SHEET.key, terrainSheetUrl, { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
     for (const [key, url] of Object.entries(SPRITE_URLS)) this.load.image(key, url);
   }
 
@@ -718,7 +722,8 @@ export class GridScene extends Phaser.Scene {
     this.clearMoveArrow();
     this.arrowSprites = getArrowPieces(path).map(({ x, y, piece }) => {
       const pos = gridToWorld(x, y, TILE_SIZE);
-      return this.addTileSprite(pos.x, pos.y, ARROW_SPRITES[piece]).setDepth(0.6);
+      const frame = getTileFrame(ARROW_TILES[piece], TERRAIN_SHEET.columns);
+      return this.add.sprite(pos.x, pos.y, TERRAIN_SHEET.key, frame).setOrigin(0, 0).setDepth(0.6);
     });
   }
 
@@ -1072,7 +1077,22 @@ export class GridScene extends Phaser.Scene {
   createCursor() {
     this.cursor = createCursor(0, 0);
     const { x, y } = gridToWorld(this.cursor.x, this.cursor.y, TILE_SIZE);
-    this.cursorSprite = this.addTileSprite(x, y, UI_SPRITES.cursor).setDepth(1);
+    const { key, columns } = TERRAIN_SHEET;
+    const frames = CURSOR_ANIMATION.tiles.map((tile) => ({ key, frame: getTileFrame(tile, columns) }));
+    // Animations are global to the game, so a restarted scene reuses it.
+    if (!this.anims.exists(CURSOR_ANIMATION.key)) {
+      this.anims.create({
+        key: CURSOR_ANIMATION.key,
+        frames,
+        frameRate: 1000 / CURSOR_ANIMATION.frameMs,
+        repeat: -1,
+      });
+    }
+    this.cursorSprite = this.add
+      .sprite(x, y, key, frames[0].frame)
+      .setOrigin(0, 0)
+      .setDepth(1)
+      .play(CURSOR_ANIMATION.key);
   }
 
   // A hidden cursor hovers nothing, so the unit panel clears with it.
@@ -1092,24 +1112,46 @@ export class GridScene extends Phaser.Scene {
     return this.add.sprite(x, y, key).setOrigin(0, 0).setDisplaySize(TILE_SIZE, TILE_SIZE);
   }
 
-  // Terrain is a dual grid (see src/game/terrainTiles.js): one tile bigger
-  // than the map each way and shifted half a tile up and left, so each tile
-  // sits over the corner where four cells meet. The half tile hanging past
-  // the map is masked off so the map keeps a clean rectangular edge.
+  // Terrain is plain grass under every cell, with each autotiled terrain
+  // (see src/game/autotile.js) drawn over it as its own layer of half-size
+  // tiles, four per cell. Animated sets step through their copies on a timer.
   renderTerrain(grid) {
-    const size = getTerrainGridSize(grid);
-    const data = [];
-    for (let y = 0; y < size.height; y++) {
-      data[y] = [];
-      for (let x = 0; x < size.width; x++) data[y][x] = getTerrainFrame(grid, x, y);
+    const { key, columns } = TERRAIN_SHEET;
+    const grassFrame = getTileFrame(TERRAIN_BASE_TILE, columns);
+    const grass = Array.from({ length: grid.height }, () => Array(grid.width).fill(grassFrame));
+    const grassMap = this.make.tilemap({ data: grass, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });
+    grassMap.createLayer(0, grassMap.addTilesetImage(key, key, TILE_SIZE, TILE_SIZE), 0, 0);
+
+    const half = TILE_SIZE / 2;
+    for (const [terrain, autotile] of Object.entries(TERRAIN_AUTOTILES)) {
+      const frameCount = autotile.animation?.frames ?? 1;
+      // One quarter-frame map per animation frame: frames[i][y][x].
+      const frames = Array.from({ length: frameCount }, (_, i) => {
+        const data = Array.from({ length: grid.height * 2 }, () => Array(grid.width * 2).fill(-1));
+        for (const cell of grid.cells) {
+          const quarters = getQuarterFrames(grid, cell.x, cell.y, terrain, autotile, columns, i);
+          quarters?.forEach((frame, q) => {
+            data[cell.y * 2 + (q >> 1)][cell.x * 2 + (q & 1)] = frame;
+          });
+        }
+        return data;
+      });
+
+      const map = this.make.tilemap({ data: frames[0], tileWidth: half, tileHeight: half });
+      const layer = map.createLayer(0, map.addTilesetImage(key, key, half, half), 0, 0);
+      if (frameCount < 2) continue;
+      let current = 0;
+      this.time.addEvent({
+        delay: autotile.animation.frameMs,
+        loop: true,
+        callback: () => {
+          current = (current + 1) % frameCount;
+          layer.forEachTile((tile) => {
+            if (tile.index >= 0) tile.index = frames[current][tile.y][tile.x];
+          });
+        },
+      });
     }
-
-    const map = this.make.tilemap({ data, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });
-    const tileset = map.addTilesetImage(TERRAIN_TILESET_KEY, TERRAIN_TILESET_KEY, TILE_SIZE, TILE_SIZE);
-    const layer = map.createLayer(0, tileset, -TILE_SIZE / 2, -TILE_SIZE / 2);
-
-    const bounds = this.make.graphics().fillRect(0, 0, grid.width * TILE_SIZE, grid.height * TILE_SIZE);
-    layer.setMask(bounds.createGeometryMask());
   }
 
   // Draws a sprite per unit on the grid and keeps them in this.unitSprites

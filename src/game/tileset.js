@@ -1,38 +1,35 @@
 // Art config: which image each piece of the map draws with.
 //
-// Terrain comes from the grass/water dual-grid tileset
-// (src/assets/tileset-grass-water.png, 32x32 tiles, 4x4) and is picked by
-// frame number. Units, the cursor, and the movement arrow are standalone
-// images, named here by texture key (src/assets/sprites.js maps keys to
-// files); each is drawn stretched to fill one map tile.
+// Terrain comes from the overworld sheet (src/assets/overworld.png, 32x32
+// tiles, 42 columns x 63 rows; see .claude/skills/tileset/overworld-catalog.md
+// for what's where) and is picked by position on it. The tile cursor and the
+// movement arrow are tiles of the same sheet. Units are standalone images, named here by texture key
+// (src/assets/sprites.js maps keys to files); each is drawn stretched to
+// fill one map tile.
 
-// Size of one map tile in world pixels — the terrain tileset's tile size.
+// Size of one map tile in world pixels — the terrain sheet's tile size.
 export const TILE_SIZE = 32;
 
-export const TERRAIN_TILESET_KEY = 'grass-water';
+export const TERRAIN_SHEET = {
+  key: 'overworld',
+  columns: 42,
+  rows: 63,
+};
 
-// Dual-grid frames, keyed by terrain then by the corner piece names from
-// src/game/terrainTiles.js (which of the tile's four corners hold that
-// terrain). Water's set draws a shoreline wherever water and grass corners
-// meet; 'none' is plain grass.
-export const TERRAIN_CORNER_FRAMES = {
+// Plain grass fills every cell under the other terrain, as a [column, row]
+// tile on the terrain sheet.
+export const TERRAIN_BASE_TILE = [0, 0];
+
+// Blob autotiles drawn over the grass, keyed by terrain (see
+// src/game/autotile.js). `block` is the top-left tile of the terrain's plain
+// 3x3 block (outer corners, edges, and the full middle); `inner` is the tile
+// with an inside corner in each of its four corners. `animation` steps
+// through `frames` copies of the set laid out `columnStride` tiles apart.
+export const TERRAIN_AUTOTILES = {
   water: {
-    none: 12,
-    'top-left': 15,
-    'top-right': 8,
-    'bottom-left': 0,
-    'bottom-right': 13,
-    'top-left+top-right': 9,
-    'bottom-left+bottom-right': 3,
-    'top-left+bottom-left': 11,
-    'top-right+bottom-right': 1,
-    'top-left+bottom-right': 4,
-    'top-right+bottom-left': 14,
-    'top-left+top-right+bottom-left': 7,
-    'top-left+top-right+bottom-right': 10,
-    'top-left+bottom-left+bottom-right': 2,
-    'top-right+bottom-left+bottom-right': 5,
-    all: 6,
+    block: [4, 8],
+    inner: [2, 9],
+    animation: { frames: 6, columnStride: 7, frameMs: 180 },
   },
 };
 
@@ -53,20 +50,31 @@ export const UNIT_SHADOW = {
   alpha: 0.35,
 };
 
-export const UI_SPRITES = {
-  cursor: 'cursor',
+// The tile cursor: corner brackets that pulse between two tiles of the
+// terrain sheet (brackets on the tile's corners, then 1px in), as [column,
+// row], holding each for frameMs.
+export const CURSOR_ANIMATION = {
+  key: 'cursor',
+  tiles: [
+    [28, 62],
+    [29, 62],
+  ],
+  frameMs: 400,
 };
 
-// Movement arrow pieces, keyed by the piece names from src/game/moveArrow.js.
-export const ARROW_SPRITES = {
-  'head-up': 'path-head-up',
-  'head-left': 'path-head-left',
-  'head-right': 'path-head-right',
-  'head-down': 'path-head-down',
-  'left-right': 'path-left-right',
-  'up-down': 'path-up-down',
-  'down-right': 'path-down-right',
-  'down-left': 'path-down-left',
-  'up-right': 'path-up-right',
-  'up-left': 'path-up-left',
+// Movement arrow pieces, keyed by the piece names from src/game/moveArrow.js,
+// as [column, row] tiles on the terrain sheet. Straights and corners come
+// from the pink rounded-square loop (a 3x3 of path tiles around a gem);
+// the heads sit just below it.
+export const ARROW_TILES = {
+  'left-right': [30, 56],
+  'up-down': [29, 57],
+  'down-right': [29, 56],
+  'down-left': [31, 56],
+  'up-right': [29, 58],
+  'up-left': [31, 58],
+  'head-right': [29, 59],
+  'head-down': [30, 59],
+  'head-up': [29, 60],
+  'head-left': [30, 60],
 };
