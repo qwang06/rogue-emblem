@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getArrowPieces } from './moveArrow.js';
-import { ARROW_FRAMES } from './tileset.js';
+import { ARROW_SPRITES } from './tileset.js';
 
 // Builds a path from "x,y" strings to keep the cases readable.
 function path(...coords) {
@@ -58,6 +58,6 @@ describe('getArrowPieces', () => {
 
   it('only produces pieces that have a frame', () => {
     const winding = path('1,1', '1,0', '2,0', '2,1', '2,2', '1,2', '0,2', '0,1', '0,0');
-    for (const { piece } of getArrowPieces(winding)) expect(ARROW_FRAMES).toHaveProperty(piece);
+    for (const { piece } of getArrowPieces(winding)) expect(ARROW_SPRITES).toHaveProperty(piece);
   });
 });

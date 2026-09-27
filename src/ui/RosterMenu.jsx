@@ -25,7 +25,7 @@ export function RosterMenu() {
               aria-current={selected ? 'true' : undefined}
               {...menuItemPointerProps('rosterMenu', index)}
             >
-              <UnitSprite frame={entry.frame} />
+              <UnitSprite sprite={entry.sprite} />
               <span className="roster-menu__name">{entry.label}</span>
               {entry.placed && <span className="roster-menu__tag">Placed</span>}
             </li>

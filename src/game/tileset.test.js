@@ -1,21 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { getFramePosition, TILESET_COLUMNS, UNIT_FRAMES } from './tileset.js';
+import { SPRITE_URLS } from '../assets/sprites.js';
+import { ARROW_SPRITES, UI_SPRITES, UNIT_SPRITES } from './tileset.js';
 
-describe('getFramePosition', () => {
-  it('puts frame 0 at the top-left', () => {
-    expect(getFramePosition(0)).toEqual({ col: 0, row: 0 });
+describe('sprite keys', () => {
+  it('names an image for every unit, UI element, and arrow piece', () => {
+    const keys = [
+      ...Object.values(UNIT_SPRITES),
+      ...Object.values(UI_SPRITES),
+      ...Object.values(ARROW_SPRITES),
+    ];
+    for (const key of keys) expect(SPRITE_URLS).toHaveProperty([key]);
   });
 
-  it('wraps to the next row after the last column', () => {
-    expect(getFramePosition(TILESET_COLUMNS - 1)).toEqual({ col: TILESET_COLUMNS - 1, row: 0 });
-    expect(getFramePosition(TILESET_COLUMNS)).toEqual({ col: 0, row: 1 });
-  });
-
-  it('locates unit frames on the sheet', () => {
-    expect(getFramePosition(UNIT_FRAMES.player)).toEqual({ col: 16, row: 6 });
-  });
-
-  it('accepts a custom column count', () => {
-    expect(getFramePosition(7, 4)).toEqual({ col: 3, row: 1 });
+  it('gives each team its own sprite', () => {
+    expect(UNIT_SPRITES.player).not.toBe(UNIT_SPRITES.enemy);
   });
 });

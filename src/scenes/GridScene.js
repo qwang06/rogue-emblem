@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import tilesetUrl from '../assets/kenney_tiny-battle/Tilemap/tilemap_packed.png';
+import { SPRITE_URLS } from '../assets/sprites.js';
+import terrainTilesetUrl from '../assets/tileset-grass-water.png';
 import { gameCommands } from '../bridge/commands.js';
 import { BATTLE_STATE_DEFAULTS, gameStore } from '../bridge/gameStore.js';
 import {
@@ -30,7 +31,7 @@ import {
 } from '../game/deployment.js';
 import { findUnit, getCell, gridToWorld, isInBounds, moveUnit, setUnit, worldToGrid } from '../game/grid.js';
 import { getArrowPieces } from '../game/moveArrow.js';
-import { getTerrainFrame } from '../game/terrainTiles.js';
+import { getTerrainFrame, getTerrainGridSize } from '../game/terrainTiles.js';
 import { extendMovePath, getMovementRange } from '../game/movement.js';
 import { PAUSE_ACTIONS } from '../game/pauseMenu.js';
 import {
@@ -45,13 +46,14 @@ import {
   unmarkMoved,
 } from '../game/turns.js';
 import {
-  ARROW_FRAMES,
-  TILESET_KEY,
+  ARROW_SPRITES,
+  TERRAIN_TILESET_KEY,
   TILE_SIZE,
-  UI_FRAMES,
-  UNIT_FRAMES,
+  UI_SPRITES,
+  UNIT_SPRITES,
 } from '../game/tileset.js';
 import { POTION_COLORS, playFireBurst, playGrenadeThrow, playHitFlash, playPotionGlow } from './effects.js';
+import { addUnitShadow } from './unitShadow.js';
 
 // The canvas is sized by the page (see main.js); maps are zoomed to fit it,
 // up to MAX_ZOOM, and centered.
@@ -85,10 +87,8 @@ export class GridScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.spritesheet(TILESET_KEY, tilesetUrl, {
-      frameWidth: TILE_SIZE,
-      frameHeight: TILE_SIZE,
-    });
+    this.load.image(TERRAIN_TILESET_KEY, terrainTilesetUrl);
+    for (const [key, url] of Object.entries(SPRITE_URLS)) this.load.image(key, url);
   }
 
   // `setup` is the battle the title screen chose (gameStore's battleSetup):
@@ -468,7 +468,7 @@ export class GridScene extends Phaser.Scene {
       return toRosterEntryView({
         id,
         unit,
-        frame: UNIT_FRAMES[unit.team] ?? UNIT_FRAMES.player,
+        sprite: UNIT_SPRITES[unit.team] ?? UNIT_SPRITES.player,
         placed: isPlaced(this.grid, id),
       });
     });
@@ -718,10 +718,7 @@ export class GridScene extends Phaser.Scene {
     this.clearMoveArrow();
     this.arrowSprites = getArrowPieces(path).map(({ x, y, piece }) => {
       const pos = gridToWorld(x, y, TILE_SIZE);
-      return this.add
-        .sprite(pos.x, pos.y, TILESET_KEY, ARROW_FRAMES[piece])
-        .setOrigin(0, 0)
-        .setDepth(0.6);
+      return this.addTileSprite(pos.x, pos.y, ARROW_SPRITES[piece]).setDepth(0.6);
     });
   }
 
@@ -1075,10 +1072,7 @@ export class GridScene extends Phaser.Scene {
   createCursor() {
     this.cursor = createCursor(0, 0);
     const { x, y } = gridToWorld(this.cursor.x, this.cursor.y, TILE_SIZE);
-    this.cursorSprite = this.add
-      .sprite(x, y, TILESET_KEY, UI_FRAMES.cursor)
-      .setOrigin(0, 0)
-      .setDepth(1);
+    this.cursorSprite = this.addTileSprite(x, y, UI_SPRITES.cursor).setDepth(1);
   }
 
   // A hidden cursor hovers nothing, so the unit panel clears with it.
@@ -1092,16 +1086,30 @@ export class GridScene extends Phaser.Scene {
     this.cursorSprite.setPosition(x, y);
   }
 
+  // A sprite (by texture key) covering the map tile whose top-left corner is
+  // (x, y), stretched to the tile whatever the image's own size.
+  addTileSprite(x, y, key) {
+    return this.add.sprite(x, y, key).setOrigin(0, 0).setDisplaySize(TILE_SIZE, TILE_SIZE);
+  }
+
+  // Terrain is a dual grid (see src/game/terrainTiles.js): one tile bigger
+  // than the map each way and shifted half a tile up and left, so each tile
+  // sits over the corner where four cells meet. The half tile hanging past
+  // the map is masked off so the map keeps a clean rectangular edge.
   renderTerrain(grid) {
+    const size = getTerrainGridSize(grid);
     const data = [];
-    for (const cell of grid.cells) {
-      data[cell.y] = data[cell.y] ?? [];
-      data[cell.y][cell.x] = getTerrainFrame(grid, cell.x, cell.y);
+    for (let y = 0; y < size.height; y++) {
+      data[y] = [];
+      for (let x = 0; x < size.width; x++) data[y][x] = getTerrainFrame(grid, x, y);
     }
 
     const map = this.make.tilemap({ data, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });
-    const tileset = map.addTilesetImage(TILESET_KEY, TILESET_KEY, TILE_SIZE, TILE_SIZE);
-    map.createLayer(0, tileset, 0, 0);
+    const tileset = map.addTilesetImage(TERRAIN_TILESET_KEY, TERRAIN_TILESET_KEY, TILE_SIZE, TILE_SIZE);
+    const layer = map.createLayer(0, tileset, -TILE_SIZE / 2, -TILE_SIZE / 2);
+
+    const bounds = this.make.graphics().fillRect(0, 0, grid.width * TILE_SIZE, grid.height * TILE_SIZE);
+    layer.setMask(bounds.createGeometryMask());
   }
 
   // Draws a sprite per unit on the grid and keeps them in this.unitSprites
@@ -1117,11 +1125,10 @@ export class GridScene extends Phaser.Scene {
   addUnitSprite(unitId, gridX, gridY) {
     const unit = this.units.get(unitId);
     const { x, y } = gridToWorld(gridX, gridY, TILE_SIZE);
-    const sprite = this.add
-      .sprite(x, y, TILESET_KEY, UNIT_FRAMES[unit.team] ?? UNIT_FRAMES.player)
-      .setOrigin(0, 0)
+    const sprite = this.addTileSprite(x, y, UNIT_SPRITES[unit.team] ?? UNIT_SPRITES.player)
       .setDepth(0.75)
       .setData('unit', unit);
+    addUnitShadow(this, sprite);
     this.unitSprites.set(unitId, sprite);
   }
 }
