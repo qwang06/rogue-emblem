@@ -8,13 +8,14 @@ import {
   toPhaseBannerView,
   toCanvasFraction,
   toRosterEntryView,
+  toTileAnchorView,
   toTurnView,
   toUnitView,
   worldToScreen,
 } from '../bridge/views.js';
 import { createActionMenu, getSelectedAction, getUnitActions, moveSelection, selectIndex } from '../game/actionMenu.js';
 import { calculateSkillDamage, findLearnedSkill, getLearnedSkills, getSkillActions } from '../game/skills.js';
-import { calculateDamage, getAttackRange, getAttackTargets } from '../game/combat.js';
+import { calculateDamage, getAttackRange, getAttackTargets, getThreatRange } from '../game/combat.js';
 import { getFitZoom } from '../game/camera.js';
 import { createCursor, moveCursor } from '../game/cursor.js';
 import { createDemoLevel } from '../game/demoLevel.js';
@@ -31,6 +32,7 @@ import {
 } from '../game/deployment.js';
 import { findUnit, getCell, gridToWorld, isInBounds, moveUnit, setUnit, worldToGrid } from '../game/grid.js';
 import { getPathFacings } from '../game/facing.js';
+import { createKeyRepeat, updateKeyRepeat } from '../game/keyRepeat.js';
 import { getArrowPieces } from '../game/moveArrow.js';
 import { getQuarterFrames, getTileFrame } from '../game/autotile.js';
 import { extendMovePath, getMovementRange } from '../game/movement.js';
@@ -38,7 +40,6 @@ import { PAUSE_ACTIONS } from '../game/pauseMenu.js';
 import {
   createTurnState,
   getBattleOutcome,
-  hasMoved,
   isDone,
   isPhaseOver,
   markDone,
@@ -93,6 +94,8 @@ export class GridScene extends Phaser.Scene {
   }
 
   preload() {
+    // Drives the loading screen's bar; the screen lifts at the end of create().
+    this.load.on('progress', (progress) => gameStore.setState({ mapLoadProgress: progress }));
     // Spritesheets so sprites can draw single frames: the cursor and arrow
     // tiles of the terrain sheet (the tilemaps still use it whole), and each
     // unit sheet's animation frames.
@@ -128,6 +131,7 @@ export class GridScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.DESTROY, stopFitting);
 
     this.keys = this.input.keyboard.createCursorKeys();
+    this.arrowRepeat = createKeyRepeat(); // held arrow keys step the cursor / menus again (src/game/keyRepeat.js)
     this.actionKeys = this.input.keyboard.addKeys({
       confirm: Phaser.Input.Keyboard.KeyCodes.ENTER,
       confirmAlt: Phaser.Input.Keyboard.KeyCodes.Z,
@@ -163,6 +167,7 @@ export class GridScene extends Phaser.Scene {
     // where everyone starts on the map) go straight to the battle.
     if (this.deploymentZone.length > 0) this.startDeployment();
     else this.startBattle();
+    gameStore.setState({ mapLoadProgress: 1, mapReady: true });
   }
 
   // Zooms the map to fit the canvas (up to MAX_ZOOM) and centers it. Runs
@@ -171,12 +176,16 @@ export class GridScene extends Phaser.Scene {
     const camera = this.cameras.main;
     camera.setZoom(getFitZoom(this.grid, TILE_SIZE, this.scale.gameSize, MAX_ZOOM));
     camera.centerOn((this.grid.width * TILE_SIZE) / 2, (this.grid.height * TILE_SIZE) / 2);
+    // The camera's visible area only updates when it next renders, so move
+    // an open unit menu to the refitted map then.
+    this.events.once(Phaser.Scenes.Events.RENDER, () => {
+      if (this.activeUnit) this.publishMenuAnchor();
+    });
   }
 
-  update() {
+  update(time, delta) {
     const { JustDown } = Phaser.Input.Keyboard;
-    const dx = Number(JustDown(this.keys.right)) - Number(JustDown(this.keys.left));
-    const dy = Number(JustDown(this.keys.down)) - Number(JustDown(this.keys.up));
+    const { dx, dy } = this.readArrowKeys(delta);
     const pointer = this.drainPointerInput();
     const confirm =
       JustDown(this.actionKeys.confirm) || JustDown(this.actionKeys.confirmAlt) || pointer.confirm;
@@ -217,11 +226,18 @@ export class GridScene extends Phaser.Scene {
 
     if (this.rangeMode) {
       // Confirm acts on the tile under the cursor if it's valid (other
-      // tiles are ignored); cancel backs out to the action menu.
+      // tiles are ignored); cancel backs out a step: from moving it lets go
+      // of the unit, from aiming it goes back to the menu the aim came from.
       if (confirm) {
         if (this.rangeMode === 'move') this.tryMoveActiveUnit();
         else if (this.rangeMode === 'skill') this.tryUseSkill();
         else this.tryAttackWithActiveUnit();
+        return;
+      }
+      if (cancel && this.rangeMode === 'move') {
+        this.hideRange();
+        this.setCursor(this.activeUnit.x, this.activeUnit.y);
+        this.activeUnit = null;
         return;
       }
       if (cancel && this.rangeMode === 'skill') {
@@ -241,8 +257,10 @@ export class GridScene extends Phaser.Scene {
       // Units that are done for the phase can't be picked again.
       const { unitId } = getCell(this.grid, this.cursor.x, this.cursor.y);
       if (isDone(this.turnState, unitId)) return;
+      // Selecting a unit goes straight to choosing where it moves; the
+      // action menu opens once it has (confirming its own tile stays put).
       this.activeUnit = { unitId, unit: this.hoveredUnit, x: this.cursor.x, y: this.cursor.y };
-      this.openActionMenu();
+      this.showMoveRange();
       return;
     } else if (cancel) {
       // Nothing to back out of on the bare map, so cancel opens the pause menu.
@@ -256,13 +274,29 @@ export class GridScene extends Phaser.Scene {
     if (this.rangeMode === 'move') this.updateMovePath();
   }
 
+  // This frame's arrow-key step as { dx, dy }: one tile or menu entry when
+  // a key is pressed, repeating while it's held (src/game/keyRepeat.js).
+  readArrowKeys(delta) {
+    const { JustDown } = Phaser.Input.Keyboard;
+    const isDown = {};
+    const justPressed = {};
+    for (const key of ['up', 'down', 'left', 'right']) {
+      isDown[key] = this.keys[key].isDown;
+      justPressed[key] = JustDown(this.keys[key]);
+    }
+    const { state, step } = updateKeyRepeat(this.arrowRepeat, { isDown, justPressed }, delta);
+    this.arrowRepeat = state;
+    return step ?? { dx: 0, dy: 0 };
+  }
+
   // While the action menu is open it owns input: up/down move the
-  // highlight, confirm picks an action, cancel closes the menu.
+  // highlight, confirm picks an action, and cancel takes the move back and
+  // returns to choosing where the unit moves.
   updateActionMenu(dy, confirm, cancel) {
     if (cancel) {
       this.setActionMenu(null);
-      if (this.activeUnit.origin) this.undoMove();
-      this.activeUnit = null;
+      this.undoMove();
+      this.showMoveRange();
       return;
     }
 
@@ -270,10 +304,7 @@ export class GridScene extends Phaser.Scene {
       const action = getSelectedAction(this.actionMenu);
       if (action?.disabled) return;
       this.setActionMenu(null);
-      if (action?.id === 'move') {
-        this.setCursor(this.activeUnit.x, this.activeUnit.y);
-        this.showMoveRange();
-      } else if (action?.id === 'attack') {
+      if (action?.id === 'attack') {
         this.setCursor(this.activeUnit.x, this.activeUnit.y);
         this.showAttackRange();
       } else if (action?.id === 'skill') {
@@ -295,20 +326,21 @@ export class GridScene extends Phaser.Scene {
     this.publishMenu('actionMenu', menu);
   }
 
-  // Opens the action menu for the active unit. Skill is only available
-  // once the unit has learned a skill, Item while it carries any, and Move
-  // until it has moved.
+  // Opens the action menu for the active unit, once it has moved. Skill is
+  // only available once the unit has learned a skill, and Item while it
+  // carries any.
   openActionMenu() {
-    const { unit, unitId } = this.activeUnit;
+    const { unit } = this.activeUnit;
     const hasSkills = getLearnedSkills(unit.unitClass, unit.level).length > 0;
     const hasItems = unit.items.length > 0;
-    const moved = hasMoved(this.turnState, unitId);
-    this.setActionMenu(createActionMenu(getUnitActions({ hasSkills, hasItems, hasMoved: moved })));
+    this.publishMenuAnchor();
+    this.setActionMenu(createActionMenu(getUnitActions({ hasSkills, hasItems })));
   }
 
   openSkillMenu() {
     const { unit } = this.activeUnit;
     const skills = getLearnedSkills(unit.unitClass, unit.level);
+    this.publishMenuAnchor();
     this.publishMenu('skillMenu', createActionMenu(getSkillActions(unit, skills)));
   }
 
@@ -338,6 +370,7 @@ export class GridScene extends Phaser.Scene {
 
   openItemMenu() {
     const { unit } = this.activeUnit;
+    this.publishMenuAnchor();
     this.publishMenu('itemMenu', createActionMenu(getItemActions(unit, unit.items)));
   }
 
@@ -361,6 +394,15 @@ export class GridScene extends Phaser.Scene {
     }
 
     if (dy !== 0) this.publishMenu('itemMenu', moveSelection(this.itemMenu, dy));
+  }
+
+  // Publishes where the active unit's tile shows on the canvas, so React
+  // opens its menus (action, skill, item) beside it.
+  publishMenuAnchor() {
+    const { x, y } = this.activeUnit;
+    const { worldView, zoom } = this.cameras.main;
+    const camera = { x: worldView.x, y: worldView.y, zoom };
+    gameStore.setState({ menuAnchor: toTileAnchorView({ x, y }, TILE_SIZE, camera, this.scale.gameSize) });
   }
 
   // Keeps a menu on the scene and mirrors it to the store field of the same
@@ -697,14 +739,17 @@ export class GridScene extends Phaser.Scene {
     };
   }
 
-  // Highlights every tile the active unit can reach and starts the planned
-  // route at the unit. The range itself comes from src/game/movement.js;
-  // this only draws it.
+  // Highlights every tile the active unit can reach in blue, and the tiles
+  // it could attack from there in red around them, and starts the planned
+  // route at the unit. The ranges come from src/game/movement.js and
+  // src/game/combat.js; this only draws them.
   showMoveRange() {
     const { unit, x, y } = this.activeUnit;
     this.moveRange = getMovementRange(this.grid, { x, y }, unit.movement, this.movementOptions(unit));
     this.movePath = [{ x, y }];
     this.showRange('move', this.moveRange, MOVE_RANGE_COLOR, MOVE_RANGE_ALPHA);
+    const threat = getThreatRange(this.grid, this.moveRange, unit.range);
+    this.rangeTiles.push(...this.drawTileHighlights(threat, ATTACK_RANGE_COLOR, ATTACK_RANGE_ALPHA));
   }
 
   // Follows the cursor with the planned route (extendMovePath keeps the
@@ -775,7 +820,9 @@ export class GridScene extends Phaser.Scene {
   }
 
   // Moves the active unit to the tile under the cursor, if that tile is in
-  // its range. It walks the planned route the arrow shows, tile by tile.
+  // its range. It walks the planned route the arrow shows, tile by tile;
+  // confirming the unit's own tile keeps it there. Either way the action
+  // menu opens next.
   tryMoveActiveUnit() {
     const { unitId, x, y } = this.activeUnit;
     const from = { x, y };
@@ -802,11 +849,12 @@ export class GridScene extends Phaser.Scene {
   // Puts the active unit back where it stood before its move this phase
   // and gives it the move back.
   undoMove() {
-    const { unitId, x, y, origin } = this.activeUnit;
+    const { unitId, unit, x, y, origin } = this.activeUnit;
     this.grid = moveUnit(this.grid, { x, y }, origin);
     this.turnState = unmarkMoved(this.turnState, unitId);
     const pos = gridToWorld(origin.x, origin.y, TILE_SIZE);
     this.unitSprites.get(unitId).setPosition(pos.x, pos.y);
+    this.activeUnit = { unitId, unit, x: origin.x, y: origin.y };
     this.setCursor(origin.x, origin.y);
   }
 

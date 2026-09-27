@@ -25,6 +25,24 @@ export function getAttackRange(grid, origin, maxRange, minRange = 1) {
   return tiles;
 }
 
+// Every tile a unit could strike from somewhere it can end its move: the
+// tiles within attack range of any tile in `stops` (e.g. its movement
+// range), leaving out the stops themselves, as [{ x, y }] — the fringe of
+// attackable tiles drawn around a unit's move range. No duplicates.
+export function getThreatRange(grid, stops, maxRange, minRange = 1) {
+  const key = ({ x, y }) => `${x},${y}`;
+  const seen = new Set(stops.map(key));
+  const tiles = [];
+  for (const stop of stops) {
+    for (const tile of getAttackRange(grid, stop, maxRange, minRange)) {
+      if (seen.has(key(tile))) continue;
+      seen.add(key(tile));
+      tiles.push(tile);
+    }
+  }
+  return tiles;
+}
+
 // The occupied tiles in attack range whose unit isHostile(unitId) accepts,
 // as [{ x, y, unitId }].
 export function getAttackTargets(grid, origin, maxRange, isHostile, minRange = 1) {

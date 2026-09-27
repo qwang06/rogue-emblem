@@ -381,6 +381,19 @@ kbd {
   box-sizing: border-box;
 }
 
+/* The deployment phase's menus sit in the middle of the map. */
+.action-menu--centered {
+  top: 50%;
+  right: auto;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* A unit's menus open beside it; useMenuBesideUnit sets left / top. */
+.action-menu--beside-unit {
+  right: auto;
+}
+
 .action-menu__list {
   list-style: none;
   margin: 0;
@@ -805,6 +818,70 @@ kbd {
   color: var(--parchment-dim);
 }
 
+/* ---- Loading screen --------------------------------------------------- */
+
+/* Same backdrop as the title screen, so starting a battle reads as one
+   continuous screen until the map is ready; then it fades out over it. */
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background:
+    radial-gradient(ellipse at 50% 35%, rgb(64 86 160 / 45%), transparent 65%),
+    linear-gradient(180deg, #111a3a 0%, var(--ink) 100%);
+  font-family: var(--serif);
+  color: var(--parchment);
+  user-select: none;
+  transition:
+    opacity 300ms ease-out,
+    visibility 0s linear 300ms;
+}
+
+.loading-screen--done {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.loading-screen .title-screen__crest {
+  width: 56px;
+  height: 56px;
+  margin: 0;
+  animation: loading-pulse 1.4s ease-in-out infinite;
+}
+
+.loading-screen__label {
+  margin: 0;
+  font-size: 1.25rem;
+  letter-spacing: 3px;
+  color: var(--gold);
+}
+
+.loading-screen__bar {
+  width: min(320px, 70vw);
+  height: 8px;
+  padding: 2px;
+  border: 2px solid var(--gold-dim);
+  background: rgb(22 32 74 / 85%);
+}
+
+.loading-screen__fill {
+  height: 100%;
+  background: var(--gold);
+  transition: width 150ms linear;
+}
+
+@keyframes loading-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
 /* ---- Reduced motion ------------------------------------------------- */
 
 /* No sliding or rising: banners and damage numbers just appear, hold, and
@@ -815,8 +892,13 @@ kbd {
     animation-name: fade-out-late;
   }
 
-  .meter__fill {
+  .meter__fill,
+  .loading-screen__fill {
     transition: none;
+  }
+
+  .loading-screen .title-screen__crest {
+    animation: none;
   }
 }
 

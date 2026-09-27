@@ -1,7 +1,8 @@
 import { useGameStore } from './useGameStore.js';
 import { menuItemPointerProps } from './menuPointer.js';
 
-// The Place Units / Start menu of the deployment phase. Selection is driven
+// The Place Units / Start menu of the deployment phase, centered on the map.
+// Selection is driven
 // by GridScene; this renders the snapshot and forwards the mouse. Start shows
 // as disabled until a unit has been placed.
 export function DeploymentMenu() {
@@ -9,7 +10,7 @@ export function DeploymentMenu() {
   if (!menu) return null;
 
   return (
-    <nav className="panel action-menu" aria-label="Deployment">
+    <nav className="panel action-menu action-menu--centered" aria-label="Deployment">
       <ul className="action-menu__list">
         {menu.actions.map((action, index) => {
           const selected = index === menu.selectedIndex;

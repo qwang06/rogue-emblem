@@ -40,6 +40,20 @@ export function toCanvasFraction(point, size) {
   return { x: point.x / size.width, y: point.y / size.height };
 }
 
+// Snapshot of where a map tile shows on the canvas, for UI anchored beside
+// it (e.g. a unit's menus): its edges as fractions of the canvas (see
+// toCanvasFraction), so it stays put however large the canvas is displayed.
+// `tile` is { x, y } in grid cells, `camera` as in worldToScreen, and `size`
+// the canvas's { width, height }.
+export function toTileAnchorView(tile, tileSize, camera, size) {
+  const topLeft = toCanvasFraction(worldToScreen({ x: tile.x * tileSize, y: tile.y * tileSize }, camera), size);
+  const bottomRight = toCanvasFraction(
+    worldToScreen({ x: (tile.x + 1) * tileSize, y: (tile.y + 1) * tileSize }, camera),
+    size,
+  );
+  return Object.freeze({ left: topLeft.x, top: topLeft.y, right: bottomRight.x, bottom: bottomRight.y });
+}
+
 // How each kind of popup reads: damage is the bare number, recovery says
 // what was restored.
 const POPUP_TEXT = Object.freeze({

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateDamage, getAttackRange, getAttackTargets } from './combat.js';
+import { calculateDamage, getAttackRange, getAttackTargets, getThreatRange } from './combat.js';
 import { createGrid, setTerrain, setUnit } from './grid.js';
 
 // Sorted "x,y" strings so assertions don't depend on iteration order.
@@ -47,6 +47,62 @@ describe('getAttackRange', () => {
   it('is empty with zero range', () => {
     const grid = createGrid(5, 5, 'grass');
     expect(getAttackRange(grid, { x: 2, y: 2 }, 0)).toEqual([]);
+  });
+});
+
+describe('getThreatRange', () => {
+  const sortTiles = (tiles) => [...tiles].sort((a, b) => a.y - b.y || a.x - b.x);
+
+  it('rings the stops with the tiles in attack range, leaving out the stops', () => {
+    const grid = createGrid(5, 5);
+    const stops = [
+      { x: 2, y: 2 },
+      { x: 3, y: 2 },
+    ];
+    expect(sortTiles(getThreatRange(grid, stops, 1))).toEqual([
+      { x: 2, y: 1 },
+      { x: 3, y: 1 },
+      { x: 1, y: 2 },
+      { x: 4, y: 2 },
+      { x: 2, y: 3 },
+      { x: 3, y: 3 },
+    ]);
+  });
+
+  it('lists each tile once even when several stops reach it', () => {
+    const grid = createGrid(5, 5);
+    const stops = [
+      { x: 1, y: 1 },
+      { x: 3, y: 1 },
+    ];
+    const tiles = getThreatRange(grid, stops, 1);
+    const keys = tiles.map(({ x, y }) => `${x},${y}`);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(keys.filter((k) => k === '2,1')).toHaveLength(1);
+  });
+
+  it('reaches further with a longer range', () => {
+    const grid = createGrid(5, 5);
+    expect(getThreatRange(grid, [{ x: 2, y: 2 }], 2)).toHaveLength(12);
+  });
+
+  it('stays on the map', () => {
+    const grid = createGrid(3, 3);
+    expect(sortTiles(getThreatRange(grid, [{ x: 0, y: 0 }], 1))).toEqual([
+      { x: 1, y: 0 },
+      { x: 0, y: 1 },
+    ]);
+  });
+
+  it('respects a minimum range', () => {
+    const grid = createGrid(5, 5);
+    const tiles = getThreatRange(grid, [{ x: 2, y: 2 }], 2, 2);
+    expect(tiles).toHaveLength(8);
+    expect(tiles).not.toContainEqual({ x: 2, y: 1 });
+  });
+
+  it('is empty with no stops', () => {
+    expect(getThreatRange(createGrid(3, 3), [], 1)).toEqual([]);
   });
 });
 

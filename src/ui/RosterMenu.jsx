@@ -3,13 +3,13 @@ import { useGameStore } from './useGameStore.js';
 import { menuItemPointerProps } from './menuPointer.js';
 
 // The units available to deploy, each with its sprite, while the player
-// picks one to place. GridScene handles the input; the mouse is forwarded to it.
+// picks one to place, centered on the map. GridScene handles the input; the mouse is forwarded to it.
 export function RosterMenu() {
   const menu = useGameStore((state) => state.rosterMenu);
   if (!menu) return null;
 
   return (
-    <nav className="panel action-menu roster-menu" aria-label="Units">
+    <nav className="panel action-menu action-menu--centered roster-menu" aria-label="Units">
       <h2 className="roster-menu__title">Units</h2>
       <ul className="action-menu__list">
         {menu.actions.map((entry, index) => {

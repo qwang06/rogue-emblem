@@ -1,15 +1,17 @@
 import { useGameStore } from './useGameStore.js';
 import { menuItemPointerProps } from './menuPointer.js';
+import { useMenuBesideUnit } from './useMenuBesideUnit.js';
 
 // Displays the active unit's skills, opened from the action menu. Each
 // entry shows its mana cost; skills the unit can't afford are greyed out.
 // Selection is driven by GridScene; the mouse is forwarded to it.
 export function SkillMenu() {
   const menu = useGameStore((state) => state.skillMenu);
+  const placement = useMenuBesideUnit(Boolean(menu));
   if (!menu) return null;
 
   return (
-    <nav className="panel action-menu" aria-label="Skills">
+    <nav className="panel action-menu action-menu--beside-unit" aria-label="Skills" {...placement}>
       <ul className="action-menu__list">
         {menu.actions.map((skill, index) => {
           const selected = index === menu.selectedIndex;
