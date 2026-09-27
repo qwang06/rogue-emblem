@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { gameStore } from './bridge/gameStore.js';
-import { CANVAS_HEIGHT, CANVAS_WIDTH, GridScene } from './scenes/GridScene.js';
+import { GridScene } from './scenes/GridScene.js';
 import { mountUI } from './ui/mountUI.jsx';
 
 // React renders the page first: it owns the layout, including the #game
@@ -9,15 +9,14 @@ mountUI(document.getElementById('root'));
 
 // No scenes run at boot: the React title screen is shown first, and the map
 // scene is only started once the player chooses Play.
-// The canvas keeps a fixed 960x720 resolution and FIT scales it to fill
-// #game, whose size the page layout sets to fit the window.
+// RESIZE keeps the canvas the same size as #game, which the page layout
+// stretches to fill the space beside the sidebar, so one canvas pixel is
+// one CSS pixel and the map scene decides how far to zoom in.
 const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
   scale: {
-    mode: Phaser.Scale.FIT,
-    width: CANVAS_WIDTH,
-    height: CANVAS_HEIGHT,
+    mode: Phaser.Scale.RESIZE,
   },
   backgroundColor: '#1d1d1d',
   pixelArt: true,
