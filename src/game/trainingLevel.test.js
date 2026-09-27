@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createDialog } from './dialog.js';
 import { findUnit } from './grid.js';
 import { getMovePath } from './movement.js';
 import {
@@ -8,6 +9,7 @@ import {
   SPARRING_PARTNER_POSITION,
   TRAINEE_ID,
   TRAINEE_POSITION,
+  TRAINING_OPENING_DIALOG,
 } from './trainingLevel.js';
 import { UNIT_CLASSES } from './unitClasses.js';
 
@@ -68,6 +70,12 @@ describe('createTrainingLevel', () => {
   it('builds a fresh level each call', () => {
     const other = createTrainingLevel('soldier');
     expect(other.units.get(TRAINEE_ID)).not.toBe(level.units.get(TRAINEE_ID));
+  });
+
+  it('opens with a greeting from the sparring partner', () => {
+    expect(level.openingDialog).toBe(TRAINING_OPENING_DIALOG);
+    expect(() => createDialog(level.openingDialog)).not.toThrow();
+    expect(level.openingDialog.every((line) => line.speaker === 'Sparring Partner')).toBe(true);
   });
 
   it('throws on an unknown class', () => {

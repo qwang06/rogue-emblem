@@ -5,6 +5,7 @@ import { gameCommands } from '../bridge/commands.js';
 import { BATTLE_STATE_DEFAULTS, gameStore } from '../bridge/gameStore.js';
 import {
   toDamagePopupView,
+  toDialogView,
   toPhaseBannerView,
   toCanvasFraction,
   toRosterEntryView,
@@ -31,6 +32,7 @@ import {
   placeUnit,
 } from '../game/deployment.js';
 import { findUnit, getCell, gridToWorld, isInBounds, moveUnit, setUnit, worldToGrid } from '../game/grid.js';
+import { advanceDialog, createDialog, DIALOG_CHARS_PER_SECOND, getCurrentLine } from '../game/dialog.js';
 import { getPathFacings } from '../game/facing.js';
 import { createKeyRepeat, updateKeyRepeat } from '../game/keyRepeat.js';
 import { getArrowPieces } from '../game/moveArrow.js';
@@ -162,11 +164,21 @@ export class GridScene extends Phaser.Scene {
     this.nextBannerId = 1;
     this.hoveredUnit = null;
     this.nextPopupId = 1;
+    this.dialog = null; // from src/game/dialog.js while a conversation is showing
+    this.dialogLineStartedAt = 0; // scene time the current line started typing
+    this.onDialogDone = null;
+    this.dialogLineId = null; // changes per line so the dialog box restarts its typing
+    this.nextDialogLineId = 1;
     this.updateHoveredUnit();
     // Levels with units to place open on deployment; others (e.g. training,
-    // where everyone starts on the map) go straight to the battle.
-    if (this.deploymentZone.length > 0) this.startDeployment();
-    else this.startBattle();
+    // where everyone starts on the map) go straight to the battle. Either
+    // waits for the level's opening dialog, if it has one.
+    const begin = () => {
+      if (this.deploymentZone.length > 0) this.startDeployment();
+      else this.startBattle();
+    };
+    if (level.openingDialog?.length) this.playDialog(level.openingDialog, begin);
+    else begin();
     gameStore.setState({ mapLoadProgress: 1, mapReady: true });
   }
 
@@ -196,6 +208,11 @@ export class GridScene extends Phaser.Scene {
 
     if (this.battleOutcome) {
       if (confirm) this.exitToTitle();
+      return;
+    }
+
+    if (this.dialog) {
+      this.updateDialog(confirm, cancel);
       return;
     }
 
@@ -439,6 +456,53 @@ export class GridScene extends Phaser.Scene {
   exitToTitle() {
     this.inputLocked = true;
     gameStore.setState({ ...BATTLE_STATE_DEFAULTS, screen: 'title', battleSetup: null });
+  }
+
+  // ---- Dialog -----------------------------------------------------------
+  // A conversation in the dialog box (drawn by React) owns input while it
+  // shows: confirm finishes typing the line, or moves to the next one;
+  // cancel skips the rest. The rules live in src/game/dialog.js. `onDone`
+  // runs once the dialog closes.
+
+  playDialog(lines, onDone) {
+    this.onDialogDone = onDone;
+    this.setCursorVisible(false);
+    this.showDialog(createDialog(lines));
+  }
+
+  showDialog(dialog) {
+    if (dialog.index !== this.dialog?.index) {
+      this.dialogLineStartedAt = this.time.now;
+      this.dialogLineId = this.nextDialogLineId++;
+    }
+    this.dialog = dialog;
+    const { team } = getCurrentLine(dialog);
+    const view = toDialogView({
+      id: this.dialogLineId,
+      dialog,
+      sprite: team ? UNIT_SPRITES[team] ?? UNIT_SPRITES.player : null,
+      charsPerSecond: DIALOG_CHARS_PER_SECOND,
+    });
+    gameStore.setState({ dialog: view });
+  }
+
+  updateDialog(confirm, cancel) {
+    if (cancel) {
+      this.endDialog();
+      return;
+    }
+    if (!confirm) return;
+    const next = advanceDialog(this.dialog, this.time.now - this.dialogLineStartedAt);
+    if (next) this.showDialog(next);
+    else this.endDialog();
+  }
+
+  endDialog() {
+    this.dialog = null;
+    gameStore.setState({ dialog: null });
+    const onDone = this.onDialogDone;
+    this.onDialogDone = null;
+    onDone?.();
   }
 
   // ---- Deployment phase -------------------------------------------------
@@ -1056,6 +1120,12 @@ export class GridScene extends Phaser.Scene {
     const queue = this.pointerQueue;
     this.pointerQueue = [];
     const result = { confirm: false, cancel: false };
+    // Leaving for the title works even mid-animation or during the enemy
+    // phase; removing the scene stops whatever was playing out.
+    if (queue.some((command) => command.type === 'main-menu')) {
+      this.exitToTitle();
+      return result;
+    }
     if (this.inputLocked) return result;
 
     for (const command of queue) {
@@ -1095,6 +1165,7 @@ export class GridScene extends Phaser.Scene {
     return (
       this.cursorSprite.visible &&
       !this.battleOutcome &&
+      !this.dialog &&
       !this.pauseMenu &&
       !this.deploymentMenu &&
       !this.rosterMenu &&

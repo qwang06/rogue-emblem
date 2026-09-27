@@ -3,6 +3,7 @@ const CONTROLS = [
   { keys: ['Enter', 'Z'], action: 'Confirm' },
   { keys: ['Esc', 'X'], action: 'Cancel' },
   { keys: ['Esc'], action: 'Pause (on the map)' },
+  { keys: ['Esc'], action: 'Skip dialog' },
   { keys: ['Mouse'], action: 'Point to move cursor' },
   { keys: ['Left click'], action: 'Confirm' },
   { keys: ['Right click'], action: 'Cancel / Pause' },
@@ -15,7 +16,7 @@ export function ControlsPanel() {
       <h2 className="side-panel__title">Controls</h2>
       <dl className="controls-panel__list">
         {CONTROLS.map(({ keys, action }) => (
-          <div key={action} className="controls-panel__row">
+          <div key={`${keys.join(' ')}: ${action}`} className="controls-panel__row">
             <dt>
               {keys.map((key) => (
                 <kbd key={key}>{key}</kbd>

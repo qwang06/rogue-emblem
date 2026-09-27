@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Unit } from '../game/Unit.js';
 import {
   toDamagePopupView,
+  toDialogView,
   toPhaseBannerView,
   toRosterEntryView,
   toTileAnchorView,
@@ -10,6 +11,7 @@ import {
   toUnitView,
   worldToScreen,
 } from './views.js';
+import { advanceDialog, createDialog } from '../game/dialog.js';
 import { HEALTH_POTION } from '../game/items.js';
 import { createTurnState, markDone } from '../game/turns.js';
 
@@ -166,5 +168,36 @@ describe('toPhaseBannerView', () => {
     const view = toPhaseBannerView({ id: 3, turnState: createTurnState(2, 'enemy'), durationMs: 1200 });
     expect(view).toEqual({ id: 3, turn: 2, team: 'enemy', label: 'Enemy Phase', durationMs: 1200 });
     expect(Object.isFrozen(view)).toBe(true);
+  });
+});
+
+describe('toDialogView', () => {
+  const dialog = createDialog([
+    { speaker: 'Alden', team: 'player', side: 'left', text: 'Onward.' },
+    { speaker: 'Foe', team: 'enemy', side: 'right', text: 'Never!' },
+  ]);
+
+  it('snapshots the current line with its stand-in sprite and typing speed', () => {
+    const view = toDialogView({ id: 3, dialog, sprite: 'Villager_01', charsPerSecond: 40 });
+    expect(view).toEqual({
+      id: 3,
+      speaker: 'Alden',
+      side: 'left',
+      text: 'Onward.',
+      sprite: 'Villager_01',
+      revealed: false,
+      charsPerSecond: 40,
+      isLast: false,
+    });
+    expect(Object.isFrozen(view)).toBe(true);
+  });
+
+  it('follows the dialog to its revealed, last line', () => {
+    const last = advanceDialog(dialog, 10_000);
+    const view = toDialogView({ id: 4, dialog: advanceDialog(last, 0), charsPerSecond: 40 });
+    expect(view.speaker).toBe('Foe');
+    expect(view.revealed).toBe(true);
+    expect(view.isLast).toBe(true);
+    expect(view.sprite).toBeNull();
   });
 });

@@ -5,12 +5,15 @@ import { ControlsPanel } from './ControlsPanel.jsx';
 import { DamagePopups } from './DamagePopups.jsx';
 import { DeploymentBanner } from './DeploymentBanner.jsx';
 import { DeploymentMenu } from './DeploymentMenu.jsx';
+import { DialogBox } from './DialogBox.jsx';
 import { ItemMenu } from './ItemMenu.jsx';
 import { LoadingScreen } from './LoadingScreen.jsx';
+import { MainMenuButton } from './MainMenuButton.jsx';
 import { PageHeader } from './PageHeader.jsx';
 import { PauseMenu } from './PauseMenu.jsx';
 import { PhaseBanner } from './PhaseBanner.jsx';
 import { RosterMenu } from './RosterMenu.jsx';
+import { SettingsButton } from './SettingsButton.jsx';
 import { SkillMenu } from './SkillMenu.jsx';
 import { TitleScreen } from './TitleScreen.jsx';
 import { TurnIndicator } from './TurnIndicator.jsx';
@@ -37,7 +40,14 @@ export function App() {
 
   return (
     <div className="page">
-      <PageHeader>
+      <PageHeader
+        actions={
+          <>
+            <SettingsButton />
+            <MainMenuButton />
+          </>
+        }
+      >
         <DeploymentBanner />
         <TurnIndicator />
       </PageHeader>
@@ -56,6 +66,7 @@ export function App() {
               <ItemMenu />
               <DamagePopups />
               <PhaseBanner />
+              <DialogBox />
               <PauseMenu />
               <BattleResult />
             </div>

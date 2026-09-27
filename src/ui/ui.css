@@ -70,6 +70,71 @@ body {
   font-family: var(--serif);
 }
 
+.page-header__end {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-button {
+  padding: 5px 12px;
+  font-family: var(--serif);
+  font-size: 0.875rem;
+  letter-spacing: 1px;
+  color: var(--gold);
+  background: rgb(22 32 74 / 90%);
+  border: 1px solid var(--gold-dim);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.header-button:hover {
+  color: var(--ink);
+  background: var(--gold);
+}
+
+.header-button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.header-button[aria-expanded='true'] {
+  color: var(--ink);
+  background: var(--gold);
+}
+
+/* The settings panel drops down from its button, over the page. */
+.settings {
+  position: relative;
+}
+
+/* Nested so its opaque background beats .panel's, which comes later. */
+.settings .settings__panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  min-width: 14rem;
+  padding: 10px 14px;
+  background: var(--navy);
+  font-family: var(--mono);
+  color: var(--parchment);
+}
+
+.settings__title {
+  margin: 0 0 6px;
+  font-family: var(--serif);
+  font-size: 1rem;
+  letter-spacing: 1px;
+  color: var(--gold);
+}
+
+.settings__empty {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--parchment-dim);
+}
+
 .page__main {
   flex: 1;
   min-height: 0;
@@ -673,6 +738,112 @@ kbd {
   color: var(--parchment-dim);
 }
 
+/* ---- Dialog box ------------------------------------------------------ */
+
+/* Covers the map so a click anywhere reaches GridScene's confirm, with the
+   box itself along the bottom and a soft shade behind it for legibility. */
+.dialog-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 12px;
+  background: linear-gradient(transparent 55%, rgb(12 18 38 / 55%));
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.dialog-box {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+  width: min(100%, 44rem);
+  padding: 10px 12px;
+  cursor: pointer;
+  animation: dialog-rise 180ms ease-out;
+}
+
+/* A speaker on the right has their portrait on the right. */
+.dialog-box--right {
+  flex-direction: row-reverse;
+}
+
+.dialog-box--right .dialog-box__speaker {
+  margin-left: auto;
+}
+
+/* Sized for 96px portrait art; the 3x unit sprite fills it until then. */
+.dialog-box__portrait {
+  flex: none;
+  width: 96px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 40%, rgb(232 200 114 / 18%), rgb(12 18 38 / 70%));
+  border: 2px solid var(--gold-dim);
+  border-radius: 3px;
+}
+
+.dialog-box__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dialog-box__speaker {
+  width: fit-content;
+  margin: 0 0 6px;
+  padding: 1px 10px;
+  font-family: var(--serif);
+  font-size: 1rem;
+  letter-spacing: 1px;
+  color: var(--ink);
+  background: var(--gold);
+  border-radius: 2px;
+}
+
+.dialog-box__text {
+  position: relative;
+  margin: 0;
+  padding-right: 16px;
+  font-size: 1rem;
+  line-height: 1.5;
+  min-height: 3em;
+}
+
+.dialog-box__untyped {
+  visibility: hidden;
+}
+
+/* Blinking "more" marker once the line is fully shown. */
+.dialog-box__next {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid var(--gold);
+  animation: dialog-next 900ms steps(2, jump-none) infinite;
+}
+
+@keyframes dialog-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes dialog-next {
+  50% {
+    opacity: 0;
+  }
+}
+
 /* ---- Title screen ---------------------------------------------------- */
 
 .title-screen {
@@ -897,7 +1068,9 @@ kbd {
     transition: none;
   }
 
-  .loading-screen .title-screen__crest {
+  .loading-screen .title-screen__crest,
+  .dialog-box,
+  .dialog-box__next {
     animation: none;
   }
 }

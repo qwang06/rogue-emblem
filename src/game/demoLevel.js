@@ -49,9 +49,38 @@ export const PLAYER_ROSTER = Object.freeze({
   'soldier-3': 'Cato',
 });
 
-// Returns { grid, units, roster, deploymentZone }. `units` maps every
-// unitId (player and enemy) to its Unit; `roster` lists the player unitIds
-// available to deploy; `deploymentZone` is [{ x, y }] of placeable tiles.
+// The conversation before deployment, as a script for src/game/dialog.js.
+// The roster speaks from the left; the enemy answers from the right.
+const [ALDEN, BRYN, CATO] = Object.values(PLAYER_ROSTER);
+export const DEMO_OPENING_DIALOG = Object.freeze(
+  [
+    {
+      speaker: ALDEN,
+      team: 'player',
+      side: 'left',
+      text: 'Enemy soldiers have taken the eastern island. That bridge is the only way across.',
+    },
+    {
+      speaker: BRYN,
+      team: 'player',
+      side: 'left',
+      text: "Three of them, by my count. They'll see us coming the moment we set foot on it.",
+    },
+    {
+      speaker: 'Enemy Soldier',
+      team: 'enemy',
+      side: 'right',
+      text: 'Hold the line! Nobody crosses while we still stand.',
+    },
+    { speaker: CATO, team: 'player', side: 'left', text: "Then we won't let them stand for long." },
+    { speaker: ALDEN, team: 'player', side: 'left', text: 'Take your positions. We move on my signal.' },
+  ].map(Object.freeze),
+);
+
+// Returns { grid, units, roster, deploymentZone, openingDialog }. `units`
+// maps every unitId (player and enemy) to its Unit; `roster` lists the
+// player unitIds available to deploy; `deploymentZone` is [{ x, y }] of
+// placeable tiles; `openingDialog` is the script played before deployment.
 export function createDemoLevel() {
   let grid = parseTerrainMap(DEMO_MAP);
 
@@ -70,5 +99,6 @@ export function createDemoLevel() {
     units,
     roster: Object.keys(PLAYER_ROSTER),
     deploymentZone: DEPLOYMENT_ZONE.map((tile) => ({ ...tile })),
+    openingDialog: DEMO_OPENING_DIALOG,
   };
 }
