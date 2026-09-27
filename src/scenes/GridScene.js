@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import tilesetUrl from '../assets/kenney_tiny-battle/Tilemap/tilemap_packed.png';
+import { gameCommands } from '../bridge/commands.js';
 import { BATTLE_STATE_DEFAULTS, gameStore } from '../bridge/gameStore.js';
 import {
   toDamagePopupView,
@@ -25,7 +26,7 @@ import {
   isPlaced,
   placeUnit,
 } from '../game/deployment.js';
-import { findUnit, getCell, gridToWorld, moveUnit, setUnit } from '../game/grid.js';
+import { findUnit, getCell, gridToWorld, isInBounds, moveUnit, setUnit, worldToGrid } from '../game/grid.js';
 import { getArrowPieces } from '../game/moveArrow.js';
 import { extendMovePath, getMovementRange } from '../game/movement.js';
 import { PAUSE_ACTIONS } from '../game/pauseMenu.js';
@@ -117,6 +118,7 @@ export class GridScene extends Phaser.Scene {
       cancel: Phaser.Input.Keyboard.KeyCodes.ESC,
       cancelAlt: Phaser.Input.Keyboard.KeyCodes.X,
     });
+    this.createPointerInput();
 
     this.phase = 'deployment'; // 'deployment' | 'battle'
     this.actionMenu = null;
@@ -148,8 +150,11 @@ export class GridScene extends Phaser.Scene {
     const { JustDown } = Phaser.Input.Keyboard;
     const dx = Number(JustDown(this.keys.right)) - Number(JustDown(this.keys.left));
     const dy = Number(JustDown(this.keys.down)) - Number(JustDown(this.keys.up));
-    const confirm = JustDown(this.actionKeys.confirm) || JustDown(this.actionKeys.confirmAlt);
-    const cancel = JustDown(this.actionKeys.cancel) || JustDown(this.actionKeys.cancelAlt);
+    const pointer = this.drainPointerInput();
+    const confirm =
+      JustDown(this.actionKeys.confirm) || JustDown(this.actionKeys.confirmAlt) || pointer.confirm;
+    const cancel =
+      JustDown(this.actionKeys.cancel) || JustDown(this.actionKeys.cancelAlt) || pointer.cancel;
 
     if (this.inputLocked) return;
 
@@ -927,6 +932,102 @@ export class GridScene extends Phaser.Scene {
         if (next === steps.length) onDone();
       },
     });
+  }
+
+  // ---- Mouse -------------------------------------------------------------
+  // The mouse feeds the same confirm / cancel the keyboard does, so every
+  // input step above works with either. Pointer events on the map (from
+  // Phaser) and commands from the React menus (via src/bridge/commands.js)
+  // are queued as they arrive and applied at the start of update(), where
+  // they respect inputLocked like keys do:
+  //   - moving over the map moves the cursor while it's free to roam
+  //   - left click on the map moves the cursor there and confirms
+  //   - hovering / clicking a menu entry highlights / picks it
+  //   - right click anywhere on the stage cancels (sent by React)
+
+  createPointerInput() {
+    this.pointerQueue = [];
+    this.pointerTile = null; // last tile the pointer was over, so only tile changes move the cursor
+
+    const toTile = (pointer) => {
+      const tile = worldToGrid(pointer.worldX, pointer.worldY, TILE_SIZE);
+      return isInBounds(this.grid, tile.x, tile.y) ? tile : null;
+    };
+    this.input.on('pointermove', (pointer) => {
+      const tile = toTile(pointer);
+      if (!tile || (tile.x === this.pointerTile?.x && tile.y === this.pointerTile?.y)) return;
+      this.pointerTile = tile;
+      this.pointerQueue.push({ type: 'hover-tile', ...tile });
+    });
+    this.input.on('pointerdown', (pointer) => {
+      const tile = toTile(pointer);
+      if (tile && pointer.button === 0) this.pointerQueue.push({ type: 'click-tile', ...tile });
+    });
+
+    const unsubscribe = gameCommands.subscribe((command) => this.pointerQueue.push(command));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, unsubscribe);
+    this.events.once(Phaser.Scenes.Events.DESTROY, unsubscribe);
+  }
+
+  // Applies queued pointer input (cursor moves, menu highlights) and returns
+  // the confirm / cancel it amounts to. Input that arrives while locked is
+  // dropped, as a key press would be.
+  drainPointerInput() {
+    const queue = this.pointerQueue;
+    this.pointerQueue = [];
+    const result = { confirm: false, cancel: false };
+    if (this.inputLocked) return result;
+
+    for (const command of queue) {
+      switch (command.type) {
+        case 'hover-tile':
+          if (this.canRoamCursor()) this.pointCursorAt(command.x, command.y);
+          break;
+        case 'click-tile':
+          if (this.battleOutcome) {
+            result.confirm = true;
+          } else if (this.canRoamCursor()) {
+            this.pointCursorAt(command.x, command.y);
+            result.confirm = true;
+          }
+          break;
+        case 'hover-menu':
+        case 'select-menu':
+          // Only a menu that's open can be pointed at.
+          if (!this[command.menu]) break;
+          this.publishMenu(command.menu, selectIndex(this[command.menu], command.index));
+          if (command.type === 'select-menu') result.confirm = true;
+          break;
+        case 'confirm':
+          result.confirm = true;
+          break;
+        case 'cancel':
+          result.cancel = true;
+          break;
+      }
+    }
+    return result;
+  }
+
+  // The cursor follows the pointer only when no menu has input: on the bare
+  // map, while choosing a destination or target, and while placing a unit.
+  canRoamCursor() {
+    return (
+      this.cursorSprite.visible &&
+      !this.battleOutcome &&
+      !this.pauseMenu &&
+      !this.deploymentMenu &&
+      !this.rosterMenu &&
+      !this.actionMenu &&
+      !this.skillMenu &&
+      !this.itemMenu
+    );
+  }
+
+  pointCursorAt(x, y) {
+    if (x === this.cursor.x && y === this.cursor.y) return;
+    this.setCursor(x, y);
+    if (this.rangeMode === 'move') this.updateMovePath();
   }
 
   setCursor(x, y) {

@@ -1,7 +1,8 @@
 import { useGameStore } from './useGameStore.js';
+import { menuItemPointerProps } from './menuPointer.js';
 
 // Displays the unit action menu while one is open. Selection is driven by
-// the keyboard in GridScene; this component only renders the snapshot.
+// GridScene; this component renders the snapshot and forwards the mouse.
 // Disabled actions (e.g. Skill before any are learned) are greyed out.
 export function ActionMenu() {
   const menu = useGameStore((state) => state.actionMenu);
@@ -20,6 +21,7 @@ export function ActionMenu() {
               key={action.id}
               className={classes.join(' ')}
               aria-current={selected ? 'true' : undefined}
+              {...menuItemPointerProps('actionMenu', index)}
               aria-disabled={action.disabled ? 'true' : undefined}
             >
               {action.label}

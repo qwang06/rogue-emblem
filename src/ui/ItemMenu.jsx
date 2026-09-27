@@ -1,9 +1,10 @@
 import { useGameStore } from './useGameStore.js';
+import { menuItemPointerProps } from './menuPointer.js';
 
 // Displays the active unit's items, opened from the action menu. Each
 // entry shows how many are left; items that would restore nothing (e.g. a
-// health potion at full health) are greyed out. Selection is driven by the
-// keyboard in GridScene.
+// health potion at full health) are greyed out. Selection is driven by
+// GridScene; the mouse is forwarded to it.
 export function ItemMenu() {
   const menu = useGameStore((state) => state.itemMenu);
   if (!menu) return null;
@@ -21,6 +22,7 @@ export function ItemMenu() {
               key={item.id}
               className={classes.join(' ')}
               aria-current={selected ? 'true' : undefined}
+              {...menuItemPointerProps('itemMenu', index)}
               aria-disabled={item.disabled ? 'true' : undefined}
             >
               <span>{item.label}</span>

@@ -1,7 +1,8 @@
 import { useGameStore } from './useGameStore.js';
+import { menuItemPointerProps } from './menuPointer.js';
 
-// The End Turn / Main Menu / Settings menu opened with Esc on the bare map. Display
-// only — GridScene handles the input.
+// The End Turn / Main Menu / Settings menu opened with Esc on the bare map.
+// GridScene handles the input; the mouse is forwarded to it.
 export function PauseMenu() {
   const menu = useGameStore((state) => state.pauseMenu);
   if (!menu) return null;
@@ -18,6 +19,7 @@ export function PauseMenu() {
                 key={action.id}
                 className={selected ? 'action-menu__item action-menu__item--selected' : 'action-menu__item'}
                 aria-current={selected ? 'true' : undefined}
+                {...menuItemPointerProps('pauseMenu', index)}
               >
                 {action.label}
               </li>

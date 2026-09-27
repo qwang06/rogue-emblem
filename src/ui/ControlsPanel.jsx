@@ -3,6 +3,9 @@ const CONTROLS = [
   { keys: ['Enter', 'Z'], action: 'Confirm' },
   { keys: ['Esc', 'X'], action: 'Cancel' },
   { keys: ['Esc'], action: 'Pause (on the map)' },
+  { keys: ['Mouse'], action: 'Point to move cursor' },
+  { keys: ['Left click'], action: 'Confirm' },
+  { keys: ['Right click'], action: 'Cancel / Pause' },
 ];
 
 // Static key reference shown in the sidebar.

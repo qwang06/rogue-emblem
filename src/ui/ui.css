@@ -401,6 +401,11 @@ kbd {
 .action-menu__item {
   padding: 3px 8px 3px 20px;
   position: relative;
+  cursor: pointer;
+}
+
+.battle-result {
+  cursor: pointer;
 }
 
 .action-menu__item--selected {
@@ -420,6 +425,7 @@ kbd {
 
 .action-menu__item--disabled {
   color: rgb(243 234 211 / 35%);
+  cursor: default;
 }
 
 /* ---- Skill menu ------------------------------------------------------- */
