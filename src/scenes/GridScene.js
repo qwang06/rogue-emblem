@@ -28,6 +28,7 @@ import {
 } from '../game/deployment.js';
 import { findUnit, getCell, gridToWorld, isInBounds, moveUnit, setUnit, worldToGrid } from '../game/grid.js';
 import { getArrowPieces } from '../game/moveArrow.js';
+import { getTerrainFrame } from '../game/terrainTiles.js';
 import { extendMovePath, getMovementRange } from '../game/movement.js';
 import { PAUSE_ACTIONS } from '../game/pauseMenu.js';
 import {
@@ -43,7 +44,6 @@ import {
 } from '../game/turns.js';
 import {
   ARROW_FRAMES,
-  TERRAIN_FRAMES,
   TILESET_KEY,
   TILE_SIZE,
   UI_FRAMES,
@@ -1079,7 +1079,7 @@ export class GridScene extends Phaser.Scene {
     const data = [];
     for (const cell of grid.cells) {
       data[cell.y] = data[cell.y] ?? [];
-      data[cell.y][cell.x] = TERRAIN_FRAMES[cell.terrain] ?? TERRAIN_FRAMES.grass;
+      data[cell.y][cell.x] = getTerrainFrame(grid, cell.x, cell.y);
     }
 
     const map = this.make.tilemap({ data, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });

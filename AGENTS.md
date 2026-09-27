@@ -8,6 +8,10 @@ Rogue Emblem — a browser game built with [Phaser 3](https://phaser.io/) and bu
 
 Turn-based tactical strategy, in the vein of Fire Emblem and Advance Wars: top-down, grid-based maps, units taking turns to move and act. Art is pixel art on a 16x16 tile grid — one tileset for terrain and a spritesheet (or sheets) covering all unit/character sprites. Keep new art assets aligned to the 16x16 grid so they drop into the tileset/spritesheet pipeline without special-casing.
 
+## Tileset
+
+Any work that touches the tilesheet — picking or changing frame indices, the frame tables in `src/game/tileset.js`, terrain autotiling/edge logic, new terrain types, unit or UI sprites, or tilemap rendering — must start by loading the `tileset` skill (`.claude/skills/tileset/SKILL.md`). Its `catalog.md` describes every frame on the sheet — look frames up there instead of decoding them — and it has a script for inspecting tiles. If you learn something new about a frame, update the catalog.
+
 ## Coding philosophy
 
 - **Modular, composable pieces.** Build features as independent modules (map/grid, units, turn order, combat, AI, UI) that combine rather than reach into each other's internals. Favor small, focused files over large ones that accumulate unrelated responsibilities.
