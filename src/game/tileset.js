@@ -4,8 +4,8 @@
 // tiles, 42 columns x 63 rows; see .claude/skills/tileset/overworld-catalog.md
 // for what's where) and is picked by position on it. The tile cursor and the
 // movement arrow are tiles of the same sheet. Units are standalone sprite
-// sheets, named here by texture key (src/assets/sprites.js maps keys to
-// files), cut into one-tile frames.
+// sheets, one per animation, named here by texture key (src/assets/sprites.js
+// maps keys to files), cut into one-tile frames.
 
 // Size of one map tile in world pixels — the terrain sheet's tile size.
 export const TILE_SIZE = 32;
@@ -33,22 +33,39 @@ export const TERRAIN_AUTOTILES = {
   },
 };
 
-// Unit sprites keyed by team, so every unit on a side looks alike.
+// Unit art keyed by team, so every unit on a side looks alike. Each names a
+// set of sheets, one per animation in UNIT_ANIMATIONS (see unitSheetKey).
 export const UNIT_SPRITES = {
-  player: 'villager-1',
-  enemy: 'soldier-3',
+  player: 'Villager_01',
+  enemy: 'Soldier_03',
 };
 
 // Every unit sheet is a grid of one-tile frames, `columns` wide: one row per
-// facing direction, one column per idle animation frame. Units only face
-// `row` (row 0, toward the camera) for now, looping its `frames` columns,
-// each shown for frameMs.
-export const UNIT_IDLE_ANIMATION = {
+// facing direction (`rows`, keyed by the facings in src/game/facing.js), one
+// column per animation frame. A unit loops its facing's row, `frames` columns
+// long. Units start out facing `defaultFacing` (toward the camera), turn to
+// face the way they step while walking, and keep facing their last step once
+// they stop.
+export const UNIT_SHEET = {
   columns: 4,
-  row: 0,
+  rows: { down: 0, left: 1, right: 2, up: 3 },
+  defaultFacing: 'down',
   frames: 4,
-  frameMs: 200,
 };
+
+// Unit animations: `sheet` is the suffix of the sheet's texture key, and each
+// frame shows for frameMs. Units play `idle` standing still and `move` while
+// walking.
+export const UNIT_ANIMATIONS = {
+  idle: { sheet: 'Idle', frameMs: 200 },
+  move: { sheet: 'Move', frameMs: 120 },
+};
+
+// The texture key of a unit's sheet for an animation, e.g.
+// ('Villager_01', 'move') -> 'Villager_01_Move'.
+export function unitSheetKey(sprite, animation) {
+  return `${sprite}_${UNIT_ANIMATIONS[animation].sheet}`;
+}
 
 // The blob shadow drawn under every unit, since the unit sprites have none:
 // a flat ellipse centered at (centerX, centerY) within the unit's tile, in
