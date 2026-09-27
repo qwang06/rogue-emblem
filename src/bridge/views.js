@@ -59,9 +59,10 @@ export function toDamagePopupView({ id, amount, kind = 'damage', x, y, durationM
 }
 
 // Snapshot of one unit in the deployment roster menu: its id, the name to
-// show, the sprite frame to draw, and whether it's already on the map.
-export function toRosterEntryView({ id, unit, frame, placed }) {
-  return Object.freeze({ id, label: unit.name, frame, placed });
+// show, the sprite to draw (a texture key), and whether it's already on
+// the map.
+export function toRosterEntryView({ id, unit, sprite, placed }) {
+  return Object.freeze({ id, label: unit.name, sprite, placed });
 }
 
 const PHASE_LABELS = Object.freeze({ player: 'Player Phase', enemy: 'Enemy Phase' });

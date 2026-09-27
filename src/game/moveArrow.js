@@ -1,6 +1,6 @@
 // Pure logic for the movement arrow: which arrow piece to draw on each tile
-// of a planned route. No Phaser — the scene maps piece names to frames
-// (ARROW_FRAMES in tileset.js) and draws them.
+// of a planned route. No Phaser — the scene maps piece names to sprites
+// (ARROW_SPRITES in tileset.js) and draws them.
 //
 // Piece names:
 //   'head-up' | 'head-down' | 'head-left' | 'head-right' — the arrowhead on

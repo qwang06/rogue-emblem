@@ -1,73 +1,50 @@
-// Picks which piece of an edge set a cell draws with, so a patch of terrain
-// (e.g. water) gets a border where it meets different terrain. Pieces are
-// named for the edges that border other terrain: 'top-left', 'top',
-// 'top-right', 'left', 'center', 'right', 'bottom-left', 'bottom',
-// 'bottom-right', plus inner corners 'inner-top-left', 'inner-top-right',
-// 'inner-bottom-right', 'inner-bottom-left' for other terrain touching only
-// a diagonal. TERRAIN_EDGE_FRAMES in tileset.js maps them to frames.
+// Picks terrain frames for a dual-grid tileset. Terrain tiles aren't drawn
+// on the map's cells: they sit on a second grid shifted half a tile up and
+// left, so each terrain tile covers the meeting point of four cells, one in
+// each of its corners. A tile's frame depends only on which of those four
+// cells hold the terrain being drawn (e.g. water over grass), which gives 16
+// pieces — named for the corners that hold it, 'top-left+bottom-right' and
+// so on, plus 'none' and 'all'. TERRAIN_CORNER_FRAMES in tileset.js maps
+// them to frames.
+//
+// The terrain grid is one tile wider and taller than the map: terrain tile
+// (x, y) has cell (x - 1, y - 1) in its top-left corner and cell (x, y) in
+// its bottom-right.
 
 import { getCell } from './grid.js';
-import { TERRAIN_EDGE_FRAMES, TERRAIN_FRAMES } from './tileset.js';
+import { TERRAIN_CORNER_FRAMES } from './tileset.js';
 
-// A neighbor borders the cell when it's on the map and holds other terrain.
-// The map edge doesn't draw a border, so terrain reads as continuing past it.
-function bordersAt(grid, x, y, terrain) {
-  const neighbor = getCell(grid, x, y);
-  return neighbor !== undefined && neighbor.terrain !== terrain;
-}
-
-// Border on one side only picks that side; on both sides or neither there's
-// no edge piece for it, so the axis falls back to the middle.
-function pickSide(before, after, beforeName, afterName) {
-  if (before && !after) return beforeName;
-  if (after && !before) return afterName;
-  return null;
-}
-
-// Diagonal neighbors, named for the corner they sit at.
+// Terrain tile corners, in piece-name order, as offsets from the tile's
+// bottom-right cell.
 const CORNERS = [
   { dx: -1, dy: -1, name: 'top-left' },
-  { dx: 1, dy: -1, name: 'top-right' },
-  { dx: 1, dy: 1, name: 'bottom-right' },
-  { dx: -1, dy: 1, name: 'bottom-left' },
+  { dx: 0, dy: -1, name: 'top-right' },
+  { dx: -1, dy: 0, name: 'bottom-left' },
+  { dx: 0, dy: 0, name: 'bottom-right' },
 ];
 
-// Returns the edge piece name for the cell at (x, y). Orthogonal neighbors
-// pick the edge pieces; a cell with none that touches other terrain at
-// exactly one diagonal is an inner corner ('inner-top-left', …), named for
-// the corner the other terrain is in. More than one such diagonal has no
-// piece, so it stays 'center'.
-export function getEdgePiece(grid, x, y) {
-  const { terrain } = getCell(grid, x, y);
-  const vertical = pickSide(
-    bordersAt(grid, x, y - 1, terrain),
-    bordersAt(grid, x, y + 1, terrain),
-    'top',
-    'bottom',
-  );
-  const horizontal = pickSide(
-    bordersAt(grid, x - 1, y, terrain),
-    bordersAt(grid, x + 1, y, terrain),
-    'left',
-    'right',
-  );
-  if (vertical && horizontal) return `${vertical}-${horizontal}`;
-  if (vertical || horizontal) return vertical ?? horizontal;
+const clamp = (value, max) => Math.min(Math.max(value, 0), max);
 
-  // Only an untouched cell can be an inner corner: an edge piece already
-  // draws a shoreline, and a side bordered on both sides has no piece.
-  const touchesSide = [[0, -1], [0, 1], [-1, 0], [1, 0]].some(([dx, dy]) => bordersAt(grid, x + dx, y + dy, terrain));
-  if (touchesSide) return 'center';
-  const corners = CORNERS.filter(({ dx, dy }) => bordersAt(grid, x + dx, y + dy, terrain));
-  return corners.length === 1 ? `inner-${corners[0].name}` : 'center';
+// Size of the terrain grid for a map: one more tile in each direction.
+export function getTerrainGridSize(grid) {
+  return { width: grid.width + 1, height: grid.height + 1 };
 }
 
-// The tileset frame a cell renders with: its edge piece for terrain that has
-// an edge set (its center if the set lacks that piece), otherwise its plain
-// terrain frame (grass for unknown terrain).
-export function getTerrainFrame(grid, x, y, { frames = TERRAIN_FRAMES, edgeFrames = TERRAIN_EDGE_FRAMES } = {}) {
-  const { terrain } = getCell(grid, x, y);
-  const edges = edgeFrames[terrain];
-  if (edges) return edges[getEdgePiece(grid, x, y)] ?? edges.center;
-  return frames[terrain] ?? frames.grass;
+// Names the piece terrain tile (x, y) needs: which of its corners hold
+// `terrain`. Corners off the map take the nearest cell on it, so terrain
+// reads as continuing past the map edge instead of drawing a border there.
+export function getCornerPiece(grid, x, y, terrain) {
+  const corners = CORNERS.filter(({ dx, dy }) => {
+    const cell = getCell(grid, clamp(x + dx, grid.width - 1), clamp(y + dy, grid.height - 1));
+    return cell.terrain === terrain;
+  }).map(({ name }) => name);
+  if (corners.length === 0) return 'none';
+  if (corners.length === CORNERS.length) return 'all';
+  return corners.join('+');
+}
+
+// The frame terrain tile (x, y) renders with. Only water has a corner set,
+// drawn over grass; any other terrain draws as grass.
+export function getTerrainFrame(grid, x, y, { terrain = 'water', cornerFrames = TERRAIN_CORNER_FRAMES } = {}) {
+  return cornerFrames[terrain][getCornerPiece(grid, x, y, terrain)];
 }

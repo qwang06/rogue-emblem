@@ -483,9 +483,8 @@ kbd {
 }
 
 .unit-sprite {
-  display: inline-block;
+  display: block;
   flex: none;
-  background-repeat: no-repeat;
   image-rendering: pixelated;
 }
 
