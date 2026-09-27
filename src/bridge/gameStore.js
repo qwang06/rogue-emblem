@@ -22,5 +22,8 @@ export const BATTLE_STATE_DEFAULTS = Object.freeze({
 // Add new UI-facing state here as plain, serializable values.
 export const gameStore = createStore({
   screen: 'title', // 'title' (main menu) | 'battle' (the map is running)
+  // Which battle the map runs, set together with screen: 'battle':
+  // { mode: 'demo' } | { mode: 'training', unitClass } (a class id from src/game/unitClasses.js)
+  battleSetup: null,
   ...BATTLE_STATE_DEFAULTS,
 });

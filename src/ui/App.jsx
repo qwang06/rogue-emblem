@@ -41,7 +41,7 @@ export function App() {
       </PageHeader>
 
       <main className="page__main">
-        {/* The stage is the largest 4:3 box that fits this area (see ui.css). */}
+        {/* The stage fills this area, and the canvas fills the stage (see ui.css). */}
         <div className="stage-area">
           {/* Right click anywhere on the map or its menus cancels, like Esc. */}
           <div className="stage" onContextMenu={cancelOnRightClick}>

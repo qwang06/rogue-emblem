@@ -8,7 +8,7 @@ import { Soldier } from './Soldier.js';
 describe('createDemoLevel', () => {
   const level = createDemoLevel();
 
-  it('builds its terrain from the demo map, sized to fill the 20x15 view', () => {
+  it('builds its terrain from the demo map, sized 20x15', () => {
     expect(level.grid.width).toBe(20);
     expect(level.grid.height).toBe(15);
     expect(level.grid.height).toBe(DEMO_MAP.length);

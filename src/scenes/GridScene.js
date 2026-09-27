@@ -14,8 +14,10 @@ import {
 import { createActionMenu, getSelectedAction, getUnitActions, moveSelection, selectIndex } from '../game/actionMenu.js';
 import { calculateSkillDamage, findLearnedSkill, getLearnedSkills, getSkillActions } from '../game/skills.js';
 import { calculateDamage, getAttackRange, getAttackTargets } from '../game/combat.js';
+import { getFitZoom } from '../game/camera.js';
 import { createCursor, moveCursor } from '../game/cursor.js';
 import { createDemoLevel } from '../game/demoLevel.js';
+import { createTrainingLevel } from '../game/trainingLevel.js';
 import { getItemActions } from '../game/items.js';
 import { planRushAction } from '../game/enemyAI.js';
 import {
@@ -51,10 +53,9 @@ import {
 } from '../game/tileset.js';
 import { POTION_COLORS, playFireBurst, playGrenadeThrow, playHitFlash, playPotionGlow } from './effects.js';
 
-// 20x15 tiles of 16px art, drawn at 3x.
-export const CANVAS_WIDTH = 960;
-export const CANVAS_HEIGHT = 720;
-const ZOOM = 3;
+// The canvas is sized by the page (see main.js); maps are zoomed to fit it,
+// up to MAX_ZOOM, and centered.
+const MAX_ZOOM = 2;
 const MOVE_RANGE_COLOR = 0x3b82f6;
 const MOVE_RANGE_ALPHA = 0.45;
 const ATTACK_RANGE_COLOR = 0xef4444;
@@ -90,12 +91,15 @@ export class GridScene extends Phaser.Scene {
     });
   }
 
-  create() {
+  // `setup` is the battle the title screen chose (gameStore's battleSetup):
+  // { mode: 'training', unitClass } for a training battle, else the demo.
+  create(setup) {
     // Every battle starts from a clean slate: clear anything a previous
-    // battle left in the store, then enter the deployment phase.
-    gameStore.setState({ ...BATTLE_STATE_DEFAULTS, phase: 'deployment' });
+    // battle left in the store.
+    gameStore.setState({ ...BATTLE_STATE_DEFAULTS });
 
-    const level = createDemoLevel();
+    const level =
+      setup?.mode === 'training' ? createTrainingLevel(setup.unitClass) : createDemoLevel();
     this.grid = level.grid;
     this.units = level.units; // unitId -> Unit, player roster and enemies alike
     this.roster = level.roster; // player unitIds that can be deployed
@@ -105,11 +109,12 @@ export class GridScene extends Phaser.Scene {
     this.renderUnits(this.grid);
     this.createCursor();
 
-    this.cameras.main.setZoom(ZOOM);
-    this.cameras.main.centerOn(
-      (this.grid.width * TILE_SIZE) / 2,
-      (this.grid.height * TILE_SIZE) / 2,
-    );
+    this.fitCamera();
+    // The scale manager outlives this scene, so stop listening when it goes.
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.fitCamera, this);
+    const stopFitting = () => this.scale.off(Phaser.Scale.Events.RESIZE, this.fitCamera, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, stopFitting);
+    this.events.once(Phaser.Scenes.Events.DESTROY, stopFitting);
 
     this.keys = this.input.keyboard.createCursorKeys();
     this.actionKeys = this.input.keyboard.addKeys({
@@ -143,7 +148,18 @@ export class GridScene extends Phaser.Scene {
     this.hoveredUnit = null;
     this.nextPopupId = 1;
     this.updateHoveredUnit();
-    this.startDeployment();
+    // Levels with units to place open on deployment; others (e.g. training,
+    // where everyone starts on the map) go straight to the battle.
+    if (this.deploymentZone.length > 0) this.startDeployment();
+    else this.startBattle();
+  }
+
+  // Zooms the map to fit the canvas (up to MAX_ZOOM) and centers it. Runs
+  // on create and whenever the page resizes the canvas.
+  fitCamera() {
+    const camera = this.cameras.main;
+    camera.setZoom(getFitZoom(this.grid, TILE_SIZE, this.scale.gameSize, MAX_ZOOM));
+    camera.centerOn((this.grid.width * TILE_SIZE) / 2, (this.grid.height * TILE_SIZE) / 2);
   }
 
   update() {
@@ -369,7 +385,7 @@ export class GridScene extends Phaser.Scene {
   // makes main.js remove this scene. The next Play starts a fresh battle.
   exitToTitle() {
     this.inputLocked = true;
-    gameStore.setState({ ...BATTLE_STATE_DEFAULTS, screen: 'title' });
+    gameStore.setState({ ...BATTLE_STATE_DEFAULTS, screen: 'title', battleSetup: null });
   }
 
   // ---- Deployment phase -------------------------------------------------
@@ -383,6 +399,7 @@ export class GridScene extends Phaser.Scene {
 
   startDeployment() {
     this.phase = 'deployment';
+    gameStore.setState({ phase: 'deployment' });
     this.zoneTiles = this.drawTileHighlights(
       this.deploymentZone,
       DEPLOYMENT_ZONE_COLOR,
@@ -884,7 +901,7 @@ export class GridScene extends Phaser.Scene {
         { x: sprite.x + sprite.displayWidth / 2, y: sprite.y },
         { x: worldView.x, y: worldView.y, zoom },
       ),
-      { width: CANVAS_WIDTH, height: CANVAS_HEIGHT },
+      this.scale.gameSize,
     );
     const popup = toDamagePopupView({
       id: this.nextPopupId++,

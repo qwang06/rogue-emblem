@@ -8,8 +8,8 @@ import { Soldier } from './Soldier.js';
 import { parseTerrainMap } from './terrainMap.js';
 
 // A small island on the left joined by a bridge to a large island on the
-// right, which has arms reaching north and south. Sized to exactly fill the
-// 20x15 tile view. '.' is grass, '~' is water.
+// right, which has arms reaching north and south. 20x15 tiles. '.' is
+// grass, '~' is water.
 export const DEMO_MAP = Object.freeze([
   '~~~~~~~~~~~~~....~~~',
   '~~~~~~~~~~~~~....~~~',

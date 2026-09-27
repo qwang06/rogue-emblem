@@ -2,16 +2,44 @@ import { useEffect, useState } from 'react';
 import { gameStore } from '../bridge/gameStore.js';
 import { createActionMenu, getSelectedAction, moveSelection, selectIndex } from '../game/actionMenu.js';
 import { TITLE_ACTIONS } from '../game/titleMenu.js';
+import { getTrainingActions } from '../game/trainingLevel.js';
 
-// Carries out a title menu choice. Settings is a placeholder for now.
-function runTitleAction(action) {
-  if (action?.id === 'play') gameStore.setState({ screen: 'battle' });
+const TRAINING_INDEX = TITLE_ACTIONS.findIndex((action) => action.id === 'training');
+
+function mainMenu(selectedIndex = 0) {
+  return selectIndex(createActionMenu(TITLE_ACTIONS), selectedIndex);
 }
 
-// The landing screen: game title plus the Play / Settings menu. Works with
-// the keyboard (arrows + Enter/Z, same keys as the map) and the mouse.
+// The landing screen: game title plus the Play / Training / Settings menu.
+// Training swaps in a second menu listing the unit classes; picking one
+// starts a small practice battle with that unit. Works with the keyboard
+// (arrows + Enter/Z to choose, Esc/X to go back — same keys as the map) and
+// the mouse (right click goes back).
 export function TitleScreen() {
-  const [menu, setMenu] = useState(() => createActionMenu(TITLE_ACTIONS));
+  const [view, setView] = useState('main'); // 'main' | 'training'
+  const [menu, setMenu] = useState(() => mainMenu());
+
+  function openTraining() {
+    setView('training');
+    setMenu(createActionMenu(getTrainingActions()));
+  }
+
+  function backToMain() {
+    setView('main');
+    setMenu(mainMenu(TRAINING_INDEX));
+  }
+
+  // Carries out a menu choice. Settings is a placeholder for now.
+  function runAction(action) {
+    if (!action) return;
+    if (view === 'training') {
+      gameStore.setState({ screen: 'battle', battleSetup: { mode: 'training', unitClass: action.id } });
+    } else if (action.id === 'play') {
+      gameStore.setState({ screen: 'battle', battleSetup: { mode: 'demo' } });
+    } else if (action.id === 'training') {
+      openTraining();
+    }
+  }
 
   useEffect(() => {
     function onKeyDown(event) {
@@ -20,15 +48,27 @@ export function TitleScreen() {
         setMenu((current) => moveSelection(current, event.key === 'ArrowUp' ? -1 : 1));
       } else if (event.key === 'Enter' || event.key === 'z' || event.key === 'Z') {
         event.preventDefault();
-        runTitleAction(getSelectedAction(menu));
+        runAction(getSelectedAction(menu));
+      } else if (event.key === 'Escape' || event.key === 'x' || event.key === 'X') {
+        if (view === 'training') {
+          event.preventDefault();
+          backToMain();
+        }
       }
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [menu]);
+  });
+
+  function onContextMenu(event) {
+    event.preventDefault();
+    if (view === 'training') backToMain();
+  }
+
+  const training = view === 'training';
 
   return (
-    <div className="title-screen">
+    <div className="title-screen" onContextMenu={onContextMenu}>
       <header className="title-screen__header">
         <Crest />
         <h1 className="title-screen__title">Rogue Emblem</h1>
@@ -37,7 +77,8 @@ export function TitleScreen() {
         </div>
       </header>
 
-      <nav className="title-menu" aria-label="Main menu">
+      <nav className="title-menu" aria-label={training ? 'Choose a unit to train' : 'Main menu'}>
+        {training && <h2 className="title-menu__heading">Training — Choose a Unit</h2>}
         <ul className="title-menu__list">
           {menu.actions.map((action, index) => {
             const selected = index === menu.selectedIndex;
@@ -48,7 +89,7 @@ export function TitleScreen() {
                   className={selected ? 'title-menu__item title-menu__item--selected' : 'title-menu__item'}
                   aria-current={selected ? 'true' : undefined}
                   onMouseEnter={() => setMenu((current) => selectIndex(current, index))}
-                  onClick={() => runTitleAction(action)}
+                  onClick={() => runAction(action)}
                 >
                   {action.label}
                 </button>
@@ -58,7 +99,9 @@ export function TitleScreen() {
         </ul>
       </nav>
 
-      <p className="title-screen__hint">↑↓ Select · Enter Confirm</p>
+      <p className="title-screen__hint">
+        {training ? '↑↓ Select · Enter Confirm · Esc Back' : '↑↓ Select · Enter Confirm'}
+      </p>
     </div>
   );
 }

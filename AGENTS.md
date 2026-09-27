@@ -22,9 +22,10 @@ Any work that touches the tilesheet — picking or changing frame indices, the f
 
 ## Git workflow
 
-- Don't create branches, commit, push, or open pull requests on your own initiative. Work on whatever branch is currently checked out; the user will explicitly say when to create a branch and when to open a PR.
-- Never commit directly to `main`. If you're on `main` when asked to commit, say so and ask for a branch name rather than committing there.
-- When asked to branch, create it off `main` with a descriptive name (e.g. `feature/grid-cursor`, `fix/combat-crit-calc`) unless told otherwise.
+- Don't commit, push, or open pull requests on your own initiative; the user will explicitly say when to do those.
+- If `main` is checked out when you start new work, assume the previous work is finished and create a new branch off `main` for it before making changes, unless the user says otherwise. Otherwise work on whatever branch is currently checked out, and only create other branches when asked.
+- Never commit directly to `main`.
+- Create branches off `main` with a descriptive name (e.g. `feature/grid-cursor`, `fix/combat-crit-calc`) unless told otherwise.
 - When asked to open a PR, make sure tests pass and `ARCHITECTURES.md` is updated if the change warrants it, then push the branch and open the PR against `main` with `gh pr create`.
 - Don't merge the PR yourself; merging into `main` happens through the PR on GitHub, not a local `git merge`.
 

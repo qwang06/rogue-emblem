@@ -3,5 +3,6 @@
 
 export const TITLE_ACTIONS = Object.freeze([
   Object.freeze({ id: 'play', label: 'Play' }),
+  Object.freeze({ id: 'training', label: 'Training' }),
   Object.freeze({ id: 'settings', label: 'Settings' }),
 ]);
