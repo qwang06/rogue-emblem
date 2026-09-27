@@ -2,10 +2,14 @@
 // them all under these keys; the React UI looks unit portraits up here.
 // src/game/tileset.js names which key each unit draws with.
 
-import soldier3 from './soldier-3.png';
-import villager1 from './villager-1.png';
+import soldier03Idle from './Soldier_03_Idle.png';
+import soldier03Move from './Soldier_03_Move.png';
+import villager01Idle from './Villager_01_Idle.png';
+import villager01Move from './Villager_01_Move.png';
 
 export const SPRITE_URLS = {
-  'soldier-3': soldier3,
-  'villager-1': villager1,
+  Soldier_03_Idle: soldier03Idle,
+  Soldier_03_Move: soldier03Move,
+  Villager_01_Idle: villager01Idle,
+  Villager_01_Move: villager01Move,
 };

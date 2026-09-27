@@ -489,7 +489,7 @@ kbd {
   image-rendering: pixelated;
 }
 
-/* Timing comes from UNIT_IDLE_ANIMATION, set inline by UnitSprite. */
+/* Timing comes from UNIT_SHEET / UNIT_ANIMATIONS, set inline by UnitSprite. */
 .unit-sprite--animated {
   animation-name: unit-sprite-idle;
   animation-iteration-count: infinite;

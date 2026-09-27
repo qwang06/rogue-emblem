@@ -1,10 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import { SPRITE_URLS } from '../assets/sprites.js';
-import { ARROW_TILES, CURSOR_ANIMATION, TERRAIN_SHEET, UNIT_SPRITES } from './tileset.js';
+import { FACINGS } from './facing.js';
+import {
+  ARROW_TILES,
+  CURSOR_ANIMATION,
+  TERRAIN_SHEET,
+  UNIT_ANIMATIONS,
+  UNIT_SHEET,
+  UNIT_SPRITES,
+  unitSheetKey,
+} from './tileset.js';
 
 describe('sprite keys', () => {
-  it('names an image for every unit', () => {
-    for (const key of Object.values(UNIT_SPRITES)) expect(SPRITE_URLS).toHaveProperty([key]);
+  it('names an image for every unit animation', () => {
+    for (const sprite of Object.values(UNIT_SPRITES)) {
+      for (const animation of Object.keys(UNIT_ANIMATIONS)) {
+        expect(SPRITE_URLS).toHaveProperty([unitSheetKey(sprite, animation)]);
+      }
+    }
   });
 
   it('gives each team its own sprite', () => {
@@ -34,5 +47,21 @@ describe('ARROW_TILES', () => {
       expect(column).toBeLessThan(TERRAIN_SHEET.columns);
       expect(row).toBeLessThan(TERRAIN_SHEET.rows);
     }
+  });
+});
+
+describe('unitSheetKey', () => {
+  it('names the sheet for each animation', () => {
+    expect(unitSheetKey('Villager_01', 'idle')).toBe('Villager_01_Idle');
+    expect(unitSheetKey('Villager_01', 'move')).toBe('Villager_01_Move');
+  });
+});
+
+describe('UNIT_SHEET', () => {
+  it('has a distinct sheet row for every facing', () => {
+    const { rows, defaultFacing } = UNIT_SHEET;
+    expect(Object.keys(rows).sort()).toEqual([...FACINGS].sort());
+    expect(new Set(Object.values(rows)).size).toBe(FACINGS.length);
+    expect(rows).toHaveProperty([defaultFacing]);
   });
 });

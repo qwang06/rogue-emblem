@@ -30,6 +30,7 @@ import {
   placeUnit,
 } from '../game/deployment.js';
 import { findUnit, getCell, gridToWorld, isInBounds, moveUnit, setUnit, worldToGrid } from '../game/grid.js';
+import { getPathFacings } from '../game/facing.js';
 import { getArrowPieces } from '../game/moveArrow.js';
 import { getQuarterFrames, getTileFrame } from '../game/autotile.js';
 import { extendMovePath, getMovementRange } from '../game/movement.js';
@@ -52,8 +53,10 @@ import {
   TERRAIN_BASE_TILE,
   TERRAIN_SHEET,
   TILE_SIZE,
-  UNIT_IDLE_ANIMATION,
+  UNIT_ANIMATIONS,
+  UNIT_SHEET,
   UNIT_SPRITES,
+  unitSheetKey,
 } from '../game/tileset.js';
 import { POTION_COLORS, playFireBurst, playGrenadeThrow, playHitFlash, playPotionGlow } from './effects.js';
 import { addUnitShadow } from './unitShadow.js';
@@ -72,8 +75,8 @@ const DEPLOYMENT_ZONE_ALPHA = 0.4;
 // Deployment menu entries, by index, for re-opening it on a given one.
 const PLACE_UNITS_INDEX = 0;
 const START_INDEX = 1;
-// Pause between each tile a unit steps through when it moves.
-const MOVE_STEP_DELAY_MS = 80;
+// How long a walking unit takes to glide from one tile to the next.
+const MOVE_STEP_MS = 140;
 // How long a damage number stays on screen (the React HUD animates it).
 const DAMAGE_POPUP_DURATION_MS = 700;
 // How long the "Player Phase" / "Enemy Phase" banner holds the screen.
@@ -934,9 +937,10 @@ export class GridScene extends Phaser.Scene {
     this.unitSprites.delete(unitId);
   }
 
-  // Steps a sprite through each tile of path (path[0] is where it already
-  // is), pausing between steps, then calls onDone. No tweening yet — the
-  // sprite snaps from tile to tile.
+  // Walks a sprite through each tile of path (path[0] is where it already
+  // is), gliding at a steady speed from tile to tile, then calls onDone. It
+  // plays its move animation facing each step's direction as it takes it,
+  // then idles facing the last one.
   walkSprite(sprite, path, onDone) {
     const steps = path.slice(1);
     if (steps.length === 0) {
@@ -944,15 +948,20 @@ export class GridScene extends Phaser.Scene {
       return;
     }
 
-    let next = 0;
-    this.time.addEvent({
-      delay: MOVE_STEP_DELAY_MS,
-      repeat: steps.length - 1,
-      callback: () => {
-        const { x, y } = gridToWorld(steps[next].x, steps[next].y, TILE_SIZE);
-        sprite.setPosition(x, y);
-        next += 1;
-        if (next === steps.length) onDone();
+    const art = sprite.getData('art');
+    const facings = getPathFacings(path, sprite.getData('facing'));
+    this.tweens.chain({
+      targets: sprite,
+      tweens: steps.map((step, i) => ({
+        ...gridToWorld(step.x, step.y, TILE_SIZE),
+        duration: MOVE_STEP_MS,
+        ease: 'Linear',
+        onStart: () => sprite.play(this.unitAnimation(art, 'move', facings[i]), true),
+      })),
+      onComplete: () => {
+        const facing = facings[facings.length - 1];
+        sprite.setData('facing', facing).play(this.unitAnimation(art, 'idle', facing));
+        onDone();
       },
     });
   }
@@ -1171,21 +1180,27 @@ export class GridScene extends Phaser.Scene {
   addUnitSprite(unitId, gridX, gridY) {
     const unit = this.units.get(unitId);
     const { x, y } = gridToWorld(gridX, gridY, TILE_SIZE);
-    const key = UNIT_SPRITES[unit.team] ?? UNIT_SPRITES.player;
-    const sprite = this.addTileSprite(x, y, key)
+    const art = UNIT_SPRITES[unit.team] ?? UNIT_SPRITES.player;
+    const sprite = this.addTileSprite(x, y, unitSheetKey(art, 'idle'))
       .setDepth(0.75)
       .setData('unit', unit)
-      .play(this.unitIdleAnimation(key));
+      .setData('art', art)
+      .setData('facing', UNIT_SHEET.defaultFacing)
+      .play(this.unitAnimation(art, 'idle', UNIT_SHEET.defaultFacing));
     addUnitShadow(this, sprite);
     this.unitSprites.set(unitId, sprite);
   }
 
-  // The looping idle animation for a unit sheet, created on first use.
-  // Animations are global to the game, so a restarted scene reuses it.
-  unitIdleAnimation(key) {
-    const animKey = `${key}-idle`;
+  // The looping animation (a UNIT_ANIMATIONS name) for a unit's art facing
+  // `facing`, created on first use. Animations are global to the game, so a
+  // restarted scene reuses them.
+  unitAnimation(art, animation, facing) {
+    const key = unitSheetKey(art, animation);
+    const animKey = `${key}-${facing}`;
     if (!this.anims.exists(animKey)) {
-      const { columns, row, frames, frameMs } = UNIT_IDLE_ANIMATION;
+      const { columns, rows, frames } = UNIT_SHEET;
+      const { frameMs } = UNIT_ANIMATIONS[animation];
+      const row = rows[facing];
       this.anims.create({
         key: animKey,
         frames: Array.from({ length: frames }, (_, column) => ({ key, frame: getTileFrame([column, row], columns) })),
