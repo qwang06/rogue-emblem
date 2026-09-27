@@ -6,11 +6,11 @@ Instructions for AI coding agents working in this repository.
 
 Rogue Emblem — a browser game built with [Phaser 3](https://phaser.io/) and bundled with [Vite](https://vitejs.dev/).
 
-Turn-based tactical strategy, in the vein of Fire Emblem and Advance Wars: top-down, grid-based maps, units taking turns to move and act. Art is pixel art on a 32x32 tile grid — a dual-grid tileset for terrain (`src/assets/tileset-grass-water.png`) and standalone images for units, the cursor, and movement-arrow pieces (16x16 UI images are drawn at 2x). Keep new art assets aligned to the 32x32 grid so they drop into the art pipeline without special-casing.
+Turn-based tactical strategy, in the vein of Fire Emblem and Advance Wars: top-down, grid-based maps, units taking turns to move and act. Art is pixel art on a 32x32 tile grid — a blob-autotile overworld sheet for terrain (`src/assets/overworld.png`) which also holds the cursor and movement-arrow pieces, and standalone images for units. Keep new art assets aligned to the 32x32 grid so they drop into the art pipeline without special-casing.
 
 ## Tileset
 
-Any work that touches art — picking or changing terrain frame indices or sprite keys, the tables in `src/game/tileset.js` and `src/assets/sprites.js`, dual-grid terrain logic, new terrain types, unit or UI sprites, or tilemap rendering — must start by loading the `tileset` skill (`.claude/skills/tileset/SKILL.md`). It describes the terrain sheet's layout and the sprite files, and has a script for inspecting any PNG as ASCII. If you learn something new about an image, add it to the skill.
+Any work that touches art — picking or changing terrain frame indices or sprite keys, the tables in `src/game/tileset.js` and `src/assets/sprites.js`, terrain autotiling, new terrain types, unit or UI sprites, or tilemap rendering — must start by loading the `tileset` skill (`.claude/skills/tileset/SKILL.md`). It describes the terrain sheet's layout and the sprite files, and has a script for inspecting any PNG as ASCII. If you learn something new about an image, add it to the skill.
 
 ## Coding philosophy
 

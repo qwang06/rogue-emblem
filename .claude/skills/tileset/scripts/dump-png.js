@@ -1,6 +1,6 @@
 // Prints PNG images (or one tile of a tilesheet) as ASCII, so pixel art can
 // be read without an image viewer. Usage (from the repo root):
-//   node .claude/skills/tileset/scripts/dump-png.js src/assets/cursor.png
+//   node .claude/skills/tileset/scripts/dump-png.js src/assets/warrior-1.png
 //   node .claude/skills/tileset/scripts/dump-png.js --tile 32 src/assets/tileset-grass-water.png:15
 //   node .claude/skills/tileset/scripts/dump-png.js --colors src/assets/warrior-1.png
 // Each distinct color gets its own character, most common first, with a
@@ -11,12 +11,13 @@
 // interlacing).
 
 import fs from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import zlib from 'node:zlib';
 
 const CHANNELS = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 };
 
 // Returns the image as rows of [r, g, b, a] pixels.
-function decode(file) {
+export function decode(file) {
   const buf = fs.readFileSync(file);
   let pos = 8;
   let header;
@@ -99,29 +100,34 @@ function crop(rows, size, frame) {
   return rows.slice(y0, y0 + size).map((row) => row.slice(x0, x0 + size));
 }
 
-const args = process.argv.slice(2);
-const colorsMode = args.includes('--colors');
-const sizeIndex = args.indexOf('--tile');
-const size = sizeIndex >= 0 ? Number(args[sizeIndex + 1]) : null;
-const targets = args.filter((arg, i) => !arg.startsWith('--') && (sizeIndex < 0 || i !== sizeIndex + 1));
+// Only run the CLI when invoked directly, so other scripts can import decode.
+if (import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-for (const target of targets) {
-  const [, file, frame] = target.match(/^(.*?)(?::(\d+))?$/);
-  let rows = decode(file);
-  if (size && frame !== undefined) rows = crop(rows, size, Number(frame));
+function main() {
+  const args = process.argv.slice(2);
+  const colorsMode = args.includes('--colors');
+  const sizeIndex = args.indexOf('--tile');
+  const size = sizeIndex >= 0 ? Number(args[sizeIndex + 1]) : null;
+  const targets = args.filter((arg, i) => !arg.startsWith('--') && (sizeIndex < 0 || i !== sizeIndex + 1));
 
-  const counts = new Map();
-  for (const px of rows.flat()) {
-    if (px[3] === 0) continue;
-    counts.set(hex(px), (counts.get(hex(px)) ?? 0) + 1);
+  for (const target of targets) {
+    const [, file, frame] = target.match(/^(.*?)(?::(\d+))?$/);
+    let rows = decode(file);
+    if (size && frame !== undefined) rows = crop(rows, size, Number(frame));
+
+    const counts = new Map();
+    for (const px of rows.flat()) {
+      if (px[3] === 0) continue;
+      counts.set(hex(px), (counts.get(hex(px)) ?? 0) + 1);
+    }
+    const colors = [...counts].sort((p, q) => q[1] - p[1]);
+    console.log(`${target}  ${rows[0].length}x${rows.length}`);
+    if (colorsMode) {
+      console.log(colors.map(([color, n]) => `${color}:${n}`).join(' '), '\n');
+      continue;
+    }
+    const chars = new Map(colors.map(([color], i) => [color, CHARS[i] ?? '?']));
+    console.log(rows.map((row) => row.map((px) => (px[3] === 0 ? ' ' : chars.get(hex(px)))).join('')).join('\n'));
+    console.log([...chars].map(([color, char]) => `${char}=${color}`).join(' '), '\n');
   }
-  const colors = [...counts].sort((p, q) => q[1] - p[1]);
-  console.log(`${target}  ${rows[0].length}x${rows.length}`);
-  if (colorsMode) {
-    console.log(colors.map(([color, n]) => `${color}:${n}`).join(' '), '\n');
-    continue;
-  }
-  const chars = new Map(colors.map(([color], i) => [color, CHARS[i] ?? '?']));
-  console.log(rows.map((row) => row.map((px) => (px[3] === 0 ? ' ' : chars.get(hex(px)))).join('')).join('\n'));
-  console.log([...chars].map(([color, char]) => `${char}=${color}`).join(' '), '\n');
 }
