@@ -3,9 +3,9 @@
 // Terrain comes from the overworld sheet (src/assets/overworld.png, 32x32
 // tiles, 42 columns x 63 rows; see .claude/skills/tileset/overworld-catalog.md
 // for what's where) and is picked by position on it. The tile cursor and the
-// movement arrow are tiles of the same sheet. Units are standalone images, named here by texture key
-// (src/assets/sprites.js maps keys to files); each is drawn stretched to
-// fill one map tile.
+// movement arrow are tiles of the same sheet. Units are standalone sprite
+// sheets, named here by texture key (src/assets/sprites.js maps keys to
+// files), cut into one-tile frames.
 
 // Size of one map tile in world pixels — the terrain sheet's tile size.
 export const TILE_SIZE = 32;
@@ -35,15 +35,26 @@ export const TERRAIN_AUTOTILES = {
 
 // Unit sprites keyed by team, so every unit on a side looks alike.
 export const UNIT_SPRITES = {
-  player: 'warrior-1',
-  enemy: 'warrior-2',
+  player: 'villager-1',
+  enemy: 'soldier-3',
+};
+
+// Every unit sheet is a grid of one-tile frames, `columns` wide: one row per
+// facing direction, one column per idle animation frame. Units only face
+// `row` (row 0, toward the camera) for now, looping its `frames` columns,
+// each shown for frameMs.
+export const UNIT_IDLE_ANIMATION = {
+  columns: 4,
+  row: 0,
+  frames: 4,
+  frameMs: 200,
 };
 
 // The blob shadow drawn under every unit, since the unit sprites have none:
 // a flat ellipse centered at (centerX, centerY) within the unit's tile, in
-// tile pixels, lined up with where the warriors' feet touch the ground.
+// tile pixels, lined up with where the units' feet touch the ground.
 export const UNIT_SHADOW = {
-  width: 20,
+  width: 16,
   height: 6,
   centerX: 16,
   centerY: 29,

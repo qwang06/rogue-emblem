@@ -159,9 +159,9 @@ React renders the whole page, mounted by `mountUI(container)` into `#root` (see 
 Composition root. Mounts the React page first (which opens on the title screen and provides `#game`), then constructs the single `Phaser.Game` instance in `#game` (RESIZE scale mode, so the canvas matches `#game`'s size) with no scenes running, and subscribes to `gameStore` so that when `screen` becomes `'battle'` it adds and starts `GridScene` with `battleSetup` as scene data, and when it goes back to `'title'` it removes the scene (so the next Play starts a fresh battle). Phaser and React are started independently here and only communicate through `src/bridge/`. Should stay free of game logic.
 
 ### `src/assets/overworld.png`
-Terrain art: the used area of `Tactical RPG Overworld Pack - Tilesheet.png` (drawn at 3x) redrawn at 2x, so its 16px tiles are 32px. It's 42x63 tiles of blob autotile sets (grass, sand, water with 6 animation frames, deep water), mountains, forests, team-colored buildings and UI. Regenerated with the `tileset` skill's `rescale-png.js`. Everything on it is cataloged in `.claude/skills/tileset/overworld-catalog.md`.
+Terrain art: the used area of the Tactical RPG Overworld Pack sheet (drawn at 3x; the original isn't kept in the repo) redrawn at 2x, so its 16px tiles are 32px. It's 42x63 tiles of blob autotile sets (grass, sand, water with 6 animation frames, deep water), mountains, forests, team-colored buildings and UI. Made with the `tileset` skill's `rescale-png.js`. Everything on it is cataloged in `.claude/skills/tileset/overworld-catalog.md`.
 ### `src/assets/` sprites
-Unit sprites `warrior-1.png` (player) and `warrior-2.png` (enemy), 32x32. Wired up through `sprites.js`.
+Unit sprite sheets `villager-1.png` (player) and `soldier-3.png` (enemy): 4x4 grids of 32x32 frames (rows are facing directions, columns idle animation frames), rescaled to 2x from the `Villager_01_Idle` / `Soldier_03_Idle` source sheets. Wired up through `sprites.js`; units loop row 0 (`UNIT_IDLE_ANIMATION` in `tileset.js`), on the map and in the deployment roster.
 
 ## Conventions to keep in mind
 

@@ -1,8 +1,8 @@
 // Prints PNG images (or one tile of a tilesheet) as ASCII, so pixel art can
 // be read without an image viewer. Usage (from the repo root):
-//   node .claude/skills/tileset/scripts/dump-png.js src/assets/warrior-1.png
+//   node .claude/skills/tileset/scripts/dump-png.js src/assets/villager-1.png
 //   node .claude/skills/tileset/scripts/dump-png.js --tile 32 src/assets/tileset-grass-water.png:15
-//   node .claude/skills/tileset/scripts/dump-png.js --colors src/assets/warrior-1.png
+//   node .claude/skills/tileset/scripts/dump-png.js --colors src/assets/villager-1.png
 // Each distinct color gets its own character, most common first, with a
 // legend (char = hex) under the image; transparent pixels print as spaces.
 // `file:n` with --tile N prints frame n (row-major, N-pixel tiles) of a
@@ -82,7 +82,10 @@ export function decode(file) {
         row.push([palette[index * 3], palette[index * 3 + 1], palette[index * 3 + 2], alpha]);
       } else {
         const i = y * stride + x * channels;
-        row.push([pixels[i], pixels[i + 1], pixels[i + 2], channels === 4 ? pixels[i + 3] : 255]);
+        const [r, g, b] = [pixels[i], pixels[i + 1], pixels[i + 2]];
+        // An RGB image's tRNS chunk names one color (16-bit samples) as transparent.
+        const keyed = colorType === 2 && alphas && r === alphas[1] && g === alphas[3] && b === alphas[5];
+        row.push([r, g, b, channels === 4 ? pixels[i + 3] : keyed ? 0 : 255]);
       }
     }
     rows.push(row);

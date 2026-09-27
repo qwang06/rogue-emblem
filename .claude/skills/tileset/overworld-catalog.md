@@ -5,13 +5,15 @@ in **16px source tiles**, which are the same numbers as 32px tiles in the
 game's `src/assets/overworld.png`. That sheet is 42 x 63 tiles, and a tile's
 frame is `row * 42 + column`.
 
-- **Source:** `src/assets/Tactical RPG Overworld Pack - Tilesheet.png`, 3072x3072.
+- **Source:** `Tactical RPG Overworld Pack - Tilesheet.png`, 3072x3072 (not kept
+  in the repo; `overworld.png` holds everything the game uses).
   The art is drawn at 3x (every art pixel is a 3x3 block), so it's natively
   1024x1024. Only the top-left 672x1008 native pixels are used; the rest is
   transparent.
 - **Game sheet:** `src/assets/overworld.png` is the used area redrawn at 2x,
-  so 16px tiles become the game's 32px tiles. Regenerate it with:
-  `node .claude/skills/tileset/scripts/rescale-png.js --from 3 --to 2 --crop 672x1008 "src/assets/Tactical RPG Overworld Pack - Tilesheet.png" src/assets/overworld.png`
+  so 16px tiles become the game's 32px tiles. It was made (and can be
+  remade from a copy of the pack) with:
+  `node .claude/skills/tileset/scripts/rescale-png.js --from 3 --to 2 --crop 672x1008 "Tactical RPG Overworld Pack - Tilesheet.png" src/assets/overworld.png`
 
 Nothing is on a dual grid. Terrain uses **blob autotiles**: a terrain is drawn
 in its own cells, with its border inside the edge cells, over a grass base.
@@ -105,4 +107,4 @@ Wars–style captured buildings):
 | Map pins / unit markers | row 61, columns 28–31 |
 | Hatched tile | `[30, 62]` |
 
-The pack has **no unit sprites**; units still come from `warrior-*.png`.
+The pack has **no unit sprites**; units come from their own sheets (see SKILL.md).

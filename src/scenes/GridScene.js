@@ -52,6 +52,7 @@ import {
   TERRAIN_BASE_TILE,
   TERRAIN_SHEET,
   TILE_SIZE,
+  UNIT_IDLE_ANIMATION,
   UNIT_SPRITES,
 } from '../game/tileset.js';
 import { POTION_COLORS, playFireBurst, playGrenadeThrow, playHitFlash, playPotionGlow } from './effects.js';
@@ -89,10 +90,13 @@ export class GridScene extends Phaser.Scene {
   }
 
   preload() {
-    // A spritesheet so sprites (the cursor) can draw single tiles of it too;
-    // the tilemaps still use it as a whole image.
+    // Spritesheets so sprites can draw single frames: the cursor and arrow
+    // tiles of the terrain sheet (the tilemaps still use it whole), and each
+    // unit sheet's animation frames.
     this.load.spritesheet(TERRAIN_SHEET.key, terrainSheetUrl, { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
-    for (const [key, url] of Object.entries(SPRITE_URLS)) this.load.image(key, url);
+    for (const [key, url] of Object.entries(SPRITE_URLS)) {
+      this.load.spritesheet(key, url, { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
+    }
   }
 
   // `setup` is the battle the title screen chose (gameStore's battleSetup):
@@ -1167,10 +1171,28 @@ export class GridScene extends Phaser.Scene {
   addUnitSprite(unitId, gridX, gridY) {
     const unit = this.units.get(unitId);
     const { x, y } = gridToWorld(gridX, gridY, TILE_SIZE);
-    const sprite = this.addTileSprite(x, y, UNIT_SPRITES[unit.team] ?? UNIT_SPRITES.player)
+    const key = UNIT_SPRITES[unit.team] ?? UNIT_SPRITES.player;
+    const sprite = this.addTileSprite(x, y, key)
       .setDepth(0.75)
-      .setData('unit', unit);
+      .setData('unit', unit)
+      .play(this.unitIdleAnimation(key));
     addUnitShadow(this, sprite);
     this.unitSprites.set(unitId, sprite);
+  }
+
+  // The looping idle animation for a unit sheet, created on first use.
+  // Animations are global to the game, so a restarted scene reuses it.
+  unitIdleAnimation(key) {
+    const animKey = `${key}-idle`;
+    if (!this.anims.exists(animKey)) {
+      const { columns, row, frames, frameMs } = UNIT_IDLE_ANIMATION;
+      this.anims.create({
+        key: animKey,
+        frames: Array.from({ length: frames }, (_, column) => ({ key, frame: getTileFrame([column, row], columns) })),
+        frameRate: 1000 / frameMs,
+        repeat: -1,
+      });
+    }
+    return animKey;
   }
 }
