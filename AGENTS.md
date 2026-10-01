@@ -29,6 +29,10 @@ Any work that touches art — picking or changing terrain frame indices or sprit
 - When asked to open a PR, make sure tests pass and `ARCHITECTURES.md` is updated if the change warrants it, then push the branch and open the PR against `main` with `gh pr create`.
 - Don't merge the PR yourself; merging into `main` happens through the PR on GitHub, not a local `git merge`.
 
+## Roadmap
+
+`ROADMAP.md` is the milestone plan for growing the game into a Fire Emblem–style tactics game. When asked to work on "the next thing" or a named milestone, start there; each milestone is one branch/PR. Tick a milestone's checkbox in the same PR that completes it, and note anything deferred under it.
+
 ## Architecture docs
 
 `ARCHITECTURES.md` tracks the current shape of the system — modules, their responsibilities, and how they connect. Update it whenever a change is worth reflecting there: a new module, a new layer, a changed responsibility boundary, or a new significant piece (e.g. combat system, AI, save/load). Small internal edits that don't change the shape of the system don't need an update.
