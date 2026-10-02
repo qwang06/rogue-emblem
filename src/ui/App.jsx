@@ -1,12 +1,15 @@
 import { gameCommands } from '../bridge/commands.js';
 import { ActionMenu } from './ActionMenu.jsx';
 import { BattleResult } from './BattleResult.jsx';
+import { CombatForecast } from './CombatForecast.jsx';
 import { ControlsPanel } from './ControlsPanel.jsx';
 import { DamagePopups } from './DamagePopups.jsx';
 import { DeploymentBanner } from './DeploymentBanner.jsx';
 import { DeploymentMenu } from './DeploymentMenu.jsx';
 import { DialogBox } from './DialogBox.jsx';
+import { ExperienceBar } from './ExperienceBar.jsx';
 import { ItemMenu } from './ItemMenu.jsx';
+import { LevelUpPanel } from './LevelUpPanel.jsx';
 import { LoadingScreen } from './LoadingScreen.jsx';
 import { MainMenuButton } from './MainMenuButton.jsx';
 import { PageHeader } from './PageHeader.jsx';
@@ -64,7 +67,10 @@ export function App() {
               <ActionMenu />
               <SkillMenu />
               <ItemMenu />
+              <CombatForecast />
               <DamagePopups />
+              <ExperienceBar />
+              <LevelUpPanel />
               <PhaseBanner />
               <DialogBox />
               <PauseMenu />

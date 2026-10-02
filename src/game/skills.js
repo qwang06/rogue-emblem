@@ -3,23 +3,41 @@
 // tree whose level it has reached — so skills are gained by leveling up.
 // Using a skill costs mana. No Phaser, no rendering, no hidden state.
 
-// A skill: { id, label, manaCost, range, power, animation }. `range` is
-// how far away (orthogonal steps) the target can be, `power` is the damage
-// it deals before the target's defense, and `animation` names the effect
+import { calculateDamage, DAMAGE_TYPES, getDamageType } from './combat.js';
+
+// A skill: { id, label, manaCost, range, animation, might?, damageScale? }.
+// Its damage is a variant of the user's regular hit: `might` (default 0)
+// is added to the user's attack power, and the resulting damage is
+// multiplied by `damageScale` (default 1). `range` is how far away
+// (orthogonal steps) the target can be, and `animation` names the effect
 // the presentation layer plays for it.
 
-export const THROW_GRENADE = Object.freeze({
-  id: 'throw-grenade',
-  label: 'Throw Grenade',
-  manaCost: 3,
-  range: 2,
-  power: 6,
-  animation: 'grenade',
+// Stones lobbed at a distant foe: half the damage of the user's regular
+// attack, from up to 4 tiles away.
+export const THROW_STONES = Object.freeze({
+  id: 'throw-stones',
+  label: 'Throw Stones',
+  manaCost: 2,
+  range: 4,
+  damageScale: 0.5,
+  animation: 'stone',
+});
+
+// A heavier blow against an adjacent foe: the user's regular attack with
+// 3 more power behind it.
+export const POWER_STRIKE = Object.freeze({
+  id: 'power-strike',
+  label: 'Power Strike',
+  manaCost: 2,
+  range: 1,
+  might: 3,
+  animation: 'strike',
 });
 
 // unitClass -> [{ level, skill }]. Classes without an entry know no skills.
 export const SKILL_TREES = Object.freeze({
-  soldier: Object.freeze([Object.freeze({ level: 1, skill: THROW_GRENADE })]),
+  villager: Object.freeze([Object.freeze({ level: 1, skill: THROW_STONES })]),
+  soldier: Object.freeze([Object.freeze({ level: 1, skill: POWER_STRIKE })]),
 });
 
 // Every skill a unit of unitClass knows at the given level, in tree order.
@@ -42,10 +60,15 @@ export function findLearnedSkill(unitClass, level, skillId, trees = SKILL_TREES)
   return getLearnedSkills(unitClass, level, trees).find((skill) => skill.id === skillId) ?? null;
 }
 
-// Damage a damaging skill deals: its own power minus the target's defense,
-// never below zero. It doesn't depend on the user's strength or magic.
-export function calculateSkillDamage(skill, defender) {
-  return Math.max(0, skill.power - defender.defense);
+// Damage a skill deals when `user` uses it on `defender`: the user's
+// regular hit (calculateDamage, of the user's damage type) with the
+// skill's `might` added to its attack power, times its `damageScale`,
+// rounded up — so a scaled-down hit that would have dealt damage still
+// deals at least 1. Never below zero.
+export function calculateSkillDamage(skill, user, defender) {
+  const { power } = DAMAGE_TYPES[getDamageType(user)];
+  const boosted = { ...user, [power]: (user[power] ?? 0) + (skill.might ?? 0) };
+  return Math.ceil(calculateDamage(boosted, defender) * (skill.damageScale ?? 1));
 }
 
 export function canUseSkill(unit, skill) {

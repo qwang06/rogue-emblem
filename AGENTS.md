@@ -33,6 +33,10 @@ Any work that touches art — picking or changing terrain frame indices or sprit
 
 `ROADMAP.md` is the milestone plan for growing the game into a Fire Emblem–style tactics game. When asked to work on "the next thing" or a named milestone, start there; each milestone is one branch/PR. Tick a milestone's checkbox in the same PR that completes it, and note anything deferred under it.
 
+## Unit reference
+
+`UNITS.md` is the running reference for every unit class's base stats, growth rates, caps and skills, plus the level-1 matchup numbers. Update it in the same change whenever a class's stats, growths, caps or skills change, a skill's numbers change, or a class is added. `src/game/unitsDoc.test.js` checks it against the code, so the test suite fails when it drifts.
+
 ## Architecture docs
 
 `ARCHITECTURES.md` tracks the current shape of the system — modules, their responsibilities, and how they connect. Update it whenever a change is worth reflecting there: a new module, a new layer, a changed responsibility boundary, or a new significant piece (e.g. combat system, AI, save/load). Small internal edits that don't change the shape of the system don't need an update.

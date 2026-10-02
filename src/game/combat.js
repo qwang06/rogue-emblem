@@ -127,3 +127,32 @@ export function resolveCombat(attacker, defender, { distance, rng = Math.random,
 
   return { strikes, attackerHealth: health.attacker, defenderHealth: health.defender };
 }
+
+// What an attack would look like before it's made, for the forecast panel:
+// per side, its current health, the damage one landed (non-crit) strike
+// deals, its hit and crit chances, and how many strikes it gets — the same
+// formulas and strike order resolveCombat rolls against, so the preview
+// and the outcome can't disagree. Returns { attacker, defender }, each
+// { health, maxHealth, damage, hit, crit, strikes, counters }. A defender
+// that can't reach the attacker (`counters` false) has damage, hit and
+// crit null and 0 strikes. `context.distance` is as in resolveCombat.
+export function getCombatForecast(attacker, defender, { distance }) {
+  const order = getStrikeOrder(attacker, defender, distance);
+  const side = (unit, opponent, role) => {
+    const strikes = order.filter((by) => by === role).length;
+    const acts = strikes > 0;
+    return {
+      health: unit.health,
+      maxHealth: unit.maxHealth,
+      damage: acts ? calculateDamage(unit, opponent) : null,
+      hit: acts ? getHitChance(unit, opponent) : null,
+      crit: acts ? getCritChance(unit, opponent) : null,
+      strikes,
+      counters: role === 'attacker' || acts,
+    };
+  };
+  return {
+    attacker: side(attacker, defender, 'attacker'),
+    defender: side(defender, attacker, 'defender'),
+  };
+}

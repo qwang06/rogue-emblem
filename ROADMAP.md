@@ -11,7 +11,7 @@ The plan for growing Rogue Emblem into a Fire Emblem–style tactics game, one s
 
 ## Where we are
 
-Already built: grid and terrain move costs, movement range and arrow, player/enemy phases with win/loss, one-way attacks (`attack - defense`; counterattacks and FE-style stats since 1.1/1.2), skills with mana, consumable items, deployment, a rushing enemy AI, dialog, title/pause menus, and training mode. There is one class (Soldier), no counterattacks, no hit/crit randomness, and `levelUp()` only bumps the level number.
+Already built: grid and terrain move costs, movement range and arrow, player/enemy phases with win/loss, one-way attacks (`attack - defense`; counterattacks and FE-style stats since 1.1/1.2), skills with mana, consumable items, deployment, a rushing enemy AI, dialog, title/pause menus, and training mode. Phase 1 added counterattacks, hit/crit/doubling, the combat forecast, and XP with growth-rate level ups. There is still one class (Soldier) and no weapons.
 
 ---
 
@@ -46,19 +46,21 @@ The single biggest change to how the game feels. After this phase every attack i
 - **Tests:** formula edge cases, clamping, doubling on both sides, exact threshold, crit lethal, all-miss sequences with a stubbed RNG.
 - *Notes:* formulas live in `src/game/combatStats.js`; `getStrikeOrder` in `combat.js` is shared so the 1.4 forecast can reuse it. Hit adds a flat `BASE_HIT` (80) standing in for weapon hit — with stats alone two soldiers have 7 hit vs 8 avoid (0%); weapons should replace it. Soldier vs soldier is 79% hit, 0% crit, no doubling. Doubling uses `>=` the threshold. 2RN is available as `trueHit` but off by default; the scene uses `Math.random`. Crits also shake the camera. Crit rolls are 1RN. Skills (the grenade) still always hit and never crit.
 
-### [ ] 1.4 Combat forecast panel
+### [x] 1.4 Combat forecast panel
 - Pure `getCombatForecast(attacker, defender, context)` → `{ attacker: { hp, damage, hit, crit, strikes }, defender: {...} }` — shares formulas with `resolveCombat` so preview and outcome can't disagree.
 - When choosing an attack target, the scene publishes the forecast for the hovered target; a React `CombatForecast.jsx` renders it (HP, Dmg, Hit, Crit, ×2) beside the units.
 - Confirm/cancel flow: cursor over target shows the forecast, confirm attacks, cancel backs out.
 - **Tests:** forecast equals the expected values of `resolveCombat`; no-counter shows "–" for defender.
+- *Notes:* each side is `{ health, maxHealth, damage, hit, crit, strikes, counters }`; a non-countering defender has `null` damage/hit/crit (rendered "–") and 0 strikes. `damage` is per landed non-crit strike — the panel doesn't show a predicted post-combat HP (could add "HP → after" later). Entering attack aim snaps the cursor to the first target in range; no cycling between targets with a dedicated key yet. The panel opens beside both units (right of the pair if it fits, else left). Enemy-phase attacks show no forecast. Skills get no forecast yet — add one when magic/tome skills join regular combat.
 
-### [ ] 1.5 Experience and growth rates
+### [x] 1.5 Experience and growth rates
 - Pure `src/game/experience.js`: XP for a hit / a kill / a miss, scaled by level difference (FE-style); 100 XP = level up, carry overflow.
 - Growth rates per class (`{ health: 80, strength: 50, ... }` percentages); `rollLevelUp(unit, growths, rng)` returns the stat gains. `Unit.levelUp()` applies gains instead of only incrementing level.
 - Existing skill unlocks (`getSkillsLearnedBetween`) hook into the same level-up.
 - React `LevelUpPanel.jsx` showing each stat with "+1" highlights; XP bar after combat.
 - Only player units gain XP.
 - **Tests:** XP amounts across level gaps, overflow, multi-level gain, growth rolls with stubbed RNG, 0% / 100% growths, stat caps (if any).
+- *Notes:* FE7-style numbers: hit = `max(1, floor((31 + enemyLv − Lv) / 3))` (10 at even levels), kill = hit + `max(0, 20 + 3 × (enemyLv − Lv))` (30 at even levels), 1 XP for a miss / 0-damage / no-strike combat, 0 if the unit dies; one combat gives at most 100 XP. Max level 20 (XP stays 0 there). Growths and caps live on the unit (set by its class, e.g. `SOLDIER_GROWTHS` / `SOLDIER_CAPS`; caps are 40 HP, 30 MP, 20 otherwise); growths over 100% give guaranteed points. Health/mana gains raise current values too. A damaging skill earns XP as one landed strike; items earn none. No class-based XP modifiers (promoted classes etc.) yet. The level-up panel is timed rather than dismissed with confirm, and the XP bar shows in the bottom center of the map rather than by the unit. Skill unlocks are listed on the panel, but the Soldier's only skill is learned at level 1, so none show yet.
 
 ---
 

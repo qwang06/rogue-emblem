@@ -4,8 +4,12 @@ import terrainSheetUrl from '../assets/overworld.png';
 import { gameCommands } from '../bridge/commands.js';
 import { BATTLE_STATE_DEFAULTS, gameStore } from '../bridge/gameStore.js';
 import {
+  mergeTileAnchors,
+  toCombatForecastView,
   toDamagePopupView,
   toDialogView,
+  toExperienceGainView,
+  toLevelUpView,
   toPhaseBannerView,
   toCanvasFraction,
   toRosterEntryView,
@@ -15,8 +19,15 @@ import {
   worldToScreen,
 } from '../bridge/views.js';
 import { createActionMenu, getSelectedAction, getUnitActions, moveSelection, selectIndex } from '../game/actionMenu.js';
+import { getCombatExperience, getCombatOutcome } from '../game/experience.js';
 import { calculateSkillDamage, findLearnedSkill, getLearnedSkills, getSkillActions } from '../game/skills.js';
-import { getAttackRange, getAttackTargets, getThreatRange, resolveCombat } from '../game/combat.js';
+import {
+  getAttackRange,
+  getAttackTargets,
+  getCombatForecast,
+  getThreatRange,
+  resolveCombat,
+} from '../game/combat.js';
 import { getFitZoom } from '../game/camera.js';
 import { createCursor, moveCursor } from '../game/cursor.js';
 import { createDemoLevel } from '../game/demoLevel.js';
@@ -61,10 +72,10 @@ import {
   TREE_SPRITES,
   UNIT_ANIMATIONS,
   UNIT_SHEET,
-  UNIT_SPRITES,
+  getUnitSprite,
   unitSheetKey,
 } from '../game/tileset.js';
-import { POTION_COLORS, playFireBurst, playGrenadeThrow, playHitFlash, playPotionGlow } from './effects.js';
+import { POTION_COLORS, playHitFlash, playLunge, playPotionGlow, playStoneThrow } from './effects.js';
 import { addTreeShadow, addUnitShadow } from './unitShadow.js';
 
 // The canvas is sized by the page (see main.js); maps are zoomed to fit it,
@@ -95,6 +106,10 @@ const PHASE_BANNER_DURATION_MS = 1200;
 // Pauses in the enemy phase: on each enemy before it moves, and between enemies.
 const ENEMY_FOCUS_DELAY_MS = 250;
 const ENEMY_ACTION_DELAY_MS = 300;
+// How long a player unit's XP bar shows after combat (the React HUD fills it).
+const EXPERIENCE_BAR_MS = 1100;
+// How long each level-up panel holds the screen.
+const LEVEL_UP_MS = 2400;
 // Tint for units that are done for the phase.
 const DONE_TINT = 0x808080;
 
@@ -174,6 +189,7 @@ export class GridScene extends Phaser.Scene {
     this.nextBannerId = 1;
     this.hoveredUnit = null;
     this.nextPopupId = 1;
+    this.nextProgressId = 1; // changes per XP bar / level-up panel so React restarts their animations
     this.dialog = null; // from src/game/dialog.js while a conversation is showing
     this.dialogLineStartedAt = 0; // scene time the current line started typing
     this.onDialogDone = null;
@@ -202,6 +218,7 @@ export class GridScene extends Phaser.Scene {
     // an open unit menu to the refitted map then.
     this.events.once(Phaser.Scenes.Events.RENDER, () => {
       if (this.activeUnit) this.publishMenuAnchor();
+      if (this.rangeMode === 'attack') this.updateCombatForecast();
     });
   }
 
@@ -427,9 +444,14 @@ export class GridScene extends Phaser.Scene {
   // opens its menus (action, skill, item) beside it.
   publishMenuAnchor() {
     const { x, y } = this.activeUnit;
+    gameStore.setState({ menuAnchor: this.getTileAnchor({ x, y }) });
+  }
+
+  // Where a map tile shows on the canvas right now (see toTileAnchorView).
+  getTileAnchor(tile) {
     const { worldView, zoom } = this.cameras.main;
     const camera = { x: worldView.x, y: worldView.y, zoom };
-    gameStore.setState({ menuAnchor: toTileAnchorView({ x, y }, TILE_SIZE, camera, this.scale.gameSize) });
+    return toTileAnchorView(tile, TILE_SIZE, camera, this.scale.gameSize);
   }
 
   // Keeps a menu on the scene and mirrors it to the store field of the same
@@ -486,11 +508,11 @@ export class GridScene extends Phaser.Scene {
       this.dialogLineId = this.nextDialogLineId++;
     }
     this.dialog = dialog;
-    const { team } = getCurrentLine(dialog);
+    const { unitClass } = getCurrentLine(dialog);
     const view = toDialogView({
       id: this.dialogLineId,
       dialog,
-      sprite: team ? UNIT_SPRITES[team] ?? UNIT_SPRITES.player : null,
+      sprite: unitClass ? getUnitSprite(unitClass) : null,
       charsPerSecond: DIALOG_CHARS_PER_SECOND,
     });
     gameStore.setState({ dialog: view });
@@ -595,7 +617,7 @@ export class GridScene extends Phaser.Scene {
       return toRosterEntryView({
         id,
         unit,
-        sprite: UNIT_SPRITES[unit.team] ?? UNIT_SPRITES.player,
+        sprite: getUnitSprite(unit.unitClass),
         placed: isPlaced(this.grid, id),
       });
     });
@@ -859,11 +881,42 @@ export class GridScene extends Phaser.Scene {
   }
 
   // Highlights every tile the active unit can strike, from
-  // src/game/combat.js. Only tiles holding a hostile unit accept confirm.
+  // src/game/combat.js, and puts the cursor on the first hostile unit in
+  // range so its combat forecast shows straight away. Only tiles holding a
+  // hostile unit accept confirm.
   showAttackRange() {
     const { unit, x, y } = this.activeUnit;
     const range = getAttackRange(this.grid, { x, y }, unit.range);
     this.showRange('attack', range, ATTACK_RANGE_COLOR, ATTACK_RANGE_ALPHA);
+    const [first] = getAttackTargets(this.grid, { x, y }, unit.range, this.isHostileTo(unit));
+    if (first) this.setCursor(first.x, first.y);
+    else this.updateCombatForecast();
+  }
+
+  // The hostile unit under the cursor that the active unit can attack from
+  // where it stands, as { x, y, unitId }, or null.
+  getAttackTargetUnderCursor() {
+    const { unit, x, y } = this.activeUnit;
+    const targets = getAttackTargets(this.grid, { x, y }, unit.range, this.isHostileTo(unit));
+    return targets.find((t) => t.x === this.cursor.x && t.y === this.cursor.y) ?? null;
+  }
+
+  // While aiming an attack, publishes the combat forecast
+  // (getCombatForecast in src/game/combat.js) against the target under the
+  // cursor, anchored beside both units for React's CombatForecast to draw;
+  // clears it whenever there's no target to forecast.
+  updateCombatForecast() {
+    const target = this.rangeMode === 'attack' ? this.getAttackTargetUnderCursor() : null;
+    if (!target) {
+      gameStore.setState({ combatForecast: null });
+      return;
+    }
+    const { unit, x, y } = this.activeUnit;
+    const defender = this.units.get(target.unitId);
+    const distance = Math.abs(x - target.x) + Math.abs(y - target.y);
+    const forecast = getCombatForecast(unit, defender, { distance });
+    const anchor = mergeTileAnchors(this.getTileAnchor({ x, y }), this.getTileAnchor(target));
+    gameStore.setState({ combatForecast: toCombatForecastView({ forecast, attacker: unit, defender, anchor }) });
   }
 
   showRange(mode, tiles, color, alpha) {
@@ -888,6 +941,7 @@ export class GridScene extends Phaser.Scene {
     this.rangeTiles = null;
     this.rangeMode = null;
     this.activeSkill = null;
+    this.updateCombatForecast();
     this.clearMoveArrow();
     this.moveRange = null;
     this.movePath = null;
@@ -934,10 +988,8 @@ export class GridScene extends Phaser.Scene {
 
   // Attacks the unit under the cursor, if it's a hostile unit in range.
   tryAttackWithActiveUnit() {
-    const { unit, unitId, x, y } = this.activeUnit;
-    const target = getAttackTargets(this.grid, { x, y }, unit.range, this.isHostileTo(unit)).find(
-      (t) => t.x === this.cursor.x && t.y === this.cursor.y,
-    );
+    const { unitId } = this.activeUnit;
+    const target = this.getAttackTargetUnderCursor();
     if (!target) return;
 
     this.hideRange();
@@ -953,8 +1005,9 @@ export class GridScene extends Phaser.Scene {
   // the HUD shows the new health while the struck sprite flashes and a
   // damage number pops over it (a crit also shakes the camera); a miss just
   // shows "Miss" for a moment. A unit brought to 0 health is removed once
-  // its flash finishes, which ends the exchange. Input stays locked until
-  // onDone.
+  // its flash finishes, which ends the exchange. Then the player unit in
+  // the fight, if it survived, gains XP (see showExperienceGain). Input
+  // stays locked until onDone.
   resolveAttack(attackerId, target, onDone) {
     const attacker = this.units.get(attackerId);
     const defender = this.units.get(target.unitId);
@@ -971,7 +1024,7 @@ export class GridScene extends Phaser.Scene {
       const strike = strikes[index];
       if (!strike) {
         this.updateHoveredUnit();
-        onDone();
+        this.awardCombatExperience(sides, strikes, onDone);
         return;
       }
       const struck = sides[strike.target];
@@ -993,11 +1046,64 @@ export class GridScene extends Phaser.Scene {
     playStrike(0);
   }
 
+  // After an exchange from resolveAttack, gives the player unit in it (only
+  // player units gain XP) the XP its outcome earned (src/game/
+  // experience.js), unless it died; then onDone.
+  awardCombatExperience(sides, strikes, onDone) {
+    const side = ['attacker', 'defender'].find((s) => sides[s].unit.team === 'player');
+    const unit = side && sides[side].unit;
+    if (!unit?.isAlive()) {
+      onDone();
+      return;
+    }
+    const opponent = sides[side === 'attacker' ? 'defender' : 'attacker'].unit;
+    const amount = getCombatExperience(unit.level, opponent.level, getCombatOutcome(strikes, side));
+    this.showExperienceGain(unit, amount, onDone);
+  }
+
+  // Gives the unit `amount` XP (Unit.gainExperience rolls any level ups)
+  // and shows it: React's XP bar fills for EXPERIENCE_BAR_MS, then one
+  // level-up panel per level gained holds for LEVEL_UP_MS each. Calls
+  // onDone straight away when there's no XP to give.
+  showExperienceGain(unit, amount, onDone) {
+    if (amount <= 0) {
+      onDone();
+      return;
+    }
+    const from = { level: unit.level, experience: unit.experience };
+    const result = unit.gainExperience(amount);
+    const experienceGain = toExperienceGainView({
+      id: this.nextProgressId++,
+      name: unit.name,
+      from,
+      result,
+      durationMs: EXPERIENCE_BAR_MS,
+    });
+    gameStore.setState({ experienceGain });
+
+    const showLevelUp = (index) => {
+      const levelUp = result.levelUps[index];
+      if (!levelUp) {
+        gameStore.setState({ levelUp: null });
+        this.publishHoveredUnit();
+        onDone();
+        return;
+      }
+      const view = toLevelUpView({ id: this.nextProgressId++, name: unit.name, levelUp, durationMs: LEVEL_UP_MS });
+      gameStore.setState({ levelUp: view });
+      this.time.delayedCall(LEVEL_UP_MS, () => showLevelUp(index + 1));
+    };
+    this.time.delayedCall(EXPERIENCE_BAR_MS, () => {
+      gameStore.setState({ experienceGain: null });
+      showLevelUp(0);
+    });
+  }
+
   // Uses the aimed skill on the unit under the cursor, if it's a hostile
   // unit in the skill's range. Mana is spent and damage from
   // src/game/skills.js applied right away; then the skill's animation plays
-  // (a grenade lobbed onto the target, bursting into fire) and a unit
-  // brought to 0 health is removed once it finishes.
+  // (see playSkillAnimation) and a unit brought to 0 health is removed once
+  // it finishes.
   tryUseSkill() {
     const { unit, unitId, x, y } = this.activeUnit;
     const skill = this.activeSkill;
@@ -1007,7 +1113,7 @@ export class GridScene extends Phaser.Scene {
     if (!target) return;
 
     const defender = this.units.get(target.unitId);
-    const damage = calculateSkillDamage(skill, defender);
+    const damage = calculateSkillDamage(skill, unit, defender);
     unit.spendMana(skill.manaCost);
     defender.takeDamage(damage);
 
@@ -1015,18 +1121,63 @@ export class GridScene extends Phaser.Scene {
     this.inputLocked = true;
     const userSprite = this.unitSprites.get(unitId);
     const defenderSprite = this.unitSprites.get(target.unitId);
-    const center = (sprite) => ({ x: sprite.x + TILE_SIZE / 2, y: sprite.y + TILE_SIZE / 2 });
 
-    playGrenadeThrow(this, center(userSprite), center(defenderSprite), () => {
-      // The HUD only shows the new health once the grenade lands.
+    // The HUD only shows the new health once the skill lands.
+    const onImpact = () => {
       this.publishHoveredUnit();
       this.showDamagePopup(defenderSprite, damage);
-      playFireBurst(this, defenderSprite, center(defenderSprite), () => {
-        if (!defender.isAlive()) this.removeUnit(target);
-        this.activeUnit = null;
-        this.finishPlayerAction(unitId);
-      });
+    };
+    this.playSkillAnimation(skill.animation, userSprite, defenderSprite, onImpact, () => {
+      if (!defender.isAlive()) this.removeUnit(target);
+      this.activeUnit = null;
+      // A skill earns XP like a single strike that always lands.
+      const strikes = [{ by: 'attacker', target: 'defender', damage, hit: true, lethal: !defender.isAlive() }];
+      const amount = getCombatExperience(unit.level, defender.level, getCombatOutcome(strikes, 'attacker'));
+      this.showExperienceGain(unit, amount, () => this.finishPlayerAction(unitId));
     });
+  }
+
+  // Plays a skill's `animation` from the user's sprite onto the target's,
+  // calling onImpact when it lands and onDone when it's over:
+  //   'stone' — a stone lobbed onto the target, which flashes
+  //   'strike' — the user lunges at the target, which flashes and shakes
+  //              the camera like a crit
+  playSkillAnimation(animation, userSprite, targetSprite, onImpact, onDone) {
+    const center = (sprite) => ({ x: sprite.x + TILE_SIZE / 2, y: sprite.y + TILE_SIZE / 2 });
+    if (animation === 'stone') {
+      playStoneThrow(this, center(userSprite), center(targetSprite), () => {
+        onImpact();
+        playHitFlash(this, targetSprite, onDone);
+      });
+      return;
+    }
+    // Done once the target's flash and the user's return have both ended —
+    // exactly once, since onDone ends the unit's action.
+    let flashed = false;
+    let returned = false;
+    let done = false;
+    const finish = () => {
+      if (done || !flashed || !returned) return;
+      done = true;
+      onDone();
+    };
+    playLunge(
+      this,
+      userSprite,
+      center(targetSprite),
+      () => {
+        onImpact();
+        this.cameras.main.shake(CRIT_SHAKE_MS, CRIT_SHAKE_INTENSITY);
+        playHitFlash(this, targetSprite, () => {
+          flashed = true;
+          finish();
+        });
+      },
+      () => {
+        returned = true;
+        finish();
+      },
+    );
   }
 
   // The active unit uses one of its items on itself. The effect (from
@@ -1221,6 +1372,7 @@ export class GridScene extends Phaser.Scene {
     this.cursor = moveCursor(this.grid, this.cursor, x - this.cursor.x, y - this.cursor.y);
     this.updateCursorSprite();
     this.updateHoveredUnit();
+    if (this.rangeMode === 'attack') this.updateCombatForecast();
   }
 
   // Looks up the unit (if any) under the visible cursor and, only on change,
@@ -1362,7 +1514,7 @@ export class GridScene extends Phaser.Scene {
   addUnitSprite(unitId, gridX, gridY) {
     const unit = this.units.get(unitId);
     const { x, y } = gridToWorld(gridX, gridY, TILE_SIZE);
-    const art = UNIT_SPRITES[unit.team] ?? UNIT_SPRITES.player;
+    const art = getUnitSprite(unit.unitClass);
     const sprite = this.addTileSprite(x, y, unitSheetKey(art, 'idle'))
       .setDepth(0.75)
       .setData('unit', unit)

@@ -14,6 +14,7 @@ import {
 import { findUnit, getCell } from './grid.js';
 import { getMovePath, getMoveCost } from './movement.js';
 import { Soldier } from './Soldier.js';
+import { Villager } from './Villager.js';
 import { STRUCTURE_SPRITES, TREE_SPRITES } from './tileset.js';
 
 describe('createDemoLevel', () => {
@@ -57,7 +58,7 @@ describe('createDemoLevel', () => {
   });
 
   it('offers three named player soldiers for deployment', () => {
-    expect(level.roster).toEqual(['soldier-1', 'soldier-2', 'soldier-3']);
+    expect(level.roster).toEqual(['villager-1', 'villager-2', 'villager-3']);
     for (const unitId of level.roster) {
       expect(level.units.get(unitId).team).toBe('player');
       expect(level.units.get(unitId).name).toBe(PLAYER_ROSTER[unitId]);
@@ -104,9 +105,9 @@ describe('createDemoLevel', () => {
     }
   });
 
-  it('makes every unit a level 1 soldier', () => {
+  it('makes the player units level 1 villagers and the enemies level 1 soldiers', () => {
     for (const unit of level.units.values()) {
-      expect(unit).toBeInstanceOf(Soldier);
+      expect(unit).toBeInstanceOf(unit.team === 'player' ? Villager : Soldier);
       expect(unit.level).toBe(1);
     }
   });
@@ -124,7 +125,7 @@ describe('createDemoLevel', () => {
   it('leaves the whole deployment zone open and placeable', () => {
     for (const { x, y } of level.deploymentZone) {
       expect(getMoveCost(getCell(level.grid, x, y).terrain)).toBe(1);
-      expect(canPlaceUnit(level.grid, level.deploymentZone, 'soldier-1', x, y)).toBe(true);
+      expect(canPlaceUnit(level.grid, level.deploymentZone, 'villager-1', x, y)).toBe(true);
     }
   });
 
@@ -144,12 +145,12 @@ describe('createDemoLevel', () => {
     const speakers = new Set(level.openingDialog.map((line) => line.speaker));
     for (const name of Object.values(PLAYER_ROSTER)) expect(speakers.has(name)).toBe(true);
     for (const line of level.openingDialog) {
-      expect(line.side).toBe(line.team === 'player' ? 'left' : 'right');
+      expect(line.side).toBe(line.unitClass === 'villager' ? 'left' : 'right');
     }
   });
 
   it('builds a fresh level each call', () => {
     const other = createDemoLevel();
-    expect(other.units.get('soldier-1')).not.toBe(level.units.get('soldier-1'));
+    expect(other.units.get('villager-1')).not.toBe(level.units.get('villager-1'));
   });
 });

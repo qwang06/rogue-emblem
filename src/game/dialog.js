@@ -1,6 +1,6 @@
 // Pure state for conversations shown in the dialog box. A script is a list
-// of lines, each { speaker, team, side, text }: `speaker` is the name shown,
-// `team` picks the art standing in for a portrait, and `side` ('left' |
+// of lines, each { speaker, unitClass, side, text }: `speaker` is the name
+// shown, `unitClass` picks the art standing in for a portrait (none if null), and `side` ('left' |
 // 'right') is where the speaker's portrait sits. A dialog is a frozen
 // { lines, index, revealed } — which line is showing, and whether its text
 // has been fully typed out (by time passing, or by the player skipping).
@@ -19,7 +19,7 @@ export function createDialog(lines) {
     if (!line.text) throw new Error(`Dialog line ${i} has no text`);
     const side = line.side ?? 'left';
     if (!DIALOG_SIDES.includes(side)) throw new Error(`Dialog line ${i} has unknown side "${side}"`);
-    return Object.freeze({ speaker: line.speaker ?? '', team: line.team ?? null, side, text: line.text });
+    return Object.freeze({ speaker: line.speaker ?? '', unitClass: line.unitClass ?? null, side, text: line.text });
   });
   return Object.freeze({ lines: Object.freeze(frozen), index: 0, revealed: false });
 }

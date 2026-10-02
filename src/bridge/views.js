@@ -7,8 +7,10 @@ export function toUnitView(unit) {
   if (!unit) return null;
   return Object.freeze({
     name: unit.name,
+    unitClass: unit.unitClass,
     team: unit.team,
     level: unit.level,
+    experience: unit.experience,
     health: unit.health,
     maxHealth: unit.maxHealth,
     mana: unit.mana,
@@ -59,6 +61,31 @@ export function toTileAnchorView(tile, tileSize, camera, size) {
   return Object.freeze({ left: topLeft.x, top: topLeft.y, right: bottomRight.x, bottom: bottomRight.y });
 }
 
+// The smallest TileAnchorView covering both a and b (e.g. an attacker's
+// and its target's tiles), so UI placed beside it covers neither.
+export function mergeTileAnchors(a, b) {
+  return Object.freeze({
+    left: Math.min(a.left, b.left),
+    top: Math.min(a.top, b.top),
+    right: Math.max(a.right, b.right),
+    bottom: Math.max(a.bottom, b.bottom),
+  });
+}
+
+// Snapshot of the combat forecast shown while aiming an attack, from
+// getCombatForecast (src/game/combat.js): per side, the unit's name and
+// team plus its forecast numbers (damage / hit / crit are null for a
+// defender that can't counter, which the UI shows as "–"). `anchor` is a
+// TileAnchorView covering both units, which the panel opens beside.
+export function toCombatForecastView({ forecast, attacker, defender, anchor }) {
+  const side = (unit, numbers) => Object.freeze({ name: unit.name, team: unit.team, ...numbers });
+  return Object.freeze({
+    attacker: side(attacker, forecast.attacker),
+    defender: side(defender, forecast.defender),
+    anchor,
+  });
+}
+
 // How each kind of popup reads: damage is the bare number (a crit calls
 // itself out), a miss says so, and recovery says what was restored.
 const POPUP_TEXT = Object.freeze({
@@ -85,6 +112,56 @@ export function toDamagePopupView({ id, amount, kind = 'damage', x, y, durationM
 // the map.
 export function toRosterEntryView({ id, unit, sprite, placed }) {
   return Object.freeze({ id, label: unit.name, sprite, placed });
+}
+
+// Snapshot of the XP bar shown after a player unit's combat: its name, the
+// level it started at, how many XP it gained, and the bar's fill (0–100)
+// before and after — a level up fills it to 100, and the level-up panel
+// takes over from there. `from` is the unit's { level, experience } before
+// the gain and `result` the resolveExperienceGain result (src/game/
+// experience.js). `id` changes per bar so the UI restarts its animation.
+export function toExperienceGainView({ id, name, from, result, durationMs }) {
+  return Object.freeze({
+    id,
+    name,
+    level: from.level,
+    gained: result.amount,
+    startPercent: from.experience,
+    endPercent: result.levelUps.length > 0 ? 100 : result.experience,
+    durationMs,
+  });
+}
+
+// How each growth stat is labelled on the level-up panel, in display order.
+const LEVEL_UP_STATS = Object.freeze([
+  ['health', 'HP'],
+  ['mana', 'MP'],
+  ['strength', 'STR'],
+  ['magic', 'MAG'],
+  ['skill', 'SKL'],
+  ['speed', 'SPD'],
+  ['luck', 'LCK'],
+  ['defense', 'DEF'],
+  ['resistance', 'RES'],
+]);
+
+// Snapshot of the level-up panel for one level gained: the unit's name, the
+// level reached, each stat's new value and gain (from a levelUps entry of
+// resolveExperienceGain), and the labels of any skills learned. `id`
+// changes per panel so the UI restarts its animation.
+export function toLevelUpView({ id, name, levelUp, durationMs }) {
+  return Object.freeze({
+    id,
+    name,
+    level: levelUp.level,
+    stats: Object.freeze(
+      LEVEL_UP_STATS.map(([stat, label]) =>
+        Object.freeze({ id: stat, label, value: levelUp.stats[stat], gain: levelUp.gains[stat] ?? 0 }),
+      ),
+    ),
+    skills: Object.freeze(levelUp.skills.map((skill) => skill.label)),
+    durationMs,
+  });
 }
 
 const PHASE_LABELS = Object.freeze({ player: 'Player Phase', enemy: 'Enemy Phase' });

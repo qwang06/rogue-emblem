@@ -14,7 +14,10 @@ export const BATTLE_STATE_DEFAULTS = Object.freeze({
   actionMenu: null, // frozen menu from src/game/actionMenu.js while open, or null
   skillMenu: null, // frozen menu of the active unit's skills (from getSkillActions) while open, or null
   itemMenu: null, // frozen menu of the active unit's items (from getItemActions) while open, or null
+  combatForecast: null, // CombatForecastView from toCombatForecastView() while aiming an attack at a target, or null
   menuAnchor: null, // TileAnchorView from toTileAnchorView() of the active unit's tile, which its menus open beside, or null
+  experienceGain: null, // ExperienceGainView from toExperienceGainView() while a unit's XP bar fills after combat, or null
+  levelUp: null, // LevelUpView from toLevelUpView() while a level up is being shown, or null
   damagePopups: [], // DamagePopupViews (damage or recovery) from toDamagePopupView() currently on screen
   turn: null, // TurnView from toTurnView() once the battle starts, else null
   phaseBanner: null, // PhaseBannerView from toPhaseBannerView() while a phase is being announced, or null

@@ -9,7 +9,7 @@ import {
   SPARRING_PARTNER_POSITION,
   TRAINEE_ID,
   TRAINEE_POSITION,
-  TRAINING_OPENING_DIALOG,
+  getTrainingOpeningDialog,
 } from './trainingLevel.js';
 import { UNIT_CLASSES } from './unitClasses.js';
 
@@ -73,9 +73,23 @@ describe('createTrainingLevel', () => {
   });
 
   it('opens with a greeting from the sparring partner', () => {
-    expect(level.openingDialog).toBe(TRAINING_OPENING_DIALOG);
+    expect(level.openingDialog).toEqual(getTrainingOpeningDialog('soldier'));
     expect(() => createDialog(level.openingDialog)).not.toThrow();
     expect(level.openingDialog.every((line) => line.speaker === 'Sparring Partner')).toBe(true);
+  });
+
+  it("gives the sparring partner the trainee's class as its portrait", () => {
+    expect(level.openingDialog.every((line) => line.unitClass === 'soldier')).toBe(true);
+    const villagerLevel = createTrainingLevel('villager');
+    expect(villagerLevel.openingDialog.every((line) => line.unitClass === 'villager')).toBe(true);
+  });
+
+  it('pits a villager against a villager when the villager is chosen', () => {
+    const villagerLevel = createTrainingLevel('villager');
+    const trainee = villagerLevel.units.get(TRAINEE_ID);
+    const partner = villagerLevel.units.get(SPARRING_PARTNER_ID);
+    expect(trainee).toMatchObject({ team: 'player', unitClass: 'villager' });
+    expect(partner).toMatchObject({ team: 'enemy', unitClass: 'villager' });
   });
 
   it('throws on an unknown class', () => {
