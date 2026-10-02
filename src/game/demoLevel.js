@@ -42,6 +42,14 @@ export const ENEMY_POSITIONS = Object.freeze([
   { x: 18, y: 11 },
 ]);
 
+// Trees, as decoration only — they don't block movement. Placeholder until
+// the map is rebuilt with more scenery: the gold ginkgo on the small island
+// and its green recolor on the large one.
+export const TREE_POSITIONS = Object.freeze([
+  Object.freeze({ x: 4, y: 5, tree: 'gold_ginkgo' }),
+  Object.freeze({ x: 12, y: 4, tree: 'green_ginkgo' }),
+]);
+
 // The player's roster, by unitId -> name. One unit per deployment tile.
 export const PLAYER_ROSTER = Object.freeze({
   'soldier-1': 'Alden',
@@ -77,10 +85,11 @@ export const DEMO_OPENING_DIALOG = Object.freeze(
   ].map(Object.freeze),
 );
 
-// Returns { grid, units, roster, deploymentZone, openingDialog }. `units`
+// Returns { grid, units, roster, deploymentZone, openingDialog, decorations }. `units`
 // maps every unitId (player and enemy) to its Unit; `roster` lists the
 // player unitIds available to deploy; `deploymentZone` is [{ x, y }] of
-// placeable tiles; `openingDialog` is the script played before deployment.
+// placeable tiles; `openingDialog` is the script played before deployment;
+// `decorations` is [{ x, y, tree }] of trees drawn over the grass.
 export function createDemoLevel() {
   let grid = parseTerrainMap(DEMO_MAP);
 
@@ -100,5 +109,6 @@ export function createDemoLevel() {
     roster: Object.keys(PLAYER_ROSTER),
     deploymentZone: DEPLOYMENT_ZONE.map((tile) => ({ ...tile })),
     openingDialog: DEMO_OPENING_DIALOG,
+    decorations: TREE_POSITIONS.map((tree) => ({ ...tree })),
   };
 }

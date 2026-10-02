@@ -67,6 +67,14 @@ export function unitSheetKey(sprite, animation) {
   return `${sprite}_${UNIT_ANIMATIONS[animation].sheet}`;
 }
 
+// Tree art, by tree name: the texture key of a one-tile tree standing on its
+// own patch of grass, drawn over the grass terrain and below units. The
+// green ginkgo is the gold one recolored (same shape, green leaves).
+export const TREE_SPRITES = {
+  gold_ginkgo: 'gold_ginkgo_tree',
+  green_ginkgo: 'ginkgo_tree_green',
+};
+
 // The blob shadow drawn under every unit, since the unit sprites have none:
 // a flat ellipse centered at (centerX, centerY) within the unit's tile, in
 // tile pixels, lined up with where the units' feet touch the ground.
@@ -75,6 +83,18 @@ export const UNIT_SHADOW = {
   height: 6,
   centerX: 16,
   centerY: 29,
+  alpha: 0.35,
+};
+
+// The blob shadow drawn at the foot of every tree, in the same terms as
+// UNIT_SHADOW: wider than the trunk and a bit under the canopy's spread, so
+// the tree sits on the ground, centered on where the gold ginkgo's trunk
+// meets it (x 10–20, y 26–28).
+export const TREE_SHADOW = {
+  width: 26,
+  height: 8,
+  centerX: 16,
+  centerY: 27,
   alpha: 0.35,
 };
 

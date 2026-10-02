@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { canPlaceUnit } from './deployment.js';
 import { createDialog } from './dialog.js';
-import { createDemoLevel, DEMO_MAP, DEMO_OPENING_DIALOG, DEPLOYMENT_ZONE, ENEMY_POSITIONS, PLAYER_ROSTER } from './demoLevel.js';
+import { createDemoLevel, DEMO_MAP, DEMO_OPENING_DIALOG, DEPLOYMENT_ZONE, ENEMY_POSITIONS, TREE_POSITIONS, PLAYER_ROSTER } from './demoLevel.js';
 import { findUnit, getCell } from './grid.js';
 import { getMovePath } from './movement.js';
 import { Soldier } from './Soldier.js';
+import { TREE_SPRITES } from './tileset.js';
 
 describe('createDemoLevel', () => {
   const level = createDemoLevel();
@@ -37,6 +38,27 @@ describe('createDemoLevel', () => {
       expect(level.units.get(unitId).team).toBe('player');
       expect(level.units.get(unitId).name).toBe(PLAYER_ROSTER[unitId]);
     }
+  });
+
+  it('puts each tree on open grass, clear of deployment and the bridge rows', () => {
+    expect(level.decorations.length).toBeGreaterThan(0);
+    for (const { x, y } of level.decorations) {
+      expect(getCell(level.grid, x, y).terrain).toBe('grass');
+      expect(getCell(level.grid, x, y).unitId).toBeFalsy();
+      expect(level.deploymentZone).not.toContainEqual({ x, y });
+      expect([7, 8]).not.toContain(y);
+    }
+  });
+
+  it('places one gold and one green ginkgo, each on its own tile', () => {
+    expect(level.decorations.map((t) => t.tree).sort()).toEqual(['gold_ginkgo', 'green_ginkgo']);
+    expect(new Set(level.decorations.map(({ x, y }) => `${x},${y}`)).size).toBe(level.decorations.length);
+    for (const { tree } of level.decorations) expect(TREE_SPRITES).toHaveProperty([tree]);
+  });
+
+  it('copies the tree positions', () => {
+    expect(level.decorations).toEqual(TREE_POSITIONS);
+    expect(level.decorations[0]).not.toBe(TREE_POSITIONS[0]);
   });
 
   it('has room in the deployment zone for the whole roster', () => {
