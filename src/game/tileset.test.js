@@ -4,6 +4,7 @@ import { FACINGS } from './facing.js';
 import {
   ARROW_TILES,
   CURSOR_ANIMATION,
+  STRUCTURE_SPRITES,
   TERRAIN_SHEET,
   TILE_SIZE,
   TREE_SHADOW,
@@ -26,6 +27,14 @@ describe('sprite keys', () => {
 
   it('names an image for every tree', () => {
     for (const key of Object.values(TREE_SPRITES)) expect(SPRITE_URLS).toHaveProperty([key]);
+  });
+
+  it('names an image for every structure, at least one tile in each direction', () => {
+    for (const { key, width, height } of Object.values(STRUCTURE_SPRITES)) {
+      expect(SPRITE_URLS).toHaveProperty([key]);
+      expect(width).toBeGreaterThanOrEqual(1);
+      expect(height).toBeGreaterThanOrEqual(1);
+    }
   });
 
   it('gives each team its own sprite', () => {

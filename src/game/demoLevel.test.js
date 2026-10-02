@@ -1,31 +1,55 @@
 import { describe, expect, it } from 'vitest';
 import { canPlaceUnit } from './deployment.js';
 import { createDialog } from './dialog.js';
-import { createDemoLevel, DEMO_MAP, DEMO_OPENING_DIALOG, DEPLOYMENT_ZONE, ENEMY_POSITIONS, TREE_POSITIONS, PLAYER_ROSTER } from './demoLevel.js';
+import {
+  createDemoLevel,
+  DEMO_MAP,
+  DEMO_OPENING_DIALOG,
+  DEPLOYMENT_ZONE,
+  ENEMY_POSITIONS,
+  PLAYER_ROSTER,
+  STRUCTURE_POSITIONS,
+  TREE_POSITIONS,
+} from './demoLevel.js';
 import { findUnit, getCell } from './grid.js';
-import { getMovePath } from './movement.js';
+import { getMovePath, getMoveCost } from './movement.js';
 import { Soldier } from './Soldier.js';
-import { TREE_SPRITES } from './tileset.js';
+import { STRUCTURE_SPRITES, TREE_SPRITES } from './tileset.js';
 
 describe('createDemoLevel', () => {
   const level = createDemoLevel();
 
-  it('builds its terrain from the demo map, sized 20x15', () => {
-    expect(level.grid.width).toBe(20);
-    expect(level.grid.height).toBe(15);
+  it('builds its terrain from the demo map, sized 16x14', () => {
+    expect(level.grid.width).toBe(16);
+    expect(level.grid.height).toBe(14);
     expect(level.grid.height).toBe(DEMO_MAP.length);
   });
 
-  it('is only grass and water', () => {
+  it('is grass with a dirt path', () => {
     const terrains = new Set(level.grid.cells.map((c) => c.terrain));
-    expect([...terrains].sort()).toEqual(['grass', 'water']);
+    expect([...terrains].sort()).toEqual(['dirt', 'grass']);
   });
 
-  it('separates the two islands with water except for the bridge', () => {
-    expect(getCell(level.grid, 7, 5).terrain).toBe('water');
-    expect(getCell(level.grid, 7, 7).terrain).toBe('grass');
-    expect(getCell(level.grid, 7, 8).terrain).toBe('grass');
-    expect(getCell(level.grid, 7, 9).terrain).toBe('water');
+  it('runs the dirt path from the south edge up through the middle of the gate', () => {
+    const [{ x: gateX, y: gateY }] = STRUCTURE_POSITIONS;
+    const pathX = gateX + 1;
+    for (let y = gateY; y < level.grid.height; y++) expect(getCell(level.grid, pathX, y).terrain).toBe('dirt');
+    expect(getCell(level.grid, pathX, gateY - 1).terrain).toBe('grass');
+  });
+
+  it('lets units walk on every tile under the gate, the path down its middle', () => {
+    expect(level.structures).toEqual(STRUCTURE_POSITIONS);
+    expect(level.structures[0]).not.toBe(STRUCTURE_POSITIONS[0]);
+    const [{ x, y, structure }] = level.structures;
+    const { width, height } = STRUCTURE_SPRITES[structure];
+    expect([width, height]).toEqual([3, 2]);
+    for (let dy = 0; dy < height; dy++) {
+      for (let dx = 0; dx < width; dx++) {
+        const { terrain } = getCell(level.grid, x + dx, y + dy);
+        expect(terrain).toBe(dx === 1 ? 'dirt' : 'grass');
+        expect(getMoveCost(terrain)).toBe(1);
+      }
+    }
   });
 
   it('starts with no player units on the map', () => {
@@ -40,20 +64,24 @@ describe('createDemoLevel', () => {
     }
   });
 
-  it('puts each tree on open grass, clear of deployment and the bridge rows', () => {
+  it('puts each tree on open grass, clear of units, deployment and the gate', () => {
     expect(level.decorations.length).toBeGreaterThan(0);
     for (const { x, y } of level.decorations) {
       expect(getCell(level.grid, x, y).terrain).toBe('grass');
       expect(getCell(level.grid, x, y).unitId).toBeFalsy();
       expect(level.deploymentZone).not.toContainEqual({ x, y });
-      expect([7, 8]).not.toContain(y);
     }
   });
 
-  it('places one gold and one green ginkgo, each on its own tile', () => {
-    expect(level.decorations.map((t) => t.tree).sort()).toEqual(['gold_ginkgo', 'green_ginkgo']);
+  it('places gold ginkgos behind the gate and green ones in the field, one per tile', () => {
+    const [gate] = level.structures;
+    for (const { y, tree } of level.decorations) {
+      expect(TREE_SPRITES).toHaveProperty([tree]);
+      if (tree === 'gold_ginkgo') expect(y).toBeLessThan(gate.y);
+    }
+    const kinds = new Set(level.decorations.map((t) => t.tree));
+    expect([...kinds].sort()).toEqual(['gold_ginkgo', 'green_ginkgo']);
     expect(new Set(level.decorations.map(({ x, y }) => `${x},${y}`)).size).toBe(level.decorations.length);
-    for (const { tree } of level.decorations) expect(TREE_SPRITES).toHaveProperty([tree]);
   });
 
   it('copies the tree positions', () => {
@@ -65,13 +93,13 @@ describe('createDemoLevel', () => {
     expect(level.roster.length).toBeLessThanOrEqual(level.deploymentZone.length);
   });
 
-  it('places the enemies on grass at their positions', () => {
+  it('places the enemies on open ground at their positions', () => {
     const enemies = level.grid.cells.filter((c) => c.unitId).map(({ x, y, unitId }) => ({ x, y, unitId }));
     expect(enemies.map(({ x, y }) => ({ x, y }))).toEqual(
       [...ENEMY_POSITIONS].sort((a, b) => a.y - b.y || a.x - b.x),
     );
     for (const { x, y, unitId } of enemies) {
-      expect(getCell(level.grid, x, y).terrain).toBe('grass');
+      expect(getMoveCost(getCell(level.grid, x, y).terrain)).toBe(1);
       expect(level.units.get(unitId).team).toBe('enemy');
     }
   });
@@ -95,7 +123,7 @@ describe('createDemoLevel', () => {
 
   it('leaves the whole deployment zone open and placeable', () => {
     for (const { x, y } of level.deploymentZone) {
-      expect(getCell(level.grid, x, y).terrain).toBe('grass');
+      expect(getMoveCost(getCell(level.grid, x, y).terrain)).toBe(1);
       expect(canPlaceUnit(level.grid, level.deploymentZone, 'soldier-1', x, y)).toBe(true);
     }
   });

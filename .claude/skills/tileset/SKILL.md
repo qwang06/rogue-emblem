@@ -30,7 +30,7 @@ Each unit art (`UNIT_SPRITES`, e.g. `Villager_01`) has one sheet per animation, 
 
 ## Gate: gates.png
 
-`src/assets/gates.png` is 96x64 (3x2 tiles): one red Chinese-style paifang gate with a tiered roof and a gold plaque in the middle, drawn within x 3–85, y 3–56 (transparent margin around it). It was the top-left cell of a 192x128 sheet of four gate variants (a 2x2 grid of 96x64 cells), cropped down at the user's request. The game doesn't use it yet.
+`src/assets/gates.png` is 96x64 (3x2 tiles): one red Chinese-style paifang gate with a tiered roof and a gold plaque in the middle, drawn within x 3–85, y 3–56 (transparent margin around it). It was the top-left cell of a 192x128 sheet of four gate variants (a 2x2 grid of 96x64 cells), cropped down at the user's request. Its posts stand at x ~10–13, 27–30, 58–61 and 75–78, so the opening under the plaque is the middle tile column (x 31–57). The game draws it as `STRUCTURE_SPRITES.gate` (texture key `gates`, 3x2 tiles): Like every sprite it loads as a 32px spritesheet, so its six tiles are frames 0–5 in reading order. `GridScene.renderStructures` draws it tile by tile from `getStructureTiles` (`src/game/structures.js`): the top `roofRows` row (the roof and plaque) at depth 0.8, over units (0.75) and under the cursor (1), so a unit in the opening's top tile stands behind the roof (only its hat tip shows above it); the bottom row (the posts) at the trees' depth 0.4, under units. Level 1 (`demoLevel.js`) puts it at the north end of the dirt path; all six of its tiles are walkable, so units can stand behind the roof or by the posts on any column.
 
 ## Terrain: overworld sheet
 
@@ -38,7 +38,7 @@ Each unit art (`UNIT_SPRITES`, e.g. `Villager_01`) has one sheet per animation, 
 
 The sheet comes from a pack drawn at 3x (every art pixel is a 3x3 block, so it's natively 1024x1024, 16px tiles). `scripts/rescale-png.js` redraws the used area at 2x as `src/assets/overworld.png` (see the catalog for the command), so tile `[column, row]` on the pack is 32px tile `[column, row]` in the game, frame `row * 42 + column`.
 
-Terrain is **blob-autotiled on the map's own cells** (not a dual grid). Grass (`TERRAIN_BASE_TILE`) fills every cell; each terrain in `TERRAIN_AUTOTILES` is drawn over it, with its border inside its own edge cells. Every set uses the same 7-column layout (strip, notched 3x3, plain 3x3), which the catalog diagrams. Water, sand beach and deep water come in **6 animation frames** laid 7 columns apart.
+Terrain is **blob-autotiled on the map's own cells** (not a dual grid). Grass (`TERRAIN_BASE_TILE`) fills every cell; each terrain in `TERRAIN_AUTOTILES` is drawn over it, with its border inside its own edge cells. Every set uses the same 7-column layout (strip, notched 3x3, plain 3x3), which the catalog diagrams. Water, sand beach and deep water come in **6 animation frames** laid 7 columns apart. The **dirt** path (`TERRAIN_AUTOTILES.dirt`) is the peach sand-patch set, which only has a *notched* 3x3 (`block: [1, 3]`, `inner: [2, 4]`): its outer corners and edges are clean, but every quarter that would be `'full'` has a ~8x6px notch in its inner corner, so dirt two or more tiles wide shows grass holes in its middle. One-tile-wide paths (only `'outer'` and `'vertical'`/`'horizontal'` quarters) are clean. A wider path needs a full sand tile added to the sheet (e.g. in the empty row 7) and a `full` option in `autotile.js`.
 
 ## Inspecting art
 

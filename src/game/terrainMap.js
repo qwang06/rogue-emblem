@@ -7,6 +7,8 @@ import { createGrid } from './grid.js';
 export const DEFAULT_TERRAIN_LEGEND = Object.freeze({
   '.': 'grass',
   '~': 'water',
+  ',': 'dirt',
+  '#': 'wall',
 });
 
 // Throws if the rows are empty, ragged, or use a character the legend

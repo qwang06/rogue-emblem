@@ -18,6 +18,12 @@ describe('parseTerrainMap', () => {
     expect(getCell(grid, 1, 1).terrain).toBe('grass');
   });
 
+  it('reads dirt and walls with the default legend', () => {
+    const grid = parseTerrainMap([',#']);
+    expect(getCell(grid, 0, 0).terrain).toBe('dirt');
+    expect(getCell(grid, 1, 0).terrain).toBe('wall');
+  });
+
   it('leaves every tile empty of units', () => {
     const grid = parseTerrainMap(['.~.']);
     for (const cell of grid.cells) expect(cell.unitId).toBeNull();
