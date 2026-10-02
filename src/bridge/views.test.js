@@ -16,7 +16,7 @@ import { HEALTH_POTION } from '../game/items.js';
 import { createTurnState, markDone } from '../game/turns.js';
 
 const makeUnit = () =>
-  new Unit({ name: 'Soldier', health: 10, mana: 5, attack: 4, defense: 2, movement: 5, team: 'player' });
+  new Unit({ name: 'Soldier', health: 10, mana: 5, strength: 4, defense: 2, movement: 5, team: 'player' });
 
 describe('toUnitView', () => {
   it('returns null for no unit', () => {
@@ -33,8 +33,13 @@ describe('toUnitView', () => {
       maxHealth: 10,
       mana: 5,
       maxMana: 5,
-      attack: 4,
+      strength: 4,
+      magic: 0,
+      skill: 0,
+      speed: 0,
+      luck: 0,
       defense: 2,
+      resistance: 0,
       movement: 5,
       range: 1,
       items: [],
@@ -45,7 +50,7 @@ describe('toUnitView', () => {
     const unit = new Unit({
       name: 'Soldier',
       health: 10,
-      attack: 4,
+      strength: 4,
       defense: 2,
       movement: 5,
       team: 'player',
@@ -125,6 +130,11 @@ describe('toDamagePopupView', () => {
   it('labels health and mana recovery', () => {
     expect(toDamagePopupView({ id: 1, amount: 5, kind: 'health', x: 0, y: 0, durationMs: 700 }).text).toBe('+5 HP');
     expect(toDamagePopupView({ id: 1, amount: 3, kind: 'mana', x: 0, y: 0, durationMs: 700 }).text).toBe('+3 MP');
+  });
+
+  it('calls out crits and misses', () => {
+    expect(toDamagePopupView({ id: 1, amount: 9, kind: 'crit', x: 0, y: 0, durationMs: 700 }).text).toBe('Crit! 9');
+    expect(toDamagePopupView({ id: 1, amount: 0, kind: 'miss', x: 0, y: 0, durationMs: 700 }).text).toBe('Miss');
   });
 
   it('shows a recovery of 0 rather than hiding it', () => {

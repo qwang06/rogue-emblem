@@ -13,8 +13,13 @@ export function toUnitView(unit) {
     maxHealth: unit.maxHealth,
     mana: unit.mana,
     maxMana: unit.maxMana,
-    attack: unit.attack,
+    strength: unit.strength,
+    magic: unit.magic,
+    skill: unit.skill,
+    speed: unit.speed,
+    luck: unit.luck,
     defense: unit.defense,
+    resistance: unit.resistance,
     movement: unit.movement,
     range: unit.range,
     items: Object.freeze(
@@ -54,16 +59,19 @@ export function toTileAnchorView(tile, tileSize, camera, size) {
   return Object.freeze({ left: topLeft.x, top: topLeft.y, right: bottomRight.x, bottom: bottomRight.y });
 }
 
-// How each kind of popup reads: damage is the bare number, recovery says
-// what was restored.
+// How each kind of popup reads: damage is the bare number (a crit calls
+// itself out), a miss says so, and recovery says what was restored.
 const POPUP_TEXT = Object.freeze({
   damage: (amount) => `${amount}`,
+  crit: (amount) => `Crit! ${amount}`,
+  miss: () => 'Miss',
   health: (amount) => `+${amount} HP`,
   mana: (amount) => `+${amount} MP`,
 });
 
-// Snapshot of one floating number over a unit: damage taken, or health or
-// mana recovered (`kind` is 'damage' | 'health' | 'mana', which the UI
+// Snapshot of one floating number over a unit: damage taken (plain, a
+// crit, or a miss), or health or mana recovered (`kind` is 'damage' |
+// 'crit' | 'miss' | 'health' | 'mana', which the UI
 // colors by; `text` is what it shows). `x`/`y` are the point the number
 // rises from, as fractions of the canvas (see toCanvasFraction); `durationMs` is how long it stays up,
 // so the UI animation and the store entry's lifetime agree.

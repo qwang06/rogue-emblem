@@ -330,7 +330,7 @@ body {
 
 .unit-panel__stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
   margin: 12px 0 0;
 }
@@ -628,6 +628,17 @@ kbd {
 
 .damage-popup--mana {
   color: #93c5fd;
+}
+
+/* A crit reads hot and big; a miss is a quiet grey. */
+.damage-popup--crit {
+  font-size: 2rem;
+  color: #fcd34d;
+}
+
+.damage-popup--miss {
+  font-size: 1.25rem;
+  color: #d4d4d8;
 }
 
 @keyframes damage-popup-rise {

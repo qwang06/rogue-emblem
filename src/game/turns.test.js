@@ -13,7 +13,7 @@ import {
 import { Unit } from './Unit.js';
 
 const makeUnit = (team, health = 10) =>
-  new Unit({ name: team, health, attack: 4, defense: 2, movement: 5, team });
+  new Unit({ name: team, health, strength: 4, defense: 2, movement: 5, team });
 
 describe('createTurnState', () => {
   it('starts on turn 1 with the player phase and nobody moved or done', () => {

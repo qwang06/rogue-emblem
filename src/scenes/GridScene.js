@@ -16,7 +16,7 @@ import {
 } from '../bridge/views.js';
 import { createActionMenu, getSelectedAction, getUnitActions, moveSelection, selectIndex } from '../game/actionMenu.js';
 import { calculateSkillDamage, findLearnedSkill, getLearnedSkills, getSkillActions } from '../game/skills.js';
-import { calculateDamage, getAttackRange, getAttackTargets, getThreatRange } from '../game/combat.js';
+import { getAttackRange, getAttackTargets, getThreatRange, resolveCombat } from '../game/combat.js';
 import { getFitZoom } from '../game/camera.js';
 import { createCursor, moveCursor } from '../game/cursor.js';
 import { createDemoLevel } from '../game/demoLevel.js';
@@ -85,6 +85,11 @@ const START_INDEX = 1;
 const MOVE_STEP_MS = 140;
 // How long a damage number stays on screen (the React HUD animates it).
 const DAMAGE_POPUP_DURATION_MS = 700;
+// How long a missed strike holds before the next one (about a hit flash).
+const MISS_PAUSE_MS = 420;
+// Camera shake on a crit.
+const CRIT_SHAKE_MS = 160;
+const CRIT_SHAKE_INTENSITY = 0.006;
 // How long the "Player Phase" / "Enemy Phase" banner holds the screen.
 const PHASE_BANNER_DURATION_MS = 1200;
 // Pauses in the enemy phase: on each enemy before it moves, and between enemies.
@@ -941,25 +946,51 @@ export class GridScene extends Phaser.Scene {
   }
 
   // One unit attacks another ({ x, y, unitId } target), for either side.
-  // Damage comes from src/game/combat.js and is applied right away so the
-  // HUD shows the new health while the target's sprite flashes and a damage
-  // number pops over it; a unit brought to 0 health is removed once the
-  // flash finishes. Input stays locked until onDone.
+  // The exchange — the attack, the defender's counter if the attacker is
+  // in its range, and a follow-up strike for whoever doubles, each rolled
+  // to hit and crit — comes from resolveCombat in src/game/combat.js and is
+  // played strike by strike: each hit's damage is applied right away so
+  // the HUD shows the new health while the struck sprite flashes and a
+  // damage number pops over it (a crit also shakes the camera); a miss just
+  // shows "Miss" for a moment. A unit brought to 0 health is removed once
+  // its flash finishes, which ends the exchange. Input stays locked until
+  // onDone.
   resolveAttack(attackerId, target, onDone) {
     const attacker = this.units.get(attackerId);
     const defender = this.units.get(target.unitId);
-    const damage = calculateDamage(attacker, defender);
-    defender.takeDamage(damage);
-    this.publishHoveredUnit();
+    const attackerTile = findUnit(this.grid, attackerId);
+    const distance = Math.abs(attackerTile.x - target.x) + Math.abs(attackerTile.y - target.y);
+    const { strikes } = resolveCombat(attacker, defender, { distance });
+    const sides = {
+      attacker: { unit: attacker, tile: { ...attackerTile, unitId: attackerId } },
+      defender: { unit: defender, tile: target },
+    };
 
     this.inputLocked = true;
-    const defenderSprite = this.unitSprites.get(target.unitId);
-    this.showDamagePopup(defenderSprite, damage);
-    playHitFlash(this, defenderSprite, () => {
-      if (!defender.isAlive()) this.removeUnit(target);
-      this.updateHoveredUnit();
-      onDone();
-    });
+    const playStrike = (index) => {
+      const strike = strikes[index];
+      if (!strike) {
+        this.updateHoveredUnit();
+        onDone();
+        return;
+      }
+      const struck = sides[strike.target];
+      const sprite = this.unitSprites.get(struck.tile.unitId);
+      if (!strike.hit) {
+        this.showDamagePopup(sprite, 0, 'miss');
+        this.time.delayedCall(MISS_PAUSE_MS, () => playStrike(index + 1));
+        return;
+      }
+      struck.unit.takeDamage(strike.damage);
+      this.publishHoveredUnit();
+      this.showDamagePopup(sprite, strike.damage, strike.crit ? 'crit' : 'damage');
+      if (strike.crit) this.cameras.main.shake(CRIT_SHAKE_MS, CRIT_SHAKE_INTENSITY);
+      playHitFlash(this, sprite, () => {
+        if (!struck.unit.isAlive()) this.removeUnit(struck.tile);
+        playStrike(index + 1);
+      });
+    };
+    playStrike(0);
   }
 
   // Uses the aimed skill on the unit under the cursor, if it's a hostile

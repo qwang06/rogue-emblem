@@ -34,8 +34,13 @@ export function UnitPanel() {
       <Meter label="MP" value={unit.mana} max={unit.maxMana} kind="mp" />
 
       <dl className="unit-panel__stats">
-        <Stat label="ATK" value={unit.attack} />
+        <Stat label="STR" value={unit.strength} />
+        <Stat label="MAG" value={unit.magic} />
+        <Stat label="SKL" value={unit.skill} />
+        <Stat label="SPD" value={unit.speed} />
+        <Stat label="LCK" value={unit.luck} />
         <Stat label="DEF" value={unit.defense} />
+        <Stat label="RES" value={unit.resistance} />
         <Stat label="MOV" value={unit.movement} />
         <Stat label="RNG" value={unit.range} />
       </dl>
