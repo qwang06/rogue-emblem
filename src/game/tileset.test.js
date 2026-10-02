@@ -5,6 +5,10 @@ import {
   ARROW_TILES,
   CURSOR_ANIMATION,
   TERRAIN_SHEET,
+  TILE_SIZE,
+  TREE_SHADOW,
+  TREE_SPRITES,
+  UNIT_SHADOW,
   UNIT_ANIMATIONS,
   UNIT_SHEET,
   UNIT_SPRITES,
@@ -20,8 +24,28 @@ describe('sprite keys', () => {
     }
   });
 
+  it('names an image for every tree', () => {
+    for (const key of Object.values(TREE_SPRITES)) expect(SPRITE_URLS).toHaveProperty([key]);
+  });
+
   it('gives each team its own sprite', () => {
     expect(UNIT_SPRITES.player).not.toBe(UNIT_SPRITES.enemy);
+  });
+});
+
+describe('shadows', () => {
+  it('fit inside one tile and are translucent', () => {
+    for (const { width, height, centerX, centerY, alpha } of [UNIT_SHADOW, TREE_SHADOW]) {
+      expect(centerX - width / 2).toBeGreaterThanOrEqual(0);
+      expect(centerX + width / 2).toBeLessThanOrEqual(TILE_SIZE);
+      expect(centerY - height / 2).toBeGreaterThanOrEqual(0);
+      expect(centerY + height / 2).toBeLessThanOrEqual(TILE_SIZE);
+      expect(alpha).toBeGreaterThan(0);
+      expect(alpha).toBeLessThan(1);
+      // Whole-pixel corners, so the pixel art stays crisp.
+      expect(Number.isInteger(centerX - width / 2)).toBe(true);
+      expect(Number.isInteger(centerY - height / 2)).toBe(true);
+    }
   });
 });
 

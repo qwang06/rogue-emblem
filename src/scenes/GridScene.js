@@ -56,13 +56,14 @@ import {
   TERRAIN_BASE_TILE,
   TERRAIN_SHEET,
   TILE_SIZE,
+  TREE_SPRITES,
   UNIT_ANIMATIONS,
   UNIT_SHEET,
   UNIT_SPRITES,
   unitSheetKey,
 } from '../game/tileset.js';
 import { POTION_COLORS, playFireBurst, playGrenadeThrow, playHitFlash, playPotionGlow } from './effects.js';
-import { addUnitShadow } from './unitShadow.js';
+import { addTreeShadow, addUnitShadow } from './unitShadow.js';
 
 // The canvas is sized by the page (see main.js); maps are zoomed to fit it,
 // up to MAX_ZOOM, and centered.
@@ -122,6 +123,7 @@ export class GridScene extends Phaser.Scene {
     this.deploymentZone = level.deploymentZone;
 
     this.renderTerrain(this.grid);
+    this.renderDecorations(level.decorations ?? []);
     this.renderUnits(this.grid);
     this.createCursor();
 
@@ -1283,6 +1285,16 @@ export class GridScene extends Phaser.Scene {
           });
         },
       });
+    }
+  }
+
+  // Trees ({ x, y, tree } from the level) over the grass, below range highlights
+  // and units.
+  renderDecorations(decorations) {
+    for (const { x, y, tree } of decorations) {
+      const pos = gridToWorld(x, y, TILE_SIZE);
+      addTreeShadow(this, pos.x, pos.y);
+      this.addTileSprite(pos.x, pos.y, TREE_SPRITES[tree]).setDepth(0.4);
     }
   }
 
