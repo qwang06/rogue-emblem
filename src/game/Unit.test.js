@@ -212,5 +212,52 @@ describe('Unit', () => {
       expect(unit.levelUp()).toBe(2);
       expect(unit.level).toBe(2);
     });
+
+    it('applies stat gains, raising max and current health and mana', () => {
+      const unit = new Unit({ name: 'U', health: 10, mana: 5, strength: 4, defense: 2, movement: 5, team: 'player' });
+      unit.takeDamage(4);
+      unit.spendMana(2);
+      unit.levelUp({ health: 2, mana: 1, strength: 1, luck: 1, resistance: 0 });
+      expect(unit.maxHealth).toBe(12);
+      expect(unit.health).toBe(8);
+      expect(unit.maxMana).toBe(6);
+      expect(unit.mana).toBe(4);
+      expect(unit.strength).toBe(5);
+      expect(unit.luck).toBe(1);
+      expect(unit.resistance).toBe(0);
+    });
+  });
+
+  describe('gainExperience', () => {
+    const makeGrower = (growths) =>
+      new Unit({ name: 'U', health: 10, strength: 4, defense: 2, movement: 5, team: 'player', growths });
+
+    it('starts at 0 XP and stores what it gains', () => {
+      const unit = makeGrower({});
+      expect(unit.experience).toBe(0);
+      unit.gainExperience(30, () => 0);
+      expect(unit.experience).toBe(30);
+      expect(unit.level).toBe(1);
+    });
+
+    it('levels up with its growths and carries the overflow', () => {
+      const unit = makeGrower({ health: 100, strength: 100 });
+      unit.experience = 80;
+      const result = unit.gainExperience(45, () => 0.5);
+      expect(unit.level).toBe(2);
+      expect(unit.experience).toBe(25);
+      expect(unit.maxHealth).toBe(11);
+      expect(unit.strength).toBe(5);
+      expect(unit.defense).toBe(2);
+      expect(result.levelUps).toHaveLength(1);
+    });
+
+    it('applies several level ups at once', () => {
+      const unit = makeGrower({ strength: 100 });
+      unit.gainExperience(250, () => 0);
+      expect(unit.level).toBe(3);
+      expect(unit.strength).toBe(6);
+      expect(unit.experience).toBe(50);
+    });
   });
 });

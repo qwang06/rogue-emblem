@@ -8,6 +8,8 @@ import {
   toCombatForecastView,
   toDamagePopupView,
   toDialogView,
+  toExperienceGainView,
+  toLevelUpView,
   toPhaseBannerView,
   toCanvasFraction,
   toRosterEntryView,
@@ -17,6 +19,7 @@ import {
   worldToScreen,
 } from '../bridge/views.js';
 import { createActionMenu, getSelectedAction, getUnitActions, moveSelection, selectIndex } from '../game/actionMenu.js';
+import { getCombatExperience, getCombatOutcome } from '../game/experience.js';
 import { calculateSkillDamage, findLearnedSkill, getLearnedSkills, getSkillActions } from '../game/skills.js';
 import {
   getAttackRange,
@@ -103,6 +106,10 @@ const PHASE_BANNER_DURATION_MS = 1200;
 // Pauses in the enemy phase: on each enemy before it moves, and between enemies.
 const ENEMY_FOCUS_DELAY_MS = 250;
 const ENEMY_ACTION_DELAY_MS = 300;
+// How long a player unit's XP bar shows after combat (the React HUD fills it).
+const EXPERIENCE_BAR_MS = 1100;
+// How long each level-up panel holds the screen.
+const LEVEL_UP_MS = 2400;
 // Tint for units that are done for the phase.
 const DONE_TINT = 0x808080;
 
@@ -182,6 +189,7 @@ export class GridScene extends Phaser.Scene {
     this.nextBannerId = 1;
     this.hoveredUnit = null;
     this.nextPopupId = 1;
+    this.nextProgressId = 1; // changes per XP bar / level-up panel so React restarts their animations
     this.dialog = null; // from src/game/dialog.js while a conversation is showing
     this.dialogLineStartedAt = 0; // scene time the current line started typing
     this.onDialogDone = null;
@@ -997,8 +1005,9 @@ export class GridScene extends Phaser.Scene {
   // the HUD shows the new health while the struck sprite flashes and a
   // damage number pops over it (a crit also shakes the camera); a miss just
   // shows "Miss" for a moment. A unit brought to 0 health is removed once
-  // its flash finishes, which ends the exchange. Input stays locked until
-  // onDone.
+  // its flash finishes, which ends the exchange. Then the player unit in
+  // the fight, if it survived, gains XP (see showExperienceGain). Input
+  // stays locked until onDone.
   resolveAttack(attackerId, target, onDone) {
     const attacker = this.units.get(attackerId);
     const defender = this.units.get(target.unitId);
@@ -1015,7 +1024,7 @@ export class GridScene extends Phaser.Scene {
       const strike = strikes[index];
       if (!strike) {
         this.updateHoveredUnit();
-        onDone();
+        this.awardCombatExperience(sides, strikes, onDone);
         return;
       }
       const struck = sides[strike.target];
@@ -1035,6 +1044,59 @@ export class GridScene extends Phaser.Scene {
       });
     };
     playStrike(0);
+  }
+
+  // After an exchange from resolveAttack, gives the player unit in it (only
+  // player units gain XP) the XP its outcome earned (src/game/
+  // experience.js), unless it died; then onDone.
+  awardCombatExperience(sides, strikes, onDone) {
+    const side = ['attacker', 'defender'].find((s) => sides[s].unit.team === 'player');
+    const unit = side && sides[side].unit;
+    if (!unit?.isAlive()) {
+      onDone();
+      return;
+    }
+    const opponent = sides[side === 'attacker' ? 'defender' : 'attacker'].unit;
+    const amount = getCombatExperience(unit.level, opponent.level, getCombatOutcome(strikes, side));
+    this.showExperienceGain(unit, amount, onDone);
+  }
+
+  // Gives the unit `amount` XP (Unit.gainExperience rolls any level ups)
+  // and shows it: React's XP bar fills for EXPERIENCE_BAR_MS, then one
+  // level-up panel per level gained holds for LEVEL_UP_MS each. Calls
+  // onDone straight away when there's no XP to give.
+  showExperienceGain(unit, amount, onDone) {
+    if (amount <= 0) {
+      onDone();
+      return;
+    }
+    const from = { level: unit.level, experience: unit.experience };
+    const result = unit.gainExperience(amount);
+    const experienceGain = toExperienceGainView({
+      id: this.nextProgressId++,
+      name: unit.name,
+      from,
+      result,
+      durationMs: EXPERIENCE_BAR_MS,
+    });
+    gameStore.setState({ experienceGain });
+
+    const showLevelUp = (index) => {
+      const levelUp = result.levelUps[index];
+      if (!levelUp) {
+        gameStore.setState({ levelUp: null });
+        this.publishHoveredUnit();
+        onDone();
+        return;
+      }
+      const view = toLevelUpView({ id: this.nextProgressId++, name: unit.name, levelUp, durationMs: LEVEL_UP_MS });
+      gameStore.setState({ levelUp: view });
+      this.time.delayedCall(LEVEL_UP_MS, () => showLevelUp(index + 1));
+    };
+    this.time.delayedCall(EXPERIENCE_BAR_MS, () => {
+      gameStore.setState({ experienceGain: null });
+      showLevelUp(0);
+    });
   }
 
   // Uses the aimed skill on the unit under the cursor, if it's a hostile
@@ -1068,7 +1130,10 @@ export class GridScene extends Phaser.Scene {
       playFireBurst(this, defenderSprite, center(defenderSprite), () => {
         if (!defender.isAlive()) this.removeUnit(target);
         this.activeUnit = null;
-        this.finishPlayerAction(unitId);
+        // A skill earns XP like a single strike that always lands.
+        const strikes = [{ by: 'attacker', target: 'defender', damage, hit: true, lethal: !defender.isAlive() }];
+        const amount = getCombatExperience(unit.level, defender.level, getCombatOutcome(strikes, 'attacker'));
+        this.showExperienceGain(unit, amount, () => this.finishPlayerAction(unitId));
       });
     });
   }

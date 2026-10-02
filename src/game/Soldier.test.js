@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { HEALTH_POTION, MANA_POTION, STARTING_ITEMS } from './items.js';
-import { SOLDIER_STATS, Soldier } from './Soldier.js';
+import { SOLDIER_CAPS, SOLDIER_GROWTHS, SOLDIER_STATS, Soldier } from './Soldier.js';
 import { Unit } from './Unit.js';
 
 describe('Soldier', () => {
@@ -32,6 +32,13 @@ describe('Soldier', () => {
     expect(soldier.damageType).toBe('physical');
     expect(soldier.movement).toBe(SOLDIER_STATS.movement);
     expect(soldier.range).toBe(1);
+  });
+
+  it('levels up with the soldier growth rates and caps', () => {
+    const soldier = new Soldier({ team: 'player' });
+    expect(soldier.growths).toBe(SOLDIER_GROWTHS);
+    expect(soldier.caps).toBe(SOLDIER_CAPS);
+    expect(soldier.experience).toBe(0);
   });
 
   it('accepts a custom name and level', () => {

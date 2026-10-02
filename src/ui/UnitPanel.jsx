@@ -2,7 +2,8 @@ import { UNIT_SPRITES } from '../game/tileset.js';
 import { UnitSprite } from './UnitSprite.jsx';
 import { useGameStore } from './useGameStore.js';
 
-// Sidebar card for the unit under the cursor: portrait, level, HP/MP
+// Sidebar card for the unit under the cursor: portrait, level (and XP
+// for player units), HP/MP
 // meters, combat stats, and the items it carries. Holds its place with a hint when nothing is
 // hovered, so the sidebar doesn't jump around.
 export function UnitPanel() {
@@ -26,7 +27,10 @@ export function UnitPanel() {
         </span>
         <div>
           <p className="unit-panel__name">{unit.name}</p>
-          <p className="unit-panel__level">Level {unit.level}</p>
+          <p className="unit-panel__level">
+            Level {unit.level}
+            {unit.team === 'player' && <span className="unit-panel__experience"> · EXP {unit.experience}</span>}
+          </p>
         </div>
       </div>
 

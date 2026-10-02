@@ -4,10 +4,12 @@
 // strength / magic power physical / magical hits, defense / resistance
 // guard against them, and skill, speed and luck feed hit, crit and
 // doubling. `damageType` says which kind of hit the unit's attacks deal. Specific unit types extend
-// this and set their own class and stats; the skills a unit knows come
+// this and set their own class, stats, growth rates and stat caps (see
+// experience.js), which decide what a level up raises; the skills a unit knows come
 // from its class's skill tree and its level (see skills.js). Items it
 // carries are an inventory from items.js.
 
+import { GROWTH_STATS, resolveExperienceGain } from './experience.js';
 import { createInventory, findItem, getItemRecovery, removeItem } from './items.js';
 
 export class Unit {
@@ -15,6 +17,7 @@ export class Unit {
     name,
     unitClass = null,
     level = 1,
+    experience = 0,
     health,
     mana = 0,
     strength,
@@ -29,10 +32,13 @@ export class Unit {
     damageType = 'physical',
     team,
     items = [],
+    growths = {},
+    caps = {},
   }) {
     this.name = name;
     this.unitClass = unitClass;
     this.level = level;
+    this.experience = experience;
     this.maxHealth = health;
     this.health = health;
     this.maxMana = mana;
@@ -49,6 +55,8 @@ export class Unit {
     this.damageType = damageType;
     this.team = team;
     this.items = createInventory(items);
+    this.growths = growths;
+    this.caps = caps;
   }
 
   isAlive() {
@@ -95,8 +103,34 @@ export class Unit {
     return { item, amount };
   }
 
-  levelUp() {
+  // Raises the level by one and adds `gains` ({ health, strength, ... },
+  // from rollLevelUp) to the stats. Health and mana gains raise both the
+  // maximum and the current value. Returns the new level.
+  levelUp(gains = {}) {
     this.level += 1;
+    for (const stat of GROWTH_STATS) {
+      const gain = gains[stat] ?? 0;
+      if (stat === 'health') {
+        this.maxHealth += gain;
+        this.health += gain;
+      } else if (stat === 'mana') {
+        this.maxMana += gain;
+        this.mana += gain;
+      } else {
+        this[stat] += gain;
+      }
+    }
     return this.level;
+  }
+
+  // Gains `amount` XP, leveling up (rolling growths with `rng`) for every
+  // 100 it crosses, with the overflow carried. Returns the
+  // resolveExperienceGain result, whose levelUps say what each level
+  // raised and which skills it taught.
+  gainExperience(amount, rng = Math.random) {
+    const result = resolveExperienceGain(this, amount, rng);
+    for (const { gains } of result.levelUps) this.levelUp(gains);
+    this.experience = result.experience;
+    return result;
   }
 }

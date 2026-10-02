@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { Unit } from '../game/Unit.js';
 import {
   mergeTileAnchors,
+  toExperienceGainView,
+  toLevelUpView,
   toCombatForecastView,
   toDamagePopupView,
   toDialogView,
@@ -31,6 +33,7 @@ describe('toUnitView', () => {
       name: 'Soldier',
       team: 'player',
       level: 1,
+      experience: 0,
       health: 10,
       maxHealth: 10,
       mana: 5,
@@ -264,5 +267,41 @@ describe('toCombatForecastView', () => {
     expect(Object.isFrozen(view)).toBe(true);
     expect(Object.isFrozen(view.attacker)).toBe(true);
     expect(Object.isFrozen(view.defender)).toBe(true);
+  });
+});
+
+describe('toExperienceGainView', () => {
+  it('fills the bar from the old XP to the new', () => {
+    const result = { amount: 30, level: 1, experience: 50, levelUps: [] };
+    const view = toExperienceGainView({ id: 1, name: 'Ana', from: { level: 1, experience: 20 }, result, durationMs: 900 });
+    expect(view).toEqual({ id: 1, name: 'Ana', level: 1, gained: 30, startPercent: 20, endPercent: 50, durationMs: 900 });
+    expect(Object.isFrozen(view)).toBe(true);
+  });
+
+  it('fills the bar to 100 on a level up', () => {
+    const result = { amount: 30, level: 2, experience: 10, levelUps: [{}] };
+    const view = toExperienceGainView({ id: 2, name: 'Ana', from: { level: 1, experience: 80 }, result, durationMs: 900 });
+    expect(view.startPercent).toBe(80);
+    expect(view.endPercent).toBe(100);
+  });
+});
+
+describe('toLevelUpView', () => {
+  const levelUp = {
+    level: 3,
+    gains: { health: 1, mana: 0, strength: 1, magic: 0, skill: 0, speed: 1, luck: 0, defense: 0, resistance: 0 },
+    stats: { health: 12, mana: 5, strength: 5, magic: 0, skill: 3, speed: 4, luck: 2, defense: 2, resistance: 0 },
+    skills: [{ id: 'throw-grenade', label: 'Throw Grenade' }],
+  };
+
+  it('lists every stat with its label, new value and gain, plus learned skills', () => {
+    const view = toLevelUpView({ id: 4, name: 'Ana', levelUp, durationMs: 2000 });
+    expect(view.level).toBe(3);
+    expect(view.stats.map((s) => s.label)).toEqual(['HP', 'MP', 'STR', 'MAG', 'SKL', 'SPD', 'LCK', 'DEF', 'RES']);
+    expect(view.stats[0]).toEqual({ id: 'health', label: 'HP', value: 12, gain: 1 });
+    expect(view.stats[1]).toEqual({ id: 'mana', label: 'MP', value: 5, gain: 0 });
+    expect(view.skills).toEqual(['Throw Grenade']);
+    expect(Object.isFrozen(view)).toBe(true);
+    expect(Object.isFrozen(view.stats[0])).toBe(true);
   });
 });
