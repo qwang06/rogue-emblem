@@ -8,7 +8,9 @@ import { getCell, getNeighbors, isInBounds } from './grid.js';
 // impassable. Terrain missing from the table (including null) costs 1.
 export const TERRAIN_MOVE_COSTS = Object.freeze({
   grass: 1,
+  dirt: 1,
   water: Infinity,
+  wall: Infinity,
 });
 
 export function getMoveCost(terrain, terrainCosts = TERRAIN_MOVE_COSTS) {

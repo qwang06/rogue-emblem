@@ -7,48 +7,68 @@ import { setUnit } from './grid.js';
 import { Soldier } from './Soldier.js';
 import { parseTerrainMap } from './terrainMap.js';
 
-// A small island on the left joined by a bridge to a large island on the
-// right, which has arms reaching north and south. 20x15 tiles. '.' is
-// grass, '~' is water.
+// Level 1: a dirt path runs north up the middle of a grass field to a
+// paifang gate, with a stand of gold ginkgos behind the gate and green
+// ginkgos scattered across the field. 16x14 tiles. '.' is grass, ',' is
+// dirt. Every tile under the gate is walkable: the path through its middle
+// and grass under its sides.
 export const DEMO_MAP = Object.freeze([
-  '~~~~~~~~~~~~~....~~~',
-  '~~~~~~~~~~~~~....~~~',
-  '~~~~~~~~~~~~~....~~~',
-  '~~~~~~~~~...........',
-  '~~~~~~~~~...........',
-  '~.....~~~...........',
-  '~.....~~~...........',
-  '~...................',
-  '~...................',
-  '~.....~~~...........',
-  '~.....~~~...........',
-  '~~~~~~~~~...........',
-  '~~~~~~~~~...........',
-  '~~~~~~~~~~~~~....~~~',
-  '~~~~~~~~~~~~~....~~~',
+  '................',
+  '................',
+  '................',
+  '........,.......',
+  '........,.......',
+  '........,.......',
+  '........,.......',
+  '........,.......',
+  '........,.......',
+  '........,.......',
+  '........,.......',
+  '........,.......',
+  '........,.......',
+  '........,.......',
 ]);
 
-// Placeholder spots until units get their own placement data: the player
-// deploys along the west edge of the small island, and the enemies wait on
-// the large island.
+// Multi-tile structures drawn over the terrain, by top-left tile: the gate
+// (3x2 tiles) straddles the north end of the path.
+export const STRUCTURE_POSITIONS = Object.freeze([Object.freeze({ x: 7, y: 3, structure: 'gate' })]);
+
+// The player deploys at the south end of the path, and the enemies hold the
+// gate: one in its opening and one on either side.
 export const DEPLOYMENT_ZONE = Object.freeze([
-  { x: 1, y: 6 },
-  { x: 1, y: 7 },
-  { x: 1, y: 8 },
+  { x: 7, y: 13 },
+  { x: 8, y: 13 },
+  { x: 9, y: 13 },
 ]);
 export const ENEMY_POSITIONS = Object.freeze([
-  { x: 14, y: 2 },
-  { x: 18, y: 6 },
-  { x: 18, y: 11 },
+  { x: 8, y: 4 },
+  { x: 5, y: 5 },
+  { x: 11, y: 6 },
 ]);
 
-// Trees, as decoration only — they don't block movement. Placeholder until
-// the map is rebuilt with more scenery: the gold ginkgo on the small island
-// and its green recolor on the large one.
-export const TREE_POSITIONS = Object.freeze([
-  Object.freeze({ x: 4, y: 5, tree: 'gold_ginkgo' }),
-  Object.freeze({ x: 12, y: 4, tree: 'green_ginkgo' }),
-]);
+// Trees, as decoration only — they don't block movement. A stand of gold
+// ginkgos right behind the gate, and three clumps of green ones in the field: west
+// of the gate, in the southwest corner, and in the east.
+export const TREE_POSITIONS = Object.freeze(
+  [
+    { x: 8, y: 1, tree: 'gold_ginkgo' },
+    { x: 7, y: 2, tree: 'gold_ginkgo' },
+    { x: 8, y: 2, tree: 'gold_ginkgo' },
+    { x: 9, y: 2, tree: 'gold_ginkgo' },
+    { x: 2, y: 4, tree: 'green_ginkgo' },
+    { x: 1, y: 5, tree: 'green_ginkgo' },
+    { x: 3, y: 5, tree: 'green_ginkgo' },
+    { x: 2, y: 6, tree: 'green_ginkgo' },
+    { x: 13, y: 9, tree: 'green_ginkgo' },
+    { x: 12, y: 10, tree: 'green_ginkgo' },
+    { x: 14, y: 10, tree: 'green_ginkgo' },
+    { x: 13, y: 11, tree: 'green_ginkgo' },
+    { x: 4, y: 12, tree: 'green_ginkgo' },
+    { x: 5, y: 12, tree: 'green_ginkgo' },
+    { x: 3, y: 13, tree: 'green_ginkgo' },
+    { x: 5, y: 13, tree: 'green_ginkgo' },
+  ].map(Object.freeze),
+);
 
 // The player's roster, by unitId -> name. One unit per deployment tile.
 export const PLAYER_ROSTER = Object.freeze({
@@ -66,30 +86,32 @@ export const DEMO_OPENING_DIALOG = Object.freeze(
       speaker: ALDEN,
       team: 'player',
       side: 'left',
-      text: 'Enemy soldiers have taken the eastern island. That bridge is the only way across.',
+      text: 'Enemy soldiers have taken the old gate. This road is the only way through.',
     },
     {
       speaker: BRYN,
       team: 'player',
       side: 'left',
-      text: "Three of them, by my count. They'll see us coming the moment we set foot on it.",
+      text: "Three of them, by my count. They'll see us coming all the way up the road.",
     },
     {
       speaker: 'Enemy Soldier',
       team: 'enemy',
       side: 'right',
-      text: 'Hold the line! Nobody crosses while we still stand.',
+      text: 'Hold the line! Nobody passes the gate while we still stand.',
     },
     { speaker: CATO, team: 'player', side: 'left', text: "Then we won't let them stand for long." },
     { speaker: ALDEN, team: 'player', side: 'left', text: 'Take your positions. We move on my signal.' },
   ].map(Object.freeze),
 );
 
-// Returns { grid, units, roster, deploymentZone, openingDialog, decorations }. `units`
+// Returns { grid, units, roster, deploymentZone, openingDialog, decorations,
+// structures }. `units`
 // maps every unitId (player and enemy) to its Unit; `roster` lists the
 // player unitIds available to deploy; `deploymentZone` is [{ x, y }] of
 // placeable tiles; `openingDialog` is the script played before deployment;
-// `decorations` is [{ x, y, tree }] of trees drawn over the grass.
+// `decorations` is [{ x, y, tree }] of trees drawn over the grass;
+// `structures` is [{ x, y, structure }] of multi-tile art by top-left tile.
 export function createDemoLevel() {
   let grid = parseTerrainMap(DEMO_MAP);
 
@@ -110,5 +132,6 @@ export function createDemoLevel() {
     deploymentZone: DEPLOYMENT_ZONE.map((tile) => ({ ...tile })),
     openingDialog: DEMO_OPENING_DIALOG,
     decorations: TREE_POSITIONS.map((tree) => ({ ...tree })),
+    structures: STRUCTURE_POSITIONS.map((structure) => ({ ...structure })),
   };
 }

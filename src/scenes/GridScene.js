@@ -20,6 +20,7 @@ import { calculateDamage, getAttackRange, getAttackTargets, getThreatRange } fro
 import { getFitZoom } from '../game/camera.js';
 import { createCursor, moveCursor } from '../game/cursor.js';
 import { createDemoLevel } from '../game/demoLevel.js';
+import { getStructureTiles } from '../game/structures.js';
 import { createTrainingLevel } from '../game/trainingLevel.js';
 import { getItemActions } from '../game/items.js';
 import { planRushAction } from '../game/enemyAI.js';
@@ -52,6 +53,7 @@ import {
 import {
   ARROW_TILES,
   CURSOR_ANIMATION,
+  STRUCTURE_SPRITES,
   TERRAIN_AUTOTILES,
   TERRAIN_BASE_TILE,
   TERRAIN_SHEET,
@@ -124,6 +126,7 @@ export class GridScene extends Phaser.Scene {
 
     this.renderTerrain(this.grid);
     this.renderDecorations(level.decorations ?? []);
+    this.renderStructures(level.structures ?? []);
     this.renderUnits(this.grid);
     this.createCursor();
 
@@ -1295,6 +1298,23 @@ export class GridScene extends Phaser.Scene {
       const pos = gridToWorld(x, y, TILE_SIZE);
       addTreeShadow(this, pos.x, pos.y);
       this.addTileSprite(pos.x, pos.y, TREE_SPRITES[tree]).setDepth(0.4);
+    }
+  }
+
+  // Multi-tile structures ({ x, y, structure } from the level, by top-left
+  // tile), drawn a tile at a time: roof tiles over units (0.75) so a unit
+  // under the roof passes behind it, but under the cursor (1); the rest at
+  // the trees' depth, under units.
+  renderStructures(structures) {
+    for (const { x, y, structure } of structures) {
+      const sprite = STRUCTURE_SPRITES[structure];
+      for (const tile of getStructureTiles(sprite, x, y)) {
+        const pos = gridToWorld(tile.x, tile.y, TILE_SIZE);
+        this.add
+          .image(pos.x, pos.y, sprite.key, tile.frame)
+          .setOrigin(0, 0)
+          .setDepth(tile.overUnits ? 0.8 : 0.4);
+      }
     }
   }
 

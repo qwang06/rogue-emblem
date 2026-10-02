@@ -31,6 +31,15 @@ export const TERRAIN_AUTOTILES = {
     inner: [2, 9],
     animation: { frames: 6, columnStride: 7, frameMs: 180 },
   },
+  // The sand-patch set, used as a dirt path. It has no plain 3x3, only the
+  // notched one, so `block` is the notched 3x3: its outer corners and edges
+  // are clean, but its middle has a notch in every corner, so a dirt patch
+  // two or more tiles wide shows small grass holes where its 'full' quarters
+  // meet. One-tile-wide paths only use the clean pieces.
+  dirt: {
+    block: [1, 3],
+    inner: [2, 4],
+  },
 };
 
 // Unit art keyed by team, so every unit on a side looks alike. Each names a
@@ -73,6 +82,15 @@ export function unitSheetKey(sprite, animation) {
 export const TREE_SPRITES = {
   gold_ginkgo: 'gold_ginkgo_tree',
   green_ginkgo: 'ginkgo_tree_green',
+};
+
+// Multi-tile structures, by name: the texture key of an image `width` x
+// `height` tiles big, drawn tile by tile from the structure's top-left tile.
+// Its top `roofRows` rows draw over units, so a unit standing under the
+// gate's roof passes behind it; the rest draws under them, like trees.
+// Which of its tiles block movement is up to the level's terrain.
+export const STRUCTURE_SPRITES = {
+  gate: { key: 'gates', width: 3, height: 2, roofRows: 1 },
 };
 
 // The blob shadow drawn under every unit, since the unit sprites have none:

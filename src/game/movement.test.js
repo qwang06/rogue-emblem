@@ -21,6 +21,8 @@ describe('getMoveCost', () => {
   it('uses the terrain cost table', () => {
     expect(getMoveCost('grass')).toBe(1);
     expect(getMoveCost('water')).toBe(Infinity);
+    expect(getMoveCost('dirt')).toBe(1);
+    expect(getMoveCost('wall')).toBe(Infinity);
   });
 
   it('defaults unknown and null terrain to 1', () => {
