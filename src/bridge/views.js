@@ -59,6 +59,31 @@ export function toTileAnchorView(tile, tileSize, camera, size) {
   return Object.freeze({ left: topLeft.x, top: topLeft.y, right: bottomRight.x, bottom: bottomRight.y });
 }
 
+// The smallest TileAnchorView covering both a and b (e.g. an attacker's
+// and its target's tiles), so UI placed beside it covers neither.
+export function mergeTileAnchors(a, b) {
+  return Object.freeze({
+    left: Math.min(a.left, b.left),
+    top: Math.min(a.top, b.top),
+    right: Math.max(a.right, b.right),
+    bottom: Math.max(a.bottom, b.bottom),
+  });
+}
+
+// Snapshot of the combat forecast shown while aiming an attack, from
+// getCombatForecast (src/game/combat.js): per side, the unit's name and
+// team plus its forecast numbers (damage / hit / crit are null for a
+// defender that can't counter, which the UI shows as "–"). `anchor` is a
+// TileAnchorView covering both units, which the panel opens beside.
+export function toCombatForecastView({ forecast, attacker, defender, anchor }) {
+  const side = (unit, numbers) => Object.freeze({ name: unit.name, team: unit.team, ...numbers });
+  return Object.freeze({
+    attacker: side(attacker, forecast.attacker),
+    defender: side(defender, forecast.defender),
+    anchor,
+  });
+}
+
 // How each kind of popup reads: damage is the bare number (a crit calls
 // itself out), a miss says so, and recovery says what was restored.
 const POPUP_TEXT = Object.freeze({

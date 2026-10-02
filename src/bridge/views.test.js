@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Unit } from '../game/Unit.js';
 import {
+  mergeTileAnchors,
+  toCombatForecastView,
   toDamagePopupView,
   toDialogView,
   toPhaseBannerView,
@@ -209,5 +211,58 @@ describe('toDialogView', () => {
     expect(view.revealed).toBe(true);
     expect(view.isLast).toBe(true);
     expect(view.sprite).toBeNull();
+  });
+});
+
+describe('mergeTileAnchors', () => {
+  it('covers both anchors', () => {
+    const a = { left: 0.1, top: 0.4, right: 0.2, bottom: 0.5 };
+    const b = { left: 0.3, top: 0.2, right: 0.4, bottom: 0.3 };
+    const merged = mergeTileAnchors(a, b);
+    expect(merged).toEqual({ left: 0.1, top: 0.2, right: 0.4, bottom: 0.5 });
+    expect(Object.isFrozen(merged)).toBe(true);
+  });
+
+  it('is the anchor itself when both are the same', () => {
+    const a = { left: 0.1, top: 0.2, right: 0.3, bottom: 0.4 };
+    expect(mergeTileAnchors(a, a)).toEqual(a);
+  });
+});
+
+describe('toCombatForecastView', () => {
+  const anchor = { left: 0.1, top: 0.2, right: 0.3, bottom: 0.4 };
+  const forecast = {
+    attacker: {
+      health: 10,
+      maxHealth: 10,
+      damage: 3,
+      hit: 79,
+      crit: 0,
+      strikes: 2,
+      counters: true,
+    },
+    defender: {
+      health: 6,
+      maxHealth: 10,
+      damage: null,
+      hit: null,
+      crit: null,
+      strikes: 0,
+      counters: false,
+    },
+  };
+
+  it('labels each side with its unit and keeps the numbers', () => {
+    const attacker = makeUnit();
+    const defender = new Unit({ name: 'Bandit', health: 10, team: 'enemy' });
+    const view = toCombatForecastView({ forecast, attacker, defender, anchor });
+    expect(view).toEqual({
+      attacker: { name: 'Soldier', team: 'player', ...forecast.attacker },
+      defender: { name: 'Bandit', team: 'enemy', ...forecast.defender },
+      anchor,
+    });
+    expect(Object.isFrozen(view)).toBe(true);
+    expect(Object.isFrozen(view.attacker)).toBe(true);
+    expect(Object.isFrozen(view.defender)).toBe(true);
   });
 });

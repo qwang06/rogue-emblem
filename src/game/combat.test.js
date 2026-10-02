@@ -5,6 +5,7 @@ import {
   getStrikeOrder,
   getAttackRange,
   getAttackTargets,
+  getCombatForecast,
   getThreatRange,
   isInStrikeRange,
   resolveCombat,
@@ -385,5 +386,118 @@ describe('resolveCombat rolls', () => {
     const oneRn = resolveCombat(unit(), unit({ range: 0 }), { distance: 1, rng: rolls(...order) });
     expect(twoRn.strikes[0].hit).toBe(true);
     expect(oneRn.strikes[0].hit).toBe(false);
+  });
+});
+
+describe('getCombatForecast', () => {
+  // 20 HP so nobody dies mid-exchange; base 80 hit + skill, no crit unless skilled.
+  const unit = (stats) => ({
+    health: 20,
+    maxHealth: 20,
+    strength: 5,
+    defense: 2,
+    skill: 0,
+    speed: 0,
+    luck: 0,
+    range: 1,
+    ...stats,
+  });
+
+  // The strikes resolveCombat deals per side when every strike lands.
+  function landedStrikes(attacker, defender, distance) {
+    const { strikes } = resolveCombat(attacker, defender, {
+      distance,
+      rng: alwaysHit,
+    });
+    const of = (by) => strikes.filter((s) => s.by === by);
+    return { attacker: of('attacker'), defender: of('defender') };
+  }
+
+  it('shows both sides of a plain exchange', () => {
+    const forecast = getCombatForecast(unit({ skill: 4 }), unit({ strength: 4, speed: 3 }), { distance: 1 });
+    expect(forecast.attacker).toEqual({
+      health: 20,
+      maxHealth: 20,
+      damage: 3,
+      hit: 82, // 80 + 8 hit − 6 avoid
+      crit: 2,
+      strikes: 1,
+      counters: true,
+    });
+    expect(forecast.defender).toEqual({
+      health: 20,
+      maxHealth: 20,
+      damage: 2,
+      hit: 80,
+      crit: 0,
+      strikes: 1,
+      counters: true,
+    });
+  });
+
+  it('matches what resolveCombat deals when every strike lands', () => {
+    const cases = [
+      [unit(), unit({ strength: 4 }), 1],
+      [unit({ speed: 9 }), unit(), 1], // attacker doubles
+      [unit(), unit({ speed: 9, strength: 7 }), 1], // defender doubles
+      [unit({ range: 2, speed: 9 }), unit(), 2], // no counter, attacker doubles
+      [unit({ strength: 1 }), unit({ strength: 1 }), 1], // 0 damage
+    ];
+    for (const [attacker, defender, distance] of cases) {
+      const forecast = getCombatForecast(attacker, defender, { distance });
+      const landed = landedStrikes(attacker, defender, distance);
+      for (const side of ['attacker', 'defender']) {
+        expect(landed[side]).toHaveLength(forecast[side].strikes);
+        for (const strike of landed[side]) expect(strike.damage).toBe(forecast[side].damage);
+      }
+    }
+  });
+
+  it('matches crit damage as damage × CRIT_MULTIPLIER', () => {
+    const attacker = unit({ skill: 10 }); // 5% crit, rolled as 0 → crits
+    const forecast = getCombatForecast(attacker, unit(), { distance: 1 });
+    const { strikes } = resolveCombat(attacker, unit(), {
+      distance: 1,
+      rng: alwaysHit,
+    });
+    expect(strikes[0]).toMatchObject({
+      crit: true,
+      damage: forecast.attacker.damage * 3,
+    });
+  });
+
+  it('shows nothing for a defender that cannot counter', () => {
+    const forecast = getCombatForecast(unit({ range: 2 }), unit({ speed: 9 }), {
+      distance: 2,
+    });
+    expect(forecast.defender).toEqual({
+      health: 20,
+      maxHealth: 20,
+      damage: null,
+      hit: null,
+      crit: null,
+      strikes: 0,
+      counters: false,
+    });
+    expect(forecast.attacker.strikes).toBe(1);
+  });
+
+  it('counts two strikes for a doubling side', () => {
+    expect(getCombatForecast(unit({ speed: 4 }), unit(), { distance: 1 }).attacker.strikes).toBe(2);
+    expect(getCombatForecast(unit(), unit({ speed: 4 }), { distance: 1 }).defender.strikes).toBe(2);
+  });
+
+  it('clamps hit to 0–100', () => {
+    const forecast = getCombatForecast(unit({ skill: 20 }), unit({ skill: 20, speed: 70 }), { distance: 1 });
+    expect(forecast.attacker.hit).toBe(0);
+    expect(forecast.defender.hit).toBe(100);
+  });
+
+  it('does not mutate the units', () => {
+    const attacker = unit();
+    const defender = unit();
+    getCombatForecast(attacker, defender, { distance: 1 });
+    expect(attacker).toEqual(unit());
+    expect(defender).toEqual(unit());
   });
 });

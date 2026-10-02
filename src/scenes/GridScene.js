@@ -4,6 +4,8 @@ import terrainSheetUrl from '../assets/overworld.png';
 import { gameCommands } from '../bridge/commands.js';
 import { BATTLE_STATE_DEFAULTS, gameStore } from '../bridge/gameStore.js';
 import {
+  mergeTileAnchors,
+  toCombatForecastView,
   toDamagePopupView,
   toDialogView,
   toPhaseBannerView,
@@ -16,7 +18,13 @@ import {
 } from '../bridge/views.js';
 import { createActionMenu, getSelectedAction, getUnitActions, moveSelection, selectIndex } from '../game/actionMenu.js';
 import { calculateSkillDamage, findLearnedSkill, getLearnedSkills, getSkillActions } from '../game/skills.js';
-import { getAttackRange, getAttackTargets, getThreatRange, resolveCombat } from '../game/combat.js';
+import {
+  getAttackRange,
+  getAttackTargets,
+  getCombatForecast,
+  getThreatRange,
+  resolveCombat,
+} from '../game/combat.js';
 import { getFitZoom } from '../game/camera.js';
 import { createCursor, moveCursor } from '../game/cursor.js';
 import { createDemoLevel } from '../game/demoLevel.js';
@@ -202,6 +210,7 @@ export class GridScene extends Phaser.Scene {
     // an open unit menu to the refitted map then.
     this.events.once(Phaser.Scenes.Events.RENDER, () => {
       if (this.activeUnit) this.publishMenuAnchor();
+      if (this.rangeMode === 'attack') this.updateCombatForecast();
     });
   }
 
@@ -427,9 +436,14 @@ export class GridScene extends Phaser.Scene {
   // opens its menus (action, skill, item) beside it.
   publishMenuAnchor() {
     const { x, y } = this.activeUnit;
+    gameStore.setState({ menuAnchor: this.getTileAnchor({ x, y }) });
+  }
+
+  // Where a map tile shows on the canvas right now (see toTileAnchorView).
+  getTileAnchor(tile) {
     const { worldView, zoom } = this.cameras.main;
     const camera = { x: worldView.x, y: worldView.y, zoom };
-    gameStore.setState({ menuAnchor: toTileAnchorView({ x, y }, TILE_SIZE, camera, this.scale.gameSize) });
+    return toTileAnchorView(tile, TILE_SIZE, camera, this.scale.gameSize);
   }
 
   // Keeps a menu on the scene and mirrors it to the store field of the same
@@ -859,11 +873,42 @@ export class GridScene extends Phaser.Scene {
   }
 
   // Highlights every tile the active unit can strike, from
-  // src/game/combat.js. Only tiles holding a hostile unit accept confirm.
+  // src/game/combat.js, and puts the cursor on the first hostile unit in
+  // range so its combat forecast shows straight away. Only tiles holding a
+  // hostile unit accept confirm.
   showAttackRange() {
     const { unit, x, y } = this.activeUnit;
     const range = getAttackRange(this.grid, { x, y }, unit.range);
     this.showRange('attack', range, ATTACK_RANGE_COLOR, ATTACK_RANGE_ALPHA);
+    const [first] = getAttackTargets(this.grid, { x, y }, unit.range, this.isHostileTo(unit));
+    if (first) this.setCursor(first.x, first.y);
+    else this.updateCombatForecast();
+  }
+
+  // The hostile unit under the cursor that the active unit can attack from
+  // where it stands, as { x, y, unitId }, or null.
+  getAttackTargetUnderCursor() {
+    const { unit, x, y } = this.activeUnit;
+    const targets = getAttackTargets(this.grid, { x, y }, unit.range, this.isHostileTo(unit));
+    return targets.find((t) => t.x === this.cursor.x && t.y === this.cursor.y) ?? null;
+  }
+
+  // While aiming an attack, publishes the combat forecast
+  // (getCombatForecast in src/game/combat.js) against the target under the
+  // cursor, anchored beside both units for React's CombatForecast to draw;
+  // clears it whenever there's no target to forecast.
+  updateCombatForecast() {
+    const target = this.rangeMode === 'attack' ? this.getAttackTargetUnderCursor() : null;
+    if (!target) {
+      gameStore.setState({ combatForecast: null });
+      return;
+    }
+    const { unit, x, y } = this.activeUnit;
+    const defender = this.units.get(target.unitId);
+    const distance = Math.abs(x - target.x) + Math.abs(y - target.y);
+    const forecast = getCombatForecast(unit, defender, { distance });
+    const anchor = mergeTileAnchors(this.getTileAnchor({ x, y }), this.getTileAnchor(target));
+    gameStore.setState({ combatForecast: toCombatForecastView({ forecast, attacker: unit, defender, anchor }) });
   }
 
   showRange(mode, tiles, color, alpha) {
@@ -888,6 +933,7 @@ export class GridScene extends Phaser.Scene {
     this.rangeTiles = null;
     this.rangeMode = null;
     this.activeSkill = null;
+    this.updateCombatForecast();
     this.clearMoveArrow();
     this.moveRange = null;
     this.movePath = null;
@@ -934,10 +980,8 @@ export class GridScene extends Phaser.Scene {
 
   // Attacks the unit under the cursor, if it's a hostile unit in range.
   tryAttackWithActiveUnit() {
-    const { unit, unitId, x, y } = this.activeUnit;
-    const target = getAttackTargets(this.grid, { x, y }, unit.range, this.isHostileTo(unit)).find(
-      (t) => t.x === this.cursor.x && t.y === this.cursor.y,
-    );
+    const { unitId } = this.activeUnit;
+    const target = this.getAttackTargetUnderCursor();
     if (!target) return;
 
     this.hideRange();
@@ -1221,6 +1265,7 @@ export class GridScene extends Phaser.Scene {
     this.cursor = moveCursor(this.grid, this.cursor, x - this.cursor.x, y - this.cursor.y);
     this.updateCursorSprite();
     this.updateHoveredUnit();
+    if (this.rangeMode === 'attack') this.updateCombatForecast();
   }
 
   // Looks up the unit (if any) under the visible cursor and, only on change,

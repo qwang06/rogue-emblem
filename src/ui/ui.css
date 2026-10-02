@@ -496,6 +496,71 @@ kbd {
   cursor: default;
 }
 
+/* ---- Combat forecast -------------------------------------------------- */
+
+/* Opens beside the two fighters; usePanelBesideAnchor sets left / top. */
+.combat-forecast {
+  position: absolute;
+  min-width: 11rem;
+  box-sizing: border-box;
+  pointer-events: none;
+  font-size: 0.9375rem;
+}
+
+.combat-forecast__names {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgb(168 137 63 / 45%);
+  font-family: var(--serif);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.combat-forecast__name--player {
+  color: #93c5fd;
+}
+
+.combat-forecast__name--enemy {
+  color: #fca5a5;
+}
+
+.combat-forecast__row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: baseline;
+  gap: 10px;
+  padding: 1px 0;
+}
+
+.combat-forecast__label {
+  font-size: 0.75rem;
+  color: var(--gold);
+  text-align: center;
+}
+
+.combat-forecast__value {
+  margin: 0;
+  font-weight: bold;
+  color: #fff8e2;
+}
+
+.combat-forecast__row .combat-forecast__value:first-child {
+  text-align: left;
+}
+
+.combat-forecast__row .combat-forecast__value:last-child {
+  text-align: right;
+}
+
+.combat-forecast__double {
+  margin-left: 4px;
+  font-size: 0.75rem;
+  color: #fcd34d;
+}
+
 /* ---- Skill menu ------------------------------------------------------- */
 
 .skill-menu__item {

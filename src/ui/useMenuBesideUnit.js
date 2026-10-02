@@ -9,6 +9,12 @@ import { useGameStore } from './useGameStore.js';
 // painted, and re-placed whenever it or the HUD changes size.
 export function useMenuBesideUnit(open) {
   const anchor = useGameStore((state) => state.menuAnchor);
+  return usePanelBesideAnchor(open, anchor);
+}
+
+// Places an open panel beside any TileAnchorView the same way (e.g. the
+// combat forecast beside both fighters). Returns { ref, style } as above.
+export function usePanelBesideAnchor(open, anchor) {
   const ref = useRef(null);
   const [position, setPosition] = useState(null);
 

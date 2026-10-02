@@ -46,11 +46,12 @@ The single biggest change to how the game feels. After this phase every attack i
 - **Tests:** formula edge cases, clamping, doubling on both sides, exact threshold, crit lethal, all-miss sequences with a stubbed RNG.
 - *Notes:* formulas live in `src/game/combatStats.js`; `getStrikeOrder` in `combat.js` is shared so the 1.4 forecast can reuse it. Hit adds a flat `BASE_HIT` (80) standing in for weapon hit — with stats alone two soldiers have 7 hit vs 8 avoid (0%); weapons should replace it. Soldier vs soldier is 79% hit, 0% crit, no doubling. Doubling uses `>=` the threshold. 2RN is available as `trueHit` but off by default; the scene uses `Math.random`. Crits also shake the camera. Crit rolls are 1RN. Skills (the grenade) still always hit and never crit.
 
-### [ ] 1.4 Combat forecast panel
+### [x] 1.4 Combat forecast panel
 - Pure `getCombatForecast(attacker, defender, context)` → `{ attacker: { hp, damage, hit, crit, strikes }, defender: {...} }` — shares formulas with `resolveCombat` so preview and outcome can't disagree.
 - When choosing an attack target, the scene publishes the forecast for the hovered target; a React `CombatForecast.jsx` renders it (HP, Dmg, Hit, Crit, ×2) beside the units.
 - Confirm/cancel flow: cursor over target shows the forecast, confirm attacks, cancel backs out.
 - **Tests:** forecast equals the expected values of `resolveCombat`; no-counter shows "–" for defender.
+- *Notes:* each side is `{ health, maxHealth, damage, hit, crit, strikes, counters }`; a non-countering defender has `null` damage/hit/crit (rendered "–") and 0 strikes. `damage` is per landed non-crit strike — the panel doesn't show a predicted post-combat HP (could add "HP → after" later). Entering attack aim snaps the cursor to the first target in range; no cycling between targets with a dedicated key yet. The panel opens beside both units (right of the pair if it fits, else left). Enemy-phase attacks show no forecast. Skills get no forecast yet — add one when magic/tome skills join regular combat.
 
 ### [ ] 1.5 Experience and growth rates
 - Pure `src/game/experience.js`: XP for a hit / a kill / a miss, scaled by level difference (FE-style); 100 XP = level up, carry overflow.

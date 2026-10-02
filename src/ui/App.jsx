@@ -1,6 +1,7 @@
 import { gameCommands } from '../bridge/commands.js';
 import { ActionMenu } from './ActionMenu.jsx';
 import { BattleResult } from './BattleResult.jsx';
+import { CombatForecast } from './CombatForecast.jsx';
 import { ControlsPanel } from './ControlsPanel.jsx';
 import { DamagePopups } from './DamagePopups.jsx';
 import { DeploymentBanner } from './DeploymentBanner.jsx';
@@ -64,6 +65,7 @@ export function App() {
               <ActionMenu />
               <SkillMenu />
               <ItemMenu />
+              <CombatForecast />
               <DamagePopups />
               <PhaseBanner />
               <DialogBox />
