@@ -7,6 +7,7 @@ export function toUnitView(unit) {
   if (!unit) return null;
   return Object.freeze({
     name: unit.name,
+    unitClass: unit.unitClass,
     team: unit.team,
     level: unit.level,
     experience: unit.experience,

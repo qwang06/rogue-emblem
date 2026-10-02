@@ -31,6 +31,7 @@ describe('toUnitView', () => {
   it('copies the stats the UI displays', () => {
     expect(toUnitView(makeUnit())).toEqual({
       name: 'Soldier',
+      unitClass: null,
       team: 'player',
       level: 1,
       experience: 0,
@@ -291,7 +292,7 @@ describe('toLevelUpView', () => {
     level: 3,
     gains: { health: 1, mana: 0, strength: 1, magic: 0, skill: 0, speed: 1, luck: 0, defense: 0, resistance: 0 },
     stats: { health: 12, mana: 5, strength: 5, magic: 0, skill: 3, speed: 4, luck: 2, defense: 2, resistance: 0 },
-    skills: [{ id: 'throw-grenade', label: 'Throw Grenade' }],
+    skills: [{ id: 'power-strike', label: 'Power Strike' }],
   };
 
   it('lists every stat with its label, new value and gain, plus learned skills', () => {
@@ -300,7 +301,7 @@ describe('toLevelUpView', () => {
     expect(view.stats.map((s) => s.label)).toEqual(['HP', 'MP', 'STR', 'MAG', 'SKL', 'SPD', 'LCK', 'DEF', 'RES']);
     expect(view.stats[0]).toEqual({ id: 'health', label: 'HP', value: 12, gain: 1 });
     expect(view.stats[1]).toEqual({ id: 'mana', label: 'MP', value: 5, gain: 0 });
-    expect(view.skills).toEqual(['Throw Grenade']);
+    expect(view.skills).toEqual(['Power Strike']);
     expect(Object.isFrozen(view)).toBe(true);
     expect(Object.isFrozen(view.stats[0])).toBe(true);
   });

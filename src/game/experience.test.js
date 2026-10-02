@@ -13,7 +13,7 @@ import {
   resolveExperienceGain,
   rollLevelUp,
 } from './experience.js';
-import { THROW_GRENADE } from './skills.js';
+import { POWER_STRIKE } from './skills.js';
 
 // Plays back the given rolls (as fractions) in order, then repeats the last.
 const rolls = (...values) => {
@@ -240,9 +240,9 @@ describe('resolveExperienceGain', () => {
   });
 
   it('lists the skills learned at each new level', () => {
-    const trees = { soldier: [{ level: 3, skill: THROW_GRENADE }] };
+    const trees = { soldier: [{ level: 3, skill: POWER_STRIKE }] };
     const result = resolveExperienceGain(unit({ unitClass: 'soldier' }), 200, () => 0, trees);
-    expect(result.levelUps.map((l) => l.skills)).toEqual([[], [THROW_GRENADE]]);
+    expect(result.levelUps.map((l) => l.skills)).toEqual([[], [POWER_STRIKE]]);
   });
 
   it('does not mutate the unit', () => {

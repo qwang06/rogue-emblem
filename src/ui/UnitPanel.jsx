@@ -1,4 +1,4 @@
-import { UNIT_SPRITES } from '../game/tileset.js';
+import { getUnitSprite } from '../game/tileset.js';
 import { UnitSprite } from './UnitSprite.jsx';
 import { useGameStore } from './useGameStore.js';
 
@@ -23,7 +23,7 @@ export function UnitPanel() {
       <h2 className="side-panel__title">{unit.team === 'enemy' ? 'Enemy' : 'Ally'}</h2>
       <div className="unit-panel__header">
         <span className="unit-panel__portrait">
-          <UnitSprite sprite={UNIT_SPRITES[unit.team]} scale={2} />
+          <UnitSprite sprite={getUnitSprite(unit.unitClass)} scale={2} />
         </span>
         <div>
           <p className="unit-panel__name">{unit.name}</p>

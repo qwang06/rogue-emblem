@@ -42,12 +42,22 @@ export const TERRAIN_AUTOTILES = {
   },
 };
 
-// Unit art keyed by team, so every unit on a side looks alike. Each names a
-// set of sheets, one per animation in UNIT_ANIMATIONS (see unitSheetKey).
+// Unit art keyed by unit class, so every unit of a class looks alike
+// whichever side it's on. Each names a set of sheets, one per animation in
+// UNIT_ANIMATIONS (see unitSheetKey).
 export const UNIT_SPRITES = {
-  player: 'Villager_01',
-  enemy: 'Soldier_03',
+  villager: 'Villager_01',
+  soldier: 'Soldier_03',
 };
+
+// Art for a unit whose class has none of its own (or no class).
+export const DEFAULT_UNIT_SPRITE = UNIT_SPRITES.villager;
+
+// The unit art for a unit class (a key of UNIT_SPRITES), falling back to
+// DEFAULT_UNIT_SPRITE.
+export function getUnitSprite(unitClass) {
+  return UNIT_SPRITES[unitClass] ?? DEFAULT_UNIT_SPRITE;
+}
 
 // Every unit sheet is a grid of one-tile frames, `columns` wide: one row per
 // facing direction (`rows`, keyed by the facings in src/game/facing.js), one

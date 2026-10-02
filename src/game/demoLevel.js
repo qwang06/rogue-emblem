@@ -5,6 +5,7 @@
 
 import { setUnit } from './grid.js';
 import { Soldier } from './Soldier.js';
+import { Villager } from './Villager.js';
 import { parseTerrainMap } from './terrainMap.js';
 
 // Level 1: a dirt path runs north up the middle of a grass field to a
@@ -70,11 +71,12 @@ export const TREE_POSITIONS = Object.freeze(
   ].map(Object.freeze),
 );
 
-// The player's roster, by unitId -> name. One unit per deployment tile.
+// The player's roster of villagers, by unitId -> name. One unit per
+// deployment tile.
 export const PLAYER_ROSTER = Object.freeze({
-  'soldier-1': 'Alden',
-  'soldier-2': 'Bryn',
-  'soldier-3': 'Cato',
+  'villager-1': 'Alden',
+  'villager-2': 'Bryn',
+  'villager-3': 'Cato',
 });
 
 // The conversation before deployment, as a script for src/game/dialog.js.
@@ -84,24 +86,24 @@ export const DEMO_OPENING_DIALOG = Object.freeze(
   [
     {
       speaker: ALDEN,
-      team: 'player',
+      unitClass: 'villager',
       side: 'left',
       text: 'Enemy soldiers have taken the old gate. This road is the only way through.',
     },
     {
       speaker: BRYN,
-      team: 'player',
+      unitClass: 'villager',
       side: 'left',
       text: "Three of them, by my count. They'll see us coming all the way up the road.",
     },
     {
       speaker: 'Enemy Soldier',
-      team: 'enemy',
+      unitClass: 'soldier',
       side: 'right',
       text: 'Hold the line! Nobody passes the gate while we still stand.',
     },
-    { speaker: CATO, team: 'player', side: 'left', text: "Then we won't let them stand for long." },
-    { speaker: ALDEN, team: 'player', side: 'left', text: 'Take your positions. We move on my signal.' },
+    { speaker: CATO, unitClass: 'villager', side: 'left', text: "Then we won't let them stand for long." },
+    { speaker: ALDEN, unitClass: 'villager', side: 'left', text: 'Take your positions. We move on my signal.' },
   ].map(Object.freeze),
 );
 
@@ -116,7 +118,7 @@ export function createDemoLevel() {
   let grid = parseTerrainMap(DEMO_MAP);
 
   const units = new Map(
-    Object.entries(PLAYER_ROSTER).map(([unitId, name]) => [unitId, new Soldier({ name, team: 'player' })]),
+    Object.entries(PLAYER_ROSTER).map(([unitId, name]) => [unitId, new Villager({ name, team: 'player' })]),
   );
 
   ENEMY_POSITIONS.forEach(({ x, y }, i) => {

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   SKILL_TREES,
-  THROW_GRENADE,
+  THROW_STONES,
+  POWER_STRIKE,
   calculateSkillDamage,
   canUseSkill,
   findLearnedSkill,
@@ -24,8 +25,17 @@ const trees = {
 };
 
 describe('SKILL_TREES', () => {
-  it('teaches the soldier Throw Grenade at level 1', () => {
-    expect(getLearnedSkills('soldier', 1)).toContain(THROW_GRENADE);
+  it('teaches the soldier Power Strike at level 1', () => {
+    expect(getLearnedSkills('soldier', 1)).toEqual([POWER_STRIKE]);
+  });
+
+  it('teaches the villager Throw Stones at level 1', () => {
+    expect(getLearnedSkills('villager', 1)).toEqual([THROW_STONES]);
+  });
+
+  it('keeps each skill to its own class', () => {
+    expect(getLearnedSkills('villager', 20)).not.toContain(POWER_STRIKE);
+    expect(getLearnedSkills('soldier', 20)).not.toContain(THROW_STONES);
   });
 
   it('gives every entry a level of at least 1 and a skill with a mana cost', () => {
@@ -61,9 +71,7 @@ describe('getLearnedSkills', () => {
   });
 
   it('uses SKILL_TREES by default', () => {
-    expect(getLearnedSkills('soldier', 1)).toEqual(
-      SKILL_TREES.soldier.filter((e) => e.level <= 1).map((e) => e.skill),
-    );
+    expect(getLearnedSkills('soldier', 20)).toEqual(SKILL_TREES.soldier.map((e) => e.skill));
   });
 });
 
@@ -126,17 +134,22 @@ describe('getSkillActions', () => {
   });
 });
 
-describe('THROW_GRENADE', () => {
-  it('reaches 2 tiles and costs mana', () => {
-    expect(THROW_GRENADE.range).toBe(2);
-    expect(THROW_GRENADE.manaCost).toBeGreaterThan(0);
-    expect(THROW_GRENADE.label).toBe('Throw Grenade');
+describe('THROW_STONES', () => {
+  it('reaches 4 tiles and costs mana', () => {
+    expect(THROW_STONES.range).toBe(4);
+    expect(THROW_STONES.manaCost).toBeGreaterThan(0);
+    expect(THROW_STONES.label).toBe('Throw Stones');
   });
 
-  it('is affordable for a fresh soldier (5 mana) exactly once', () => {
-    const soldier = { mana: 5 };
-    expect(canUseSkill(soldier, THROW_GRENADE)).toBe(true);
-    expect(canUseSkill({ mana: soldier.mana - THROW_GRENADE.manaCost }, THROW_GRENADE)).toBe(false);
+  it('deals half the damage of a regular attack, rounded up', () => {
+    const villager = { strength: 4, defense: 2 };
+    expect(calculateSkillDamage(THROW_STONES, villager, { defense: 2 })).toBe(1); // regular: 2
+    expect(calculateSkillDamage(THROW_STONES, villager, { defense: 1 })).toBe(2); // regular: 3
+    expect(calculateSkillDamage(THROW_STONES, villager, { defense: 0 })).toBe(2); // regular: 4
+  });
+
+  it('deals nothing where a regular attack would', () => {
+    expect(calculateSkillDamage(THROW_STONES, { strength: 2 }, { defense: 5 })).toBe(0);
   });
 });
 
@@ -155,18 +168,61 @@ describe('findLearnedSkill', () => {
   });
 });
 
+describe('POWER_STRIKE', () => {
+  it('reaches adjacent tiles and costs mana', () => {
+    expect(POWER_STRIKE.range).toBe(1);
+    expect(POWER_STRIKE.manaCost).toBeGreaterThan(0);
+    expect(POWER_STRIKE.label).toBe('Power Strike');
+  });
+
+  it('hits harder than a regular attack', () => {
+    const soldier = { strength: 4, defense: 2 };
+    expect(calculateSkillDamage(POWER_STRIKE, soldier, soldier)).toBe(5); // regular: 2
+  });
+
+  it('is affordable for a fresh soldier (5 mana) twice', () => {
+    expect(canUseSkill({ mana: 5 - POWER_STRIKE.manaCost }, POWER_STRIKE)).toBe(true);
+    expect(canUseSkill({ mana: 5 - 2 * POWER_STRIKE.manaCost }, POWER_STRIKE)).toBe(false);
+  });
+});
+
 describe('calculateSkillDamage', () => {
-  const skill = { id: 'boom', label: 'Boom', manaCost: 1, range: 2, power: 6 };
-
-  it('is power minus the target defense', () => {
-    expect(calculateSkillDamage(skill, { defense: 2 })).toBe(4);
+  it('is the regular hit for a plain skill', () => {
+    const skill = { id: 'jab', label: 'Jab', manaCost: 1, range: 1 };
+    expect(calculateSkillDamage(skill, { strength: 6 }, { defense: 2 })).toBe(4);
   });
 
-  it('never goes below zero', () => {
-    expect(calculateSkillDamage(skill, { defense: 10 })).toBe(0);
+  it('scales the damage, rounding up', () => {
+    const skill = { id: 'tap', label: 'Tap', manaCost: 1, range: 1, damageScale: 0.5 };
+    expect(calculateSkillDamage(skill, { strength: 7 }, { defense: 2 })).toBe(3);
+    expect(calculateSkillDamage(skill, { strength: 2 }, { defense: 2 })).toBe(0);
   });
 
-  it('deals full power to a target with no defense', () => {
-    expect(calculateSkillDamage(skill, { defense: 0 })).toBe(6);
+  it('applies might before scaling', () => {
+    const skill = { id: 'combo', label: 'Combo', manaCost: 1, range: 1, might: 2, damageScale: 0.5 };
+    expect(calculateSkillDamage(skill, { strength: 4 }, { defense: 2 })).toBe(2);
+  });
+
+  describe('with might', () => {
+    const strike = { id: 'smash', label: 'Smash', manaCost: 1, range: 1, might: 3 };
+
+    it("adds might to the user's strength for a physical hit", () => {
+      expect(calculateSkillDamage(strike, { strength: 4 }, { defense: 2 })).toBe(5);
+    });
+
+    it("adds might to the user's magic for a magical hit", () => {
+      const mage = { strength: 0, magic: 5, damageType: 'magical' };
+      expect(calculateSkillDamage(strike, mage, { defense: 20, resistance: 1 })).toBe(7);
+    });
+
+    it('never goes below zero', () => {
+      expect(calculateSkillDamage(strike, { strength: 1 }, { defense: 10 })).toBe(0);
+    });
+
+    it('does not mutate the user', () => {
+      const user = { strength: 4 };
+      calculateSkillDamage(strike, user, { defense: 0 });
+      expect(user.strength).toBe(4);
+    });
   });
 });

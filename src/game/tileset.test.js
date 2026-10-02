@@ -13,8 +13,11 @@ import {
   UNIT_ANIMATIONS,
   UNIT_SHEET,
   UNIT_SPRITES,
+  DEFAULT_UNIT_SPRITE,
+  getUnitSprite,
   unitSheetKey,
 } from './tileset.js';
+import { UNIT_CLASSES } from './unitClasses.js';
 
 describe('sprite keys', () => {
   it('names an image for every unit animation', () => {
@@ -37,8 +40,22 @@ describe('sprite keys', () => {
     }
   });
 
-  it('gives each team its own sprite', () => {
-    expect(UNIT_SPRITES.player).not.toBe(UNIT_SPRITES.enemy);
+  it('gives every unit class its own sprite', () => {
+    const sprites = UNIT_CLASSES.map(({ id }) => UNIT_SPRITES[id]);
+    expect(sprites.every(Boolean)).toBe(true);
+    expect(new Set(sprites).size).toBe(sprites.length);
+  });
+});
+
+describe('getUnitSprite', () => {
+  it('picks the art by unit class', () => {
+    expect(getUnitSprite('villager')).toBe('Villager_01');
+    expect(getUnitSprite('soldier')).toBe('Soldier_03');
+  });
+
+  it('falls back to the default art for an unknown or missing class', () => {
+    expect(getUnitSprite('dragon')).toBe(DEFAULT_UNIT_SPRITE);
+    expect(getUnitSprite(null)).toBe(DEFAULT_UNIT_SPRITE);
   });
 });
 

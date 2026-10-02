@@ -23,39 +23,39 @@ export function playHitFlash(scene, sprite, onDone) {
 
 const EFFECT_DEPTH = 2; // above units and the cursor
 
-const GRENADE_COLOR = 0x2f3b2f;
-const GRENADE_RADIUS = 2;
-const GRENADE_FLIGHT_MS = 380;
-const GRENADE_ARC_HEIGHT = 14; // px the lob rises above a straight line
+const STONE_COLOR = 0x8a8a8a;
+const STONE_RADIUS = 2;
+const STONE_SPEED = 0.25; // px per ms, so farther throws take longer
+const STONE_MIN_FLIGHT_MS = 240;
+const STONE_ARC_PER_PX = 0.18; // the lob rises this much per px of distance
 
-// Lobs a small drawn grenade in an arc from one world point to another,
-// then calls onDone once it lands. No sprite needed — it's a circle.
-export function playGrenadeThrow(scene, from, to, onDone) {
-  const grenade = scene.add.circle(from.x, from.y, GRENADE_RADIUS, GRENADE_COLOR).setDepth(EFFECT_DEPTH);
+// Lobs a small drawn stone in an arc from one world point to another (a
+// longer throw flies longer and higher), then calls onDone once it lands.
+// No sprite needed — it's a circle. A single counter tween, so onDone
+// fires exactly once.
+export function playStoneThrow(scene, from, to, onDone) {
+  const stone = scene.add.circle(from.x, from.y, STONE_RADIUS, STONE_COLOR).setDepth(EFFECT_DEPTH);
+  const distance = Math.hypot(to.x - from.x, to.y - from.y);
+  const arcHeight = distance * STONE_ARC_PER_PX;
   scene.tweens.addCounter({
     from: 0,
     to: 1,
-    duration: GRENADE_FLIGHT_MS,
+    duration: Math.max(STONE_MIN_FLIGHT_MS, distance / STONE_SPEED),
     onUpdate: (tween) => {
       const t = tween.getValue();
-      grenade.setPosition(
+      stone.setPosition(
         from.x + (to.x - from.x) * t,
-        from.y + (to.y - from.y) * t - Math.sin(Math.PI * t) * GRENADE_ARC_HEIGHT,
+        from.y + (to.y - from.y) * t - Math.sin(Math.PI * t) * arcHeight,
       );
     },
     onComplete: () => {
-      grenade.destroy();
+      stone.destroy();
       onDone?.();
     },
   });
 }
 
 const PARTICLE_KEY = 'fx-particle';
-const FIRE_PARTICLE_COUNT = 28;
-const FIRE_LIFESPAN_MS = 450;
-const FIRE_FLICKER_COLORS = [0xff5a00, 0xffc400];
-const FIRE_FLICKER_TOGGLES = 8;
-const FIRE_FLICKER_INTERVAL_MS = 60;
 
 // A soft white dot drawn at runtime, so particle effects need no sprite
 // art. Particles are tinted per-frame, so white is the neutral base.
@@ -68,43 +68,6 @@ function ensureParticleTexture(scene) {
   g.fillCircle(3, 3, 2);
   g.generateTexture(PARTICLE_KEY, 6, 6);
   g.destroy();
-}
-
-// A fiery burst at a world point: particles fly out and drift upward,
-// fading yellow → orange → red, while the sprite flickers orange instead
-// of the white hit flash. Calls onDone when the flicker ends.
-export function playFireBurst(scene, sprite, center, onDone) {
-  ensureParticleTexture(scene);
-  const emitter = scene.add
-    .particles(center.x, center.y, PARTICLE_KEY, {
-      speed: { min: 15, max: 55 },
-      angle: { min: 0, max: 360 },
-      gravityY: -60,
-      lifespan: { min: FIRE_LIFESPAN_MS * 0.6, max: FIRE_LIFESPAN_MS },
-      scale: { start: 1.3, end: 0 },
-      alpha: { start: 1, end: 0 },
-      color: [0xfff3a0, 0xffb000, 0xff5a00, 0xb01800],
-      blendMode: 'ADD',
-      emitting: false,
-    })
-    .setDepth(EFFECT_DEPTH);
-  emitter.explode(FIRE_PARTICLE_COUNT);
-  scene.time.delayedCall(FIRE_LIFESPAN_MS, () => emitter.destroy());
-
-  let toggles = 0;
-  scene.time.addEvent({
-    delay: FIRE_FLICKER_INTERVAL_MS,
-    repeat: FIRE_FLICKER_TOGGLES - 1,
-    callback: () => {
-      toggles += 1;
-      if (toggles === FIRE_FLICKER_TOGGLES) {
-        sprite.clearTint();
-        onDone?.();
-      } else {
-        sprite.setTintFill(FIRE_FLICKER_COLORS[toggles % FIRE_FLICKER_COLORS.length]);
-      }
-    },
-  });
 }
 
 // Colors for playPotionGlow, by the stat the potion restores.
@@ -153,6 +116,38 @@ export function playPotionGlow(scene, sprite, center, color, onDone) {
       if (toggles % 2 === 1) sprite.setTint(color);
       else sprite.clearTint();
       if (toggles === POTION_PULSE_TOGGLES) onDone?.();
+    },
+  });
+}
+
+const LUNGE_DISTANCE = 12; // px the attacker steps toward its target
+const LUNGE_MS = 110; // each way
+
+// A melee lunge: the sprite darts toward a world point and back. onImpact
+// fires once at the far end (where the blow lands), onDone once it's back.
+// It's a single counter tween moving the sprite along the lunge, because a
+// property tween on both x and y fires onYoyo once per property.
+export function playLunge(scene, sprite, toward, onImpact, onDone) {
+  const center = { x: sprite.x + sprite.displayWidth / 2, y: sprite.y + sprite.displayHeight / 2 };
+  const dx = toward.x - center.x;
+  const dy = toward.y - center.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const home = { x: sprite.x, y: sprite.y };
+  const step = { x: (dx / length) * LUNGE_DISTANCE, y: (dy / length) * LUNGE_DISTANCE };
+  scene.tweens.addCounter({
+    from: 0,
+    to: 1,
+    duration: LUNGE_MS,
+    ease: 'Quad.easeIn',
+    yoyo: true,
+    onUpdate: (tween) => {
+      const t = tween.getValue();
+      sprite.setPosition(home.x + step.x * t, home.y + step.y * t);
+    },
+    onYoyo: () => onImpact?.(),
+    onComplete: () => {
+      sprite.setPosition(home.x, home.y);
+      onDone?.();
     },
   });
 }

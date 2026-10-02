@@ -3,8 +3,10 @@
 // choice of class (e.g. Training) don't need to know the subclasses.
 
 import { Soldier } from './Soldier.js';
+import { Villager } from './Villager.js';
 
 export const UNIT_CLASSES = Object.freeze([
+  Object.freeze({ id: 'villager', label: 'Villager', create: (options) => new Villager(options) }),
   Object.freeze({ id: 'soldier', label: 'Soldier', create: (options) => new Soldier(options) }),
 ]);
 

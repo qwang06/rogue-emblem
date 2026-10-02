@@ -72,10 +72,10 @@ import {
   TREE_SPRITES,
   UNIT_ANIMATIONS,
   UNIT_SHEET,
-  UNIT_SPRITES,
+  getUnitSprite,
   unitSheetKey,
 } from '../game/tileset.js';
-import { POTION_COLORS, playFireBurst, playGrenadeThrow, playHitFlash, playPotionGlow } from './effects.js';
+import { POTION_COLORS, playHitFlash, playLunge, playPotionGlow, playStoneThrow } from './effects.js';
 import { addTreeShadow, addUnitShadow } from './unitShadow.js';
 
 // The canvas is sized by the page (see main.js); maps are zoomed to fit it,
@@ -508,11 +508,11 @@ export class GridScene extends Phaser.Scene {
       this.dialogLineId = this.nextDialogLineId++;
     }
     this.dialog = dialog;
-    const { team } = getCurrentLine(dialog);
+    const { unitClass } = getCurrentLine(dialog);
     const view = toDialogView({
       id: this.dialogLineId,
       dialog,
-      sprite: team ? UNIT_SPRITES[team] ?? UNIT_SPRITES.player : null,
+      sprite: unitClass ? getUnitSprite(unitClass) : null,
       charsPerSecond: DIALOG_CHARS_PER_SECOND,
     });
     gameStore.setState({ dialog: view });
@@ -617,7 +617,7 @@ export class GridScene extends Phaser.Scene {
       return toRosterEntryView({
         id,
         unit,
-        sprite: UNIT_SPRITES[unit.team] ?? UNIT_SPRITES.player,
+        sprite: getUnitSprite(unit.unitClass),
         placed: isPlaced(this.grid, id),
       });
     });
@@ -1102,8 +1102,8 @@ export class GridScene extends Phaser.Scene {
   // Uses the aimed skill on the unit under the cursor, if it's a hostile
   // unit in the skill's range. Mana is spent and damage from
   // src/game/skills.js applied right away; then the skill's animation plays
-  // (a grenade lobbed onto the target, bursting into fire) and a unit
-  // brought to 0 health is removed once it finishes.
+  // (see playSkillAnimation) and a unit brought to 0 health is removed once
+  // it finishes.
   tryUseSkill() {
     const { unit, unitId, x, y } = this.activeUnit;
     const skill = this.activeSkill;
@@ -1113,7 +1113,7 @@ export class GridScene extends Phaser.Scene {
     if (!target) return;
 
     const defender = this.units.get(target.unitId);
-    const damage = calculateSkillDamage(skill, defender);
+    const damage = calculateSkillDamage(skill, unit, defender);
     unit.spendMana(skill.manaCost);
     defender.takeDamage(damage);
 
@@ -1121,21 +1121,63 @@ export class GridScene extends Phaser.Scene {
     this.inputLocked = true;
     const userSprite = this.unitSprites.get(unitId);
     const defenderSprite = this.unitSprites.get(target.unitId);
-    const center = (sprite) => ({ x: sprite.x + TILE_SIZE / 2, y: sprite.y + TILE_SIZE / 2 });
 
-    playGrenadeThrow(this, center(userSprite), center(defenderSprite), () => {
-      // The HUD only shows the new health once the grenade lands.
+    // The HUD only shows the new health once the skill lands.
+    const onImpact = () => {
       this.publishHoveredUnit();
       this.showDamagePopup(defenderSprite, damage);
-      playFireBurst(this, defenderSprite, center(defenderSprite), () => {
-        if (!defender.isAlive()) this.removeUnit(target);
-        this.activeUnit = null;
-        // A skill earns XP like a single strike that always lands.
-        const strikes = [{ by: 'attacker', target: 'defender', damage, hit: true, lethal: !defender.isAlive() }];
-        const amount = getCombatExperience(unit.level, defender.level, getCombatOutcome(strikes, 'attacker'));
-        this.showExperienceGain(unit, amount, () => this.finishPlayerAction(unitId));
-      });
+    };
+    this.playSkillAnimation(skill.animation, userSprite, defenderSprite, onImpact, () => {
+      if (!defender.isAlive()) this.removeUnit(target);
+      this.activeUnit = null;
+      // A skill earns XP like a single strike that always lands.
+      const strikes = [{ by: 'attacker', target: 'defender', damage, hit: true, lethal: !defender.isAlive() }];
+      const amount = getCombatExperience(unit.level, defender.level, getCombatOutcome(strikes, 'attacker'));
+      this.showExperienceGain(unit, amount, () => this.finishPlayerAction(unitId));
     });
+  }
+
+  // Plays a skill's `animation` from the user's sprite onto the target's,
+  // calling onImpact when it lands and onDone when it's over:
+  //   'stone' — a stone lobbed onto the target, which flashes
+  //   'strike' — the user lunges at the target, which flashes and shakes
+  //              the camera like a crit
+  playSkillAnimation(animation, userSprite, targetSprite, onImpact, onDone) {
+    const center = (sprite) => ({ x: sprite.x + TILE_SIZE / 2, y: sprite.y + TILE_SIZE / 2 });
+    if (animation === 'stone') {
+      playStoneThrow(this, center(userSprite), center(targetSprite), () => {
+        onImpact();
+        playHitFlash(this, targetSprite, onDone);
+      });
+      return;
+    }
+    // Done once the target's flash and the user's return have both ended —
+    // exactly once, since onDone ends the unit's action.
+    let flashed = false;
+    let returned = false;
+    let done = false;
+    const finish = () => {
+      if (done || !flashed || !returned) return;
+      done = true;
+      onDone();
+    };
+    playLunge(
+      this,
+      userSprite,
+      center(targetSprite),
+      () => {
+        onImpact();
+        this.cameras.main.shake(CRIT_SHAKE_MS, CRIT_SHAKE_INTENSITY);
+        playHitFlash(this, targetSprite, () => {
+          flashed = true;
+          finish();
+        });
+      },
+      () => {
+        returned = true;
+        finish();
+      },
+    );
   }
 
   // The active unit uses one of its items on itself. The effect (from
@@ -1472,7 +1514,7 @@ export class GridScene extends Phaser.Scene {
   addUnitSprite(unitId, gridX, gridY) {
     const unit = this.units.get(unitId);
     const { x, y } = gridToWorld(gridX, gridY, TILE_SIZE);
-    const art = UNIT_SPRITES[unit.team] ?? UNIT_SPRITES.player;
+    const art = getUnitSprite(unit.unitClass);
     const sprite = this.addTileSprite(x, y, unitSheetKey(art, 'idle'))
       .setDepth(0.75)
       .setData('unit', unit)

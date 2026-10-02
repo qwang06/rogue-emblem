@@ -9,8 +9,8 @@ import {
 } from './dialog.js';
 
 const SCRIPT = [
-  { speaker: 'Alden', team: 'player', side: 'left', text: 'Hello.' },
-  { speaker: 'Foe', team: 'enemy', side: 'right', text: 'Begone!' },
+  { speaker: 'Alden', unitClass: 'villager', side: 'left', text: 'Hello.' },
+  { speaker: 'Foe', unitClass: 'soldier', side: 'right', text: 'Begone!' },
 ];
 
 describe('createDialog', () => {
@@ -28,9 +28,9 @@ describe('createDialog', () => {
     expect(dialog.lines.every(Object.isFrozen)).toBe(true);
   });
 
-  it('defaults a missing speaker, team, and side', () => {
+  it('defaults a missing speaker, unitClass, and side', () => {
     const line = getCurrentLine(createDialog([{ text: 'Narration.' }]));
-    expect(line).toEqual({ speaker: '', team: null, side: 'left', text: 'Narration.' });
+    expect(line).toEqual({ speaker: '', unitClass: null, side: 'left', text: 'Narration.' });
   });
 
   it('throws on an empty script, a line without text, or an unknown side', () => {

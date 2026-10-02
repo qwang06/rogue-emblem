@@ -3,9 +3,9 @@ import { Soldier } from './Soldier.js';
 import { createUnitOfClass, UNIT_CLASSES } from './unitClasses.js';
 
 describe('UNIT_CLASSES', () => {
-  it('lists the soldier', () => {
-    expect(UNIT_CLASSES.map((c) => c.id)).toEqual(['soldier']);
-    expect(UNIT_CLASSES[0].label).toBe('Soldier');
+  it('lists the villager and the soldier', () => {
+    expect(UNIT_CLASSES.map((c) => c.id)).toEqual(['villager', 'soldier']);
+    expect(UNIT_CLASSES.map((c) => c.label)).toEqual(['Villager', 'Soldier']);
   });
 
   it('is frozen', () => {
