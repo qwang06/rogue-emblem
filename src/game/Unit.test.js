@@ -7,7 +7,7 @@ function makeUnit(overrides = {}) {
     name: 'Soldier',
     health: 10,
     mana: 5,
-    attack: 4,
+    strength: 4,
     defense: 2,
     movement: 5,
     team: 'player',
@@ -21,7 +21,7 @@ describe('Unit', () => {
     expect(unit.name).toBe('Soldier');
     expect(unit.health).toBe(10);
     expect(unit.maxHealth).toBe(10);
-    expect(unit.attack).toBe(4);
+    expect(unit.strength).toBe(4);
     expect(unit.defense).toBe(2);
     expect(unit.movement).toBe(5);
     expect(unit.team).toBe('player');
@@ -30,11 +30,31 @@ describe('Unit', () => {
   });
 
   it('defaults to level 1, no class, and no mana', () => {
-    const unit = new Unit({ name: 'Blob', health: 1, attack: 0, defense: 0, movement: 1, team: 'enemy' });
+    const unit = new Unit({ name: 'Blob', health: 1, strength: 0, defense: 0, movement: 1, team: 'enemy' });
     expect(unit.level).toBe(1);
     expect(unit.unitClass).toBeNull();
     expect(unit.mana).toBe(0);
     expect(unit.maxMana).toBe(0);
+  });
+
+  it('defaults magic, skill, speed, luck, and resistance to 0 and deals physical damage', () => {
+    const unit = makeUnit();
+    expect(unit.magic).toBe(0);
+    expect(unit.skill).toBe(0);
+    expect(unit.speed).toBe(0);
+    expect(unit.luck).toBe(0);
+    expect(unit.resistance).toBe(0);
+    expect(unit.damageType).toBe('physical');
+  });
+
+  it('accepts the expanded stats and a damage type', () => {
+    const unit = makeUnit({ magic: 6, skill: 5, speed: 7, luck: 3, resistance: 4, damageType: 'magical' });
+    expect(unit.magic).toBe(6);
+    expect(unit.skill).toBe(5);
+    expect(unit.speed).toBe(7);
+    expect(unit.luck).toBe(3);
+    expect(unit.resistance).toBe(4);
+    expect(unit.damageType).toBe('magical');
   });
 
   it('accepts an explicit class and level', () => {

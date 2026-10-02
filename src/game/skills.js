@@ -43,7 +43,7 @@ export function findLearnedSkill(unitClass, level, skillId, trees = SKILL_TREES)
 }
 
 // Damage a damaging skill deals: its own power minus the target's defense,
-// never below zero. It doesn't depend on the user's attack stat.
+// never below zero. It doesn't depend on the user's strength or magic.
 export function calculateSkillDamage(skill, defender) {
   return Math.max(0, skill.power - defender.defense);
 }

@@ -22,8 +22,14 @@ describe('Soldier', () => {
   it('uses the soldier stat line', () => {
     const soldier = new Soldier({ team: 'enemy' });
     expect(soldier.maxHealth).toBe(SOLDIER_STATS.health);
-    expect(soldier.attack).toBe(SOLDIER_STATS.attack);
+    expect(soldier.strength).toBe(SOLDIER_STATS.strength);
+    expect(soldier.magic).toBe(SOLDIER_STATS.magic);
+    expect(soldier.skill).toBe(SOLDIER_STATS.skill);
+    expect(soldier.speed).toBe(SOLDIER_STATS.speed);
+    expect(soldier.luck).toBe(SOLDIER_STATS.luck);
     expect(soldier.defense).toBe(SOLDIER_STATS.defense);
+    expect(soldier.resistance).toBe(SOLDIER_STATS.resistance);
+    expect(soldier.damageType).toBe('physical');
     expect(soldier.movement).toBe(SOLDIER_STATS.movement);
     expect(soldier.range).toBe(1);
   });

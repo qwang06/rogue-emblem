@@ -1,6 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { calculateDamage, getAttackRange, getAttackTargets, getThreatRange } from './combat.js';
+import {
+  calculateDamage,
+  getDamageType,
+  getStrikeOrder,
+  getAttackRange,
+  getAttackTargets,
+  getThreatRange,
+  isInStrikeRange,
+  resolveCombat,
+} from './combat.js';
 import { createGrid, setTerrain, setUnit } from './grid.js';
+
+// Rolls 0 every time: every strike with a hit chance above 0 lands, and
+// only crits with a crit chance above 0.
+const alwaysHit = () => 0;
+// Rolls 99 every time: everything below 100% fails.
+const alwaysMiss = () => 0.999;
+// Plays back the given rolls (as fractions) in order.
+const rolls = (...values) => {
+  let i = 0;
+  return () => values[i++];
+};
 
 // Sorted "x,y" strings so assertions don't depend on iteration order.
 function tiles(list) {
@@ -137,11 +157,233 @@ describe('getAttackTargets', () => {
 });
 
 describe('calculateDamage', () => {
-  it('is attack minus defense', () => {
-    expect(calculateDamage({ attack: 5 }, { defense: 2 })).toBe(3);
+  const defender = { defense: 2, resistance: 5 };
+
+  it('is strength minus defense for a physical hit', () => {
+    expect(calculateDamage({ strength: 5 }, { defense: 2 })).toBe(3);
+    expect(calculateDamage({ strength: 7, magic: 9, damageType: 'physical' }, defender)).toBe(5);
+  });
+
+  it('is magic minus resistance for a magical hit', () => {
+    expect(calculateDamage({ strength: 9, magic: 7, damageType: 'magical' }, defender)).toBe(2);
   });
 
   it('never goes below zero', () => {
-    expect(calculateDamage({ attack: 1 }, { defense: 4 })).toBe(0);
+    expect(calculateDamage({ strength: 1 }, { defense: 4 })).toBe(0);
+    expect(calculateDamage({ magic: 3, damageType: 'magical' }, defender)).toBe(0);
+  });
+
+  it('counts a missing guard stat as 0', () => {
+    expect(calculateDamage({ magic: 4, damageType: 'magical' }, { defense: 3 })).toBe(4);
+  });
+});
+
+describe('getDamageType', () => {
+  it('defaults to physical', () => {
+    expect(getDamageType({})).toBe('physical');
+  });
+
+  it('uses the unit damage type', () => {
+    expect(getDamageType({ damageType: 'magical' })).toBe('magical');
+  });
+
+  it('throws on an unknown type', () => {
+    expect(() => getDamageType({ damageType: 'psychic' })).toThrow(/psychic/);
+  });
+});
+
+describe('resolveCombat damage types', () => {
+  it("uses each side's own damage type", () => {
+    const mage = { health: 10, strength: 0, magic: 6, defense: 1, resistance: 4, range: 1, damageType: 'magical' };
+    const knight = { health: 10, strength: 6, magic: 0, defense: 8, resistance: 0, range: 1 };
+    const { strikes } = resolveCombat(mage, knight, { distance: 1, rng: alwaysHit });
+    expect(strikes.map((s) => s.damage)).toEqual([6, 5]);
+  });
+});
+
+describe('isInStrikeRange', () => {
+  it('accepts distances from 1 up to range', () => {
+    expect(isInStrikeRange({ range: 2 }, 1)).toBe(true);
+    expect(isInStrikeRange({ range: 2 }, 2)).toBe(true);
+    expect(isInStrikeRange({ range: 2 }, 3)).toBe(false);
+  });
+
+  it('respects a minimum range', () => {
+    expect(isInStrikeRange({ range: 2, minRange: 2 }, 1)).toBe(false);
+    expect(isInStrikeRange({ range: 2, minRange: 2 }, 2)).toBe(true);
+  });
+
+  it('never strikes its own tile', () => {
+    expect(isInStrikeRange({ range: 1, minRange: 0 }, 0)).toBe(false);
+  });
+});
+
+describe('resolveCombat', () => {
+  const unit = (stats) => ({ health: 10, strength: 5, defense: 2, range: 1, ...stats });
+
+  it('has the defender counter when the attacker is in its range', () => {
+    const result = resolveCombat(unit(), unit({ strength: 4 }), { distance: 1, rng: alwaysHit });
+    expect(result.strikes).toEqual([
+      { by: 'attacker', target: 'defender', damage: 3, hit: true, crit: false, lethal: false },
+      { by: 'defender', target: 'attacker', damage: 2, hit: true, crit: false, lethal: false },
+    ]);
+    expect(result.attackerHealth).toBe(8);
+    expect(result.defenderHealth).toBe(7);
+  });
+
+  it('has no counter when the attacker is out of the defender range', () => {
+    const result = resolveCombat(unit({ range: 2 }), unit({ range: 1 }), { distance: 2, rng: alwaysHit });
+    expect(result.strikes).toHaveLength(1);
+    expect(result.strikes[0].by).toBe('attacker');
+    expect(result.attackerHealth).toBe(10);
+  });
+
+  it('has no counter inside the defender minimum range', () => {
+    const result = resolveCombat(unit(), unit({ range: 2, minRange: 2 }), { distance: 1, rng: alwaysHit });
+    expect(result.strikes).toHaveLength(1);
+  });
+
+  it('ends before the counter when the attacker kills', () => {
+    const result = resolveCombat(unit({ strength: 20 }), unit(), { distance: 1, rng: alwaysHit });
+    expect(result.strikes).toEqual([
+      { by: 'attacker', target: 'defender', damage: 18, hit: true, crit: false, lethal: true },
+    ]);
+    expect(result.defenderHealth).toBe(0);
+    expect(result.attackerHealth).toBe(10);
+  });
+
+  it('lets the counter kill the attacker', () => {
+    const result = resolveCombat(unit({ health: 2 }), unit({ strength: 9 }), { distance: 1, rng: alwaysHit });
+    expect(result.strikes[1]).toMatchObject({ by: 'defender', damage: 7, lethal: true });
+    expect(result.attackerHealth).toBe(0);
+    expect(result.defenderHealth).toBe(7);
+  });
+
+  it('plays out a 0-damage exchange without killing anyone', () => {
+    const result = resolveCombat(unit({ strength: 1 }), unit({ strength: 1 }), { distance: 1, rng: alwaysHit });
+    expect(result.strikes.map((s) => s.damage)).toEqual([0, 0]);
+    expect(result.strikes.every((s) => !s.lethal)).toBe(true);
+    expect(result.attackerHealth).toBe(10);
+    expect(result.defenderHealth).toBe(10);
+  });
+
+  it('does not mutate the units', () => {
+    const attacker = unit();
+    const defender = unit();
+    resolveCombat(attacker, defender, { distance: 1, rng: alwaysHit });
+    expect(attacker.health).toBe(10);
+    expect(defender.health).toBe(10);
+  });
+});
+
+describe('getStrikeOrder', () => {
+  const unit = (stats) => ({ speed: 5, range: 1, ...stats });
+
+  it('is attacker then defender when neither doubles', () => {
+    expect(getStrikeOrder(unit(), unit(), 1)).toEqual(['attacker', 'defender']);
+  });
+
+  it('lets a faster attacker strike again last', () => {
+    expect(getStrikeOrder(unit({ speed: 9 }), unit(), 1)).toEqual(['attacker', 'defender', 'attacker']);
+  });
+
+  it('lets a faster defender strike again last', () => {
+    expect(getStrikeOrder(unit(), unit({ speed: 9 }), 1)).toEqual(['attacker', 'defender', 'defender']);
+  });
+
+  it('doubles at exactly the threshold but not one short of it', () => {
+    expect(getStrikeOrder(unit({ speed: 9 }), unit({ speed: 5 }), 1)).toHaveLength(3);
+    expect(getStrikeOrder(unit({ speed: 8 }), unit({ speed: 5 }), 1)).toHaveLength(2);
+  });
+
+  it('lets an attacker double even when the defender cannot counter', () => {
+    expect(getStrikeOrder(unit({ speed: 9, range: 2 }), unit(), 2)).toEqual(['attacker', 'attacker']);
+  });
+
+  it('never has a defender out of range double', () => {
+    expect(getStrikeOrder(unit({ range: 2 }), unit({ speed: 9 }), 2)).toEqual(['attacker']);
+  });
+});
+
+describe('resolveCombat rolls', () => {
+  // 10 HP, 3 damage per hit; base 80 hit vs 0 avoid, no crit unless skilled.
+  const unit = (stats) => ({ health: 10, strength: 5, defense: 2, speed: 0, range: 1, ...stats });
+
+  it('deals no damage on a miss', () => {
+    const result = resolveCombat(unit(), unit(), { distance: 1, rng: alwaysMiss });
+    expect(result.strikes).toEqual([
+      { by: 'attacker', target: 'defender', damage: 0, hit: false, crit: false, lethal: false },
+      { by: 'defender', target: 'attacker', damage: 0, hit: false, crit: false, lethal: false },
+    ]);
+    expect(result.attackerHealth).toBe(10);
+    expect(result.defenderHealth).toBe(10);
+  });
+
+  it('rolls each strike separately', () => {
+    // Attacker rolls 85 (miss vs 80); defender rolls 10 (hit), then 50 for crit (0% — no crit).
+    const result = resolveCombat(unit(), unit(), { distance: 1, rng: rolls(0.85, 0.1, 0.5) });
+    expect(result.strikes.map((s) => s.hit)).toEqual([false, true]);
+    expect(result.attackerHealth).toBe(7);
+  });
+
+  it('triples damage on a crit', () => {
+    // skill 20 → crit 10 vs 0 dodge; rolls: hit 0, crit 5.
+    const result = resolveCombat(unit({ skill: 20 }), unit(), { distance: 1, rng: rolls(0, 0.05, 0.99) });
+    expect(result.strikes[0]).toMatchObject({ hit: true, crit: true, damage: 9 });
+  });
+
+  it('can kill with a crit, ending the exchange', () => {
+    const result = resolveCombat(unit({ skill: 20 }), unit({ health: 8 }), { distance: 1, rng: alwaysHit });
+    expect(result.strikes).toEqual([
+      { by: 'attacker', target: 'defender', damage: 9, hit: true, crit: true, lethal: true },
+    ]);
+    expect(result.defenderHealth).toBe(0);
+  });
+
+  it('never crits on a miss', () => {
+    // Hit 120 vs avoid 40 = 80%; crit chance 10, but the hit roll misses so
+    // the crit roll (0 — would crit) is never taken.
+    const result = resolveCombat(unit({ skill: 20 }), unit({ speed: 20, range: 0 }), {
+      distance: 1,
+      rng: rolls(0.99, 0),
+    });
+    expect(result.strikes[0]).toMatchObject({ hit: false, crit: false, damage: 0 });
+  });
+
+  it('plays a double, which can finish the defender', () => {
+    const result = resolveCombat(unit({ speed: 4 }), unit({ health: 6, speed: 0 }), { distance: 1, rng: alwaysHit });
+    expect(result.strikes.map((s) => [s.by, s.damage, s.lethal])).toEqual([
+      ['attacker', 3, false],
+      ['defender', 3, false],
+      ['attacker', 3, true],
+    ]);
+    expect(result.defenderHealth).toBe(0);
+  });
+
+  it('lets a doubling defender kill the attacker', () => {
+    const result = resolveCombat(unit({ health: 6 }), unit({ speed: 4 }), { distance: 1, rng: alwaysHit });
+    expect(result.strikes.map((s) => s.by)).toEqual(['attacker', 'defender', 'defender']);
+    expect(result.attackerHealth).toBe(0);
+    expect(result.strikes[2].lethal).toBe(true);
+  });
+
+  it('can miss every strike of a doubled exchange', () => {
+    const result = resolveCombat(unit({ speed: 4 }), unit(), { distance: 1, rng: alwaysMiss });
+    expect(result.strikes).toHaveLength(3);
+    expect(result.strikes.every((s) => !s.hit && s.damage === 0)).toBe(true);
+  });
+
+  it('never hits at 0% even on the lowest roll', () => {
+    const result = resolveCombat(unit(), unit({ speed: 50 }), { distance: 1, rng: alwaysHit });
+    expect(result.strikes[0].hit).toBe(false);
+  });
+
+  it('passes trueHit through to the hit roll', () => {
+    // 80% hit; rolls 90 and 60 average to 75 — a hit with 2RN, a miss without.
+    const order = [0.9, 0.6];
+    const twoRn = resolveCombat(unit(), unit({ range: 0 }), { distance: 1, rng: rolls(...order, 0.99), trueHit: true });
+    const oneRn = resolveCombat(unit(), unit({ range: 0 }), { distance: 1, rng: rolls(...order) });
+    expect(twoRn.strikes[0].hit).toBe(true);
+    expect(oneRn.strikes[0].hit).toBe(false);
   });
 });

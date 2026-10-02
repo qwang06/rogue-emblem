@@ -1,6 +1,9 @@
 // Base class for all units on the tactics board. No Phaser, no rendering —
 // just stats and the state changes every unit shares (taking damage,
-// healing, dying, spending mana, leveling up). Specific unit types extend
+// healing, dying, spending mana, leveling up). Stats follow Fire Emblem:
+// strength / magic power physical / magical hits, defense / resistance
+// guard against them, and skill, speed and luck feed hit, crit and
+// doubling. `damageType` says which kind of hit the unit's attacks deal. Specific unit types extend
 // this and set their own class and stats; the skills a unit knows come
 // from its class's skill tree and its level (see skills.js). Items it
 // carries are an inventory from items.js.
@@ -14,10 +17,16 @@ export class Unit {
     level = 1,
     health,
     mana = 0,
-    attack,
+    strength,
+    magic = 0,
+    skill = 0,
+    speed = 0,
+    luck = 0,
     defense,
+    resistance = 0,
     movement,
     range = 1,
+    damageType = 'physical',
     team,
     items = [],
   }) {
@@ -28,10 +37,16 @@ export class Unit {
     this.health = health;
     this.maxMana = mana;
     this.mana = mana;
-    this.attack = attack;
+    this.strength = strength;
+    this.magic = magic;
+    this.skill = skill;
+    this.speed = speed;
+    this.luck = luck;
     this.defense = defense;
+    this.resistance = resistance;
     this.movement = movement;
     this.range = range;
+    this.damageType = damageType;
     this.team = team;
     this.items = createInventory(items);
   }

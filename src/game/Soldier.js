@@ -4,8 +4,13 @@ import { Unit } from './Unit.js';
 export const SOLDIER_STATS = Object.freeze({
   health: 10,
   mana: 5,
-  attack: 4,
+  strength: 4,
+  magic: 0,
+  skill: 3,
+  speed: 3,
+  luck: 2,
   defense: 2,
+  resistance: 0,
   movement: 5,
 });
 

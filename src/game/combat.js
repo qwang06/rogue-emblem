@@ -1,8 +1,10 @@
 // Pure combat rules: which tiles a unit can strike, which of those hold a
-// valid target, and how much damage a hit deals. No Phaser, no rendering,
-// no hidden state — applying the damage to a Unit is the caller's job.
+// valid target, how much damage a hit deals, and how a whole exchange of
+// strikes plays out. No Phaser, no rendering, no hidden state — applying
+// the damage to a Unit is the caller's job.
 
 import { getCell, isInBounds } from './grid.js';
+import { CRIT_MULTIPLIER, canDouble, getCritChance, getHitChance, rollChance } from './combatStats.js';
 
 function manhattan(a, b) {
   return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
@@ -51,7 +53,77 @@ export function getAttackTargets(grid, origin, maxRange, isHostile, minRange = 1
     .filter(({ unitId }) => unitId && isHostile(unitId));
 }
 
-// Damage one hit deals: attack minus defense, never below zero.
+// Damage types: which attacker stat powers a hit and which defender stat
+// guards against it.
+export const DAMAGE_TYPES = Object.freeze({
+  physical: Object.freeze({ power: 'strength', guard: 'defense' }),
+  magical: Object.freeze({ power: 'magic', guard: 'resistance' }),
+});
+
+// The kind of hit a unit's attacks deal ('physical' unless it says
+// otherwise). Throws on a type DAMAGE_TYPES doesn't know.
+export function getDamageType(attacker) {
+  const type = attacker.damageType ?? 'physical';
+  if (!DAMAGE_TYPES[type]) throw new Error(`Unknown damage type: ${type}`);
+  return type;
+}
+
+// Damage one hit deals: strength minus defense for a physical hit, magic
+// minus resistance for a magical one, never below zero. Missing stats
+// count as 0.
 export function calculateDamage(attacker, defender) {
-  return Math.max(0, attacker.attack - defender.defense);
+  const { power, guard } = DAMAGE_TYPES[getDamageType(attacker)];
+  return Math.max(0, (attacker[power] ?? 0) - (defender[guard] ?? 0));
+}
+
+// Whether a unit with the given range (`range` max, optional `minRange`,
+// default 1) can strike something `distance` orthogonal steps away.
+export function isInStrikeRange(unit, distance) {
+  return distance >= Math.max(1, unit.minRange ?? 1) && distance <= unit.range;
+}
+
+// Who strikes, in order, when attacker attacks defender `distance` steps
+// away, as a list of 'attacker' / 'defender': the attacker, then the
+// defender if the attacker is within its range, then whoever doubles
+// (attacker first). Ignores deaths — resolveCombat stops early on those.
+export function getStrikeOrder(attacker, defender, distance) {
+  const counters = isInStrikeRange(defender, distance);
+  const order = ['attacker'];
+  if (counters) order.push('defender');
+  if (canDouble(attacker, defender)) order.push('attacker');
+  else if (counters && canDouble(defender, attacker)) order.push('defender');
+  return order;
+}
+
+// One full exchange when attacker strikes defender, following
+// getStrikeOrder. Each strike rolls to hit (hit chance from combatStats.js)
+// and, if it lands, to crit (×CRIT_MULTIPLIER damage); a miss deals 0.
+// Combat stops as soon as a unit dies. Nothing is mutated — returns
+// { strikes, attackerHealth, defenderHealth }, where strikes is the ordered
+// list [{ by, target, damage, hit, crit, lethal }] with `by` / `target`
+// being 'attacker' or 'defender', for the caller to apply and animate.
+// `context.distance` is the orthogonal distance between the two units (the
+// attacker is assumed able to reach); `context.rng` (() => [0, 1),
+// default Math.random) drives the rolls, and `context.trueHit` switches
+// hit rolls to the two-roll average (see rollChance).
+export function resolveCombat(attacker, defender, { distance, rng = Math.random, trueHit = false }) {
+  const health = { attacker: attacker.health, defender: defender.health };
+  const units = { attacker, defender };
+  const strikes = [];
+
+  for (const by of getStrikeOrder(attacker, defender, distance)) {
+    const target = by === 'attacker' ? 'defender' : 'attacker';
+    const striker = units[by];
+    const struck = units[target];
+    const hit = rollChance(getHitChance(striker, struck), rng, { trueHit });
+    const crit = hit && rollChance(getCritChance(striker, struck), rng);
+    const base = calculateDamage(striker, struck);
+    const damage = !hit ? 0 : crit ? base * CRIT_MULTIPLIER : base;
+    health[target] = Math.max(0, health[target] - damage);
+    const lethal = health[target] === 0;
+    strikes.push({ by, target, damage, hit, crit, lethal });
+    if (lethal) break;
+  }
+
+  return { strikes, attackerHealth: health.attacker, defenderHealth: health.defender };
 }

@@ -11,7 +11,7 @@ The plan for growing Rogue Emblem into a Fire Emblem–style tactics game, one s
 
 ## Where we are
 
-Already built: grid and terrain move costs, movement range and arrow, player/enemy phases with win/loss, one-way attacks (`attack - defense`), skills with mana, consumable items, deployment, a rushing enemy AI, dialog, title/pause menus, and training mode. There is one class (Soldier), no counterattacks, no hit/crit randomness, and `levelUp()` only bumps the level number.
+Already built: grid and terrain move costs, movement range and arrow, player/enemy phases with win/loss, one-way attacks (`attack - defense`; counterattacks and FE-style stats since 1.1/1.2), skills with mana, consumable items, deployment, a rushing enemy AI, dialog, title/pause menus, and training mode. There is one class (Soldier), no counterattacks, no hit/crit randomness, and `levelUp()` only bumps the level number.
 
 ---
 
@@ -19,21 +19,23 @@ Already built: grid and terrain move costs, movement range and arrow, player/ene
 
 The single biggest change to how the game feels. After this phase every attack is a two-sided, uncertain exchange the player can preview.
 
-### [ ] 1.1 Combat resolution and counterattacks
+### [x] 1.1 Combat resolution and counterattacks
 - New pure `resolveCombat(attacker, defender, context)` in `combat.js` returning an ordered list of strikes: `[{ by, target, damage, hit, crit, lethal }]`, plus resulting HP for both sides. Combat ends early when a unit dies.
 - Defender counterattacks if the attacker's tile is within the defender's range (min/max).
 - `GridScene` plays the strike list in sequence (existing damage popups per strike) instead of applying a single hit.
 - Enemy attacks during enemy phase go through the same function (player units counter).
 - Skills stay one-way for now (no counter) — note if that should change.
 - **Tests:** counter in range, no counter out of range (e.g. range-2 attacker vs range-1 defender), attacker kills before counter, counter kills attacker, 0-damage exchanges.
+- *Notes:* units only have a max `range`; `isInStrikeRange` honours an optional `minRange` (default 1) so bows/siege can set one later. Skills remain one-way — revisit once magic/tomes exist (a tome attack should probably be a regular combat with counters, while utility skills like the grenade stay one-way). `hit`/`crit` are fixed to `true`/`false` until 1.3.
 
-### [ ] 1.2 Expanded stats
+### [x] 1.2 Expanded stats
 - Add `skill`, `speed`, `luck`, `resistance` to `Unit` (rename `attack` → `strength` if it reads better once weapons exist; decide here).
 - Split damage into physical (`strength - defense`) and magical (`magic - resistance`) — add `magic` too, or defer until mages exist (1.2 decides and notes it).
 - Update `Soldier` stats, `UnitPanel` display, and existing tests.
 - **Tests:** stat defaults, damage type selection.
+- *Notes:* `attack` is renamed to `strength` (weapon might will add to it in 2.x). `magic` is added now (default 0) together with a per-unit `damageType` (`'physical'` | `'magical'`, default physical) so damage type selection works before mages exist; once weapons land the type should come from the equipped weapon instead. Skills still deal `power - defense` regardless of type — give skills a `damageType` when magical skills appear. Soldier: 4 STR, 0 MAG, 3 SKL, 3 SPD, 2 LCK, 2 DEF, 0 RES.
 
-### [ ] 1.3 Hit, crit, and doubling
+### [x] 1.3 Hit, crit, and doubling
 - Pure formulas in a new `src/game/combatStats.js` (or within `combat.js` if small):
   - Hit = `skill * 2 + luck / 2` (+ weapon hit later); Avoid = `speed * 2 + luck` (+ terrain later); displayed hit = clamp(Hit − Avoid, 0, 100).
   - Crit = `skill / 2` (+ weapon crit later); Dodge = `luck`; crit deals ×3 damage.
@@ -42,6 +44,7 @@ The single biggest change to how the game feels. After this phase every attack i
 - Strike order: attacker, defender, then whoever doubles.
 - Damage popups show "Miss" and "Crit!".
 - **Tests:** formula edge cases, clamping, doubling on both sides, exact threshold, crit lethal, all-miss sequences with a stubbed RNG.
+- *Notes:* formulas live in `src/game/combatStats.js`; `getStrikeOrder` in `combat.js` is shared so the 1.4 forecast can reuse it. Hit adds a flat `BASE_HIT` (80) standing in for weapon hit — with stats alone two soldiers have 7 hit vs 8 avoid (0%); weapons should replace it. Soldier vs soldier is 79% hit, 0% crit, no doubling. Doubling uses `>=` the threshold. 2RN is available as `trueHit` but off by default; the scene uses `Math.random`. Crits also shake the camera. Crit rolls are 1RN. Skills (the grenade) still always hit and never crit.
 
 ### [ ] 1.4 Combat forecast panel
 - Pure `getCombatForecast(attacker, defender, context)` → `{ attacker: { hp, damage, hit, crit, strikes }, defender: {...} }` — shares formulas with `resolveCombat` so preview and outcome can't disagree.
