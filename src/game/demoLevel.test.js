@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { canPlaceUnit } from './deployment.js';
 import { createDialog } from './dialog.js';
+import { DIALOGS } from '../data/dialogs.js';
 import {
   createDemoLevel,
   DEMO_MAP,
-  DEMO_OPENING_DIALOG,
   DEPLOYMENT_ZONE,
   ENEMY_POSITIONS,
   PLAYER_ROSTER,
@@ -140,12 +140,14 @@ describe('createDemoLevel', () => {
   });
 
   it('opens with a dialog spoken by the roster and the enemy', () => {
-    expect(level.openingDialog).toBe(DEMO_OPENING_DIALOG);
-    expect(() => createDialog(level.openingDialog)).not.toThrow();
-    const speakers = new Set(level.openingDialog.map((line) => line.speaker));
+    expect(level.dialogs).toBe(DIALOGS.demo);
+    expect(() => createDialog(level.dialogs.opening)).not.toThrow();
+    const speakers = new Set(level.dialogs.opening.map((line) => line.speaker));
     for (const name of Object.values(PLAYER_ROSTER)) expect(speakers.has(name)).toBe(true);
-    for (const line of level.openingDialog) {
-      expect(line.side).toBe(line.unitClass === 'villager' ? 'left' : 'right');
+    for (const line of level.dialogs.opening) {
+      expect(line.side).toBe(line.team === 'player' ? 'left' : 'right');
+      // The stand-in art matches the units on the map: villagers vs. soldiers.
+      expect(line.unitClass).toBe(line.team === 'player' ? 'villager' : 'soldier');
     }
   });
 

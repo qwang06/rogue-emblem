@@ -200,6 +200,7 @@ describe('toDialogView', () => {
       speaker: 'Alden',
       side: 'left',
       text: 'Onward.',
+      portrait: null,
       sprite: 'Villager_01',
       revealed: false,
       charsPerSecond: 40,

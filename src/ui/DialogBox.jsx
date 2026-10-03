@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { SPRITE_URLS } from '../assets/sprites.js';
 import { gameCommands } from '../bridge/commands.js';
 import { getRevealedLength } from '../game/dialog.js';
 import { UnitSprite } from './UnitSprite.jsx';
@@ -15,7 +16,7 @@ export function DialogBox() {
   return (
     <div className="dialog-layer" onClick={() => gameCommands.send({ type: 'confirm' })}>
       <section className={`panel dialog-box dialog-box--${line.side}`} aria-label="Dialog">
-        <DialogPortrait sprite={line.sprite} />
+        <DialogPortrait portrait={line.portrait} sprite={line.sprite} />
         <div className="dialog-box__body">
           {line.speaker && <h2 className="dialog-box__speaker">{line.speaker}</h2>}
           {/* Keyed by line so the typing restarts for each one. */}
@@ -26,12 +27,18 @@ export function DialogBox() {
   );
 }
 
-// The frame a character's portrait goes in. There's no portrait art yet, so
-// the speaker's unit sprite stands in, scaled up to fill it.
-function DialogPortrait({ sprite }) {
+// The frame a character's portrait goes in: their portrait art (the
+// `portrait` sprite key from characters.json) when they have some, else
+// their unit sprite scaled up to fill it.
+function DialogPortrait({ portrait, sprite }) {
+  const portraitUrl = portrait ? SPRITE_URLS[portrait] : null;
   return (
     <div className="dialog-box__portrait" aria-hidden="true">
-      {sprite && <UnitSprite sprite={sprite} scale={3} animated />}
+      {portraitUrl ? (
+        <img className="dialog-box__portrait-art" src={portraitUrl} alt="" />
+      ) : (
+        sprite && <UnitSprite sprite={sprite} scale={3} animated />
+      )}
     </div>
   );
 }

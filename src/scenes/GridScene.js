@@ -45,6 +45,7 @@ import {
 } from '../game/deployment.js';
 import { findUnit, getCell, gridToWorld, isInBounds, moveUnit, setUnit, worldToGrid } from '../game/grid.js';
 import { advanceDialog, createDialog, DIALOG_CHARS_PER_SECOND, getCurrentLine } from '../game/dialog.js';
+import { getTriggeredDialog, turnTrigger } from '../game/dialogScript.js';
 import { getPathFacings } from '../game/facing.js';
 import { createKeyRepeat, updateKeyRepeat } from '../game/keyRepeat.js';
 import { getArrowPieces } from '../game/moveArrow.js';
@@ -143,6 +144,7 @@ export class GridScene extends Phaser.Scene {
     this.units = level.units; // unitId -> Unit, player roster and enemies alike
     this.roster = level.roster; // player unitIds that can be deployed
     this.deploymentZone = level.deploymentZone;
+    this.dialogs = level.dialogs; // the level's conversations by trigger (src/game/dialogScript.js)
 
     this.renderTerrain(this.grid);
     this.renderDecorations(level.decorations ?? []);
@@ -193,6 +195,7 @@ export class GridScene extends Phaser.Scene {
     this.dialog = null; // from src/game/dialog.js while a conversation is showing
     this.dialogLineStartedAt = 0; // scene time the current line started typing
     this.onDialogDone = null;
+    this.cursorVisibleBeforeDialog = false; // restored when the dialog closes
     this.dialogLineId = null; // changes per line so the dialog box restarts its typing
     this.nextDialogLineId = 1;
     this.updateHoveredUnit();
@@ -203,8 +206,7 @@ export class GridScene extends Phaser.Scene {
       if (this.deploymentZone.length > 0) this.startDeployment();
       else this.startBattle();
     };
-    if (level.openingDialog?.length) this.playDialog(level.openingDialog, begin);
-    else begin();
+    this.playTriggeredDialog('opening', begin);
     gameStore.setState({ mapLoadProgress: 1, mapReady: true });
   }
 
@@ -233,13 +235,15 @@ export class GridScene extends Phaser.Scene {
 
     if (this.inputLocked) return;
 
-    if (this.battleOutcome) {
-      if (confirm) this.exitToTitle();
+    // Before the outcome: a victory or defeat conversation plays out before
+    // the result is shown.
+    if (this.dialog) {
+      this.updateDialog(confirm, cancel);
       return;
     }
 
-    if (this.dialog) {
-      this.updateDialog(confirm, cancel);
+    if (this.battleOutcome) {
+      if (confirm) this.exitToTitle();
       return;
     }
 
@@ -493,13 +497,24 @@ export class GridScene extends Phaser.Scene {
   // ---- Dialog -----------------------------------------------------------
   // A conversation in the dialog box (drawn by React) owns input while it
   // shows: confirm finishes typing the line, or moves to the next one;
-  // cancel skips the rest. The rules live in src/game/dialog.js. `onDone`
-  // runs once the dialog closes.
+  // cancel skips the rest. The rules live in src/game/dialog.js. The cursor
+  // hides while it shows and comes back as it was; `onDone` runs once the
+  // dialog closes.
 
   playDialog(lines, onDone) {
     this.onDialogDone = onDone;
+    this.cursorVisibleBeforeDialog = this.cursorSprite.visible;
     this.setCursorVisible(false);
     this.showDialog(createDialog(lines));
+  }
+
+  // Plays the level's conversation for `trigger` ('opening', 'victory',
+  // 'defeat', 'turn N') if it has one, then runs `onDone` — right away when
+  // there's nothing to say.
+  playTriggeredDialog(trigger, onDone) {
+    const lines = getTriggeredDialog(this.dialogs, trigger);
+    if (lines) this.playDialog(lines, onDone);
+    else onDone();
   }
 
   showDialog(dialog) {
@@ -532,6 +547,7 @@ export class GridScene extends Phaser.Scene {
   endDialog() {
     this.dialog = null;
     gameStore.setState({ dialog: null });
+    this.setCursorVisible(this.cursorVisibleBeforeDialog);
     const onDone = this.onDialogDone;
     this.onDialogDone = null;
     onDone?.();
@@ -713,10 +729,12 @@ export class GridScene extends Phaser.Scene {
         this.runEnemyPhase();
         return;
       }
-      // Hand the cursor back to the player on their first unit.
+      // Hand the cursor back to the player on their first unit, after the
+      // turn's conversation if the level has one.
       const first = findUnit(this.grid, this.teamUnitIds('player')[0]);
       if (first) this.setCursor(first.x, first.y);
       this.inputLocked = false;
+      this.playTriggeredDialog(turnTrigger(turnState.turn), () => {});
     });
   }
 
@@ -764,13 +782,14 @@ export class GridScene extends Phaser.Scene {
 
   // Ends the battle if one side has been wiped out, publishing the result
   // for React; confirm then returns to the title. Returns whether it ended.
+  // The level's [victory] or [defeat] conversation plays before the result.
   checkOutcome() {
     const outcome = getBattleOutcome(this.units.values());
     if (!outcome) return false;
     this.battleOutcome = outcome;
     this.inputLocked = false;
     this.setCursorVisible(false);
-    gameStore.setState({ battleOutcome: outcome });
+    this.playTriggeredDialog(outcome, () => gameStore.setState({ battleOutcome: outcome }));
     return true;
   }
 

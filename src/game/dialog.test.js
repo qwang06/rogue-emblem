@@ -9,8 +9,8 @@ import {
 } from './dialog.js';
 
 const SCRIPT = [
-  { speaker: 'Alden', unitClass: 'villager', side: 'left', text: 'Hello.' },
-  { speaker: 'Foe', unitClass: 'soldier', side: 'right', text: 'Begone!' },
+  { speaker: 'Alden', team: 'player', unitClass: 'villager', side: 'left', text: 'Hello.' },
+  { speaker: 'Foe', team: 'enemy', unitClass: 'soldier', side: 'right', text: 'Begone!' },
 ];
 
 describe('createDialog', () => {
@@ -18,7 +18,7 @@ describe('createDialog', () => {
     const dialog = createDialog(SCRIPT);
     expect(dialog.index).toBe(0);
     expect(dialog.revealed).toBe(false);
-    expect(getCurrentLine(dialog)).toEqual(SCRIPT[0]);
+    expect(getCurrentLine(dialog)).toEqual({ ...SCRIPT[0], portrait: null });
   });
 
   it('freezes the dialog and its lines', () => {
@@ -28,9 +28,16 @@ describe('createDialog', () => {
     expect(dialog.lines.every(Object.isFrozen)).toBe(true);
   });
 
-  it('defaults a missing speaker, unitClass, and side', () => {
+  it('defaults a missing speaker, team, unitClass, portrait, and side', () => {
     const line = getCurrentLine(createDialog([{ text: 'Narration.' }]));
-    expect(line).toEqual({ speaker: '', unitClass: null, side: 'left', text: 'Narration.' });
+    expect(line).toEqual({
+      speaker: '',
+      team: null,
+      unitClass: null,
+      side: 'left',
+      portrait: null,
+      text: 'Narration.',
+    });
   });
 
   it('throws on an empty script, a line without text, or an unknown side', () => {

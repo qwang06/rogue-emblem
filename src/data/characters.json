@@ -1,0 +1,7 @@
+{
+  "alden": { "name": "Alden", "team": "player", "unitClass": "villager", "portrait": null },
+  "bryn": { "name": "Bryn", "team": "player", "unitClass": "villager", "portrait": null },
+  "cato": { "name": "Cato", "team": "player", "unitClass": "villager", "portrait": null },
+  "enemy_soldier": { "name": "Enemy Soldier", "team": "enemy", "unitClass": "soldier", "portrait": null },
+  "sparring_partner": { "name": "Sparring Partner", "team": "enemy", "unitClass": null, "portrait": null }
+}
