@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { gameCommands } from '../bridge/commands.js';
-import { getRevealedLength } from '../game/dialog.js';
+import { getRevealedLength } from '../game/dialog.ts';
 import { UnitSprite } from './UnitSprite.jsx';
 import { useGameStore } from './useGameStore.js';
 

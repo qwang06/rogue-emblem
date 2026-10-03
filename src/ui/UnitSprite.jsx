@@ -1,7 +1,7 @@
 import { SPRITE_URLS } from '../assets/sprites.js';
-import { TILE_SIZE, UNIT_ANIMATIONS, UNIT_SHEET, unitSheetKey } from '../game/tileset.js';
+import { TILE_SIZE, UNIT_ANIMATIONS, UNIT_SHEET, unitSheetKey } from '../game/tileset.ts';
 
-// A unit's idle sheet by unit art name (UNIT_SPRITES in tileset.js), drawn at
+// A unit's idle sheet by unit art name (UNIT_SPRITES in tileset.ts), drawn at
 // the size of `scale` map tiles with crisp pixels, cropped from the sheet's
 // row for the direction units start out facing. Shows the first idle frame, or with `animated`
 // loops the idle frames like units on the map. Used to show unit sprites in

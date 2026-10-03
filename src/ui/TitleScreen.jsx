@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { gameStore } from '../bridge/gameStore.js';
-import { createActionMenu, getSelectedAction, moveSelection, selectIndex } from '../game/actionMenu.js';
-import { TITLE_ACTIONS } from '../game/titleMenu.js';
-import { getTrainingActions } from '../game/trainingLevel.js';
+import { createActionMenu, getSelectedAction, moveSelection, selectIndex } from '../game/actionMenu.ts';
+import { TITLE_ACTIONS } from '../game/titleMenu.ts';
+import { getTrainingActions } from '../game/trainingLevel.ts';
 
 const TRAINING_INDEX = TITLE_ACTIONS.findIndex((action) => action.id === 'training');
 

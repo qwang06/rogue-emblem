@@ -25,9 +25,7 @@ export function LevelUpPanel() {
             </div>
           ))}
         </dl>
-        {levelUp.skills.length > 0 && (
-          <p className="level-up__skills">Learned {levelUp.skills.join(', ')}</p>
-        )}
+        {levelUp.skills.length > 0 && <p className="level-up__skills">Learned {levelUp.skills.join(', ')}</p>}
       </section>
     </div>
   );

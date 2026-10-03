@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Unit } from '../game/Unit.js';
+import { Unit } from '../game/Unit.ts';
 import {
   mergeTileAnchors,
   toExperienceGainView,
@@ -15,9 +15,9 @@ import {
   toUnitView,
   worldToScreen,
 } from './views.js';
-import { advanceDialog, createDialog } from '../game/dialog.js';
-import { HEALTH_POTION } from '../game/items.js';
-import { createTurnState, markDone } from '../game/turns.js';
+import { advanceDialog, createDialog } from '../game/dialog.ts';
+import { HEALTH_POTION } from '../game/items.ts';
+import { createTurnState, markDone } from '../game/turns.ts';
 
 const makeUnit = () =>
   new Unit({ name: 'Soldier', health: 10, mana: 5, strength: 4, defense: 2, movement: 5, team: 'player' });
@@ -274,14 +274,34 @@ describe('toCombatForecastView', () => {
 describe('toExperienceGainView', () => {
   it('fills the bar from the old XP to the new', () => {
     const result = { amount: 30, level: 1, experience: 50, levelUps: [] };
-    const view = toExperienceGainView({ id: 1, name: 'Ana', from: { level: 1, experience: 20 }, result, durationMs: 900 });
-    expect(view).toEqual({ id: 1, name: 'Ana', level: 1, gained: 30, startPercent: 20, endPercent: 50, durationMs: 900 });
+    const view = toExperienceGainView({
+      id: 1,
+      name: 'Ana',
+      from: { level: 1, experience: 20 },
+      result,
+      durationMs: 900,
+    });
+    expect(view).toEqual({
+      id: 1,
+      name: 'Ana',
+      level: 1,
+      gained: 30,
+      startPercent: 20,
+      endPercent: 50,
+      durationMs: 900,
+    });
     expect(Object.isFrozen(view)).toBe(true);
   });
 
   it('fills the bar to 100 on a level up', () => {
     const result = { amount: 30, level: 2, experience: 10, levelUps: [{}] };
-    const view = toExperienceGainView({ id: 2, name: 'Ana', from: { level: 1, experience: 80 }, result, durationMs: 900 });
+    const view = toExperienceGainView({
+      id: 2,
+      name: 'Ana',
+      from: { level: 1, experience: 80 },
+      result,
+      durationMs: 900,
+    });
     expect(view.startPercent).toBe(80);
     expect(view.endPercent).toBe(100);
   });

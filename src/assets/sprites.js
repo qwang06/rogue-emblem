@@ -1,6 +1,6 @@
 // Texture key -> URL for every standalone sprite sheet. GridScene preloads
 // them all under these keys; the React UI looks unit portraits up here.
-// src/game/tileset.js names which key each unit draws with.
+// src/game/tileset.ts names which key each unit draws with.
 
 import gates from './gates.png';
 import goldGinkgoTree from './gold_ginkgo_tree.png';

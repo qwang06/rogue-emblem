@@ -1,4 +1,4 @@
-import { getUnitSprite } from '../game/tileset.js';
+import { getUnitSprite } from '../game/tileset.ts';
 import { UnitSprite } from './UnitSprite.jsx';
 import { useGameStore } from './useGameStore.js';
 

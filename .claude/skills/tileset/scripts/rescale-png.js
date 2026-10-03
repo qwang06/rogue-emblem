@@ -44,7 +44,12 @@ function encode(file, rows) {
   const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
   fs.writeFileSync(
     file,
-    Buffer.concat([signature, chunk('IHDR', header), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]),
+    Buffer.concat([
+      signature,
+      chunk('IHDR', header),
+      chunk('IDAT', zlib.deflateSync(raw)),
+      chunk('IEND', Buffer.alloc(0)),
+    ]),
   );
 }
 
@@ -59,9 +64,7 @@ const cropArg = option('--crop', null);
 const [input, output] = args;
 
 const rows = decode(input);
-const [width, height] = cropArg
-  ? cropArg.split('x').map(Number)
-  : [rows[0].length / from, rows.length / from];
+const [width, height] = cropArg ? cropArg.split('x').map(Number) : [rows[0].length / from, rows.length / from];
 
 const native = [];
 for (let y = 0; y < height; y++) {

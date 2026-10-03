@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { getEllipseSpans } from '../game/pixelShapes.js';
-import { TREE_SHADOW, UNIT_SHADOW } from '../game/tileset.js';
+import { getEllipseSpans } from '../game/pixelShapes.ts';
+import { TREE_SHADOW, UNIT_SHADOW } from '../game/tileset.ts';
 
 const UNIT_SHADOW_DEPTH = 0.7; // above range highlights and the arrow, below units
 const TREE_SHADOW_DEPTH = 0.35; // over the terrain, below trees (0.4)

@@ -15,9 +15,7 @@ export function createStore(initialState) {
   // merges it, and notifies only if some top-level value actually changed.
   function setState(update) {
     const partial = typeof update === 'function' ? update(state) : update;
-    const changed = Object.keys(partial).some(
-      (key) => !(key in state) || !Object.is(state[key], partial[key]),
-    );
+    const changed = Object.keys(partial).some((key) => !(key in state) || !Object.is(state[key], partial[key]));
     if (!changed) return;
 
     state = { ...state, ...partial };

@@ -43,10 +43,7 @@ export function playStoneThrow(scene, from, to, onDone) {
     duration: Math.max(STONE_MIN_FLIGHT_MS, distance / STONE_SPEED),
     onUpdate: (tween) => {
       const t = tween.getValue();
-      stone.setPosition(
-        from.x + (to.x - from.x) * t,
-        from.y + (to.y - from.y) * t - Math.sin(Math.PI * t) * arcHeight,
-      );
+      stone.setPosition(from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t - Math.sin(Math.PI * t) * arcHeight);
     },
     onComplete: () => {
       stone.destroy();

@@ -11,7 +11,7 @@ export const BATTLE_STATE_DEFAULTS = Object.freeze({
   rosterMenu: null, // frozen menu of RosterEntryViews while picking a unit to place, or null
   pauseMenu: null, // frozen Main Menu / Settings menu while open, or null
   hoveredUnit: null, // UnitView from toUnitView(), or null
-  actionMenu: null, // frozen menu from src/game/actionMenu.js while open, or null
+  actionMenu: null, // frozen menu from src/game/actionMenu.ts while open, or null
   skillMenu: null, // frozen menu of the active unit's skills (from getSkillActions) while open, or null
   itemMenu: null, // frozen menu of the active unit's items (from getItemActions) while open, or null
   combatForecast: null, // CombatForecastView from toCombatForecastView() while aiming an attack at a target, or null
@@ -30,7 +30,7 @@ export const BATTLE_STATE_DEFAULTS = Object.freeze({
 export const gameStore = createStore({
   screen: 'title', // 'title' (main menu) | 'battle' (the map is running)
   // Which battle the map runs, set together with screen: 'battle':
-  // { mode: 'demo' } | { mode: 'training', unitClass } (a class id from src/game/unitClasses.js)
+  // { mode: 'demo' } | { mode: 'training', unitClass } (a class id from src/game/unitClasses.ts)
   battleSetup: null,
   ...BATTLE_STATE_DEFAULTS,
 });

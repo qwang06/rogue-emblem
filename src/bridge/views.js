@@ -73,7 +73,7 @@ export function mergeTileAnchors(a, b) {
 }
 
 // Snapshot of the combat forecast shown while aiming an attack, from
-// getCombatForecast (src/game/combat.js): per side, the unit's name and
+// getCombatForecast (src/game/combat.ts): per side, the unit's name and
 // team plus its forecast numbers (damage / hit / crit are null for a
 // defender that can't counter, which the UI shows as "–"). `anchor` is a
 // TileAnchorView covering both units, which the panel opens beside.
@@ -119,7 +119,7 @@ export function toRosterEntryView({ id, unit, sprite, placed }) {
 // before and after — a level up fills it to 100, and the level-up panel
 // takes over from there. `from` is the unit's { level, experience } before
 // the gain and `result` the resolveExperienceGain result (src/game/
-// experience.js). `id` changes per bar so the UI restarts its animation.
+// experience.ts). `id` changes per bar so the UI restarts its animation.
 export function toExperienceGainView({ id, name, from, result, durationMs }) {
   return Object.freeze({
     id,
@@ -166,7 +166,7 @@ export function toLevelUpView({ id, name, levelUp, durationMs }) {
 
 const PHASE_LABELS = Object.freeze({ player: 'Player Phase', enemy: 'Enemy Phase' });
 
-// Snapshot of whose phase it is, from a turn state (src/game/turns.js):
+// Snapshot of whose phase it is, from a turn state (src/game/turns.ts):
 // the turn number, the team, and the phase's display name.
 export function toTurnView(turnState) {
   if (!turnState) return null;
@@ -181,7 +181,7 @@ export function toPhaseBannerView({ id, turnState, durationMs }) {
 }
 
 // Snapshot of the line the dialog box shows, from a dialog
-// (src/game/dialog.js). `id` changes per line so the UI restarts its
+// (src/game/dialog.ts). `id` changes per line so the UI restarts its
 // typing; `sprite` is the unit art standing in for the speaker's portrait
 // (null for none); `revealed` is true once the player has skipped the
 // typing, and `charsPerSecond` is how fast it types otherwise, so the UI

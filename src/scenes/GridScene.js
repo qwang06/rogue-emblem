@@ -18,23 +18,17 @@ import {
   toUnitView,
   worldToScreen,
 } from '../bridge/views.js';
-import { createActionMenu, getSelectedAction, getUnitActions, moveSelection, selectIndex } from '../game/actionMenu.js';
-import { getCombatExperience, getCombatOutcome } from '../game/experience.js';
-import { calculateSkillDamage, findLearnedSkill, getLearnedSkills, getSkillActions } from '../game/skills.js';
-import {
-  getAttackRange,
-  getAttackTargets,
-  getCombatForecast,
-  getThreatRange,
-  resolveCombat,
-} from '../game/combat.js';
-import { getFitZoom } from '../game/camera.js';
-import { createCursor, moveCursor } from '../game/cursor.js';
-import { createDemoLevel } from '../game/demoLevel.js';
-import { getStructureTiles } from '../game/structures.js';
-import { createTrainingLevel } from '../game/trainingLevel.js';
-import { getItemActions } from '../game/items.js';
-import { planRushAction } from '../game/enemyAI.js';
+import { createActionMenu, getSelectedAction, getUnitActions, moveSelection, selectIndex } from '../game/actionMenu.ts';
+import { getCombatExperience, getCombatOutcome } from '../game/experience.ts';
+import { calculateSkillDamage, findLearnedSkill, getLearnedSkills, getSkillActions } from '../game/skills.ts';
+import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange, resolveCombat } from '../game/combat.ts';
+import { getFitZoom } from '../game/camera.ts';
+import { createCursor, moveCursor } from '../game/cursor.ts';
+import { createDemoLevel } from '../game/demoLevel.ts';
+import { getStructureTiles } from '../game/structures.ts';
+import { createTrainingLevel } from '../game/trainingLevel.ts';
+import { getItemActions } from '../game/items.ts';
+import { planRushAction } from '../game/enemyAI.ts';
 import {
   canPlaceUnit,
   canStartBattle,
@@ -42,15 +36,15 @@ import {
   getFirstOpenTile,
   isPlaced,
   placeUnit,
-} from '../game/deployment.js';
-import { findUnit, getCell, gridToWorld, isInBounds, moveUnit, setUnit, worldToGrid } from '../game/grid.js';
-import { advanceDialog, createDialog, DIALOG_CHARS_PER_SECOND, getCurrentLine } from '../game/dialog.js';
-import { getPathFacings } from '../game/facing.js';
-import { createKeyRepeat, updateKeyRepeat } from '../game/keyRepeat.js';
-import { getArrowPieces } from '../game/moveArrow.js';
-import { getQuarterFrames, getTileFrame } from '../game/autotile.js';
-import { extendMovePath, getMovementRange } from '../game/movement.js';
-import { PAUSE_ACTIONS } from '../game/pauseMenu.js';
+} from '../game/deployment.ts';
+import { findUnit, getCell, gridToWorld, isInBounds, moveUnit, setUnit, worldToGrid } from '../game/grid.ts';
+import { advanceDialog, createDialog, DIALOG_CHARS_PER_SECOND, getCurrentLine } from '../game/dialog.ts';
+import { getPathFacings } from '../game/facing.ts';
+import { createKeyRepeat, updateKeyRepeat } from '../game/keyRepeat.ts';
+import { getArrowPieces } from '../game/moveArrow.ts';
+import { getQuarterFrames, getTileFrame } from '../game/autotile.ts';
+import { extendMovePath, getMovementRange } from '../game/movement.ts';
+import { PAUSE_ACTIONS } from '../game/pauseMenu.ts';
 import {
   createTurnState,
   getBattleOutcome,
@@ -60,7 +54,7 @@ import {
   markMoved,
   nextPhase,
   unmarkMoved,
-} from '../game/turns.js';
+} from '../game/turns.ts';
 import {
   ARROW_TILES,
   CURSOR_ANIMATION,
@@ -74,7 +68,7 @@ import {
   UNIT_SHEET,
   getUnitSprite,
   unitSheetKey,
-} from '../game/tileset.js';
+} from '../game/tileset.ts';
 import { POTION_COLORS, playHitFlash, playLunge, playPotionGlow, playStoneThrow } from './effects.js';
 import { addTreeShadow, addUnitShadow } from './unitShadow.js';
 
@@ -137,8 +131,7 @@ export class GridScene extends Phaser.Scene {
     // battle left in the store.
     gameStore.setState({ ...BATTLE_STATE_DEFAULTS });
 
-    const level =
-      setup?.mode === 'training' ? createTrainingLevel(setup.unitClass) : createDemoLevel();
+    const level = setup?.mode === 'training' ? createTrainingLevel(setup.unitClass) : createDemoLevel();
     this.grid = level.grid;
     this.units = level.units; // unitId -> Unit, player roster and enemies alike
     this.roster = level.roster; // player unitIds that can be deployed
@@ -158,7 +151,7 @@ export class GridScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.DESTROY, stopFitting);
 
     this.keys = this.input.keyboard.createCursorKeys();
-    this.arrowRepeat = createKeyRepeat(); // held arrow keys step the cursor / menus again (src/game/keyRepeat.js)
+    this.arrowRepeat = createKeyRepeat(); // held arrow keys step the cursor / menus again (src/game/keyRepeat.ts)
     this.actionKeys = this.input.keyboard.addKeys({
       confirm: Phaser.Input.Keyboard.KeyCodes.ENTER,
       confirmAlt: Phaser.Input.Keyboard.KeyCodes.Z,
@@ -184,13 +177,13 @@ export class GridScene extends Phaser.Scene {
     this.movePath = null; // planned route [{ x, y }] from the active unit to the cursor
     this.arrowSprites = []; // arrow pieces drawn along movePath
     this.inputLocked = false; // input is ignored while a move, hit, banner, or the enemy phase plays out
-    this.turnState = null; // from src/game/turns.js once the battle starts
+    this.turnState = null; // from src/game/turns.ts once the battle starts
     this.battleOutcome = null; // 'victory' | 'defeat' once the battle is decided
     this.nextBannerId = 1;
     this.hoveredUnit = null;
     this.nextPopupId = 1;
     this.nextProgressId = 1; // changes per XP bar / level-up panel so React restarts their animations
-    this.dialog = null; // from src/game/dialog.js while a conversation is showing
+    this.dialog = null; // from src/game/dialog.ts while a conversation is showing
     this.dialogLineStartedAt = 0; // scene time the current line started typing
     this.onDialogDone = null;
     this.dialogLineId = null; // changes per line so the dialog box restarts its typing
@@ -226,10 +219,8 @@ export class GridScene extends Phaser.Scene {
     const { JustDown } = Phaser.Input.Keyboard;
     const { dx, dy } = this.readArrowKeys(delta);
     const pointer = this.drainPointerInput();
-    const confirm =
-      JustDown(this.actionKeys.confirm) || JustDown(this.actionKeys.confirmAlt) || pointer.confirm;
-    const cancel =
-      JustDown(this.actionKeys.cancel) || JustDown(this.actionKeys.cancelAlt) || pointer.cancel;
+    const confirm = JustDown(this.actionKeys.confirm) || JustDown(this.actionKeys.confirmAlt) || pointer.confirm;
+    const cancel = JustDown(this.actionKeys.cancel) || JustDown(this.actionKeys.cancelAlt) || pointer.cancel;
 
     if (this.inputLocked) return;
 
@@ -319,7 +310,7 @@ export class GridScene extends Phaser.Scene {
   }
 
   // This frame's arrow-key step as { dx, dy }: one tile or menu entry when
-  // a key is pressed, repeating while it's held (src/game/keyRepeat.js).
+  // a key is pressed, repeating while it's held (src/game/keyRepeat.ts).
   readArrowKeys(delta) {
     const { JustDown } = Phaser.Input.Keyboard;
     const isDown = {};
@@ -405,7 +396,12 @@ export class GridScene extends Phaser.Scene {
       const { unit, x, y } = this.activeUnit;
       this.activeSkill = findLearnedSkill(unit.unitClass, unit.level, skill.id);
       this.setCursor(x, y);
-      this.showRange('skill', getAttackRange(this.grid, { x, y }, this.activeSkill.range), SKILL_RANGE_COLOR, SKILL_RANGE_ALPHA);
+      this.showRange(
+        'skill',
+        getAttackRange(this.grid, { x, y }, this.activeSkill.range),
+        SKILL_RANGE_COLOR,
+        SKILL_RANGE_ALPHA,
+      );
       return;
     }
 
@@ -493,7 +489,7 @@ export class GridScene extends Phaser.Scene {
   // ---- Dialog -----------------------------------------------------------
   // A conversation in the dialog box (drawn by React) owns input while it
   // shows: confirm finishes typing the line, or moves to the next one;
-  // cancel skips the rest. The rules live in src/game/dialog.js. `onDone`
+  // cancel skips the rest. The rules live in src/game/dialog.ts. `onDone`
   // runs once the dialog closes.
 
   playDialog(lines, onDone) {
@@ -544,16 +540,12 @@ export class GridScene extends Phaser.Scene {
   //   'roster'  — pick the unit to place
   //   'placing' — move the cursor and confirm a zone tile
   // The rules (valid tiles, when Start is allowed) live in
-  // src/game/deployment.js; this only drives input and rendering.
+  // src/game/deployment.ts; this only drives input and rendering.
 
   startDeployment() {
     this.phase = 'deployment';
     gameStore.setState({ phase: 'deployment' });
-    this.zoneTiles = this.drawTileHighlights(
-      this.deploymentZone,
-      DEPLOYMENT_ZONE_COLOR,
-      DEPLOYMENT_ZONE_ALPHA,
-    );
+    this.zoneTiles = this.drawTileHighlights(this.deploymentZone, DEPLOYMENT_ZONE_COLOR, DEPLOYMENT_ZONE_ALPHA);
     // The cursor stays hidden while a deployment menu has input; it only
     // appears once there's a tile to choose.
     this.setCursorVisible(false);
@@ -648,9 +640,7 @@ export class GridScene extends Phaser.Scene {
   beginPlacing(unitId) {
     this.placingUnitId = unitId;
     const tile =
-      findUnit(this.grid, unitId) ??
-      getFirstOpenTile(this.grid, this.deploymentZone) ??
-      this.deploymentZone[0];
+      findUnit(this.grid, unitId) ?? getFirstOpenTile(this.grid, this.deploymentZone) ?? this.deploymentZone[0];
     this.setCursor(tile.x, tile.y);
     this.setCursorVisible(true);
     this.setDeploymentStep('placing');
@@ -694,10 +684,10 @@ export class GridScene extends Phaser.Scene {
 
   // ---- Turns ------------------------------------------------------------
   // The battle alternates a player phase and an enemy phase (rules in
-  // src/game/turns.js). In the player phase each unit may move, then act
+  // src/game/turns.ts). In the player phase each unit may move, then act
   // (attack, skill, or wait); acting finishes it and greys it out. Once all
   // are finished the enemy phase runs on its own, each enemy acting in turn
-  // with the plan from src/game/enemyAI.js. After every action the battle
+  // with the plan from src/game/enemyAI.ts. After every action the battle
   // checks for victory or defeat.
 
   // Announces the phase with a banner (input locked meanwhile), then either
@@ -795,13 +785,7 @@ export class GridScene extends Phaser.Scene {
   takeEnemyAction(unitId, onDone) {
     const unit = this.units.get(unitId);
     const from = findUnit(this.grid, unitId);
-    const { path, target } = planRushAction(
-      this.grid,
-      from,
-      unit,
-      this.isHostileTo(unit),
-      this.movementOptions(unit),
-    );
+    const { path, target } = planRushAction(this.grid, from, unit, this.isHostileTo(unit), this.movementOptions(unit));
     const to = path[path.length - 1];
     const finish = () => {
       this.finishUnit(unitId);
@@ -819,7 +803,7 @@ export class GridScene extends Phaser.Scene {
     });
   }
 
-  // Options for src/game/movement.js: allies can be walked through, anyone
+  // Options for src/game/movement.ts: allies can be walked through, anyone
   // else blocks.
   movementOptions(unit) {
     return {
@@ -837,8 +821,8 @@ export class GridScene extends Phaser.Scene {
 
   // Highlights every tile the active unit can reach in blue, and the tiles
   // it could attack from there in red around them, and starts the planned
-  // route at the unit. The ranges come from src/game/movement.js and
-  // src/game/combat.js; this only draws them.
+  // route at the unit. The ranges come from src/game/movement.ts and
+  // src/game/combat.ts; this only draws them.
   showMoveRange() {
     const { unit, x, y } = this.activeUnit;
     this.moveRange = getMovementRange(this.grid, { x, y }, unit.movement, this.movementOptions(unit));
@@ -852,19 +836,13 @@ export class GridScene extends Phaser.Scene {
   // way the player traced it where it can) and redraws the arrow along it.
   updateMovePath() {
     const { unit } = this.activeUnit;
-    const path = extendMovePath(
-      this.grid,
-      this.movePath,
-      this.cursor,
-      unit.movement,
-      this.movementOptions(unit),
-    );
+    const path = extendMovePath(this.grid, this.movePath, this.cursor, unit.movement, this.movementOptions(unit));
     if (path === this.movePath) return;
     this.movePath = path;
     this.drawMoveArrow(path);
   }
 
-  // Draws the arrow pieces from src/game/moveArrow.js above the range
+  // Draws the arrow pieces from src/game/moveArrow.ts above the range
   // highlight and below units.
   drawMoveArrow(path) {
     this.clearMoveArrow();
@@ -881,7 +859,7 @@ export class GridScene extends Phaser.Scene {
   }
 
   // Highlights every tile the active unit can strike, from
-  // src/game/combat.js, and puts the cursor on the first hostile unit in
+  // src/game/combat.ts, and puts the cursor on the first hostile unit in
   // range so its combat forecast shows straight away. Only tiles holding a
   // hostile unit accept confirm.
   showAttackRange() {
@@ -902,7 +880,7 @@ export class GridScene extends Phaser.Scene {
   }
 
   // While aiming an attack, publishes the combat forecast
-  // (getCombatForecast in src/game/combat.js) against the target under the
+  // (getCombatForecast in src/game/combat.ts) against the target under the
   // cursor, anchored beside both units for React's CombatForecast to draw;
   // clears it whenever there's no target to forecast.
   updateCombatForecast() {
@@ -929,10 +907,7 @@ export class GridScene extends Phaser.Scene {
   drawTileHighlights(tiles, color, alpha) {
     return tiles.map((tile) => {
       const pos = gridToWorld(tile.x, tile.y, TILE_SIZE);
-      return this.add
-        .rectangle(pos.x, pos.y, TILE_SIZE, TILE_SIZE, color, alpha)
-        .setOrigin(0, 0)
-        .setDepth(0.5);
+      return this.add.rectangle(pos.x, pos.y, TILE_SIZE, TILE_SIZE, color, alpha).setOrigin(0, 0).setDepth(0.5);
     });
   }
 
@@ -1000,7 +975,7 @@ export class GridScene extends Phaser.Scene {
   // One unit attacks another ({ x, y, unitId } target), for either side.
   // The exchange — the attack, the defender's counter if the attacker is
   // in its range, and a follow-up strike for whoever doubles, each rolled
-  // to hit and crit — comes from resolveCombat in src/game/combat.js and is
+  // to hit and crit — comes from resolveCombat in src/game/combat.ts and is
   // played strike by strike: each hit's damage is applied right away so
   // the HUD shows the new health while the struck sprite flashes and a
   // damage number pops over it (a crit also shakes the camera); a miss just
@@ -1048,7 +1023,7 @@ export class GridScene extends Phaser.Scene {
 
   // After an exchange from resolveAttack, gives the player unit in it (only
   // player units gain XP) the XP its outcome earned (src/game/
-  // experience.js), unless it died; then onDone.
+  // experience.ts), unless it died; then onDone.
   awardCombatExperience(sides, strikes, onDone) {
     const side = ['attacker', 'defender'].find((s) => sides[s].unit.team === 'player');
     const unit = side && sides[side].unit;
@@ -1101,7 +1076,7 @@ export class GridScene extends Phaser.Scene {
 
   // Uses the aimed skill on the unit under the cursor, if it's a hostile
   // unit in the skill's range. Mana is spent and damage from
-  // src/game/skills.js applied right away; then the skill's animation plays
+  // src/game/skills.ts applied right away; then the skill's animation plays
   // (see playSkillAnimation) and a unit brought to 0 health is removed once
   // it finishes.
   tryUseSkill() {
@@ -1181,7 +1156,7 @@ export class GridScene extends Phaser.Scene {
   }
 
   // The active unit uses one of its items on itself. The effect (from
-  // Unit.useItem and src/game/items.js) applies right away; the unit glows
+  // Unit.useItem and src/game/items.ts) applies right away; the unit glows
   // in the potion's color while a "+N HP" / "+N MP" popup rises over it,
   // and using an item ends its action.
   useItem(itemId) {
@@ -1205,10 +1180,7 @@ export class GridScene extends Phaser.Scene {
   showDamagePopup(sprite, amount, kind = 'damage') {
     const { worldView, zoom } = this.cameras.main;
     const { x, y } = toCanvasFraction(
-      worldToScreen(
-        { x: sprite.x + sprite.displayWidth / 2, y: sprite.y },
-        { x: worldView.x, y: worldView.y, zoom },
-      ),
+      worldToScreen({ x: sprite.x + sprite.displayWidth / 2, y: sprite.y }, { x: worldView.x, y: worldView.y, zoom }),
       this.scale.gameSize,
     );
     const popup = toDamagePopupView({
@@ -1433,7 +1405,7 @@ export class GridScene extends Phaser.Scene {
   }
 
   // Terrain is plain grass under every cell, with each autotiled terrain
-  // (see src/game/autotile.js) drawn over it as its own layer of half-size
+  // (see src/game/autotile.ts) drawn over it as its own layer of half-size
   // tiles, four per cell. Animated sets step through their copies on a timer.
   renderTerrain(grid) {
     const { key, columns } = TERRAIN_SHEET;

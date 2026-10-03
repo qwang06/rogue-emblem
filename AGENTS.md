@@ -10,7 +10,7 @@ Turn-based tactical strategy, in the vein of Fire Emblem and Advance Wars: top-d
 
 ## Tileset
 
-Any work that touches art — picking or changing terrain frame indices or sprite keys, the tables in `src/game/tileset.js` and `src/assets/sprites.js`, terrain autotiling, new terrain types, unit or UI sprites, or tilemap rendering — must start by loading the `tileset` skill (`.claude/skills/tileset/SKILL.md`). It describes the terrain sheet's layout and the sprite files, and has a script for inspecting any PNG as ASCII. If you learn something new about an image, add it to the skill.
+Any work that touches art — picking or changing terrain frame indices or sprite keys, the tables in `src/game/tileset.ts` and `src/assets/sprites.js`, terrain autotiling, new terrain types, unit or UI sprites, or tilemap rendering — must start by loading the `tileset` skill (`.claude/skills/tileset/SKILL.md`). It describes the terrain sheet's layout and the sprite files, and has a script for inspecting any PNG as ASCII. If you learn something new about an image, add it to the skill.
 
 ## Coding philosophy
 
@@ -19,6 +19,14 @@ Any work that touches art — picking or changing terrain frame indices or sprit
 - **UI elements belong in React.** Menus, panels, HUD readouts, text popups (e.g. damage numbers), dialogs — build them as React components in `src/ui/` that read state from the bridge store, not as Phaser game objects. Phaser publishes what to show (including screen positions for anything anchored to the map) and React draws it. Only use Phaser for UI when it's unequivocally the better fit — e.g. something that must be drawn in world space as part of the map, like the tile cursor or range highlights.
 - **Unit test the pure functions.** Every pure function implementing a game rule gets unit tests covering normal cases and edge cases (e.g. zero movement, blocked tiles, unit death, boundary of the map). Tests should not require Phaser or a running game instance to execute.
 - **Don't rely on visual/browser testing to verify game logic.** As game rules grow more complex, eyeballing a rendered scene stops being a tractable way to confirm correctness. Unit tests on the pure functions are the source of truth — run those to verify a change instead of launching the game in a browser.
+
+## TypeScript
+
+The codebase is migrating from JavaScript to TypeScript one module at a time. Write new files as `.ts` / `.tsx`. When you substantially change a `.js` / `.jsx` file, convert it (and its test) to TypeScript in the same change. Import TS files with their `.ts` / `.tsx` extension. Run `npm run typecheck` alongside `npm test` to verify a change.
+
+## Formatting
+
+Prettier (`.prettierrc.json`) owns code and Markdown formatting. Don't hand-format: write the change, then run `npx prettier --write <files you touched>` (or `npm run format` for everything) and keep what it produces. `npm run format:check` must pass before a PR.
 
 ## Git workflow
 
@@ -35,7 +43,7 @@ Any work that touches art — picking or changing terrain frame indices or sprit
 
 ## Unit reference
 
-`UNITS.md` is the running reference for every unit class's base stats, growth rates, caps and skills, plus the level-1 matchup numbers. Update it in the same change whenever a class's stats, growths, caps or skills change, a skill's numbers change, or a class is added. `src/game/unitsDoc.test.js` checks it against the code, so the test suite fails when it drifts.
+`UNITS.md` is the running reference for every unit class's base stats, growth rates, caps and skills, plus the level-1 matchup numbers. Update it in the same change whenever a class's stats, growths, caps or skills change, a skill's numbers change, or a class is added. `src/game/unitsDoc.test.ts` checks it against the code, so the test suite fails when it drifts.
 
 ## Architecture docs
 
