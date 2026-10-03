@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SPRITE_URLS } from '../assets/sprites.js';
+import { SPRITE_URLS } from '../assets/sprites.ts';
 import { FACINGS } from './facing.ts';
 import {
   ARROW_TILES,

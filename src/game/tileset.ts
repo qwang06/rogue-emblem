@@ -4,7 +4,7 @@
 // tiles, 42 columns x 63 rows; see .claude/skills/tileset/overworld-catalog.md
 // for what's where) and is picked by position on it. The tile cursor and the
 // movement arrow are tiles of the same sheet. Units are standalone sprite
-// sheets, one per animation, named here by texture key (src/assets/sprites.js
+// sheets, one per animation, named here by texture key (src/assets/sprites.ts
 // maps keys to files), cut into one-tile frames.
 
 import type { Autotile, SheetTile } from './autotile.ts';

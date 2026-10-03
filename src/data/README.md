@@ -16,7 +16,7 @@ Everyone who can speak in dialog, by id:
 - **name**: shown on the dialog box's name plate.
 - **team**: `player` or `enemy`. Player speakers stand on the left of the dialog box, enemies on the right.
 - **unitClass**: the unit class (`villager`, `soldier`, ...) whose sprite fills the portrait frame until there's portrait art, or `null` for an empty frame. Optional. The Sparring Partner leaves it `null` because Training fills in whichever class you picked.
-- **portrait**: the sprite key of the character's portrait art, or `null` for none yet. A new portrait image goes in `src/assets/sprites.js` like the other sprites.
+- **portrait**: the sprite key of the character's portrait art, or `null` for none yet. A new portrait image goes in `src/assets/sprites.ts` like the other sprites.
 
 ## `dialog/*.txt`
 

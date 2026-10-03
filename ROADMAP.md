@@ -52,7 +52,7 @@ The single biggest change to how the game feels. After this phase every attack i
 ### [x] 1.4 Combat forecast panel
 
 - Pure `getCombatForecast(attacker, defender, context)` → `{ attacker: { hp, damage, hit, crit, strikes }, defender: {...} }` — shares formulas with `resolveCombat` so preview and outcome can't disagree.
-- When choosing an attack target, the scene publishes the forecast for the hovered target; a React `CombatForecast.jsx` renders it (HP, Dmg, Hit, Crit, ×2) beside the units.
+- When choosing an attack target, the scene publishes the forecast for the hovered target; a React `CombatForecast.tsx` renders it (HP, Dmg, Hit, Crit, ×2) beside the units.
 - Confirm/cancel flow: cursor over target shows the forecast, confirm attacks, cancel backs out.
 - **Tests:** forecast equals the expected values of `resolveCombat`; no-counter shows "–" for defender.
 - _Notes:_ each side is `{ health, maxHealth, damage, hit, crit, strikes, counters }`; a non-countering defender has `null` damage/hit/crit (rendered "–") and 0 strikes. `damage` is per landed non-crit strike — the panel doesn't show a predicted post-combat HP (could add "HP → after" later). Entering attack aim snaps the cursor to the first target in range; no cycling between targets with a dedicated key yet. The panel opens beside both units (right of the pair if it fits, else left). Enemy-phase attacks show no forecast. Skills get no forecast yet — add one when magic/tome skills join regular combat.
@@ -62,7 +62,7 @@ The single biggest change to how the game feels. After this phase every attack i
 - Pure `src/game/experience.ts`: XP for a hit / a kill / a miss, scaled by level difference (FE-style); 100 XP = level up, carry overflow.
 - Growth rates per class (`{ health: 80, strength: 50, ... }` percentages); `rollLevelUp(unit, growths, rng)` returns the stat gains. `Unit.levelUp()` applies gains instead of only incrementing level.
 - Existing skill unlocks (`getSkillsLearnedBetween`) hook into the same level-up.
-- React `LevelUpPanel.jsx` showing each stat with "+1" highlights; XP bar after combat.
+- React `LevelUpPanel.tsx` showing each stat with "+1" highlights; XP bar after combat.
 - Only player units gain XP.
 - **Tests:** XP amounts across level gaps, overflow, multi-level gain, growth rolls with stubbed RNG, 0% / 100% growths, stat caps (if any).
 - _Notes:_ FE7-style numbers: hit = `max(1, floor((31 + enemyLv − Lv) / 3))` (10 at even levels), kill = hit + `max(0, 20 + 3 × (enemyLv − Lv))` (30 at even levels), 1 XP for a miss / 0-damage / no-strike combat, 0 if the unit dies; one combat gives at most 100 XP. Max level 20 (XP stays 0 there). Growths and caps live on the unit (set by its class, e.g. `SOLDIER_GROWTHS` / `SOLDIER_CAPS`; caps are 40 HP, 30 MP, 20 otherwise); growths over 100% give guaranteed points. Health/mana gains raise current values too. A damaging skill earns XP as one landed strike; items earn none. No class-based XP modifiers (promoted classes etc.) yet. The level-up panel is timed rather than dismissed with confirm, and the XP bar shows in the bottom center of the map rather than by the unit. Skill unlocks are listed on the panel, but the Soldier's only skill is learned at level 1, so none show yet.

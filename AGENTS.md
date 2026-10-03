@@ -10,7 +10,7 @@ Turn-based tactical strategy, in the vein of Fire Emblem and Advance Wars: top-d
 
 ## Tileset
 
-Any work that touches art — picking or changing terrain frame indices or sprite keys, the tables in `src/game/tileset.ts` and `src/assets/sprites.js`, terrain autotiling, new terrain types, unit or UI sprites, or tilemap rendering — must start by loading the `tileset` skill (`.claude/skills/tileset/SKILL.md`). It describes the terrain sheet's layout and the sprite files, and has a script for inspecting any PNG as ASCII. If you learn something new about an image, add it to the skill.
+Any work that touches art — picking or changing terrain frame indices or sprite keys, the tables in `src/game/tileset.ts` and `src/assets/sprites.ts`, terrain autotiling, new terrain types, unit or UI sprites, or tilemap rendering — must start by loading the `tileset` skill (`.claude/skills/tileset/SKILL.md`). It describes the terrain sheet's layout and the sprite files, and has a script for inspecting any PNG as ASCII. If you learn something new about an image, add it to the skill.
 
 ## Coding philosophy
 
@@ -22,7 +22,7 @@ Any work that touches art — picking or changing terrain frame indices or sprit
 
 ## TypeScript
 
-The codebase is migrating from JavaScript to TypeScript one module at a time. Write new files as `.ts` / `.tsx`. When you substantially change a `.js` / `.jsx` file, convert it (and its test) to TypeScript in the same change. Import TS files with their `.ts` / `.tsx` extension. Run `npm run typecheck` alongside `npm test` to verify a change.
+The codebase is TypeScript in `strict` mode (`tsconfig.json`). Write new files as `.ts` / `.tsx`, not JavaScript, and import them with their `.ts` / `.tsx` extension. Run `npm run typecheck` alongside `npm test` to verify a change.
 
 ## Formatting
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SPRITE_URLS } from '../assets/sprites.js';
+import { SPRITE_URLS } from '../assets/sprites.ts';
 import { createDialog } from '../game/dialog.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
 import { CHARACTERS, DIALOGS } from './dialogs.ts';

@@ -15,14 +15,9 @@
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
 
-    // Incremental migration: existing .js/.jsx files are part of the program
-    // (so .ts files can import them) but aren't type-checked until converted.
-    "allowJs": true,
-    "checkJs": false,
-
     "strict": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true
   },
-  "include": ["src", "vite.config.js"]
+  "include": ["src", "vite.config.ts"]
 }
