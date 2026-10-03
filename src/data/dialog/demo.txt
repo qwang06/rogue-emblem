@@ -1,0 +1,20 @@
+# Dialog for the demo battle. See src/data/README.md for the format.
+
+[opening]
+alden: Enemy soldiers have taken the old gate. This road is the only way through.
+bryn: Three of them, by my count. They'll see us coming all the way up the road.
+enemy_soldier: Hold the line! Nobody passes the gate while we still stand.
+cato: Then we won't let them stand for long.
+alden: Take your positions. We move on my signal.
+
+[turn 2]
+bryn: They're dug in under the gate. We'll have to push through.
+enemy_soldier: Is that all you've got? Come on, then!
+
+[victory]
+alden: The gate is ours. Tend to the wounded, then we march.
+cato: They won't forget this road in a hurry.
+
+[defeat]
+alden: Fall back... we can't hold here.
+enemy_soldier: Nobody passes. Just like I said.

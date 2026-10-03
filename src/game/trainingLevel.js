@@ -2,6 +2,7 @@
 // Training menu faces a single sparring partner of the same class on a
 // small open field. There's no deployment — both units start on the map.
 
+import { DIALOGS } from '../data/dialogs.js';
 import { setUnit } from './grid.js';
 import { parseTerrainMap } from './terrainMap.js';
 import { createUnitOfClass, UNIT_CLASSES } from './unitClasses.js';
@@ -22,31 +23,23 @@ export function getTrainingActions(classes = UNIT_CLASSES) {
   return Object.freeze(classes.map(({ id, label }) => Object.freeze({ id, label })));
 }
 
-// The sparring partner's greeting before the bout, as a script for
-// src/game/dialog.js. The partner is of the trainee's class, so its
-// portrait art is too.
-export function getTrainingOpeningDialog(unitClass) {
+// Training's conversations by trigger, from src/data/dialog/training.txt,
+// with every line given `unitClass` for its stand-in art: the sparring
+// partner is of the trainee's class, so its portrait is too.
+export function getTrainingDialogs(unitClass, dialogs = DIALOGS.training) {
   return Object.freeze(
-    [
-      {
-        speaker: 'Sparring Partner',
-        unitClass,
-        side: 'right',
-        text: "Ready when you are. Don't hold back on my account.",
-      },
-      {
-        speaker: 'Sparring Partner',
-        unitClass,
-        side: 'right',
-        text: 'Move in close, pick your action, and show me what you can do.',
-      },
-    ].map(Object.freeze),
+    Object.fromEntries(
+      Object.entries(dialogs).map(([trigger, lines]) => [
+        trigger,
+        Object.freeze(lines.map((line) => Object.freeze({ ...line, unitClass }))),
+      ]),
+    ),
   );
 }
 
-// Returns { grid, units, roster, deploymentZone, openingDialog } like
+// Returns { grid, units, roster, deploymentZone, dialogs } like
 // createDemoLevel, with both units already placed and nothing to deploy
-// (empty roster and zone).
+// (empty roster and zone). `dialogs` come from getTrainingDialogs.
 // Throws on an unknown unit class.
 export function createTrainingLevel(unitClass) {
   const trainee = createUnitOfClass(unitClass, { team: 'player' });
@@ -64,6 +57,6 @@ export function createTrainingLevel(unitClass) {
     ]),
     roster: [],
     deploymentZone: [],
-    openingDialog: getTrainingOpeningDialog(unitClass),
+    dialogs: getTrainingDialogs(unitClass),
   };
 }

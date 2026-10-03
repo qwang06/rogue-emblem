@@ -1,0 +1,14 @@
+# Dialog for Training mode. See src/data/README.md for the format.
+
+[opening]
+sparring_partner: Ready when you are. Don't hold back on my account.
+sparring_partner: Move in close, pick your action, and show me what you can do.
+
+[turn 2]
+sparring_partner: Not bad. Let's go another round.
+
+[victory]
+sparring_partner: Well fought. You're ready for the real thing.
+
+[defeat]
+sparring_partner: Up you get. Everyone ends up in the dirt the first time.

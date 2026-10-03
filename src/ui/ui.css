@@ -1017,6 +1017,13 @@ kbd {
   border-radius: 3px;
 }
 
+.dialog-box__portrait-art {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
 .dialog-box__body {
   flex: 1;
   min-width: 0;
