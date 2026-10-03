@@ -2,8 +2,9 @@
 // Training menu faces a single sparring partner of the same class on a
 // small open field. There's no deployment — both units start on the map.
 
+import { DIALOGS } from '../data/dialogs.ts';
 import type { MenuAction } from './actionMenu.ts';
-import { freezeScript, type DialogLineInput } from './dialog.ts';
+import type { DialogScripts } from './dialogScript.ts';
 import { setUnit, type Grid, type Point } from './grid.ts';
 import { parseTerrainMap } from './terrainMap.ts';
 import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from './unitClasses.ts';
@@ -15,7 +16,7 @@ export interface Level {
   units: Map<string, Unit>;
   roster: string[];
   deploymentZone: Point[];
-  openingDialog: readonly DialogLineInput[];
+  dialogs: DialogScripts;
 }
 
 // Open grass, '.' per tile.
@@ -34,29 +35,23 @@ export function getTrainingActions(classes: readonly UnitClass[] = UNIT_CLASSES)
   return Object.freeze(classes.map(({ id, label }) => Object.freeze({ id, label })));
 }
 
-// The sparring partner's greeting before the bout, as a script for
-// src/game/dialog.ts. The partner is of the trainee's class, so its
-// portrait art is too.
-export function getTrainingOpeningDialog(unitClass: string): readonly DialogLineInput[] {
-  return freezeScript([
-    {
-      speaker: 'Sparring Partner',
-      unitClass,
-      side: 'right',
-      text: "Ready when you are. Don't hold back on my account.",
-    },
-    {
-      speaker: 'Sparring Partner',
-      unitClass,
-      side: 'right',
-      text: 'Move in close, pick your action, and show me what you can do.',
-    },
-  ]);
+// Training's conversations by trigger, from src/data/dialog/training.txt,
+// with every line given `unitClass` for its stand-in art: the sparring
+// partner is of the trainee's class, so its portrait is too.
+export function getTrainingDialogs(unitClass: string, dialogs: DialogScripts = DIALOGS.training): DialogScripts {
+  return Object.freeze(
+    Object.fromEntries(
+      Object.entries(dialogs).map(([trigger, lines]) => [
+        trigger,
+        Object.freeze(lines.map((line) => Object.freeze({ ...line, unitClass }))),
+      ]),
+    ),
+  );
 }
 
-// Returns { grid, units, roster, deploymentZone, openingDialog } like
+// Returns { grid, units, roster, deploymentZone, dialogs } like
 // createDemoLevel, with both units already placed and nothing to deploy
-// (empty roster and zone).
+// (empty roster and zone). `dialogs` come from getTrainingDialogs.
 // Throws on an unknown unit class.
 export function createTrainingLevel(unitClass: string): Level {
   const trainee = createUnitOfClass(unitClass, { team: 'player' });
@@ -74,6 +69,6 @@ export function createTrainingLevel(unitClass: string): Level {
     ]),
     roster: [],
     deploymentZone: [],
-    openingDialog: getTrainingOpeningDialog(unitClass),
+    dialogs: getTrainingDialogs(unitClass),
   };
 }

@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest';
+import type { DialogScripts } from './dialogScript.ts';
+import { DIALOGS } from '../data/dialogs.ts';
 import { createDialog } from './dialog.ts';
 import { findUnit } from './grid.ts';
 import { getMovePath } from './movement.ts';
 import {
   createTrainingLevel,
   getTrainingActions,
+  getTrainingDialogs,
   SPARRING_PARTNER_ID,
   SPARRING_PARTNER_POSITION,
   TRAINEE_ID,
   TRAINEE_POSITION,
-  getTrainingOpeningDialog,
 } from './trainingLevel.ts';
 import { UNIT_CLASSES } from './unitClasses.ts';
 
@@ -26,6 +28,28 @@ describe('getTrainingActions', () => {
 
   it('is empty with no classes', () => {
     expect(getTrainingActions([])).toEqual([]);
+  });
+});
+
+describe('getTrainingDialogs', () => {
+  it('keeps every conversation from training.txt, with the given class on each line', () => {
+    const dialogs = getTrainingDialogs('villager');
+    expect(Object.keys(dialogs)).toEqual(Object.keys(DIALOGS.training));
+    for (const [trigger, lines] of Object.entries(dialogs)) {
+      expect(lines).toEqual(DIALOGS.training[trigger].map((line) => ({ ...line, unitClass: 'villager' })));
+    }
+  });
+
+  it('is frozen and leaves the loaded dialogs alone', () => {
+    const dialogs = getTrainingDialogs('soldier');
+    expect(Object.isFrozen(dialogs)).toBe(true);
+    expect(Object.isFrozen(dialogs.opening)).toBe(true);
+    expect(dialogs.opening.every(Object.isFrozen)).toBe(true);
+    expect(DIALOGS.training.opening[0].unitClass).toBeNull();
+  });
+
+  it('is empty for a level without dialog', () => {
+    expect(getTrainingDialogs('soldier', {})).toEqual({});
   });
 });
 
@@ -73,15 +97,16 @@ describe('createTrainingLevel', () => {
   });
 
   it('opens with a greeting from the sparring partner', () => {
-    expect(level.openingDialog).toEqual(getTrainingOpeningDialog('soldier'));
-    expect(() => createDialog(level.openingDialog)).not.toThrow();
-    expect(level.openingDialog.every((line) => line.speaker === 'Sparring Partner')).toBe(true);
+    expect(level.dialogs).toEqual(getTrainingDialogs('soldier'));
+    expect(() => createDialog(level.dialogs.opening)).not.toThrow();
+    expect(level.dialogs.opening.every((line) => line.speaker === 'Sparring Partner')).toBe(true);
   });
 
   it("gives the sparring partner the trainee's class as its portrait", () => {
-    expect(level.openingDialog.every((line) => line.unitClass === 'soldier')).toBe(true);
+    const allLines = (dialogs: DialogScripts) => Object.values(dialogs).flat();
+    expect(allLines(level.dialogs).every((line) => line.unitClass === 'soldier')).toBe(true);
     const villagerLevel = createTrainingLevel('villager');
-    expect(villagerLevel.openingDialog.every((line) => line.unitClass === 'villager')).toBe(true);
+    expect(allLines(villagerLevel.dialogs).every((line) => line.unitClass === 'villager')).toBe(true);
   });
 
   it('pits a villager against a villager when the villager is chosen', () => {

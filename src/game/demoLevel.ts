@@ -3,7 +3,7 @@
 // deployment), and the deployment zone. Real level data will replace this
 // once maps are loaded from data.
 
-import { freezeScript } from './dialog.ts';
+import { DIALOGS } from '../data/dialogs.ts';
 import { setUnit, type Point } from './grid.ts';
 import { Soldier } from './Soldier.ts';
 import { Villager } from './Villager.ts';
@@ -96,39 +96,13 @@ export const PLAYER_ROSTER: Readonly<Record<string, string>> = Object.freeze({
   'villager-3': 'Cato',
 });
 
-// The conversation before deployment, as a script for src/game/dialog.ts.
-// The roster speaks from the left; the enemy answers from the right.
-const [ALDEN, BRYN, CATO] = Object.values(PLAYER_ROSTER);
-export const DEMO_OPENING_DIALOG = freezeScript([
-  {
-    speaker: ALDEN,
-    unitClass: 'villager',
-    side: 'left',
-    text: 'Enemy soldiers have taken the old gate. This road is the only way through.',
-  },
-  {
-    speaker: BRYN,
-    unitClass: 'villager',
-    side: 'left',
-    text: "Three of them, by my count. They'll see us coming all the way up the road.",
-  },
-  {
-    speaker: 'Enemy Soldier',
-    unitClass: 'soldier',
-    side: 'right',
-    text: 'Hold the line! Nobody passes the gate while we still stand.',
-  },
-  { speaker: CATO, unitClass: 'villager', side: 'left', text: "Then we won't let them stand for long." },
-  { speaker: ALDEN, unitClass: 'villager', side: 'left', text: 'Take your positions. We move on my signal.' },
-]);
-
-// Returns { grid, units, roster, deploymentZone, openingDialog, decorations,
-// structures }. `units`
-// maps every unitId (player and enemy) to its Unit; `roster` lists the
-// player unitIds available to deploy; `deploymentZone` is [{ x, y }] of
-// placeable tiles; `openingDialog` is the script played before deployment;
-// `decorations` is [{ x, y, tree }] of trees drawn over the grass;
-// `structures` is [{ x, y, structure }] of multi-tile art by top-left tile.
+// Returns { grid, units, roster, deploymentZone, dialogs, decorations,
+// structures }. `units` maps every unitId (player and enemy) to its Unit;
+// `roster` lists the player unitIds available to deploy; `deploymentZone`
+// is [{ x, y }] of placeable tiles; `dialogs` are the level's
+// conversations by trigger, from src/data/dialog/demo.txt; `decorations`
+// is [{ x, y, tree }] of trees drawn over the grass; `structures` is
+// [{ x, y, structure }] of multi-tile art by top-left tile.
 export function createDemoLevel(): DemoLevel {
   let grid = parseTerrainMap(DEMO_MAP);
 
@@ -147,7 +121,7 @@ export function createDemoLevel(): DemoLevel {
     units,
     roster: Object.keys(PLAYER_ROSTER),
     deploymentZone: DEPLOYMENT_ZONE.map((tile) => ({ ...tile })),
-    openingDialog: DEMO_OPENING_DIALOG,
+    dialogs: DIALOGS.demo,
     decorations: TREE_POSITIONS.map((tree) => ({ ...tree })),
     structures: STRUCTURE_POSITIONS.map((structure) => ({ ...structure })),
   };

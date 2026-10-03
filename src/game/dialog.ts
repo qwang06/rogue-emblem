@@ -1,25 +1,34 @@
 // Pure state for conversations shown in the dialog box. A script is a list
-// of lines, each { speaker, unitClass, side, text }: `speaker` is the name
-// shown, `unitClass` picks the art standing in for a portrait (none if null), and `side` ('left' |
-// 'right') is where the speaker's portrait sits. A dialog is a frozen
+// of lines, each { speaker, team, unitClass, side, portrait, text }:
+// `speaker` is the name shown, `team` the speaker's side in the battle,
+// `portrait` their portrait art (a sprite key, or null until there is
+// some), `unitClass` picks the unit art standing in for a missing portrait
+// (none if null), and `side` ('left' | 'right') is where the portrait sits.
+// src/game/dialogScript.ts builds these from dialog files. A dialog is a frozen
 // { lines, index, revealed } — which line is showing, and whether its text
 // has been fully typed out (by time passing, or by the player skipping).
 // Showing the dialog and timing the typing belong to the caller.
+
+import type { Team } from './turns.ts';
 
 export type DialogSide = 'left' | 'right';
 
 export interface DialogLine {
   speaker: string;
+  team: Team | null;
   unitClass: string | null;
   side: DialogSide;
+  portrait: string | null;
   text: string;
 }
 
 // A line as written in a script: everything but the text has a default.
 export interface DialogLineInput {
   speaker?: string;
+  team?: Team | null;
   unitClass?: string | null;
   side?: DialogSide;
+  portrait?: string | null;
   text: string;
 }
 
@@ -34,11 +43,6 @@ export const DIALOG_CHARS_PER_SECOND = 45;
 
 export const DIALOG_SIDES: readonly DialogSide[] = Object.freeze(['left', 'right']);
 
-// A script frozen as written, line by line, for level data.
-export function freezeScript(lines: readonly DialogLineInput[]): readonly DialogLineInput[] {
-  return Object.freeze(lines.map((line) => Object.freeze({ ...line })));
-}
-
 // Starts a dialog on its first line. Throws on an empty script or a line
 // without text or with an unknown side.
 export function createDialog(lines: readonly DialogLineInput[]): Dialog {
@@ -47,7 +51,14 @@ export function createDialog(lines: readonly DialogLineInput[]): Dialog {
     if (!line.text) throw new Error(`Dialog line ${i} has no text`);
     const side = line.side ?? 'left';
     if (!DIALOG_SIDES.includes(side)) throw new Error(`Dialog line ${i} has unknown side "${side}"`);
-    return Object.freeze({ speaker: line.speaker ?? '', unitClass: line.unitClass ?? null, side, text: line.text });
+    return Object.freeze({
+      speaker: line.speaker ?? '',
+      team: line.team ?? null,
+      unitClass: line.unitClass ?? null,
+      side,
+      portrait: line.portrait ?? null,
+      text: line.text,
+    });
   });
   return Object.freeze({ lines: Object.freeze(frozen), index: 0, revealed: false });
 }
