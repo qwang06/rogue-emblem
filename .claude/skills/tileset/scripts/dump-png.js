@@ -93,6 +93,50 @@ export function decode(file) {
   return rows;
 }
 
+const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+
+function crc32(buf) {
+  let c = 0xffffffff;
+  for (const byte of buf) c = CRC_TABLE[(c ^ byte) & 255] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+function chunk(type, data) {
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length);
+  const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(body));
+  return Buffer.concat([length, body, crc]);
+}
+
+// Writes rows of [r, g, b, a] pixels as an RGBA PNG.
+export function encode(file, rows) {
+  const height = rows.length;
+  const width = rows[0].length;
+  const raw = Buffer.alloc(height * (width * 4 + 1));
+  rows.forEach((row, y) => row.forEach((px, x) => raw.set(px, y * (width * 4 + 1) + 1 + x * 4)));
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8; // bit depth
+  header[9] = 6; // RGBA
+  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  fs.writeFileSync(
+    file,
+    Buffer.concat([
+      signature,
+      chunk('IHDR', header),
+      chunk('IDAT', zlib.deflateSync(raw)),
+      chunk('IEND', Buffer.alloc(0)),
+    ]),
+  );
+}
+
 const hex = ([r, g, b]) => [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
 const CHARS = '#.,:~-=o*+%@&$sSlmkdbBcrRpyYhGgfFTwWxXzZ0123456789';
 
@@ -104,7 +148,7 @@ function crop(rows, size, frame) {
 }
 
 // Only run the CLI when invoked directly, so other scripts can import decode.
-if (import.meta.url === pathToFileURL(process.argv[1]).href) main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
 function main() {
   const args = process.argv.slice(2);
