@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { PLAYER_ROSTER } from './demoLevel.ts';
-import { createDungeonLevel, DUNGEON_ENEMY_COUNT, DUNGEON_MAP_SIZE, DUNGEON_MAX_DEPLOYED } from './dungeonLevel.ts';
+import {
+  createDungeonLevel,
+  DUNGEON_ENEMY_COUNT,
+  DUNGEON_MAP_SIZE,
+  DUNGEON_MAX_DEPLOYED,
+  DUNGEON_PALETTE,
+} from './dungeonLevel.ts';
 import { findUnit, getCell } from './grid.ts';
+import { getBuildingSprites, getFeatureSprites } from './mapArt.ts';
 import { getReachable, terrainToRows } from './mapGen.ts';
+import { BUILDING_ART, BUILDING_PALETTES, FOREST_ART, MOUNTAIN_ART } from './tileset.ts';
 
 const SEEDS = Array.from({ length: 50 }, (_, i) => i * 104729 + 3);
 
@@ -54,15 +62,29 @@ describe('createDungeonLevel', () => {
     }
   });
 
-  it('puts trees only on free grass, clear of units and deployment', () => {
+  it('puts trees only on free grass, clear of units, deployment and other art', () => {
     for (const seed of SEEDS) {
-      const { grid, decorations, deploymentZone } = createDungeonLevel(seed);
+      const { grid, decorations, deploymentZone, buildings = [] } = createDungeonLevel(seed);
+      const art = [
+        ...getBuildingSprites(buildings, BUILDING_PALETTES[DUNGEON_PALETTE], BUILDING_ART),
+        ...getFeatureSprites(grid, FOREST_ART, MOUNTAIN_ART),
+      ];
       for (const { x, y, tree } of decorations) {
         expect(tree).toBe('green_ginkgo');
         expect(getCell(grid, x, y)!.terrain).toBe('grass');
         expect(getCell(grid, x, y)!.unitId).toBeNull();
         expect(deploymentZone).not.toContainEqual({ x, y });
+        expect(art.filter((s) => s.x === x && s.y === y)).toEqual([]);
       }
     }
+  });
+
+  it('draws every dungeon in set A stone, with the generated buildings', () => {
+    for (const seed of SEEDS.slice(0, 10)) {
+      const level = createDungeonLevel(seed);
+      expect(level.palette).toBe('a-stone');
+      expect(level.buildings!.length).toBeGreaterThan(0);
+    }
+    expect(DUNGEON_PALETTE).toBe('a-stone');
   });
 });

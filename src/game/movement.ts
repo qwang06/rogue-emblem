@@ -23,6 +23,10 @@ export const TERRAIN_MOVE_COSTS: TerrainCosts = Object.freeze({
   dirt: 1,
   water: Infinity,
   wall: Infinity,
+  forest: 2,
+  // Until movement types (fliers) exist, nothing crosses mountains.
+  mountain: Infinity,
+  meadow: 1,
 });
 
 export function getMoveCost(terrain: Terrain, terrainCosts: TerrainCosts = TERRAIN_MOVE_COSTS): number {

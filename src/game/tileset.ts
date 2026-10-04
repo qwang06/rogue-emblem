@@ -8,6 +8,7 @@
 // maps keys to files), cut into one-tile frames.
 
 import type { Autotile, SheetTile } from './autotile.ts';
+import type { BuildingKind } from './buildings.ts';
 import type { Facing } from './facing.ts';
 import type { ArrowPiece } from './moveArrow.ts';
 
@@ -55,7 +56,107 @@ export const TERRAIN_AUTOTILES: Record<string, Autotile> = {
     block: [1, 3],
     inner: [2, 4],
   },
+  // Dark grass: the one patch set with a plain 3x3, so it's clean at any
+  // size. A meadow is walkable like grass.
+  meadow: {
+    block: [12, 3],
+    inner: [10, 4],
+  },
 };
+
+// One-tile overlays drawn over the grass on forest cells (see
+// getFeatureSprites in src/game/mapArt.ts). `tiles` are the variants (dense
+// pine, sparse pine, broadleaf); `peakBelow[i]` is `tiles[i]` with the
+// mountain peak of the cell south of it baked into its bottom, for a forest
+// just north of a mountain.
+export const FOREST_ART: { tiles: SheetTile[]; peakBelow: SheetTile[] } = {
+  tiles: [
+    [0, 1],
+    [1, 1],
+    [2, 1],
+  ],
+  peakBelow: [
+    [8, 1],
+    [9, 1],
+    [10, 1],
+  ],
+};
+
+// Mountain overlays, stacked a column at a time: a mountain cell draws a
+// `body` variant, or a `peakBelow` one (the same body with the next
+// mountain's peak in its bottom) when the cell south of it is a mountain
+// too. The top mountain of a column pokes its peak into the cell north of it
+// with a `cap`, drawn over that cell.
+export const MOUNTAIN_ART: { body: SheetTile[]; peakBelow: SheetTile[]; cap: SheetTile[] } = {
+  body: [
+    [4, 1],
+    [6, 1],
+    [5, 2],
+    [8, 2],
+    [9, 2],
+    [10, 2],
+  ],
+  peakBelow: [
+    [5, 1],
+    [7, 1],
+  ],
+  cap: [
+    [4, 0],
+    [5, 0],
+  ],
+};
+
+// Where each building kind sits on the terrain sheet in its block's first
+// color column: `column` is that column (0 or 12; a palette's
+// `buildingColumn` is added to it) and `row` the row of the tile the
+// building stands on. A `tall` building's top is the tile above that, over
+// the cell north of it. A colored building's flag is the tile above its
+// top, drawn over the next cell north.
+export const BUILDING_ART: Record<BuildingKind, { column: number; row: number; tall?: boolean }> = {
+  house: { column: 0, row: 50 },
+  fort: { column: 0, row: 52 },
+  temple: { column: 0, row: 54 },
+  windmill: { column: 0, row: 58 },
+  camp: { column: 0, row: 60 },
+  workshop: { column: 0, row: 62 },
+  farm: { column: 12, row: 50 },
+  fountain: { column: 12, row: 52 },
+  goldMine: { column: 12, row: 54 },
+  mine: { column: 12, row: 56 },
+  tower: { column: 12, row: 59, tall: true },
+  castle: { column: 12, row: 62, tall: true },
+};
+
+// A building color: every building and wall on a map is drawn in one
+// palette, so colors never mix. Set A ('a-…') is natural wood and stone with
+// colored roofs and trim; set B ('b-…') tints the whole building.
+// `buildingColumn` is the palette's offset from a building's first color
+// column (set A 0–4, set B 6–10); `wall` is the top-left tile of its
+// 6-column rampart group (set B's walls come in a different color order
+// than its buildings). The neutral colors (a-stone, b-white) have no flags.
+export interface BuildingPalette {
+  buildingColumn: number;
+  wall: SheetTile;
+  flags: boolean;
+}
+
+export const BUILDING_PALETTES = {
+  'a-stone': { buildingColumn: 0, wall: [0, 33], flags: false },
+  'a-orange': { buildingColumn: 1, wall: [6, 33], flags: true },
+  'a-teal': { buildingColumn: 2, wall: [12, 33], flags: true },
+  'a-pink': { buildingColumn: 3, wall: [18, 33], flags: true },
+  'a-brown': { buildingColumn: 4, wall: [24, 33], flags: true },
+  'b-white': { buildingColumn: 6, wall: [0, 41], flags: false },
+  'b-red': { buildingColumn: 7, wall: [18, 41], flags: true },
+  'b-blue': { buildingColumn: 8, wall: [12, 41], flags: true },
+  'b-green': { buildingColumn: 9, wall: [24, 41], flags: true },
+  'b-orange': { buildingColumn: 10, wall: [6, 41], flags: true },
+} as const satisfies Record<string, BuildingPalette>;
+
+export type BuildingPaletteName = keyof typeof BUILDING_PALETTES;
+
+// The palette for a level that doesn't pick one.
+export const DEFAULT_BUILDING_PALETTE: BuildingPaletteName = 'a-stone';
 
 // Unit art keyed by unit class, so every unit of a class looks alike
 // whichever side it's on. Each names a set of sheets, one per animation in

@@ -55,7 +55,8 @@ import { getTriggeredDialog, turnTrigger } from '../game/dialogScript.ts';
 import { getPathFacings } from '../game/facing.ts';
 import { createKeyRepeat, updateKeyRepeat } from '../game/keyRepeat.ts';
 import { getArrowPieces } from '../game/moveArrow.ts';
-import { getQuarterFrames, getTileFrame } from '../game/autotile.ts';
+import { getQuarterFrames, getTileFrame, type Autotile } from '../game/autotile.ts';
+import { getBuildingSprites, getFeatureSprites, getWallAutotile, type MapSprite } from '../game/mapArt.ts';
 import { extendMovePath, getMovementRange } from '../game/movement.ts';
 import { PAUSE_ACTIONS } from '../game/pauseMenu.ts';
 import {
@@ -70,7 +71,12 @@ import {
 } from '../game/turns.ts';
 import {
   ARROW_TILES,
+  BUILDING_ART,
+  BUILDING_PALETTES,
   CURSOR_ANIMATION,
+  DEFAULT_BUILDING_PALETTE,
+  FOREST_ART,
+  MOUNTAIN_ART,
   STRUCTURE_SPRITES,
   TERRAIN_AUTOTILES,
   TERRAIN_BASE_TILE,
@@ -238,7 +244,12 @@ export class GridScene extends Phaser.Scene {
     this.deploymentLimit = getDeploymentLimit(level.roster, level.deploymentZone, level.maxDeployed);
     this.dialogs = level.dialogs; // the level's conversations by trigger (src/game/dialogScript.ts)
 
-    this.renderTerrain(this.grid);
+    const palette = BUILDING_PALETTES[level.palette ?? DEFAULT_BUILDING_PALETTE];
+    this.renderTerrain(this.grid, { ...TERRAIN_AUTOTILES, wall: getWallAutotile(palette) });
+    this.renderMapSprites([
+      ...getFeatureSprites(this.grid, FOREST_ART, MOUNTAIN_ART),
+      ...getBuildingSprites(level.buildings ?? [], palette, BUILDING_ART),
+    ]);
     this.renderDecorations(level.decorations ?? []);
     this.renderStructures(level.structures ?? []);
     this.renderUnits(this.grid);
@@ -1541,9 +1552,10 @@ export class GridScene extends Phaser.Scene {
   }
 
   // Terrain is plain grass under every cell, with each autotiled terrain
-  // (see src/game/autotile.ts) drawn over it as its own layer of half-size
-  // tiles, four per cell. Animated sets step through their copies on a timer.
-  renderTerrain(grid: Grid) {
+  // (`autotiles`, see src/game/autotile.ts) drawn over it as its own layer of
+  // half-size tiles, four per cell. Animated sets step through their copies
+  // on a timer.
+  renderTerrain(grid: Grid, autotiles: Record<string, Autotile>) {
     const { key, columns } = TERRAIN_SHEET;
     const grassFrame = getTileFrame(TERRAIN_BASE_TILE, columns);
     const grass = Array.from({ length: grid.height }, () => Array(grid.width).fill(grassFrame));
@@ -1551,7 +1563,7 @@ export class GridScene extends Phaser.Scene {
     grassMap.createLayer(0, grassMap.addTilesetImage(key, key, TILE_SIZE, TILE_SIZE)!, 0, 0);
 
     const half = TILE_SIZE / 2;
-    for (const [terrain, autotile] of Object.entries(TERRAIN_AUTOTILES)) {
+    for (const [terrain, autotile] of Object.entries(autotiles)) {
       const frameCount = autotile.animation?.frames ?? 1;
       // One quarter-frame map per animation frame: frames[i][y][x].
       const frames = Array.from({ length: frameCount }, (_, i) => {
@@ -1579,6 +1591,21 @@ export class GridScene extends Phaser.Scene {
           });
         },
       });
+    }
+  }
+
+  // One-tile overlays from the terrain sheet (forests, mountains, buildings;
+  // see src/game/mapArt.ts): ground art and caps under units, at the trees'
+  // depth (caps just above, so a peak covers the forest it pokes into), and
+  // roofs over units like the gate's.
+  renderMapSprites(sprites: readonly MapSprite[]) {
+    const depths = { ground: 0.4, cap: 0.45, roof: 0.8 };
+    for (const { x, y, tile, layer } of sprites) {
+      const pos = gridToWorld(x, y, TILE_SIZE);
+      this.add
+        .image(pos.x, pos.y, TERRAIN_SHEET.key, getTileFrame(tile, TERRAIN_SHEET.columns))
+        .setOrigin(0, 0)
+        .setDepth(depths[layer]);
     }
   }
 

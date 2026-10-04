@@ -24,6 +24,11 @@ describe('parseTerrainMap', () => {
     expect(getCell(grid, 1, 0)!.terrain).toBe('wall');
   });
 
+  it('reads forests, mountains and meadows with the default legend', () => {
+    const grid = parseTerrainMap(['T^"']);
+    expect(grid.cells.map((c) => c.terrain)).toEqual(['forest', 'mountain', 'meadow']);
+  });
+
   it('leaves every tile empty of units', () => {
     const grid = parseTerrainMap(['.~.']);
     for (const cell of grid.cells) expect(cell.unitId).toBeNull();
