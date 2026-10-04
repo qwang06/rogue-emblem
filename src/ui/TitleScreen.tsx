@@ -4,6 +4,7 @@ import { gameStore } from '../bridge/gameStore.ts';
 import { createActionMenu, getSelectedAction, moveSelection, selectIndex } from '../game/actionMenu.ts';
 import { TITLE_ACTIONS } from '../game/titleMenu.ts';
 import { getTrainingActions } from '../game/trainingLevel.ts';
+import { FIRST_STORY_CHAPTER, firstDungeonFloor } from '../game/battleSetup.ts';
 import { randomSeed } from '../game/dungeonLevel.ts';
 
 const TRAINING_INDEX = TITLE_ACTIONS.findIndex((action) => action.id === 'training');
@@ -39,9 +40,9 @@ export function TitleScreen() {
     if (view === 'training') {
       gameStore.setState({ screen: 'battle', battleSetup: { mode: 'training', unitClass: action.id } });
     } else if (action.id === 'story') {
-      gameStore.setState({ screen: 'battle', battleSetup: { mode: 'demo' } });
+      gameStore.setState({ screen: 'battle', battleSetup: FIRST_STORY_CHAPTER });
     } else if (action.id === 'dungeon') {
-      gameStore.setState({ screen: 'battle', battleSetup: { mode: 'dungeon', seed: randomSeed() } });
+      gameStore.setState({ screen: 'battle', battleSetup: firstDungeonFloor(randomSeed()) });
     } else if (action.id === 'training') {
       openTraining();
     }

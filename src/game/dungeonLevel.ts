@@ -1,41 +1,37 @@
 // Dungeon Mode's battle: a procedurally generated map (src/game/mapGen.ts)
 // with the player deploying at the south end of the path and enemies placed
-// in the north third. Everything comes from one seed, so a seed is enough to
-// rebuild the same battle.
+// in the north third. The floor's config (src/game/dungeonConfigs.ts) sets
+// the map's size and makeup; everything else comes from one seed, so a seed
+// and a config are enough to rebuild the same battle.
 
 import { PLAYER_ROSTER, type DemoLevel, type TreePlacement } from './demoLevel.ts';
 import { setUnit, type Point } from './grid.ts';
 import { getBuildingSprites, getFeatureSprites } from './mapArt.ts';
-import { generateTerrain, getReachable, type MapGenOptions } from './mapGen.ts';
+import { DUNGEON_CONFIGS, type DungeonConfig } from './dungeonConfigs.ts';
+import { generateTerrain, getReachable } from './mapGen.ts';
+import { DEFAULT_OBJECTIVE } from './objectives.ts';
 import { createSeededRng, shuffle } from './rng.ts';
 import { Soldier } from './Soldier.ts';
-import { BUILDING_ART, BUILDING_PALETTES, FOREST_ART, MOUNTAIN_ART, type BuildingPaletteName } from './tileset.ts';
+import { BUILDING_ART, BUILDING_PALETTES, FOREST_ART, MOUNTAIN_ART } from './tileset.ts';
 import { Villager } from './Villager.ts';
 
-export const DUNGEON_MAP_SIZE: Readonly<Pick<MapGenOptions, 'width' | 'height'>> = Object.freeze({
-  width: 16,
-  height: 14,
-});
-
-export const DUNGEON_ENEMY_COUNT = 3;
 export const DUNGEON_MAX_DEPLOYED = 3;
-// Chance (0–1) each free grass tile gets a decorative tree.
-export const DUNGEON_TREE_CHANCE = 0.05;
-// Every dungeon's buildings and walls are set A's neutral stone gray.
-export const DUNGEON_PALETTE: BuildingPaletteName = 'a-stone';
 
 const key = ({ x, y }: Point) => `${x},${y}`;
 
-// Returns a level shaped like createDemoLevel's, generated from `seed`:
+// Returns a level shaped like createDemoLevel's, generated from `seed` with
+// `config`'s terrain options (the first floor's config by default):
 // - deploymentZone: the path's south end and the tiles either side of it
-// - enemies: DUNGEON_ENEMY_COUNT soldiers on random walkable tiles in the
+// - enemies: config.enemyCount soldiers on random walkable tiles in the
 //   north third that the deployment zone can reach
-// - buildings: the generator's, drawn in DUNGEON_PALETTE
-// - decorations: green ginkgos scattered on the grass no other art covers
-export function createDungeonLevel(seed: number): DemoLevel {
+// - buildings: the generator's, drawn in config.palette
+// - decorations: green ginkgos scattered (config.treeChance) on the grass no
+//   other art covers
+// - objective: config.objective, else a rout (defeat all enemies)
+export function createDungeonLevel(seed: number, config: DungeonConfig = DUNGEON_CONFIGS[0]): DemoLevel {
   const rng = createSeededRng(seed);
-  const { width, height } = DUNGEON_MAP_SIZE;
-  const generated = generateTerrain({ width, height }, rng);
+  const { height } = config.terrain;
+  const generated = generateTerrain(config.terrain, rng);
   const { path, buildings } = generated;
   let { grid } = generated;
 
@@ -44,7 +40,7 @@ export function createDungeonLevel(seed: number): DemoLevel {
 
   const reachable = getReachable(grid, start);
   const enemyCandidates = grid.cells.filter((c) => c.y < Math.floor(height / 3) && reachable.has(key(c)));
-  const enemyTiles = shuffle(rng, enemyCandidates).slice(0, DUNGEON_ENEMY_COUNT);
+  const enemyTiles = shuffle(rng, enemyCandidates).slice(0, config.enemyCount);
 
   const units = new Map(
     Object.entries(PLAYER_ROSTER).map(([unitId, name]) => [unitId, new Villager({ name, team: 'player' })]),
@@ -59,12 +55,12 @@ export function createDungeonLevel(seed: number): DemoLevel {
   // building, its overhang, or a mountain's peak is drawn on.
   const covered = new Set([
     ...deploymentZone.map(key),
-    ...getBuildingSprites(buildings, BUILDING_PALETTES[DUNGEON_PALETTE], BUILDING_ART).map(key),
+    ...getBuildingSprites(buildings, BUILDING_PALETTES[config.palette], BUILDING_ART).map(key),
     ...getFeatureSprites(grid, FOREST_ART, MOUNTAIN_ART).map(key),
   ]);
   const decorations: TreePlacement[] = grid.cells
     .filter((c) => c.terrain === 'grass' && !c.unitId && !covered.has(key(c)))
-    .filter(() => rng() < DUNGEON_TREE_CHANCE)
+    .filter(() => rng() < config.treeChance)
     .map(({ x, y }) => ({ x, y, tree: 'green_ginkgo' }));
 
   return {
@@ -77,7 +73,8 @@ export function createDungeonLevel(seed: number): DemoLevel {
     decorations,
     structures: [],
     buildings,
-    palette: DUNGEON_PALETTE,
+    palette: config.palette,
+    objective: config.objective ?? DEFAULT_OBJECTIVE,
   };
 }
 

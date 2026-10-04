@@ -1,0 +1,84 @@
+// Which battle the map runs, and what comes after it. The title screen picks
+// a BattleSetup, the map scene builds its level with createBattleLevel, and
+// once the objective is completed getNextBattle says where to go next: the
+// next story chapter, the next dungeon floor, or nowhere (back to the title).
+
+import { getDungeonConfig } from './dungeonConfigs.ts';
+import { createDungeonLevel } from './dungeonLevel.ts';
+import { createDemoLevel, type DemoLevel } from './demoLevel.ts';
+import { createTrainingLevel, type Level } from './trainingLevel.ts';
+
+export type BattleSetup =
+  | { mode: 'story'; chapter: number }
+  | { mode: 'training'; unitClass: string }
+  | { mode: 'dungeon'; seed: number; floor: number };
+
+// A battle's starting state, whichever mode built it.
+export type BattleLevel = Level & Partial<DemoLevel>;
+
+export interface StoryChapter {
+  name: string;
+  createLevel: () => BattleLevel;
+}
+
+// Story Mode's chapters in order (chapter 1 first).
+export const STORY_CHAPTERS: readonly StoryChapter[] = Object.freeze([
+  Object.freeze({ name: 'The Old Gate', createLevel: createDemoLevel }),
+]);
+
+// The first battle of each mode that has one.
+export const FIRST_STORY_CHAPTER: BattleSetup = Object.freeze({ mode: 'story', chapter: 1 });
+
+export function firstDungeonFloor(seed: number): BattleSetup {
+  return { mode: 'dungeon', seed, floor: 1 };
+}
+
+function getStoryChapter(chapter: number, chapters: readonly StoryChapter[]): StoryChapter {
+  const found = Number.isInteger(chapter) ? chapters[chapter - 1] : undefined;
+  if (!found) throw new Error(`No story chapter ${chapter}`);
+  return found;
+}
+
+// Builds the level a setup describes.
+export function createBattleLevel(setup: BattleSetup, chapters: readonly StoryChapter[] = STORY_CHAPTERS): BattleLevel {
+  switch (setup.mode) {
+    case 'story':
+      return getStoryChapter(setup.chapter, chapters).createLevel();
+    case 'training':
+      return createTrainingLevel(setup.unitClass);
+    case 'dungeon':
+      return createDungeonLevel(setup.seed, getDungeonConfig(setup.floor));
+  }
+}
+
+// The battle after `setup` is won, or null when there's none and the
+// player goes back to the title: story mode moves to the next chapter
+// until the last; a dungeon goes one floor down, on a new map made from
+// `seed`, and never ends; training is a single bout.
+export function getNextBattle(
+  setup: BattleSetup,
+  seed: number,
+  chapters: readonly StoryChapter[] = STORY_CHAPTERS,
+): BattleSetup | null {
+  switch (setup.mode) {
+    case 'story':
+      return setup.chapter < chapters.length ? { mode: 'story', chapter: setup.chapter + 1 } : null;
+    case 'training':
+      return null;
+    case 'dungeon':
+      return { mode: 'dungeon', seed, floor: setup.floor + 1 };
+  }
+}
+
+// A short title for a battle, e.g. "Chapter 1: The Old Gate" or
+// "Floor 2: Lakeside".
+export function describeBattle(setup: BattleSetup, chapters: readonly StoryChapter[] = STORY_CHAPTERS): string {
+  switch (setup.mode) {
+    case 'story':
+      return `Chapter ${setup.chapter}: ${getStoryChapter(setup.chapter, chapters).name}`;
+    case 'training':
+      return 'Training';
+    case 'dungeon':
+      return `Floor ${setup.floor}: ${getDungeonConfig(setup.floor).name}`;
+  }
+}

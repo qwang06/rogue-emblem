@@ -6,6 +6,7 @@ import { DIALOGS } from '../data/dialogs.ts';
 import type { MenuAction } from './actionMenu.ts';
 import type { DialogScripts } from './dialogScript.ts';
 import { setUnit, type Grid, type Point } from './grid.ts';
+import type { Objective } from './objectives.ts';
 import { parseTerrainMap } from './terrainMap.ts';
 import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from './unitClasses.ts';
 import type { Unit } from './Unit.ts';
@@ -18,6 +19,8 @@ export interface Level {
   deploymentZone: Point[];
   maxDeployed: number;
   dialogs: DialogScripts;
+  // What wins and loses the battle (see objectives.ts); a rout if unset.
+  objective?: Objective;
 }
 
 // Open grass, '.' per tile.
