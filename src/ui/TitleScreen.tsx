@@ -2,12 +2,19 @@ import { useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import type { MenuAction } from '../game/actionMenu.ts';
 import { gameStore } from '../bridge/gameStore.ts';
 import { createActionMenu, getSelectedAction, moveSelection, selectIndex } from '../game/actionMenu.ts';
-import { TITLE_ACTIONS } from '../game/titleMenu.ts';
+import { SETTINGS_ACTIONS, TITLE_ACTIONS } from '../game/titleMenu.ts';
 import { getTrainingActions } from '../game/trainingLevel.ts';
 import { FIRST_STORY_CHAPTER, firstDungeonFloor } from '../game/battleSetup.ts';
 import { randomSeed } from '../game/dungeonLevel.ts';
+import { routeHash } from './route.ts';
 
-const TRAINING_INDEX = TITLE_ACTIONS.findIndex((action) => action.id === 'training');
+type View = 'main' | 'training' | 'settings';
+
+// The submenus title entries open: their heading, and the entries to list.
+const SUBMENUS = {
+  training: { heading: 'Training — Choose a Unit', label: 'Choose a unit to train', actions: getTrainingActions },
+  settings: { heading: 'Settings', label: 'Settings', actions: () => SETTINGS_ACTIONS },
+} as const;
 
 function mainMenu(selectedIndex = 0) {
   return selectIndex(createActionMenu(TITLE_ACTIONS), selectedIndex);
@@ -16,35 +23,39 @@ function mainMenu(selectedIndex = 0) {
 // The landing screen: game title plus the Story Mode / Dungeon Mode /
 // Training / Settings menu.
 // Training swaps in a second menu listing the unit classes; picking one
-// starts a small practice battle with that unit. Works with the keyboard
+// starts a small practice battle with that unit. Settings swaps in the
+// settings menu, whose Game Configs opens the config editor (#/configs). Works with the keyboard
 // (arrows + Enter/Z to choose, Esc/X to go back — same keys as the map) and
 // the mouse (right click goes back).
 export function TitleScreen() {
-  const [view, setView] = useState('main'); // 'main' | 'training'
+  const [view, setView] = useState<View>('main');
   const [menu, setMenu] = useState(() => mainMenu());
 
-  function openTraining() {
-    setView('training');
-    setMenu(createActionMenu(getTrainingActions()));
+  function openSubmenu(submenu: Exclude<View, 'main'>) {
+    setView(submenu);
+    setMenu(createActionMenu(SUBMENUS[submenu].actions()));
   }
 
+  // Back to the main menu, with the entry that opened the submenu selected.
   function backToMain() {
+    setMenu(mainMenu(TITLE_ACTIONS.findIndex((action) => action.id === view)));
     setView('main');
-    setMenu(mainMenu(TRAINING_INDEX));
   }
 
   // Carries out a menu choice. Dungeon Mode starts a battle on a freshly
-  // generated map; Settings is a placeholder for now.
+  // generated map.
   function runAction(action: MenuAction | null) {
     if (!action) return;
-    if (view === 'training') {
+    if (view === 'settings') {
+      if (action.id === 'configs') window.location.hash = routeHash({ page: 'configs' });
+    } else if (view === 'training') {
       gameStore.setState({ screen: 'battle', battleSetup: { mode: 'training', unitClass: action.id } });
     } else if (action.id === 'story') {
       gameStore.setState({ screen: 'battle', battleSetup: FIRST_STORY_CHAPTER });
     } else if (action.id === 'dungeon') {
       gameStore.setState({ screen: 'battle', battleSetup: firstDungeonFloor(randomSeed()) });
-    } else if (action.id === 'training') {
-      openTraining();
+    } else if (action.id === 'training' || action.id === 'settings') {
+      openSubmenu(action.id);
     }
   }
 
@@ -57,7 +68,7 @@ export function TitleScreen() {
         event.preventDefault();
         runAction(getSelectedAction(menu));
       } else if (event.key === 'Escape' || event.key === 'x' || event.key === 'X') {
-        if (view === 'training') {
+        if (view !== 'main') {
           event.preventDefault();
           backToMain();
         }
@@ -69,10 +80,10 @@ export function TitleScreen() {
 
   function onContextMenu(event: ReactMouseEvent) {
     event.preventDefault();
-    if (view === 'training') backToMain();
+    if (view !== 'main') backToMain();
   }
 
-  const training = view === 'training';
+  const submenu = view === 'main' ? null : SUBMENUS[view];
 
   return (
     <div className="title-screen" onContextMenu={onContextMenu}>
@@ -84,8 +95,8 @@ export function TitleScreen() {
         </div>
       </header>
 
-      <nav className="title-menu" aria-label={training ? 'Choose a unit to train' : 'Main menu'}>
-        {training && <h2 className="title-menu__heading">Training — Choose a Unit</h2>}
+      <nav className="title-menu" aria-label={submenu?.label ?? 'Main menu'}>
+        {submenu && <h2 className="title-menu__heading">{submenu.heading}</h2>}
         <ul className="title-menu__list">
           {menu.actions.map((action, index) => {
             const selected = index === menu.selectedIndex;
@@ -107,7 +118,7 @@ export function TitleScreen() {
       </nav>
 
       <p className="title-screen__hint">
-        {training ? '↑↓ Select · Enter Confirm · Esc Back' : '↑↓ Select · Enter Confirm'}
+        {submenu ? '↑↓ Select · Enter Confirm · Esc Back' : '↑↓ Select · Enter Confirm'}
       </p>
     </div>
   );

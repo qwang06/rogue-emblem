@@ -3,6 +3,7 @@ import { gameCommands } from '../bridge/commands.ts';
 import { ActionMenu } from './ActionMenu.tsx';
 import { BattleResult } from './BattleResult.tsx';
 import { CombatForecast } from './CombatForecast.tsx';
+import { ConfigEditor } from './ConfigEditor.tsx';
 import { ControlsButton } from './ControlsButton.tsx';
 import { DamagePopups } from './DamagePopups.tsx';
 import { DeploymentBanner } from './DeploymentBanner.tsx';
@@ -25,11 +26,12 @@ import { TitleScreen } from './TitleScreen.tsx';
 import { TurnIndicator } from './TurnIndicator.tsx';
 import { UnitPanel } from './UnitPanel.tsx';
 import { useGameStore } from './useGameStore.ts';
+import { useRoute } from './useRoute.ts';
 
 // Root of the page. The battle layout is always mounted, because #game is
 // where Phaser put its canvas at boot; the title screen covers it while
 // `screen` is 'title', and `LoadingScreen` covers it while a battle's map
-// loads.
+// loads. On the #/configs routes, `ConfigEditor` covers it instead.
 //
 // Inside the stage, the HUD overlay sits on top of the canvas: the overlay
 // ignores pointer events so clicks fall through to the game, and
@@ -43,6 +45,7 @@ function cancelOnRightClick(event: MouseEvent) {
 
 export function App() {
   const screen = useGameStore((state) => state.screen);
+  const route = useRoute();
 
   return (
     <div className="page">
@@ -88,8 +91,14 @@ export function App() {
         </div>
       </main>
 
-      {screen === 'title' && <TitleScreen />}
-      {screen === 'battle' && <LoadingScreen />}
+      {route.page !== 'game' ? (
+        <ConfigEditor route={route} />
+      ) : (
+        <>
+          {screen === 'title' && <TitleScreen />}
+          {screen === 'battle' && <LoadingScreen />}
+        </>
+      )}
     </div>
   );
 }

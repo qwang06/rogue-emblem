@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PLAYER_ROSTER } from './demoLevel.ts';
-import { DUNGEON_CONFIGS } from './dungeonConfigs.ts';
+import { DUNGEON_CONFIGS } from '../data/dungeon.ts';
 import { createDungeonLevel, DUNGEON_MAX_DEPLOYED } from './dungeonLevel.ts';
 import { findUnit, getCell } from './grid.ts';
 import { getBuildingSprites, getFeatureSprites } from './mapArt.ts';
@@ -18,20 +18,16 @@ const BATTLES = DUNGEON_CONFIGS.flatMap((config) =>
 
 describe('createDungeonLevel', () => {
   it('rebuilds the same battle from the same seed', () => {
-    const a = createDungeonLevel(1234);
-    const b = createDungeonLevel(1234);
+    const a = createDungeonLevel(1234, FIRST);
+    const b = createDungeonLevel(1234, FIRST);
     expect(terrainToRows(a.grid)).toEqual(terrainToRows(b.grid));
     expect(a.grid.cells.map((c) => c.unitId)).toEqual(b.grid.cells.map((c) => c.unitId));
     expect(a.decorations).toEqual(b.decorations);
   });
 
   it('builds different maps from different seeds', () => {
-    const maps = new Set(SEEDS.map((seed) => terrainToRows(createDungeonLevel(seed).grid).join('\n')));
+    const maps = new Set(SEEDS.map((seed) => terrainToRows(createDungeonLevel(seed, FIRST).grid).join('\n')));
     expect(maps.size).toBeGreaterThan(1);
-  });
-
-  it('defaults to the first floor config', () => {
-    expect(terrainToRows(createDungeonLevel(7).grid)).toEqual(terrainToRows(createDungeonLevel(7, FIRST).grid));
   });
 
   it('builds a different map from the same seed with a different config', () => {
@@ -45,7 +41,7 @@ describe('createDungeonLevel', () => {
       expect(level.grid.width).toBe(config.terrain.width);
       expect(level.grid.height).toBe(config.terrain.height);
     }
-    const level = createDungeonLevel(1);
+    const level = createDungeonLevel(1, FIRST);
     expect(level.roster).toEqual(Object.keys(PLAYER_ROSTER));
     expect(level.maxDeployed).toBe(DUNGEON_MAX_DEPLOYED);
     for (const unitId of level.roster) expect(findUnit(level.grid, unitId)).toBeNull();

@@ -9,3 +9,9 @@ export const TITLE_ACTIONS: readonly MenuAction[] = Object.freeze([
   Object.freeze({ id: 'training', label: 'Training' }),
   Object.freeze({ id: 'settings', label: 'Settings' }),
 ]);
+
+// Entries on the Settings submenu the title menu's Settings opens.
+// 'configs' leads to the config editor (#/configs).
+export const SETTINGS_ACTIONS: readonly MenuAction[] = Object.freeze([
+  Object.freeze({ id: 'configs', label: 'Game Configs' }),
+]);

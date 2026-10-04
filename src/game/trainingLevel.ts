@@ -55,9 +55,10 @@ export function getTrainingDialogs(unitClass: string, dialogs: DialogScripts = D
 
 // Returns { grid, units, roster, deploymentZone, maxDeployed, dialogs }
 // like createDemoLevel, with both units already placed and nothing to
-// deploy (empty roster and zone, and a max of 0). `dialogs` come from getTrainingDialogs.
+// deploy (empty roster and zone, and a max of 0). `dialogs` come from
+// getTrainingDialogs, given training.txt's conversations unless others are.
 // Throws on an unknown unit class.
-export function createTrainingLevel(unitClass: string): Level {
+export function createTrainingLevel(unitClass: string, dialogs: DialogScripts = DIALOGS.training): Level {
   const trainee = createUnitOfClass(unitClass, { team: 'player' });
   const partner = createUnitOfClass(unitClass, { name: 'Sparring Partner', team: 'enemy' });
 
@@ -74,6 +75,6 @@ export function createTrainingLevel(unitClass: string): Level {
     roster: [],
     deploymentZone: [],
     maxDeployed: 0,
-    dialogs: getTrainingDialogs(unitClass),
+    dialogs: getTrainingDialogs(unitClass, dialogs),
   };
 }

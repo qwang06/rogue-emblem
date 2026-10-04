@@ -7,7 +7,7 @@
 import { PLAYER_ROSTER, type DemoLevel, type TreePlacement } from './demoLevel.ts';
 import { setUnit, type Point } from './grid.ts';
 import { getBuildingSprites, getFeatureSprites } from './mapArt.ts';
-import { DUNGEON_CONFIGS, type DungeonConfig } from './dungeonConfigs.ts';
+import type { DungeonConfig } from './dungeonConfigs.ts';
 import { generateTerrain, getReachable } from './mapGen.ts';
 import { DEFAULT_OBJECTIVE } from './objectives.ts';
 import { createSeededRng, shuffle } from './rng.ts';
@@ -20,7 +20,7 @@ export const DUNGEON_MAX_DEPLOYED = 3;
 const key = ({ x, y }: Point) => `${x},${y}`;
 
 // Returns a level shaped like createDemoLevel's, generated from `seed` with
-// `config`'s terrain options (the first floor's config by default):
+// `config`'s terrain options:
 // - deploymentZone: the path's south end and the tiles either side of it
 // - enemies: config.enemyCount soldiers on random walkable tiles in the
 //   north third that the deployment zone can reach
@@ -28,7 +28,7 @@ const key = ({ x, y }: Point) => `${x},${y}`;
 // - decorations: green ginkgos scattered (config.treeChance) on the grass no
 //   other art covers
 // - objective: config.objective, else a rout (defeat all enemies)
-export function createDungeonLevel(seed: number, config: DungeonConfig = DUNGEON_CONFIGS[0]): DemoLevel {
+export function createDungeonLevel(seed: number, config: DungeonConfig): DemoLevel {
   const rng = createSeededRng(seed);
   const { height } = config.terrain;
   const generated = generateTerrain(config.terrain, rng);
