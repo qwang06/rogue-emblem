@@ -12,6 +12,7 @@ import {
   type Skill,
   type SkillTrees,
 } from './skills.ts';
+import { Soldier } from './Soldier.ts';
 
 // A skill with the fields a test doesn't care about filled in.
 const makeSkill = (fields: Pick<Skill, 'id' | 'label' | 'manaCost'> & Partial<Skill>): Skill => ({
@@ -220,8 +221,14 @@ describe('calculateSkillDamage', () => {
     });
 
     it("adds might to the user's magic for a magical hit", () => {
-      const mage = { strength: 0, magic: 5, damageType: 'magical' };
+      const mage = { strength: 0, magic: 5, weapon: { type: 'magical' as const, might: 0 } };
       expect(calculateSkillDamage(strike, mage, { defense: 20, resistance: 1 })).toBe(7);
+    });
+
+    it("builds on the weapon's might, as the regular hit does", () => {
+      const soldier = new Soldier({ team: 'enemy' });
+      // 4 STR + 1 Iron Spear might + 3 skill might − 2 DEF.
+      expect(calculateSkillDamage(strike, soldier, { defense: 2 })).toBe(6);
     });
 
     it('never goes below zero', () => {

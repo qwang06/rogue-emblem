@@ -10,10 +10,18 @@ import {
   isInStrikeRange,
   resolveCombat,
   type CombatSide,
+  type CombatWeapon,
   type Combatant,
   type Fighter,
 } from './combat.ts';
 import { createGrid, setTerrain, setUnit, type Point } from './grid.ts';
+import type { WeaponType } from './weapons.ts';
+
+// A plain test weapon: physical, no might, 80 hit, no crit, no weight,
+// range 1 — so a fighter with it reads like its bare stats.
+function arms(overrides: Partial<CombatWeapon> = {}): CombatWeapon {
+  return { type: 'physical', might: 0, hit: 80, crit: 0, weight: 0, minRange: 1, maxRange: 1, ...overrides };
+}
 
 // Rolls 0 every time: every strike with a hit chance above 0 lands, and
 // only crits with a crit chance above 0.
@@ -161,49 +169,60 @@ describe('calculateDamage', () => {
 
   it('is strength minus defense for a physical hit', () => {
     expect(calculateDamage({ strength: 5 }, { defense: 2 })).toBe(3);
-    expect(calculateDamage({ strength: 7, magic: 9, damageType: 'physical' }, defender)).toBe(5);
+    expect(calculateDamage({ strength: 7, magic: 9, weapon: arms() }, defender)).toBe(5);
   });
 
   it('is magic minus resistance for a magical hit', () => {
-    expect(calculateDamage({ strength: 9, magic: 7, damageType: 'magical' }, defender)).toBe(2);
+    expect(calculateDamage({ strength: 9, magic: 7, weapon: arms({ type: 'magical' }) }, defender)).toBe(2);
+  });
+
+  it('hits physically with a siege weapon', () => {
+    expect(calculateDamage({ strength: 7, magic: 9, weapon: arms({ type: 'siege' }) }, defender)).toBe(5);
+  });
+
+  it("adds the weapon's might to the attack power", () => {
+    expect(calculateDamage({ strength: 5, weapon: arms({ might: 3 }) }, { defense: 2 })).toBe(6);
+    expect(calculateDamage({ magic: 6, weapon: arms({ type: 'magical', might: 2 }) }, defender)).toBe(3);
   });
 
   it('never goes below zero', () => {
     expect(calculateDamage({ strength: 1 }, { defense: 4 })).toBe(0);
-    expect(calculateDamage({ magic: 3, damageType: 'magical' }, defender)).toBe(0);
+    expect(calculateDamage({ magic: 3, weapon: arms({ type: 'magical' }) }, defender)).toBe(0);
   });
 
   it('counts a missing guard stat as 0', () => {
-    expect(calculateDamage({ magic: 4, damageType: 'magical' }, { defense: 3 })).toBe(4);
+    expect(calculateDamage({ magic: 4, weapon: arms({ type: 'magical' }) }, { defense: 3 })).toBe(4);
   });
 });
 
 describe('getDamageType', () => {
-  it('defaults to physical', () => {
+  it('is physical without a weapon', () => {
     expect(getDamageType({})).toBe('physical');
+    expect(getDamageType({ weapon: null })).toBe('physical');
   });
 
-  it('uses the unit damage type', () => {
-    expect(getDamageType({ damageType: 'magical' })).toBe('magical');
+  it("follows the weapon's type", () => {
+    expect(getDamageType({ weapon: arms() })).toBe('physical');
+    expect(getDamageType({ weapon: arms({ type: 'magical' }) })).toBe('magical');
+    expect(getDamageType({ weapon: arms({ type: 'siege' }) })).toBe('physical');
   });
 
-  it('throws on an unknown type', () => {
-    expect(() => getDamageType({ damageType: 'psychic' })).toThrow(/psychic/);
+  it('throws on an unknown weapon type', () => {
+    expect(() => getDamageType({ weapon: arms({ type: 'psychic' as WeaponType }) })).toThrow(/psychic/);
   });
 });
 
 describe('resolveCombat damage types', () => {
-  it("uses each side's own damage type", () => {
+  it("uses each side's own weapon's damage type", () => {
     const mage: Fighter = {
       health: 10,
       strength: 0,
       magic: 6,
       defense: 1,
       resistance: 4,
-      range: 1,
-      damageType: 'magical',
+      weapon: arms({ type: 'magical' }),
     };
-    const knight: Fighter = { health: 10, strength: 6, magic: 0, defense: 8, resistance: 0, range: 1 };
+    const knight: Fighter = { health: 10, strength: 6, magic: 0, defense: 8, resistance: 0, weapon: arms() };
     const { strikes } = resolveCombat(mage, knight, { distance: 1, rng: alwaysHit });
     expect(strikes.map((s) => s.damage)).toEqual([6, 5]);
   });
@@ -211,23 +230,34 @@ describe('resolveCombat damage types', () => {
 
 describe('isInStrikeRange', () => {
   it('accepts distances from 1 up to range', () => {
-    expect(isInStrikeRange({ range: 2 }, 1)).toBe(true);
-    expect(isInStrikeRange({ range: 2 }, 2)).toBe(true);
-    expect(isInStrikeRange({ range: 2 }, 3)).toBe(false);
+    expect(isInStrikeRange({ weapon: arms({ maxRange: 2 }) }, 1)).toBe(true);
+    expect(isInStrikeRange({ weapon: arms({ maxRange: 2 }) }, 2)).toBe(true);
+    expect(isInStrikeRange({ weapon: arms({ maxRange: 2 }) }, 3)).toBe(false);
   });
 
   it('respects a minimum range', () => {
-    expect(isInStrikeRange({ range: 2, minRange: 2 }, 1)).toBe(false);
-    expect(isInStrikeRange({ range: 2, minRange: 2 }, 2)).toBe(true);
+    expect(isInStrikeRange({ weapon: arms({ minRange: 2, maxRange: 2 }) }, 1)).toBe(false);
+    expect(isInStrikeRange({ weapon: arms({ minRange: 2, maxRange: 2 }) }, 2)).toBe(true);
+  });
+
+  it('never strikes without a weapon', () => {
+    expect(isInStrikeRange({}, 1)).toBe(false);
+    expect(isInStrikeRange({ weapon: null }, 1)).toBe(false);
   });
 
   it('never strikes its own tile', () => {
-    expect(isInStrikeRange({ range: 1, minRange: 0 }, 0)).toBe(false);
+    expect(isInStrikeRange({ weapon: arms({ minRange: 0 }) }, 0)).toBe(false);
   });
 });
 
 describe('resolveCombat', () => {
-  const unit = (stats: Partial<Fighter> = {}): Fighter => ({ health: 10, strength: 5, defense: 2, range: 1, ...stats });
+  const unit = (stats: Partial<Fighter> = {}): Fighter => ({
+    health: 10,
+    strength: 5,
+    defense: 2,
+    weapon: arms(),
+    ...stats,
+  });
 
   it('has the defender counter when the attacker is in its range', () => {
     const result = resolveCombat(unit(), unit({ strength: 4 }), { distance: 1, rng: alwaysHit });
@@ -240,14 +270,20 @@ describe('resolveCombat', () => {
   });
 
   it('has no counter when the attacker is out of the defender range', () => {
-    const result = resolveCombat(unit({ range: 2 }), unit({ range: 1 }), { distance: 2, rng: alwaysHit });
+    const result = resolveCombat(unit({ weapon: arms({ maxRange: 2 }) }), unit({ weapon: arms() }), {
+      distance: 2,
+      rng: alwaysHit,
+    });
     expect(result.strikes).toHaveLength(1);
     expect(result.strikes[0].by).toBe('attacker');
     expect(result.attackerHealth).toBe(10);
   });
 
   it('has no counter inside the defender minimum range', () => {
-    const result = resolveCombat(unit(), unit({ range: 2, minRange: 2 }), { distance: 1, rng: alwaysHit });
+    const result = resolveCombat(unit(), unit({ weapon: arms({ minRange: 2, maxRange: 2 }) }), {
+      distance: 1,
+      rng: alwaysHit,
+    });
     expect(result.strikes).toHaveLength(1);
   });
 
@@ -285,7 +321,7 @@ describe('resolveCombat', () => {
 });
 
 describe('getStrikeOrder', () => {
-  const unit = (stats: Partial<Fighter> = {}) => ({ speed: 5, range: 1, ...stats });
+  const unit = (stats: Partial<Fighter> = {}) => ({ speed: 5, weapon: arms(), ...stats });
 
   it('is attacker then defender when neither doubles', () => {
     expect(getStrikeOrder(unit(), unit(), 1)).toEqual(['attacker', 'defender']);
@@ -305,11 +341,37 @@ describe('getStrikeOrder', () => {
   });
 
   it('lets an attacker double even when the defender cannot counter', () => {
-    expect(getStrikeOrder(unit({ speed: 9, range: 2 }), unit(), 2)).toEqual(['attacker', 'attacker']);
+    expect(getStrikeOrder(unit({ speed: 9, weapon: arms({ maxRange: 2 }) }), unit(), 2)).toEqual([
+      'attacker',
+      'attacker',
+    ]);
+  });
+
+  it('gives a side without a weapon no strikes', () => {
+    expect(getStrikeOrder(unit(), unit({ weapon: null, speed: 9 }), 1)).toEqual(['attacker']);
+    expect(getStrikeOrder(unit({ weapon: null }), unit(), 1)).toEqual(['defender']);
+  });
+
+  it('drops strikes past the last use of a weapon, hit or miss', () => {
+    expect(getStrikeOrder(unit({ speed: 9, weaponUses: 1 }), unit(), 1)).toEqual(['attacker', 'defender']);
+    expect(getStrikeOrder(unit(), unit({ speed: 9, weaponUses: 1 }), 1)).toEqual(['attacker', 'defender']);
+    expect(getStrikeOrder(unit({ speed: 9, weaponUses: 2 }), unit(), 1)).toEqual(['attacker', 'defender', 'attacker']);
+    expect(getStrikeOrder(unit(), unit({ weaponUses: 0 }), 1)).toEqual(['attacker']);
+  });
+
+  it('never runs out with a weapon that never breaks', () => {
+    expect(getStrikeOrder(unit({ speed: 9, weaponUses: null }), unit(), 1)).toHaveLength(3);
+  });
+
+  it('slows a unit whose weapon is too heavy for it', () => {
+    // Speed 9, but weight 8 against strength 4 costs 4 attack speed: 5 vs 5, no double.
+    const heavy = unit({ speed: 9, strength: 4, weapon: arms({ weight: 8 }) });
+    expect(getStrikeOrder(heavy, unit(), 1)).toEqual(['attacker', 'defender']);
+    expect(getStrikeOrder({ ...heavy, strength: 8 }, unit(), 1)).toHaveLength(3);
   });
 
   it('never has a defender out of range double', () => {
-    expect(getStrikeOrder(unit({ range: 2 }), unit({ speed: 9 }), 2)).toEqual(['attacker']);
+    expect(getStrikeOrder(unit({ weapon: arms({ maxRange: 2 }) }), unit({ speed: 9 }), 2)).toEqual(['attacker']);
   });
 });
 
@@ -320,7 +382,7 @@ describe('resolveCombat rolls', () => {
     strength: 5,
     defense: 2,
     speed: 0,
-    range: 1,
+    weapon: arms(),
     ...stats,
   });
 
@@ -358,7 +420,7 @@ describe('resolveCombat rolls', () => {
   it('never crits on a miss', () => {
     // Hit 120 vs avoid 40 = 80%; crit chance 10, but the hit roll misses so
     // the crit roll (0 — would crit) is never taken.
-    const result = resolveCombat(unit({ skill: 20 }), unit({ speed: 20, range: 0 }), {
+    const result = resolveCombat(unit({ skill: 20 }), unit({ speed: 20, weapon: null }), {
       distance: 1,
       rng: rolls(0.99, 0),
     });
@@ -396,8 +458,12 @@ describe('resolveCombat rolls', () => {
   it('passes trueHit through to the hit roll', () => {
     // 80% hit; rolls 90 and 60 average to 75 — a hit with 2RN, a miss without.
     const order = [0.9, 0.6];
-    const twoRn = resolveCombat(unit(), unit({ range: 0 }), { distance: 1, rng: rolls(...order, 0.99), trueHit: true });
-    const oneRn = resolveCombat(unit(), unit({ range: 0 }), { distance: 1, rng: rolls(...order) });
+    const twoRn = resolveCombat(unit(), unit({ weapon: null }), {
+      distance: 1,
+      rng: rolls(...order, 0.99),
+      trueHit: true,
+    });
+    const oneRn = resolveCombat(unit(), unit({ weapon: null }), { distance: 1, rng: rolls(...order) });
     expect(twoRn.strikes[0].hit).toBe(true);
     expect(oneRn.strikes[0].hit).toBe(false);
   });
@@ -413,7 +479,7 @@ describe('getCombatForecast', () => {
     skill: 0,
     speed: 0,
     luck: 0,
-    range: 1,
+    weapon: arms(),
     ...stats,
   });
 
@@ -454,7 +520,7 @@ describe('getCombatForecast', () => {
       [unit(), unit({ strength: 4 }), 1],
       [unit({ speed: 9 }), unit(), 1], // attacker doubles
       [unit(), unit({ speed: 9, strength: 7 }), 1], // defender doubles
-      [unit({ range: 2, speed: 9 }), unit(), 2], // no counter, attacker doubles
+      [unit({ weapon: arms({ maxRange: 2 }), speed: 9 }), unit(), 2], // no counter, attacker doubles
       [unit({ strength: 1 }), unit({ strength: 1 }), 1], // 0 damage
     ];
     for (const [attacker, defender, distance] of cases) {
@@ -481,7 +547,7 @@ describe('getCombatForecast', () => {
   });
 
   it('shows nothing for a defender that cannot counter', () => {
-    const forecast = getCombatForecast(unit({ range: 2 }), unit({ speed: 9 }), {
+    const forecast = getCombatForecast(unit({ weapon: arms({ maxRange: 2 }) }), unit({ speed: 9 }), {
       distance: 2,
     });
     expect(forecast.defender).toEqual({
@@ -499,6 +565,29 @@ describe('getCombatForecast', () => {
   it('counts two strikes for a doubling side', () => {
     expect(getCombatForecast(unit({ speed: 4 }), unit(), { distance: 1 }).attacker.strikes).toBe(2);
     expect(getCombatForecast(unit(), unit({ speed: 4 }), { distance: 1 }).defender.strikes).toBe(2);
+  });
+
+  it('changes with the weapon the attacker fights with', () => {
+    const defender = unit({ speed: 3 });
+    const spear = getCombatForecast(unit({ weapon: arms({ might: 1, hit: 80 }) }), defender, { distance: 1 });
+    const axe = getCombatForecast(unit({ weapon: arms({ might: 3, hit: 65, weight: 7 }) }), defender, {
+      distance: 1,
+    });
+    const bow = getCombatForecast(unit({ weapon: arms({ might: 2, minRange: 2, maxRange: 2 }) }), defender, {
+      distance: 2,
+    });
+    expect([spear.attacker.damage, spear.attacker.hit, spear.defender.hit]).toEqual([4, 74, 80]);
+    // Weight 7 against strength 5 costs 2 attack speed, so 4 less avoid.
+    expect([axe.attacker.damage, axe.attacker.hit, axe.defender.hit]).toEqual([6, 59, 84]);
+    expect([bow.attacker.damage, bow.defender.counters]).toEqual([5, false]);
+  });
+
+  it('agrees with resolveCombat when a weapon breaks mid-exchange', () => {
+    const attacker = unit({ speed: 9, weaponUses: 1 });
+    const forecast = getCombatForecast(attacker, unit(), { distance: 1 });
+    const landed = landedStrikes(attacker, unit(), 1);
+    expect(forecast.attacker.strikes).toBe(1);
+    expect(landed.attacker).toHaveLength(1);
   });
 
   it('clamps hit to 0–100', () => {

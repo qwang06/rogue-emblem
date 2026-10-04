@@ -1,5 +1,6 @@
-import { STARTING_ITEMS } from './items.ts';
+import { STARTING_ITEMS, type Inventory } from './items.ts';
 import { Unit, type ClassUnitOptions } from './Unit.ts';
+import { IRON_SPEAR, weaponEntry, type WeaponType } from './weapons.ts';
 
 export const SOLDIER_STATS = Object.freeze({
   health: 10,
@@ -40,18 +41,25 @@ export const SOLDIER_CAPS = Object.freeze({
   resistance: 20,
 });
 
-// The basic infantry unit. Starts at level 1 with the soldier stat line;
-// its skills come from the 'soldier' skill tree, and it carries the
-// starting items (a health and a mana potion) unless given others. Levels
-// up with the soldier growth rates and caps.
+// The weapon types a soldier can wield.
+export const SOLDIER_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
+
+// What a soldier carries into battle: its spear and the potions.
+export const SOLDIER_ITEMS: Inventory = Object.freeze([weaponEntry(IRON_SPEAR), ...STARTING_ITEMS]);
+
+// The basic spear-and-shield infantry. Starts at level 1 with the soldier
+// stat line; its skills come from the 'soldier' skill tree, it wields
+// physical weapons, and it carries an Iron Spear and the potions unless
+// given other items. Levels up with the soldier growth rates and caps.
 export class Soldier extends Unit {
-  constructor({ name = 'Soldier', team, level = 1, items = STARTING_ITEMS }: ClassUnitOptions) {
+  constructor({ name = 'Soldier', team, level = 1, items = SOLDIER_ITEMS }: ClassUnitOptions) {
     super({
       name,
       unitClass: 'soldier',
       level,
       team,
       items,
+      weaponTypes: SOLDIER_WEAPON_TYPES,
       growths: SOLDIER_GROWTHS,
       caps: SOLDIER_CAPS,
       ...SOLDIER_STATS,

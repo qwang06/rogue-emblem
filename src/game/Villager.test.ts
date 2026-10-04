@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { STARTING_ITEMS } from './items.ts';
 import { THROW_STONES, getLearnedSkills } from './skills.ts';
 import { Unit } from './Unit.ts';
-import { VILLAGER_CAPS, VILLAGER_GROWTHS, VILLAGER_STATS, Villager } from './Villager.ts';
+import { VILLAGER_CAPS, VILLAGER_GROWTHS, VILLAGER_ITEMS, VILLAGER_STATS, Villager } from './Villager.ts';
+import { FISTS } from './weapons.ts';
 
 describe('Villager', () => {
   it('is a Unit of the villager class', () => {
@@ -31,9 +32,19 @@ describe('Villager', () => {
     expect(villager.level).toBe(3);
   });
 
-  it('carries the starting items by default', () => {
+  it('carries its fists and the starting potions by default', () => {
     const villager = new Villager({ team: 'player' });
-    expect(villager.items).toEqual(STARTING_ITEMS);
+    expect(villager.items).toEqual(VILLAGER_ITEMS);
+    expect(villager.items.slice(1)).toEqual(STARTING_ITEMS);
+  });
+
+  it('fights with fists that never break', () => {
+    const villager = new Villager({ team: 'player' });
+    expect(villager.weaponTypes).toEqual(['physical']);
+    expect(villager.weapon).toBe(FISTS);
+    expect(villager.weaponUses).toBeNull();
+    for (let i = 0; i < 100; i++) expect(villager.spendWeaponUse().broke).toBe(false);
+    expect(villager.weapon).toBe(FISTS);
   });
 
   it('knows Throw Stones from level 1', () => {

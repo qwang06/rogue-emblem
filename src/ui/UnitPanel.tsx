@@ -17,9 +17,11 @@ const STATS = [
 
 // Compact card for the unit under the cursor, docked in a top corner of the
 // map: sprite, name and level (plus XP for player units), thin HP/MP bars,
-// a plain grid of stats, and its items (up to six, see MAX_INVENTORY_SLOTS)
-// one per row, long names cut short with an ellipsis; left out when it has
-// none. The team shows as the accent color. It sits in the corner away
+// a plain grid of stats (RNG is its equipped weapon's), and its items (up
+// to six, see MAX_INVENTORY_SLOTS) one per row — potions with their count,
+// weapons with their uses left (∞ if they never break) and the equipped
+// one in gold — long names cut short with an ellipsis; left out when it
+// has none. The team shows as the accent color. It sits in the corner away
 // from the hovered unit so it never covers it, and steps aside while the
 // combat forecast (which already shows both fighters) is up.
 export function UnitPanel() {
@@ -60,12 +62,17 @@ export function UnitPanel() {
 
       {unit.items.length > 0 && (
         <ul className="unit-panel__items" aria-label="Items">
-          {unit.items.map((item) => (
-            <li key={item.id} className="unit-panel__item">
-              <span className="unit-panel__item-label" title={item.label}>
+          {unit.items.map((item, index) => (
+            <li
+              key={`${item.id}@${index}`}
+              className={item.equipped ? 'unit-panel__item unit-panel__item--equipped' : 'unit-panel__item'}
+            >
+              <span className="unit-panel__item-label" title={item.equipped ? `${item.label} (equipped)` : item.label}>
                 {item.label}
               </span>
-              <span className="unit-panel__item-quantity">×{item.quantity}</span>
+              <span className="unit-panel__item-quantity">
+                {item.weapon ? (item.quantity ?? '∞') : `×${item.quantity}`}
+              </span>
             </li>
           ))}
         </ul>

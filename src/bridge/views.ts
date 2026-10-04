@@ -9,11 +9,17 @@ import type { ExperienceGain, GrowthStat, LevelUpResult } from '../game/experien
 import type { Point } from '../game/grid.ts';
 import type { Team, TurnState } from '../game/turns.ts';
 import type { Unit } from '../game/Unit.ts';
+import { formatWeaponRange } from '../game/weapons.ts';
 
+// One inventory slot. `quantity` is how many are left (for a weapon, its
+// uses left), or null for a weapon that never breaks; `equipped` marks
+// the weapon the unit fights with.
 export interface ItemView {
   id: string;
   label: string;
-  quantity: number;
+  quantity: number | null;
+  weapon: boolean;
+  equipped: boolean;
 }
 
 export interface UnitView {
@@ -34,7 +40,8 @@ export interface UnitView {
   defense: number;
   resistance: number;
   movement: number;
-  range: number;
+  range: string;
+  weapon: string | null;
   items: readonly ItemView[];
 }
 
@@ -61,6 +68,7 @@ export interface TileAnchorView {
 export interface ForecastSideView extends ForecastSide {
   name: string;
   team: Team;
+  weapon: string | null;
 }
 
 export interface CombatForecastView {
@@ -69,7 +77,7 @@ export interface CombatForecastView {
   anchor: TileAnchorView;
 }
 
-export type PopupKind = 'damage' | 'crit' | 'miss' | 'health' | 'mana';
+export type PopupKind = 'damage' | 'crit' | 'miss' | 'health' | 'mana' | 'broke';
 
 export interface DamagePopupView {
   id: number;
@@ -138,8 +146,11 @@ export interface DialogView {
   isLast: boolean;
 }
 
+// Snapshot of a unit for the HUD. `range` is its equipped weapon's range
+// ("1", "1–2"), or "–" with no weapon, and `weapon` that weapon's name.
 export function toUnitView(unit: Unit | null | undefined): UnitView | null {
   if (!unit) return null;
+  const equipped = unit.equippedWeapon;
   return Object.freeze({
     name: unit.name,
     unitClass: unit.unitClass,
@@ -158,9 +169,18 @@ export function toUnitView(unit: Unit | null | undefined): UnitView | null {
     defense: unit.defense,
     resistance: unit.resistance,
     movement: unit.movement,
-    range: unit.range,
+    range: equipped ? formatWeaponRange(equipped.weapon) : '–',
+    weapon: equipped?.weapon.label ?? null,
     items: Object.freeze(
-      (unit.items ?? []).map(({ item, quantity }) => Object.freeze({ id: item.id, label: item.label, quantity })),
+      (unit.items ?? []).map(({ item, quantity }, index) =>
+        Object.freeze({
+          id: item.id,
+          label: item.label,
+          quantity: item.kind === 'weapon' && item.uses === null ? null : quantity,
+          weapon: item.kind === 'weapon',
+          equipped: index === equipped?.index,
+        }),
+      ),
     ),
   });
 }
@@ -209,9 +229,10 @@ export function mergeTileAnchors(a: TileAnchorView, b: TileAnchorView): TileAnch
 
 // Snapshot of the combat forecast shown while aiming an attack, from
 // getCombatForecast (src/game/combat.ts): per side, the unit's name and
-// team plus its forecast numbers (damage / hit / crit are null for a
-// defender that can't counter, which the UI shows as "–"). `anchor` is a
-// TileAnchorView covering both units, which the panel opens beside.
+// team, the name of the weapon it fights with (null for none), plus its
+// forecast numbers (damage / hit / crit are null for a defender that
+// can't counter, which the UI shows as "–"). `anchor` is a TileAnchorView
+// covering both units, which the panel opens beside.
 export function toCombatForecastView({
   forecast,
   attacker,
@@ -219,12 +240,12 @@ export function toCombatForecastView({
   anchor,
 }: {
   forecast: Record<CombatSide, ForecastSide>;
-  attacker: Pick<Unit, 'name' | 'team'>;
-  defender: Pick<Unit, 'name' | 'team'>;
+  attacker: Pick<Unit, 'name' | 'team' | 'weapon'>;
+  defender: Pick<Unit, 'name' | 'team' | 'weapon'>;
   anchor: TileAnchorView;
 }): CombatForecastView {
-  const side = (unit: Pick<Unit, 'name' | 'team'>, numbers: ForecastSide) =>
-    Object.freeze({ name: unit.name, team: unit.team, ...numbers });
+  const side = (unit: Pick<Unit, 'name' | 'team' | 'weapon'>, numbers: ForecastSide) =>
+    Object.freeze({ name: unit.name, team: unit.team, weapon: unit.weapon?.label ?? null, ...numbers });
   return Object.freeze({
     attacker: side(attacker, forecast.attacker),
     defender: side(defender, forecast.defender),
@@ -233,18 +254,20 @@ export function toCombatForecastView({
 }
 
 // How each kind of popup reads: damage is the bare number (a crit calls
-// itself out), a miss says so, and recovery says what was restored.
+// itself out), a miss says so, recovery says what was restored, and a
+// weapon that wore out says it broke.
 const POPUP_TEXT: Readonly<Record<PopupKind, (amount: number) => string>> = Object.freeze({
   damage: (amount) => `${amount}`,
   crit: (amount) => `Crit! ${amount}`,
   miss: () => 'Miss',
   health: (amount) => `+${amount} HP`,
   mana: (amount) => `+${amount} MP`,
+  broke: () => 'Broke!',
 });
 
 // Snapshot of one floating number over a unit: damage taken (plain, a
-// crit, or a miss), or health or mana recovered (`kind` is 'damage' |
-// 'crit' | 'miss' | 'health' | 'mana', which the UI
+// crit, or a miss), health or mana recovered, or its weapon breaking
+// (`kind` is 'damage' | 'crit' | 'miss' | 'health' | 'mana' | 'broke', which the UI
 // colors by; `text` is what it shows). `x`/`y` are the point the number
 // rises from, as fractions of the canvas (see toCanvasFraction); `durationMs` is how long it stays up,
 // so the UI animation and the store entry's lifetime agree.

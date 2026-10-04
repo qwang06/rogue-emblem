@@ -9,10 +9,12 @@ import {
   canUseItem,
   createInventory,
   findItem,
+  getConsumables,
   getItemActions,
   getItemRecovery,
   removeItem,
 } from './items.ts';
+import { FISTS, IRON_SPEAR, weaponEntry } from './weapons.ts';
 
 const unitAt = ({ health = 10, maxHealth = 10, mana = 5, maxMana = 5 } = {}) => ({
   health,
@@ -227,5 +229,31 @@ describe('addItem', () => {
     const inventory = createInventory(STARTING_ITEMS);
     addItem(inventory, HEALTH_POTION);
     expect(findItem(inventory, HEALTH_POTION.id)!.quantity).toBe(1);
+  });
+});
+
+describe('weapons in the inventory', () => {
+  const spear = weaponEntry(IRON_SPEAR);
+
+  it('never stack: each weapon added takes its own slot with its uses', () => {
+    const inventory = addItem(createInventory([spear]), IRON_SPEAR, 12);
+    expect(inventory).toEqual([spear, { item: IRON_SPEAR, quantity: 12 }]);
+  });
+
+  it('need a free slot even when the same weapon is carried', () => {
+    const full = createInventory(Array.from({ length: MAX_INVENTORY_SLOTS }, () => spear));
+    expect(canAddItem(full, IRON_SPEAR)).toBe(false);
+    expect(() => addItem(full, IRON_SPEAR)).toThrow(/full/);
+  });
+
+  it('restore nothing and so are never used like a potion', () => {
+    expect(getItemRecovery(unitAt({ health: 1 }), IRON_SPEAR)).toBe(0);
+    expect(canUseItem(unitAt({ health: 1 }), IRON_SPEAR)).toBe(false);
+  });
+
+  it('are left out of the consumables and the item menu', () => {
+    const inventory = createInventory([spear, { item: HEALTH_POTION, quantity: 2 }, weaponEntry(FISTS)]);
+    expect(getConsumables(inventory)).toEqual([{ item: HEALTH_POTION, quantity: 2 }]);
+    expect(getItemActions(unitAt({ health: 1 }), inventory).map((a) => a.id)).toEqual(['health-potion']);
   });
 });

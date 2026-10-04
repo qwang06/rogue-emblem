@@ -10,7 +10,8 @@
 //   { type: 'main-menu' }                — leave the battle for the title screen, whatever is going on
 
 // Store fields holding a menu React can point at.
-export type MenuField = 'actionMenu' | 'skillMenu' | 'itemMenu' | 'deploymentMenu' | 'rosterMenu' | 'pauseMenu';
+export type MenuField =
+  'actionMenu' | 'weaponMenu' | 'skillMenu' | 'itemMenu' | 'deploymentMenu' | 'rosterMenu' | 'pauseMenu';
 
 export type Command =
   | { type: 'hover-menu'; menu: MenuField; index: number }

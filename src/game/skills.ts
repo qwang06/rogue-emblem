@@ -96,13 +96,16 @@ export function findLearnedSkill(
 }
 
 // Damage a skill deals when `user` uses it on `defender`: the user's
-// regular hit (calculateDamage, of the user's damage type) with the
-// skill's `might` added to its attack power, times its `damageScale`,
-// rounded up — so a scaled-down hit that would have dealt damage still
-// deals at least 1. Never below zero.
+// regular hit (calculateDamage, of its weapon's damage type and with its
+// weapon's might) with the skill's `might` added to its attack power,
+// times its `damageScale`, rounded up — so a scaled-down hit that would
+// have dealt damage still deals at least 1. Never below zero. Skills
+// don't spend weapon uses.
 export function calculateSkillDamage(skill: Skill, user: DamageStats, defender: DamageStats): number {
   const { power } = DAMAGE_TYPES[getDamageType(user)];
-  const boosted = { ...user, [power]: (user[power] ?? 0) + (skill.might ?? 0) };
+  // Copied field by field: a Unit's weapon is a getter, which a spread drops.
+  const boosted: DamageStats = { strength: user.strength, magic: user.magic, weapon: user.weapon };
+  boosted[power] = (user[power] ?? 0) + (skill.might ?? 0);
   return Math.ceil(calculateDamage(boosted, defender) * (skill.damageScale ?? 1));
 }
 

@@ -24,17 +24,21 @@ export const UNIT_ACTIONS: readonly MenuAction[] = Object.freeze([
   Object.freeze({ id: 'wait', label: 'Wait' }),
 ]);
 
-// The unit actions for a particular unit. Skill is disabled when the unit
-// knows no skills and Item when it carries no items; the caller decides
-// what disabled means for input.
+// The unit actions for a particular unit. Attack is disabled when the unit
+// has no weapon it can wield, Skill when it knows no skills, and Item
+// when it carries no consumables; the caller decides what disabled means
+// for input.
 export function getUnitActions({
   hasSkills,
   hasItems = true,
+  hasWeapons = true,
 }: {
   hasSkills: boolean;
   hasItems?: boolean;
+  hasWeapons?: boolean;
 }): readonly MenuAction[] {
-  const disabled = (id: string) => (id === 'skill' && !hasSkills) || (id === 'item' && !hasItems);
+  const disabled = (id: string) =>
+    (id === 'attack' && !hasWeapons) || (id === 'skill' && !hasSkills) || (id === 'item' && !hasItems);
   return Object.freeze(
     UNIT_ACTIONS.map((action) => (disabled(action.id) ? Object.freeze({ ...action, disabled: true }) : action)),
   );
