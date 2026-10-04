@@ -19,7 +19,8 @@ import type {
 export type Screen = 'title' | 'battle';
 export type BattlePhase = 'deployment' | 'battle';
 export type DeploymentStep = 'menu' | 'roster' | 'placing';
-export type BattleSetup = { mode: 'demo' } | { mode: 'training'; unitClass: string };
+export type BattleSetup =
+  { mode: 'demo' } | { mode: 'training'; unitClass: string } | { mode: 'dungeon'; seed: number };
 
 // A roster entry as a menu entry: RosterEntryViews carry their own label.
 export type RosterMenuEntry = RosterEntryView & MenuAction;
@@ -87,6 +88,7 @@ export const gameStore = createStore<GameState>({
   screen: 'title', // 'title' (main menu) | 'battle' (the map is running)
   // Which battle the map runs, set together with screen: 'battle':
   // { mode: 'demo' } | { mode: 'training', unitClass } (a class id from src/game/unitClasses.ts)
+  // | { mode: 'dungeon', seed } (a generated map, src/game/dungeonLevel.ts)
   battleSetup: null,
   ...BATTLE_STATE_DEFAULTS,
 });

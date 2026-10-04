@@ -108,6 +108,18 @@ Authored content, documented for writers in `src/data/README.md`. `characters.js
 
 `UNIT_CLASSES` — the unit classes the game can build, in menu order, as frozen `{ id, label, create(options) }` (the villager, then the soldier). `createUnitOfClass(classId, options)` builds a fresh `Unit` of a class by id (throws on an unknown one), so code that offers a choice of class doesn't import the subclasses. Tested in `src/game/unitClasses.test.ts`.
 
+### `src/game/rng.ts`
+
+Seeded randomness. `createSeededRng(seed)` returns an `Rng` (Mulberry32, numbers in [0, 1) like `Math.random`) that gives the same sequence for the same seed. It comes with `randomInt`, `randomItem` and `shuffle` helpers that take an `Rng`. Tested in `src/game/rng.test.ts`.
+
+### `src/game/mapGen.ts`
+
+Pure procedural terrain built in layers from an `Rng`. `generateTerrain({ width, height, lakes, lakeSize, turnChance }, rng)` returns `{ grid, path }`. It fills the map with grass, then `carvePath` cuts a one-tile-wide dirt path from the middle of the south edge to the north edge, never jogging sideways in two rows running so the path never forms a 2x2 block (the dirt autotile only has notched full tiles). Then `growLake` floods random blobs of water that stay a tile clear of the path, out of the top row and out of the bottom two rows. Because the path is laid first and lakes avoid it, the two ends of the map are always connected. `getReachable(grid, start)` floods the walkable tiles, and `terrainToRows(grid)` prints a grid back as text rows (the inverse of `terrainMap.ts`). Tested in `src/game/mapGen.test.ts`.
+
+### `src/game/dungeonLevel.ts`
+
+Dungeon Mode's battle. `createDungeonLevel(seed)` returns the same shape as `createDemoLevel`, built entirely from the seed. The terrain comes from `generateTerrain` (`DUNGEON_MAP_SIZE`, 16x14). The deployment zone is the path's south end and the tile on each side of it. `DUNGEON_ENEMY_COUNT` enemy `Soldier`s go on random tiles in the north third that the deployment zone can reach, and green ginkgos are scattered on free grass (`DUNGEON_TREE_CHANCE`). The roster is the demo's `PLAYER_ROSTER`, and there are no dialogs or structures. `randomSeed()` picks a seed. The title screen's Dungeon Mode sets `battleSetup: { mode: 'dungeon', seed }`. Tested in `src/game/dungeonLevel.test.ts`.
+
 ### `src/game/trainingLevel.ts`
 
 The Training mode's practice battle. `getTrainingActions()` lists one `{ id, label }` menu entry per unit class. `createTrainingLevel(unitClass)` returns the same `{ grid, units, roster, deploymentZone, maxDeployed }` shape as `createDemoLevel` (empty roster and zone, `maxDeployed` 0): a 3x3 grass field (`TRAINING_MAP`) with the chosen class on the player team at `TRAINEE_POSITION` (west edge) and a "Sparring Partner" of the same class on the enemy team at `SPARRING_PARTNER_POSITION` (east edge). Both start on the map, so the roster and deployment zone are empty; `dialogs` is `getTrainingDialogs(unitClass)`: `DIALOGS.training` with the chosen class set as every line's `unitClass`, so the sparring partner's portrait art matches its class. Tested in `src/game/trainingLevel.test.ts`.

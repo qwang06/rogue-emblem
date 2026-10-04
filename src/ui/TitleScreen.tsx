@@ -4,6 +4,7 @@ import { gameStore } from '../bridge/gameStore.ts';
 import { createActionMenu, getSelectedAction, moveSelection, selectIndex } from '../game/actionMenu.ts';
 import { TITLE_ACTIONS } from '../game/titleMenu.ts';
 import { getTrainingActions } from '../game/trainingLevel.ts';
+import { randomSeed } from '../game/dungeonLevel.ts';
 
 const TRAINING_INDEX = TITLE_ACTIONS.findIndex((action) => action.id === 'training');
 
@@ -31,14 +32,16 @@ export function TitleScreen() {
     setMenu(mainMenu(TRAINING_INDEX));
   }
 
-  // Carries out a menu choice. Dungeon Mode (the rogue-like run) and Settings
-  // are placeholders for now.
+  // Carries out a menu choice. Dungeon Mode starts a battle on a freshly
+  // generated map; Settings is a placeholder for now.
   function runAction(action: MenuAction | null) {
     if (!action) return;
     if (view === 'training') {
       gameStore.setState({ screen: 'battle', battleSetup: { mode: 'training', unitClass: action.id } });
     } else if (action.id === 'story') {
       gameStore.setState({ screen: 'battle', battleSetup: { mode: 'demo' } });
+    } else if (action.id === 'dungeon') {
+      gameStore.setState({ screen: 'battle', battleSetup: { mode: 'dungeon', seed: randomSeed() } });
     } else if (action.id === 'training') {
       openTraining();
     }
