@@ -1,0 +1,14 @@
+# Check out text files with LF on every OS, whatever core.autocrlf is set to,
+# so files match Prettier's default `endOfLine: "lf"` on Windows and Linux alike.
+* text=auto eol=lf
+
+# Binary assets: never touch their bytes.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary

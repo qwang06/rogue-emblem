@@ -33,6 +33,7 @@ import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange, re
 import { getFitZoom } from '../game/camera.ts';
 import { createCursor, moveCursor } from '../game/cursor.ts';
 import { createDemoLevel } from '../game/demoLevel.ts';
+import { createDungeonLevel } from '../game/dungeonLevel.ts';
 import { getStructureTiles } from '../game/structures.ts';
 import { createTrainingLevel } from '../game/trainingLevel.ts';
 import { getItemActions } from '../game/items.ts';
@@ -216,14 +217,19 @@ export class GridScene extends Phaser.Scene {
   }
 
   // `setup` is the battle the title screen chose (gameStore's battleSetup):
-  // { mode: 'training', unitClass } for a training battle, else the demo.
+  // { mode: 'training', unitClass } for a training battle, { mode: 'dungeon',
+  // seed } for a generated map, else the demo.
   create(setup?: BattleSetup) {
     // Every battle starts from a clean slate: clear anything a previous
     // battle left in the store.
     gameStore.setState({ ...BATTLE_STATE_DEFAULTS });
 
     const level: Level & Partial<DemoLevel> =
-      setup?.mode === 'training' ? createTrainingLevel(setup.unitClass) : createDemoLevel();
+      setup?.mode === 'training'
+        ? createTrainingLevel(setup.unitClass)
+        : setup?.mode === 'dungeon'
+          ? createDungeonLevel(setup.seed)
+          : createDemoLevel();
     this.grid = level.grid;
     this.units = level.units; // unitId -> Unit, player roster and enemies alike
     this.roster = level.roster; // player unitIds that can be deployed
