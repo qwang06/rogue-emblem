@@ -316,10 +316,14 @@ export function generateTerrain(options: MapGenOptions, rng: Rng): GeneratedTerr
     ['forest', forests, forestSize, openBlocked],
     ['meadow', meadows, meadowSize, openBlocked],
   ];
+  // Each patch starts on a grass tile it's free to grow from, so asking for
+  // `count` patches gives that many unless the map runs out of room (a patch
+  // can still grow into an earlier one of its kind and merge with it).
   for (const [terrain, count, [min, max], blocked] of layers) {
     for (let i = 0; i < count; i++) {
-      const start = { x: randomInt(rng, 0, width - 1), y: randomInt(rng, 1, Math.max(1, height - 3)) };
-      grid = growPatch(grid, start, randomInt(rng, min, max), rng, blocked, terrain);
+      const starts = grid.cells.filter((c) => c.terrain === 'grass' && !blocked.has(key(c)));
+      if (starts.length === 0) break;
+      grid = growPatch(grid, randomItem(rng, starts), randomInt(rng, min, max), rng, blocked, terrain);
     }
   }
 

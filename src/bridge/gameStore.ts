@@ -2,6 +2,7 @@ import type { ItemAction } from '../game/items.ts';
 import type { MenuAction, Menu } from '../game/actionMenu.ts';
 import type { SkillAction } from '../game/skills.ts';
 import type { WeaponAction } from '../game/weapons.ts';
+import type { BattleSetup } from '../game/battleSetup.ts';
 import type { BattleOutcome } from '../game/turns.ts';
 import { createStore } from './store.ts';
 import type {
@@ -10,6 +11,7 @@ import type {
   DialogView,
   ExperienceGainView,
   LevelUpView,
+  ObjectiveView,
   PhaseBannerView,
   RosterEntryView,
   TileAnchorView,
@@ -20,8 +22,7 @@ import type {
 export type Screen = 'title' | 'battle';
 export type BattlePhase = 'deployment' | 'battle';
 export type DeploymentStep = 'menu' | 'roster' | 'placing';
-export type BattleSetup =
-  { mode: 'demo' } | { mode: 'training'; unitClass: string } | { mode: 'dungeon'; seed: number };
+export type { BattleSetup };
 
 // A roster entry as a menu entry: RosterEntryViews carry their own label.
 export type RosterMenuEntry = RosterEntryView & MenuAction;
@@ -50,6 +51,8 @@ export interface BattleState {
   phaseBanner: PhaseBannerView | null;
   battleOutcome: BattleOutcome | null;
   dialog: DialogView | null;
+  objective: ObjectiveView | null;
+  nextBattle: string | null;
 }
 
 export interface GameState extends BattleState {
@@ -83,6 +86,8 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   phaseBanner: null, // PhaseBannerView from toPhaseBannerView() while a phase is being announced, or null
   battleOutcome: null, // 'victory' | 'defeat' once the battle is decided, else null
   dialog: null, // DialogView from toDialogView() of the line being spoken, or null
+  objective: null, // ObjectiveView from toObjectiveView() while the Objective screen is up, or null
+  nextBattle: null, // describeBattle() of the battle a victory leads to (shown on the result), or null
 });
 
 // The single app-wide store shared by Phaser (writer) and React (reader).
@@ -90,8 +95,8 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
 export const gameStore = createStore<GameState>({
   screen: 'title', // 'title' (main menu) | 'battle' (the map is running)
   // Which battle the map runs, set together with screen: 'battle':
-  // { mode: 'demo' } | { mode: 'training', unitClass } (a class id from src/game/unitClasses.ts)
-  // | { mode: 'dungeon', seed } (a generated map, src/game/dungeonLevel.ts)
+  // a BattleSetup from src/game/battleSetup.ts. Winning a battle that has a
+  // next one (getNextBattle) swaps it in, and main.ts restarts the map.
   battleSetup: null,
   ...BATTLE_STATE_DEFAULTS,
 });

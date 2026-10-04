@@ -6,6 +6,7 @@
 import type { CombatSide, ForecastSide } from '../game/combat.ts';
 import type { Dialog, DialogSide } from '../game/dialog.ts';
 import type { ExperienceGain, GrowthStat, LevelUpResult } from '../game/experience.ts';
+import type { ObjectiveText } from '../game/objectives.ts';
 import type { Point } from '../game/grid.ts';
 import type { Team, TurnState } from '../game/turns.ts';
 import type { Unit } from '../game/Unit.ts';
@@ -132,6 +133,11 @@ export interface TurnView {
 export interface PhaseBannerView extends TurnView {
   id: number;
   durationMs: number;
+}
+
+export interface ObjectiveView extends ObjectiveText {
+  // The battle's title, e.g. "Floor 2: Lakeside" (see describeBattle).
+  battle: string;
 }
 
 export interface DialogView {
@@ -428,4 +434,10 @@ export function toDialogView({
     charsPerSecond,
     isLast: dialog.index === dialog.lines.length - 1,
   });
+}
+
+// Snapshot for the Objective screen: the battle's title and its objective's
+// words (src/game/objectives.ts).
+export function toObjectiveView(battle: string, text: ObjectiveText): ObjectiveView {
+  return Object.freeze({ battle, goal: text.goal, defeat: text.defeat });
 }

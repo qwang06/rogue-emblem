@@ -7,6 +7,7 @@ import {
   toCombatForecastView,
   toDamagePopupView,
   toDialogView,
+  toObjectiveView,
   toPhaseBannerView,
   toRosterEntryView,
   toTileAnchorView,
@@ -381,5 +382,13 @@ describe('toLevelUpView', () => {
     expect(view.skills).toEqual(['Power Strike']);
     expect(Object.isFrozen(view)).toBe(true);
     expect(Object.isFrozen(view.stats[0])).toBe(true);
+  });
+});
+
+describe('toObjectiveView', () => {
+  it('carries the battle title and the objective words, frozen', () => {
+    const view = toObjectiveView('Floor 2: Lakeside', { goal: 'Defeat all enemies', defeat: 'All your units fall' });
+    expect(view).toEqual({ battle: 'Floor 2: Lakeside', goal: 'Defeat all enemies', defeat: 'All your units fall' });
+    expect(Object.isFrozen(view)).toBe(true);
   });
 });

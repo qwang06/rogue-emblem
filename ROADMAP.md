@@ -142,6 +142,7 @@ One class per sub-PR is fine. Each class: stat line, growth rates, weapon types 
 - Pure `getBattleOutcome(state, objective)` generalizes the existing rout check. Loss conditions: Lord dies, or all units die.
 - Objective shown in the HUD; Seize as a new action on the target tile.
 - **Tests:** each objective's win/loss, Lord death overrides everything, turn-limit boundaries.
+- _Progress:_ `src/game/objectives.ts` has the `Objective` type with `rout` only (the default for every level; a dungeon config can set its own), and the Objective screen shows it after the opening dialog. The other objective kinds, `getBattleOutcome(state, objective)`, Lord death and the in-battle HUD readout are still to do.
 
 ### [ ] 3.4 Permadeath and difficulty modes
 

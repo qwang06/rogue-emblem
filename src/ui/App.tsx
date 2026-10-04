@@ -14,6 +14,7 @@ import { WeaponMenu } from './WeaponMenu.tsx';
 import { LevelUpPanel } from './LevelUpPanel.tsx';
 import { LoadingScreen } from './LoadingScreen.tsx';
 import { MainMenuButton } from './MainMenuButton.tsx';
+import { ObjectiveScreen } from './ObjectiveScreen.tsx';
 import { PageHeader } from './PageHeader.tsx';
 import { PauseMenu } from './PauseMenu.tsx';
 import { PhaseBanner } from './PhaseBanner.tsx';
@@ -79,6 +80,7 @@ export function App() {
               <LevelUpPanel />
               <PhaseBanner />
               <DialogBox />
+              <ObjectiveScreen />
               <PauseMenu />
               <BattleResult />
             </div>

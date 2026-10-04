@@ -290,6 +290,13 @@ describe('generateTerrain', () => {
     }
   });
 
+  it('grows every kind of patch it is asked for while there is room', () => {
+    for (const seed of SEEDS) {
+      const { grid } = generate(seed);
+      for (const terrain of PATCHES) expect(grid.cells.some((c) => c.terrain === terrain)).toBe(true);
+    }
+  });
+
   it('lays only the path when every other layer is turned off', () => {
     const { grid, buildings } = generate(5, {
       lakes: 0,

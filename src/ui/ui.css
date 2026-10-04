@@ -1029,6 +1029,65 @@ kbd {
   color: var(--parchment-dim);
 }
 
+/* ---- Objective screen ---------------------------------------------- */
+
+/* Covers the map so a click anywhere reaches GridScene's confirm. */
+.objective-layer {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.objective {
+  position: static;
+  min-width: 17.5rem;
+  padding: 20px 32px;
+  text-align: center;
+  animation: level-up-pop 200ms ease-out;
+}
+
+.objective__battle {
+  margin: 0 0 12px;
+  font-family: var(--serif);
+  font-size: 1.125rem;
+  color: var(--parchment);
+}
+
+.objective__title {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 0.875rem;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.objective__goal {
+  margin: 10px 0 0;
+  font-family: var(--serif);
+  font-size: 1.75rem;
+  color: #fff8e2;
+}
+
+.objective__defeat {
+  margin: 10px 0 0;
+  font-size: 0.875rem;
+  color: var(--parchment-dim);
+}
+
+.objective__label {
+  margin-right: 6px;
+  font-size: 0.75rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #fca5a5;
+}
+
+.objective__hint {
+  margin: 14px 0 0;
+  font-size: 0.75rem;
+  color: var(--parchment-dim);
+}
+
 /* ---- Dialog box ------------------------------------------------------ */
 
 /* Covers the map so a click anywhere reaches GridScene's confirm, with the
@@ -1368,7 +1427,8 @@ kbd {
   }
 
   .experience-bar__fill,
-  .level-up {
+  .level-up,
+  .objective {
     animation: none;
   }
 

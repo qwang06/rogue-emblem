@@ -18,6 +18,7 @@ import {
   toDialogView,
   toExperienceGainView,
   toLevelUpView,
+  toObjectiveView,
   toPhaseBannerView,
   toCanvasFraction,
   toRosterEntryView,
@@ -32,10 +33,9 @@ import { calculateSkillDamage, findLearnedSkill, getLearnedSkills, getSkillActio
 import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange, resolveCombat } from '../game/combat.ts';
 import { getFitZoom } from '../game/camera.ts';
 import { createCursor, moveCursor } from '../game/cursor.ts';
-import { createDemoLevel } from '../game/demoLevel.ts';
-import { createDungeonLevel } from '../game/dungeonLevel.ts';
+import { createBattleLevel, describeBattle, FIRST_STORY_CHAPTER, getNextBattle } from '../game/battleSetup.ts';
+import { randomSeed } from '../game/dungeonLevel.ts';
 import { getStructureTiles } from '../game/structures.ts';
-import { createTrainingLevel } from '../game/trainingLevel.ts';
 import { getConsumables, getItemActions } from '../game/items.ts';
 import { getWeaponActions, getWeaponReach, type Weapon, type WeaponAction } from '../game/weapons.ts';
 import { planRushAction } from '../game/enemyAI.ts';
@@ -53,6 +53,7 @@ import {
 import { findUnit, getCell, gridToWorld, isInBounds, moveUnit, setUnit, worldToGrid } from '../game/grid.ts';
 import { advanceDialog, createDialog, DIALOG_CHARS_PER_SECOND, getCurrentLine } from '../game/dialog.ts';
 import { getTriggeredDialog, turnTrigger } from '../game/dialogScript.ts';
+import { DEFAULT_OBJECTIVE, describeObjective, type Objective } from '../game/objectives.ts';
 import { getPathFacings } from '../game/facing.ts';
 import { createKeyRepeat, updateKeyRepeat } from '../game/keyRepeat.ts';
 import { getArrowPieces } from '../game/moveArrow.ts';
@@ -98,8 +99,7 @@ import type { Grid, Point } from '../game/grid.ts';
 import type { Direction, KeyRepeatState, Step } from '../game/keyRepeat.ts';
 import type { MovementOptions, RangeTile } from '../game/movement.ts';
 import type { CombatSide, Strike, TargetTile } from '../game/combat.ts';
-import type { DemoLevel, StructurePlacement, TreePlacement } from '../game/demoLevel.ts';
-import type { Level } from '../game/trainingLevel.ts';
+import type { StructurePlacement, TreePlacement } from '../game/demoLevel.ts';
 import type { Facing } from '../game/facing.ts';
 import type { UnitAnimation } from '../game/tileset.ts';
 import type { PopupKind } from '../bridge/views.ts';
@@ -169,6 +169,10 @@ export class GridScene extends Phaser.Scene {
   deploymentZone!: Point[];
   deploymentLimit!: number;
   dialogs!: DialogScripts;
+  objective!: Objective;
+  setup!: BattleSetup;
+  nextBattle: BattleSetup | null = null;
+  onObjectiveDone: (() => void) | null = null;
   keys!: Phaser.Types.Input.Keyboard.CursorKeys;
   arrowRepeat!: KeyRepeatState;
   actionKeys!: Record<ActionKey, Phaser.Input.Keyboard.Key>;
@@ -224,20 +228,16 @@ export class GridScene extends Phaser.Scene {
     }
   }
 
-  // `setup` is the battle the title screen chose (gameStore's battleSetup):
-  // { mode: 'training', unitClass } for a training battle, { mode: 'dungeon',
-  // seed } for a generated map, else the demo.
-  create(setup?: BattleSetup) {
+  // `setup` is the battle to run (gameStore's battleSetup, see
+  // src/game/battleSetup.ts), the first story chapter if there's none.
+  create(setup: BattleSetup = FIRST_STORY_CHAPTER) {
     // Every battle starts from a clean slate: clear anything a previous
     // battle left in the store.
     gameStore.setState({ ...BATTLE_STATE_DEFAULTS });
 
-    const level: Level & Partial<DemoLevel> =
-      setup?.mode === 'training'
-        ? createTrainingLevel(setup.unitClass)
-        : setup?.mode === 'dungeon'
-          ? createDungeonLevel(setup.seed)
-          : createDemoLevel();
+    this.setup = setup;
+    this.nextBattle = null; // the BattleSetup a victory leads to, once won
+    const level = createBattleLevel(setup);
     this.grid = level.grid;
     this.units = level.units; // unitId -> Unit, player roster and enemies alike
     this.roster = level.roster; // player unitIds that can be deployed
@@ -245,6 +245,7 @@ export class GridScene extends Phaser.Scene {
     // How many roster units can be placed: the level's max, capped by roster and zone size.
     this.deploymentLimit = getDeploymentLimit(level.roster, level.deploymentZone, level.maxDeployed);
     this.dialogs = level.dialogs; // the level's conversations by trigger (src/game/dialogScript.ts)
+    this.objective = level.objective ?? DEFAULT_OBJECTIVE; // what wins the battle (src/game/objectives.ts)
 
     const palette = BUILDING_PALETTES[level.palette ?? DEFAULT_BUILDING_PALETTE];
     this.renderTerrain(this.grid, { ...TERRAIN_AUTOTILES, wall: getWallAutotile(palette) });
@@ -304,15 +305,17 @@ export class GridScene extends Phaser.Scene {
     this.cursorVisibleBeforeDialog = false; // restored when the dialog closes
     this.dialogLineId = null; // changes per line so the dialog box restarts its typing
     this.nextDialogLineId = 1;
+    this.onObjectiveDone = null; // set while the Objective screen is up
     this.updateHoveredUnit();
     // Levels with units to place open on deployment; others (e.g. training,
     // where everyone starts on the map) go straight to the battle. Either
-    // waits for the level's opening dialog, if it has one.
+    // waits for the level's opening dialog, if it has one, and then the
+    // Objective screen.
     const begin = () => {
       if (this.deploymentZone.length > 0) this.startDeployment();
       else this.startBattle();
     };
-    this.playTriggeredDialog('opening', begin);
+    this.playTriggeredDialog('opening', () => this.showObjective(begin));
     gameStore.setState({ mapLoadProgress: 1, mapReady: true });
   }
 
@@ -346,8 +349,13 @@ export class GridScene extends Phaser.Scene {
       return;
     }
 
+    if (this.onObjectiveDone) {
+      if (confirm || cancel) this.hideObjective();
+      return;
+    }
+
     if (this.battleOutcome) {
-      if (confirm) this.exitToTitle();
+      if (confirm) this.leaveBattle();
       return;
     }
 
@@ -644,11 +652,40 @@ export class GridScene extends Phaser.Scene {
     if (dy !== 0) this.publishMenu('pauseMenu', moveSelection(this.pauseMenu!, dy));
   }
 
+  // After the result: on to the next battle if the victory leads to one,
+  // else back to the title. Moving on restarts this scene with the next
+  // setup; create() (re)sets every piece of battle state.
+  leaveBattle() {
+    if (!this.nextBattle) {
+      this.exitToTitle();
+      return;
+    }
+    this.inputLocked = true;
+    gameStore.setState({ ...BATTLE_STATE_DEFAULTS, battleSetup: this.nextBattle });
+    this.scene.restart(this.nextBattle);
+  }
+
   // Clears the battle's UI state and switches to the title screen, which
   // makes main.ts remove this scene. The next battle starts fresh.
   exitToTitle() {
     this.inputLocked = true;
     gameStore.setState({ ...BATTLE_STATE_DEFAULTS, screen: 'title', battleSetup: null });
+  }
+
+  // ---- Objective --------------------------------------------------------
+  // Before the battle (after the opening dialog) React shows what wins and
+  // loses it; confirm or cancel dismisses it and the level carries on.
+
+  showObjective(onDone: () => void) {
+    this.onObjectiveDone = onDone;
+    gameStore.setState({ objective: toObjectiveView(describeBattle(this.setup), describeObjective(this.objective)) });
+  }
+
+  hideObjective() {
+    const onDone = this.onObjectiveDone;
+    this.onObjectiveDone = null;
+    gameStore.setState({ objective: null });
+    onDone?.();
   }
 
   // ---- Dialog -----------------------------------------------------------
@@ -945,7 +982,10 @@ export class GridScene extends Phaser.Scene {
     this.battleOutcome = outcome;
     this.inputLocked = false;
     this.setCursorVisible(false);
-    this.playTriggeredDialog(outcome, () => gameStore.setState({ battleOutcome: outcome }));
+    // Completing the objective moves on to the next chapter or floor.
+    this.nextBattle = outcome === 'victory' ? getNextBattle(this.setup, randomSeed()) : null;
+    const nextBattle = this.nextBattle && describeBattle(this.nextBattle);
+    this.playTriggeredDialog(outcome, () => gameStore.setState({ battleOutcome: outcome, nextBattle }));
     return true;
   }
 
