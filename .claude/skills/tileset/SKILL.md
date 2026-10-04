@@ -16,7 +16,7 @@ A map tile (`TILE_SIZE`) is **32px**. The art comes in two forms:
 | Cursor         | `src/assets/overworld.png` tiles `[28, 62]` and `[29, 62]`                                              | 32x32                                         | Sprite looping the two tiles (`CURSOR_ANIMATION`)                                   |
 | Movement arrow | `src/assets/overworld.png` tiles in columns 29–31, rows 56–60 (`ARROW_TILES`)                           | 32x32                                         | One sprite per route tile, drawn from the sheet                                     |
 
-The arrow is a continuous 8px pink band through tile centers. Straights and rounded corners come from the pack's pink rounded-square loop (a 3x3 of path tiles around a gem), and the heads from the tiles just below it. Pieces are named after `src/game/moveArrow.ts`: `head-up`, `head-down`, `head-left`, `head-right`, `left-right`, `up-down`, `up-left`, `up-right`, `down-left`, `down-right`. Each corner piece is named for the two tile edges it joins. The sheet also has a _broken_ (segmented, directional) arrow set in rows 50–55, which we don't use; see the catalog.
+The arrow is a continuous 8px pink band through tile centers. Straights and rounded corners come from the pack's pink rounded-square loop (a 3x3 of path tiles around a gem), and the heads from the tiles just below it. Pieces are named after `src/game/moveArrow.ts`: `head-up`, `head-down`, `head-left`, `head-right`, `left-right`, `up-down`, `up-left`, `up-right`, `down-left`, `down-right`. Each corner piece is named for the two tile edges it joins. The sheet also has a _broken_ (segmented, directional) arrow set in rows 50–55, which we don't use; see [ui-catalog.md](ui-catalog.md).
 
 ## Units: idle and move sheets
 
@@ -34,7 +34,7 @@ Each unit art (`UNIT_SPRITES`, e.g. `Villager_01`) has one sheet per animation, 
 
 ## Terrain: overworld sheet
 
-**[overworld-catalog.md](overworld-catalog.md)** lists everything on the sheet: grass variants, the water, sand and deep-water sets, mountains, forests, bridges, team-colored buildings and UI. Read it before picking any terrain art.
+**[overworld-catalog.md](overworld-catalog.md)** lists the map art on the sheet: grass variants, the water, sand, dark-grass and deep-water sets, island rings, mountains, forests, bridges, team-colored buildings and walls. Read it before picking any terrain art. The UI pieces on the same sheet (cursor, movement arrow, digits, HP bar, markers) are in **[ui-catalog.md](ui-catalog.md)**, kept separate so they're never mistaken for map tiles.
 
 The sheet comes from a pack drawn at 3x (every art pixel is a 3x3 block, so it's natively 1024x1024, 16px tiles). `scripts/rescale-png.js` redraws the used area at 2x as `src/assets/overworld.png` (see the catalog for the command), so tile `[column, row]` on the pack is 32px tile `[column, row]` in the game, frame `row * 42 + column`.
 
@@ -52,7 +52,20 @@ node .claude/skills/tileset/scripts/dump-png.js --colors src/assets/Villager_01_
 
 Each distinct color gets its own character (most common first), with a `char=hex` legend under the image; transparent pixels are spaces. Characters are assigned per image, so the same character can mean different colors in two dumps.
 
-`scripts/rescale-png.js --from N --to M [--crop WxH] in.png out.png` changes the scale of upscaled pixel art (it checks every NxN block is one color). `dump-png.js` exports `decode` for other scripts.
+To _look_ at a block of a sheet (e.g. when cataloging new tiles), render it as a zoomed contact sheet and view the PNG; it labels column/row numbers and prints each tile's opaque bounding box. To check how overlays stack, compose tiles into a little scene (`/` separates rows, spaces cells, `+` layers bottom to top):
+
+```sh
+node .claude/skills/tileset/scripts/sheet-grid.js --scale 3 src/assets/overworld.png <scratchpad>/grid.png 0 0 12 2   # columns 0-12, rows 0-2
+node .claude/skills/tileset/scripts/compose-tiles.js <scratchpad>/scene.png "0,0+4,0 0,0 / 0,0+4,1 5,9+12,1"
+```
+
+To judge an autotile set as the game will draw it, `autotile-preview.ts` runs a little `#`/`.` map through `src/game/autotile.ts` over grass (`--over c,r=X` stamps a sheet tile on cells marked X):
+
+```sh
+node .claude/skills/tileset/scripts/autotile-preview.ts --block 1,33 --inner 2,34 --over 5,34=G <scratchpad>/walls.png "......./.##G##./.#...#./.#####./......."
+```
+
+`scripts/rescale-png.js --from N --to M [--crop WxH] in.png out.png` changes the scale of upscaled pixel art (it checks every NxN block is one color). `dump-png.js` exports `decode` and `encode` (rows of RGBA pixels to and from PNG) for other scripts.
 
 ## How the code uses the art
 
