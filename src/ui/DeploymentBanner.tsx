@@ -16,7 +16,11 @@ export function DeploymentBanner() {
   return (
     <div className="deployment-banner">
       <h2 className="deployment-banner__title">Deployment</h2>
-      {step && HINTS[step] && <p className="deployment-banner__hint">{HINTS[step]}</p>}
+      {step && HINTS[step] && (
+        <p className="deployment-banner__hint" title={HINTS[step]}>
+          {HINTS[step]}
+        </p>
+      )}
     </div>
   );
 }
