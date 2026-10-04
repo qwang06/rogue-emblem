@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   HEALTH_POTION,
   MANA_POTION,
+  MAX_INVENTORY_SLOTS,
   STARTING_ITEMS,
+  addItem,
+  canAddItem,
   canUseItem,
   createInventory,
   findItem,
@@ -147,5 +150,82 @@ describe('getItemActions', () => {
 
   it('is empty for an empty inventory', () => {
     expect(getItemActions(unitAt(), createInventory())).toEqual([]);
+  });
+});
+
+// n distinct one-off items, for filling inventory slots.
+const distinctItems = (n: number) =>
+  Array.from({ length: n }, (_, i) => ({ item: { ...HEALTH_POTION, id: `item-${i}` }, quantity: 1 }));
+
+describe('MAX_INVENTORY_SLOTS', () => {
+  it('is 6', () => {
+    expect(MAX_INVENTORY_SLOTS).toBe(6);
+  });
+
+  it('lets createInventory fill every slot', () => {
+    expect(createInventory(distinctItems(MAX_INVENTORY_SLOTS))).toHaveLength(MAX_INVENTORY_SLOTS);
+  });
+
+  it('makes createInventory throw past the limit', () => {
+    expect(() => createInventory(distinctItems(MAX_INVENTORY_SLOTS + 1))).toThrow(/at most 6/);
+  });
+
+  it("doesn't count empty entries against the limit", () => {
+    const entries = [...distinctItems(MAX_INVENTORY_SLOTS), { item: MANA_POTION, quantity: 0 }];
+    expect(createInventory(entries)).toHaveLength(MAX_INVENTORY_SLOTS);
+  });
+});
+
+describe('canAddItem', () => {
+  const full = createInventory(distinctItems(MAX_INVENTORY_SLOTS));
+
+  it('allows a new item while a slot is free', () => {
+    expect(canAddItem(createInventory(), HEALTH_POTION)).toBe(true);
+    expect(canAddItem(createInventory(distinctItems(5)), MANA_POTION)).toBe(true);
+  });
+
+  it('rejects a new item when every slot is taken', () => {
+    expect(canAddItem(full, MANA_POTION)).toBe(false);
+  });
+
+  it('allows stacking onto a held item even when full', () => {
+    expect(canAddItem(full, full[0].item)).toBe(true);
+  });
+});
+
+describe('addItem', () => {
+  it('adds a new item in a slot at the end', () => {
+    const inventory = addItem(createInventory([{ item: HEALTH_POTION, quantity: 1 }]), MANA_POTION, 2);
+    expect(inventory).toEqual([
+      { item: HEALTH_POTION, quantity: 1 },
+      { item: MANA_POTION, quantity: 2 },
+    ]);
+    expect(Object.isFrozen(inventory)).toBe(true);
+  });
+
+  it('stacks onto an entry already holding the item, one by default', () => {
+    const inventory = addItem(createInventory(STARTING_ITEMS), HEALTH_POTION);
+    expect(findItem(inventory, HEALTH_POTION.id)!.quantity).toBe(2);
+    expect(inventory).toHaveLength(STARTING_ITEMS.length);
+  });
+
+  it('stacks even when every slot is taken', () => {
+    const full = createInventory(distinctItems(MAX_INVENTORY_SLOTS));
+    expect(addItem(full, full[0].item, 3)[0].quantity).toBe(4);
+  });
+
+  it('throws when a new item has no slot', () => {
+    expect(() => addItem(createInventory(distinctItems(MAX_INVENTORY_SLOTS)), MANA_POTION)).toThrow(/full/);
+  });
+
+  it('throws on a quantity that is not positive', () => {
+    expect(() => addItem(createInventory(), HEALTH_POTION, 0)).toThrow();
+    expect(() => addItem(createInventory(), HEALTH_POTION, -1)).toThrow();
+  });
+
+  it('leaves the original inventory untouched', () => {
+    const inventory = createInventory(STARTING_ITEMS);
+    addItem(inventory, HEALTH_POTION);
+    expect(findItem(inventory, HEALTH_POTION.id)!.quantity).toBe(1);
   });
 });

@@ -25,8 +25,8 @@ body {
 
 /* ---- Page layout ---------------------------------------------------- */
 
-/* The page fills the window exactly: the header takes its height, the
-   sidebar a fixed width, and the map stage takes whatever is left. */
+/* The page fills the window exactly: the header takes its height and the
+   map stage takes whatever is left. */
 .page {
   height: 100vh;
   height: 100dvh;
@@ -73,7 +73,7 @@ body {
 .page-header__end {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .header-button {
@@ -103,13 +103,20 @@ body {
   background: var(--gold);
 }
 
-/* The settings panel drops down from its button, over the page. */
-.settings {
+/* Icon-only header buttons (Controls): square-ish, icon centered. */
+.header-button--icon {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+}
+
+/* Header popovers (Settings, Controls) drop down from their button, over the page. */
+.header-popover {
   position: relative;
 }
 
 /* Nested so its opaque background beats .panel's, which comes later. */
-.settings .settings__panel {
+.header-popover .header-popover__panel {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
@@ -121,7 +128,7 @@ body {
   color: var(--parchment);
 }
 
-.settings__title {
+.header-popover__title {
   margin: 0 0 6px;
   font-family: var(--serif);
   font-size: 1rem;
@@ -139,7 +146,6 @@ body {
   flex: 1;
   min-height: 0;
   display: flex;
-  gap: 16px;
 }
 
 /* The padding leaves room for the stage's frame, drawn outside its box. */
@@ -175,127 +181,89 @@ body {
   overflow: hidden;
 }
 
-.sidebar {
-  width: 16.25rem;
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-/* Narrow windows: the sidebar drops below the map, the map takes the full
-   width, and the page scrolls. */
+/* Narrow windows: the header wraps, and the stage still fills what's left. */
 @media (max-width: 48rem) {
   .page {
-    height: auto;
-    min-height: 100dvh;
-    max-width: none;
+    gap: 10px;
+    padding: 10px;
   }
 
-  .page__main {
-    flex-direction: column;
-  }
-
-  /* With the page scrolling there's no height left to fill, so the stage
-     takes a 4:3 box at the full width. */
-  .stage-area {
-    flex: none;
-  }
-
-  .stage {
-    aspect-ratio: 4 / 3;
-  }
-
-  .sidebar {
-    width: auto;
-    overflow: visible;
+  .page-header {
+    flex-wrap: wrap;
+    gap: 8px;
   }
 }
 
-/* ---- Sidebar -------------------------------------------------------- */
+/* ---- Unit panel (docked in a top corner of the map) ----------------- */
 
-.side-panel {
-  padding: 12px 14px;
-  background: rgb(22 32 74 / 85%);
-  border: 2px solid var(--gold-dim);
-  border-radius: 4px;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
-  font-family: var(--mono);
-  font-size: 0.8125rem;
+/* Nested so it beats .panel, which comes later. It's read-only, so the
+   pointer passes through to the map: hovering a tile under it moves the
+   cursor there, and the panel then flips to the other corner. The team
+   shows as the accent: the left border and the name. */
+.hud .unit-panel {
+  --team: var(--gold);
+  position: absolute;
+  top: 12px;
+  width: 11.5rem;
+  max-height: calc(100% - 24px);
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 6px 10px 8px;
+  border-width: 1px;
+  border-left: 3px solid var(--team);
+  font-size: 0.75rem;
+  pointer-events: none;
 }
 
-.side-panel__title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 10px;
-  font-family: var(--serif);
-  font-size: 0.8125rem;
-  font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--gold);
+.unit-panel--player {
+  --team: #93c5fd;
 }
 
-/* A thin gold rule trailing the title, like the one on the title screen. */
-.side-panel__title::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, var(--gold-dim), transparent);
+.unit-panel--enemy {
+  --team: #fca5a5;
 }
 
-.unit-panel--player .side-panel__title {
-  color: #93c5fd;
+.unit-panel--left {
+  left: 12px;
 }
 
-.unit-panel--enemy .side-panel__title {
-  color: #fca5a5;
-}
-
-.unit-panel__placeholder {
-  margin: 0;
-  padding: 24px 0;
-  text-align: center;
-  color: var(--parchment-dim);
+.unit-panel--right {
+  right: 12px;
 }
 
 .unit-panel__header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-bottom: 4px;
 }
 
-.unit-panel__portrait {
-  display: flex;
-  padding: 4px;
-  background: rgb(0 0 0 / 30%);
-  border: 1px solid rgb(168 137 63 / 60%);
-  border-radius: 2px;
+.unit-panel__identity {
+  min-width: 0;
 }
 
 .unit-panel__name {
   margin: 0;
+  overflow: hidden;
   font-family: var(--serif);
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 700;
-  color: #fff8e2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--team);
 }
 
 .unit-panel__level {
-  margin: 2px 0 0;
+  margin: 0;
   color: var(--parchment-dim);
 }
 
 .meter {
   display: grid;
-  grid-template-columns: 24px 1fr 48px;
+  grid-template-columns: 1.5rem 1fr auto;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: 6px;
+  margin-top: 2px;
 }
 
 .meter__label {
@@ -303,9 +271,8 @@ body {
 }
 
 .meter__track {
-  height: 8px;
+  height: 4px;
   background: rgb(0 0 0 / 45%);
-  border: 1px solid rgb(168 137 63 / 45%);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -317,77 +284,78 @@ body {
 }
 
 .meter--hp .meter__fill {
-  background: linear-gradient(180deg, #86efac, #22c55e);
+  background: #4ade80;
 }
 
 .meter--mp .meter__fill {
-  background: linear-gradient(180deg, #93c5fd, #3b82f6);
+  background: #60a5fa;
 }
 
 .meter__value {
+  min-width: 2.75rem;
   text-align: right;
 }
 
+/* Three columns of "STR 5", divided from the bars by a hairline. */
 .unit-panel__stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  margin: 12px 0 0;
+  column-gap: 10px;
+  row-gap: 1px;
+  margin: 6px 0 0;
+  padding-top: 5px;
+  border-top: 1px solid rgb(168 137 63 / 30%);
 }
 
 .unit-panel__stat {
-  padding: 4px 0;
-  text-align: center;
-  background: rgb(0 0 0 / 25%);
-  border-radius: 2px;
+  display: flex;
+  justify-content: space-between;
 }
 
 .unit-panel__stat dt {
-  font-size: 0.625rem;
   color: var(--parchment-dim);
 }
 
 .unit-panel__stat dd {
-  margin: 2px 0 0;
-  font-size: 0.9375rem;
+  margin: 0;
   color: #fff8e2;
 }
 
-.unit-panel__subtitle {
-  margin: 12px 0 6px;
-  font-size: 0.625rem;
-  font-weight: normal;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--parchment-dim);
-}
-
+/* One item per row under a hairline: the name takes what room is left
+   and is cut short with an ellipsis, the count stays whole. */
 .unit-panel__items {
-  margin: 0;
-  padding: 0;
+  margin: 5px 0 0;
+  padding: 4px 0 0;
   list-style: none;
+  border-top: 1px solid rgb(168 137 63 / 30%);
+  color: #fff8e2;
 }
 
 .unit-panel__item {
   display: flex;
+  gap: 8px;
   justify-content: space-between;
-  padding: 3px 0;
+  min-width: 0;
 }
 
-.unit-panel__item-quantity,
-.unit-panel__no-items {
+.unit-panel__item-label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.unit-panel__item-quantity {
+  flex: none;
   color: var(--parchment-dim);
 }
 
-.unit-panel__no-items {
+.controls-list {
+  min-width: 17rem;
   margin: 0;
 }
 
-.controls-panel__list {
-  margin: 0;
-}
-
-.controls-panel__row {
+.controls-list__row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -395,12 +363,12 @@ body {
   padding: 3px 0;
 }
 
-.controls-panel__row dt {
+.controls-list__row dt {
   display: flex;
   gap: 3px;
 }
 
-.controls-panel__row dd {
+.controls-list__row dd {
   margin: 0;
   color: var(--parchment-dim);
 }
@@ -420,10 +388,14 @@ kbd {
 
 /* ---- HUD overlay (on top of the canvas) ---------------------------- */
 
+/* Nothing on the map selects as text: clicks there are game input, and a
+   double click would otherwise highlight whatever is under it. The dialog
+   box opts back in. */
 .hud {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  user-select: none;
   font-family: var(--mono);
   line-height: normal;
   color: var(--parchment);
@@ -755,6 +727,9 @@ kbd {
 }
 
 .roster-menu__title {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
   margin: 0 0 6px;
   font-family: var(--serif);
   font-size: 0.75rem;
@@ -992,6 +967,7 @@ kbd {
   width: min(100%, 44rem);
   padding: 10px 12px;
   cursor: pointer;
+  user-select: text;
   animation: dialog-rise 180ms ease-out;
 }
 
@@ -1326,4 +1302,8 @@ kbd {
   100% {
     opacity: 0;
   }
+}
+
+.roster-menu__count {
+  color: var(--parchment-dim);
 }

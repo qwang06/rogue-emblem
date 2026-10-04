@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { placeMenuBesideTile } from './menuPlacement.ts';
+import { pickCornerAwayFromTile, placeMenuBesideTile } from './menuPlacement.ts';
 
 const stage = { width: 600, height: 400 };
 const menu = { width: 120, height: 150 };
@@ -37,5 +37,28 @@ describe('placeMenuBesideTile', () => {
 
   it('uses the given gap', () => {
     expect(placeMenuBesideTile(tileAt(100, 100), menu, stage, 0)).toEqual({ side: 'right', left: 164, top: 100 });
+  });
+});
+
+describe('pickCornerAwayFromTile', () => {
+  const tileFrom = (left: number, right: number) => ({ left, top: 0.2, right, bottom: 0.3 });
+
+  it('docks left with no tile', () => {
+    expect(pickCornerAwayFromTile(null)).toBe('left');
+  });
+
+  it('docks right when the tile is in the left half', () => {
+    expect(pickCornerAwayFromTile(tileFrom(0, 0.1))).toBe('right');
+    expect(pickCornerAwayFromTile(tileFrom(0.4, 0.5))).toBe('right');
+  });
+
+  it('docks left when the tile is in the right half or centered', () => {
+    expect(pickCornerAwayFromTile(tileFrom(0.9, 1))).toBe('left');
+    expect(pickCornerAwayFromTile(tileFrom(0.45, 0.55))).toBe('left');
+  });
+
+  it('handles tiles partly off the canvas', () => {
+    expect(pickCornerAwayFromTile(tileFrom(-0.05, 0.05))).toBe('right');
+    expect(pickCornerAwayFromTile(tileFrom(0.98, 1.08))).toBe('left');
   });
 });

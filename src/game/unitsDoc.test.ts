@@ -11,7 +11,8 @@ import { calculateSkillDamage, POWER_STRIKE, SKILL_TREES, THROW_STONES } from '.
 import { createUnitOfClass, UNIT_CLASSES } from './unitClasses.ts';
 import type { Unit } from './Unit.ts';
 
-const doc = readFileSync(new URL('../../UNITS.md', import.meta.url), 'utf8');
+// Line endings normalized, so a Windows checkout (CRLF) parses the same.
+const doc = readFileSync(new URL('../../UNITS.md', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 
 // The body of the `## heading` section, up to the next `## `.
 function section(heading: string): string {

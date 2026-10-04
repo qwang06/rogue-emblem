@@ -11,7 +11,8 @@ function mainMenu(selectedIndex = 0) {
   return selectIndex(createActionMenu(TITLE_ACTIONS), selectedIndex);
 }
 
-// The landing screen: game title plus the Play / Training / Settings menu.
+// The landing screen: game title plus the Story Mode / Dungeon Mode /
+// Training / Settings menu.
 // Training swaps in a second menu listing the unit classes; picking one
 // starts a small practice battle with that unit. Works with the keyboard
 // (arrows + Enter/Z to choose, Esc/X to go back — same keys as the map) and
@@ -30,12 +31,13 @@ export function TitleScreen() {
     setMenu(mainMenu(TRAINING_INDEX));
   }
 
-  // Carries out a menu choice. Settings is a placeholder for now.
+  // Carries out a menu choice. Dungeon Mode (the rogue-like run) and Settings
+  // are placeholders for now.
   function runAction(action: MenuAction | null) {
     if (!action) return;
     if (view === 'training') {
       gameStore.setState({ screen: 'battle', battleSetup: { mode: 'training', unitClass: action.id } });
-    } else if (action.id === 'play') {
+    } else if (action.id === 'story') {
       gameStore.setState({ screen: 'battle', battleSetup: { mode: 'demo' } });
     } else if (action.id === 'training') {
       openTraining();

@@ -88,6 +88,10 @@ export const TREE_POSITIONS: readonly TreePlacement[] = Object.freeze(
   ].map((tree) => Object.freeze(tree)),
 );
 
+// How many units the player may deploy on this map. Deployment is done
+// (and the menu jumps to Start) once this many are placed.
+export const DEMO_MAX_DEPLOYED = 3;
+
 // The player's roster of villagers, by unitId -> name. One unit per
 // deployment tile.
 export const PLAYER_ROSTER: Readonly<Record<string, string>> = Object.freeze({
@@ -96,10 +100,11 @@ export const PLAYER_ROSTER: Readonly<Record<string, string>> = Object.freeze({
   'villager-3': 'Cato',
 });
 
-// Returns { grid, units, roster, deploymentZone, dialogs, decorations,
-// structures }. `units` maps every unitId (player and enemy) to its Unit;
+// Returns { grid, units, roster, deploymentZone, maxDeployed, dialogs,
+// decorations, structures }. `units` maps every unitId (player and enemy) to its Unit;
 // `roster` lists the player unitIds available to deploy; `deploymentZone`
-// is [{ x, y }] of placeable tiles; `dialogs` are the level's
+// is [{ x, y }] of placeable tiles; `maxDeployed` caps how many units
+// can be placed; `dialogs` are the level's
 // conversations by trigger, from src/data/dialog/demo.txt; `decorations`
 // is [{ x, y, tree }] of trees drawn over the grass; `structures` is
 // [{ x, y, structure }] of multi-tile art by top-left tile.
@@ -121,6 +126,7 @@ export function createDemoLevel(): DemoLevel {
     units,
     roster: Object.keys(PLAYER_ROSTER),
     deploymentZone: DEPLOYMENT_ZONE.map((tile) => ({ ...tile })),
+    maxDeployed: DEMO_MAX_DEPLOYED,
     dialogs: DIALOGS.demo,
     decorations: TREE_POSITIONS.map((tree) => ({ ...tree })),
     structures: STRUCTURE_POSITIONS.map((structure) => ({ ...structure })),

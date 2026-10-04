@@ -16,6 +16,7 @@ export interface Level {
   units: Map<string, Unit>;
   roster: string[];
   deploymentZone: Point[];
+  maxDeployed: number;
   dialogs: DialogScripts;
 }
 
@@ -49,9 +50,9 @@ export function getTrainingDialogs(unitClass: string, dialogs: DialogScripts = D
   );
 }
 
-// Returns { grid, units, roster, deploymentZone, dialogs } like
-// createDemoLevel, with both units already placed and nothing to deploy
-// (empty roster and zone). `dialogs` come from getTrainingDialogs.
+// Returns { grid, units, roster, deploymentZone, maxDeployed, dialogs }
+// like createDemoLevel, with both units already placed and nothing to
+// deploy (empty roster and zone, and a max of 0). `dialogs` come from getTrainingDialogs.
 // Throws on an unknown unit class.
 export function createTrainingLevel(unitClass: string): Level {
   const trainee = createUnitOfClass(unitClass, { team: 'player' });
@@ -69,6 +70,7 @@ export function createTrainingLevel(unitClass: string): Level {
     ]),
     roster: [],
     deploymentZone: [],
+    maxDeployed: 0,
     dialogs: getTrainingDialogs(unitClass),
   };
 }

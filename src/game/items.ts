@@ -61,11 +61,38 @@ const STAT_FIELDS: Readonly<Record<RestoreStat, { current: keyof Restorable; max
   mana: Object.freeze({ current: 'mana', max: 'maxMana' }),
 });
 
+// How many different items a unit can carry: each entry (one item, any
+// quantity) takes a slot.
+export const MAX_INVENTORY_SLOTS = 6;
+
 // A frozen inventory from [{ item, quantity }], dropping empty entries.
+// Throws if more than MAX_INVENTORY_SLOTS entries are left.
 export function createInventory(entries: readonly InventoryEntry[] = []): Inventory {
-  return Object.freeze(
-    entries.filter((entry) => entry.quantity > 0).map(({ item, quantity }) => Object.freeze({ item, quantity })),
-  );
+  const kept = entries.filter((entry) => entry.quantity > 0);
+  if (kept.length > MAX_INVENTORY_SLOTS) {
+    throw new Error(`An inventory holds at most ${MAX_INVENTORY_SLOTS} items, got ${kept.length}`);
+  }
+  return Object.freeze(kept.map(({ item, quantity }) => Object.freeze({ item, quantity })));
+}
+
+// Whether item fits: it stacks onto an entry already holding it, otherwise
+// it needs a free slot.
+export function canAddItem(inventory: Inventory, item: Item): boolean {
+  return findItem(inventory, item.id) !== null || inventory.length < MAX_INVENTORY_SLOTS;
+}
+
+// Adds quantity (default 1) of item and returns the new inventory: stacked
+// onto its entry if there is one, else in a new slot at the end. Throws if
+// it doesn't fit (check canAddItem first) or quantity isn't positive.
+export function addItem(inventory: Inventory, item: Item, quantity = 1): Inventory {
+  if (!(quantity > 0)) throw new Error(`Can't add ${quantity} of ${item.id}`);
+  if (!canAddItem(inventory, item)) throw new Error(`No room for ${item.id}: inventory is full`);
+  if (findItem(inventory, item.id)) {
+    return createInventory(
+      inventory.map((entry) => (entry.item.id === item.id ? { ...entry, quantity: entry.quantity + quantity } : entry)),
+    );
+  }
+  return createInventory([...inventory, { item, quantity }]);
 }
 
 // The inventory entry holding itemId, or null.

@@ -3,6 +3,7 @@ import { canPlaceUnit } from './deployment.ts';
 import { createDialog } from './dialog.ts';
 import { DIALOGS } from '../data/dialogs.ts';
 import {
+  DEMO_MAX_DEPLOYED,
   createDemoLevel,
   DEMO_MAP,
   DEPLOYMENT_ZONE,
@@ -92,6 +93,12 @@ describe('createDemoLevel', () => {
 
   it('has room in the deployment zone for the whole roster', () => {
     expect(level.roster.length).toBeLessThanOrEqual(level.deploymentZone.length);
+  });
+
+  it('lets the player deploy up to DEMO_MAX_DEPLOYED units, all of which fit', () => {
+    expect(level.maxDeployed).toBe(DEMO_MAX_DEPLOYED);
+    expect(level.maxDeployed).toBeGreaterThan(0);
+    expect(level.maxDeployed).toBeLessThanOrEqual(Math.min(level.roster.length, level.deploymentZone.length));
   });
 
   it('places the enemies on open ground at their positions', () => {

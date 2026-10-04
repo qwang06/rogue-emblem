@@ -29,10 +29,12 @@ export interface BattleState {
   mapReady: boolean;
   phase: BattlePhase | null;
   deploymentStep: DeploymentStep | null;
+  deploymentLimit: number | null;
   deploymentMenu: Menu | null;
   rosterMenu: Menu<RosterMenuEntry> | null;
   pauseMenu: Menu | null;
   hoveredUnit: UnitView | null;
+  hoveredAnchor: TileAnchorView | null;
   actionMenu: Menu | null;
   skillMenu: Menu<SkillAction> | null;
   itemMenu: Menu<ItemAction> | null;
@@ -59,10 +61,12 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   mapReady: false, // true once the map scene has loaded and built the map, lifting the loading screen
   phase: null, // 'deployment' (placing units) | 'battle' while the map runs, else null
   deploymentStep: null, // 'menu' | 'roster' | 'placing' during deployment, else null
+  deploymentLimit: null, // how many units can be deployed (getDeploymentLimit) during deployment, else null
   deploymentMenu: null, // frozen Place Units / Start menu while open, or null
   rosterMenu: null, // frozen menu of RosterEntryViews while picking a unit to place, or null
   pauseMenu: null, // frozen Main Menu / Settings menu while open, or null
   hoveredUnit: null, // UnitView from toUnitView(), or null
+  hoveredAnchor: null, // TileAnchorView from toTileAnchorView() of the hovered unit's tile (the unit panel docks away from it), or null
   actionMenu: null, // frozen menu from src/game/actionMenu.ts while open, or null
   skillMenu: null, // frozen menu of the active unit's skills (from getSkillActions) while open, or null
   itemMenu: null, // frozen menu of the active unit's items (from getItemActions) while open, or null
