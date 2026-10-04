@@ -1,8 +1,8 @@
 // Prints PNG images (or one tile of a tilesheet) as ASCII, so pixel art can
 // be read without an image viewer. Usage (from the repo root):
-//   node .claude/skills/tileset/scripts/dump-png.js src/assets/Villager_01_Idle.png
+//   node .claude/skills/tileset/scripts/dump-png.js src/assets/units/Villager_01_Idle.png
 //   node .claude/skills/tileset/scripts/dump-png.js --tile 32 src/assets/tileset-grass-water.png:15
-//   node .claude/skills/tileset/scripts/dump-png.js --colors src/assets/Villager_01_Idle.png
+//   node .claude/skills/tileset/scripts/dump-png.js --colors src/assets/units/Villager_01_Idle.png
 // Each distinct color gets its own character, most common first, with a
 // legend (char = hex) under the image; transparent pixels print as spaces.
 // `file:n` with --tile N prints frame n (row-major, N-pixel tiles) of a

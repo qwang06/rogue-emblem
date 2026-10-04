@@ -258,7 +258,7 @@ Terrain art: the used area of the Tactical RPG Overworld Pack sheet (drawn at 3x
 
 ### `src/assets/` sprites
 
-Unit sprite sheets `Villager_01_Idle.png` / `Villager_01_Move.png` (villager class) and `Soldier_03_Idle.png` / `Soldier_03_Move.png` (soldier class): 4x4 grids of 32x32 frames (rows are facing directions, columns animation frames). Wired up through `sprites.ts`; rows are down, left, right, up (`UNIT_SHEET.rows` in `tileset.ts`). Units start out idling on the down row (so does the deployment roster), play the move sheet facing each step while walking, and idle facing their last step after they stop.
+Unit sprite sheets live in `src/assets/units/`: the whole pack, 16 units with six team-color/race variants each, cataloged in `.claude/skills/tileset/units-catalog.md`. In use: `Villager_01_Idle.png` / `Villager_01_Move.png` (villager class) and `Soldier_03_Idle.png` / `Soldier_03_Move.png` (soldier class). All are 4x4 grids of 32x32 frames (rows are facing directions, columns animation frames). Wired up through `sprites.ts`; rows are down, left, right, up (`UNIT_SHEET.rows` in `tileset.ts`). Units start out idling on the down row (so does the deployment roster), play the move sheet facing each step while walking, and idle facing their last step after they stop.
 
 ## Conventions to keep in mind
 
