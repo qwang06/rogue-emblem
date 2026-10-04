@@ -6,7 +6,7 @@
 import { DIALOGS } from '../data/dialogs.ts';
 import type { DialogFiles } from './dialogScript.ts';
 import { DUNGEON_SETTINGS } from '../data/dungeon.ts';
-import { getDungeonFloor, type DungeonSettings } from './dungeonConfigs.ts';
+import { getConfigFloors, getDungeonFloor, type DungeonSettings } from './dungeonConfigs.ts';
 import { createDungeonLevel } from './dungeonLevel.ts';
 import { createDemoLevel, type DemoLevel } from './demoLevel.ts';
 import { createTrainingLevel, type Level } from './trainingLevel.ts';
@@ -106,4 +106,13 @@ export function describeBattle(
     case 'dungeon':
       return `Floor ${setup.floor}: ${getDungeonFloor(setup.floor, content.dungeon).name}`;
   }
+}
+
+// The battle that shows config `index` of `settings` as it plays: its first
+// floor, on a map made from `seed` (so the same map the config makes with
+// createDungeonLevel). Null when there's no such config.
+export function dungeonConfigPreview(index: number, seed: number, settings: DungeonSettings): BattleSetup | null {
+  if (!Number.isInteger(index) || index < 0 || index >= settings.floors.length) return null;
+  const { first } = getConfigFloors(index, settings.floors.length, settings.floorsPerConfig);
+  return { mode: 'dungeon', seed, floor: first };
 }

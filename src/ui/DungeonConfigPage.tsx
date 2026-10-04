@@ -23,7 +23,7 @@ const TERRAIN_COUNTS = [
   ['buildings', 'Buildings'],
 ] as const;
 
-function floorLabel(first: number, last: number | null): string {
+export function floorLabel(first: number, last: number | null): string {
   if (last === null) return `Floor ${first}+`;
   return first === last ? `Floor ${first}` : `Floors ${first}–${last}`;
 }
@@ -126,7 +126,7 @@ export function DungeonConfigPage() {
         <ul className="configs-group__list dungeon-floors">
           {settings.floors.map((floor, i) => {
             const { first, last } = getConfigFloors(i, settings.floors.length, settings.floorsPerConfig);
-            return <FloorCard key={i} label={floorLabel(first, last)} floor={floor} seed={seed} />;
+            return <FloorCard key={i} index={i} label={floorLabel(first, last)} floor={floor} seed={seed} />;
           })}
         </ul>
       </section>
@@ -134,7 +134,18 @@ export function DungeonConfigPage() {
   );
 }
 
-function FloorCard({ label, floor, seed }: { label: string; floor: DungeonConfig; seed: number }) {
+function FloorCard({
+  index,
+  label,
+  floor,
+  seed,
+}: {
+  index: number;
+  label: string;
+  floor: DungeonConfig;
+  seed: number;
+}) {
+  const previewHref = routeHash({ page: 'dungeon-preview', index, seed });
   const { terrain } = floor;
   const stats: [string, string | number][] = [
     ['Map', `${terrain.width}×${terrain.height}`],
@@ -153,7 +164,10 @@ function FloorCard({ label, floor, seed }: { label: string; floor: DungeonConfig
         <span className="config-card__badge">{label}</span>
       </div>
       {floor.description && <p className="config-card__description">{floor.description}</p>}
-      <MapPreview floor={floor} seed={seed} />
+      {/* The button below is the accessible way in; the thumbnail is a shortcut. */}
+      <a className="map-preview-link" href={previewHref} title="View the full map" tabIndex={-1} aria-hidden="true">
+        <MapPreview floor={floor} seed={seed} />
+      </a>
       <dl className="dungeon-stats">
         {stats.map(([name, value]) => (
           <div key={name} className="dungeon-stats__pair">
@@ -162,6 +176,11 @@ function FloorCard({ label, floor, seed }: { label: string; floor: DungeonConfig
           </div>
         ))}
       </dl>
+      <div className="dialog-files__actions">
+        <a className="header-button" href={previewHref}>
+          View Full Map
+        </a>
+      </div>
     </li>
   );
 }

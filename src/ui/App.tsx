@@ -9,6 +9,7 @@ import { DamagePopups } from './DamagePopups.tsx';
 import { DeploymentBanner } from './DeploymentBanner.tsx';
 import { DeploymentMenu } from './DeploymentMenu.tsx';
 import { DialogBox } from './DialogBox.tsx';
+import { DungeonPreview, DungeonPreviewActions, DungeonPreviewBanner } from './DungeonPreview.tsx';
 import { ExperienceBar } from './ExperienceBar.tsx';
 import { ItemMenu } from './ItemMenu.tsx';
 import { WeaponMenu } from './WeaponMenu.tsx';
@@ -31,7 +32,9 @@ import { useRoute } from './useRoute.ts';
 // Root of the page. The battle layout is always mounted, because #game is
 // where Phaser put its canvas at boot; the title screen covers it while
 // `screen` is 'title', and `LoadingScreen` covers it while a battle's map
-// loads. On the #/configs routes, `ConfigEditor` covers it instead.
+// loads. On the #/configs routes, `ConfigEditor` covers it instead, except
+// for a dungeon floor's preview, which runs the map on the stage read-only
+// (`DungeonPreview`).
 //
 // Inside the stage, the HUD overlay sits on top of the canvas: the overlay
 // ignores pointer events so clicks fall through to the game, and
@@ -46,6 +49,7 @@ function cancelOnRightClick(event: MouseEvent) {
 export function App() {
   const screen = useGameStore((state) => state.screen);
   const route = useRoute();
+  const preview = route.page === 'dungeon-preview' ? route : null;
 
   return (
     <div className="page">
@@ -54,12 +58,18 @@ export function App() {
           <>
             <ControlsButton />
             <SettingsButton />
-            <MainMenuButton />
+            {preview ? <DungeonPreviewActions {...preview} /> : <MainMenuButton />}
           </>
         }
       >
-        <DeploymentBanner />
-        <TurnIndicator />
+        {preview ? (
+          <DungeonPreviewBanner {...preview} />
+        ) : (
+          <>
+            <DeploymentBanner />
+            <TurnIndicator />
+          </>
+        )}
       </PageHeader>
 
       <main className="page__main">
@@ -91,7 +101,9 @@ export function App() {
         </div>
       </main>
 
-      {route.page !== 'game' ? (
+      {preview ? (
+        <DungeonPreview {...preview} />
+      ) : route.page !== 'game' ? (
         <ConfigEditor route={route} />
       ) : (
         <>
