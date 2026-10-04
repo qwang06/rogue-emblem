@@ -20,6 +20,7 @@ import type { ExperienceGain } from '../game/experience.ts';
 import { POWER_STRIKE } from '../game/skills.ts';
 import { advanceDialog, createDialog } from '../game/dialog.ts';
 import { HEALTH_POTION } from '../game/items.ts';
+import { FIRE, FISTS, IRON_SPEAR, weaponEntry } from '../game/weapons.ts';
 import { createTurnState, markDone } from '../game/turns.ts';
 
 const makeUnit = () =>
@@ -50,9 +51,24 @@ describe('toUnitView', () => {
       defense: 2,
       resistance: 0,
       movement: 5,
-      range: 1,
+      range: '–',
+      weapon: null,
       items: [],
     });
+  });
+
+  it("shows the equipped weapon's range and name", () => {
+    const unit = new Unit({
+      name: 'Mage',
+      health: 10,
+      strength: 0,
+      defense: 0,
+      movement: 5,
+      team: 'player',
+      weaponTypes: ['magical'],
+      items: [weaponEntry(FIRE)],
+    });
+    expect(toUnitView(unit)).toMatchObject({ range: '1–2', weapon: 'Fire' });
   });
 
   it('lists the items the unit carries', () => {
@@ -63,10 +79,21 @@ describe('toUnitView', () => {
       defense: 2,
       movement: 5,
       team: 'player',
-      items: [{ item: HEALTH_POTION, quantity: 2 }],
+      weaponTypes: ['physical'],
+      items: [
+        { item: HEALTH_POTION, quantity: 2 },
+        weaponEntry(FIRE),
+        { item: IRON_SPEAR, quantity: 7 },
+        weaponEntry(FISTS),
+      ],
     });
     const view = toUnitView(unit);
-    expect(view!.items).toEqual([{ id: 'health-potion', label: 'Health Potion', quantity: 2 }]);
+    expect(view!.items).toEqual([
+      { id: 'health-potion', label: 'Health Potion', quantity: 2, weapon: false, equipped: false },
+      { id: 'fire', label: 'Fire', quantity: 30, weapon: true, equipped: false },
+      { id: 'iron-spear', label: 'Iron Spear', quantity: 7, weapon: true, equipped: true },
+      { id: 'fists', label: 'Fists', quantity: null, weapon: true, equipped: false },
+    ]);
     expect(Object.isFrozen(view!.items)).toBe(true);
     expect(Object.isFrozen(view!.items[0])).toBe(true);
   });
@@ -147,6 +174,7 @@ describe('toDamagePopupView', () => {
   it('calls out crits and misses', () => {
     expect(toDamagePopupView({ id: 1, amount: 9, kind: 'crit', x: 0, y: 0, durationMs: 700 }).text).toBe('Crit! 9');
     expect(toDamagePopupView({ id: 1, amount: 0, kind: 'miss', x: 0, y: 0, durationMs: 700 }).text).toBe('Miss');
+    expect(toDamagePopupView({ id: 1, amount: 0, kind: 'broke', x: 0, y: 0, durationMs: 700 }).text).toBe('Broke!');
   });
 
   it('shows a recovery of 0 rather than hiding it', () => {
@@ -275,13 +303,22 @@ describe('toCombatForecastView', () => {
     },
   };
 
-  it('labels each side with its unit and keeps the numbers', () => {
-    const attacker = makeUnit();
+  it('labels each side with its unit and weapon and keeps the numbers', () => {
+    const attacker = new Unit({
+      name: 'Soldier',
+      health: 10,
+      strength: 4,
+      defense: 2,
+      movement: 5,
+      team: 'player',
+      weaponTypes: ['physical'],
+      items: [weaponEntry(IRON_SPEAR)],
+    });
     const defender = new Unit({ name: 'Bandit', health: 10, strength: 4, defense: 2, movement: 5, team: 'enemy' });
     const view = toCombatForecastView({ forecast, attacker, defender, anchor });
     expect(view).toEqual({
-      attacker: { name: 'Soldier', team: 'player', ...forecast.attacker },
-      defender: { name: 'Bandit', team: 'enemy', ...forecast.defender },
+      attacker: { name: 'Soldier', team: 'player', weapon: 'Iron Spear', ...forecast.attacker },
+      defender: { name: 'Bandit', team: 'enemy', weapon: null, ...forecast.defender },
       anchor,
     });
     expect(Object.isFrozen(view)).toBe(true);

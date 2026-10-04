@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { GrowthTable } from './experience.ts';
-import { HEALTH_POTION, MANA_POTION } from './items.ts';
+import { HEALTH_POTION, MANA_POTION, type InventoryEntry } from './items.ts';
 import { Unit } from './Unit.ts';
+import { FIRE, FISTS, IRON_BOW, IRON_SPEAR, weaponEntry, type WeaponType } from './weapons.ts';
 
 function makeUnit(overrides = {}) {
   return new Unit({
@@ -38,24 +39,22 @@ describe('Unit', () => {
     expect(unit.maxMana).toBe(0);
   });
 
-  it('defaults magic, skill, speed, luck, and resistance to 0 and deals physical damage', () => {
+  it('defaults magic, skill, speed, luck, and resistance to 0', () => {
     const unit = makeUnit();
     expect(unit.magic).toBe(0);
     expect(unit.skill).toBe(0);
     expect(unit.speed).toBe(0);
     expect(unit.luck).toBe(0);
     expect(unit.resistance).toBe(0);
-    expect(unit.damageType).toBe('physical');
   });
 
-  it('accepts the expanded stats and a damage type', () => {
-    const unit = makeUnit({ magic: 6, skill: 5, speed: 7, luck: 3, resistance: 4, damageType: 'magical' });
+  it('accepts the expanded stats', () => {
+    const unit = makeUnit({ magic: 6, skill: 5, speed: 7, luck: 3, resistance: 4 });
     expect(unit.magic).toBe(6);
     expect(unit.skill).toBe(5);
     expect(unit.speed).toBe(7);
     expect(unit.luck).toBe(3);
     expect(unit.resistance).toBe(4);
-    expect(unit.damageType).toBe('magical');
   });
 
   it('accepts an explicit class and level', () => {
@@ -64,12 +63,67 @@ describe('Unit', () => {
     expect(unit.level).toBe(4);
   });
 
-  it('defaults range to 1 when not given', () => {
-    expect(makeUnit().range).toBe(1);
-  });
+  describe('weapons', () => {
+    const armed = (items: InventoryEntry[], weaponTypes: WeaponType[] = ['physical']) =>
+      makeUnit({ items, weaponTypes });
 
-  it('accepts an explicit range', () => {
-    expect(makeUnit({ range: 3 }).range).toBe(3);
+    it('masters no weapon types and has no weapon by default', () => {
+      const unit = makeUnit();
+      expect(unit.weaponTypes).toEqual([]);
+      expect(unit.weapon).toBeNull();
+      expect(unit.weaponUses).toBeNull();
+      expect(unit.equippedWeapon).toBeNull();
+    });
+
+    it('fights with the first weapon it can wield', () => {
+      const unit = armed([{ item: HEALTH_POTION, quantity: 1 }, weaponEntry(FIRE), weaponEntry(IRON_BOW)]);
+      expect(unit.weapon).toBe(IRON_BOW);
+      expect(unit.weaponUses).toBe(40);
+      expect(unit.equippedWeapon?.index).toBe(2);
+    });
+
+    it("can't fight with a weapon it hasn't mastered", () => {
+      expect(armed([weaponEntry(FIRE)]).weapon).toBeNull();
+      expect(armed([weaponEntry(FIRE)], ['magical']).weapon).toBe(FIRE);
+    });
+
+    it('lists every weapon it can wield, equipped first', () => {
+      const unit = armed([weaponEntry(IRON_SPEAR), weaponEntry(FIRE), weaponEntry(IRON_BOW)]);
+      expect(unit.wieldableWeapons.map(({ weapon }) => weapon)).toEqual([IRON_SPEAR, IRON_BOW]);
+    });
+
+    it('equips another weapon by moving it to the front', () => {
+      const unit = armed([weaponEntry(IRON_SPEAR), { item: HEALTH_POTION, quantity: 1 }, weaponEntry(IRON_BOW)]);
+      expect(unit.equip(2)).toBe(IRON_BOW);
+      expect(unit.weapon).toBe(IRON_BOW);
+      expect(unit.items.map((e) => e.item.id)).toEqual(['iron-bow', 'iron-spear', 'health-potion']);
+    });
+
+    it("throws when equipping something that isn't a weapon it can wield", () => {
+      const unit = armed([{ item: HEALTH_POTION, quantity: 1 }, weaponEntry(FIRE)]);
+      expect(() => unit.equip(0)).toThrow();
+      expect(() => unit.equip(1)).toThrow();
+    });
+
+    it('wears the equipped weapon down one use per strike', () => {
+      const unit = armed([weaponEntry(IRON_SPEAR)]);
+      expect(unit.spendWeaponUse()).toEqual({ weapon: IRON_SPEAR, broke: false });
+      expect(unit.weaponUses).toBe(39);
+    });
+
+    it('loses a weapon that breaks and falls back on the next one', () => {
+      const unit = armed([{ item: IRON_SPEAR, quantity: 1 }, weaponEntry(FISTS)]);
+      expect(unit.spendWeaponUse()).toEqual({ weapon: IRON_SPEAR, broke: true });
+      expect(unit.items).toEqual([weaponEntry(FISTS)]);
+      expect(unit.weapon).toBe(FISTS);
+    });
+
+    it('is left unarmed when its last weapon breaks', () => {
+      const unit = armed([{ item: IRON_SPEAR, quantity: 1 }]);
+      unit.spendWeaponUse();
+      expect(unit.weapon).toBeNull();
+      expect(() => unit.spendWeaponUse()).toThrow(/no weapon/);
+    });
   });
 
   it('is alive when health is above zero', () => {
@@ -204,6 +258,12 @@ describe('Unit', () => {
       unit.takeDamage(5);
       expect(() => unit.useItem('health-potion')).toThrow();
       expect(unit.health).toBe(5);
+    });
+
+    it('throws for a weapon, which is fought with rather than used', () => {
+      const unit = makeUnit({ items: [weaponEntry(IRON_SPEAR)], weaponTypes: ['physical'] });
+      expect(() => unit.useItem('iron-spear')).toThrow(/iron-spear/);
+      expect(unit.weaponUses).toBe(40);
     });
   });
 

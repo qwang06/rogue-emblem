@@ -10,6 +10,7 @@ import type { GrowthStat } from './experience.ts';
 import { calculateSkillDamage, POWER_STRIKE, SKILL_TREES, THROW_STONES } from './skills.ts';
 import { createUnitOfClass, UNIT_CLASSES } from './unitClasses.ts';
 import type { Unit } from './Unit.ts';
+import { formatWeaponRange, WEAPONS } from './weapons.ts';
 
 // Line endings normalized, so a Windows checkout (CRLF) parses the same.
 const doc = readFileSync(new URL('../../UNITS.md', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
@@ -60,7 +61,6 @@ const STAT_ROWS: Record<string, (unit: Unit) => number> = {
   DEF: (unit) => unit.defense,
   RES: (unit) => unit.resistance,
   MOV: (unit) => unit.movement,
-  RNG: (unit) => unit.range,
 };
 const GROWTH_KEYS: Record<string, GrowthStat> = {
   HP: 'health',
@@ -92,6 +92,12 @@ describe('UNITS.md', () => {
         }
       });
 
+      it('lists the weapon types it wields and the weapon it starts with', () => {
+        const [[types, weapon]] = tableWithHeader(text, 'Weapon types');
+        expect(types).toBe(unit.weaponTypes.join(', '));
+        expect(weapon).toBe(unit.weapon?.label ?? '–');
+      });
+
       it('lists every skill the class learns', () => {
         const rows = tableWithHeader(text, 'Skill');
         const tree = SKILL_TREES[id] ?? [];
@@ -106,20 +112,44 @@ describe('UNITS.md', () => {
     });
   }
 
+  it('lists every weapon with its numbers', () => {
+    const rows = tableWithHeader(section('Weapons'), 'Weapon');
+    expect(rows.map(([label]) => label)).toEqual(WEAPONS.map((w) => w.label));
+    rows.forEach(([, type, might, hit, crit, weight, range, uses], i) => {
+      const weapon = WEAPONS[i];
+      expect([type, might, hit, crit, weight, range, uses], weapon.label).toEqual([
+        weapon.type,
+        String(weapon.might),
+        String(weapon.hit),
+        String(weapon.crit),
+        String(weapon.weight),
+        formatWeaponRange(weapon),
+        weapon.uses === null ? '∞' : String(weapon.uses),
+      ]);
+    });
+  });
+
   it('has the right level-1 matchup numbers', () => {
-    const villager = createUnitOfClass('villager', { team: 'player' });
-    const soldier = createUnitOfClass('soldier', { team: 'enemy' });
-    const rows = Object.fromEntries(tableWithHeader(section('Matchups at level 1'), 'Action').map((r) => [r[0], r]));
-    const forecast = getCombatForecast(villager, soldier, { distance: 1 });
+    const units = {
+      Villager: createUnitOfClass('villager', { team: 'player' }),
+      Soldier: createUnitOfClass('soldier', { team: 'enemy' }),
+    };
+    const text = section('Matchups at level 1');
+    const attacks = tableWithHeader(text, 'Attacker');
+    expect(attacks.map(([attacker]) => attacker)).toEqual(['Villager', 'Soldier']);
+    for (const [attackerName, weapon, damage, hit, crit, strikes] of attacks) {
+      const attacker = units[attackerName as keyof typeof units];
+      const defender = attacker === units.Villager ? units.Soldier : units.Villager;
+      const forecast = getCombatForecast(attacker, defender, { distance: 1 });
+      expect(weapon).toBe(attacker.weapon!.label);
+      expect(Number(damage), `${attackerName} damage`).toBe(calculateDamage(attacker, defender));
+      expect(hit, `${attackerName} hit`).toBe(`${getHitChance(attacker, defender)}%`);
+      expect(crit, `${attackerName} crit`).toBe(`${getCritChance(attacker, defender)}%`);
+      expect(Number(strikes), `${attackerName} strikes`).toBe(forecast.attacker.strikes);
+    }
 
-    const [, damage, hit, crit] = rows['Regular attack'];
-    expect(Number(damage)).toBe(calculateDamage(villager, soldier));
-    expect(hit).toBe(`${getHitChance(villager, soldier)}%`);
-    expect(crit).toBe(`${getCritChance(villager, soldier)}%`);
-    expect(forecast.attacker.strikes).toBe(1);
-    expect(forecast.defender.strikes).toBe(1);
-
-    expect(Number(rows['Throw Stones'][1])).toBe(calculateSkillDamage(THROW_STONES, villager, soldier));
-    expect(Number(rows['Power Strike'][1])).toBe(calculateSkillDamage(POWER_STRIKE, soldier, villager));
+    const skills = Object.fromEntries(tableWithHeader(text, 'Skill').map((r) => [r[0], r]));
+    expect(Number(skills['Throw Stones'][2])).toBe(calculateSkillDamage(THROW_STONES, units.Villager, units.Soldier));
+    expect(Number(skills['Power Strike'][2])).toBe(calculateSkillDamage(POWER_STRIKE, units.Soldier, units.Villager));
   });
 });

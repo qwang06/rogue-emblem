@@ -36,7 +36,8 @@ import { createDemoLevel } from '../game/demoLevel.ts';
 import { createDungeonLevel } from '../game/dungeonLevel.ts';
 import { getStructureTiles } from '../game/structures.ts';
 import { createTrainingLevel } from '../game/trainingLevel.ts';
-import { getItemActions } from '../game/items.ts';
+import { getConsumables, getItemActions } from '../game/items.ts';
+import { getWeaponActions, getWeaponReach, type Weapon, type WeaponAction } from '../game/weapons.ts';
 import { planRushAction } from '../game/enemyAI.ts';
 import {
   canDeployUnit,
@@ -173,6 +174,7 @@ export class GridScene extends Phaser.Scene {
   actionKeys!: Record<ActionKey, Phaser.Input.Keyboard.Key>;
   phase!: BattlePhase;
   actionMenu: Menu | null = null;
+  weaponMenu: Menu<WeaponAction> | null = null;
   skillMenu: Menu<SkillAction> | null = null;
   itemMenu: Menu<ItemAction> | null = null;
   deploymentMenu: Menu | null = null;
@@ -274,6 +276,7 @@ export class GridScene extends Phaser.Scene {
 
     this.phase = 'deployment'; // 'deployment' | 'battle'
     this.actionMenu = null;
+    this.weaponMenu = null; // the active unit's weapons, opened by choosing Attack
     this.skillMenu = null; // the active unit's skills, opened from the action menu
     this.itemMenu = null; // the active unit's items, opened from the action menu
     this.deploymentMenu = null; // Place Units / Start
@@ -358,6 +361,11 @@ export class GridScene extends Phaser.Scene {
       return;
     }
 
+    if (this.weaponMenu) {
+      this.updateWeaponMenu(dy, confirm, cancel);
+      return;
+    }
+
     if (this.skillMenu) {
       this.updateSkillMenu(dy, confirm, cancel);
       return;
@@ -387,6 +395,13 @@ export class GridScene extends Phaser.Scene {
         this.hideRange();
         this.setCursor(this.activeUnit!.x, this.activeUnit!.y);
         this.activeUnit = null;
+        return;
+      }
+      if (cancel && this.rangeMode === 'attack') {
+        // Back out of aiming to the weapon menu the weapon was picked from.
+        this.hideRange();
+        this.setCursor(this.activeUnit!.x, this.activeUnit!.y);
+        this.openWeaponMenu();
         return;
       }
       if (cancel && this.rangeMode === 'skill') {
@@ -454,8 +469,7 @@ export class GridScene extends Phaser.Scene {
       if (action?.disabled) return;
       this.setActionMenu(null);
       if (action?.id === 'attack') {
-        this.setCursor(this.activeUnit!.x, this.activeUnit!.y);
-        this.showAttackRange();
+        this.openWeaponMenu();
       } else if (action?.id === 'skill') {
         this.openSkillMenu();
       } else if (action?.id === 'item') {
@@ -475,15 +489,51 @@ export class GridScene extends Phaser.Scene {
     this.publishMenu('actionMenu', menu);
   }
 
-  // Opens the action menu for the active unit, once it has moved. Skill is
-  // only available once the unit has learned a skill, and Item while it
-  // carries any.
+  // Opens the action menu for the active unit, once it has moved. Attack is
+  // only available while it has a weapon it can wield, Skill once it has
+  // learned a skill, and Item while it carries any consumables.
   openActionMenu() {
     const { unit } = this.activeUnit!;
+    const hasWeapons = unit.wieldableWeapons.length > 0;
     const hasSkills = getLearnedSkills(unit.unitClass, unit.level).length > 0;
-    const hasItems = unit.items.length > 0;
+    const hasItems = getConsumables(unit.items).length > 0;
     this.publishMenuAnchor();
-    this.setActionMenu(createActionMenu(getUnitActions({ hasSkills, hasItems })));
+    this.setActionMenu(createActionMenu(getUnitActions({ hasSkills, hasItems, hasWeapons })));
+  }
+
+  // Opens the weapon menu after Attack: every weapon the active unit can
+  // wield, equipped first, greyed out when nothing hostile is in its range
+  // from where the unit stands.
+  openWeaponMenu() {
+    const { unit, x, y } = this.activeUnit!;
+    const hasTarget = (weapon: Weapon) => this.getWeaponTargets(unit, { x, y }, weapon).length > 0;
+    this.publishMenuAnchor();
+    this.publishMenu('weaponMenu', createActionMenu(getWeaponActions(unit.items, unit.weaponTypes, hasTarget)));
+  }
+
+  // While the weapon menu is open it owns input: up/down move the
+  // highlight, cancel goes back to the action menu, and confirm equips a
+  // weapon with something in range and shows that range to aim it (the
+  // forecast then uses it).
+  updateWeaponMenu(dy: number, confirm: boolean, cancel: boolean) {
+    if (cancel) {
+      this.publishMenu('weaponMenu', null);
+      this.openActionMenu();
+      return;
+    }
+
+    if (confirm) {
+      const action = getSelectedAction(this.weaponMenu!);
+      if (!action || action.disabled) return;
+      this.publishMenu('weaponMenu', null);
+      const { unit, x, y } = this.activeUnit!;
+      unit.equip(action.index);
+      this.setCursor(x, y);
+      this.showAttackRange();
+      return;
+    }
+
+    if (dy !== 0) this.publishMenu('weaponMenu', moveSelection(this.weaponMenu!, dy));
   }
 
   openSkillMenu() {
@@ -963,7 +1013,9 @@ export class GridScene extends Phaser.Scene {
     this.moveRange = getMovementRange(this.grid, { x, y }, unit.movement, this.movementOptions(unit));
     this.movePath = [{ x, y }];
     this.showRange('move', this.moveRange, MOVE_RANGE_COLOR, MOVE_RANGE_ALPHA);
-    const threat = getThreatRange(this.grid, this.moveRange, unit.range);
+    const reach = getWeaponReach(unit.wieldableWeapons.map(({ weapon }) => weapon));
+    if (!reach) return;
+    const threat = getThreatRange(this.grid, this.moveRange, reach.maxRange, reach.minRange);
     this.rangeTiles!.push(...this.drawTileHighlights(threat, ATTACK_RANGE_COLOR, ATTACK_RANGE_ALPHA));
   }
 
@@ -993,24 +1045,31 @@ export class GridScene extends Phaser.Scene {
     this.arrowSprites = [];
   }
 
-  // Highlights every tile the active unit can strike, from
-  // src/game/combat.ts, and puts the cursor on the first hostile unit in
-  // range so its combat forecast shows straight away. Only tiles holding a
-  // hostile unit accept confirm.
+  // Highlights every tile the active unit's equipped weapon can strike,
+  // from src/game/combat.ts, and puts the cursor on the first hostile unit
+  // in range so its combat forecast shows straight away. Only tiles holding
+  // a hostile unit accept confirm.
   showAttackRange() {
     const { unit, x, y } = this.activeUnit!;
-    const range = getAttackRange(this.grid, { x, y }, unit.range);
+    const weapon = unit.weapon!;
+    const range = getAttackRange(this.grid, { x, y }, weapon.maxRange, weapon.minRange);
     this.showRange('attack', range, ATTACK_RANGE_COLOR, ATTACK_RANGE_ALPHA);
-    const [first] = getAttackTargets(this.grid, { x, y }, unit.range, this.isHostileTo(unit));
+    const [first] = this.getWeaponTargets(unit, { x, y }, weapon);
     if (first) this.setCursor(first.x, first.y);
     else this.updateCombatForecast();
   }
 
-  // The hostile unit under the cursor that the active unit can attack from
-  // where it stands, as { x, y, unitId }, or null.
+  // The hostile units `weapon` reaches from `from`, as [{ x, y, unitId }].
+  getWeaponTargets(unit: Unit, from: Point, weapon: Weapon) {
+    return getAttackTargets(this.grid, from, weapon.maxRange, this.isHostileTo(unit), weapon.minRange);
+  }
+
+  // The hostile unit under the cursor that the active unit can attack with
+  // its equipped weapon from where it stands, as { x, y, unitId }, or null.
   getAttackTargetUnderCursor() {
     const { unit, x, y } = this.activeUnit!;
-    const targets = getAttackTargets(this.grid, { x, y }, unit.range, this.isHostileTo(unit));
+    if (!unit.weapon) return null;
+    const targets = this.getWeaponTargets(unit, { x, y }, unit.weapon);
     return targets.find((t) => t.x === this.cursor.x && t.y === this.cursor.y) ?? null;
   }
 
@@ -1111,7 +1170,9 @@ export class GridScene extends Phaser.Scene {
   // The exchange — the attack, the defender's counter if the attacker is
   // in its range, and a follow-up strike for whoever doubles, each rolled
   // to hit and crit — comes from resolveCombat in src/game/combat.ts and is
-  // played strike by strike: each hit's damage is applied right away so
+  // played strike by strike: each strike spends a use of the striker's
+  // weapon ("Broke!" pops up over it if that wears it out), and each hit's
+  // damage is applied right away so
   // the HUD shows the new health while the struck sprite flashes and a
   // damage number pops over it (a crit also shakes the camera); a miss just
   // shows "Miss" for a moment. A unit brought to 0 health is removed once
@@ -1136,6 +1197,11 @@ export class GridScene extends Phaser.Scene {
         this.updateHoveredUnit();
         this.awardCombatExperience(sides, strikes, onDone);
         return;
+      }
+      // Every strike wears the striker's weapon, hit or miss.
+      const striker = sides[strike.by];
+      if (striker.unit.spendWeaponUse().broke) {
+        this.showDamagePopup(this.unitSprites.get(striker.tile.unitId)!, 0, 'broke');
       }
       const struck = sides[strike.target];
       const sprite = this.unitSprites.get(struck.tile.unitId)!;
@@ -1472,6 +1538,7 @@ export class GridScene extends Phaser.Scene {
       !this.deploymentMenu &&
       !this.rosterMenu &&
       !this.actionMenu &&
+      !this.weaponMenu &&
       !this.skillMenu &&
       !this.itemMenu
     );

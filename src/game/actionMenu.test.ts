@@ -26,6 +26,11 @@ describe('getUnitActions', () => {
     expect(actions.some((a) => a.disabled)).toBe(false);
   });
 
+  it('disables Attack when the unit has no weapon it can wield', () => {
+    const actions = getUnitActions({ hasSkills: true, hasWeapons: false });
+    expect(actions.filter((a) => a.disabled).map((a) => a.id)).toEqual(['attack']);
+  });
+
   it('can disable Skill and Item together', () => {
     const actions = getUnitActions({ hasSkills: false, hasItems: false });
     expect(actions.filter((a) => a.disabled).map((a) => a.id)).toEqual(['skill', 'item']);

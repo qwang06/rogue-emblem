@@ -11,7 +11,7 @@ The plan for growing Rogue Emblem into a Fire Emblem–style tactics game, one s
 
 ## Where we are
 
-Already built: grid and terrain move costs, movement range and arrow, player/enemy phases with win/loss, one-way attacks (`attack - defense`; counterattacks and FE-style stats since 1.1/1.2), skills with mana, consumable items, deployment, a rushing enemy AI, dialog, title/pause menus, and training mode. Phase 1 added counterattacks, hit/crit/doubling, the combat forecast, and XP with growth-rate level ups. There is still one class (Soldier) and no weapons.
+Already built: grid and terrain move costs, movement range and arrow, player/enemy phases with win/loss, one-way attacks (`attack - defense`; counterattacks and FE-style stats since 1.1/1.2), skills with mana, consumable items, deployment, a rushing enemy AI, dialog, title/pause menus, and training mode. Phase 1 added counterattacks, hit/crit/doubling, the combat forecast, and XP with growth-rate level ups. Phase 2 has begun: units fight with weapons (2.1). There are still only two classes (Villager and Soldier).
 
 ---
 
@@ -71,7 +71,7 @@ The single biggest change to how the game feels. After this phase every attack i
 
 ## Phase 2 — Units with identity
 
-### [ ] 2.1 Weapons
+### [x] 2.1 Weapons
 
 - Weapons as a new item kind: `{ id, label, type: 'sword'|'lance'|'axe'|'bow'|'tome'|'staff', might, hit, crit, weight, minRange, maxRange, uses, damageType }`.
 - Unit inventory holds weapons and consumables; one weapon is **equipped** (first usable weapon by default). Attack range comes from the equipped weapon, replacing the fixed `range` stat.
@@ -80,8 +80,11 @@ The single biggest change to how the game feels. After this phase every attack i
 - "Attack" flow lets the player pick a weapon (weapon select menu) before targeting; the forecast updates per weapon.
 - Starter weapons: Iron Sword/Lance/Axe, Iron Bow, Fire tome, Heal staff (staff usage comes in 2.3).
 - **Tests:** equip rules, range from weapon, uses/breakage, weight penalty, forecast per weapon.
+- _Notes:_ built around the unit catalog rather than FE's weapon list: a weapon's `type` is `physical`, `magical` or `siege` (no sword/lance/axe), and it's a mastery gate — each class lists the types it can wield (`weaponTypes`; Soldier and Villager: physical). Damage type comes from the weapon (siege hits physically), replacing `Unit.damageType`, and `Unit.range` is gone. Weapons live in `src/game/weapons.ts`; an inventory entry's `quantity` is a weapon's uses left, and weapons never stack. Starters, one per armed catalog unit: Fists (∞ uses, the villager's), Iron Spear (soldier), Iron Axe (vanguard), Iron Bow (archer, range 2 only), Fire (elemental/wizard, 1–2), Powder Keg (sapper, siege 1–2), Ballista (siege engine, 2–3) — only Fists and the Iron Spear are carried until 2.3 adds the classes. Weapon hit replaces `BASE_HIT`; the iron weapons keep 80 so level-1 hit rates didn't move (79%), and the spear's 1 might makes soldiers hit for 3. Every strike spends a use, hit or miss, so breakage is deterministic and the forecast caps strikes at the uses left; a weapon that breaks mid-exchange stops its wielder striking ("Broke!" popup) and the next wieldable weapon is equipped. Attack → weapon menu (wieldable weapons, greyed when nothing is in range, highlighted weapon's numbers shown) → aim; picking equips (moves it to the front), and cancelling the aim returns to the weapon menu. The forecast names each side's weapon. The move-range threat fringe spans all wieldable weapons. Deferred: the Heal staff (with the Acolyte/Cleric in 2.3), constitution, the AI choosing between weapons (it fights with whatever is equipped), unequip/discard/trade, and weapon ranks.
 
 ### [ ] 2.2 Weapon triangle
+
+- _Revisit before building:_ since 2.1 the weapon types are `physical` / `magical` / `siege`, not sword / lance / axe, so this triangle no longer maps onto anything. Drop it or redesign it around the new types; decide that first.
 
 - Sword > Axe > Lance > Sword: advantage gives +15 hit and +1 damage, disadvantage the reverse. Magic/bows neutral (or a magic triangle later).
 - Forecast shows advantage arrows.

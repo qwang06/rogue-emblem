@@ -1,5 +1,6 @@
-import { STARTING_ITEMS } from './items.ts';
+import { STARTING_ITEMS, type Inventory } from './items.ts';
 import { Unit, type ClassUnitOptions } from './Unit.ts';
+import { FISTS, weaponEntry, type WeaponType } from './weapons.ts';
 
 // For now a villager fights like a soldier: the same stat line, growth
 // rates and caps. Tune these to give the class its own identity.
@@ -42,18 +43,27 @@ export const VILLAGER_CAPS = Object.freeze({
   resistance: 20,
 });
 
+// The weapon types a villager can wield.
+export const VILLAGER_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
+
+// What a villager carries into battle: bare fists (which never break) and
+// the potions.
+export const VILLAGER_ITEMS: Inventory = Object.freeze([weaponEntry(FISTS), ...STARTING_ITEMS]);
+
 // The player's townsfolk-turned-fighters. Starts at level 1 with the
-// villager stat line; its skills come from the 'villager' skill tree, and
-// it carries the starting items (a health and a mana potion) unless given
-// others. Levels up with the villager growth rates and caps.
+// villager stat line; its skills come from the 'villager' skill tree, it
+// wields physical weapons, and it fights with its fists and carries the
+// potions unless given other items. Levels up with the villager growth
+// rates and caps.
 export class Villager extends Unit {
-  constructor({ name = 'Villager', team, level = 1, items = STARTING_ITEMS }: ClassUnitOptions) {
+  constructor({ name = 'Villager', team, level = 1, items = VILLAGER_ITEMS }: ClassUnitOptions) {
     super({
       name,
       unitClass: 'villager',
       level,
       team,
       items,
+      weaponTypes: VILLAGER_WEAPON_TYPES,
       growths: VILLAGER_GROWTHS,
       caps: VILLAGER_CAPS,
       ...VILLAGER_STATS,

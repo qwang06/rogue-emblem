@@ -4,7 +4,7 @@ import { usePanelBesideAnchor } from './useMenuBesideUnit.ts';
 import { useGameStore } from './useGameStore.ts';
 
 // The combat forecast shown while aiming an attack at a unit: each side's
-// HP, damage per hit (with ×2 when it strikes twice), hit and crit
+// weapon, HP, damage per hit (with ×2 when it strikes twice), hit and crit
 // chances, attacker on the left and defender on the right. A defender that
 // can't counter shows "–". GridScene publishes the numbers (from
 // getCombatForecast) and where the two units stand; this opens beside
@@ -20,6 +20,10 @@ export function CombatForecast() {
       <div className="combat-forecast__names">
         <span className={`combat-forecast__name combat-forecast__name--${attacker.team}`}>{attacker.name}</span>
         <span className={`combat-forecast__name combat-forecast__name--${defender.team}`}>{defender.name}</span>
+      </div>
+      <div className="combat-forecast__weapons">
+        <span>{attacker.weapon ?? '–'}</span>
+        <span>{defender.weapon ?? '–'}</span>
       </div>
       <div className="combat-forecast__rows">
         <Row label="HP" attacker={attacker.health} defender={defender.health} />

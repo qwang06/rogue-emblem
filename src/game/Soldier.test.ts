@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { HEALTH_POTION, MANA_POTION, STARTING_ITEMS } from './items.ts';
-import { SOLDIER_CAPS, SOLDIER_GROWTHS, SOLDIER_STATS, Soldier } from './Soldier.ts';
+import { HEALTH_POTION, MANA_POTION } from './items.ts';
+import { SOLDIER_CAPS, SOLDIER_GROWTHS, SOLDIER_ITEMS, SOLDIER_STATS, Soldier } from './Soldier.ts';
 import { Unit } from './Unit.ts';
+import { FIRE, IRON_SPEAR, weaponEntry } from './weapons.ts';
 
 describe('Soldier', () => {
   it('is a Unit of the soldier class', () => {
@@ -29,9 +30,19 @@ describe('Soldier', () => {
     expect(soldier.luck).toBe(SOLDIER_STATS.luck);
     expect(soldier.defense).toBe(SOLDIER_STATS.defense);
     expect(soldier.resistance).toBe(SOLDIER_STATS.resistance);
-    expect(soldier.damageType).toBe('physical');
     expect(soldier.movement).toBe(SOLDIER_STATS.movement);
-    expect(soldier.range).toBe(1);
+  });
+
+  it('wields physical weapons only', () => {
+    const soldier = new Soldier({ team: 'enemy', items: [weaponEntry(FIRE)] });
+    expect(soldier.weaponTypes).toEqual(['physical']);
+    expect(soldier.weapon).toBeNull();
+  });
+
+  it('fights with an Iron Spear', () => {
+    const soldier = new Soldier({ team: 'enemy' });
+    expect(soldier.weapon).toBe(IRON_SPEAR);
+    expect(soldier.weaponUses).toBe(IRON_SPEAR.uses);
   });
 
   it('levels up with the soldier growth rates and caps', () => {
@@ -47,10 +58,10 @@ describe('Soldier', () => {
     expect(soldier.level).toBe(3);
   });
 
-  it('carries a health potion and a mana potion', () => {
+  it('carries its spear, a health potion and a mana potion', () => {
     const soldier = new Soldier({ team: 'player' });
-    expect(soldier.items).toEqual(STARTING_ITEMS);
-    expect(soldier.items.map((entry) => entry.item)).toEqual([HEALTH_POTION, MANA_POTION]);
+    expect(soldier.items).toEqual(SOLDIER_ITEMS);
+    expect(soldier.items.map((entry) => entry.item)).toEqual([IRON_SPEAR, HEALTH_POTION, MANA_POTION]);
   });
 
   it('can be given other items', () => {
@@ -62,6 +73,7 @@ describe('Soldier', () => {
     const b = new Soldier({ team: 'player' });
     a.health = 1;
     a.useItem('health-potion');
-    expect(b.items).toEqual(STARTING_ITEMS);
+    a.spendWeaponUse();
+    expect(b.items).toEqual(SOLDIER_ITEMS);
   });
 });

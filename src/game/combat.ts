@@ -1,7 +1,9 @@
 // Pure combat rules: which tiles a unit can strike, which of those hold a
 // valid target, how much damage a hit deals, and how a whole exchange of
-// strikes plays out. No Phaser, no rendering, no hidden state — applying
-// the damage to a Unit is the caller's job.
+// strikes plays out. A unit fights with its equipped weapon (weapons.ts),
+// which sets its range, damage type and might. No Phaser, no rendering,
+// no hidden state — applying the damage (and spending weapon uses) on a
+// Unit is the caller's job.
 
 import { getCell, isInBounds } from './grid.ts';
 import {
@@ -14,28 +16,37 @@ import {
   type Rng,
 } from './combatStats.ts';
 import type { Grid, Point } from './grid.ts';
+import { WEAPON_DAMAGE_TYPES, type Weapon } from './weapons.ts';
 
 export type DamageType = 'physical' | 'magical';
 export type CombatSide = 'attacker' | 'defender';
 
-// What the damage formulas read off a unit. Missing stats count as 0;
-// `damageType` defaults to 'physical'.
+// The weapon numbers combat reads.
+export type CombatWeapon = Pick<Weapon, 'type' | 'might' | 'hit' | 'crit' | 'weight' | 'minRange' | 'maxRange'>;
+
+// What the damage formulas read off a unit. Missing stats count as 0; a
+// unit without a weapon hits physically with no might.
 export interface DamageStats {
   strength?: number;
   magic?: number;
   defense?: number;
   resistance?: number;
-  damageType?: string;
+  weapon?: Pick<CombatWeapon, 'type' | 'might'> | null;
 }
 
+// What reach reads off a unit: its weapon's range, or nothing without one.
 export interface StrikeRange {
-  range: number;
-  minRange?: number;
+  weapon?: Pick<CombatWeapon, 'minRange' | 'maxRange'> | null;
 }
 
-// Everything a unit brings to a full exchange of strikes.
+// Everything a unit brings to a full exchange of strikes: its stats, its
+// equipped weapon (null if it has none, so it can't strike), and the uses
+// that weapon has left (`weaponUses`; null or missing for one that never
+// breaks).
 export interface Fighter extends CombatStatLine, DamageStats, StrikeRange {
   health: number;
+  weapon?: CombatWeapon | null;
+  weaponUses?: number | null;
 }
 
 // A fighter as the forecast shows it, health bar and all.
@@ -134,35 +145,44 @@ export const DAMAGE_TYPES: Readonly<
   magical: Object.freeze({ power: 'magic', guard: 'resistance' }),
 });
 
-// The kind of hit a unit's attacks deal ('physical' unless it says
-// otherwise). Throws on a type DAMAGE_TYPES doesn't know.
-export function getDamageType(attacker: Pick<DamageStats, 'damageType'>): DamageType {
-  const type = attacker.damageType ?? 'physical';
-  if (!Object.hasOwn(DAMAGE_TYPES, type)) throw new Error(`Unknown damage type: ${type}`);
-  return type as DamageType;
+// The kind of hit a unit's attacks deal: its weapon type's (see
+// WEAPON_DAMAGE_TYPES), or 'physical' without a weapon. Throws on a weapon
+// type it doesn't know.
+export function getDamageType(attacker: Pick<DamageStats, 'weapon'>): DamageType {
+  const type = attacker.weapon?.type;
+  if (type === undefined) return 'physical';
+  if (!Object.hasOwn(WEAPON_DAMAGE_TYPES, type)) throw new Error(`Unknown weapon type: ${type}`);
+  return WEAPON_DAMAGE_TYPES[type];
 }
 
-// Damage one hit deals: strength minus defense for a physical hit, magic
-// minus resistance for a magical one, never below zero. Missing stats
-// count as 0.
+// Damage one hit deals: strength plus weapon might minus defense for a
+// physical hit, magic plus might minus resistance for a magical one, never
+// below zero. Missing stats count as 0.
 export function calculateDamage(attacker: DamageStats, defender: DamageStats): number {
   const { power, guard } = DAMAGE_TYPES[getDamageType(attacker)];
-  return Math.max(0, (attacker[power] ?? 0) - (defender[guard] ?? 0));
+  const might = attacker.weapon?.might ?? 0;
+  return Math.max(0, (attacker[power] ?? 0) + might - (defender[guard] ?? 0));
 }
 
-// Whether a unit with the given range (`range` max, optional `minRange`,
-// default 1) can strike something `distance` orthogonal steps away.
+// Whether a unit can strike something `distance` orthogonal steps away
+// with its weapon (from its minRange, at least 1, to its maxRange). A unit
+// without a weapon can't strike at all.
 export function isInStrikeRange(unit: StrikeRange, distance: number): boolean {
-  return distance >= Math.max(1, unit.minRange ?? 1) && distance <= unit.range;
+  const { weapon } = unit;
+  if (!weapon) return false;
+  return distance >= Math.max(1, weapon.minRange) && distance <= weapon.maxRange;
 }
 
 // Who strikes, in order, when attacker attacks defender `distance` steps
 // away, as a list of 'attacker' / 'defender': the attacker, then the
 // defender if the attacker is within its range, then whoever doubles
-// (attacker first). Ignores deaths — resolveCombat stops early on those.
+// (attacker first). Every strike spends a weapon use, hit or miss, so a
+// side's strikes past its weapon's last use (`weaponUses`) are dropped —
+// its weapon has broken. A side without a weapon never strikes. Ignores
+// deaths — resolveCombat stops early on those.
 export function getStrikeOrder(
-  attacker: CombatStatLine,
-  defender: CombatStatLine & StrikeRange,
+  attacker: CombatStatLine & Pick<Fighter, 'weapon' | 'weaponUses'>,
+  defender: CombatStatLine & Pick<Fighter, 'weapon' | 'weaponUses'>,
   distance: number,
 ): CombatSide[] {
   const counters = isInStrikeRange(defender, distance);
@@ -170,7 +190,19 @@ export function getStrikeOrder(
   if (counters) order.push('defender');
   if (canDouble(attacker, defender)) order.push('attacker');
   else if (counters && canDouble(defender, attacker)) order.push('defender');
-  return order;
+
+  const usesLeft: Record<CombatSide, number> = {
+    attacker: strikesAvailable(attacker),
+    defender: strikesAvailable(defender),
+  };
+  return order.filter((side) => usesLeft[side]-- > 0);
+}
+
+// How many strikes a unit's weapon has left in it: none without a weapon,
+// endless for one that never breaks.
+function strikesAvailable(unit: Pick<Fighter, 'weapon' | 'weaponUses'>): number {
+  if (!unit.weapon) return 0;
+  return unit.weaponUses ?? Infinity;
 }
 
 // One full exchange when attacker strikes defender, following

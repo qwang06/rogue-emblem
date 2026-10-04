@@ -1,15 +1,17 @@
 // Base class for all units on the tactics board. No Phaser, no rendering —
 // just stats and the state changes every unit shares (taking damage,
-// healing, dying, spending mana, leveling up). Stats follow Fire Emblem:
-// strength / magic power physical / magical hits, defense / resistance
-// guard against them, and skill, speed and luck feed hit, crit and
-// doubling. `damageType` says which kind of hit the unit's attacks deal. Specific unit types extend
-// this and set their own class, stats, growth rates and stat caps (see
-// experience.ts), which decide what a level up raises; the skills a unit knows come
-// from its class's skill tree and its level (see skills.ts). Items it
-// carries are an inventory from items.ts.
+// healing, dying, spending mana, leveling up, equipping and wearing out
+// weapons). Stats follow Fire Emblem: strength / magic power physical /
+// magical hits, defense / resistance guard against them, and skill, speed
+// and luck feed hit, crit and doubling. Specific unit types extend this
+// and set their own class, stats, growth rates and stat caps (see
+// experience.ts), which decide what a level up raises, and the weapon
+// types they master; the skills a unit knows come from its class's skill
+// tree and its level (see skills.ts). Items it carries — consumables and
+// weapons — are an inventory from items.ts; the first weapon in it the
+// unit can wield is the one it fights with (see weapons.ts), which sets
+// its range and the kind of damage it deals.
 
-import type { DamageType } from './combat.ts';
 import type { Rng } from './combatStats.ts';
 import {
   GROWTH_STATS,
@@ -25,9 +27,18 @@ import {
   removeItem,
   type Inventory,
   type InventoryEntry,
-  type Item,
+  type Consumable,
 } from './items.ts';
 import type { Team } from './turns.ts';
+import {
+  equipWeapon,
+  getEquippedWeapon,
+  getWieldableWeapons,
+  spendWeaponUse,
+  type EquippedWeapon,
+  type Weapon,
+  type WeaponType,
+} from './weapons.ts';
 
 export interface UnitOptions {
   name: string;
@@ -44,8 +55,7 @@ export interface UnitOptions {
   defense: number;
   resistance?: number;
   movement: number;
-  range?: number;
-  damageType?: DamageType;
+  weaponTypes?: readonly WeaponType[];
   team: Team;
   items?: readonly InventoryEntry[];
   growths?: GrowthTable;
@@ -78,8 +88,7 @@ export class Unit {
   defense: number;
   resistance: number;
   movement: number;
-  range: number;
-  damageType: DamageType;
+  weaponTypes: readonly WeaponType[];
   team: Team;
   items: Inventory;
   growths: GrowthTable;
@@ -100,8 +109,7 @@ export class Unit {
     defense,
     resistance = 0,
     movement,
-    range = 1,
-    damageType = 'physical',
+    weaponTypes = [],
     team,
     items = [],
     growths = {},
@@ -123,8 +131,7 @@ export class Unit {
     this.defense = defense;
     this.resistance = resistance;
     this.movement = movement;
-    this.range = range;
-    this.damageType = damageType;
+    this.weaponTypes = Object.freeze([...weaponTypes]);
     this.team = team;
     this.items = createInventory(items);
     this.growths = growths;
@@ -159,13 +166,55 @@ export class Unit {
     return this.mana;
   }
 
-  // Uses one of itemId from the inventory, restoring its stat. Returns
-  // { item, amount } with the amount actually restored. Throws if the unit
-  // doesn't carry the item — check canUseItem first to avoid wasting one.
-  useItem(itemId: string): { item: Item; amount: number } {
+  // The weapon it fights with — the first in its inventory it can wield —
+  // or null if it has none (then it can't attack or counter).
+  get weapon(): Weapon | null {
+    return this.equippedWeapon?.weapon ?? null;
+  }
+
+  // Uses the equipped weapon has left, or null if it never breaks (or
+  // there's no weapon).
+  get weaponUses(): number | null {
+    return this.equippedWeapon?.uses ?? null;
+  }
+
+  // The equipped weapon with its inventory slot and uses left, or null.
+  get equippedWeapon(): EquippedWeapon | null {
+    return getEquippedWeapon(this.items, this.weaponTypes);
+  }
+
+  // Every weapon it carries and can wield, equipped first.
+  get wieldableWeapons(): EquippedWeapon[] {
+    return getWieldableWeapons(this.items, this.weaponTypes);
+  }
+
+  // Equips the weapon in inventory slot `index` (moving it to the front).
+  // Throws if there's no weapon it can wield there.
+  equip(index: number): Weapon {
+    this.items = equipWeapon(this.items, index, this.weaponTypes);
+    return this.weapon!;
+  }
+
+  // Spends one use of the equipped weapon, for a strike made with it.
+  // Returns { weapon, broke }: a weapon that runs out is removed from the
+  // inventory, and the next one it can wield (if any) is equipped. Throws
+  // if it has no weapon.
+  spendWeaponUse(): { weapon: Weapon; broke: boolean } {
+    const equipped = this.equippedWeapon;
+    if (!equipped) throw new Error(`${this.name} has no weapon`);
+    const { inventory, broke } = spendWeaponUse(this.items, equipped.index);
+    this.items = inventory;
+    return { weapon: equipped.weapon, broke };
+  }
+
+  // Uses one of the consumable itemId from the inventory, restoring its
+  // stat. Returns { item, amount } with the amount actually restored.
+  // Throws if the unit doesn't carry it (or it's a weapon) — check
+  // canUseItem first to avoid wasting one.
+  useItem(itemId: string): { item: Consumable; amount: number } {
     const entry = findItem(this.items, itemId);
-    if (!entry) {
-      throw new Error(`${this.name} has no ${itemId}`);
+    if (!entry || entry.item.kind !== 'consumable') {
+      throw new Error(`${this.name} has no ${itemId} to use`);
     }
     const { item } = entry;
     const amount = getItemRecovery(this, item);

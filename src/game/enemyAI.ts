@@ -13,11 +13,13 @@ import {
   type MovementOptions,
   type RangeTile,
 } from './movement.ts';
+import type { Weapon } from './weapons.ts';
 
-// What planning reads off the unit.
+// What planning reads off the unit: how far it moves, and the weapon it
+// attacks with (null if it has none, so it never finds a target).
 export interface Mover {
   movement: number;
-  range: number;
+  weapon: Pick<Weapon, 'minRange' | 'maxRange'> | null;
 }
 
 export interface RushPlan {
@@ -29,7 +31,8 @@ export interface RushPlan {
 // terrain costs Infinity, and Infinity + 1 > Infinity is false.
 const UNLIMITED_MOVEMENT = Number.MAX_SAFE_INTEGER;
 
-// Plans one unit's phase. `unit` needs `movement` and `range`; `isHostile`
+// Plans one unit's phase. `unit` needs `movement` and `weapon` (whose
+// range decides where it can strike from); `isHostile`
 // (unitId) says who it wants to hit; `options` are the movement options
 // (terrainCosts, canPassThrough) from movement.ts.
 //
@@ -50,7 +53,7 @@ export function planRushAction(
 
   let best: { tile: RangeTile; target: TargetTile } | null = null;
   for (const tile of reachable) {
-    const [target] = getAttackTargets(grid, tile, unit.range, isHostile);
+    const [target] = targetsFrom(grid, tile, unit, isHostile);
     if (target && (!best || tile.cost < best.tile.cost)) best = { tile, target };
   }
   if (best) {
@@ -60,6 +63,12 @@ export function planRushAction(
   }
 
   return { path: approachNearest(grid, origin, unit, isHostile, options), target: null };
+}
+
+// The hostiles the unit's weapon reaches from `tile`; none without a weapon.
+function targetsFrom(grid: Grid, tile: Point, unit: Mover, isHostile: (unitId: string) => boolean): TargetTile[] {
+  if (!unit.weapon) return [];
+  return getAttackTargets(grid, tile, unit.weapon.maxRange, isHostile, unit.weapon.minRange);
 }
 
 // The route toward the closest tile the unit could attack a hostile from,
@@ -78,7 +87,7 @@ function approachNearest(
 
   let goal: RangeTile | null = null;
   for (const tile of everywhere) {
-    if (getAttackTargets(grid, tile, unit.range, isHostile).length === 0) continue;
+    if (targetsFrom(grid, tile, unit, isHostile).length === 0) continue;
     if (!goal || tile.cost < goal.cost) goal = tile;
   }
   if (!goal) return [origin];

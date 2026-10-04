@@ -1,6 +1,7 @@
 import type { ItemAction } from '../game/items.ts';
 import type { MenuAction, Menu } from '../game/actionMenu.ts';
 import type { SkillAction } from '../game/skills.ts';
+import type { WeaponAction } from '../game/weapons.ts';
 import type { BattleOutcome } from '../game/turns.ts';
 import { createStore } from './store.ts';
 import type {
@@ -37,6 +38,7 @@ export interface BattleState {
   hoveredUnit: UnitView | null;
   hoveredAnchor: TileAnchorView | null;
   actionMenu: Menu | null;
+  weaponMenu: Menu<WeaponAction> | null;
   skillMenu: Menu<SkillAction> | null;
   itemMenu: Menu<ItemAction> | null;
   combatForecast: CombatForecastView | null;
@@ -69,6 +71,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   hoveredUnit: null, // UnitView from toUnitView(), or null
   hoveredAnchor: null, // TileAnchorView from toTileAnchorView() of the hovered unit's tile (the unit panel docks away from it), or null
   actionMenu: null, // frozen menu from src/game/actionMenu.ts while open, or null
+  weaponMenu: null, // frozen menu of the active unit's weapons (from getWeaponActions) after choosing Attack, or null
   skillMenu: null, // frozen menu of the active unit's skills (from getSkillActions) while open, or null
   itemMenu: null, // frozen menu of the active unit's items (from getItemActions) while open, or null
   combatForecast: null, // CombatForecastView from toCombatForecastView() while aiming an attack at a target, or null

@@ -1,20 +1,27 @@
-// Pure rules for consumable items. A unit carries an inventory — a frozen
-// list of { item, quantity } entries — and using an item restores one of
-// its stats and uses one up. No Phaser, no rendering, no hidden state.
+// Pure rules for items. A unit carries an inventory — a frozen list of
+// { item, quantity } entries — of consumables and weapons. Using a
+// consumable restores one of its stats and uses one up; weapons are
+// fought with (see weapons.ts), and a weapon entry's quantity is the uses
+// it has left. No Phaser, no rendering, no hidden state.
 
-// An item: { id, label, stat, amount }. `stat` is what it restores
-// ('health' or 'mana') and `amount` the most it restores in one use.
+// A consumable: { kind: 'consumable', id, label, stat, amount }. `stat` is
+// what it restores ('health' or 'mana') and `amount` the most it restores
+// in one use.
 
 import type { MenuAction } from './actionMenu.ts';
+import type { Weapon } from './weapons.ts';
 
 export type RestoreStat = 'health' | 'mana';
 
-export interface Item {
+export interface Consumable {
+  kind: 'consumable';
   id: string;
   label: string;
   stat: RestoreStat;
   amount: number;
 }
+
+export type Item = Consumable | Weapon;
 
 export interface InventoryEntry {
   item: Item;
@@ -35,21 +42,23 @@ export interface ItemAction extends MenuAction {
   quantity: number;
 }
 
-export const HEALTH_POTION: Item = Object.freeze({
+export const HEALTH_POTION: Consumable = Object.freeze({
+  kind: 'consumable',
   id: 'health-potion',
   label: 'Health Potion',
   stat: 'health',
   amount: 5,
 });
 
-export const MANA_POTION: Item = Object.freeze({
+export const MANA_POTION: Consumable = Object.freeze({
+  kind: 'consumable',
   id: 'mana-potion',
   label: 'Mana Potion',
   stat: 'mana',
   amount: 3,
 });
 
-// What every soldier carries into battle.
+// The potions every unit carries into battle (each class adds its weapon).
 export const STARTING_ITEMS: Inventory = Object.freeze([
   Object.freeze({ item: HEALTH_POTION, quantity: 1 }),
   Object.freeze({ item: MANA_POTION, quantity: 1 }),
@@ -75,19 +84,23 @@ export function createInventory(entries: readonly InventoryEntry[] = []): Invent
   return Object.freeze(kept.map(({ item, quantity }) => Object.freeze({ item, quantity })));
 }
 
-// Whether item fits: it stacks onto an entry already holding it, otherwise
-// it needs a free slot.
+// Whether item fits: a consumable stacks onto an entry already holding it;
+// otherwise (and always for a weapon, which never stacks) it needs a free
+// slot.
 export function canAddItem(inventory: Inventory, item: Item): boolean {
-  return findItem(inventory, item.id) !== null || inventory.length < MAX_INVENTORY_SLOTS;
+  const stacks = item.kind === 'consumable' && findItem(inventory, item.id) !== null;
+  return stacks || inventory.length < MAX_INVENTORY_SLOTS;
 }
 
-// Adds quantity (default 1) of item and returns the new inventory: stacked
-// onto its entry if there is one, else in a new slot at the end. Throws if
-// it doesn't fit (check canAddItem first) or quantity isn't positive.
+// Adds quantity (default 1) of item and returns the new inventory: a
+// consumable is stacked onto its entry if there is one, else it goes in a
+// new slot at the end — as a weapon always does, with `quantity` as its
+// uses left. Throws if it doesn't fit (check canAddItem first) or quantity
+// isn't positive.
 export function addItem(inventory: Inventory, item: Item, quantity = 1): Inventory {
   if (!(quantity > 0)) throw new Error(`Can't add ${quantity} of ${item.id}`);
   if (!canAddItem(inventory, item)) throw new Error(`No room for ${item.id}: inventory is full`);
-  if (findItem(inventory, item.id)) {
+  if (item.kind === 'consumable' && findItem(inventory, item.id)) {
     return createInventory(
       inventory.map((entry) => (entry.item.id === item.id ? { ...entry, quantity: entry.quantity + quantity } : entry)),
     );
@@ -112,8 +125,10 @@ export function removeItem(inventory: Inventory, itemId: string): Inventory {
 }
 
 // How much of its stat the item would actually restore on this unit: its
-// amount, capped by how far the stat is below its maximum.
+// amount, capped by how far the stat is below its maximum. Weapons restore
+// nothing.
 export function getItemRecovery(unit: Restorable, item: Item): number {
+  if (item.kind !== 'consumable') return 0;
   const fields = STAT_FIELDS[item.stat] as (typeof STAT_FIELDS)[RestoreStat] | undefined;
   if (!fields) return 0;
   const missing = unit[fields.max] - unit[fields.current];
@@ -125,11 +140,17 @@ export function canUseItem(unit: Restorable, item: Item): boolean {
   return getItemRecovery(unit, item) > 0;
 }
 
-// Entries for the item menu: each item with how many are left, disabled
-// if it would restore nothing (e.g. a health potion at full health).
+// The consumables in an inventory, in order (weapons left out).
+export function getConsumables(inventory: Inventory): (InventoryEntry & { item: Consumable })[] {
+  return inventory.filter((entry): entry is InventoryEntry & { item: Consumable } => entry.item.kind === 'consumable');
+}
+
+// Entries for the item menu: each consumable with how many are left,
+// disabled if it would restore nothing (e.g. a health potion at full
+// health). Weapons aren't listed — they're chosen through Attack.
 export function getItemActions(unit: Restorable, inventory: Inventory): readonly ItemAction[] {
   return Object.freeze(
-    inventory.map(({ item, quantity }) =>
+    getConsumables(inventory).map(({ item, quantity }) =>
       Object.freeze({
         id: item.id,
         label: item.label,

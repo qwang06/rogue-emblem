@@ -10,6 +10,7 @@ import { DeploymentMenu } from './DeploymentMenu.tsx';
 import { DialogBox } from './DialogBox.tsx';
 import { ExperienceBar } from './ExperienceBar.tsx';
 import { ItemMenu } from './ItemMenu.tsx';
+import { WeaponMenu } from './WeaponMenu.tsx';
 import { LevelUpPanel } from './LevelUpPanel.tsx';
 import { LoadingScreen } from './LoadingScreen.tsx';
 import { MainMenuButton } from './MainMenuButton.tsx';
@@ -69,6 +70,7 @@ export function App() {
               <DeploymentMenu />
               <RosterMenu />
               <ActionMenu />
+              <WeaponMenu />
               <SkillMenu />
               <ItemMenu />
               <CombatForecast />

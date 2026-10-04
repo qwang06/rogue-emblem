@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { planRushAction } from './enemyAI.ts';
 import { createGrid, setTerrain, setUnit, type Grid, type Point } from './grid.ts';
+import { FIRE, IRON_BOW, IRON_SPEAR } from './weapons.ts';
 
 // Units are keyed by id; ids starting with 'p' are the player's, 'e' the enemy's.
 const isHostile = (unitId: string) => unitId.startsWith('p');
 const options = { canPassThrough: (unitId: string) => unitId.startsWith('e') };
-const soldier = { movement: 3, range: 1 };
+const soldier = { movement: 3, weapon: IRON_SPEAR };
 
 function place(grid: Grid, units: Record<string, Point>): Grid {
   return Object.entries(units).reduce((g, [unitId, { x, y }]) => setUnit(g, x, y, unitId), grid);
@@ -55,7 +56,13 @@ describe('planRushAction', () => {
     let grid = createGrid(5, 5, 'grass');
     for (let x = 0; x < 4; x++) grid = setTerrain(grid, x, 2, 'water');
     grid = place(grid, { e1: { x: 0, y: 0 }, p1: { x: 0, y: 4 } });
-    const { path, target } = planRushAction(grid, { x: 0, y: 0 }, { movement: 20, range: 1 }, isHostile, options);
+    const { path, target } = planRushAction(
+      grid,
+      { x: 0, y: 0 },
+      { movement: 20, weapon: IRON_SPEAR },
+      isHostile,
+      options,
+    );
     expect(path.filter(({ y }) => y === 2)).toEqual([{ x: 4, y: 2 }]);
     expect(target!.unitId).toBe('p1');
   });
@@ -96,9 +103,31 @@ describe('planRushAction', () => {
 
   it('uses its range to attack from further away', () => {
     const grid = place(createGrid(8, 1, 'grass'), { e1: { x: 0, y: 0 }, p1: { x: 4, y: 0 } });
-    const { path, target } = planRushAction(grid, { x: 0, y: 0 }, { movement: 3, range: 2 }, isHostile, options);
+    const { path, target } = planRushAction(grid, { x: 0, y: 0 }, { movement: 3, weapon: FIRE }, isHostile, options);
     expect(last(path)).toEqual({ x: 2, y: 0 });
     expect(target!.unitId).toBe('p1');
+  });
+
+  it("keeps its weapon's minimum range, backing off to strike", () => {
+    // A bow can't hit adjacent foes: from next to p1 it steps away to shoot.
+    const grid = place(createGrid(8, 1, 'grass'), { e1: { x: 3, y: 0 }, p1: { x: 4, y: 0 } });
+    const { path, target } = planRushAction(
+      grid,
+      { x: 3, y: 0 },
+      { movement: 3, weapon: IRON_BOW },
+      isHostile,
+      options,
+    );
+    expect(last(path)).toEqual({ x: 2, y: 0 });
+    expect(target!.unitId).toBe('p1');
+  });
+
+  it('never attacks or approaches without a weapon', () => {
+    const grid = place(createGrid(6, 1, 'grass'), { e1: { x: 0, y: 0 }, p1: { x: 1, y: 0 } });
+    expect(planRushAction(grid, { x: 0, y: 0 }, { movement: 3, weapon: null }, isHostile, options)).toEqual({
+      path: [{ x: 0, y: 0 }],
+      target: null,
+    });
   });
 
   it('stays put with no target when there are no foes', () => {
@@ -121,7 +150,13 @@ describe('planRushAction', () => {
 
   it('stays put with zero movement and no adjacent foe', () => {
     const grid = place(createGrid(5, 1, 'grass'), { e1: { x: 0, y: 0 }, p1: { x: 4, y: 0 } });
-    const { path, target } = planRushAction(grid, { x: 0, y: 0 }, { movement: 0, range: 1 }, isHostile, options);
+    const { path, target } = planRushAction(
+      grid,
+      { x: 0, y: 0 },
+      { movement: 0, weapon: IRON_SPEAR },
+      isHostile,
+      options,
+    );
     expect(path).toEqual([{ x: 0, y: 0 }]);
     expect(target).toBeNull();
   });
