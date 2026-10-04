@@ -3,9 +3,9 @@ import { createActionMenu, getSelectedAction, moveSelection } from './actionMenu
 import { TITLE_ACTIONS } from './titleMenu.ts';
 
 describe('TITLE_ACTIONS', () => {
-  it('lists Play, Training, then Settings', () => {
-    expect(TITLE_ACTIONS.map((a) => a.id)).toEqual(['play', 'training', 'settings']);
-    expect(TITLE_ACTIONS.map((a) => a.label)).toEqual(['Play', 'Training', 'Settings']);
+  it('lists Story Mode, Dungeon Mode, Training, then Settings', () => {
+    expect(TITLE_ACTIONS.map((a) => a.id)).toEqual(['story', 'dungeon', 'training', 'settings']);
+    expect(TITLE_ACTIONS.map((a) => a.label)).toEqual(['Story Mode', 'Dungeon Mode', 'Training', 'Settings']);
   });
 
   it('is frozen', () => {
@@ -13,11 +13,11 @@ describe('TITLE_ACTIONS', () => {
     expect(TITLE_ACTIONS.every(Object.isFrozen)).toBe(true);
   });
 
-  it('starts on Play and wraps around the entries', () => {
+  it('starts on Story Mode and wraps around the entries', () => {
     const menu = createActionMenu(TITLE_ACTIONS);
-    expect(getSelectedAction(menu)!.id).toBe('play');
-    expect(getSelectedAction(moveSelection(menu, 1))!.id).toBe('training');
+    expect(getSelectedAction(menu)!.id).toBe('story');
+    expect(getSelectedAction(moveSelection(menu, 1))!.id).toBe('dungeon');
     expect(getSelectedAction(moveSelection(menu, -1))!.id).toBe('settings');
-    expect(getSelectedAction(moveSelection(menu, 3))!.id).toBe('play');
+    expect(getSelectedAction(moveSelection(menu, 4))!.id).toBe('story');
   });
 });

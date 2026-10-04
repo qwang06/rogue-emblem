@@ -28,3 +28,12 @@ export function placeMenuBesideTile(tile: TileAnchorView, menu: Size, stage: Siz
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(value, max));
 }
+
+// Which top corner of the map a docked panel (the unit panel) goes in so it
+// stays clear of `tile`, a TileAnchorView in canvas fractions: the left
+// corner, unless the tile's center is in the left half of the map, then the
+// right one. With no tile it stays left.
+export function pickCornerAwayFromTile(tile: TileAnchorView | null): 'left' | 'right' {
+  if (!tile) return 'left';
+  return (tile.left + tile.right) / 2 < 0.5 ? 'right' : 'left';
+}

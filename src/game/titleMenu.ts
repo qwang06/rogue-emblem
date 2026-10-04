@@ -4,7 +4,8 @@
 import type { MenuAction } from './actionMenu.ts';
 
 export const TITLE_ACTIONS: readonly MenuAction[] = Object.freeze([
-  Object.freeze({ id: 'play', label: 'Play' }),
+  Object.freeze({ id: 'story', label: 'Story Mode' }),
+  Object.freeze({ id: 'dungeon', label: 'Dungeon Mode' }),
   Object.freeze({ id: 'training', label: 'Training' }),
   Object.freeze({ id: 'settings', label: 'Settings' }),
 ]);

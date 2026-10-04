@@ -3,7 +3,7 @@ import { gameCommands } from '../bridge/commands.ts';
 import { ActionMenu } from './ActionMenu.tsx';
 import { BattleResult } from './BattleResult.tsx';
 import { CombatForecast } from './CombatForecast.tsx';
-import { ControlsPanel } from './ControlsPanel.tsx';
+import { ControlsButton } from './ControlsButton.tsx';
 import { DamagePopups } from './DamagePopups.tsx';
 import { DeploymentBanner } from './DeploymentBanner.tsx';
 import { DeploymentMenu } from './DeploymentMenu.tsx';
@@ -31,9 +31,9 @@ import { useGameStore } from './useGameStore.ts';
 //
 // Inside the stage, the HUD overlay sits on top of the canvas: the overlay
 // ignores pointer events so clicks fall through to the game, and
-// individual panels opt back in via CSS. Things tied to the map (menus,
-// banners, popups) go there; readouts that don't need to cover the map go
-// in the header or sidebar.
+// individual panels opt back in via CSS. All in-battle UI goes there (the
+// unit panel included, so the map gets the whole width); reference panels
+// like the controls drop down from header buttons.
 function cancelOnRightClick(event: MouseEvent) {
   event.preventDefault();
   gameCommands.send({ type: 'cancel' });
@@ -47,6 +47,7 @@ export function App() {
       <PageHeader
         actions={
           <>
+            <ControlsButton />
             <SettingsButton />
             <MainMenuButton />
           </>
@@ -63,6 +64,8 @@ export function App() {
           <div className="stage" onContextMenu={cancelOnRightClick}>
             <div id="game" role="img" aria-label="Battle map" />
             <div className="hud">
+              {/* First, so every other overlay paints over it. */}
+              <UnitPanel />
               <DeploymentMenu />
               <RosterMenu />
               <ActionMenu />
@@ -79,11 +82,6 @@ export function App() {
             </div>
           </div>
         </div>
-
-        <aside className="sidebar">
-          <UnitPanel />
-          <ControlsPanel />
-        </aside>
       </main>
 
       {screen === 'title' && <TitleScreen />}

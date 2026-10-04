@@ -1,35 +1,47 @@
 import { getUnitSprite } from '../game/tileset.ts';
+import { pickCornerAwayFromTile } from './menuPlacement.ts';
 import { UnitSprite } from './UnitSprite.tsx';
 import { useGameStore } from './useGameStore.ts';
 
-// Sidebar card for the unit under the cursor: portrait, level (and XP
-// for player units), HP/MP
-// meters, combat stats, and the items it carries. Holds its place with a hint when nothing is
-// hovered, so the sidebar doesn't jump around.
+const STATS = [
+  ['STR', 'strength'],
+  ['MAG', 'magic'],
+  ['SKL', 'skill'],
+  ['SPD', 'speed'],
+  ['LCK', 'luck'],
+  ['DEF', 'defense'],
+  ['RES', 'resistance'],
+  ['MOV', 'movement'],
+  ['RNG', 'range'],
+] as const;
+
+// Compact card for the unit under the cursor, docked in a top corner of the
+// map: sprite, name and level (plus XP for player units), thin HP/MP bars,
+// a plain grid of stats, and its items (up to six, see MAX_INVENTORY_SLOTS)
+// one per row, long names cut short with an ellipsis; left out when it has
+// none. The team shows as the accent color. It sits in the corner away
+// from the hovered unit so it never covers it, and steps aside while the
+// combat forecast (which already shows both fighters) is up.
 export function UnitPanel() {
   const unit = useGameStore((state) => state.hoveredUnit);
+  const anchor = useGameStore((state) => state.hoveredAnchor);
+  const forecastOpen = useGameStore((state) => state.combatForecast !== null);
 
-  if (!unit) {
-    return (
-      <section className="side-panel unit-panel unit-panel--empty">
-        <h2 className="side-panel__title">Unit</h2>
-        <p className="unit-panel__placeholder">Hover a unit to see its stats</p>
-      </section>
-    );
-  }
+  if (!unit || forecastOpen) return null;
 
+  const corner = pickCornerAwayFromTile(anchor);
   return (
-    <section className={`side-panel unit-panel unit-panel--${unit.team}`}>
-      <h2 className="side-panel__title">{unit.team === 'enemy' ? 'Enemy' : 'Ally'}</h2>
+    <section
+      className={`panel unit-panel unit-panel--${unit.team} unit-panel--${corner}`}
+      aria-label={`${unit.team === 'enemy' ? 'Enemy' : 'Ally'} ${unit.name}'s stats`}
+    >
       <div className="unit-panel__header">
-        <span className="unit-panel__portrait">
-          <UnitSprite sprite={getUnitSprite(unit.unitClass)} scale={2} />
-        </span>
-        <div>
-          <p className="unit-panel__name">{unit.name}</p>
+        <UnitSprite sprite={getUnitSprite(unit.unitClass)} />
+        <div className="unit-panel__identity">
+          <h2 className="unit-panel__name">{unit.name}</h2>
           <p className="unit-panel__level">
-            Level {unit.level}
-            {unit.team === 'player' && <span className="unit-panel__experience"> · EXP {unit.experience}</span>}
+            Lv {unit.level}
+            {unit.team === 'player' && <> · {unit.experience} XP</>}
           </p>
         </div>
       </div>
@@ -38,29 +50,25 @@ export function UnitPanel() {
       <Meter label="MP" value={unit.mana} max={unit.maxMana} kind="mp" />
 
       <dl className="unit-panel__stats">
-        <Stat label="STR" value={unit.strength} />
-        <Stat label="MAG" value={unit.magic} />
-        <Stat label="SKL" value={unit.skill} />
-        <Stat label="SPD" value={unit.speed} />
-        <Stat label="LCK" value={unit.luck} />
-        <Stat label="DEF" value={unit.defense} />
-        <Stat label="RES" value={unit.resistance} />
-        <Stat label="MOV" value={unit.movement} />
-        <Stat label="RNG" value={unit.range} />
+        {STATS.map(([label, key]) => (
+          <div key={key} className="unit-panel__stat">
+            <dt>{label}</dt>
+            <dd>{unit[key]}</dd>
+          </div>
+        ))}
       </dl>
 
-      <h3 className="unit-panel__subtitle">Items</h3>
-      {unit.items.length > 0 ? (
-        <ul className="unit-panel__items">
+      {unit.items.length > 0 && (
+        <ul className="unit-panel__items" aria-label="Items">
           {unit.items.map((item) => (
             <li key={item.id} className="unit-panel__item">
-              <span>{item.label}</span>
+              <span className="unit-panel__item-label" title={item.label}>
+                {item.label}
+              </span>
               <span className="unit-panel__item-quantity">×{item.quantity}</span>
             </li>
           ))}
         </ul>
-      ) : (
-        <p className="unit-panel__no-items">None</p>
       )}
     </section>
   );
@@ -77,15 +85,6 @@ function Meter({ label, value, max, kind }: { label: string; value: number; max:
       <span className="meter__value">
         {value}/{max}
       </span>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="unit-panel__stat">
-      <dt>{label}</dt>
-      <dd>{value}</dd>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type MouseEvent } from 'react';
 import { SPRITE_URLS } from '../assets/sprites.ts';
 import { gameCommands } from '../bridge/commands.ts';
 import { getRevealedLength } from '../game/dialog.ts';
@@ -8,13 +8,30 @@ import { useGameStore } from './useGameStore.ts';
 // The conversation box along the bottom of the map: the speaker's portrait
 // on their side, a name plate, and the line typing out. GridScene handles
 // the input (confirm finishes the line or moves on, cancel skips); a click
-// anywhere on the map confirms.
+// anywhere on the map confirms. Only the box's text can be selected: a
+// click outside it clears any selection, a click that ends a drag-select
+// inside it keeps the selection instead of moving on, and rapid clicks
+// (double/triple) don't select words or lines.
 export function DialogBox() {
   const line = useGameStore((state) => state.dialog);
   if (!line) return null;
 
+  function onClick(event: MouseEvent<HTMLDivElement>) {
+    const selection = window.getSelection();
+    const insideBox = (event.target as Element).closest('.dialog-box') !== null;
+    if (insideBox && selection && !selection.isCollapsed) return;
+    if (!insideBox) selection?.removeAllRanges();
+    gameCommands.send({ type: 'confirm' });
+  }
+
   return (
-    <div className="dialog-layer" onClick={() => gameCommands.send({ type: 'confirm' })}>
+    <div
+      className="dialog-layer"
+      onClick={onClick}
+      onMouseDown={(event) => {
+        if (event.detail > 1) event.preventDefault();
+      }}
+    >
       <section className={`panel dialog-box dialog-box--${line.side}`} aria-label="Dialog">
         <DialogPortrait portrait={line.portrait} sprite={line.sprite} />
         <div className="dialog-box__body">

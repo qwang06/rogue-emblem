@@ -52,3 +52,26 @@ export function canStartBattle(grid: Grid, roster: readonly string[]): boolean {
 export function getFirstOpenTile(grid: Grid, zone: readonly Point[]): Point | null {
   return zone.find((tile) => getCell(grid, tile.x, tile.y)?.unitId === null) ?? null;
 }
+
+// How many roster units are on the map.
+export function countPlaced(grid: Grid, roster: readonly string[]): number {
+  return roster.filter((unitId) => isPlaced(grid, unitId)).length;
+}
+
+// How many units this deployment can field: the level's `maxDeployed`,
+// capped by how many units the roster has and how many tiles the zone has.
+export function getDeploymentLimit(roster: readonly string[], zone: readonly Point[], maxDeployed: number): number {
+  return Math.max(0, Math.min(maxDeployed, roster.length, zone.length));
+}
+
+// Whether unitId may be (re)placed: a unit already on the map can always
+// move, a new one only while fewer than `limit` are placed.
+export function canDeployUnit(grid: Grid, roster: readonly string[], limit: number, unitId: string): boolean {
+  return isPlaced(grid, unitId) || countPlaced(grid, roster) < limit;
+}
+
+// Deployment is complete once every slot is filled (`limit` from
+// getDeploymentLimit) — there's nothing left to place.
+export function isDeploymentComplete(grid: Grid, roster: readonly string[], limit: number): boolean {
+  return countPlaced(grid, roster) >= limit;
+}

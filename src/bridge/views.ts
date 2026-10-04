@@ -86,6 +86,7 @@ export interface RosterEntryView {
   label: string;
   sprite: string;
   placed: boolean;
+  disabled: boolean;
 }
 
 export interface ExperienceGainView {
@@ -261,19 +262,22 @@ export function toDamagePopupView({
 
 // Snapshot of one unit in the deployment roster menu: its id, the name to
 // show, the sprite to draw (a texture key), and whether it's already on
-// the map.
+// the map. `disabled` is set when it can't be placed because every slot
+// is taken (see canDeployUnit); it defaults to false.
 export function toRosterEntryView({
   id,
   unit,
   sprite,
   placed,
+  disabled = false,
 }: {
   id: string;
   unit: Pick<Unit, 'name'>;
   sprite: string;
   placed: boolean;
+  disabled?: boolean;
 }): RosterEntryView {
-  return Object.freeze({ id, label: unit.name, sprite, placed });
+  return Object.freeze({ id, label: unit.name, sprite, placed, disabled });
 }
 
 // Snapshot of the XP bar shown after a player unit's combat: its name, the

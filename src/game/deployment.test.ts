@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canDeployUnit,
   canPlaceUnit,
   canStartBattle,
+  countPlaced,
   getDeploymentActions,
+  getDeploymentLimit,
   getFirstOpenTile,
+  isDeploymentComplete,
   isInZone,
   isPlaced,
   placeUnit,
@@ -132,5 +136,75 @@ describe('getFirstOpenTile', () => {
     for (const { x, y } of zone) full = setUnit(full, x, y, `u${x}`);
     expect(getFirstOpenTile(full, zone)).toBeNull();
     expect(getFirstOpenTile(grid, [])).toBeNull();
+  });
+});
+
+describe('countPlaced', () => {
+  it('counts only roster units on the map', () => {
+    const grid = setUnit(setUnit(createGrid(4, 4), 0, 0, 'a'), 1, 1, 'enemy');
+    expect(countPlaced(grid, ['a', 'b'])).toBe(1);
+    expect(countPlaced(grid, [])).toBe(0);
+    expect(countPlaced(createGrid(4, 4), ['a', 'b'])).toBe(0);
+  });
+});
+
+describe('getDeploymentLimit', () => {
+  const roster = ['a', 'b', 'c'];
+
+  it("uses the level's max when roster and zone have room", () => {
+    expect(getDeploymentLimit(roster, zone, 2)).toBe(2);
+  });
+
+  it('is capped by the roster size', () => {
+    expect(getDeploymentLimit(['a'], zone, 3)).toBe(1);
+  });
+
+  it('is capped by the zone size', () => {
+    expect(getDeploymentLimit([...roster, 'd'], zone, 10)).toBe(3);
+  });
+
+  it('is zero with no roster, no zone, or a max of zero', () => {
+    expect(getDeploymentLimit([], zone, 3)).toBe(0);
+    expect(getDeploymentLimit(roster, [], 3)).toBe(0);
+    expect(getDeploymentLimit(roster, zone, 0)).toBe(0);
+    expect(getDeploymentLimit(roster, zone, -1)).toBe(0);
+  });
+});
+
+describe('canDeployUnit', () => {
+  const roster = ['a', 'b', 'c'];
+  const onePlaced = setUnit(createGrid(4, 4), 0, 0, 'a');
+
+  it('allows new units while slots are free', () => {
+    expect(canDeployUnit(onePlaced, roster, 2, 'b')).toBe(true);
+  });
+
+  it('rejects new units once the limit is reached', () => {
+    expect(canDeployUnit(setUnit(onePlaced, 1, 0, 'b'), roster, 2, 'c')).toBe(false);
+    expect(canDeployUnit(createGrid(4, 4), roster, 0, 'a')).toBe(false);
+  });
+
+  it('always lets a placed unit move', () => {
+    expect(canDeployUnit(setUnit(onePlaced, 1, 0, 'b'), roster, 2, 'a')).toBe(true);
+    expect(canDeployUnit(onePlaced, roster, 1, 'a')).toBe(true);
+  });
+});
+
+describe('isDeploymentComplete', () => {
+  const roster = ['a', 'b', 'c'];
+  const onePlaced = setUnit(createGrid(4, 4), 0, 0, 'a');
+
+  it('is incomplete while slots are left', () => {
+    expect(isDeploymentComplete(onePlaced, roster, 2)).toBe(false);
+    expect(isDeploymentComplete(createGrid(4, 4), roster, 3)).toBe(false);
+  });
+
+  it('is complete once every slot is filled', () => {
+    expect(isDeploymentComplete(onePlaced, roster, 1)).toBe(true);
+    expect(isDeploymentComplete(setUnit(onePlaced, 1, 0, 'b'), roster, 2)).toBe(true);
+  });
+
+  it('is complete with no slots at all', () => {
+    expect(isDeploymentComplete(createGrid(4, 4), roster, 0)).toBe(true);
   });
 });

@@ -38,10 +38,13 @@ import { createTrainingLevel } from '../game/trainingLevel.ts';
 import { getItemActions } from '../game/items.ts';
 import { planRushAction } from '../game/enemyAI.ts';
 import {
+  canDeployUnit,
   canPlaceUnit,
   canStartBattle,
   getDeploymentActions,
+  getDeploymentLimit,
   getFirstOpenTile,
+  isDeploymentComplete,
   isPlaced,
   placeUnit,
 } from '../game/deployment.ts';
@@ -156,6 +159,7 @@ export class GridScene extends Phaser.Scene {
   units!: Map<string, Unit>;
   roster!: string[];
   deploymentZone!: Point[];
+  deploymentLimit!: number;
   dialogs!: DialogScripts;
   keys!: Phaser.Types.Input.Keyboard.CursorKeys;
   arrowRepeat!: KeyRepeatState;
@@ -224,6 +228,8 @@ export class GridScene extends Phaser.Scene {
     this.units = level.units; // unitId -> Unit, player roster and enemies alike
     this.roster = level.roster; // player unitIds that can be deployed
     this.deploymentZone = level.deploymentZone;
+    // How many roster units can be placed: the level's max, capped by roster and zone size.
+    this.deploymentLimit = getDeploymentLimit(level.roster, level.deploymentZone, level.maxDeployed);
     this.dialogs = level.dialogs; // the level's conversations by trigger (src/game/dialogScript.ts)
 
     this.renderTerrain(this.grid);
@@ -572,7 +578,7 @@ export class GridScene extends Phaser.Scene {
   }
 
   // Clears the battle's UI state and switches to the title screen, which
-  // makes main.ts remove this scene. The next Play starts a fresh battle.
+  // makes main.ts remove this scene. The next battle starts fresh.
   exitToTitle() {
     this.inputLocked = true;
     gameStore.setState({ ...BATTLE_STATE_DEFAULTS, screen: 'title', battleSetup: null });
@@ -648,7 +654,7 @@ export class GridScene extends Phaser.Scene {
 
   startDeployment() {
     this.phase = 'deployment';
-    gameStore.setState({ phase: 'deployment' });
+    gameStore.setState({ phase: 'deployment', deploymentLimit: this.deploymentLimit });
     this.zoneTiles = this.drawTileHighlights(this.deploymentZone, DEPLOYMENT_ZONE_COLOR, DEPLOYMENT_ZONE_ALPHA);
     // The cursor stays hidden while a deployment menu has input; it only
     // appears once there's a tile to choose.
@@ -715,6 +721,7 @@ export class GridScene extends Phaser.Scene {
         unit,
         sprite: getUnitSprite(unit.unitClass),
         placed: isPlaced(this.grid, id),
+        disabled: !canDeployUnit(this.grid, this.roster, this.deploymentLimit, id),
       });
     });
     this.publishMenu('rosterMenu', createActionMenu(entries));
@@ -730,7 +737,8 @@ export class GridScene extends Phaser.Scene {
 
     if (confirm) {
       const entry = getSelectedAction(this.rosterMenu!);
-      if (!entry) return;
+      // Every slot is taken: only units already on the map can be moved.
+      if (!entry || entry.disabled) return;
       this.publishMenu('rosterMenu', null);
       this.beginPlacing(entry.id);
       return;
@@ -766,7 +774,10 @@ export class GridScene extends Phaser.Scene {
 
     this.placingUnitId = null;
     this.setCursorVisible(false);
-    this.openDeploymentMenu(START_INDEX);
+    // Only jump to Start once every slot is filled; until then, stay on
+    // Place Units so the next unit is one confirm away.
+    const complete = isDeploymentComplete(this.grid, this.roster, this.deploymentLimit);
+    this.openDeploymentMenu(complete ? START_INDEX : PLACE_UNITS_INDEX);
   }
 
   // Ends deployment: clears the zone, drops roster units left off the map
@@ -776,7 +787,7 @@ export class GridScene extends Phaser.Scene {
     this.zoneTiles = null;
     this.publishMenu('deploymentMenu', null);
     this.phase = 'battle';
-    gameStore.setState({ phase: 'battle', deploymentStep: null });
+    gameStore.setState({ phase: 'battle', deploymentStep: null, deploymentLimit: null });
 
     for (const unitId of this.roster) {
       if (!isPlaced(this.grid, unitId)) this.units.delete(unitId);
@@ -1476,9 +1487,13 @@ export class GridScene extends Phaser.Scene {
   }
 
   // Publishes a fresh snapshot of the hovered unit — also needed when that
-  // unit's stats change without the cursor moving (e.g. it takes damage).
+  // unit's stats change without the cursor moving (e.g. it takes damage) —
+  // plus where its tile shows, so the unit panel can stay clear of it.
   publishHoveredUnit() {
-    gameStore.setState({ hoveredUnit: toUnitView(this.hoveredUnit) });
+    gameStore.setState({
+      hoveredUnit: toUnitView(this.hoveredUnit),
+      hoveredAnchor: this.hoveredUnit ? this.getTileAnchor(this.cursor) : null,
+    });
   }
 
   createCursor() {

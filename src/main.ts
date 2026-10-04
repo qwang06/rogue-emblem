@@ -8,9 +8,9 @@ import { mountUI } from './ui/mountUI.tsx';
 mountUI(document.getElementById('root')!);
 
 // No scenes run at boot: the React title screen is shown first, and the map
-// scene is only started once the player chooses Play.
+// scene is only started once the player picks a battle.
 // RESIZE keeps the canvas the same size as #game, which the page layout
-// stretches to fill the space beside the sidebar, so one canvas pixel is
+// stretches to fill the space below the header, so one canvas pixel is
 // one CSS pixel and the map scene decides how far to zoom in.
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -24,7 +24,7 @@ const game = new Phaser.Game({
 });
 
 // The map scene lives only while the battle screen is up: added (and so
-// started fresh) on Play or Training, removed when the player returns to the
+// started fresh) on Story Mode or Training, removed when the player returns to the
 // title. The battle setup the title screen chose is passed in as scene data.
 gameStore.subscribe((state) => {
   const running = Boolean(game.scene.getScene('Grid'));
