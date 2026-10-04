@@ -181,6 +181,11 @@ export class GridScene extends Phaser.Scene {
   // The game content this battle was built from (built-in data plus any uploads).
   content!: GameContent;
   nextBattle: BattleSetup | null = null;
+  // True when the map is only being looked at (gameStore's screen is
+  // 'preview'): see the Preview section.
+  preview = false;
+  // A unit picked in the preview, and the reach highlights drawn for it.
+  previewUnitId: string | null = null;
   onObjectiveDone: (() => void) | null = null;
   keys!: Phaser.Types.Input.Keyboard.CursorKeys;
   arrowRepeat!: KeyRepeatState;
@@ -317,6 +322,13 @@ export class GridScene extends Phaser.Scene {
     this.dialogLineId = null; // changes per line so the dialog box restarts its typing
     this.nextDialogLineId = 1;
     this.onObjectiveDone = null; // set while the Objective screen is up
+    this.previewUnitId = null;
+    this.preview = gameStore.getState().screen === 'preview';
+    if (this.preview) {
+      this.startPreview();
+      gameStore.setState({ mapLoadProgress: 1, mapReady: true });
+      return;
+    }
     this.updateHoveredUnit();
     // Levels with units to place open on deployment; others (e.g. training,
     // where everyone starts on the map) go straight to the battle. Either
@@ -352,6 +364,11 @@ export class GridScene extends Phaser.Scene {
     const cancel = JustDown(this.actionKeys.cancel) || JustDown(this.actionKeys.cancelAlt) || pointer.cancel;
 
     if (this.inputLocked) return;
+
+    if (this.preview) {
+      this.updatePreview(dx, dy, confirm, cancel);
+      return;
+    }
 
     // Before the outcome: a victory or defeat conversation plays out before
     // the result is shown.
@@ -664,8 +681,9 @@ export class GridScene extends Phaser.Scene {
   }
 
   // After the result: on to the next battle if the victory leads to one,
-  // else back to the title. Moving on restarts this scene with the next
-  // setup; create() (re)sets every piece of battle state.
+  // else back to the title. Moving on swaps in the next setup, which makes
+  // main.ts restart this scene with it; create() (re)sets every piece of
+  // battle state.
   leaveBattle() {
     if (!this.nextBattle) {
       this.exitToTitle();
@@ -673,7 +691,6 @@ export class GridScene extends Phaser.Scene {
     }
     this.inputLocked = true;
     gameStore.setState({ ...BATTLE_STATE_DEFAULTS, battleSetup: this.nextBattle });
-    this.scene.restart(this.nextBattle);
   }
 
   // Clears the battle's UI state and switches to the title screen, which
@@ -699,6 +716,46 @@ export class GridScene extends Phaser.Scene {
     this.onObjectiveDone = null;
     gameStore.setState({ objective: null });
     onDone?.();
+  }
+
+  // ---- Preview ----------------------------------------------------------
+  // The config editor shows a map as it would play (screen 'preview'):
+  // terrain, buildings, enemies and the deployment zone, but no dialog,
+  // Objective screen, deployment or turns. The cursor roams so the unit
+  // panel can show whoever it's over; confirm on a unit shows how far it
+  // reaches (or hides that again), and cancel hides it, or else leaves for
+  // the title, which sends the editor back to the page the preview came from.
+
+  startPreview() {
+    this.drawTileHighlights(this.deploymentZone, DEPLOYMENT_ZONE_COLOR, DEPLOYMENT_ZONE_ALPHA);
+    const [start] = this.deploymentZone;
+    if (start) this.setCursor(start.x, start.y);
+    this.updateHoveredUnit();
+  }
+
+  updatePreview(dx: number, dy: number, confirm: boolean, cancel: boolean) {
+    if (cancel) {
+      if (this.previewUnitId) this.hidePreviewReach();
+      else this.exitToTitle();
+      return;
+    }
+    if (confirm) {
+      const unitId = getCell(this.grid, this.cursor.x, this.cursor.y)?.unitId ?? null;
+      const picked = this.previewUnitId;
+      this.hidePreviewReach();
+      if (unitId && unitId !== picked) {
+        this.previewUnitId = unitId;
+        this.rangeTiles = this.drawUnitReach(this.units.get(unitId)!, this.cursor).tiles;
+      }
+      return;
+    }
+    if (dx !== 0 || dy !== 0) this.setCursor(this.cursor.x + dx, this.cursor.y + dy);
+  }
+
+  hidePreviewReach() {
+    for (const tile of this.rangeTiles ?? []) tile.destroy();
+    this.rangeTiles = null;
+    this.previewUnitId = null;
   }
 
   // ---- Dialog -----------------------------------------------------------
@@ -1063,13 +1120,24 @@ export class GridScene extends Phaser.Scene {
   // src/game/combat.ts; this only draws them.
   showMoveRange() {
     const { unit, x, y } = this.activeUnit!;
-    this.moveRange = getMovementRange(this.grid, { x, y }, unit.movement, this.movementOptions(unit));
+    const { moveRange, tiles } = this.drawUnitReach(unit, { x, y });
+    this.moveRange = moveRange;
     this.movePath = [{ x, y }];
-    this.showRange('move', this.moveRange, MOVE_RANGE_COLOR, MOVE_RANGE_ALPHA);
+    this.rangeMode = 'move';
+    this.rangeTiles = tiles;
+  }
+
+  // Draws where `unit` standing at `from` can move (blue) and what it could
+  // attack from there (red). Returns the move range and the highlights.
+  drawUnitReach(unit: Unit, from: Point) {
+    const moveRange = getMovementRange(this.grid, from, unit.movement, this.movementOptions(unit));
+    const tiles = this.drawTileHighlights(moveRange, MOVE_RANGE_COLOR, MOVE_RANGE_ALPHA);
     const reach = getWeaponReach(unit.wieldableWeapons.map(({ weapon }) => weapon));
-    if (!reach) return;
-    const threat = getThreatRange(this.grid, this.moveRange, reach.maxRange, reach.minRange);
-    this.rangeTiles!.push(...this.drawTileHighlights(threat, ATTACK_RANGE_COLOR, ATTACK_RANGE_ALPHA));
+    if (reach) {
+      const threat = getThreatRange(this.grid, moveRange, reach.maxRange, reach.minRange);
+      tiles.push(...this.drawTileHighlights(threat, ATTACK_RANGE_COLOR, ATTACK_RANGE_ALPHA));
+    }
+    return { moveRange, tiles };
   }
 
   // Follows the cursor with the planned route (extendMovePath keeps the

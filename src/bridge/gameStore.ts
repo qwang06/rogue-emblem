@@ -19,7 +19,7 @@ import type {
   UnitView,
 } from './views.ts';
 
-export type Screen = 'title' | 'battle';
+export type Screen = 'title' | 'battle' | 'preview';
 export type BattlePhase = 'deployment' | 'battle';
 export type DeploymentStep = 'menu' | 'roster' | 'placing';
 export type { BattleSetup };
@@ -93,10 +93,13 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
 // The single app-wide store shared by Phaser (writer) and React (reader).
 // Add new UI-facing state here as plain, serializable values.
 export const gameStore = createStore<GameState>({
-  screen: 'title', // 'title' (main menu) | 'battle' (the map is running)
-  // Which battle the map runs, set together with screen: 'battle':
+  // 'title' (main menu) | 'battle' (the map is running) | 'preview' (the map
+  // is shown read-only, from the config editor: no deployment, dialog or turns)
+  screen: 'title',
+  // Which battle the map runs, set together with screen 'battle' or 'preview':
   // a BattleSetup from src/game/battleSetup.ts. Winning a battle that has a
-  // next one (getNextBattle) swaps it in, and main.ts restarts the map.
+  // next one (getNextBattle) swaps it in; main.ts restarts the map whenever
+  // it changes.
   battleSetup: null,
   ...BATTLE_STATE_DEFAULTS,
 });

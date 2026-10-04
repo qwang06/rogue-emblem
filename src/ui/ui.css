@@ -100,6 +100,12 @@ body {
   cursor: pointer;
 }
 
+/* Links that look like header buttons (e.g. a preview's Back to Floors). */
+a.header-button {
+  display: inline-block;
+  text-decoration: none;
+}
+
 .header-button:hover {
   color: var(--ink);
   background: var(--gold);
@@ -1695,6 +1701,16 @@ kbd {
 .dungeon-stats dd {
   margin: 0;
   color: var(--parchment);
+}
+
+/* A floor card's thumbnail opens its full map preview. */
+.map-preview-link {
+  display: block;
+  border-radius: 3px;
+}
+
+.map-preview-link:hover .map-preview {
+  outline: 1px solid var(--gold);
 }
 
 /* A generated map, one square per tile, colored by terrain; markers draw

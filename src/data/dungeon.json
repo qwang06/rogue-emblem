@@ -15,7 +15,7 @@
         "ruins": 0,
         "buildings": 3
       },
-      "enemyCount": 2,
+      "enemyCount": 1,
       "treeChance": 0.05,
       "palette": "a-stone"
     },
@@ -33,7 +33,7 @@
         "ruins": 1,
         "buildings": 2
       },
-      "enemyCount": 3,
+      "enemyCount": 2,
       "treeChance": 0.04,
       "palette": "b-blue"
     },
@@ -52,7 +52,7 @@
         "buildings": 1,
         "turnChance": 0.55
       },
-      "enemyCount": 4,
+      "enemyCount": 3,
       "treeChance": 0.1,
       "palette": "a-brown"
     },

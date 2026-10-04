@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   createBattleLevel,
+  DEFAULT_CONTENT,
+  dungeonConfigPreview,
   describeBattle,
   FIRST_STORY_CHAPTER,
   firstDungeonFloor,
@@ -99,5 +101,26 @@ describe('first battles', () => {
   it('start story mode on chapter 1 and a dungeon on floor 1', () => {
     expect(FIRST_STORY_CHAPTER).toEqual({ mode: 'story', chapter: 1 });
     expect(firstDungeonFloor(42)).toEqual({ mode: 'dungeon', seed: 42, floor: 1 });
+  });
+});
+
+describe('dungeonConfigPreview', () => {
+  const settings = { floorsPerConfig: 2, floors: DUNGEON_CONFIGS.slice(0, 3) };
+
+  it("runs a config's first floor on the seed", () => {
+    expect(dungeonConfigPreview(0, 9, settings)).toEqual({ mode: 'dungeon', seed: 9, floor: 1 });
+    expect(dungeonConfigPreview(2, 9, settings)).toEqual({ mode: 'dungeon', seed: 9, floor: 5 });
+  });
+
+  it('builds the same map as the config itself on that seed', () => {
+    const setup = dungeonConfigPreview(1, 31, settings)!;
+    const level = createBattleLevel(setup, { ...DEFAULT_CONTENT, dungeon: settings });
+    expect(terrainToRows(level.grid)).toEqual(terrainToRows(createDungeonLevel(31, settings.floors[1]).grid));
+  });
+
+  it('is null for a config that does not exist', () => {
+    expect(dungeonConfigPreview(3, 9, settings)).toBeNull();
+    expect(dungeonConfigPreview(-1, 9, settings)).toBeNull();
+    expect(dungeonConfigPreview(0.5, 9, settings)).toBeNull();
   });
 });
