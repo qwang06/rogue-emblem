@@ -51,7 +51,7 @@ draws it, not a bug.
 | Grass, dark (plain)     | `[13, 4]`                                                                                    | The dark-grass set's clean middle, `#84b14d` / `#abc75c`. (`[12, 6]` has a 2px notch in one corner; it's an `I` tile) |
 | Sand patch set          | strip `[0, 3]`, N `[1, 3]`, h-strip `[0, 6]`, island `[3, 6]`                                | Peach sand with orange specks. Notched only. **In use** as dirt (see Patch sets below)                                |
 | Puddle / stream set     | strip `[4, 3]`, N `[5, 3]`, h-strip `[4, 6]`, island `[7, 6]`                                | Water with a brown bank and mint foam. Notched only. Best as 1-wide streams (see Patch sets below)                    |
-| **Dark grass set**      | strip `[8, 3]`, N `[9, 3]`, **B `[12, 3]`**, h-strip `[8, 6]`, island `[11, 6]`, I `[12, 6]` | The only patch set with the full layout. **Autotiles cleanly at any size** (see Patch sets below)                     |
+| **Dark grass set**      | strip `[8, 3]`, N `[9, 3]`, **B `[12, 3]`**, h-strip `[8, 6]`, island `[11, 6]`, I `[12, 6]` | The only patch set with the full layout. **Autotiles cleanly at any size**. **In use** as `meadow`                    |
 | **Water, rocky shore**  | set at `[0, 8]`, **6 animation frames** at columns 0, 7, 14, 21, 28, 35                      | **In use** (`TERRAIN_AUTOTILES.water`: block `[4, 8]`, inner `[2, 9]`)                                                |
 | Water, sandy beach      | set at `[0, 13]`, 6 frames, 7 columns apart                                                  | Same layout. Swap in with block `[4, 13]`, inner `[2, 14]`                                                            |
 | Island rings, beach     | rows 18–24, 6 frames                                                                         | Pre-assembled water tiles that make round 2x2 and 1x1 islands. See Island rings below                                 |
@@ -170,28 +170,47 @@ whatever is there, at a depth above it). A forest cell with a mountain south of
 it swaps to its `[8–10, 1]` version. Mountain cells are opaque enough that the
 grass under them barely shows, but still draw grass first for the skirt.
 
+**In use:** `getFeatureSprites` (`src/game/mapArt.ts`) applies this rule to
+`forest` and `mountain` cells, with the variants listed in `FOREST_ART` and
+`MOUNTAIN_ART` (`tileset.ts`) picked per cell by a position hash. A mountain on
+the top row gets no cap. Forests mix all three kinds tile by tile; that reads
+fine.
+
 ## Buildings (team-colored)
 
 Every building comes in ten colors, in two palette sets of five. Within a
 block, **one column per color**, in this order:
 
-- **Set A**: white, orange, teal, pink, brown. Natural materials (wood, stone,
-  thatch) with team-colored roofs and trim.
+- **Set A**: stone, orange, teal, pink, brown. Natural materials (wood, stone,
+  thatch) with team-colored roofs and trim. **Stone** is a very light warm
+  gray (`#d7d3bd`, shaded `#9d9387`) rather than white, so we call it stone.
 - **Set B**: white, red, blue, green, orange. The whole building tinted in the
   team color.
 
 Set A is columns 0–4 and 12–16; set B is columns 6–10 and 18–22. The tall
 buildings at columns 24–28 mix the two sets: set A on some rows, set B on others
-(see the table). **White has no flag**, so it reads as neutral/unowned; the
-other colors suit team ownership (Advance Wars–style captured buildings).
+(see the table). **The neutral colors (set A stone, set B white) have no flag**,
+so they read as neutral/unowned; the other colors suit team ownership
+(Advance Wars–style captured buildings).
 
 **Flags are separate tiles.** Every colored building's pennant (8x6px, a pole
 and a team-colored flag) is its own tile in the cell **above** the building,
 sitting at y 26–31 of that tile. Its x position depends on the building type.
 So a 1x1 building is drawn as two tiles: the building in its cell plus the flag
 tile over the cell to its north (above the terrain there). The odd rows that
-look empty in rows 49–61 are those flag tiles. A white building's flag cell is
-empty.
+look empty in rows 49–61 are those flag tiles. A stone or white building's flag
+cell is empty.
+
+**One color per map.** Buildings and walls of different colors never share a
+map. In code a level picks one palette from `BUILDING_PALETTES` in `tileset.ts`
+(`a-stone`, `a-orange`, `a-teal`, `a-pink`, `a-brown`, `b-white`, `b-red`,
+`b-blue`, `b-green`, `b-orange`). It gives the palette's building column offset
+(set A 0–4, set B 6–10, added to `BUILDING_ART`'s column for each kind), its
+rampart group (the wall autotile, via `getWallAutotile`), and whether it has
+flags. `getBuildingSprites` (`src/game/mapArt.ts`) draws every building from
+it. Dungeon Mode uses `a-stone`. The pagoda and keep at columns 24–28 aren't
+wired in, because their set A / set B rows don't line up with the palette
+columns.
 
 All buildings are transparent overlays on grass, with a grass skirt and shadow
 at their base. Names are what the art reads as; pick the game meaning to fit.
@@ -227,10 +246,10 @@ Two kits, each in the ten building colors. Verified with
 `compose-tiles.js`.
 
 **Color groups.** Rampart sets are 6 columns wide, starting at columns
-**0, 6, 12, 18, 24**: rows 33–36 in set A (white, orange, teal, pink, brown) and
+**0, 6, 12, 18, 24**: rows 33–36 in set A (stone, orange, teal, pink, brown) and
 rows 41–44 in set B (white, orange, blue, red, green). Note that set B's order
 here differs from the buildings'. Tower kits are 5 columns wide. In set A:
-white at `[0, 37]`, orange at `[5, 37]`, teal at `[10, 37]`, pink at
+stone at `[0, 37]`, orange at `[5, 37]`, teal at `[10, 37]`, pink at
 `[0, 39]`, brown at `[5, 39]`. In set B (rows 45–48) the same positions hold
 white, orange, blue, red, green.
 
@@ -248,13 +267,15 @@ c    c+1 c+2 c+3   c+4        c+5
 -    -   -   o     gate, f3   gatehouse, flag 4     row 36 (44)
 ```
 
-- **Autotile:** `block: [c+1, 33]`, `inner: [c+2, 34]` (white: `[1, 33]` /
+- **Autotile:** `block: [c+1, 33]`, `inner: [c+2, 34]` (stone: `[1, 33]` /
   `[2, 34]`). Like the dirt set it's **notched only**. **1-wide walls render
   clean**: straight runs, corners, T-junctions and closed rings all look like
   proper castle walls. That's the main use. In areas 2+ wide, every full
   quarter shows a notch, so a solid block becomes a grid of small square
   courtyards with a big one in any 1-cell hole. That reads as a fortress
-  roof, not a floor.
+  roof, not a floor. A wall along the map's edge also draws thick, since the
+  autotile carries terrain past the edge; keep walls a tile in from it. The
+  map generator's ruins (`placeRuin`) are 1-wide rings kept off the sides.
 - **Gatehouse** `[c+5, 33]`: a squat block with a dark arched door at the
   bottom. Mark its cell as wall and draw it on top: the wall runs straight
   into its sides (tested in a ring). `[c+5, 34]`, `[c+5, 35]`, `[c+4, 36]`
@@ -278,15 +299,15 @@ joined by short wall segments. Each tile is one tower. Wall segments are
 towers with facing stubs make a continuous wall. Towers stacked vertically
 just touch. For the group at `[c, r]`:
 
-| Tile             | Connects     | Notes                                         |
-| ---------------- | ------------ | --------------------------------------------- |
-| `[c + 4, r + 1]` | nothing      | Lone tower. Flag in `[c + 4, r]` (not white)  |
-| `[c, r + 1]`     | east         | West end of a horizontal wall                 |
-| `[c + 1, r + 1]` | east + west  | Middle of a horizontal wall                   |
-| `[c + 2, r + 1]` | west         | East end                                      |
-| `[c + 3, r + 1]` | south        | Open at the bottom (y 0–31); a tower below it |
-| `[c, r]`         | south + east | Corner (top-left of a ring)                   |
-| `[c + 2, r]`     | south + west | Corner (top-right of a ring)                  |
+| Tile             | Connects     | Notes                                              |
+| ---------------- | ------------ | -------------------------------------------------- |
+| `[c + 4, r + 1]` | nothing      | Lone tower. Flag in `[c + 4, r]` (not stone/white) |
+| `[c, r + 1]`     | east         | West end of a horizontal wall                      |
+| `[c + 1, r + 1]` | east + west  | Middle of a horizontal wall                        |
+| `[c + 2, r + 1]` | west         | East end                                           |
+| `[c + 3, r + 1]` | south        | Open at the bottom (y 0–31); a tower below it      |
+| `[c, r]`         | south + east | Corner (top-left of a ring)                        |
+| `[c + 2, r]`     | south + west | Corner (top-right of a ring)                       |
 
 North connections need no special piece; only "is there a tower south" and
 "east/west" change the tile. **Missing:** south + east + west (a T going down)

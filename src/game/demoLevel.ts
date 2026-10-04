@@ -4,10 +4,12 @@
 // once maps are loaded from data.
 
 import { DIALOGS } from '../data/dialogs.ts';
+import type { BuildingPlacement } from './buildings.ts';
 import { setUnit, type Point } from './grid.ts';
 import { Soldier } from './Soldier.ts';
 import { Villager } from './Villager.ts';
 import { parseTerrainMap } from './terrainMap.ts';
+import type { BuildingPaletteName } from './tileset.ts';
 import type { Level } from './trainingLevel.ts';
 
 export interface TreePlacement extends Point {
@@ -21,6 +23,11 @@ export interface StructurePlacement extends Point {
 export interface DemoLevel extends Level {
   decorations: TreePlacement[];
   structures: StructurePlacement[];
+  // Buildings on the map (see buildings.ts), all drawn in `palette`, which
+  // also colors any wall terrain, so a map never mixes building colors.
+  // They default to none and DEFAULT_BUILDING_PALETTE (tileset.ts).
+  buildings?: BuildingPlacement[];
+  palette?: BuildingPaletteName;
 }
 
 // Level 1: a dirt path runs north up the middle of a grass field to a

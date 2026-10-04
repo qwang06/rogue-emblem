@@ -17,6 +17,9 @@ describe('getMoveCost', () => {
     expect(getMoveCost('water')).toBe(Infinity);
     expect(getMoveCost('dirt')).toBe(1);
     expect(getMoveCost('wall')).toBe(Infinity);
+    expect(getMoveCost('forest')).toBe(2);
+    expect(getMoveCost('mountain')).toBe(Infinity);
+    expect(getMoveCost('meadow')).toBe(1);
   });
 
   it('defaults unknown and null terrain to 1', () => {
