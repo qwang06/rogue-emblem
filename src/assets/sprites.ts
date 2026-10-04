@@ -5,10 +5,10 @@
 import gates from './gates.png';
 import goldGinkgoTree from './gold_ginkgo_tree.png';
 import ginkgoTreeGreen from './ginkgo_tree_green.png';
-import soldier03Idle from './Soldier_03_Idle.png';
-import soldier03Move from './Soldier_03_Move.png';
-import villager01Idle from './Villager_01_Idle.png';
-import villager01Move from './Villager_01_Move.png';
+import soldier03Idle from './units/Soldier_03_Idle.png';
+import soldier03Move from './units/Soldier_03_Move.png';
+import villager01Idle from './units/Villager_01_Idle.png';
+import villager01Move from './units/Villager_01_Move.png';
 
 export const SPRITE_URLS: Readonly<Record<string, string>> = {
   gates,
