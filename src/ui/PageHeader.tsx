@@ -10,7 +10,7 @@ export function PageHeader({ children, actions }: { children?: ReactNode; action
         <span className="page-header__gem" aria-hidden="true">
           ◆
         </span>
-        Rogue Emblem
+        <span className="page-header__name">Rogue Emblem</span>
       </div>
       <div className="page-header__end">
         <div className="page-header__status" aria-live="polite">

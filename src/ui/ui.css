@@ -43,13 +43,16 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  /* Fits the two-line deployment status, so the map doesn't shift when the battle starts. */
-  min-height: 2.75rem;
+  /* A fixed height that fits the two-line deployment status: the header
+     never wraps or grows, so the map below never resizes as the status
+     changes. */
+  height: 2.75rem;
   padding-bottom: 12px;
   border-bottom: 1px solid rgb(168 137 63 / 45%);
 }
 
 .page-header__brand {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -66,18 +69,27 @@ body {
   text-shadow: none;
 }
 
+/* The status takes whatever width the brand and buttons leave, and clips
+   rather than wrapping when that runs out. */
 .page-header__status {
+  min-width: 0;
+  overflow: hidden;
   font-family: var(--serif);
 }
 
 .page-header__end {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 12px;
 }
 
 .header-button {
+  flex: none;
   padding: 5px 12px;
+  white-space: nowrap;
   font-family: var(--serif);
   font-size: 0.875rem;
   letter-spacing: 1px;
@@ -181,7 +193,8 @@ body {
   overflow: hidden;
 }
 
-/* Narrow windows: the header wraps, and the stage still fills what's left. */
+/* Narrow windows: the header stays one row at its fixed height; the brand
+   shrinks (and drops to just the gem on phones) to leave room for the status. */
 @media (max-width: 48rem) {
   .page {
     gap: 10px;
@@ -189,8 +202,22 @@ body {
   }
 
   .page-header {
-    flex-wrap: wrap;
     gap: 8px;
+  }
+
+  .page-header__brand {
+    font-size: 1.125rem;
+    letter-spacing: 2px;
+  }
+
+  .page-header__end {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 36rem) {
+  .page-header__name {
+    display: none;
   }
 }
 
@@ -715,8 +742,13 @@ kbd {
   color: var(--gold);
 }
 
+/* One line, cut off with an ellipsis when it doesn't fit (the full text is
+   its tooltip), so a long hint can't grow the header. */
 .deployment-banner__hint {
   margin: 2px 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-family: var(--mono);
   font-size: 0.75rem;
   color: var(--parchment-dim);
@@ -857,6 +889,7 @@ kbd {
   font-weight: 700;
   letter-spacing: 3px;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .turn-indicator__turn {
