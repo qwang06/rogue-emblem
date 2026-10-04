@@ -167,7 +167,13 @@ describe('toRosterEntryView', () => {
   });
 
   it('marks entries that can no longer be placed as disabled', () => {
-    const view = toRosterEntryView({ id: 'soldier', unit: makeUnit(), sprite: 'Villager_01', placed: false, disabled: true });
+    const view = toRosterEntryView({
+      id: 'soldier',
+      unit: makeUnit(),
+      sprite: 'Villager_01',
+      placed: false,
+      disabled: true,
+    });
     expect(view.disabled).toBe(true);
   });
 });
