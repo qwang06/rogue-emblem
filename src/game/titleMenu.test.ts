@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createActionMenu, getSelectedAction, moveSelection } from './actionMenu.ts';
-import { TITLE_ACTIONS } from './titleMenu.ts';
+import { SETTINGS_ACTIONS, TITLE_ACTIONS } from './titleMenu.ts';
 
 describe('TITLE_ACTIONS', () => {
   it('lists Story Mode, Dungeon Mode, Training, then Settings', () => {
@@ -19,5 +19,17 @@ describe('TITLE_ACTIONS', () => {
     expect(getSelectedAction(moveSelection(menu, 1))!.id).toBe('dungeon');
     expect(getSelectedAction(moveSelection(menu, -1))!.id).toBe('settings');
     expect(getSelectedAction(moveSelection(menu, 4))!.id).toBe('story');
+  });
+});
+
+describe('SETTINGS_ACTIONS', () => {
+  it('offers the game configs', () => {
+    expect(SETTINGS_ACTIONS.map((a) => a.id)).toEqual(['configs']);
+    expect(SETTINGS_ACTIONS.map((a) => a.label)).toEqual(['Game Configs']);
+  });
+
+  it('is frozen', () => {
+    expect(Object.isFrozen(SETTINGS_ACTIONS)).toBe(true);
+    expect(SETTINGS_ACTIONS.every(Object.isFrozen)).toBe(true);
   });
 });

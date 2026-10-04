@@ -5,6 +5,7 @@
 
 import { DIALOGS } from '../data/dialogs.ts';
 import type { BuildingPlacement } from './buildings.ts';
+import type { DialogScripts } from './dialogScript.ts';
 import { setUnit, type Point } from './grid.ts';
 import { Soldier } from './Soldier.ts';
 import { Villager } from './Villager.ts';
@@ -112,10 +113,10 @@ export const PLAYER_ROSTER: Readonly<Record<string, string>> = Object.freeze({
 // `roster` lists the player unitIds available to deploy; `deploymentZone`
 // is [{ x, y }] of placeable tiles; `maxDeployed` caps how many units
 // can be placed; `dialogs` are the level's
-// conversations by trigger, from src/data/dialog/demo.txt; `decorations`
+// conversations by trigger, src/data/dialog/demo.txt's unless others are given; `decorations`
 // is [{ x, y, tree }] of trees drawn over the grass; `structures` is
 // [{ x, y, structure }] of multi-tile art by top-left tile.
-export function createDemoLevel(): DemoLevel {
+export function createDemoLevel(dialogs: DialogScripts = DIALOGS.demo): DemoLevel {
   let grid = parseTerrainMap(DEMO_MAP);
 
   const units = new Map(
@@ -134,7 +135,7 @@ export function createDemoLevel(): DemoLevel {
     roster: Object.keys(PLAYER_ROSTER),
     deploymentZone: DEPLOYMENT_ZONE.map((tile) => ({ ...tile })),
     maxDeployed: DEMO_MAX_DEPLOYED,
-    dialogs: DIALOGS.demo,
+    dialogs,
     decorations: TREE_POSITIONS.map((tree) => ({ ...tree })),
     structures: STRUCTURE_POSITIONS.map((structure) => ({ ...structure })),
   };

@@ -6,17 +6,35 @@ import {
   firstDungeonFloor,
   getNextBattle,
   STORY_CHAPTERS,
+  type GameContent,
   type StoryChapter,
 } from './battleSetup.ts';
-import { DUNGEON_CONFIGS, getDungeonConfig } from './dungeonConfigs.ts';
+import { DUNGEON_CONFIGS, DUNGEON_SETTINGS } from '../data/dungeon.ts';
+import { getDungeonFloor } from './dungeonConfigs.ts';
 import { createDungeonLevel } from './dungeonLevel.ts';
 import { createDemoLevel } from './demoLevel.ts';
+import { parseCharacters, parseDialogScript } from './dialogScript.ts';
 import { terrainToRows } from './mapGen.ts';
 
 const CHAPTERS: readonly StoryChapter[] = [
-  { name: 'One', createLevel: createDemoLevel },
-  { name: 'Two', createLevel: createDemoLevel },
+  { name: 'One', createLevel: () => createDemoLevel() },
+  { name: 'Two', createLevel: () => createDemoLevel() },
 ];
+
+const characters = parseCharacters({ hero: { name: 'Hero', team: 'player' } });
+const CUSTOM_CONTENT: GameContent = Object.freeze({
+  dialogs: Object.freeze({
+    demo: parseDialogScript('[opening]\nhero: Custom demo.', characters),
+    training: parseDialogScript('[opening]\nhero: Custom training.', characters),
+  }),
+  dungeon: Object.freeze({
+    floorsPerConfig: 2,
+    floors: [
+      { ...DUNGEON_CONFIGS[0], name: 'Custom Depths' },
+      { ...DUNGEON_CONFIGS[1], name: 'Custom Bottom' },
+    ],
+  }),
+});
 
 describe('getNextBattle', () => {
   it('moves story mode on to the next chapter', () => {
@@ -43,7 +61,22 @@ describe('createBattleLevel', () => {
     expect(terrainToRows(createBattleLevel(FIRST_STORY_CHAPTER).grid)).toEqual(terrainToRows(createDemoLevel().grid));
     expect(createBattleLevel({ mode: 'training', unitClass: 'soldier' }).deploymentZone).toEqual([]);
     const floor2 = createBattleLevel({ mode: 'dungeon', seed: 3, floor: 2 });
-    expect(terrainToRows(floor2.grid)).toEqual(terrainToRows(createDungeonLevel(3, getDungeonConfig(2)).grid));
+    expect(terrainToRows(floor2.grid)).toEqual(
+      terrainToRows(createDungeonLevel(3, getDungeonFloor(2, DUNGEON_SETTINGS)).grid),
+    );
+  });
+
+  it('gives each level its dialog file from the files passed in', () => {
+    expect(createBattleLevel(FIRST_STORY_CHAPTER, CUSTOM_CONTENT).dialogs).toBe(CUSTOM_CONTENT.dialogs.demo);
+    const training = createBattleLevel({ mode: 'training', unitClass: 'soldier' }, CUSTOM_CONTENT);
+    expect(training.dialogs.opening.map((line) => line.text)).toEqual(['Custom training.']);
+    expect(training.dialogs.opening[0].unitClass).toBe('soldier');
+  });
+
+  it('builds dungeon floors from the dungeon settings passed in', () => {
+    const floor3 = createBattleLevel({ mode: 'dungeon', seed: 3, floor: 3 }, CUSTOM_CONTENT);
+    const expected = createDungeonLevel(3, CUSTOM_CONTENT.dungeon.floors[1]);
+    expect(terrainToRows(floor3.grid)).toEqual(terrainToRows(expected.grid));
   });
 
   it('rejects a story chapter that does not exist', () => {
@@ -55,7 +88,8 @@ describe('createBattleLevel', () => {
 
 describe('describeBattle', () => {
   it('names chapters, floors and training', () => {
-    expect(describeBattle({ mode: 'story', chapter: 2 }, CHAPTERS)).toBe('Chapter 2: Two');
+    expect(describeBattle({ mode: 'story', chapter: 2 }, undefined, CHAPTERS)).toBe('Chapter 2: Two');
+    expect(describeBattle({ mode: 'dungeon', seed: 0, floor: 2 }, CUSTOM_CONTENT)).toBe('Floor 2: Custom Depths');
     expect(describeBattle({ mode: 'dungeon', seed: 0, floor: 2 })).toBe(`Floor 2: ${DUNGEON_CONFIGS[1].name}`);
     expect(describeBattle({ mode: 'training', unitClass: 'soldier' })).toBe('Training');
   });

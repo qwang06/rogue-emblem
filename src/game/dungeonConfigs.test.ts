@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DUNGEON_CONFIGS, DUNGEON_FLOORS_PER_CONFIG, getDungeonConfig, type DungeonConfig } from './dungeonConfigs.ts';
-import { BUILDING_PALETTES } from './tileset.ts';
+import { getConfigFloors, getDungeonConfig, getDungeonFloor, type DungeonConfig } from './dungeonConfigs.ts';
 
 const config = (name: string): DungeonConfig => ({
   name,
@@ -13,10 +12,7 @@ const [A, B, C] = ['a', 'b', 'c'].map(config);
 
 describe('getDungeonConfig', () => {
   it('moves to the next config every floor by default', () => {
-    expect(DUNGEON_FLOORS_PER_CONFIG).toBe(1);
-    expect(getDungeonConfig(1)).toBe(DUNGEON_CONFIGS[0]);
-    expect(getDungeonConfig(2)).toBe(DUNGEON_CONFIGS[1]);
-    expect(getDungeonConfig(DUNGEON_CONFIGS.length)).toBe(DUNGEON_CONFIGS.at(-1));
+    expect([1, 2, 3].map((floor) => getDungeonConfig(floor, [A, B, C]))).toEqual([A, B, C]);
   });
 
   it('shares a config across floorsPerConfig floors in a row', () => {
@@ -27,7 +23,7 @@ describe('getDungeonConfig', () => {
   it('sticks on the last config once they run out', () => {
     expect(getDungeonConfig(4, [A, B])).toBe(B);
     expect(getDungeonConfig(100, [A, B], 3)).toBe(B);
-    expect(getDungeonConfig(1000)).toBe(DUNGEON_CONFIGS.at(-1));
+    expect(getDungeonConfig(1000, [A, B, C])).toBe(C);
   });
 
   it('works with a single config', () => {
@@ -36,9 +32,9 @@ describe('getDungeonConfig', () => {
   });
 
   it('rejects floors below 1 or between whole numbers', () => {
-    expect(() => getDungeonConfig(0)).toThrow();
-    expect(() => getDungeonConfig(-1)).toThrow();
-    expect(() => getDungeonConfig(1.5)).toThrow();
+    expect(() => getDungeonConfig(0, [A])).toThrow();
+    expect(() => getDungeonConfig(-1, [A])).toThrow();
+    expect(() => getDungeonConfig(1.5, [A])).toThrow();
   });
 
   it('rejects an empty config list and floorsPerConfig below 1', () => {
@@ -48,17 +44,23 @@ describe('getDungeonConfig', () => {
   });
 });
 
-describe('DUNGEON_CONFIGS', () => {
-  it('has uniquely named configs with usable settings', () => {
-    expect(DUNGEON_CONFIGS.length).toBeGreaterThan(1);
-    expect(new Set(DUNGEON_CONFIGS.map((c) => c.name)).size).toBe(DUNGEON_CONFIGS.length);
-    for (const { terrain, enemyCount, treeChance, palette } of DUNGEON_CONFIGS) {
-      expect(terrain.width).toBeGreaterThanOrEqual(3);
-      expect(terrain.height).toBeGreaterThanOrEqual(3);
-      expect(enemyCount).toBeGreaterThan(0);
-      expect(treeChance).toBeGreaterThanOrEqual(0);
-      expect(treeChance).toBeLessThanOrEqual(1);
-      expect(BUILDING_PALETTES).toHaveProperty(palette);
-    }
+describe('getDungeonFloor', () => {
+  it('uses the settings it is given', () => {
+    const settings = { floorsPerConfig: 2, floors: [config('A'), config('B')] };
+    expect(getDungeonFloor(2, settings).name).toBe('A');
+    expect(getDungeonFloor(3, settings).name).toBe('B');
+    expect(getDungeonFloor(99, settings).name).toBe('B');
+  });
+});
+
+describe('getConfigFloors', () => {
+  it('gives each config its stretch of floors', () => {
+    expect(getConfigFloors(0, 3, 1)).toEqual({ first: 1, last: 1 });
+    expect(getConfigFloors(1, 3, 2)).toEqual({ first: 3, last: 4 });
+  });
+
+  it('leaves the last config open-ended', () => {
+    expect(getConfigFloors(2, 3, 2)).toEqual({ first: 5, last: null });
+    expect(getConfigFloors(0, 1, 1)).toEqual({ first: 1, last: null });
   });
 });

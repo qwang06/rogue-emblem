@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { SPRITE_URLS } from '../assets/sprites.ts';
 import terrainSheetUrl from '../assets/overworld.png';
 import { gameCommands, type Command, type MenuField } from '../bridge/commands.ts';
+import { getActiveContent } from '../data/customContent.ts';
 import {
   BATTLE_STATE_DEFAULTS,
   gameStore,
@@ -33,7 +34,13 @@ import { calculateSkillDamage, findLearnedSkill, getLearnedSkills, getSkillActio
 import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange, resolveCombat } from '../game/combat.ts';
 import { getFitZoom } from '../game/camera.ts';
 import { createCursor, moveCursor } from '../game/cursor.ts';
-import { createBattleLevel, describeBattle, FIRST_STORY_CHAPTER, getNextBattle } from '../game/battleSetup.ts';
+import {
+  createBattleLevel,
+  describeBattle,
+  FIRST_STORY_CHAPTER,
+  getNextBattle,
+  type GameContent,
+} from '../game/battleSetup.ts';
 import { randomSeed } from '../game/dungeonLevel.ts';
 import { getStructureTiles } from '../game/structures.ts';
 import { getConsumables, getItemActions } from '../game/items.ts';
@@ -171,6 +178,8 @@ export class GridScene extends Phaser.Scene {
   dialogs!: DialogScripts;
   objective!: Objective;
   setup!: BattleSetup;
+  // The game content this battle was built from (built-in data plus any uploads).
+  content!: GameContent;
   nextBattle: BattleSetup | null = null;
   onObjectiveDone: (() => void) | null = null;
   keys!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -237,7 +246,9 @@ export class GridScene extends Phaser.Scene {
 
     this.setup = setup;
     this.nextBattle = null; // the BattleSetup a victory leads to, once won
-    const level = createBattleLevel(setup);
+    // Configs uploaded in the config editor replace the built-in ones.
+    this.content = getActiveContent();
+    const level = createBattleLevel(setup, this.content);
     this.grid = level.grid;
     this.units = level.units; // unitId -> Unit, player roster and enemies alike
     this.roster = level.roster; // player unitIds that can be deployed
@@ -678,7 +689,9 @@ export class GridScene extends Phaser.Scene {
 
   showObjective(onDone: () => void) {
     this.onObjectiveDone = onDone;
-    gameStore.setState({ objective: toObjectiveView(describeBattle(this.setup), describeObjective(this.objective)) });
+    gameStore.setState({
+      objective: toObjectiveView(describeBattle(this.setup, this.content), describeObjective(this.objective)),
+    });
   }
 
   hideObjective() {
@@ -984,7 +997,7 @@ export class GridScene extends Phaser.Scene {
     this.setCursorVisible(false);
     // Completing the objective moves on to the next chapter or floor.
     this.nextBattle = outcome === 'victory' ? getNextBattle(this.setup, randomSeed()) : null;
-    const nextBattle = this.nextBattle && describeBattle(this.nextBattle);
+    const nextBattle = this.nextBattle && describeBattle(this.nextBattle, this.content);
     this.playTriggeredDialog(outcome, () => gameStore.setState({ battleOutcome: outcome, nextBattle }));
     return true;
   }

@@ -1347,6 +1347,430 @@ kbd {
   color: var(--parchment-dim);
 }
 
+/* ---- Config editor ---------------------------------------------------- */
+
+/* Covers the page like the title screen, but scrolls: the catalog can run
+   past the bottom of the window. */
+.configs-page {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow-y: auto;
+  padding: 32px max(16px, calc((100% - 1080px) / 2)) 48px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgb(64 86 160 / 35%), transparent 60%),
+    linear-gradient(180deg, #111a3a 0%, var(--ink) 100%) fixed;
+  color: var(--parchment);
+}
+
+.configs-page__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--gold-dim);
+}
+
+.configs-page__title {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 2rem;
+  letter-spacing: 3px;
+  color: var(--gold);
+}
+
+.configs-page__lede {
+  margin: 6px 0 0;
+  color: var(--parchment-dim);
+}
+
+.configs-page__back {
+  text-decoration: none;
+}
+
+.configs-group {
+  margin-top: 28px;
+}
+
+.configs-group__title {
+  margin: 0 0 12px;
+  font-family: var(--serif);
+  font-size: 1.125rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.configs-group__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.config-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  background: rgb(22 32 74 / 80%);
+  border: 1px solid rgb(168 137 63 / 55%);
+  border-radius: 4px;
+}
+
+.config-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.config-card__title {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1rem;
+  letter-spacing: 1px;
+  color: var(--parchment);
+}
+
+.config-card__badge {
+  flex: none;
+  padding: 1px 6px;
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  color: var(--parchment-dim);
+  border: 1px solid rgb(243 234 211 / 25%);
+  border-radius: 3px;
+}
+
+.config-card__description {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--parchment-dim);
+}
+
+.config-card__summary {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--gold);
+}
+
+.config-card__sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: auto 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--parchment-dim);
+  overflow-wrap: anywhere;
+}
+
+/* Cards with a page: the title links there, and the link covers the card. */
+.config-card--link {
+  position: relative;
+}
+
+.config-card--link:hover {
+  border-color: var(--gold);
+}
+
+.config-card__title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.config-card__title a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.config-card__title a:focus-visible {
+  outline: none;
+}
+
+.config-card--link:focus-within {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.config-card__badge--ready {
+  color: var(--gold);
+  border-color: var(--gold-dim);
+}
+
+/* Dialogs page: the upload drop zone. The input is hidden but still
+   focusable through the label. */
+.upload-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 28px 16px;
+  text-align: center;
+  background: rgb(22 32 74 / 55%);
+  border: 2px dashed var(--gold-dim);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.upload-drop:hover,
+.upload-drop--active,
+.upload-drop:focus-within {
+  border-color: var(--gold);
+  background: rgb(22 32 74 / 85%);
+}
+
+.upload-drop__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.upload-drop__title {
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  letter-spacing: 1px;
+  color: var(--gold);
+}
+
+.upload-drop__hint {
+  font-size: 0.875rem;
+  color: var(--parchment-dim);
+}
+
+.upload-notices {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.upload-notice {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  border-radius: 3px;
+  overflow-wrap: anywhere;
+}
+
+.upload-notice--ok {
+  background: rgb(74 160 96 / 18%);
+  border: 1px solid rgb(120 200 140 / 50%);
+}
+
+.upload-notice--error {
+  background: rgb(200 70 70 / 18%);
+  border: 1px solid rgb(240 130 130 / 50%);
+}
+
+.dialog-format {
+  margin-top: 12px;
+  font-size: 0.875rem;
+  color: var(--parchment-dim);
+}
+
+.dialog-format summary {
+  cursor: pointer;
+  color: var(--gold);
+}
+
+.dialog-format pre {
+  overflow-x: auto;
+  padding: 10px 12px;
+  font-family: var(--mono);
+  color: var(--parchment);
+  background: rgb(12 18 38 / 70%);
+  border-radius: 3px;
+}
+
+.dialog-files {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dialog-triggers {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dialog-triggers summary {
+  cursor: pointer;
+}
+
+.dialog-triggers__name {
+  font-family: var(--mono);
+  color: var(--gold);
+}
+
+.dialog-triggers__count {
+  font-size: 0.8125rem;
+  color: var(--parchment-dim);
+}
+
+.dialog-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 4px;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.dialog-lines__line {
+  max-width: 85%;
+  padding: 4px 10px;
+  background: rgb(12 18 38 / 60%);
+  border-radius: 3px;
+}
+
+.dialog-lines__line--right {
+  align-self: flex-end;
+}
+
+.dialog-lines__speaker {
+  font-family: var(--serif);
+  font-weight: 700;
+}
+
+.dialog-lines__speaker--player {
+  color: #93c5fd;
+}
+
+.dialog-lines__speaker--enemy {
+  color: #fca5a5;
+}
+
+.dialog-files__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Dungeon Floors page. */
+.dungeon-summary {
+  margin-bottom: 12px;
+}
+
+.dungeon-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+.dungeon-stats__pair {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dungeon-stats dt {
+  color: var(--parchment-dim);
+}
+
+.dungeon-stats dd {
+  margin: 0;
+  color: var(--parchment);
+}
+
+/* A generated map, one square per tile, colored by terrain; markers draw
+   a dot on top. */
+.map-preview {
+  display: grid;
+  gap: 1px;
+  padding: 4px;
+  background: rgb(12 18 38 / 70%);
+  border-radius: 3px;
+}
+
+.map-preview__cell {
+  position: relative;
+  aspect-ratio: 1;
+  background: #5d9a4a;
+}
+
+.map-preview__cell--dirt {
+  background: #b08a55;
+}
+
+.map-preview__cell--water {
+  background: #3f78c4;
+}
+
+.map-preview__cell--forest {
+  background: #2f6b3a;
+}
+
+.map-preview__cell--mountain {
+  background: #8a7f73;
+}
+
+.map-preview__cell--meadow {
+  background: #46803c;
+}
+
+.map-preview__cell--wall {
+  background: #4b4d5c;
+}
+
+.map-preview__cell--enemy::after,
+.map-preview__cell--player::after,
+.map-preview__cell--building::after,
+.map-preview__cell--tree::after {
+  content: '';
+  position: absolute;
+  inset: 22%;
+  border-radius: 50%;
+}
+
+.map-preview__cell--enemy::after {
+  background: #f87171;
+  box-shadow: 0 0 0 1px #3b0d0d;
+}
+
+.map-preview__cell--player::after {
+  background: #60a5fa;
+}
+
+.map-preview__cell--building::after {
+  inset: 15%;
+  border-radius: 1px;
+  background: var(--parchment);
+}
+
+.map-preview__cell--tree::after {
+  inset: 30%;
+  background: #1f4a28;
+}
+
+.map-preview__cell--deploy {
+  box-shadow: inset 0 0 0 2px #60a5fa;
+}
+
 /* ---- Loading screen --------------------------------------------------- */
 
 /* Same backdrop as the title screen, so starting a battle reads as one

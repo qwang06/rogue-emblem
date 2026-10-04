@@ -22,6 +22,8 @@ Everyone who can speak in dialog, by id:
 
 One file per level, named after it (`demo.txt`, `training.txt`). Every `.txt` file in this folder is loaded automatically.
 
+You can also try out dialog without touching the repo: open **Game Configs → Dialogs** (`#/configs/dialogs`) from the title screen and upload a file with the same name as the one it replaces. It's checked the same way, kept in your browser only, and plays from the next battle you start. Download a built-in file there to start from it.
+
 ```
 # Comments start with #. Blank lines are ignored.
 
@@ -36,3 +38,31 @@ bryn (right): Add (left) or (right) to put a speaker on the other side.
   - `turn N` (for example `turn 3`): at the start of the player phase on turn N, once the phase banner has played.
   - `victory` / `defeat`: when the battle is won or lost, before the Victory / Defeat screen.
 - **`speaker: text`**: one line of dialog, with `speaker` an id from `characters.json`. Everything after the first colon is the text, so colons and apostrophes in the text are fine. Each line is one box of dialog, so keep it to a sentence or two.
+
+## `dungeon.json`
+
+Dungeon Mode's floors. A run goes down floor by floor; every `floorsPerConfig` floors it moves on to the next entry in `floors`, and once they run out every floor uses the last one.
+
+```json
+{
+  "floorsPerConfig": 1,
+  "floors": [
+    {
+      "name": "Meadowlands",
+      "description": "Open fields: a small map with a few lakes and hills and a farming village.",
+      "terrain": { "width": 14, "height": 12, "lakes": 1, "meadows": 4, "meadowSize": [5, 9] },
+      "enemyCount": 2,
+      "treeChance": 0.05,
+      "palette": "a-stone"
+    }
+  ]
+}
+```
+
+- **name**: shown on the Objective and Victory screens ("Floor 2: Lakeside"). **description** is optional notes for whoever edits the file.
+- **terrain**: the map generator's settings. `width` and `height` (6–48 tiles) are required; the rest are optional: how many patches to grow (`lakes`, `mountains`, `forests`, `meadows`), their sizes as `[min, max]` tiles (`lakeSize`, `mountainSize`, `forestSize`, `meadowSize`), how many walled `ruins` and lone `buildings`, whether there's a `castle` (true/false), and `turnChance` (0–1, how much the path winds).
+- **enemyCount**: 1–30 enemy soldiers in the north third of the map (a small map may fit fewer).
+- **treeChance**: 0–1, how likely each free grass tile is to get a tree.
+- **palette**: the building and wall colors, one of the names in `BUILDING_PALETTES` (`src/game/tileset.ts`), e.g. `a-stone`, `b-blue`.
+
+A setting the game doesn't know (a typo like `"lake"`) is an error, not ignored. This is also the file the config editor's **Dungeon Floors** page (`#/configs/dungeon-floors`) takes: download it there, edit it, and upload it to try changes in your browser without touching the repo.

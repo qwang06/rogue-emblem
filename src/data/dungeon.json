@@ -1,0 +1,95 @@
+{
+  "floorsPerConfig": 1,
+  "floors": [
+    {
+      "name": "Meadowlands",
+      "description": "Open fields: a small map with a few lakes and hills and a farming village.",
+      "terrain": {
+        "width": 14,
+        "height": 12,
+        "lakes": 1,
+        "mountains": 1,
+        "forests": 3,
+        "meadows": 4,
+        "meadowSize": [5, 9],
+        "ruins": 0,
+        "buildings": 3
+      },
+      "enemyCount": 2,
+      "treeChance": 0.05,
+      "palette": "a-stone"
+    },
+    {
+      "name": "Lakeside",
+      "description": "Lake country: big lakes that funnel units onto the path.",
+      "terrain": {
+        "width": 16,
+        "height": 14,
+        "lakes": 4,
+        "lakeSize": [6, 11],
+        "mountains": 1,
+        "forests": 3,
+        "meadows": 2,
+        "ruins": 1,
+        "buildings": 2
+      },
+      "enemyCount": 3,
+      "treeChance": 0.04,
+      "palette": "b-blue"
+    },
+    {
+      "name": "Deep Woods",
+      "description": "Thick woods and a twisting path: lots of cover, slow going.",
+      "terrain": {
+        "width": 16,
+        "height": 14,
+        "lakes": 1,
+        "mountains": 1,
+        "forests": 8,
+        "forestSize": [4, 9],
+        "meadows": 1,
+        "ruins": 1,
+        "buildings": 1,
+        "turnChance": 0.55
+      },
+      "enemyCount": 4,
+      "treeChance": 0.1,
+      "palette": "a-brown"
+    },
+    {
+      "name": "Highlands",
+      "description": "Mountain passes: ranges of impassable rock on a wider map.",
+      "terrain": {
+        "width": 18,
+        "height": 14,
+        "lakes": 1,
+        "mountains": 5,
+        "mountainSize": [4, 9],
+        "forests": 3,
+        "meadows": 1,
+        "ruins": 2,
+        "buildings": 2
+      },
+      "enemyCount": 4,
+      "treeChance": 0.03,
+      "palette": "b-white"
+    },
+    {
+      "name": "Fortress",
+      "description": "A fortified borderland: the biggest map, walled ruins and a garrison.",
+      "terrain": {
+        "width": 18,
+        "height": 16,
+        "lakes": 2,
+        "mountains": 2,
+        "forests": 3,
+        "meadows": 2,
+        "ruins": 3,
+        "buildings": 3
+      },
+      "enemyCount": 5,
+      "treeChance": 0.04,
+      "palette": "b-red"
+    }
+  ]
+}

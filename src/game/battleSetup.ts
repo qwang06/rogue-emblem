@@ -3,7 +3,10 @@
 // once the objective is completed getNextBattle says where to go next: the
 // next story chapter, the next dungeon floor, or nowhere (back to the title).
 
-import { getDungeonConfig } from './dungeonConfigs.ts';
+import { DIALOGS } from '../data/dialogs.ts';
+import type { DialogFiles } from './dialogScript.ts';
+import { DUNGEON_SETTINGS } from '../data/dungeon.ts';
+import { getDungeonFloor, type DungeonSettings } from './dungeonConfigs.ts';
 import { createDungeonLevel } from './dungeonLevel.ts';
 import { createDemoLevel, type DemoLevel } from './demoLevel.ts';
 import { createTrainingLevel, type Level } from './trainingLevel.ts';
@@ -16,14 +19,27 @@ export type BattleSetup =
 // A battle's starting state, whichever mode built it.
 export type BattleLevel = Level & Partial<DemoLevel>;
 
+// The authored data battles are built from: the built-in files unless the
+// player uploaded their own in the config editor (see src/data/customContent.ts).
+export interface GameContent {
+  // Every level's conversations, by dialog file name.
+  dialogs: DialogFiles;
+  // Dungeon Mode's floor configs.
+  dungeon: DungeonSettings;
+}
+
+export const DEFAULT_CONTENT: GameContent = Object.freeze({ dialogs: DIALOGS, dungeon: DUNGEON_SETTINGS });
+
+// A story chapter builds its level from the game content, picking out its
+// own dialog file.
 export interface StoryChapter {
   name: string;
-  createLevel: () => BattleLevel;
+  createLevel: (content: GameContent) => BattleLevel;
 }
 
 // Story Mode's chapters in order (chapter 1 first).
 export const STORY_CHAPTERS: readonly StoryChapter[] = Object.freeze([
-  Object.freeze({ name: 'The Old Gate', createLevel: createDemoLevel }),
+  Object.freeze({ name: 'The Old Gate', createLevel: (content: GameContent) => createDemoLevel(content.dialogs.demo) }),
 ]);
 
 // The first battle of each mode that has one.
@@ -39,15 +55,20 @@ function getStoryChapter(chapter: number, chapters: readonly StoryChapter[]): St
   return found;
 }
 
-// Builds the level a setup describes.
-export function createBattleLevel(setup: BattleSetup, chapters: readonly StoryChapter[] = STORY_CHAPTERS): BattleLevel {
+// Builds the level a setup describes from `content` (its dialog, and a
+// dungeon floor's config).
+export function createBattleLevel(
+  setup: BattleSetup,
+  content: GameContent = DEFAULT_CONTENT,
+  chapters: readonly StoryChapter[] = STORY_CHAPTERS,
+): BattleLevel {
   switch (setup.mode) {
     case 'story':
-      return getStoryChapter(setup.chapter, chapters).createLevel();
+      return getStoryChapter(setup.chapter, chapters).createLevel(content);
     case 'training':
-      return createTrainingLevel(setup.unitClass);
+      return createTrainingLevel(setup.unitClass, content.dialogs.training);
     case 'dungeon':
-      return createDungeonLevel(setup.seed, getDungeonConfig(setup.floor));
+      return createDungeonLevel(setup.seed, getDungeonFloor(setup.floor, content.dungeon));
   }
 }
 
@@ -72,13 +93,17 @@ export function getNextBattle(
 
 // A short title for a battle, e.g. "Chapter 1: The Old Gate" or
 // "Floor 2: Lakeside".
-export function describeBattle(setup: BattleSetup, chapters: readonly StoryChapter[] = STORY_CHAPTERS): string {
+export function describeBattle(
+  setup: BattleSetup,
+  content: GameContent = DEFAULT_CONTENT,
+  chapters: readonly StoryChapter[] = STORY_CHAPTERS,
+): string {
   switch (setup.mode) {
     case 'story':
       return `Chapter ${setup.chapter}: ${getStoryChapter(setup.chapter, chapters).name}`;
     case 'training':
       return 'Training';
     case 'dungeon':
-      return `Floor ${setup.floor}: ${getDungeonConfig(setup.floor).name}`;
+      return `Floor ${setup.floor}: ${getDungeonFloor(setup.floor, content.dungeon).name}`;
   }
 }

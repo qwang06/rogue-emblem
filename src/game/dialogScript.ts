@@ -29,6 +29,9 @@ export type Characters = Readonly<Record<string, Character>>;
 // A level's conversations, by trigger ('opening', 'turn 3', ...).
 export type DialogScripts = Readonly<Record<string, readonly DialogLine[]>>;
 
+// Every level's dialog file, by file name without .txt ('demo', 'training').
+export type DialogFiles = Readonly<Record<string, DialogScripts>>;
+
 // Which side of the dialog box each team's speakers stand on by default.
 export const DEFAULT_SIDES: Readonly<Record<Team, DialogSide>> = Object.freeze({ player: 'left', enemy: 'right' });
 
