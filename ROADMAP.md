@@ -11,7 +11,7 @@ The plan for growing Rogue Emblem into a Fire Emblem–style tactics game, one s
 
 ## Where we are
 
-Already built: grid and terrain move costs, movement range and arrow, player/enemy phases with win/loss, one-way attacks (`attack - defense`; counterattacks and FE-style stats since 1.1/1.2), skills with mana, consumable items, deployment, a rushing enemy AI, dialog, title/pause menus, and training mode. Phase 1 added counterattacks, hit/crit/doubling, the combat forecast, and XP with growth-rate level ups. Phase 2 has begun: units fight with weapons (2.1). There are still only two classes (Villager and Soldier).
+Already built: grid and terrain move costs, movement range and arrow, player/enemy phases with win/loss, one-way attacks (`attack - defense`; counterattacks and FE-style stats since 1.1/1.2), skills with mana, consumable items, deployment, a rushing enemy AI, dialog, title/pause menus, and training mode. Phase 1 added counterattacks, hit/crit/doubling, the combat forecast, and XP with growth-rate level ups. Phase 2 has begun: units fight with weapons (2.1). There are still only two classes (Villager and Soldier). Dungeon Mode is a ladder of generated overworld maps with nothing carried between floors; Phase W plans to turn it into **Warband Mode**, the game's roguelike run.
 
 ---
 
@@ -180,17 +180,141 @@ Decide between (or blend):
 
 Write a short design note in this file before building.
 
+- _Decided:_ the roguelike run is **Warband Mode** (Phase W below): a linear run of generated stages with a reward pick and a camp between battles, permadeath for the run, and meta-unlocks between runs. No branching node map for now. Hand-built chapters stay as Story Mode.
+
 ### [ ] 4.4 Shops and gold
 
 - Gold from battles; shop node/screen to buy weapons and items; sell.
+- _Covered for Warband Mode by W.3 (gold) and W.4 (the camp's merchant)._ Story Mode can reuse the same shop rules.
 
 ### [ ] 4.5 Class promotion
 
 - Promotion item at level 10+: advance to a stronger class (Soldier → General, Archer → Sniper, ...), stat bonuses, new weapon types, level resets to 1.
+- _Warband Mode's version is W.7_ (promotion at camp, gaining or upgrading a trait). Build the promotion rules once and share them.
 
 ### [ ] 4.6 Supports (stretch)
 
 - Units fighting adjacent build support points; conversations unlock; adjacent supported allies grant hit/avoid bonuses.
+
+---
+
+## Phase W — Warband Mode
+
+Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art better (the tileset is fields, lakes, forests, villages, castles and ruins, so a band roaming the land, not a dungeon) and puts the mode's identity where roguelike tactics games keep it, in the band you recruit, grow and lose.
+
+### Design note
+
+- **Terms:** a run is made of **stages** ("Stage 3: Highlands"); the per-stage configs (today's floor configs) are **regions**; between battles the warband makes **camp**; a lost run is "the warband fell".
+- **Run shape: linear.** Stage after stage, no branching node map. Every few stages a **region boss** closes the region and the run moves to the next region; beating the final region's boss **wins the run**, so runs can end in victory, not only in defeat.
+- **The loop:**
+
+  ```
+  New run → pick a starting warband (meta-unlocks widen the choice)
+    ┌─> Stage N battle (region map + objective)
+    │     win → gold + reward pick (1 of 3)
+    │     → Camp: merchant · hire · rest · promote · arrange deployment
+    └──── next stage (every few stages: a region boss, then the next region)
+  Final boss beaten → victory · roster empty → the warband fell
+  Either way → renown for meta-progression
+  ```
+
+- **Pillars:** permadeath and carry-over; gold, merchants and recruitment; reward picks and relics; TFT-style set bonuses (**traits**); class upgrades; varied objectives and map events; meta-progression.
+- **One modifier pipeline.** Traits, relics, elite enemies and (later) terrain bonuses are all _modifiers_ on the existing formulas, fed in as data through one pure module, so combat rules stay pure and testable and each new source of bonuses doesn't need its own plumbing.
+- **Outside dependencies:** 2.3's classes are the big one. Recruits, traits and enemy variety are thin with only Villagers and Soldiers, so land classes before or alongside W.6. W.8 completes 3.3 and W.9 uses 3.5's commands. W.4 and W.7 cover 4.4 and 4.5 for this mode.
+
+### [ ] W.0 Rename Dungeon Mode to Warband Mode
+
+- Title menu (`titleMenu.ts`) and every user-facing label; `BattleSetup`'s `'dungeon'` mode becomes `'warband'` with `stage` instead of `floor`; `describeBattle` reads "Stage 3: Highlands".
+- The config editor's Dungeon Floors page becomes Regions (`DungeonConfigPage.tsx`, `configCatalog.ts`, `route.ts`); `src/data/dungeon.json` becomes `regions.json`, and `dungeonConfigFile.ts` keeps reading files in the old shape.
+- Optionally move the mode's modules under `src/game/warband/`. Update `ARCHITECTURES.md` and `src/data/README.md`.
+- **Tests:** existing dungeon tests renamed and passing; an old-shape settings file still parses.
+
+### [ ] W.1 Run state, carry-over and permadeath
+
+- Pure `src/game/warband/run.ts`: `RunState = { seed, stage, roster, convoy, gold, relics, deployCap, fallen }`, with a `UnitSnapshot` (class, level, XP, stats, current HP, inventory) that round-trips to a `Unit`.
+- `applyBattleResult(run, result)` writes XP and levels, HP, weapon uses, items used and deaths back to the roster; the fallen leave it for good.
+- HP carries over between stages (resting at camp comes in W.4), so attrition is the tension.
+- Each stage's seed is derived from the run seed (`createSeededRng`), so a run is reproducible.
+- `createDungeonLevel(seed, config)` becomes a stage builder that takes the run's roster instead of `PLAYER_ROSTER`.
+- The run is saved to `localStorage` (try/catch) so it survives a reload; a run-scoped slice of 4.1.
+- Run-over and victory screens in React.
+- **Tests:** snapshot round-trip, battle results merged (XP, level ups, HP, broken weapons, used items), deaths removed, an empty roster ends the run, the same seed gives the same stages, corrupt saves rejected.
+
+### [ ] W.2 Enemy scaling and region bosses
+
+- `EnemyGroup` (`enemySpawns.ts`) gains `class`, `level` (or a level offset from the stage), an optional `weapon`, and `boss`.
+- Regions gain a stage-based enemy level curve and a boss stage that closes the region.
+- **Elite** enemies: a few random modifiers (e.g. Armored +3 DEF, Swift +4 SPD, Vampiric), named on the unit panel. Ship as plain stat bumps here; move them onto the W.5 modifiers once those exist.
+- **Tests:** levels per stage, boss placement, config validation of the new fields.
+
+### [ ] W.3 Gold and reward picks
+
+- Gold for kills and clearing a stage, with bonuses (no losses, a fast clear).
+- After a win, pick **1 of 3** rewards: a recruit, a weapon or item, a relic (once W.5 lands) or gold. Pure `rollRewards(stage, rng, pools)`.
+- A React reward screen between the battle result and the next stage.
+- **Tests:** gold amounts, reward rolls with a stubbed RNG, no duplicate offers, pools that run dry.
+
+### [ ] W.4 Camp: merchant, hire, rest
+
+- **Merchant:** buy and sell weapons and items, and buy promotion seals (W.7). Pure stock rolls and prices.
+- **Bigger deploy cap** for gold (3 → 4 → 5 → 6 units), TFT's "level up". This is what drives the trait game in W.6.
+- **Hire:** 2–3 mercenaries for sale, reroll for gold, like TFT's shop. A roster cap (e.g. 8) forces dismissals.
+- **Rest:** a free partial heal, or a full heal for gold.
+- **Interest:** +1 gold per 10 banked at each camp, capped, so saving is a strategy.
+- **Tests:** buy and sell prices, can't overspend, deploy cap steps, rerolls, roster cap, interest math and cap, rest healing clamps to max HP.
+
+### [ ] W.5 Modifier pipeline and relics
+
+- Pure `src/game/modifiers.ts`: a `Modifier` is `{ source, target (a stat or formula term), amount, condition? }`, with conditions like "in forest", "when attacking", "start of phase".
+- `combatStats.ts`, `combat.ts` and `turns.ts` take an optional `modifiers` input and apply it; the forecast shows the result.
+- **Relics** are data, `{ id, name, description, modifiers }`, offered by W.3's rewards. Examples: +1 MOV for all, heal 2 HP at the start of the phase, the first strike each battle crits, +1 gold per kill, a higher interest cap.
+- Move W.2's elite enemies onto modifiers.
+- **Tests:** each condition, stacking, forecast matches resolution with modifiers, no modifiers equals today's numbers.
+
+### [ ] W.6 Traits (set bonuses)
+
+- Each class has 1–2 traits. A trait's bonus turns on when enough _deployed_ units share it (thresholds 2 / 3 / 4, small because deploy caps are small) and applies to the units with that trait for the whole battle, through W.5's modifiers.
+- Pure `src/game/warband/traits.ts`: `getActiveTraits(deployedClasses)` gives the active tiers, and `getTraitModifiers(unit, active)` the modifiers they grant.
+- Active traits show in the deployment banner and the unit panel, so deployment becomes a puzzle.
+- A starting point, using the catalog art's classes (tune once they exist):
+
+  | Trait    | Classes                   | (2)                    | (3+)                    |
+  | -------- | ------------------------- | ---------------------- | ----------------------- |
+  | Militia  | Villager, Soldier, Sapper | +1 DEF                 | +2 DEF, +10 avoid       |
+  | Vanguard | Soldier, Vanguard         | +10 hit when attacking | strike first on counter |
+  | Marksman | Archer, Siege             | +10 hit, +5 crit       | +1 max range            |
+  | Arcane   | Elemental, Wizard         | +2 MAG                 | regain 1 MP per turn    |
+  | Engineer | Sapper, Siege             | siege +2 might         | siege ignores half DEF  |
+
+- Record each class's traits in `UNITS.md`.
+- **Tests:** thresholds (one short, exact, over), units without the trait unaffected, undeployed units don't count, tier upgrades.
+
+### [ ] W.7 Promotion and rally
+
+- **Promotion** at camp: a level 10+ unit spends a seal to promote (Soldier → General, Archer → Sniper, ...), with stat bonuses and new weapon types, and the promoted class **gains or upgrades a trait**, tying upgrades into sets. Shares rules with 4.5.
+- Optional **rally**: dismiss a unit to give another of its class XP or +1 to a stat, so spare recruits are worth something. Decide when building.
+- **Tests:** promotion eligibility, stat bonuses and caps, traits after promotion, rally gains.
+
+### [ ] W.8 Objective variety
+
+- Stages pick an objective: rout, **boss** (the region finale), **seize** a castle or fort tile, **survive** N turns, or **escape** (every deployed unit reaches the north edge; the generator already carves a south-to-north path).
+- Completes 3.3's `getBattleOutcome(state, objective)` and the HUD readout.
+- **Tests:** each objective's win and loss, turn-limit boundaries, escape with units still on the map.
+
+### [ ] W.9 Map events
+
+- **Chests** (gold and items) and **villages** (recruit or heal) on the map, which enemy thieves race to.
+- **On-map recruits:** a neutral unit to reach and Talk to before the enemy does (3.5's commands).
+- **Reinforcements** from the map edges after turn N.
+- **Fog of war** for some regions (e.g. Deep Woods). Last, since it touches rendering and the AI.
+- One event per sub-PR is fine.
+- **Tests:** chest and village placement on reachable tiles, reinforcement timing, fog visibility from unit vision ranges.
+
+### [ ] W.10 Meta-progression
+
+- **Renown** per run (stages cleared, bosses beaten, victory) unlocks starting warbands, starting relic choices, classes in the hire pool and new regions. Pure `src/game/warband/meta.ts`, saved to `localStorage` (try/catch).
+- Keep unlocks horizontal (more options), not permanent stat boosts, so each run stays the challenge.
+- **Tests:** renown per run outcome, unlock thresholds, save round-trip and corrupt saves.
 
 ---
 
