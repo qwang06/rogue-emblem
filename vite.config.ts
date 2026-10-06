@@ -1,8 +1,11 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import { saveConfigsPlugin } from './vite/saveConfigs.ts';
 
 export default defineConfig({
-  plugins: [react()],
+  // saveConfigsPlugin is dev-server only: it lets the config editor write
+  // its changes into src/data (see vite/saveConfigs.ts).
+  plugins: [react(), saveConfigsPlugin()],
   // Relative asset URLs so the build works when served from a subpath,
   // e.g. GitHub Pages at https://<user>.github.io/rogue-emblem/.
   base: './',

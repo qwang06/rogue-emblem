@@ -4,7 +4,7 @@ import { getConfigFloors, getDungeonConfig, getDungeonFloor, type DungeonConfig 
 const config = (name: string): DungeonConfig => ({
   name,
   terrain: { width: 8, height: 8 },
-  enemyCount: 1,
+  enemies: [{ count: 1 }],
   treeChance: 0,
   palette: 'a-stone',
 });
