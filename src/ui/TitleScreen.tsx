@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import type { MenuAction } from '../game/actionMenu.ts';
 import { gameStore } from '../bridge/gameStore.ts';
 import { createActionMenu, getSelectedAction, moveSelection, selectIndex } from '../game/actionMenu.ts';
@@ -30,6 +30,13 @@ function mainMenu(selectedIndex = 0) {
 export function TitleScreen() {
   const [view, setView] = useState<View>('main');
   const [menu, setMenu] = useState(() => mainMenu());
+  const listRef = useRef<HTMLUListElement>(null);
+
+  // On short windows the screen scrolls; keep the selected entry in view as
+  // the keyboard moves it (the mouse can only select what's already visible).
+  useEffect(() => {
+    listRef.current?.children[menu.selectedIndex]?.scrollIntoView({ block: 'nearest' });
+  }, [menu.selectedIndex, view]);
 
   function openSubmenu(submenu: Exclude<View, 'main'>) {
     setView(submenu);
@@ -97,7 +104,7 @@ export function TitleScreen() {
 
       <nav className="title-menu" aria-label={submenu?.label ?? 'Main menu'}>
         {submenu && <h2 className="title-menu__heading">{submenu.heading}</h2>}
-        <ul className="title-menu__list">
+        <ul className="title-menu__list" ref={listRef}>
           {menu.actions.map((action, index) => {
             const selected = index === menu.selectedIndex;
             return (
