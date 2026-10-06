@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PLAYER_ROSTER } from './demoLevel.ts';
 import { DUNGEON_CONFIGS } from '../data/dungeon.ts';
 import { createDungeonLevel, DUNGEON_MAX_DEPLOYED } from './dungeonLevel.ts';
+import { countEnemies, getWalkingDistances, isInRegion } from './enemySpawns.ts';
 import { findUnit, getCell } from './grid.ts';
 import { getBuildingSprites, getFeatureSprites } from './mapArt.ts';
 import { getReachable, terrainToRows } from './mapGen.ts';
@@ -58,18 +59,45 @@ describe('createDungeonLevel', () => {
     }
   });
 
-  it('places every enemy in the north third, where the player can walk to it', () => {
+  it('places every built-in floor enemy within its group, where the player can walk to it', () => {
     for (const { config, level } of BATTLES) {
       const { grid, units, deploymentZone } = level;
       const reachable = getReachable(grid, deploymentZone[1]);
       const enemies = [...units].filter(([, unit]) => unit.team === 'enemy');
-      expect(enemies).toHaveLength(config.enemyCount);
-      for (const [unitId] of enemies) {
+      expect(enemies).toHaveLength(countEnemies(config.enemies));
+      // Units are numbered in group order, so the first group's come first.
+      const groupOf = config.enemies.flatMap((group) => Array.from({ length: group.count }, () => group));
+      enemies.forEach(([unitId], i) => {
         const tile = findUnit(grid, unitId)!;
-        expect(tile.y).toBeLessThan(Math.floor(grid.height / 3));
+        expect(isInRegion(tile, groupOf[i].region ?? {}, grid.width, grid.height)).toBe(true);
         expect(reachable.has(`${tile.x},${tile.y}`)).toBe(true);
+      });
+    }
+  });
+
+  it('places enemies by their groups’ distances from the deployment zone', () => {
+    const config = {
+      ...FIRST,
+      enemies: [
+        { count: 2, minDistance: 12 },
+        { count: 2, minDistance: 3, maxDistance: 5 },
+      ],
+    };
+    for (const seed of SEEDS) {
+      const { grid, deploymentZone } = createDungeonLevel(seed, config);
+      const distances = getWalkingDistances(grid, deploymentZone);
+      const steps = (unitId: string) => distances.get(`${findUnit(grid, unitId)!.x},${findUnit(grid, unitId)!.y}`)!;
+      for (const unitId of ['enemy-1', 'enemy-2']) expect(steps(unitId)).toBeGreaterThanOrEqual(12);
+      for (const unitId of ['enemy-3', 'enemy-4']) {
+        expect(steps(unitId)).toBeGreaterThanOrEqual(3);
+        expect(steps(unitId)).toBeLessThanOrEqual(5);
       }
     }
+  });
+
+  it('places fewer enemies when a group asks for more than fit', () => {
+    const level = createDungeonLevel(1, { ...FIRST, enemies: [{ count: 3, minDistance: 100 }] });
+    expect([...level.units.values()].filter((unit) => unit.team === 'enemy')).toEqual([]);
   });
 
   it('puts trees only on free grass, clear of units, deployment and other art', () => {

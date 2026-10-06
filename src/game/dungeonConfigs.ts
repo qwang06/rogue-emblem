@@ -1,12 +1,13 @@
 // Dungeon Mode's per-floor settings. A run goes down floor by floor (1, 2,
 // 3, ...); every `floorsPerConfig` floors it moves on to the next config,
 // which sets that stretch's map size, how much of each terrain the
-// generator grows, how many enemies there are and how the buildings are
+// generator grows, where its enemies stand and how the buildings are
 // colored. Past the last config, every floor uses the last one. The
 // built-in settings are data, in src/data/dungeon.json (loaded by
 // src/data/dungeon.ts); this module holds their shape and the rules for
 // picking a floor's config.
 
+import type { EnemyGroup } from './enemySpawns.ts';
 import type { MapGenOptions } from './mapGen.ts';
 import type { Objective } from './objectives.ts';
 import type { BuildingPaletteName } from './tileset.ts';
@@ -18,8 +19,9 @@ export interface DungeonConfig {
   description?: string;
   // The generator's options, map size included (see mapGen.ts).
   terrain: MapGenOptions;
-  // How many enemy soldiers stand in the north third.
-  enemyCount: number;
+  // The enemy soldiers, in groups that each say where they may stand (see
+  // enemySpawns.ts).
+  enemies: readonly EnemyGroup[];
   // Chance (0–1) each free grass tile gets a decorative tree.
   treeChance: number;
   // The building and wall colors.

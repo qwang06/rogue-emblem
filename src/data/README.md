@@ -51,7 +51,10 @@ Dungeon Mode's floors. A run goes down floor by floor; every `floorsPerConfig` f
       "name": "Meadowlands",
       "description": "Open fields: a small map with a few lakes and hills and a farming village.",
       "terrain": { "width": 14, "height": 12, "lakes": 1, "meadows": 4, "meadowSize": [5, 9] },
-      "enemyCount": 2,
+      "enemies": [
+        { "count": 2, "region": { "y": [0, 0.34] } },
+        { "count": 1, "minDistance": 4, "maxDistance": 6 }
+      ],
       "treeChance": 0.05,
       "palette": "a-stone"
     }
@@ -61,8 +64,13 @@ Dungeon Mode's floors. A run goes down floor by floor; every `floorsPerConfig` f
 
 - **name**: shown on the Objective and Victory screens ("Floor 2: Lakeside"). **description** is optional notes for whoever edits the file.
 - **terrain**: the map generator's settings. `width` and `height` (6–48 tiles) are required; the rest are optional: how many patches to grow (`lakes`, `mountains`, `forests`, `meadows`), their sizes as `[min, max]` tiles (`lakeSize`, `mountainSize`, `forestSize`, `meadowSize`), how many walled `ruins` and lone `buildings`, whether there's a `castle` (true/false), and `turnChance` (0–1, how much the path winds).
-- **enemyCount**: 1–30 enemy soldiers in the north third of the map (a small map may fit fewer).
+- **enemies**: 1–10 groups of enemy soldiers, up to 30 in all, placed in order on random tiles the player can walk to. Each group has a `count` and optional limits:
+  - `region`: a box as `[from, to]` fractions of the map's columns (`x`) and rows (`y`), 0 being the west or north edge and 1 the east or south. It covers the tiles from `from × size` up to, but not including, `to × size`, rounded down, so `[0, 0.5]` and `[0.5, 1]` split the map into halves. Unset, an axis covers the whole map. `{ "y": [0, 0.34] }` is the north third.
+  - `minDistance` / `maxDistance`: 1–100 steps a unit would walk from the nearest deployment tile, going around water, mountains and walls.
+
+  A file whose limits leave too few tiles for its enemies on a test map is turned away. An older file's `"enemyCount": n` still loads, as `n` enemies in the north third.
+
 - **treeChance**: 0–1, how likely each free grass tile is to get a tree.
 - **palette**: the building and wall colors, one of the names in `BUILDING_PALETTES` (`src/game/tileset.ts`), e.g. `a-stone`, `b-blue`.
 
-A setting the game doesn't know (a typo like `"lake"`) is an error, not ignored. This is also the file the config editor's **Dungeon Floors** page (`#/configs/dungeon-floors`) takes: download it there, edit it, and upload it to try changes in your browser without touching the repo.
+A setting the game doesn't know (a typo like `"lake"`) is an error, not ignored. The config editor's **Dungeon Floors** page (`#/configs/dungeon-floors`) edits this file as a form. Under `npm run dev` its Save writes this file (checked first, and laid out so an unchanged save changes nothing); in a built game Save keeps the floors in your browser instead. The page also takes this file as an upload, to try changes in your browser without touching the repo.

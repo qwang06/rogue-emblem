@@ -1680,27 +1680,376 @@ kbd {
   margin-bottom: 12px;
 }
 
-.dungeon-stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px 12px;
-  margin: 0;
-  font-size: 0.8125rem;
+/* Dungeon Floors editor: one card per floor config, its fields in a grid
+   of labeled inputs. */
+.dungeon-floors {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
 }
 
-.dungeon-stats__pair {
+.floor-editor--invalid {
+  border-color: rgb(240 130 130 / 70%);
+}
+
+.floor-editor__actions {
   display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.floor-editor__preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: min(100%, 360px);
+  margin: 0;
+}
+
+.floor-editor__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 10px 12px 12px;
+  border: 1px solid rgb(243 234 211 / 18%);
+  border-radius: 3px;
+}
+
+.floor-editor__section legend {
+  padding: 0 4px;
+  font-family: var(--serif);
+  font-size: 0.875rem;
+  letter-spacing: 1px;
+  color: var(--gold);
+}
+
+.floor-editor__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+  gap: 10px 12px;
+  align-items: start;
+}
+
+/* A terrain patch's count and size sit together. */
+.floor-editor__patch {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.draft-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.draft-field__head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* A setting's info button and the explanation it drops down. */
+.info-popover {
+  position: relative;
+  display: inline-flex;
+}
+
+.info-popover__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  font-family: Georgia, serif;
+  font-size: 0.6875rem;
+  font-style: italic;
+  font-weight: bold;
+  line-height: 1;
+  color: var(--gold);
+  background: transparent;
+  border: 1px solid var(--gold-dim);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.info-popover__button:hover,
+.info-popover__button[aria-expanded='true'] {
+  color: var(--ink);
+  background: var(--gold);
+}
+
+.info-popover__button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.info-popover__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: -8px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+  width: min(21rem, calc(100vw - 32px));
+  padding: 10px 12px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 0.8125rem;
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1.45;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--parchment);
+  background: var(--navy);
+  border: 1px solid var(--gold-dim);
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+}
+
+.info-popover__panel p {
+  margin: 0;
+}
+
+.info-popover__title {
+  font-family: var(--serif);
+  font-size: 0.875rem;
+  letter-spacing: 1px;
+  color: var(--gold);
+}
+
+.floor-editor__section legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* A map from above, for explaining regions: the shaded area is the
+   example region, the dot is where the player's units start. */
+.region-diagram {
+  margin: 2px 0;
+}
+
+.region-diagram__frame {
+  display: grid;
+  grid-template: auto 1fr auto / auto 1fr auto;
+  gap: 3px;
+  align-items: center;
+  justify-items: center;
+}
+
+.region-diagram__edge {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  color: var(--parchment-dim);
+}
+
+.region-diagram__edge--top {
+  grid-area: 1 / 2;
+}
+
+.region-diagram__edge--bottom {
+  grid-area: 3 / 2;
+}
+
+.region-diagram__edge--left {
+  grid-area: 2 / 1;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.region-diagram__edge--right {
+  grid-area: 2 / 3;
+  writing-mode: vertical-rl;
+}
+
+.region-diagram__map {
+  position: relative;
+  grid-area: 2 / 2;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #3f6b3a;
+  border: 1px solid rgb(243 234 211 / 35%);
+  border-radius: 2px;
+}
+
+.region-diagram__area {
+  position: absolute;
+  box-sizing: border-box;
+  background: rgb(232 200 114 / 45%);
+  border: 2px solid var(--gold);
+}
+
+.region-diagram__start {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  background: #93c5fd;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  transform: translateX(-50%);
+}
+
+.region-diagram figcaption {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--parchment-dim);
+  text-align: center;
+}
+
+.draft-field__label {
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  color: var(--parchment-dim);
+}
+
+.draft-field__hint {
+  font-size: 0.75rem;
+  color: var(--parchment-dim);
+}
+
+.draft-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--parchment);
+  background: rgb(12 18 38 / 70%);
+  border: 1px solid rgb(243 234 211 / 25%);
+  border-radius: 3px;
+}
+
+.draft-input::placeholder {
+  color: rgb(243 234 211 / 35%);
+}
+
+.draft-input:focus-visible,
+.draft-checkbox:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+
+.draft-input--number {
+  font-family: var(--mono);
+}
+
+textarea.draft-input {
+  resize: vertical;
+}
+
+.draft-field__error {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: #fca5a5;
+}
+.draft-field--invalid .draft-field__label {
+  color: #fca5a5;
+}
+
+.draft-input[aria-invalid='true'] {
+  border-color: #f08282;
+}
+
+.draft-checkbox {
+  width: 18px;
+  height: 18px;
+  margin: 4px 0;
+  accent-color: var(--gold);
+}
+
+.draft-pair {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.enemy-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.enemy-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgb(12 18 38 / 35%);
+  border: 1px solid rgb(243 234 211 / 12%);
+  border-radius: 3px;
+}
+
+.enemy-group--invalid {
+  border-color: rgb(240 130 130 / 70%);
+}
+
+.enemy-group__head {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
 
-.dungeon-stats dt {
-  color: var(--parchment-dim);
+.enemy-group__title {
+  font-size: 0.875rem;
+  color: var(--parchment);
 }
 
-.dungeon-stats dd {
+.dungeon-summary__fields {
+  width: min(100%, 200px);
+}
+
+.header-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+  color: var(--gold);
+  background: rgb(22 32 74 / 90%);
+}
+
+/* Unsaved changes: pinned to the bottom of the scrolling page. */
+.save-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-top: 24px;
+  padding: 10px 16px;
+  background: rgb(22 32 74 / 97%);
+  border: 1px solid var(--gold-dim);
+  border-radius: 4px;
+  box-shadow: 0 -6px 18px rgb(0 0 0 / 35%);
+}
+
+.save-bar__status {
+  flex: 1 1 240px;
   margin: 0;
-  color: var(--parchment);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.save-bar__save:not(:disabled) {
+  color: var(--ink);
+  background: var(--gold);
 }
 
 /* A floor card's thumbnail opens its full map preview. */

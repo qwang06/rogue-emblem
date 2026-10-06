@@ -250,6 +250,27 @@ export function getReachable(grid: Grid, start: Point): Set<string> {
   return seen;
 }
 
+// What generateTerrain uses for each option left unset.
+export const MAP_GEN_DEFAULTS = Object.freeze({
+  lakes: 2,
+  lakeSize: [4, 8] as Range,
+  mountains: 2,
+  mountainSize: [3, 6] as Range,
+  forests: 4,
+  forestSize: [3, 6] as Range,
+  meadows: 3,
+  meadowSize: [4, 8] as Range,
+  castle: true,
+  ruins: 1,
+  buildings: 2,
+  turnChance: 0.35,
+}) satisfies Required<Omit<MapGenOptions, 'width' | 'height'>>;
+
+// `options` without its unset keys, so spreading it keeps the defaults.
+function withoutUndefined(options: MapGenOptions): MapGenOptions {
+  return Object.fromEntries(Object.entries(options).filter(([, value]) => value !== undefined)) as MapGenOptions;
+}
+
 // Builds the map in layers (see the top of this file). Everything but the
 // path stays out of the top row and the bottom two rows (where the player
 // deploys). Water, mountains and the ruin's walls also keep a tile clear of
@@ -259,19 +280,19 @@ export function generateTerrain(options: MapGenOptions, rng: Rng): GeneratedTerr
   const {
     width,
     height,
-    lakes = 2,
-    lakeSize = [4, 8],
-    mountains = 2,
-    mountainSize = [3, 6],
-    forests = 4,
-    forestSize = [3, 6],
-    meadows = 3,
-    meadowSize = [4, 8],
-    castle = true,
-    ruins = 1,
-    buildings: buildingCount = 2,
-    turnChance = 0.35,
-  } = options;
+    lakes,
+    lakeSize,
+    mountains,
+    mountainSize,
+    forests,
+    forestSize,
+    meadows,
+    meadowSize,
+    castle,
+    ruins,
+    buildings: buildingCount,
+    turnChance,
+  } = { ...MAP_GEN_DEFAULTS, ...withoutUndefined(options) };
   if (width < 3 || height < 3) throw new Error('A generated map needs to be at least 3x3');
 
   let grid = createGrid(width, height, 'grass');
