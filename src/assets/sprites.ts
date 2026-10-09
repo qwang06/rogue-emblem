@@ -2,6 +2,8 @@
 // them all under these keys; the React UI looks unit portraits up here.
 // src/game/tileset.ts names which key each unit draws with.
 
+import acolyte02Idle from './units/Acolyte_02_Idle.png';
+import acolyte02Move from './units/Acolyte_02_Move.png';
 import archer02Idle from './units/Archer_02_Idle.png';
 import archer02Move from './units/Archer_02_Move.png';
 import gates from './gates.png';
@@ -19,6 +21,8 @@ import villager01Idle from './units/Villager_01_Idle.png';
 import villager01Move from './units/Villager_01_Move.png';
 
 export const SPRITE_URLS: Readonly<Record<string, string>> = {
+  Acolyte_02_Idle: acolyte02Idle,
+  Acolyte_02_Move: acolyte02Move,
   Archer_02_Idle: archer02Idle,
   Archer_02_Move: archer02Move,
   gates,

@@ -20,6 +20,7 @@ import {
   type GrowthTable,
   type StatGains,
 } from './experience.ts';
+import { spendStaffUse, type Staff } from './healing.ts';
 import {
   createInventory,
   findItem,
@@ -205,6 +206,16 @@ export class Unit {
     const { inventory, broke } = spendWeaponUse(this.items, equipped.index);
     this.items = inventory;
     return { weapon: equipped.weapon, broke };
+  }
+
+  // Spends one use of the staff in inventory slot `index`, for a heal made
+  // with it. Returns { staff, broke }: a staff that runs out is removed
+  // from the inventory. Throws if there's no staff there.
+  spendStaffUse(index: number): { staff: Staff; broke: boolean } {
+    const staff = this.items[index]?.item as Staff | undefined;
+    const { inventory, broke } = spendStaffUse(this.items, index);
+    this.items = inventory;
+    return { staff: staff!, broke };
   }
 
   // Uses one of the consumable itemId from the inventory, restoring its
