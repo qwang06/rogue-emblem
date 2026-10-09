@@ -70,7 +70,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   deploymentLimit: null, // how many units can be deployed (getDeploymentLimit) during deployment, else null
   deploymentMenu: null, // frozen Place Units / Start menu while open, or null
   rosterMenu: null, // frozen menu of RosterEntryViews while picking a unit to place, or null
-  pauseMenu: null, // frozen Main Menu / Settings menu while open, or null
+  pauseMenu: null, // frozen End Turn / Main Menu / Settings menu while open, or null
   hoveredUnit: null, // UnitView from toUnitView(), or null
   hoveredAnchor: null, // TileAnchorView from toTileAnchorView() of the hovered unit's tile (the unit panel docks away from it), or null
   actionMenu: null, // frozen menu from src/game/actionMenu.ts while open, or null
