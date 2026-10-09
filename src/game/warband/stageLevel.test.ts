@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { PLAYER_ROSTER } from '../demoLevel.ts';
 import { REGION_CONFIGS } from '../../data/regions.ts';
-import { createStageLevel, WARBAND_MAX_DEPLOYED } from './stageLevel.ts';
+import { createStageLevel, createStartingWarband, WARBAND_MAX_DEPLOYED } from './stageLevel.ts';
+import { STARTING_CLASSES } from './startingClasses.ts';
 import { countEnemies, getWalkingDistances, isInArea } from '../enemySpawns.ts';
 import { findUnit, getCell } from '../grid.ts';
 import { getBuildingSprites, getFeatureSprites } from '../mapArt.ts';
@@ -16,6 +17,37 @@ const [FIRST] = REGION_CONFIGS;
 const BATTLES = REGION_CONFIGS.flatMap((region) =>
   SEEDS.map((seed) => ({ region, level: createStageLevel(seed, region) })),
 );
+
+describe('createStartingWarband', () => {
+  it('starts with the demo roster as villagers by default', () => {
+    const warband = createStartingWarband();
+    expect([...warband.keys()]).toEqual(['villager-1', 'villager-2', 'villager-3']);
+    expect([...warband.values()].map((u) => u.name)).toEqual(Object.values(PLAYER_ROSTER));
+    expect([...warband.values()].every((u) => u.unitClass === 'villager')).toBe(true);
+  });
+
+  it('builds the warband from the chosen class', () => {
+    for (const { id } of STARTING_CLASSES) {
+      const warband = createStartingWarband(id);
+      expect([...warband.keys()]).toEqual([`${id}-1`, `${id}-2`, `${id}-3`]);
+      for (const unit of warband.values()) {
+        expect(unit.unitClass).toBe(id);
+        expect(unit.team).toBe('player');
+        expect(unit.level).toBe(1);
+      }
+    }
+  });
+
+  it('gives each call fresh units', () => {
+    const a = createStartingWarband('soldier').get('soldier-1')!;
+    a.takeDamage(3);
+    expect(createStartingWarband('soldier').get('soldier-1')!.health).toBe(a.maxHealth);
+  });
+
+  it('rejects an unknown class', () => {
+    expect(() => createStartingWarband('dragon')).toThrow(/dragon/);
+  });
+});
 
 describe('createStageLevel', () => {
   it('rebuilds the same battle from the same seed', () => {

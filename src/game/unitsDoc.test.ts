@@ -102,10 +102,11 @@ describe('UNITS.md', () => {
         }
       });
 
-      it('lists the weapon types it wields and the weapon it starts with', () => {
-        const [[types, weapon]] = tableWithHeader(text, 'Weapon types');
+      it('lists the weapon types it wields, the weapon it starts with and its XP rate', () => {
+        const [[types, weapon, experienceRate]] = tableWithHeader(text, 'Weapon types');
         expect(types).toBe(unit.weaponTypes.join(', ') || '–');
         expect(weapon).toBe(unit.weapon?.label ?? '–');
+        expect(experienceRate).toBe(`${unit.experienceRate}%`);
       });
 
       it('lists every skill the class learns', () => {

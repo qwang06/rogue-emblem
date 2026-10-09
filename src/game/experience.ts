@@ -16,6 +16,9 @@ export const MAX_LEVEL = 20;
 export const MISS_EXPERIENCE = 1;
 // Extra XP for a kill against an opponent of the same level.
 export const KILL_BONUS = 20;
+// The XP rate (percent of every gain) of a unit whose class doesn't set
+// one. Villagers learn faster (see Villager.ts).
+export const DEFAULT_EXPERIENCE_RATE = 100;
 
 // The stats a level up can raise, in the order they're rolled. Health and
 // mana raise the unit's maximums.
@@ -55,6 +58,9 @@ export interface Experienced extends GrowthSource {
   experience?: number;
   growths?: GrowthTable;
   caps?: GrowthTable;
+  // Percent of each XP gain the unit actually earns (default
+  // DEFAULT_EXPERIENCE_RATE); see scaleExperience.
+  experienceRate?: number;
 }
 
 export interface LevelUpResult {
@@ -110,6 +116,14 @@ export function getCombatExperience(level: number, enemyLevel: number, outcome: 
   return Math.min(EXPERIENCE_PER_LEVEL, amount);
 }
 
+// `amount` XP scaled by an XP rate of `rate` percent, rounded to the
+// nearest whole point but never below 1 for a positive gain. Nothing in
+// gives nothing out.
+export function scaleExperience(amount: number, rate: number = DEFAULT_EXPERIENCE_RATE): number {
+  if (amount <= 0) return 0;
+  return Math.max(1, Math.round((amount * rate) / 100));
+}
+
 // Adds `amount` XP to a unit at `level` with `experience`, carrying the
 // overflow past each EXPERIENCE_PER_LEVEL into the next level. Stops at
 // maxLevel, where experience stays 0. Returns { level, experience,
@@ -153,8 +167,9 @@ export function rollLevelUp(stats: GrowthSource, growths: GrowthTable, rng: Rng,
   return gains;
 }
 
-// Everything that happens when `unit` gains `amount` XP: its new level and
-// experience, and one entry per level gained, in order, as { level, gains,
+// Everything that happens when `unit` gains `amount` XP, scaled by its
+// experienceRate (scaleExperience; `amount` in the result is what it
+// actually earned): its new level and experience, and one entry per level gained, in order, as { level, gains,
 // stats, skills } — the level reached, the stat gains rolled for it (see
 // rollLevelUp, against the unit's `growths` and `caps`), the growth stats'
 // values after it, and the skills its class learns at it (from `trees`).
@@ -165,7 +180,8 @@ export function resolveExperienceGain(
   rng: Rng,
   trees: SkillTrees = SKILL_TREES,
 ): ExperienceGain {
-  const result = addExperience(unit.level, unit.experience ?? 0, amount);
+  const earned = scaleExperience(amount, unit.experienceRate);
+  const result = addExperience(unit.level, unit.experience ?? 0, earned);
   const stats = Object.fromEntries(GROWTH_STATS.map((stat) => [stat, getGrowthStatValue(unit, stat)])) as StatGains;
   const levelUps: LevelUpResult[] = [];
   for (let level = unit.level + 1; level <= result.level; level++) {
@@ -175,5 +191,5 @@ export function resolveExperienceGain(
     const skills = getSkillsLearnedBetween(unit.unitClass, level - 1, level, trees);
     levelUps.push({ level, gains, stats: { ...stats }, skills });
   }
-  return { amount, level: result.level, experience: result.experience, levelUps };
+  return { amount: earned, level: result.level, experience: result.experience, levelUps };
 }

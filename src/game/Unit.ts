@@ -4,8 +4,8 @@
 // weapons). Stats follow Fire Emblem: strength / magic power physical /
 // magical hits, defense / resistance guard against them, and skill, speed
 // and luck feed hit, crit and doubling. Specific unit types extend this
-// and set their own class, stats, growth rates and stat caps (see
-// experience.ts), which decide what a level up raises, and the weapon
+// and set their own class, stats, growth rates, stat caps and XP rate
+// (see experience.ts), which decide what a level up raises, and the weapon
 // types they master; the skills a unit knows come from its class's skill
 // tree and its level (see skills.ts). Items it carries — consumables and
 // weapons — are an inventory from items.ts; the first weapon in it the
@@ -14,6 +14,7 @@
 
 import type { Rng } from './combatStats.ts';
 import {
+  DEFAULT_EXPERIENCE_RATE,
   GROWTH_STATS,
   resolveExperienceGain,
   type ExperienceGain,
@@ -61,6 +62,8 @@ export interface UnitOptions {
   items?: readonly InventoryEntry[];
   growths?: GrowthTable;
   caps?: GrowthTable;
+  // Percent of each XP gain the unit earns (see scaleExperience).
+  experienceRate?: number;
 }
 
 // The options a class (Soldier, Villager, ...) takes: the class fills in
@@ -94,6 +97,7 @@ export class Unit {
   items: Inventory;
   growths: GrowthTable;
   caps: GrowthTable;
+  experienceRate: number;
 
   constructor({
     name,
@@ -115,6 +119,7 @@ export class Unit {
     items = [],
     growths = {},
     caps = {},
+    experienceRate = DEFAULT_EXPERIENCE_RATE,
   }: UnitOptions) {
     this.name = name;
     this.unitClass = unitClass;
@@ -137,6 +142,7 @@ export class Unit {
     this.items = createInventory(items);
     this.growths = growths;
     this.caps = caps;
+    this.experienceRate = experienceRate;
   }
 
   isAlive(): boolean {

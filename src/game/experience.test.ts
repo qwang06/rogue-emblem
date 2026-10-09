@@ -12,6 +12,7 @@ import {
   getKillExperience,
   resolveExperienceGain,
   rollLevelUp,
+  scaleExperience,
   type Experienced,
 } from './experience.ts';
 import type { CombatSide, Strike } from './combat.ts';
@@ -215,6 +216,30 @@ describe('rollLevelUp', () => {
   });
 });
 
+describe('scaleExperience', () => {
+  it('leaves XP alone at the default rate', () => {
+    expect(scaleExperience(10)).toBe(10);
+    expect(scaleExperience(37, 100)).toBe(37);
+  });
+
+  it('scales XP by the rate, rounding to the nearest point', () => {
+    expect(scaleExperience(10, 150)).toBe(15);
+    expect(scaleExperience(11, 150)).toBe(17);
+    expect(scaleExperience(31, 150)).toBe(47);
+    expect(scaleExperience(10, 50)).toBe(5);
+  });
+
+  it('never rounds a positive gain down to nothing', () => {
+    expect(scaleExperience(1, 10)).toBe(1);
+    expect(scaleExperience(1, 0)).toBe(1);
+  });
+
+  it('gives nothing for nothing', () => {
+    expect(scaleExperience(0, 150)).toBe(0);
+    expect(scaleExperience(-5, 150)).toBe(0);
+  });
+});
+
 describe('resolveExperienceGain', () => {
   const unit = (overrides: Partial<Experienced> = {}): Experienced => ({
     unitClass: null,
@@ -236,6 +261,18 @@ describe('resolveExperienceGain', () => {
 
   it('adds XP without leveling', () => {
     expect(resolveExperienceGain(unit(), 30, () => 0)).toEqual({ amount: 30, level: 1, experience: 30, levelUps: [] });
+  });
+
+  it("scales the gain by the unit's XP rate and reports what it earned", () => {
+    expect(resolveExperienceGain(unit({ experienceRate: 150 }), 30, () => 0)).toEqual({
+      amount: 45,
+      level: 1,
+      experience: 45,
+      levelUps: [],
+    });
+    const result = resolveExperienceGain(unit({ experience: 90, experienceRate: 150 }), 20, () => 0);
+    expect(result).toMatchObject({ amount: 30, level: 2, experience: 20 });
+    expect(result.levelUps).toHaveLength(1);
   });
 
   it('rolls one level up per level gained, with the running stats', () => {

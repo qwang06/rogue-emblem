@@ -247,7 +247,15 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 - The run is saved to `localStorage` (try/catch) so it survives a reload; a run-scoped slice of 4.1.
 - Run-over and victory screens in React.
 - **Tests:** snapshot round-trip, battle results merged (XP, level ups, HP, broken weapons, used items), deaths removed, an empty roster ends the run, the same seed gives the same stages, corrupt saves rejected.
-- _Done:_ `src/game/warband/run.ts` holds the run (`RunState`, `UnitSnapshot`, `applyBattleResult`, `finishStage`, `getStageSeed`, `serializeRun` / `parseRun`), and `src/data/runSave.ts` keeps it in `localStorage`. Choosing Warband Mode starts a run with the three villagers, or, with one saved, offers Continue Run (Stage N) or New Run. A stage fields the run's roster as it stands; winning writes the battle back and saves the next stage, and losing ends the run (even with units left on the bench) on a "The Warband Fell" result naming the stage and everyone lost. The run is saved as each stage starts, so leaving or reloading mid-battle replays that stage from its start. Mana carries over like HP. _Deferred:_ the victory screen, until W.2's region bosses give a run an end to win, and picking a starting warband (W.10 widens the choice).
+- _Done:_ `src/game/warband/run.ts` holds the run (`RunState`, `UnitSnapshot`, `applyBattleResult`, `finishStage`, `getStageSeed`, `serializeRun` / `parseRun`), and `src/data/runSave.ts` keeps it in `localStorage`. Choosing Warband Mode starts a run with the three villagers, or, with one saved, offers Continue Run (Stage N) or New Run (W.1b reworks this menu). A stage fields the run's roster as it stands; winning writes the battle back and saves the next stage, and losing ends the run (even with units left on the bench) on a "The Warband Fell" result naming the stage and everyone lost. The run is saved as each stage starts, so leaving or reloading mid-battle replays that stage from its start. Mana carries over like HP. _Deferred:_ the victory screen, until W.2's region bosses give a run an end to win, and picking a starting warband (W.1b adds a class pick; W.10 widens the choice).
+
+### [x] W.1b Warband menu and starting class
+
+- Choosing Warband Mode always opens a menu: Continue Run (Stage N), disabled when nothing is saved, and New Run. There's still a single save slot.
+- New Run picks the base class the warband starts as: Villager, Soldier or Archer (`src/game/warband/startingClasses.ts`), each with a one-line pitch. The starting warband is three units of that class.
+- The Villager is the late bloomer: a soldier's stat line but only fists, so it's the weakest start, with the highest growth total and caps of any class and a 150% XP rate (`scaleExperience` in `experience.ts`, a `Unit.experienceRate`), so it outgrows the others later in a run.
+- **Tests:** the menu entries with and without a save, starting classes, a warband per class, XP scaling, the villager's growths and caps against the soldier's and archer's.
+- _Deferred:_ mixed starting warbands (one pick plus fixed companions) and meta-unlocked starting classes (W.10). Promotion (W.7) could give the villager a further payoff.
 
 ### [ ] W.2 Enemy scaling and region bosses
 
