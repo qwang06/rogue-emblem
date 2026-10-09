@@ -9,6 +9,8 @@ import goldGinkgoTree from './gold_ginkgo_tree.png';
 import ginkgoTreeGreen from './ginkgo_tree_green.png';
 import soldier03Idle from './units/Soldier_03_Idle.png';
 import soldier03Move from './units/Soldier_03_Move.png';
+import vanguard04Idle from './units/Vanguard_04_Idle.png';
+import vanguard04Move from './units/Vanguard_04_Move.png';
 import villager01Idle from './units/Villager_01_Idle.png';
 import villager01Move from './units/Villager_01_Move.png';
 
@@ -20,6 +22,8 @@ export const SPRITE_URLS: Readonly<Record<string, string>> = {
   ginkgo_tree_green: ginkgoTreeGreen,
   Soldier_03_Idle: soldier03Idle,
   Soldier_03_Move: soldier03Move,
+  Vanguard_04_Idle: vanguard04Idle,
+  Vanguard_04_Move: vanguard04Move,
   Villager_01_Idle: villager01Idle,
   Villager_01_Move: villager01Move,
 };

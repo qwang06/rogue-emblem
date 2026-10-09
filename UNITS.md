@@ -1,6 +1,6 @@
 # UNITS.md
 
-Reference for every unit class: base stats, growth rates, caps, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Villager.ts`, `src/game/Soldier.ts`, `src/game/Archer.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
+Reference for every unit class: base stats, growth rates, caps, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Villager.ts`, `src/game/Soldier.ts`, `src/game/Archer.ts`, `src/game/Vanguard.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
 
 ## How the numbers work
 
@@ -19,7 +19,7 @@ Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.m
 
 ## Weapons
 
-One starter weapon per armed unit in the unit catalog. Fists, the Iron Spear and the Iron Bow are carried by a class; the rest wait for their classes (milestone 2.3).
+One starter weapon per armed unit in the unit catalog. Fists, the Iron Spear, the Iron Bow and the Iron Axe are carried by a class; the rest wait for their classes (milestone 2.3).
 
 | Weapon     | Type     | Mt  | Hit | Crit | Wt  | Rng | Uses | For (catalog art)           |
 | ---------- | -------- | --- | --- | ---- | --- | --- | ---- | --------------------------- |
@@ -112,6 +112,33 @@ The ranged infantry: frail but accurate. Its bow only reaches two tiles away, so
 
 Carries an Iron Bow, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
+## Vanguard
+
+The axe-wielding front line: high HP and strength, low skill, speed and luck. Its strength matches the Iron Axe's weight, so the axe doesn't slow it, but the axe's low hit makes it the least accurate class.
+
+| Stat | Base | Growth | Cap |
+| ---- | ---- | ------ | --- |
+| HP   | 12   | 85%    | 40  |
+| MP   | 5    | 30%    | 30  |
+| STR  | 5    | 55%    | 20  |
+| MAG  | 0    | 0%     | 20  |
+| SKL  | 2    | 30%    | 20  |
+| SPD  | 2    | 30%    | 20  |
+| LCK  | 1    | 25%    | 20  |
+| DEF  | 2    | 30%    | 20  |
+| RES  | 0    | 10%    | 20  |
+| MOV  | 5    | –      | –   |
+
+| Weapon types | Starting weapon |
+| ------------ | --------------- |
+| physical     | Iron Axe        |
+
+| Skill  | Learned at | Mana | Range | Damage                      |
+| ------ | ---------- | ---- | ----- | --------------------------- |
+| Cleave | 1          | 2    | 1     | The regular hit with +2 STR |
+
+Carries an Iron Axe, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
+
 ## Matchups at level 1
 
 Villager and Soldier share a stat line, so between them the difference is the weapon: the soldier's spear adds 1 might. Each attack is from as close as the attacker's weapon reaches (2 tiles for the bow).
@@ -121,9 +148,11 @@ Villager and Soldier share a stat line, so between them the difference is the we
 | Villager | Soldier  | Fists      | 2      | 79% | 0%   | 1       |
 | Soldier  | Villager | Iron Spear | 3      | 79% | 0%   | 1       |
 | Archer   | Soldier  | Iron Bow   | 3      | 83% | 0%   | 1       |
+| Vanguard | Soldier  | Iron Axe   | 6      | 61% | 0%   | 1       |
 
 | Skill        | User     | Target   | Damage | Hit    | Crit  | Strikes       |
 | ------------ | -------- | -------- | ------ | ------ | ----- | ------------- |
 | Throw Stones | Villager | Soldier  | 1      | always | never | 1, no counter |
 | Power Strike | Soldier  | Villager | 6      | always | never | 1, no counter |
 | Long Shot    | Archer   | Soldier  | 3      | always | never | 1, no counter |
+| Cleave       | Vanguard | Soldier  | 8      | always | never | 1, no counter |
