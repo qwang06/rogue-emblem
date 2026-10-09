@@ -114,3 +114,24 @@ export function getQuarterFrames(
 export function getTileFrame([column, row]: SheetTile, sheetColumns: number): number {
   return row * sheetColumns + column;
 }
+
+// The whole map's quarter frames for one autotiled terrain, as rows of
+// half-size tiles (`grid.height * 2` rows of `grid.width * 2`): cell (x, y)'s
+// quarters fill rows y*2..y*2+1 and columns x*2..x*2+1, from
+// getQuarterFrames. Quarters of cells that aren't `terrain` are -1 (empty).
+export function getQuarterFrameMap(
+  grid: Grid,
+  terrain: Terrain,
+  autotile: Autotile,
+  sheetColumns: number,
+  animationFrame = 0,
+): number[][] {
+  const data = Array.from({ length: grid.height * 2 }, () => Array<number>(grid.width * 2).fill(-1));
+  for (const cell of grid.cells) {
+    const quarters = getQuarterFrames(grid, cell.x, cell.y, terrain, autotile, sheetColumns, animationFrame);
+    quarters?.forEach((frame, q) => {
+      data[cell.y * 2 + (q >> 1)][cell.x * 2 + (q & 1)] = frame;
+    });
+  }
+  return data;
+}

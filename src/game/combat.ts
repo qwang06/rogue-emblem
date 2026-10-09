@@ -5,7 +5,7 @@
 // no hidden state — applying the damage (and spending weapon uses) on a
 // Unit is the caller's job.
 
-import { getCell, isInBounds } from './grid.ts';
+import { getCell, getDistance, isInBounds } from './grid.ts';
 import {
   CRIT_MULTIPLIER,
   canDouble,
@@ -83,10 +83,6 @@ export interface ForecastSide {
   counters: boolean;
 }
 
-function manhattan(a: Point, b: Point): number {
-  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
-}
-
 // Every in-bounds tile from minRange to maxRange steps away (orthogonal
 // distance, like movement), as [{ x, y }]. The attacker's own tile is never
 // included. Terrain and units don't block — attacks aren't paths.
@@ -96,7 +92,7 @@ export function getAttackRange(grid: Grid, origin: Point, maxRange: number, minR
   for (let dy = -maxRange; dy <= maxRange; dy++) {
     for (let dx = -maxRange; dx <= maxRange; dx++) {
       const tile = { x: origin.x + dx, y: origin.y + dy };
-      const distance = manhattan(origin, tile);
+      const distance = getDistance(origin, tile);
       if (distance < low || distance > maxRange) continue;
       if (isInBounds(grid, tile.x, tile.y)) tiles.push(tile);
     }

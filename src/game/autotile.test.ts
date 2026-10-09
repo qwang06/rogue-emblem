@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getQuarterFrameMap,
   getQuarterFrames,
   getQuarterShapes,
   getShapeTile,
@@ -128,5 +129,54 @@ describe('getTileFrame', () => {
     const frame = getTileFrame(TERRAIN_BASE_TILE, TERRAIN_SHEET.columns);
     expect(frame).toBeGreaterThanOrEqual(0);
     expect(frame).toBeLessThan(TERRAIN_SHEET.columns * TERRAIN_SHEET.rows);
+  });
+});
+
+describe('getQuarterFrameMap', () => {
+  const autotile: Autotile = { block: [0, 0], inner: [3, 0], animation: { frames: 2, columnStride: 4, frameMs: 100 } };
+
+  it('is twice the grid in each direction', () => {
+    const grid = parseTerrainMap(['...', '...']);
+    const map = getQuarterFrameMap(grid, 'water', autotile, 4);
+    expect(map).toHaveLength(4);
+    expect(map.every((row) => row.length === 6)).toBe(true);
+  });
+
+  it('is all empty (-1) when no cell holds the terrain', () => {
+    const grid = parseTerrainMap(['..', '..']);
+    expect(
+      getQuarterFrameMap(grid, 'water', autotile, 4)
+        .flat()
+        .every((frame) => frame === -1),
+    ).toBe(true);
+  });
+
+  it("lays each cell's quarters out in its own 2x2 block, in QUARTERS order", () => {
+    const grid = parseTerrainMap(['...', '.~.', '...']);
+    const map = getQuarterFrameMap(grid, 'water', autotile, 4);
+    const [tl, tr, bl, br] = getQuarterFrames(grid, 1, 1, 'water', autotile, 4)!;
+    expect(map[2].slice(2, 4)).toEqual([tl, tr]);
+    expect(map[3].slice(2, 4)).toEqual([bl, br]);
+    // Everything outside the water cell's block stays empty.
+    const others = map.flatMap((row, y) => row.filter((_, x) => !(x >= 2 && x < 4 && y >= 2 && y < 4)));
+    expect(others.every((frame) => frame === -1)).toBe(true);
+  });
+
+  it('agrees with getQuarterFrames for every cell', () => {
+    const grid = parseTerrainMap(['.~~', '~~.', '.~.']);
+    const map = getQuarterFrameMap(grid, 'water', autotile, 4);
+    for (const { x, y } of grid.cells) {
+      const quarters = getQuarterFrames(grid, x, y, 'water', autotile, 4) ?? [-1, -1, -1, -1];
+      expect([map[y * 2][x * 2], map[y * 2][x * 2 + 1], map[y * 2 + 1][x * 2], map[y * 2 + 1][x * 2 + 1]]).toEqual(
+        quarters,
+      );
+    }
+  });
+
+  it('uses the animation frame it is given', () => {
+    const grid = parseTerrainMap(['~']);
+    const first = getQuarterFrameMap(grid, 'water', autotile, 4);
+    const second = getQuarterFrameMap(grid, 'water', autotile, 4, 1);
+    expect(second).toEqual(first.map((row) => row.map((frame) => frame + 8)));
   });
 });

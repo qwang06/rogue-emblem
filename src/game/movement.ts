@@ -2,7 +2,17 @@
 // and the tile-by-tile route to any one of them, given its movement points
 // and the terrain it has to cross. No Phaser, no rendering, no hidden state.
 
-import { getCell, getNeighbors, isInBounds, type Grid, type Point, type Terrain } from './grid.ts';
+import {
+  findTileAt,
+  getCell,
+  getDistance,
+  getNeighbors,
+  isInBounds,
+  isSameTile,
+  type Grid,
+  type Point,
+  type Terrain,
+} from './grid.ts';
 
 export type TerrainCosts = Readonly<Record<string, number>>;
 
@@ -155,7 +165,7 @@ export function getPathCost(
 }
 
 function isAdjacent(a: Point, b: Point): boolean {
-  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y) === 1;
+  return getDistance(a, b) === 1;
 }
 
 // Updates a planned route as the cursor moves to target, so the route
@@ -190,4 +200,12 @@ export function extendMovePath(
   }
 
   return getMovePath(grid, path[0], target, movement, options) ?? path;
+}
+
+// Whether the mover can confirm a move to `to`: it has to be in the
+// movement range (so not a tile it can only pass through) and be where the
+// planned route ends, since that's the route it walks.
+export function canMoveAlongPath(range: readonly Point[], path: readonly Point[], to: Point): boolean {
+  const end = path[path.length - 1];
+  return end !== undefined && isSameTile(end, to) && findTileAt(range, to) !== null;
 }

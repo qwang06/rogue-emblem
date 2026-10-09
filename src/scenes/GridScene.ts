@@ -57,16 +57,27 @@ import {
   isPlaced,
   placeUnit,
 } from '../game/deployment.ts';
-import { findUnit, getCell, gridToWorld, isInBounds, moveUnit, setUnit, worldToGrid } from '../game/grid.ts';
+import {
+  findTileAt,
+  findUnit,
+  getCell,
+  getDistance,
+  gridToWorld,
+  isSameTile,
+  moveUnit,
+  setUnit,
+  worldToTile,
+} from '../game/grid.ts';
+import { getTeamUnitIds, isAllyOf, isHostileTo } from '../game/teams.ts';
 import { advanceDialog, createDialog, DIALOG_CHARS_PER_SECOND, getCurrentLine } from '../game/dialog.ts';
 import { getTriggeredDialog, turnTrigger } from '../game/dialogScript.ts';
 import { DEFAULT_OBJECTIVE, describeObjective, type Objective } from '../game/objectives.ts';
 import { getPathFacings } from '../game/facing.ts';
 import { createKeyRepeat, updateKeyRepeat } from '../game/keyRepeat.ts';
 import { getArrowPieces } from '../game/moveArrow.ts';
-import { getQuarterFrames, getTileFrame, type Autotile } from '../game/autotile.ts';
+import { getQuarterFrameMap, getTileFrame, type Autotile } from '../game/autotile.ts';
 import { getBuildingSprites, getFeatureSprites, getWallAutotile, type MapSprite } from '../game/mapArt.ts';
-import { extendMovePath, getMovementRange } from '../game/movement.ts';
+import { canMoveAlongPath, extendMovePath, getMovementRange } from '../game/movement.ts';
 import { PAUSE_ACTIONS } from '../game/pauseMenu.ts';
 import {
   createTurnState,
@@ -1040,7 +1051,7 @@ export class GridScene extends Phaser.Scene {
   }
 
   teamUnitIds(team: Team): string[] {
-    return [...this.units].filter(([, unit]) => unit.team === team).map(([unitId]) => unitId);
+    return getTeamUnitIds(this.units, team);
   }
 
   // Ends the battle if one side has been wiped out, publishing the result
@@ -1102,16 +1113,13 @@ export class GridScene extends Phaser.Scene {
   // else blocks.
   movementOptions(unit: Unit): MovementOptions {
     return {
-      canPassThrough: (unitId: string) => this.units.get(unitId)?.team === unit.team,
+      canPassThrough: (unitId: string) => isAllyOf(this.units, unit.team, unitId),
     };
   }
 
   // Units on another team are fair game to attack.
   isHostileTo(unit: Unit) {
-    return (unitId: string) => {
-      const other = this.units.get(unitId);
-      return other !== undefined && other.team !== unit.team;
-    };
+    return (unitId: string) => isHostileTo(this.units, unit.team, unitId);
   }
 
   // Highlights every tile the active unit can reach in blue, and the tiles
@@ -1191,7 +1199,7 @@ export class GridScene extends Phaser.Scene {
     const { unit, x, y } = this.activeUnit!;
     if (!unit.weapon) return null;
     const targets = this.getWeaponTargets(unit, { x, y }, unit.weapon);
-    return targets.find((t) => t.x === this.cursor.x && t.y === this.cursor.y) ?? null;
+    return findTileAt(targets, this.cursor);
   }
 
   // While aiming an attack, publishes the combat forecast
@@ -1206,7 +1214,7 @@ export class GridScene extends Phaser.Scene {
     }
     const { unit, x, y } = this.activeUnit!;
     const defender = this.units.get(target.unitId)!;
-    const distance = Math.abs(x - target.x) + Math.abs(y - target.y);
+    const distance = getDistance({ x, y }, target);
     const forecast = getCombatForecast(unit, defender, { distance });
     const anchor = mergeTileAnchors(this.getTileAnchor({ x, y }), this.getTileAnchor(target));
     gameStore.setState({ combatForecast: toCombatForecastView({ forecast, attacker: unit, defender, anchor }) });
@@ -1246,9 +1254,7 @@ export class GridScene extends Phaser.Scene {
     const from = { x, y };
     const to = { x: this.cursor.x, y: this.cursor.y };
     const path = this.movePath!;
-    const end = path[path.length - 1];
-    const inRange = this.moveRange!.some((t) => t.x === to.x && t.y === to.y);
-    if (!inRange || end.x !== to.x || end.y !== to.y) return;
+    if (!canMoveAlongPath(this.moveRange!, path, to)) return;
 
     this.hideRange();
     this.inputLocked = true;
@@ -1304,7 +1310,7 @@ export class GridScene extends Phaser.Scene {
     const attacker = this.units.get(attackerId)!;
     const defender = this.units.get(target.unitId)!;
     const attackerTile = findUnit(this.grid, attackerId)!;
-    const distance = Math.abs(attackerTile.x - target.x) + Math.abs(attackerTile.y - target.y);
+    const distance = getDistance(attackerTile, target);
     const { strikes } = resolveCombat(attacker, defender, { distance });
     const sides = {
       attacker: { unit: attacker, tile: { ...attackerTile, unitId: attackerId } },
@@ -1404,9 +1410,8 @@ export class GridScene extends Phaser.Scene {
   tryUseSkill() {
     const { unit, unitId, x, y } = this.activeUnit!;
     const skill = this.activeSkill!;
-    const target = getAttackTargets(this.grid, { x, y }, skill.range, this.isHostileTo(unit)).find(
-      (t) => t.x === this.cursor.x && t.y === this.cursor.y,
-    );
+    const targets = getAttackTargets(this.grid, { x, y }, skill.range, this.isHostileTo(unit));
+    const target = findTileAt(targets, this.cursor);
     if (!target) return;
 
     const defender = this.units.get(target.unitId)!;
@@ -1582,13 +1587,10 @@ export class GridScene extends Phaser.Scene {
     this.pointerQueue = [];
     this.pointerTile = null; // last tile the pointer was over, so only tile changes move the cursor
 
-    const toTile = (pointer: Phaser.Input.Pointer) => {
-      const tile = worldToGrid(pointer.worldX, pointer.worldY, TILE_SIZE);
-      return isInBounds(this.grid, tile.x, tile.y) ? tile : null;
-    };
+    const toTile = (pointer: Phaser.Input.Pointer) => worldToTile(this.grid, pointer.worldX, pointer.worldY, TILE_SIZE);
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       const tile = toTile(pointer);
-      if (!tile || (tile.x === this.pointerTile?.x && tile.y === this.pointerTile?.y)) return;
+      if (!tile || (this.pointerTile && isSameTile(tile, this.pointerTile))) return;
       this.pointerTile = tile;
       this.pointerQueue.push({ type: 'hover-tile', ...tile });
     });
@@ -1754,16 +1756,9 @@ export class GridScene extends Phaser.Scene {
     for (const [terrain, autotile] of Object.entries(autotiles)) {
       const frameCount = autotile.animation?.frames ?? 1;
       // One quarter-frame map per animation frame: frames[i][y][x].
-      const frames = Array.from({ length: frameCount }, (_, i) => {
-        const data = Array.from({ length: grid.height * 2 }, () => Array(grid.width * 2).fill(-1));
-        for (const cell of grid.cells) {
-          const quarters = getQuarterFrames(grid, cell.x, cell.y, terrain, autotile, columns, i);
-          quarters?.forEach((frame, q) => {
-            data[cell.y * 2 + (q >> 1)][cell.x * 2 + (q & 1)] = frame;
-          });
-        }
-        return data;
-      });
+      const frames = Array.from({ length: frameCount }, (_, i) =>
+        getQuarterFrameMap(grid, terrain, autotile, columns, i),
+      );
 
       const map = this.make.tilemap({ data: frames[0], tileWidth: half, tileHeight: half });
       const layer = map.createLayer(0, map.addTilesetImage(key, key, half, half)!, 0, 0)!;
