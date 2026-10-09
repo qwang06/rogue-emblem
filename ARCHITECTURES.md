@@ -35,7 +35,7 @@ The codebase is split into layers that don't reach into each other's internals:
 ```
 src/
   game/       pure logic + data in TypeScript (tested with Vitest, no Phaser dependency)
-    warband/  Warband Mode's own rules: regions, the regions file, a stage's battle
+    warband/  Warband Mode's own rules: regions, the regions file, a stage's battle, the run
   scenes/     Phaser.Scene subclasses (rendering + input, calls into src/game/)
   bridge/     Phaser → React state store, React → Phaser command channel (plain TypeScript, tested with Vitest)
   ui/         React components: the page layout, header, HUD overlay, title screen and config editor
@@ -146,6 +146,10 @@ Warband Mode's regions: the shape of the per-stage map settings and the rules fo
 ### `src/game/enemySpawns.ts`
 
 Pure enemy placement for generated maps. An `EnemyGroup` is `{ count, area?, minDistance?, maxDistance? }`: `area` (a `SpawnArea`) is a box as `[from, to]` fractions of the map's columns (`x`) and rows (`y`), and the distances are walking steps from the deployment zone. `getWalkingDistances(grid, starts)` is a breadth-first search giving each reachable tile's step count from the nearest start (impassable terrain blocks). `isInArea(p, area, width, height)` checks a tile against a box (tiles from `from × size` up to, not including, `to × size`, rounded down). `pickEnemyTiles(grid, groups, deploymentZone, rng)` returns one list of tiles per group, in order: each group's shuffled pick of reachable tiles outside the zone that pass its limits and that no earlier group took, shorter than `count` when too few qualify. `countEnemies(groups)` totals them, and `NORTH_THIRD` is the area older configs' enemies stood in. `getGroupRoom(grid, group, deploymentZone)` measures one group's room on its own (`{ inArea, nearest, farthest, fits }`: reachable tiles in its area, the fewest and most steps to them, and how many are within its distances), for explaining a group that won't fit. The Regions page's cards describe each group with `describeEnemyGroup` (`src/ui/enemyGroups.ts`). Tested in `src/game/enemySpawns.test.ts`.
+
+### `src/game/warband/run.ts`
+
+A Warband Mode run, the state carried from stage to stage: `RunState` is `{ seed, stage, roster, convoy, gold, relics, deployCap, fallen }`, frozen, with the roster stored as plain `UnitSnapshot`s (`id`, `name`, `classId`, level, XP, current and max HP/MP, the other stats, and the inventory as `{ itemId, quantity }`) so a run saves as JSON. `snapshotUnit(id, unit)` takes a snapshot and `restoreUnit(snapshot)` rebuilds the Unit through `createUnitOfClass`, which supplies what a snapshot doesn't store (movement, weapon types, growths, caps); `restoreRoster(run)` gives the roster as Units by unitId and `RUN_ITEMS` is every item a saved inventory can name. `createRun(seed, roster)` starts on stage 1; `applyBattleResult(run, { units })` writes each deployed roster unit's XP, levels, HP and inventory back and moves the dead to `fallen` for good, leaving undeployed units and enemies alone; `advanceStage`, `isRunOver` (an empty roster) and `getStageSeed(runSeed, stage)` (a stage's map seed, the same for the same pair) round it out. `serializeRun` / `parseRun` save and load it, `parseRun` returning null for anything that isn't a valid run or names an unknown class or item. Nothing uses it yet: wiring it into battles, saving to `localStorage` and the run-over screen are W.1's next step. Tested in `src/game/warband/run.test.ts`.
 
 ### `src/game/warband/stageLevel.ts`
 

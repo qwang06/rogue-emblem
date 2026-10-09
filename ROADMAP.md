@@ -243,6 +243,7 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 - The run is saved to `localStorage` (try/catch) so it survives a reload; a run-scoped slice of 4.1.
 - Run-over and victory screens in React.
 - **Tests:** snapshot round-trip, battle results merged (XP, level ups, HP, broken weapons, used items), deaths removed, an empty roster ends the run, the same seed gives the same stages, corrupt saves rejected.
+- _Progress:_ the pure run state is in `src/game/warband/run.ts` (`RunState`, `UnitSnapshot`, `applyBattleResult`, `getStageSeed`, `serializeRun` / `parseRun`), with its tests. Still to do: `createStageLevel` taking the run's roster, battles writing results back, saving to `localStorage`, and the run-over and victory screens.
 
 ### [ ] W.2 Enemy scaling and region bosses
 
