@@ -2,26 +2,43 @@ import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 
 import type { MenuAction } from '../game/actionMenu.ts';
 import { gameStore } from '../bridge/gameStore.ts';
 import { createActionMenu, getSelectedAction, moveSelection, selectIndex } from '../game/actionMenu.ts';
-import { SETTINGS_ACTIONS, TITLE_ACTIONS } from '../game/titleMenu.ts';
+import { getWarbandActions, SETTINGS_ACTIONS, TITLE_ACTIONS } from '../game/titleMenu.ts';
 import { getTrainingActions } from '../game/trainingLevel.ts';
-import { FIRST_STORY_CHAPTER, firstWarbandStage } from '../game/battleSetup.ts';
+import { FIRST_STORY_CHAPTER, runStage } from '../game/battleSetup.ts';
 import { randomSeed } from '../game/rng.ts';
+import { createRun, type RunState } from '../game/warband/run.ts';
+import { createStartingWarband } from '../game/warband/stageLevel.ts';
+import { loadSavedRun, saveRun } from '../data/runSave.ts';
 import { routeHash } from './route.ts';
 
-type View = 'main' | 'training' | 'settings';
+type View = 'main' | 'training' | 'warband' | 'settings';
 
 // The submenus title entries open: their heading, and the entries to list.
 const SUBMENUS = {
   training: { heading: 'Training — Choose a Unit', label: 'Choose a unit to train', actions: getTrainingActions },
+  warband: {
+    heading: 'Warband Mode',
+    label: 'Warband Mode',
+    actions: () => {
+      const saved = loadSavedRun();
+      return saved ? getWarbandActions(saved) : [];
+    },
+  },
   settings: { heading: 'Settings', label: 'Settings', actions: () => SETTINGS_ACTIONS },
 } as const;
+
+// A fresh run with the starting warband.
+function newRun(): RunState {
+  return createRun(randomSeed(), createStartingWarband());
+}
 
 function mainMenu(selectedIndex = 0) {
   return selectIndex(createActionMenu(TITLE_ACTIONS), selectedIndex);
 }
 
 // The landing screen: game title plus the Story Mode / Warband Mode /
-// Training / Settings menu.
+// Training / Settings menu. Warband Mode starts a new run, or with one
+// saved opens a submenu to continue it or start a new one.
 // Training swaps in a second menu listing the unit classes; picking one
 // starts a small practice battle with that unit. Settings swaps in the
 // settings menu, whose Game Configs opens the config editor (#/configs). Works with the keyboard
@@ -49,21 +66,31 @@ export function TitleScreen() {
     setView('main');
   }
 
-  // Carries out a menu choice. Warband Mode starts a battle on a freshly
-  // generated map.
+  // Carries out a menu choice. Warband Mode starts a new run, or with a run
+  // saved opens a submenu to continue it or start over.
   function runAction(action: MenuAction | null) {
     if (!action) return;
     if (view === 'settings') {
       if (action.id === 'configs') window.location.hash = routeHash({ page: 'configs' });
+    } else if (view === 'warband') {
+      if (action.id === 'continue-run') playRun(loadSavedRun() ?? newRun());
+      else if (action.id === 'new-run') playRun(newRun());
     } else if (view === 'training') {
       gameStore.setState({ screen: 'battle', battleSetup: { mode: 'training', unitClass: action.id } });
     } else if (action.id === 'story') {
       gameStore.setState({ screen: 'battle', battleSetup: FIRST_STORY_CHAPTER });
     } else if (action.id === 'warband') {
-      gameStore.setState({ screen: 'battle', battleSetup: firstWarbandStage(randomSeed()) });
+      if (loadSavedRun()) openSubmenu('warband');
+      else playRun(newRun());
     } else if (action.id === 'training' || action.id === 'settings') {
       openSubmenu(action.id);
     }
+  }
+
+  // Saves `run` and starts its current stage.
+  function playRun(run: RunState) {
+    saveRun(run);
+    gameStore.setState({ screen: 'battle', battleSetup: runStage(run) });
   }
 
   useEffect(() => {

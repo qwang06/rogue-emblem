@@ -20,6 +20,7 @@ import {
   toExperienceGainView,
   toLevelUpView,
   toObjectiveView,
+  toRunOverView,
   toPhaseBannerView,
   toCanvasFraction,
   toRosterEntryView,
@@ -27,6 +28,7 @@ import {
   toTurnView,
   toUnitView,
   worldToScreen,
+  type RunOverView,
 } from '../bridge/views.ts';
 import { createActionMenu, getSelectedAction, getUnitActions, moveSelection, selectIndex } from '../game/actionMenu.ts';
 import { getCombatExperience, getCombatOutcome } from '../game/experience.ts';
@@ -49,8 +51,11 @@ import {
   describeBattle,
   FIRST_STORY_CHAPTER,
   getNextBattle,
+  runStage,
   type GameContent,
 } from '../game/battleSetup.ts';
+import { finishStage } from '../game/warband/run.ts';
+import { clearSavedRun, saveRun } from '../data/runSave.ts';
 import { randomSeed } from '../game/rng.ts';
 import { getStructureTiles } from '../game/structures.ts';
 import { getConsumables, getItemActions } from '../game/items.ts';
@@ -196,6 +201,9 @@ export class GridScene extends Phaser.Scene {
   grid!: Grid;
   units!: Map<string, Unit>;
   roster!: string[];
+  // The roster units placed when the battle started, kept after they fall
+  // (units drops them), so a Warband run can write the battle back.
+  deployedUnits!: Map<string, Unit>;
   deploymentZone!: Point[];
   deploymentLimit!: number;
   dialogs!: DialogScripts;
@@ -281,6 +289,7 @@ export class GridScene extends Phaser.Scene {
     this.grid = level.grid;
     this.units = level.units; // unitId -> Unit, player roster and enemies alike
     this.roster = level.roster; // player unitIds that can be deployed
+    this.deployedUnits = new Map(); // filled in when the battle starts
     this.deploymentZone = level.deploymentZone;
     // How many roster units can be placed: the level's max, capped by roster and zone size.
     this.deploymentLimit = getDeploymentLimit(level.roster, level.deploymentZone, level.maxDeployed);
@@ -1026,7 +1035,8 @@ export class GridScene extends Phaser.Scene {
     gameStore.setState({ phase: 'battle', deploymentStep: null, deploymentLimit: null });
 
     for (const unitId of this.roster) {
-      if (!isPlaced(this.grid, unitId)) this.units.delete(unitId);
+      if (isPlaced(this.grid, unitId)) this.deployedUnits.set(unitId, this.units.get(unitId)!);
+      else this.units.delete(unitId);
     }
 
     this.setCursorVisible(true);
@@ -1115,9 +1125,23 @@ export class GridScene extends Phaser.Scene {
     this.inputLocked = false;
     this.setCursorVisible(false);
     // Completing the objective moves on to the next chapter or stage.
-    this.nextBattle = outcome === 'victory' ? getNextBattle(this.setup, randomSeed()) : null;
+    let runOver: RunOverView | null = null;
+    if (this.setup.mode === 'warband' && this.setup.run) {
+      // A run writes the battle back to its roster and saves the next
+      // stage, or forgets the run once the warband has fallen.
+      const finished = finishStage(this.setup.run, { units: this.deployedUnits }, outcome);
+      if (finished.over) {
+        clearSavedRun();
+        runOver = toRunOverView(finished.run);
+      } else {
+        saveRun(finished.run);
+      }
+      this.nextBattle = finished.over ? null : runStage(finished.run);
+    } else {
+      this.nextBattle = outcome === 'victory' ? getNextBattle(this.setup, randomSeed()) : null;
+    }
     const nextBattle = this.nextBattle && describeBattle(this.nextBattle, this.content);
-    this.playTriggeredDialog(outcome, () => gameStore.setState({ battleOutcome: outcome, nextBattle }));
+    this.playTriggeredDialog(outcome, () => gameStore.setState({ battleOutcome: outcome, nextBattle, runOver }));
     return true;
   }
 

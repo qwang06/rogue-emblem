@@ -6,9 +6,11 @@
 // run. Units that die join `fallen` and never come back. Everything here is
 // pure: each function returns a new frozen run and leaves its input alone.
 
+import { HEAL_STAFF } from '../healing.ts';
 import { HEALTH_POTION, MANA_POTION, type Inventory, type Item } from '../items.ts';
 import { createSeededRng } from '../rng.ts';
 import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
+import type { BattleOutcome } from '../turns.ts';
 import type { Unit } from '../Unit.ts';
 import { WEAPONS } from '../weapons.ts';
 
@@ -16,7 +18,7 @@ import { WEAPONS } from '../weapons.ts';
 export const STARTING_DEPLOY_CAP = 3;
 
 // Every item a saved inventory can name, by id.
-export const RUN_ITEMS: readonly Item[] = Object.freeze([...WEAPONS, HEALTH_POTION, MANA_POTION]);
+export const RUN_ITEMS: readonly Item[] = Object.freeze([...WEAPONS, HEAL_STAFF, HEALTH_POTION, MANA_POTION]);
 
 // An inventory entry by item id: a weapon's quantity is its uses left.
 export interface ItemSnapshot {
@@ -61,7 +63,8 @@ export interface RunState {
   relics: readonly string[];
   // How many units deploy to a stage.
   deployCap: number;
-  // Units that died, in the order they fell, as they were when they died.
+  // Units that died, as they were when they died: battle by battle, in
+  // roster order within a battle.
   fallen: readonly UnitSnapshot[];
 }
 
@@ -185,6 +188,20 @@ export function advanceStage(run: RunState): RunState {
 // Whether the warband has fallen: nobody is left on the roster.
 export function isRunOver(run: RunState): boolean {
   return run.roster.length === 0;
+}
+
+// The run after a stage's battle ends with `outcome`: the battle's result
+// written back (applyBattleResult), then on a victory the next stage. A
+// defeat ends the run, as does a victory that somehow leaves nobody on the
+// roster; `over` says so.
+export function finishStage(
+  run: RunState,
+  result: BattleResult,
+  outcome: BattleOutcome,
+): { run: RunState; over: boolean } {
+  const after = applyBattleResult(run, result);
+  if (outcome === 'defeat' || isRunOver(after)) return { run: after, over: true };
+  return { run: advanceStage(after), over: false };
 }
 
 // The map seed for `stage` of a run started with `runSeed`: always the same

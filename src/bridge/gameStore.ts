@@ -14,6 +14,7 @@ import type {
   ObjectiveView,
   PhaseBannerView,
   RosterEntryView,
+  RunOverView,
   TileAnchorView,
   TurnView,
   UnitView,
@@ -53,6 +54,7 @@ export interface BattleState {
   dialog: DialogView | null;
   objective: ObjectiveView | null;
   nextBattle: string | null;
+  runOver: RunOverView | null;
 }
 
 export interface GameState extends BattleState {
@@ -88,6 +90,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   dialog: null, // DialogView from toDialogView() of the line being spoken, or null
   objective: null, // ObjectiveView from toObjectiveView() while the Objective screen is up, or null
   nextBattle: null, // describeBattle() of the battle a victory leads to (shown on the result), or null
+  runOver: null, // RunOverView from toRunOverView() once a Warband Mode run has ended, or null
 });
 
 // The single app-wide store shared by Phaser (writer) and React (reader).

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createActionMenu, getSelectedAction, moveSelection } from './actionMenu.ts';
-import { SETTINGS_ACTIONS, TITLE_ACTIONS } from './titleMenu.ts';
+import { getWarbandActions, SETTINGS_ACTIONS, TITLE_ACTIONS } from './titleMenu.ts';
+import { advanceStage, createRun } from './warband/run.ts';
+import { createStartingWarband } from './warband/stageLevel.ts';
 
 describe('TITLE_ACTIONS', () => {
   it('lists Story Mode, Warband Mode, Training, then Settings', () => {
@@ -31,5 +33,15 @@ describe('SETTINGS_ACTIONS', () => {
   it('is frozen', () => {
     expect(Object.isFrozen(SETTINGS_ACTIONS)).toBe(true);
     expect(SETTINGS_ACTIONS.every(Object.isFrozen)).toBe(true);
+  });
+});
+
+describe('getWarbandActions', () => {
+  it('offers to continue the saved run at its stage, or start a new one', () => {
+    const run = advanceStage(advanceStage(createRun(1, createStartingWarband())));
+    const actions = getWarbandActions(run);
+    expect(actions.map((a) => a.id)).toEqual(['continue-run', 'new-run']);
+    expect(actions.map((a) => a.label)).toEqual(['Continue Run (Stage 3)', 'New Run']);
+    expect(Object.isFrozen(actions)).toBe(true);
   });
 });
