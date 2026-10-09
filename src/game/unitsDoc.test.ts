@@ -10,6 +10,7 @@ import type { GrowthStat } from './experience.ts';
 import {
   calculateSkillDamage,
   CLEAVE,
+  FIREBALL,
   LONG_SHOT,
   POWER_STRIKE,
   SKILL_TREES,
@@ -143,10 +144,11 @@ describe('UNITS.md', () => {
       Soldier: createUnitOfClass('soldier', { team: 'enemy' }),
       Archer: createUnitOfClass('archer', { team: 'player' }),
       Vanguard: createUnitOfClass('vanguard', { team: 'player' }),
+      Wizard: createUnitOfClass('wizard', { team: 'player' }),
     };
     const text = section('Matchups at level 1');
     const attacks = tableWithHeader(text, 'Attacker');
-    expect(attacks.map(([attacker]) => attacker)).toEqual(['Villager', 'Soldier', 'Archer', 'Vanguard']);
+    expect(attacks.map(([attacker]) => attacker)).toEqual(['Villager', 'Soldier', 'Archer', 'Vanguard', 'Wizard']);
     for (const [attackerName, targetName, weapon, damage, hit, crit, strikes] of attacks) {
       const attacker = units[attackerName];
       const defender = units[targetName];
@@ -165,6 +167,7 @@ describe('UNITS.md', () => {
       'Power Strike': POWER_STRIKE,
       'Long Shot': LONG_SHOT,
       Cleave: CLEAVE,
+      Fireball: FIREBALL,
     };
     expect(skills.map(([name]) => name)).toEqual(Object.keys(SKILLS));
     for (const [name, user, target, damage] of skills) {

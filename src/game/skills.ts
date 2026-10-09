@@ -84,12 +84,25 @@ export const CLEAVE: Skill = Object.freeze({
   animation: 'strike',
 });
 
+// A ball of flame hurled at a foe up to 3 tiles away: the user's regular
+// spell with 1 more power behind it. Flies like a thrown stone until it
+// gets an animation of its own.
+export const FIREBALL: Skill = Object.freeze({
+  id: 'fireball',
+  label: 'Fireball',
+  manaCost: 3,
+  range: 3,
+  might: 1,
+  animation: 'stone',
+});
+
 // unitClass -> [{ level, skill }]. Classes without an entry know no skills.
 export const SKILL_TREES: SkillTrees = Object.freeze({
   villager: Object.freeze([Object.freeze({ level: 1, skill: THROW_STONES })]),
   soldier: Object.freeze([Object.freeze({ level: 1, skill: POWER_STRIKE })]),
   archer: Object.freeze([Object.freeze({ level: 1, skill: LONG_SHOT })]),
   vanguard: Object.freeze([Object.freeze({ level: 1, skill: CLEAVE })]),
+  wizard: Object.freeze([Object.freeze({ level: 1, skill: FIREBALL })]),
 });
 
 // Every skill a unit of unitClass knows at the given level, in tree order.
