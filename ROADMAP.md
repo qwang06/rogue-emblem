@@ -11,7 +11,7 @@ The plan for growing Rogue Emblem into a Fire Emblem–style tactics game, one s
 
 ## Where we are
 
-Already built: grid and terrain move costs, movement range and arrow, player/enemy phases with win/loss, one-way attacks (`attack - defense`; counterattacks and FE-style stats since 1.1/1.2), skills with mana, consumable items, deployment, a rushing enemy AI, dialog, title/pause menus, and training mode. Phase 1 added counterattacks, hit/crit/doubling, the combat forecast, and XP with growth-rate level ups. Phase 2 has begun: units fight with weapons (2.1). 2.3 has begun: Villager and Soldier are joined by the Archer, the Vanguard and the Wizard. Warband Mode (Dungeon Mode until W.0) is a run of generated overworld maps whose warband carries XP, HP, items and deaths from stage to stage (W.1); Phase W turns it into the game's roguelike run.
+Already built: grid and terrain move costs, movement range and arrow, player/enemy phases with win/loss, one-way attacks (`attack - defense`; counterattacks and FE-style stats since 1.1/1.2), skills with mana, consumable items, deployment, a rushing enemy AI, dialog, title/pause menus, and training mode. Phase 1 added counterattacks, hit/crit/doubling, the combat forecast, and XP with growth-rate level ups. Phase 2 has begun: units fight with weapons (2.1). 2.3 has begun: Villager and Soldier are joined by the Archer, the Vanguard, the Wizard, the Guard and the Acolyte. Warband Mode (Dungeon Mode until W.0) is a run of generated overworld maps whose warband carries XP, HP, items and deaths from stage to stage (W.1); Phase W turns it into the game's roguelike run.
 
 ---
 
@@ -104,8 +104,10 @@ _Decided:_ classes are named after the unit art in `src/assets/units/` (see the 
   - _Notes:_ `src/game/Archer.ts`, Iron Bow, `Archer_02` art. Frail and accurate (9 HP, 3 STR, 5 SKL, 4 SPD, 1 DEF, 1 RES). Learns **Long Shot** (2 MP, range 1–3, its regular hit, no counter), which reuses the thrown-stone animation until there's an arrow one. Selectable in Training, where two archers spar.
 - [x] **Wizard** (Mage) — Fire, the staff `Vanguard_01` art, magic damage vs resistance.
   - _Notes:_ `src/game/Wizard.ts`, magical weapons only. 8 HP, 8 MP, 1 STR, 4 MAG, 0 DEF, 3 RES. Learns **Fireball** (3 MP, range 1–3, +1 MAG, no counter), which reuses the thrown-stone animation. Against a soldier it hits for 6 at 84% and can cast from 2 tiles without a counter. The `Elemental` art (also a Fire user in the weapons table) is still unused; it could become an enemy-only caster or a W.6 Arcane recruit.
-- [ ] **Acolyte** (Cleric) — `Acolyte` art, staff only: new **Heal** action targeting adjacent allies; earns XP from healing.
-- [ ] **Guard** (Knight) — Iron Spear, the tower-shield `Soldier_04` art, high defense, low movement and speed.
+- [x] **Acolyte** (Cleric) — `Acolyte` art, staff only: new **Heal** action targeting adjacent allies; earns XP from healing.
+  - _Notes:_ `src/game/Acolyte.ts` and `src/game/healing.ts`, `Acolyte_02` art. Staves are a third item kind (`kind: 'staff'`), not a weapon type, so a healer never attacks or counters; the Acolyte masters no weapon types. **Heal** (in the action menu after Attack for anyone carrying a staff) restores the staff's 2 power + MAG (5 at level 1) to a wounded adjacent ally, spends one of the staff's 20 uses, and earns a flat 10 XP. Deferred: the Acolyte has no skills yet, enemy AI doesn't heal (3.2), and the heal plays the potion glow rather than an animation of its own.
+- [x] **Guard** (Knight) — Iron Spear, the tower-shield `Soldier_04` art, high defense, low movement and speed.
+  - _Notes:_ `src/game/Guard.ts`. 12 HP, 4 STR, 1 SPD, 5 DEF, 0 RES, 4 MOV, so a level-1 soldier's spear deals it 0 while magic hits it in full. Learns **Shield Bash** (2 MP, range 1, +1 STR, no counter). Its slowness is only the MOV stat for now; the `armored` movement type comes with 2.4.
 - [ ] **Beast Rider** (Pegasus Knight) — `BeastRider` art, flier, high resistance (needs 2.4).
 - [ ] **Cavalier** — mounted (needs 2.4). The pack has no horse art, so this waits on art or is dropped.
 

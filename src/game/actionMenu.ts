@@ -24,23 +24,34 @@ export const UNIT_ACTIONS: readonly MenuAction[] = Object.freeze([
   Object.freeze({ id: 'wait', label: 'Wait' }),
 ]);
 
+// Healers (units carrying a staff) also get Heal, right after Attack.
+export const HEAL_ACTION: MenuAction = Object.freeze({ id: 'heal', label: 'Heal' });
+
 // The unit actions for a particular unit. Attack is disabled when the unit
 // has no weapon it can wield, Skill when it knows no skills, and Item
-// when it carries no consumables; the caller decides what disabled means
-// for input.
+// when it carries no consumables. Heal is only offered when `canHeal` is
+// given (the unit carries a staff), and disabled when it's false (no
+// wounded ally in reach); the caller decides what disabled means for
+// input.
 export function getUnitActions({
   hasSkills,
   hasItems = true,
   hasWeapons = true,
+  canHeal,
 }: {
   hasSkills: boolean;
   hasItems?: boolean;
   hasWeapons?: boolean;
+  canHeal?: boolean;
 }): readonly MenuAction[] {
   const disabled = (id: string) =>
-    (id === 'attack' && !hasWeapons) || (id === 'skill' && !hasSkills) || (id === 'item' && !hasItems);
+    (id === 'attack' && !hasWeapons) ||
+    (id === 'heal' && !canHeal) ||
+    (id === 'skill' && !hasSkills) ||
+    (id === 'item' && !hasItems);
+  const actions = canHeal === undefined ? UNIT_ACTIONS : [UNIT_ACTIONS[0], HEAL_ACTION, ...UNIT_ACTIONS.slice(1)];
   return Object.freeze(
-    UNIT_ACTIONS.map((action) => (disabled(action.id) ? Object.freeze({ ...action, disabled: true }) : action)),
+    actions.map((action) => (disabled(action.id) ? Object.freeze({ ...action, disabled: true }) : action)),
   );
 }
 

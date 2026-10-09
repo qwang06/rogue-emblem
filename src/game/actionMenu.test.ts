@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  HEAL_ACTION,
   UNIT_ACTIONS,
   createActionMenu,
   getSelectedAction,
@@ -45,11 +46,28 @@ describe('getUnitActions', () => {
     expect(getUnitActions({ hasSkills: false }).map((a) => a.id)).toEqual(UNIT_ACTIONS.map((a) => a.id));
   });
 
+  it('offers no Heal to a unit without a staff', () => {
+    expect(getUnitActions({ hasSkills: true }).some((a) => a.id === 'heal')).toBe(false);
+  });
+
+  it('offers Heal right after Attack to a unit with a staff', () => {
+    const actions = getUnitActions({ hasSkills: true, hasWeapons: false, canHeal: true });
+    expect(actions.map((a) => a.id)).toEqual(['attack', 'heal', 'skill', 'item', 'wait']);
+    expect(actions.filter((a) => a.disabled).map((a) => a.id)).toEqual(['attack']);
+  });
+
+  it('disables Heal when no wounded ally is in reach', () => {
+    const actions = getUnitActions({ hasSkills: true, canHeal: false });
+    expect(actions.filter((a) => a.disabled).map((a) => a.id)).toEqual(['heal']);
+  });
+
   it('returns frozen entries without touching UNIT_ACTIONS', () => {
     const actions = getUnitActions({ hasSkills: false });
     expect(Object.isFrozen(actions)).toBe(true);
     expect(actions.every(Object.isFrozen)).toBe(true);
     expect(UNIT_ACTIONS.find((a) => a.id === 'skill')!.disabled).toBeUndefined();
+    getUnitActions({ hasSkills: true, canHeal: false });
+    expect(HEAL_ACTION.disabled).toBeUndefined();
   });
 });
 

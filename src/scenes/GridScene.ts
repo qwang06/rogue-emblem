@@ -32,6 +32,16 @@ import {
 } from '../bridge/views.ts';
 import { createActionMenu, getSelectedAction, getUnitActions, moveSelection, selectIndex } from '../game/actionMenu.ts';
 import { getCombatExperience, getCombatOutcome } from '../game/experience.ts';
+import {
+  findUsableStaff,
+  getHealAmount,
+  getHealTargets,
+  getStaves,
+  HEAL_EXPERIENCE,
+  isWounded,
+  type CarriedStaff,
+  type Staff,
+} from '../game/healing.ts';
 import { calculateSkillDamage, findLearnedSkill, getLearnedSkills, getSkillActions } from '../game/skills.ts';
 import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange, resolveCombat } from '../game/combat.ts';
 import { getFitZoom } from '../game/camera.ts';
@@ -142,6 +152,8 @@ const ATTACK_RANGE_COLOR = 0xef4444;
 const ATTACK_RANGE_ALPHA = 0.45;
 const SKILL_RANGE_COLOR = 0xf97316;
 const SKILL_RANGE_ALPHA = 0.45;
+const HEAL_RANGE_COLOR = 0x22c55e;
+const HEAL_RANGE_ALPHA = 0.45;
 const DEPLOYMENT_ZONE_COLOR = 0xfacc15;
 const DEPLOYMENT_ZONE_ALPHA = 0.4;
 // Deployment menu entries, by index, for re-opening it on a given one.
@@ -170,7 +182,7 @@ const DONE_TINT = 0x808080;
 
 type Sprite = Phaser.GameObjects.Sprite;
 type ActionKey = 'confirm' | 'confirmAlt' | 'cancel' | 'cancelAlt';
-type RangeMode = 'move' | 'attack' | 'skill';
+type RangeMode = 'move' | 'attack' | 'skill' | 'heal';
 
 // The unit whose menu or range is open, where it stands, and (after a move)
 // where it came from.
@@ -222,6 +234,7 @@ export class GridScene extends Phaser.Scene {
   activeUnit: ActiveUnit | null = null;
   rangeMode: RangeMode | null = null;
   activeSkill: Skill | null = null;
+  activeStaff: CarriedStaff | null = null;
   rangeTiles: Phaser.GameObjects.Rectangle[] | null = null;
   moveRange: RangeTile[] | null = null;
   movePath: readonly Point[] | null = null;
@@ -322,8 +335,9 @@ export class GridScene extends Phaser.Scene {
     this.placingUnitId = null; // unit being placed while choosing its tile
     this.zoneTiles = null; // highlight rectangles for the deployment zone
     this.activeUnit = null; // { unitId, unit, x, y } the menu / range belongs to
-    this.rangeMode = null; // 'move' | 'attack' | 'skill' while choosing a destination or target
+    this.rangeMode = null; // 'move' | 'attack' | 'skill' | 'heal' while choosing a destination or target
     this.activeSkill = null; // the skill being aimed while rangeMode is 'skill'
+    this.activeStaff = null; // the staff being aimed while rangeMode is 'heal'
     this.rangeTiles = null; // highlight rectangles for the current range
     this.moveRange = null; // [{ x, y, cost }] the active unit can end its move on
     this.movePath = null; // planned route [{ x, y }] from the active unit to the cursor
@@ -444,6 +458,7 @@ export class GridScene extends Phaser.Scene {
       if (confirm) {
         if (this.rangeMode === 'move') this.tryMoveActiveUnit();
         else if (this.rangeMode === 'skill') this.tryUseSkill();
+        else if (this.rangeMode === 'heal') this.tryHeal();
         else this.tryAttackWithActiveUnit();
         return;
       }
@@ -526,6 +541,8 @@ export class GridScene extends Phaser.Scene {
       this.setActionMenu(null);
       if (action?.id === 'attack') {
         this.openWeaponMenu();
+      } else if (action?.id === 'heal') {
+        this.showHealRange();
       } else if (action?.id === 'skill') {
         this.openSkillMenu();
       } else if (action?.id === 'item') {
@@ -547,14 +564,48 @@ export class GridScene extends Phaser.Scene {
 
   // Opens the action menu for the active unit, once it has moved. Attack is
   // only available while it has a weapon it can wield, Skill once it has
-  // learned a skill, and Item while it carries any consumables.
+  // learned a skill, and Item while it carries any consumables. A unit
+  // with a staff also gets Heal, available while a wounded ally is in its
+  // reach.
   openActionMenu() {
     const { unit } = this.activeUnit!;
     const hasWeapons = unit.wieldableWeapons.length > 0;
     const hasSkills = getLearnedSkills(unit.unitClass, unit.level).length > 0;
     const hasItems = getConsumables(unit.items).length > 0;
+    const canHeal = getStaves(unit.items).length > 0 ? this.findHealingStaff() !== null : undefined;
     this.publishMenuAnchor();
-    this.setActionMenu(createActionMenu(getUnitActions({ hasSkills, hasItems, hasWeapons })));
+    this.setActionMenu(createActionMenu(getUnitActions({ hasSkills, hasItems, hasWeapons, canHeal })));
+  }
+
+  // The wounded allies the active unit's staff reaches from where it stands.
+  getHealTargetsFor(staff: Staff) {
+    const { unit, unitId, x, y } = this.activeUnit!;
+    const canHeal = (otherId: string) => {
+      const other = this.units.get(otherId);
+      return otherId !== unitId && other?.team === unit.team && isWounded(other);
+    };
+    return getHealTargets(this.grid, { x, y }, staff, canHeal);
+  }
+
+  // The first staff the active unit carries with a wounded ally in reach.
+  findHealingStaff() {
+    const { unit } = this.activeUnit!;
+    return findUsableStaff(unit.items, (staff) => this.getHealTargetsFor(staff).length > 0);
+  }
+
+  // After choosing Heal: shows the staff's reach in green to pick the ally.
+  showHealRange() {
+    const { x, y } = this.activeUnit!;
+    const carried = this.findHealingStaff()!;
+    const { staff } = carried;
+    this.setCursor(x, y);
+    this.showRange(
+      'heal',
+      getAttackRange(this.grid, { x, y }, staff.maxRange, staff.minRange),
+      HEAL_RANGE_COLOR,
+      HEAL_RANGE_ALPHA,
+    );
+    this.activeStaff = carried;
   }
 
   // Opens the weapon menu after Attack: every weapon the active unit can
@@ -1263,6 +1314,7 @@ export class GridScene extends Phaser.Scene {
     this.rangeTiles = null;
     this.rangeMode = null;
     this.activeSkill = null;
+    this.activeStaff = null;
     this.updateCombatForecast();
     this.clearMoveArrow();
     this.moveRange = null;
@@ -1462,6 +1514,33 @@ export class GridScene extends Phaser.Scene {
       ];
       const amount = getCombatExperience(unit.level, defender.level, getCombatOutcome(strikes, 'attacker'));
       this.showExperienceGain(unit, amount, () => this.finishPlayerAction(unitId));
+    });
+  }
+
+  // Heals the wounded ally under the cursor with the staff being aimed, if
+  // it's one: the ally regains the staff's power plus the healer's magic
+  // (capped at its missing health) and glows like a health potion, the
+  // staff spends a use, and the healer earns HEAL_EXPERIENCE.
+  tryHeal() {
+    const { unit, unitId } = this.activeUnit!;
+    const { staff, index } = this.activeStaff!;
+    const target = findTileAt(this.getHealTargetsFor(staff), this.cursor);
+    if (!target) return;
+
+    const patient = this.units.get(target.unitId)!;
+    const amount = getHealAmount(unit, staff, patient);
+    patient.heal(amount);
+    unit.spendStaffUse(index);
+
+    this.hideRange();
+    this.inputLocked = true;
+    this.publishHoveredUnit();
+    const sprite = this.unitSprites.get(target.unitId)!;
+    const center = { x: sprite.x + TILE_SIZE / 2, y: sprite.y + TILE_SIZE / 2 };
+    this.showDamagePopup(sprite, amount, 'health');
+    playPotionGlow(this, sprite, center, POTION_COLORS.health, () => {
+      this.activeUnit = null;
+      this.showExperienceGain(unit, HEAL_EXPERIENCE, () => this.finishPlayerAction(unitId));
     });
   }
 

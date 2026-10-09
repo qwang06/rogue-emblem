@@ -96,6 +96,17 @@ export const FIREBALL: Skill = Object.freeze({
   animation: 'stone',
 });
 
+// A shove with the tower shield behind the spear: the user's regular
+// attack with 1 more power behind it, against an adjacent foe.
+export const SHIELD_BASH: Skill = Object.freeze({
+  id: 'shield-bash',
+  label: 'Shield Bash',
+  manaCost: 2,
+  range: 1,
+  might: 1,
+  animation: 'strike',
+});
+
 // unitClass -> [{ level, skill }]. Classes without an entry know no skills.
 export const SKILL_TREES: SkillTrees = Object.freeze({
   villager: Object.freeze([Object.freeze({ level: 1, skill: THROW_STONES })]),
@@ -103,6 +114,7 @@ export const SKILL_TREES: SkillTrees = Object.freeze({
   archer: Object.freeze([Object.freeze({ level: 1, skill: LONG_SHOT })]),
   vanguard: Object.freeze([Object.freeze({ level: 1, skill: CLEAVE })]),
   wizard: Object.freeze([Object.freeze({ level: 1, skill: FIREBALL })]),
+  guard: Object.freeze([Object.freeze({ level: 1, skill: SHIELD_BASH })]),
 });
 
 // Every skill a unit of unitClass knows at the given level, in tree order.

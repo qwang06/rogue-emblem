@@ -1,8 +1,8 @@
 # Unit sprite catalog
 
 What's in `src/assets/units/`: every unit sheet from the source pack, read
-from the pixels. Only `Villager_01`, `Soldier_03`, `Archer_02`, `Vanguard_04` and
-`Vanguard_01` are wired into the game
+from the pixels. Only `Villager_01`, `Soldier_03`, `Archer_02`, `Vanguard_04`,
+`Vanguard_01`, `Soldier_04` and `Acolyte_02` are wired into the game
 (`UNIT_SPRITES` in `src/game/tileset.ts`); everything else is ready to import
 in `src/assets/sprites.ts` when a class needs art.
 
@@ -45,8 +45,9 @@ share a design, and `01` and `02` are each unique. Units with no team design
 
 The game currently gives a class the same art on both teams, so the variant is
 a look rather than a team marker. `Villager_01` (blue), `Soldier_03` (pink), `Archer_02` (orange),
-`Vanguard_04` (brown, axe) and `Vanguard_01` (teal wizard with a staff, the
-wizard class) are what's in use.
+`Vanguard_04` (brown, axe), `Vanguard_01` (teal wizard with a staff, the
+wizard class) `Soldier_04` (brown tower shield, the guard class) and `Acolyte_02` (orange
+robe, the acolyte class) are what's in use.
 
 ## Units
 
