@@ -1,6 +1,6 @@
 # Game data
 
-Authored content that the game loads at build time. Edit these files and the dev server reloads the game. `npm test` parses every file and fails with the file and line number if something's wrong.
+Authored content that the game loads at build time. Edit these files and the dev server reloads the game. `npm run test:all` parses every file and fails with the file and line number if something's wrong.
 
 ## `characters.json`
 

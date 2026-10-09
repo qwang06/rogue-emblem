@@ -20,6 +20,10 @@ Any work that touches art — picking or changing terrain frame indices or sprit
 - **Unit test the pure functions.** Every pure function implementing a game rule gets unit tests covering normal cases and edge cases (e.g. zero movement, blocked tiles, unit death, boundary of the map). Tests should not require Phaser or a running game instance to execute.
 - **Don't rely on visual/browser testing to verify game logic.** As game rules grow more complex, eyeballing a rendered scene stops being a tractable way to confirm correctness. Unit tests on the pure functions are the source of truth — run those to verify a change instead of launching the game in a browser.
 
+## Running tests
+
+`npm test` runs only the test files affected by what changed since `main` (committed on the branch or not), using Vitest's `--changed`: a test runs when it imports a changed file, directly or indirectly. Use it to verify a change. Run the full suite with `npm run test:all` only when asked to; CI runs the full suite on every push.
+
 ## TypeScript
 
 The codebase is TypeScript in `strict` mode (`tsconfig.json`). Write new files as `.ts` / `.tsx`, not JavaScript, and import them with their `.ts` / `.tsx` extension. Run `npm run typecheck` alongside `npm test` to verify a change.
@@ -34,7 +38,7 @@ Prettier (`.prettierrc.json`) owns code and Markdown formatting. Don't hand-form
 - If `main` is checked out when you start new work, assume the previous work is finished and create a new branch off `main` for it before making changes, unless the user says otherwise. Otherwise work on whatever branch is currently checked out, and only create other branches when asked.
 - Never commit directly to `main`.
 - Create branches off `main` with a descriptive name (e.g. `feature/grid-cursor`, `fix/combat-crit-calc`) unless told otherwise.
-- When asked to open a PR, make sure tests pass and `ARCHITECTURES.md` is updated if the change warrants it, then push the branch and open the PR against `main` with `gh pr create`.
+- When asked to open a PR, make sure `npm test` passes and `ARCHITECTURES.md` is updated if the change warrants it, then push the branch and open the PR against `main` with `gh pr create`.
 - Don't merge the PR yourself; merging into `main` happens through the PR on GitHub, not a local `git merge`.
 
 ## Roadmap
