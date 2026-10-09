@@ -11,7 +11,7 @@ The plan for growing Rogue Emblem into a Fire Emblem–style tactics game, one s
 
 ## Where we are
 
-Already built: grid and terrain move costs, movement range and arrow, player/enemy phases with win/loss, one-way attacks (`attack - defense`; counterattacks and FE-style stats since 1.1/1.2), skills with mana, consumable items, deployment, a rushing enemy AI, dialog, title/pause menus, and training mode. Phase 1 added counterattacks, hit/crit/doubling, the combat forecast, and XP with growth-rate level ups. Phase 2 has begun: units fight with weapons (2.1). There are still only two classes (Villager and Soldier). Warband Mode (Dungeon Mode until W.0) is a ladder of generated overworld maps with nothing carried between stages; Phase W turns it into the game's roguelike run.
+Already built: grid and terrain move costs, movement range and arrow, player/enemy phases with win/loss, one-way attacks (`attack - defense`; counterattacks and FE-style stats since 1.1/1.2), skills with mana, consumable items, deployment, a rushing enemy AI, dialog, title/pause menus, and training mode. Phase 1 added counterattacks, hit/crit/doubling, the combat forecast, and XP with growth-rate level ups. Phase 2 has begun: units fight with weapons (2.1). 2.3 has begun: Villager and Soldier are joined by the Archer. Warband Mode (Dungeon Mode until W.0) is a ladder of generated overworld maps with nothing carried between stages; Phase W turns it into the game's roguelike run.
 
 ---
 
@@ -95,14 +95,17 @@ The single biggest change to how the game feels. After this phase every attack i
 
 One class per sub-PR is fine. Each class: stat line, growth rates, weapon types it can use, movement type, sprite (load the `tileset` skill for art), skill tree entries.
 
-- [ ] **Lord** — sword, the unit whose death loses the battle (used in 3.4).
-- [ ] **Fighter** — axe, high HP/strength, low skill.
-- [ ] **Archer** — bow, range 2 only (can't counter adjacent).
-- [ ] **Mage** — tomes, magic damage vs resistance.
-- [ ] **Cleric** — staff only: new **Heal** action targeting adjacent allies; earns XP from healing.
-- [ ] **Knight** — lance, high defense, low movement and speed.
-- [ ] **Pegasus Knight** — lance, flier, high resistance (needs 2.4).
-- [ ] **Cavalier** — sword/lance, mounted (needs 2.4).
+_Decided:_ classes are named after the unit art in `src/assets/units/` (see the tileset skill's `units-catalog.md`), not Fire Emblem's classes, since 2.1's weapons and W.6's traits already use those names and the pack has no sword, lance, knight or lord art. Each entry notes the Fire Emblem role it stands in for.
+
+- [ ] **Lord** — the unit whose death loses the battle. No art of its own; build it with 3.3/3.4, where its rule lives.
+- [ ] **Vanguard** (Fighter) — Iron Axe, `Vanguard_04` art, high HP/strength, low skill.
+- [x] **Archer** — bow, range 2 only (can't counter adjacent).
+  - _Notes:_ `src/game/Archer.ts`, Iron Bow, `Archer_02` art. Frail and accurate (9 HP, 3 STR, 5 SKL, 4 SPD, 1 DEF, 1 RES). Learns **Long Shot** (2 MP, range 1–3, its regular hit, no counter), which reuses the thrown-stone animation until there's an arrow one. Selectable in Training, where two archers spar.
+- [ ] **Wizard** (Mage) — Fire, the staff `Vanguard_01` art, magic damage vs resistance.
+- [ ] **Acolyte** (Cleric) — `Acolyte` art, staff only: new **Heal** action targeting adjacent allies; earns XP from healing.
+- [ ] **Guard** (Knight) — Iron Spear, the tower-shield `Soldier_04` art, high defense, low movement and speed.
+- [ ] **Beast Rider** (Pegasus Knight) — `BeastRider` art, flier, high resistance (needs 2.4).
+- [ ] **Cavalier** — mounted (needs 2.4). The pack has no horse art, so this waits on art or is dropped.
 
 ### [ ] 2.4 Movement types
 

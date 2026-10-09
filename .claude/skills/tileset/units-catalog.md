@@ -1,7 +1,7 @@
 # Unit sprite catalog
 
 What's in `src/assets/units/`: every unit sheet from the source pack, read
-from the pixels. Only `Villager_01` and `Soldier_03` are wired into the game
+from the pixels. Only `Villager_01`, `Soldier_03` and `Archer_02` are wired into the game
 (`UNIT_SPRITES` in `src/game/tileset.ts`); everything else is ready to import
 in `src/assets/sprites.ts` when a class needs art.
 
@@ -43,8 +43,8 @@ share a design, and `01` and `02` are each unique. Units with no team design
 (acolytes, boats, rams) are only recolored.
 
 The game currently gives a class the same art on both teams, so the variant is
-a look rather than a team marker. `Villager_01` (blue) and `Soldier_03` (pink)
-are what's in use.
+a look rather than a team marker. `Villager_01` (blue), `Soldier_03` (pink) and
+`Archer_02` (orange) are what's in use.
 
 ## Units
 

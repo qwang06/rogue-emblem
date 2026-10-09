@@ -164,6 +164,7 @@ export const DEFAULT_BUILDING_PALETTE: BuildingPaletteName = 'a-stone';
 export const UNIT_SPRITES: Record<string, string> = {
   villager: 'Villager_01',
   soldier: 'Soldier_03',
+  archer: 'Archer_02',
 };
 
 // Art for a unit whose class has none of its own (or no class).

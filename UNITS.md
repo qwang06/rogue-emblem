@@ -1,6 +1,6 @@
 # UNITS.md
 
-Reference for every unit class: base stats, growth rates, caps, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Villager.ts`, `src/game/Soldier.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
+Reference for every unit class: base stats, growth rates, caps, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Villager.ts`, `src/game/Soldier.ts`, `src/game/Archer.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
 
 ## How the numbers work
 
@@ -19,7 +19,7 @@ Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.m
 
 ## Weapons
 
-One starter weapon per armed unit in the unit catalog. Only Fists and the Iron Spear are carried by a class yet; the rest wait for their classes (milestone 2.3).
+One starter weapon per armed unit in the unit catalog. Fists, the Iron Spear and the Iron Bow are carried by a class; the rest wait for their classes (milestone 2.3).
 
 | Weapon     | Type     | Mt  | Hit | Crit | Wt  | Rng | Uses | For (catalog art)           |
 | ---------- | -------- | --- | --- | ---- | --- | --- | ---- | --------------------------- |
@@ -85,16 +85,45 @@ The spear-and-shield infantry: the enemy in the demo battle, and a choice in Tra
 
 Carries an Iron Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
+## Archer
+
+The ranged infantry: frail but accurate. Its bow only reaches two tiles away, so it can't strike or counter a foe on the next tile, and Long Shot is how it hits from further off (or up close).
+
+| Stat | Base | Growth | Cap |
+| ---- | ---- | ------ | --- |
+| HP   | 9    | 60%    | 40  |
+| MP   | 5    | 40%    | 30  |
+| STR  | 3    | 40%    | 20  |
+| MAG  | 0    | 5%     | 20  |
+| SKL  | 5    | 55%    | 20  |
+| SPD  | 4    | 45%    | 20  |
+| LCK  | 2    | 35%    | 20  |
+| DEF  | 1    | 20%    | 20  |
+| RES  | 1    | 20%    | 20  |
+| MOV  | 5    | –      | –   |
+
+| Weapon types | Starting weapon |
+| ------------ | --------------- |
+| physical     | Iron Bow        |
+
+| Skill     | Learned at | Mana | Range | Damage          |
+| --------- | ---------- | ---- | ----- | --------------- |
+| Long Shot | 1          | 2    | 1–3   | The regular hit |
+
+Carries an Iron Bow, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
+
 ## Matchups at level 1
 
-The two classes share a stat line, so the difference is the weapon: the soldier's spear adds 1 might.
+Villager and Soldier share a stat line, so between them the difference is the weapon: the soldier's spear adds 1 might. Each attack is from as close as the attacker's weapon reaches (2 tiles for the bow).
 
-| Attacker | Weapon     | Damage | Hit | Crit | Strikes |
-| -------- | ---------- | ------ | --- | ---- | ------- |
-| Villager | Fists      | 2      | 79% | 0%   | 1       |
-| Soldier  | Iron Spear | 3      | 79% | 0%   | 1       |
+| Attacker | Target   | Weapon     | Damage | Hit | Crit | Strikes |
+| -------- | -------- | ---------- | ------ | --- | ---- | ------- |
+| Villager | Soldier  | Fists      | 2      | 79% | 0%   | 1       |
+| Soldier  | Villager | Iron Spear | 3      | 79% | 0%   | 1       |
+| Archer   | Soldier  | Iron Bow   | 3      | 83% | 0%   | 1       |
 
-| Skill        | User     | Damage | Hit    | Crit  | Strikes       |
-| ------------ | -------- | ------ | ------ | ----- | ------------- |
-| Throw Stones | Villager | 1      | always | never | 1, no counter |
-| Power Strike | Soldier  | 6      | always | never | 1, no counter |
+| Skill        | User     | Target   | Damage | Hit    | Crit  | Strikes       |
+| ------------ | -------- | -------- | ------ | ------ | ----- | ------------- |
+| Throw Stones | Villager | Soldier  | 1      | always | never | 1, no counter |
+| Power Strike | Soldier  | Villager | 6      | always | never | 1, no counter |
+| Long Shot    | Archer   | Soldier  | 3      | always | never | 1, no counter |
