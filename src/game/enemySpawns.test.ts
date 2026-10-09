@@ -3,7 +3,7 @@ import {
   countEnemies,
   getGroupRoom,
   getWalkingDistances,
-  isInRegion,
+  isInArea,
   NORTH_THIRD,
   pickEnemyTiles,
   type EnemyGroup,
@@ -58,31 +58,31 @@ describe('getWalkingDistances', () => {
   });
 });
 
-describe('isInRegion', () => {
+describe('isInArea', () => {
   it('covers the whole map when unset', () => {
-    expect(FIELD.cells.every((c) => isInRegion(c, {}, 10, 10))).toBe(true);
+    expect(FIELD.cells.every((c) => isInArea(c, {}, 10, 10))).toBe(true);
   });
 
   it('rounds fractions down to whole tiles, the end left out', () => {
-    expect(isInRegion({ x: 0, y: 3 }, { y: [0, 0.4] }, 10, 10)).toBe(true);
-    expect(isInRegion({ x: 0, y: 4 }, { y: [0, 0.4] }, 10, 10)).toBe(false);
-    expect(isInRegion({ x: 0, y: 3 }, NORTH_THIRD, 10, 10)).toBe(false);
-    expect(isInRegion({ x: 0, y: 2 }, NORTH_THIRD, 10, 10)).toBe(true);
+    expect(isInArea({ x: 0, y: 3 }, { y: [0, 0.4] }, 10, 10)).toBe(true);
+    expect(isInArea({ x: 0, y: 4 }, { y: [0, 0.4] }, 10, 10)).toBe(false);
+    expect(isInArea({ x: 0, y: 3 }, NORTH_THIRD, 10, 10)).toBe(false);
+    expect(isInArea({ x: 0, y: 2 }, NORTH_THIRD, 10, 10)).toBe(true);
   });
 
   it('splits an odd map into halves that never overlap', () => {
     const west = { x: [0, 0.5] } as const;
     const east = { x: [0.5, 1] } as const;
     for (let x = 0; x < 11; x++) {
-      expect(isInRegion({ x, y: 0 }, west, 11, 1) !== isInRegion({ x, y: 0 }, east, 11, 1)).toBe(true);
+      expect(isInArea({ x, y: 0 }, west, 11, 1) !== isInArea({ x, y: 0 }, east, 11, 1)).toBe(true);
     }
   });
 
   it('checks both axes', () => {
     const box = { x: [0.5, 1], y: [0, 0.5] } as const;
-    expect(isInRegion({ x: 7, y: 2 }, box, 10, 10)).toBe(true);
-    expect(isInRegion({ x: 2, y: 2 }, box, 10, 10)).toBe(false);
-    expect(isInRegion({ x: 7, y: 7 }, box, 10, 10)).toBe(false);
+    expect(isInArea({ x: 7, y: 2 }, box, 10, 10)).toBe(true);
+    expect(isInArea({ x: 2, y: 2 }, box, 10, 10)).toBe(false);
+    expect(isInArea({ x: 7, y: 7 }, box, 10, 10)).toBe(false);
   });
 });
 
@@ -90,10 +90,10 @@ describe('pickEnemyTiles', () => {
   const pick = (groups: EnemyGroup[], grid = FIELD, seed = 1) =>
     pickEnemyTiles(grid, groups, ZONE, createSeededRng(seed));
 
-  it('places each group in its region', () => {
+  it('places each group in its area', () => {
     const [north, east] = pick([
-      { count: 3, region: NORTH_THIRD },
-      { count: 2, region: { x: [0.8, 1] } },
+      { count: 3, area: NORTH_THIRD },
+      { count: 2, area: { x: [0.8, 1] } },
     ]);
     expect(north).toHaveLength(3);
     expect(east).toHaveLength(2);
@@ -135,7 +135,7 @@ describe('pickEnemyTiles', () => {
 
   it('places fewer when too few tiles qualify, and none when no tile does', () => {
     const [few, none, impossible] = pick([
-      { count: 5, region: { x: [0, 0.1], y: [0, 0.2] } },
+      { count: 5, area: { x: [0, 0.1], y: [0, 0.2] } },
       { count: 3, minDistance: 50 },
       { count: 2, minDistance: 6, maxDistance: 4 },
     ]);
@@ -146,8 +146,8 @@ describe('pickEnemyTiles', () => {
 
   it('gives a later group only what earlier groups left', () => {
     const [first, second] = pick([
-      { count: 2, region: { x: [0, 0.1], y: [0, 0.2] } },
-      { count: 2, region: { x: [0, 0.1], y: [0, 0.2] } },
+      { count: 2, area: { x: [0, 0.1], y: [0, 0.2] } },
+      { count: 2, area: { x: [0, 0.1], y: [0, 0.2] } },
     ]);
     expect(first).toHaveLength(2);
     expect(second).toEqual([]);
@@ -166,27 +166,27 @@ describe('pickEnemyTiles', () => {
 });
 
 describe('getGroupRoom', () => {
-  it('measures the reachable tiles in the region and how many fit the distances', () => {
+  it('measures the reachable tiles in the area and how many fit the distances', () => {
     // Rows 0–1 of the walled field: 20 tiles, all reached through the gap at
     // (0, 5), 8 steps out; the nearest, (0, 1), is 4 more.
-    const room = getGroupRoom(WALLED, { count: 1, region: { y: [0, 0.2] }, maxDistance: 14 }, ZONE);
-    expect(room.inRegion).toBe(20);
+    const room = getGroupRoom(WALLED, { count: 1, area: { y: [0, 0.2] }, maxDistance: 14 }, ZONE);
+    expect(room.inArea).toBe(20);
     expect(room.nearest).toBe(12);
     expect(room.farthest).toBe(8 + 5 + 9);
     expect(room.fits).toBe(1 + 2 + 2);
   });
 
   it('counts the whole map, less the deployment zone, with no limits', () => {
-    expect(getGroupRoom(FIELD, { count: 1 }, ZONE)).toEqual({ inRegion: 98, nearest: 1, farthest: 13, fits: 98 });
+    expect(getGroupRoom(FIELD, { count: 1 }, ZONE)).toEqual({ inArea: 98, nearest: 1, farthest: 13, fits: 98 });
   });
 
-  it('finds no room in a region nothing can reach', () => {
+  it('finds no room in an area nothing can reach', () => {
     const boxed = [
       { x: 0, y: 1 },
       { x: 1, y: 0 },
     ].reduce((grid: Grid, p) => setTerrain(grid, p.x, p.y, 'water'), FIELD);
-    const room = getGroupRoom(boxed, { count: 1, region: { x: [0, 0.1], y: [0, 0.1] } }, ZONE);
-    expect(room).toEqual({ inRegion: 0, nearest: null, farthest: null, fits: 0 });
+    const room = getGroupRoom(boxed, { count: 1, area: { x: [0, 0.1], y: [0, 0.1] } }, ZONE);
+    expect(room).toEqual({ inArea: 0, nearest: null, farthest: null, fits: 0 });
   });
 });
 

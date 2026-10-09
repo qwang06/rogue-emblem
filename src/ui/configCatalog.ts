@@ -6,7 +6,7 @@
 import { CHARACTERS, DIALOGS } from '../data/dialogs.ts';
 import { STORY_CHAPTERS } from '../game/battleSetup.ts';
 import { CRIT_MULTIPLIER, DOUBLE_THRESHOLD } from '../game/combatStats.ts';
-import { DUNGEON_CONFIGS } from '../data/dungeon.ts';
+import { REGION_CONFIGS } from '../data/regions.ts';
 import { EXPERIENCE_PER_LEVEL, GROWTH_STATS, MAX_LEVEL } from '../game/experience.ts';
 import { STARTING_ITEMS } from '../game/items.ts';
 import { TERRAIN_MOVE_COSTS } from '../game/movement.ts';
@@ -72,11 +72,11 @@ export function getConfigCatalog(): readonly ConfigGroup[] {
           summary: plural(STORY_CHAPTERS.length, 'chapter'),
         },
         {
-          id: 'dungeon-floors',
-          title: 'Dungeon Floors',
-          description: 'Per-floor settings for generated maps: size, terrain patches, enemies, trees and palette.',
-          sources: ['src/data/dungeon.json'],
-          summary: plural(DUNGEON_CONFIGS.length, 'floor config'),
+          id: 'regions',
+          title: 'Regions',
+          description: "Warband Mode's generated maps by region: size, terrain patches, enemies, trees and palette.",
+          sources: ['src/data/regions.json'],
+          summary: plural(REGION_CONFIGS.length, 'region'),
         },
         {
           id: 'terrain-costs',

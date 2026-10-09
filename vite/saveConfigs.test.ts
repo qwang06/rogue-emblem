@@ -61,7 +61,7 @@ describe('saveConfig', () => {
     expect(writes).toEqual([]);
   });
 
-  it('saves the dungeon floors to the built-in data file', () => {
-    expect(SAVABLE_CONFIGS['dungeon-floors'].file).toBe('src/data/dungeon.json');
+  it('saves the regions to the built-in data file', () => {
+    expect(SAVABLE_CONFIGS['regions'].file).toBe('src/data/regions.json');
   });
 });

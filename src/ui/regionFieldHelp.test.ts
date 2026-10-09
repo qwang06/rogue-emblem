@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { FIELD_HELP } from './dungeonFieldHelp.tsx';
+import { FIELD_HELP } from './regionFieldHelp.tsx';
 
-// Every setting the Dungeon Floors form has a field for (size pairs are
+// Every setting the Regions form has a field for (size pairs are
 // explained with their counts).
 const EXPLAINED = [
-  'floorsPerConfig',
+  'stagesPerRegion',
   'name',
   'description',
   'width',

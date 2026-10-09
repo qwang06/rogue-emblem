@@ -1,15 +1,15 @@
-// One floor config on the Dungeon Floors page, as a form: its name and
-// notes, a sample map, the map and terrain settings, and its enemy groups.
-// Every field edits the page's draft (see dungeonDraft.ts); blank optional
+// One region on the Regions page, as a form: its name and notes, a sample
+// map, the map and terrain settings, and its enemy groups. Every field
+// edits the page's draft (see regionsDraft.ts); blank optional
 // fields are left out of the file, so the generator's defaults (shown as
 // placeholders) apply.
 
 import { useMemo } from 'react';
-import type { DungeonConfig } from '../game/dungeonConfigs.ts';
-import { DUNGEON_LIMITS } from '../game/dungeonConfigFile.ts';
-import { createDungeonLevel } from '../game/dungeonLevel.ts';
 import { MAP_GEN_DEFAULTS } from '../game/mapGen.ts';
 import { BUILDING_PALETTES } from '../game/tileset.ts';
+import type { RegionConfig } from '../game/warband/regions.ts';
+import { REGION_LIMITS } from '../game/warband/regionsFile.ts';
+import { createStageLevel } from '../game/warband/stageLevel.ts';
 import { CheckboxField, NumberField, PairField, SelectField, TextField, type DraftForm } from './DraftFields.tsx';
 import {
   getIn,
@@ -19,7 +19,7 @@ import {
   NEW_ENEMY_GROUP,
   removeAt,
   type DraftPath,
-} from './dungeonDraft.ts';
+} from './regionsDraft.ts';
 import { describeEnemyGroup } from './enemyGroups.ts';
 import { InfoPopover } from './InfoPopover.tsx';
 import { getMapPreview } from './mapPreview.ts';
@@ -34,22 +34,22 @@ const PATCHES = [
 ] as const;
 
 const PALETTES = Object.keys(BUILDING_PALETTES);
-const [MIN_SIZE, MAX_SIZE] = DUNGEON_LIMITS.mapSize;
+const [MIN_SIZE, MAX_SIZE] = REGION_LIMITS.mapSize;
 
 const defaultHint = (value: number | boolean) => `default ${value}`;
 
-export interface FloorActions {
+export interface RegionActions {
   moveUp?: () => void;
   moveDown?: () => void;
   duplicate: () => void;
   remove?: () => void;
 }
 
-export function DungeonFloorEditor({
+export function RegionEditor({
   form,
   index,
   label,
-  floor,
+  region,
   seed,
   saved,
   actions,
@@ -57,31 +57,32 @@ export function DungeonFloorEditor({
   form: DraftForm;
   index: number;
   label: string;
-  // The floor as last checked (null while the draft has never parsed), for
-  // the sample map and group summaries; may lag the form while it has an error.
-  floor: DungeonConfig | null;
+  // The region as last checked (null while the draft has never parsed),
+  // for the sample map and group summaries; may lag the form while it has
+  // an error.
+  region: RegionConfig | null;
   seed: number;
-  // Whether the floor matches what's saved, so the full map preview (which
-  // plays saved floors) shows it.
+  // Whether the region matches what's saved, so the full map preview
+  // (which plays saved regions) shows it.
   saved: boolean;
-  actions: FloorActions;
+  actions: RegionActions;
 }) {
-  const path: DraftPath = ['floors', index];
+  const path: DraftPath = ['regions', index];
   const at = (...rest: (string | number)[]): DraftPath => [...path, ...rest];
   const name = getIn(form.draft, at('name'));
   const groups = getIn(form.draft, at('enemies'));
   const groupCount = Array.isArray(groups) ? groups.length : 0;
   const hasError = isErrorWithin(form.error, path);
-  const previewHref = routeHash({ page: 'dungeon-preview', index, seed });
-  const maxGroups = DUNGEON_LIMITS.enemyGroups[1];
+  const previewHref = routeHash({ page: 'region-preview', index, seed });
+  const maxGroups = REGION_LIMITS.enemyGroups[1];
 
   return (
-    <li className={hasError ? 'config-card floor-editor floor-editor--invalid' : 'config-card floor-editor'}>
+    <li className={hasError ? 'config-card region-editor region-editor--invalid' : 'config-card region-editor'}>
       <div className="config-card__head">
-        <h3 className="config-card__title">{typeof name === 'string' && name.trim() ? name : 'Untitled floor'}</h3>
+        <h3 className="config-card__title">{typeof name === 'string' && name.trim() ? name : 'Untitled region'}</h3>
         <span className="config-card__badge">{label}</span>
       </div>
-      <div className="floor-editor__actions" role="group" aria-label="Floor order">
+      <div className="region-editor__actions" role="group" aria-label="Region order">
         <button type="button" className="header-button" onClick={actions.moveUp} disabled={!actions.moveUp}>
           Move Up
         </button>
@@ -100,8 +101,8 @@ export function DungeonFloorEditor({
       <TextField form={form} path={at('name')} label="Name" />
       <TextField form={form} path={at('description')} label="Description" multiline />
 
-      {floor && (
-        <figure className="floor-editor__preview">
+      {region && (
+        <figure className="region-editor__preview">
           {saved ? (
             // The link below is the accessible way in; the thumbnail is a shortcut.
             <a
@@ -111,10 +112,10 @@ export function DungeonFloorEditor({
               tabIndex={-1}
               aria-hidden="true"
             >
-              <MapPreview floor={floor} seed={seed} />
+              <MapPreview region={region} seed={seed} />
             </a>
           ) : (
-            <MapPreview floor={floor} seed={seed} />
+            <MapPreview region={region} seed={seed} />
           )}
           <figcaption>
             {saved ? (
@@ -130,9 +131,9 @@ export function DungeonFloorEditor({
         </figure>
       )}
 
-      <fieldset className="floor-editor__section">
+      <fieldset className="region-editor__section">
         <legend>Map</legend>
-        <div className="floor-editor__grid">
+        <div className="region-editor__grid">
           <NumberField form={form} path={at('terrain', 'width')} label="Width" hint={`${MIN_SIZE}–${MAX_SIZE} tiles`} />
           <NumberField
             form={form}
@@ -153,12 +154,12 @@ export function DungeonFloorEditor({
         </div>
       </fieldset>
 
-      <fieldset className="floor-editor__section">
+      <fieldset className="region-editor__section">
         <legend>Terrain</legend>
         <p className="draft-field__hint">Blank uses the default shown.</p>
-        <div className="floor-editor__grid">
+        <div className="region-editor__grid">
           {PATCHES.map(([count, size, title]) => (
-            <div key={count} className="floor-editor__patch">
+            <div key={count} className="region-editor__patch">
               <NumberField
                 form={form}
                 path={at('terrain', count)}
@@ -188,7 +189,7 @@ export function DungeonFloorEditor({
         </div>
       </fieldset>
 
-      <fieldset className="floor-editor__section">
+      <fieldset className="region-editor__section">
         <legend>
           Enemies
           {form.help?.enemies && <InfoPopover title={form.help.enemies.title}>{form.help.enemies.body}</InfoPopover>}
@@ -200,7 +201,7 @@ export function DungeonFloorEditor({
         </p>
         <ol className="enemy-groups">
           {Array.from({ length: groupCount }, (_, g) => {
-            const group = floor?.enemies[g];
+            const group = region?.enemies[g];
             return (
               <li
                 key={g}
@@ -225,7 +226,7 @@ export function DungeonFloorEditor({
                 {isErrorAt(form.error, at('enemies', g)) && (
                   <p className="upload-notice upload-notice--error">{form.message}</p>
                 )}
-                <div className="floor-editor__grid">
+                <div className="region-editor__grid">
                   <NumberField form={form} path={at('enemies', g, 'count')} label="Count" />
                   <NumberField
                     form={form}
@@ -241,15 +242,15 @@ export function DungeonFloorEditor({
                   />
                   <PairField
                     form={form}
-                    path={at('enemies', g, 'region', 'x')}
-                    label="Region x"
+                    path={at('enemies', g, 'area', 'x')}
+                    label="Area x"
                     placeholders={['0', '1']}
                     names={['from', 'to']}
                   />
                   <PairField
                     form={form}
-                    path={at('enemies', g, 'region', 'y')}
-                    label="Region y"
+                    path={at('enemies', g, 'area', 'y')}
+                    label="Area y"
                     placeholders={['0', '1']}
                     names={['from', 'to']}
                   />
@@ -271,16 +272,16 @@ export function DungeonFloorEditor({
   );
 }
 
-// The floor's map generated from `seed`, a square per tile.
-export function MapPreview({ floor, seed }: { floor: DungeonConfig; seed: number }) {
-  const level = useMemo(() => createDungeonLevel(seed, floor), [seed, floor]);
+// The region's map generated from `seed`, a square per tile.
+export function MapPreview({ region, seed }: { region: RegionConfig; seed: number }) {
+  const level = useMemo(() => createStageLevel(seed, region), [seed, region]);
   const cells = useMemo(() => getMapPreview(level), [level]);
   return (
     <div
       className="map-preview"
       style={{ gridTemplateColumns: `repeat(${level.grid.width}, 1fr)` }}
       role="img"
-      aria-label={`Sample ${level.grid.width} by ${level.grid.height} map for ${floor.name}`}
+      aria-label={`Sample ${level.grid.width} by ${level.grid.height} map for ${region.name}`}
     >
       {cells.map((cell) => (
         <span

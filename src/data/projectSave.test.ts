@@ -12,18 +12,18 @@ describe('saveConfigToProject', () => {
       calls.push([String(url), init!]);
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     };
-    expect(await saveConfigToProject('dungeon-floors', '{}', send as typeof fetch)).toBeNull();
+    expect(await saveConfigToProject('regions', '{}', send as typeof fetch)).toBeNull();
     expect(calls).toHaveLength(1);
     const [url, init] = calls[0];
-    expect(url).toBe('/__configs/dungeon-floors');
+    expect(url).toBe('/__configs/regions');
     expect(init.method).toBe('POST');
     expect(init.body).toBe('{}');
     expect((init.headers as Record<string, string>)[SAVE_CONFIG_HEADER]).toBe('1');
   });
 
   it("gives the server's reason when it turns the file away", async () => {
-    const send = answer(400, { ok: false, error: 'floors must be a list' });
-    expect(await saveConfigToProject('dungeon-floors', '{}', send as typeof fetch)).toBe('floors must be a list');
+    const send = answer(400, { ok: false, error: 'regions must be a list' });
+    expect(await saveConfigToProject('regions', '{}', send as typeof fetch)).toBe('regions must be a list');
   });
 
   it('gives the status when the answer has no reason', async () => {

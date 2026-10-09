@@ -1,4 +1,4 @@
-// Form controls bound to one setting in a JSON draft (see dungeonDraft.ts):
+// Form controls bound to one setting in a JSON draft (see regionsDraft.ts):
 // each reads its value at `path`, writes edits back through `form.edit`,
 // and is marked invalid when the draft's error names its path.
 
@@ -11,7 +11,7 @@ import {
   type DraftPath,
   type DraftValue,
   type Json,
-} from './dungeonDraft.ts';
+} from './regionsDraft.ts';
 import { InfoPopover } from './InfoPopover.tsx';
 
 export interface DraftForm {

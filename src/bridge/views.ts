@@ -136,7 +136,7 @@ export interface PhaseBannerView extends TurnView {
 }
 
 export interface ObjectiveView extends ObjectiveText {
-  // The battle's title, e.g. "Floor 2: Lakeside" (see describeBattle).
+  // The battle's title, e.g. "Stage 2: Lakeside" (see describeBattle).
   battle: string;
 }
 

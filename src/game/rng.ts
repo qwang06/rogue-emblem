@@ -16,6 +16,12 @@ export function createSeededRng(seed: number): Rng {
   };
 }
 
+// A fresh random seed, e.g. for a new generated map. Not seeded itself:
+// it's where a seed comes from.
+export function randomSeed(): number {
+  return Math.floor(Math.random() * 2 ** 32);
+}
+
 // A whole number from min to max, both included.
 export function randomInt(rng: Rng, min: number, max: number): number {
   return min + Math.floor(rng() * (max - min + 1));

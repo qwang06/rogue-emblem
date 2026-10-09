@@ -26,11 +26,11 @@ export interface SavableConfig {
 }
 
 export const SAVABLE_CONFIGS: Readonly<Record<string, SavableConfig>> = Object.freeze({
-  'dungeon-floors': {
-    file: 'src/data/dungeon.json',
-    module: '/src/game/dungeonConfigFile.ts',
-    parse: 'parseDungeonSettings',
-    format: 'formatDungeonSettings',
+  regions: {
+    file: 'src/data/regions.json',
+    module: '/src/game/warband/regionsFile.ts',
+    parse: 'parseRegionSettings',
+    format: 'formatRegionSettings',
   },
 });
 

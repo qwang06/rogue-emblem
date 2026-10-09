@@ -11,7 +11,7 @@ The plan for growing Rogue Emblem into a Fire Emblem–style tactics game, one s
 
 ## Where we are
 
-Already built: grid and terrain move costs, movement range and arrow, player/enemy phases with win/loss, one-way attacks (`attack - defense`; counterattacks and FE-style stats since 1.1/1.2), skills with mana, consumable items, deployment, a rushing enemy AI, dialog, title/pause menus, and training mode. Phase 1 added counterattacks, hit/crit/doubling, the combat forecast, and XP with growth-rate level ups. Phase 2 has begun: units fight with weapons (2.1). There are still only two classes (Villager and Soldier). Dungeon Mode is a ladder of generated overworld maps with nothing carried between floors; Phase W plans to turn it into **Warband Mode**, the game's roguelike run.
+Already built: grid and terrain move costs, movement range and arrow, player/enemy phases with win/loss, one-way attacks (`attack - defense`; counterattacks and FE-style stats since 1.1/1.2), skills with mana, consumable items, deployment, a rushing enemy AI, dialog, title/pause menus, and training mode. Phase 1 added counterattacks, hit/crit/doubling, the combat forecast, and XP with growth-rate level ups. Phase 2 has begun: units fight with weapons (2.1). There are still only two classes (Villager and Soldier). Warband Mode (Dungeon Mode until W.0) is a ladder of generated overworld maps with nothing carried between stages; Phase W turns it into the game's roguelike run.
 
 ---
 
@@ -142,7 +142,7 @@ One class per sub-PR is fine. Each class: stat line, growth rates, weapon types 
 - Pure `getBattleOutcome(state, objective)` generalizes the existing rout check. Loss conditions: Lord dies, or all units die.
 - Objective shown in the HUD; Seize as a new action on the target tile.
 - **Tests:** each objective's win/loss, Lord death overrides everything, turn-limit boundaries.
-- _Progress:_ `src/game/objectives.ts` has the `Objective` type with `rout` only (the default for every level; a dungeon config can set its own), and the Objective screen shows it after the opening dialog. The other objective kinds, `getBattleOutcome(state, objective)`, Lord death and the in-battle HUD readout are still to do.
+- _Progress:_ `src/game/objectives.ts` has the `Objective` type with `rout` only (the default for every level; a Warband region can set its own), and the Objective screen shows it after the opening dialog. The other objective kinds, `getBattleOutcome(state, objective)`, Lord death and the in-battle HUD readout are still to do.
 
 ### [ ] 3.4 Permadeath and difficulty modes
 
@@ -222,12 +222,13 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 - **One modifier pipeline.** Traits, relics, elite enemies and (later) terrain bonuses are all _modifiers_ on the existing formulas, fed in as data through one pure module, so combat rules stay pure and testable and each new source of bonuses doesn't need its own plumbing.
 - **Outside dependencies:** 2.3's classes are the big one. Recruits, traits and enemy variety are thin with only Villagers and Soldiers, so land classes before or alongside W.6. W.8 completes 3.3 and W.9 uses 3.5's commands. W.4 and W.7 cover 4.4 and 4.5 for this mode.
 
-### [ ] W.0 Rename Dungeon Mode to Warband Mode
+### [x] W.0 Rename Dungeon Mode to Warband Mode
 
 - Title menu (`titleMenu.ts`) and every user-facing label; `BattleSetup`'s `'dungeon'` mode becomes `'warband'` with `stage` instead of `floor`; `describeBattle` reads "Stage 3: Highlands".
 - The config editor's Dungeon Floors page becomes Regions (`DungeonConfigPage.tsx`, `configCatalog.ts`, `route.ts`); `src/data/dungeon.json` becomes `regions.json`, and `dungeonConfigFile.ts` keeps reading files in the old shape.
 - Optionally move the mode's modules under `src/game/warband/`. Update `ARCHITECTURES.md` and `src/data/README.md`.
 - **Tests:** existing dungeon tests renamed and passing; an old-shape settings file still parses.
+- _Done:_ the modules live in `src/game/warband/` (`regions.ts`, `regionsFile.ts`, `stageLevel.ts`). An enemy group's spawn box is now `area` (it was `region`, which clashed with the new term); old files' `region` still reads. Uploads keep their old storage key so they still play.
 
 ### [ ] W.1 Run state, carry-over and permadeath
 
@@ -235,7 +236,7 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 - `applyBattleResult(run, result)` writes XP and levels, HP, weapon uses, items used and deaths back to the roster; the fallen leave it for good.
 - HP carries over between stages (resting at camp comes in W.4), so attrition is the tension.
 - Each stage's seed is derived from the run seed (`createSeededRng`), so a run is reproducible.
-- `createDungeonLevel(seed, config)` becomes a stage builder that takes the run's roster instead of `PLAYER_ROSTER`.
+- `createStageLevel(seed, region)` (`src/game/warband/stageLevel.ts`) takes the run's roster instead of `PLAYER_ROSTER`.
 - The run is saved to `localStorage` (try/catch) so it survives a reload; a run-scoped slice of 4.1.
 - Run-over and victory screens in React.
 - **Tests:** snapshot round-trip, battle results merged (XP, level ups, HP, broken weapons, used items), deaths removed, an empty roster ends the run, the same seed gives the same stages, corrupt saves rejected.

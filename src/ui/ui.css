@@ -100,7 +100,7 @@ body {
   cursor: pointer;
 }
 
-/* Links that look like header buttons (e.g. a preview's Back to Floors). */
+/* Links that look like header buttons (e.g. a preview's Back to Regions). */
 a.header-button {
   display: inline-block;
   text-decoration: none;
@@ -1709,14 +1709,14 @@ kbd {
   gap: 8px;
 }
 
-/* Dungeon Floors page. */
-.dungeon-summary {
+/* Regions page. */
+.regions-summary {
   margin-bottom: 12px;
 }
 
-/* Dungeon Floors editor: one card per floor config, its fields in a grid
+/* Regions editor: one card per region, its fields in a grid
    of labeled inputs. */
-.dungeon-floors {
+.region-list {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1725,17 +1725,17 @@ kbd {
   list-style: none;
 }
 
-.floor-editor--invalid {
+.region-editor--invalid {
   border-color: rgb(240 130 130 / 70%);
 }
 
-.floor-editor__actions {
+.region-editor__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.floor-editor__preview {
+.region-editor__preview {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1743,7 +1743,7 @@ kbd {
   margin: 0;
 }
 
-.floor-editor__section {
+.region-editor__section {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1754,7 +1754,7 @@ kbd {
   border-radius: 3px;
 }
 
-.floor-editor__section legend {
+.region-editor__section legend {
   padding: 0 4px;
   font-family: var(--serif);
   font-size: 0.875rem;
@@ -1762,7 +1762,7 @@ kbd {
   color: var(--gold);
 }
 
-.floor-editor__grid {
+.region-editor__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
   gap: 10px 12px;
@@ -1770,7 +1770,7 @@ kbd {
 }
 
 /* A terrain patch's count and size sit together. */
-.floor-editor__patch {
+.region-editor__patch {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1861,19 +1861,19 @@ kbd {
   color: var(--gold);
 }
 
-.floor-editor__section legend {
+.region-editor__section legend {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-/* A map from above, for explaining regions: the shaded area is the
-   example region, the dot is where the player's units start. */
-.region-diagram {
+/* A map from above, for explaining enemy areas: the shaded part is the
+   example area, the dot is where the player's units start. */
+.area-diagram {
   margin: 2px 0;
 }
 
-.region-diagram__frame {
+.area-diagram__frame {
   display: grid;
   grid-template: auto 1fr auto / auto 1fr auto;
   gap: 3px;
@@ -1881,32 +1881,32 @@ kbd {
   justify-items: center;
 }
 
-.region-diagram__edge {
+.area-diagram__edge {
   font-family: var(--mono);
   font-size: 0.6875rem;
   color: var(--parchment-dim);
 }
 
-.region-diagram__edge--top {
+.area-diagram__edge--top {
   grid-area: 1 / 2;
 }
 
-.region-diagram__edge--bottom {
+.area-diagram__edge--bottom {
   grid-area: 3 / 2;
 }
 
-.region-diagram__edge--left {
+.area-diagram__edge--left {
   grid-area: 2 / 1;
   writing-mode: vertical-rl;
   transform: rotate(180deg);
 }
 
-.region-diagram__edge--right {
+.area-diagram__edge--right {
   grid-area: 2 / 3;
   writing-mode: vertical-rl;
 }
 
-.region-diagram__map {
+.area-diagram__map {
   position: relative;
   grid-area: 2 / 2;
   width: 100%;
@@ -1916,14 +1916,14 @@ kbd {
   border-radius: 2px;
 }
 
-.region-diagram__area {
+.area-diagram__box {
   position: absolute;
   box-sizing: border-box;
   background: rgb(232 200 114 / 45%);
   border: 2px solid var(--gold);
 }
 
-.region-diagram__start {
+.area-diagram__start {
   position: absolute;
   bottom: 3px;
   left: 50%;
@@ -1935,7 +1935,7 @@ kbd {
   transform: translateX(-50%);
 }
 
-.region-diagram figcaption {
+.area-diagram figcaption {
   margin-top: 4px;
   font-size: 0.75rem;
   color: var(--parchment-dim);
@@ -2045,7 +2045,7 @@ textarea.draft-input {
   color: var(--parchment);
 }
 
-.dungeon-summary__fields {
+.regions-summary__fields {
   width: min(100%, 200px);
 }
 
@@ -2086,7 +2086,7 @@ textarea.draft-input {
   background: var(--gold);
 }
 
-/* A floor card's thumbnail opens its full map preview. */
+/* A region card's thumbnail opens its full map preview. */
 .map-preview-link {
   display: block;
   border-radius: 3px;

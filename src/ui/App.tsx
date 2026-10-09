@@ -9,7 +9,7 @@ import { DamagePopups } from './DamagePopups.tsx';
 import { DeploymentBanner } from './DeploymentBanner.tsx';
 import { DeploymentMenu } from './DeploymentMenu.tsx';
 import { DialogBox } from './DialogBox.tsx';
-import { DungeonPreview, DungeonPreviewActions, DungeonPreviewBanner } from './DungeonPreview.tsx';
+import { RegionPreview, RegionPreviewActions, RegionPreviewBanner } from './RegionPreview.tsx';
 import { ExperienceBar } from './ExperienceBar.tsx';
 import { ItemMenu } from './ItemMenu.tsx';
 import { WeaponMenu } from './WeaponMenu.tsx';
@@ -33,8 +33,8 @@ import { useRoute } from './useRoute.ts';
 // where Phaser put its canvas at boot; the title screen covers it while
 // `screen` is 'title', and `LoadingScreen` covers it while a battle's map
 // loads. On the #/configs routes, `ConfigEditor` covers it instead, except
-// for a dungeon floor's preview, which runs the map on the stage read-only
-// (`DungeonPreview`).
+// for a Warband Mode region's preview, which runs the map on the stage read-only
+// (`RegionPreview`).
 //
 // Inside the stage, the HUD overlay sits on top of the canvas: the overlay
 // ignores pointer events so clicks fall through to the game, and
@@ -49,7 +49,7 @@ function cancelOnRightClick(event: MouseEvent) {
 export function App() {
   const screen = useGameStore((state) => state.screen);
   const route = useRoute();
-  const preview = route.page === 'dungeon-preview' ? route : null;
+  const preview = route.page === 'region-preview' ? route : null;
 
   return (
     <div className="page">
@@ -58,12 +58,12 @@ export function App() {
           <>
             <ControlsButton />
             <SettingsButton />
-            {preview ? <DungeonPreviewActions {...preview} /> : <MainMenuButton />}
+            {preview ? <RegionPreviewActions {...preview} /> : <MainMenuButton />}
           </>
         }
       >
         {preview ? (
-          <DungeonPreviewBanner {...preview} />
+          <RegionPreviewBanner {...preview} />
         ) : (
           <>
             <DeploymentBanner />
@@ -102,7 +102,7 @@ export function App() {
       </main>
 
       {preview ? (
-        <DungeonPreview {...preview} />
+        <RegionPreview {...preview} />
       ) : route.page !== 'game' ? (
         <ConfigEditor route={route} />
       ) : (

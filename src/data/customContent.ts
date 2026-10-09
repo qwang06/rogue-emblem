@@ -4,8 +4,8 @@
 
 import type { GameContent } from '../game/battleSetup.ts';
 import { getActiveDialogs } from './customDialogs.ts';
-import { getActiveDungeonSettings } from './customDungeon.ts';
+import { getActiveRegionSettings } from './customRegions.ts';
 
 export function getActiveContent(): GameContent {
-  return { dialogs: getActiveDialogs(), dungeon: getActiveDungeonSettings() };
+  return { dialogs: getActiveDialogs(), regions: getActiveRegionSettings() };
 }

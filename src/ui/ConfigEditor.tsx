@@ -3,14 +3,14 @@ import { gameCommands } from '../bridge/commands.ts';
 import { gameStore } from '../bridge/gameStore.ts';
 import { ConfigsPage } from './ConfigsPage.tsx';
 import { DialogConfigPage } from './DialogConfigPage.tsx';
-import { DungeonConfigPage } from './DungeonConfigPage.tsx';
+import { RegionsConfigPage } from './RegionsConfigPage.tsx';
 import type { Route } from './route.ts';
 
 // Each config that has its own editing page, by catalog id (see
 // configCatalog.ts). The index links to these; the rest are still to come.
 export const CONFIG_PAGES: Readonly<Record<string, ComponentType>> = Object.freeze({
   dialogs: DialogConfigPage,
-  'dungeon-floors': DungeonConfigPage,
+  regions: RegionsConfigPage,
 });
 
 // The config editor, shown on the #/configs routes in place of the title

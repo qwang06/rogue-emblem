@@ -6,9 +6,9 @@ describe('describeEnemyGroup', () => {
     expect(describeEnemyGroup({ count: 3 })).toBe('3');
   });
 
-  it('lists the region as percentages of the map', () => {
-    expect(describeEnemyGroup({ count: 2, region: { y: [0, 0.34] } })).toBe('2 · rows 0–34%');
-    expect(describeEnemyGroup({ count: 1, region: { x: [0.5, 1], y: [0.25, 0.75] } })).toBe(
+  it('lists the area as percentages of the map', () => {
+    expect(describeEnemyGroup({ count: 2, area: { y: [0, 0.34] } })).toBe('2 · rows 0–34%');
+    expect(describeEnemyGroup({ count: 1, area: { x: [0.5, 1], y: [0.25, 0.75] } })).toBe(
       '1 · columns 50–100% · rows 25–75%',
     );
   });
@@ -20,7 +20,7 @@ describe('describeEnemyGroup', () => {
     expect(describeEnemyGroup({ count: 1, minDistance: 4, maxDistance: 4 })).toBe('1 · 4 steps');
   });
 
-  it('puts the region before the distance', () => {
-    expect(describeEnemyGroup({ count: 2, region: { y: [0, 0.5] }, minDistance: 6 })).toBe('2 · rows 0–50% · 6+ steps');
+  it('puts the area before the distance', () => {
+    expect(describeEnemyGroup({ count: 2, area: { y: [0, 0.5] }, minDistance: 6 })).toBe('2 · rows 0–50% · 6+ steps');
   });
 });

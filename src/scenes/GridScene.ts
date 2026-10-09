@@ -41,7 +41,7 @@ import {
   getNextBattle,
   type GameContent,
 } from '../game/battleSetup.ts';
-import { randomSeed } from '../game/dungeonLevel.ts';
+import { randomSeed } from '../game/rng.ts';
 import { getStructureTiles } from '../game/structures.ts';
 import { getConsumables, getItemActions } from '../game/items.ts';
 import { getWeaponActions, getWeaponReach, type Weapon, type WeaponAction } from '../game/weapons.ts';
@@ -1052,7 +1052,7 @@ export class GridScene extends Phaser.Scene {
     this.battleOutcome = outcome;
     this.inputLocked = false;
     this.setCursorVisible(false);
-    // Completing the objective moves on to the next chapter or floor.
+    // Completing the objective moves on to the next chapter or stage.
     this.nextBattle = outcome === 'victory' ? getNextBattle(this.setup, randomSeed()) : null;
     const nextBattle = this.nextBattle && describeBattle(this.nextBattle, this.content);
     this.playTriggeredDialog(outcome, () => gameStore.setState({ battleOutcome: outcome, nextBattle }));
