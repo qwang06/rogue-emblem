@@ -166,6 +166,7 @@ export const UNIT_SPRITES: Record<string, string> = {
   soldier: 'Soldier_03',
   archer: 'Archer_02',
   vanguard: 'Vanguard_04',
+  wizard: 'Vanguard_01',
 };
 
 // Art for a unit whose class has none of its own (or no class).

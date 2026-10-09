@@ -4,9 +4,9 @@ import { createUnitOfClass, UNIT_CLASSES } from './unitClasses.ts';
 import type { ClassUnitOptions, Unit } from './Unit.ts';
 
 describe('UNIT_CLASSES', () => {
-  it('lists the villager, the soldier, the archer and the vanguard', () => {
-    expect(UNIT_CLASSES.map((c) => c.id)).toEqual(['villager', 'soldier', 'archer', 'vanguard']);
-    expect(UNIT_CLASSES.map((c) => c.label)).toEqual(['Villager', 'Soldier', 'Archer', 'Vanguard']);
+  it('lists the villager, the soldier, the archer, the vanguard and the wizard', () => {
+    expect(UNIT_CLASSES.map((c) => c.id)).toEqual(['villager', 'soldier', 'archer', 'vanguard', 'wizard']);
+    expect(UNIT_CLASSES.map((c) => c.label)).toEqual(['Villager', 'Soldier', 'Archer', 'Vanguard', 'Wizard']);
   });
 
   it('is frozen', () => {
