@@ -1,6 +1,6 @@
 # UNITS.md
 
-Reference for every unit class: base stats, growth rates, caps, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Villager.ts`, `src/game/Soldier.ts`, `src/game/Archer.ts`, `src/game/Vanguard.ts`, `src/game/Wizard.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
+Reference for every unit class: base stats, growth rates, caps, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Villager.ts`, `src/game/Soldier.ts`, `src/game/Archer.ts`, `src/game/Vanguard.ts`, `src/game/Wizard.ts`, `src/game/Guard.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
 
 ## How the numbers work
 
@@ -166,6 +166,33 @@ The spellcaster: magic instead of strength and resistance instead of defense, wi
 
 Carries Fire, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
+## Guard
+
+The armored infantry behind a tower shield: a soldier's strength and spear with 5 DEF, so a level-1 soldier's spear can't hurt it, but it's slow (1 SPD, 4 MOV) and has no resistance, so magic hits it in full.
+
+| Stat | Base | Growth | Cap |
+| ---- | ---- | ------ | --- |
+| HP   | 12   | 75%    | 40  |
+| MP   | 5    | 25%    | 30  |
+| STR  | 4    | 45%    | 20  |
+| MAG  | 0    | 0%     | 20  |
+| SKL  | 3    | 35%    | 20  |
+| SPD  | 1    | 20%    | 20  |
+| LCK  | 1    | 25%    | 20  |
+| DEF  | 5    | 50%    | 20  |
+| RES  | 0    | 10%    | 20  |
+| MOV  | 4    | –      | –   |
+
+| Weapon types | Starting weapon |
+| ------------ | --------------- |
+| physical     | Iron Spear      |
+
+| Skill       | Learned at | Mana | Range | Damage                      |
+| ----------- | ---------- | ---- | ----- | --------------------------- |
+| Shield Bash | 1          | 2    | 1     | The regular hit with +1 STR |
+
+Carries an Iron Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
+
 ## Matchups at level 1
 
 Villager and Soldier share a stat line, so between them the difference is the weapon: the soldier's spear adds 1 might. Each attack is from as close as the attacker's weapon reaches (2 tiles for the bow).
@@ -177,6 +204,8 @@ Villager and Soldier share a stat line, so between them the difference is the we
 | Archer   | Soldier  | Iron Bow   | 3      | 83% | 0%   | 1       |
 | Vanguard | Soldier  | Iron Axe   | 6      | 61% | 0%   | 1       |
 | Wizard   | Soldier  | Fire       | 6      | 84% | 0%   | 1       |
+| Guard    | Soldier  | Iron Spear | 3      | 78% | 0%   | 1       |
+| Soldier  | Guard    | Iron Spear | 0      | 84% | 0%   | 1       |
 
 | Skill        | User     | Target   | Damage | Hit    | Crit  | Strikes       |
 | ------------ | -------- | -------- | ------ | ------ | ----- | ------------- |
@@ -185,3 +214,4 @@ Villager and Soldier share a stat line, so between them the difference is the we
 | Long Shot    | Archer   | Soldier  | 3      | always | never | 1, no counter |
 | Cleave       | Vanguard | Soldier  | 8      | always | never | 1, no counter |
 | Fireball     | Wizard   | Soldier  | 7      | always | never | 1, no counter |
+| Shield Bash  | Guard    | Soldier  | 4      | always | never | 1, no counter |

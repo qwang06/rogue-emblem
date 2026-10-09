@@ -13,6 +13,7 @@ import {
   FIREBALL,
   LONG_SHOT,
   POWER_STRIKE,
+  SHIELD_BASH,
   SKILL_TREES,
   THROW_STONES,
   type Skill,
@@ -145,10 +146,19 @@ describe('UNITS.md', () => {
       Archer: createUnitOfClass('archer', { team: 'player' }),
       Vanguard: createUnitOfClass('vanguard', { team: 'player' }),
       Wizard: createUnitOfClass('wizard', { team: 'player' }),
+      Guard: createUnitOfClass('guard', { team: 'player' }),
     };
     const text = section('Matchups at level 1');
     const attacks = tableWithHeader(text, 'Attacker');
-    expect(attacks.map(([attacker]) => attacker)).toEqual(['Villager', 'Soldier', 'Archer', 'Vanguard', 'Wizard']);
+    expect(attacks.map(([attacker]) => attacker)).toEqual([
+      'Villager',
+      'Soldier',
+      'Archer',
+      'Vanguard',
+      'Wizard',
+      'Guard',
+      'Soldier',
+    ]);
     for (const [attackerName, targetName, weapon, damage, hit, crit, strikes] of attacks) {
       const attacker = units[attackerName];
       const defender = units[targetName];
@@ -168,6 +178,7 @@ describe('UNITS.md', () => {
       'Long Shot': LONG_SHOT,
       Cleave: CLEAVE,
       Fireball: FIREBALL,
+      'Shield Bash': SHIELD_BASH,
     };
     expect(skills.map(([name]) => name)).toEqual(Object.keys(SKILLS));
     for (const [name, user, target, damage] of skills) {
