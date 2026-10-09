@@ -104,7 +104,7 @@ describe('UNITS.md', () => {
 
       it('lists the weapon types it wields and the weapon it starts with', () => {
         const [[types, weapon]] = tableWithHeader(text, 'Weapon types');
-        expect(types).toBe(unit.weaponTypes.join(', '));
+        expect(types).toBe(unit.weaponTypes.join(', ') || '–');
         expect(weapon).toBe(unit.weapon?.label ?? '–');
       });
 

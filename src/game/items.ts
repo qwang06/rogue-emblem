@@ -1,14 +1,15 @@
 // Pure rules for items. A unit carries an inventory — a frozen list of
-// { item, quantity } entries — of consumables and weapons. Using a
+// { item, quantity } entries — of consumables, weapons and staves. Using a
 // consumable restores one of its stats and uses one up; weapons are
-// fought with (see weapons.ts), and a weapon entry's quantity is the uses
-// it has left. No Phaser, no rendering, no hidden state.
+// fought with (see weapons.ts) and staves heal allies (see healing.ts),
+// and a weapon or staff entry's quantity is the uses it has left. No Phaser, no rendering, no hidden state.
 
 // A consumable: { kind: 'consumable', id, label, stat, amount }. `stat` is
 // what it restores ('health' or 'mana') and `amount` the most it restores
 // in one use.
 
 import type { MenuAction } from './actionMenu.ts';
+import type { Staff } from './healing.ts';
 import type { Weapon } from './weapons.ts';
 
 export type RestoreStat = 'health' | 'mana';
@@ -21,7 +22,7 @@ export interface Consumable {
   amount: number;
 }
 
-export type Item = Consumable | Weapon;
+export type Item = Consumable | Weapon | Staff;
 
 export interface InventoryEntry {
   item: Item;

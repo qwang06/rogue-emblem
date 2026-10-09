@@ -1,6 +1,6 @@
 # UNITS.md
 
-Reference for every unit class: base stats, growth rates, caps, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Villager.ts`, `src/game/Soldier.ts`, `src/game/Archer.ts`, `src/game/Vanguard.ts`, `src/game/Wizard.ts`, `src/game/Guard.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
+Reference for every unit class: base stats, growth rates, caps, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Villager.ts`, `src/game/Soldier.ts`, `src/game/Archer.ts`, `src/game/Vanguard.ts`, `src/game/Wizard.ts`, `src/game/Guard.ts`, `src/game/Acolyte.ts`, `src/game/healing.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
 
 ## How the numbers work
 
@@ -11,6 +11,7 @@ Reference for every unit class: base stats, growth rates, caps, weapons and skil
 - **Crit chance** = (weapon `Crit` + `SKL / 2`) − target's `LCK`, clamped to 0–100%. A crit deals ×3 damage.
 - **Doubling:** a unit strikes twice in an exchange when its attack speed beats the opponent's by 4 or more.
 - **Counters:** the defender strikes back if the attacker is within its weapon's range (`Rng`). Bows and siege engines can't strike adjacent foes.
+- **Healing:** a unit carrying a staff gets a **Heal** action. It restores the staff's power + the healer's `MAG` to a wounded ally in the staff's range, capped at the ally's missing HP, spends one use of the staff (a staff with none left breaks), and earns the healer 10 XP. Staves aren't weapons: they can't attack or counter.
 - **Uses:** every strike, hit or miss, spends one use of the striker's weapon. A weapon with no uses left breaks and is gone, and a unit whose weapon breaks mid-exchange stops striking. Fists never break (`∞`).
 - **Growths** are the % chance a stat rises by 1 on each level up. A stat never grows past its cap. Max level is 20, 100 XP per level.
 - **Skills** always hit, never crit, and the target can't counter. Their damage is the user's regular hit (weapon might included) with any bonus `STR` added, then scaled; scaled damage rounds up. Using one costs mana, earns XP like a landed hit, and spends no weapon uses.
@@ -192,6 +193,36 @@ The armored infantry behind a tower shield: a soldier's strength and spear with 
 | Shield Bash | 1          | 2    | 1     | The regular hit with +1 STR |
 
 Carries an Iron Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
+
+## Acolyte
+
+The healer: it wields no weapon at all, so it can't attack or counter, and instead mends a wounded ally next to it with its Heal staff. At level 1 a heal restores 5 HP (the staff's 2 power + 3 MAG). Frail, but its RES and LCK make it hard to hurt with magic or crit.
+
+| Stat | Base | Growth | Cap |
+| ---- | ---- | ------ | --- |
+| HP   | 8    | 50%    | 40  |
+| MP   | 6    | 50%    | 30  |
+| STR  | 1    | 10%    | 20  |
+| MAG  | 3    | 50%    | 20  |
+| SKL  | 2    | 30%    | 20  |
+| SPD  | 3    | 40%    | 20  |
+| LCK  | 4    | 50%    | 20  |
+| DEF  | 1    | 15%    | 20  |
+| RES  | 4    | 45%    | 20  |
+| MOV  | 5    | –      | –   |
+
+| Weapon types | Starting weapon |
+| ------------ | --------------- |
+| –            | –               |
+
+| Staff | Power | Rng | Uses | Heals at level 1 |
+| ----- | ----- | --- | ---- | ---------------- |
+| Heal  | 2     | 1   | 20   | 5 HP             |
+
+| Skill | Learned at | Mana | Range | Damage |
+| ----- | ---------- | ---- | ----- | ------ |
+
+It learns no skills yet. Carries a Heal staff, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
 ## Matchups at level 1
 
