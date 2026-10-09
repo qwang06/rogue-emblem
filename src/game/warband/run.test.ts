@@ -3,6 +3,7 @@ import { Archer } from '../Archer.ts';
 import { HEALTH_POTION, MANA_POTION } from '../items.ts';
 import { Soldier } from '../Soldier.ts';
 import { Unit } from '../Unit.ts';
+import { UNIT_CLASSES } from '../unitClasses.ts';
 import { Villager } from '../Villager.ts';
 import { FISTS, IRON_BOW, IRON_SPEAR } from '../weapons.ts';
 import {
@@ -56,17 +57,17 @@ describe('createRun', () => {
 });
 
 describe('snapshotUnit and restoreUnit', () => {
-  it('round-trips a fresh unit of each class', () => {
-    for (const unit of [
-      new Soldier({ team: 'player' }),
-      new Archer({ team: 'player' }),
-      new Villager({ team: 'player' }),
-    ]) {
+  it.each(UNIT_CLASSES.map((unitClass) => [unitClass.id, unitClass] as const))(
+    'round-trips a fresh %s, its starting items included',
+    (_, unitClass) => {
+      const unit = unitClass.create({ team: 'player' });
       const restored = restoreUnit(snapshotUnit('u', unit));
       expect(restored).toEqual(unit);
       expect(restored.constructor).toBe(unit.constructor);
-    }
-  });
+      const saved = parseRun(serializeRun(createRun(1, new Map([['u', unit]]))));
+      expect(saved?.roster[0].items).toEqual(snapshotUnit('u', unit).items);
+    },
+  );
 
   it('round-trips a leveled, wounded unit with a worn weapon and a used potion', () => {
     const soldier = new Soldier({ name: 'Alden', team: 'player' });
