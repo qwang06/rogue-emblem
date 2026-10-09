@@ -1,6 +1,6 @@
 {
-  "floorsPerConfig": 1,
-  "floors": [
+  "stagesPerRegion": 1,
+  "regions": [
     {
       "name": "Meadowlands",
       "description": "Open fields: a small map with a few lakes and hills and a farming village.",
@@ -15,7 +15,7 @@
         "ruins": 0,
         "buildings": 3
       },
-      "enemies": [{ "count": 1, "region": { "y": [0, 0.34] } }],
+      "enemies": [{ "count": 1, "area": { "y": [0, 0.34] } }],
       "treeChance": 0.05,
       "palette": "a-stone"
     },
@@ -33,7 +33,7 @@
         "ruins": 1,
         "buildings": 2
       },
-      "enemies": [{ "count": 2, "region": { "y": [0, 0.34] } }],
+      "enemies": [{ "count": 2, "area": { "y": [0, 0.34] } }],
       "treeChance": 0.04,
       "palette": "b-blue"
     },
@@ -52,7 +52,7 @@
         "buildings": 1,
         "turnChance": 0.55
       },
-      "enemies": [{ "count": 3, "region": { "y": [0, 0.34] } }],
+      "enemies": [{ "count": 3, "area": { "y": [0, 0.34] } }],
       "treeChance": 0.1,
       "palette": "a-brown"
     },
@@ -70,7 +70,7 @@
         "ruins": 2,
         "buildings": 2
       },
-      "enemies": [{ "count": 4, "region": { "y": [0, 0.34] } }],
+      "enemies": [{ "count": 4, "area": { "y": [0, 0.34] } }],
       "treeChance": 0.03,
       "palette": "b-white"
     },
@@ -87,7 +87,7 @@
         "ruins": 3,
         "buildings": 3
       },
-      "enemies": [{ "count": 5, "region": { "y": [0, 0.34] } }],
+      "enemies": [{ "count": 5, "area": { "y": [0, 0.34] } }],
       "treeChance": 0.04,
       "palette": "b-red"
     }

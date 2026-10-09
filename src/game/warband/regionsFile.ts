@@ -1,39 +1,43 @@
-// Dungeon Mode's floor settings as a JSON file, so players can write their
-// own and upload them in the config editor:
+// Warband Mode's regions as a JSON file, so players can write their own
+// and upload them in the config editor:
 //
 //   {
-//     "floorsPerConfig": 1,
-//     "floors": [
+//     "stagesPerRegion": 1,
+//     "regions": [
 //       {
 //         "name": "Meadowlands",
 //         "description": "Open fields and a farming village.",
 //         "terrain": { "width": 14, "height": 12, "lakes": 1, "meadowSize": [5, 9] },
-//         "enemies": [{ "count": 2, "region": { "y": [0, 0.34] }, "minDistance": 6 }],
+//         "enemies": [{ "count": 2, "area": { "y": [0, 0.34] }, "minDistance": 6 }],
 //         "treeChance": 0.05,
 //         "palette": "a-stone"
 //       }
 //     ]
 //   }
 //
-// parseDungeonSettings checks every field (types, ranges, known palettes,
+// parseRegionSettings checks every field (types, ranges, known palettes,
 // no unknown keys, so typos don't pass silently) and throws naming the
-// field at fault, e.g. "floors[2].terrain.lakes must be a whole number from
-// 0 to 50". It then generates each floor on a few seeds, so a file that
-// passes can't break a run or come up short of enemies. An old file's
-// "enemyCount": n still reads, as n enemies in the north third.
-// formatDungeonSettings writes settings back out.
+// field at fault, e.g. "regions[2].terrain.lakes must be a whole number
+// from 0 to 50". It then generates each region on a few seeds, so a file
+// that passes can't break a run or come up short of enemies.
+// formatRegionSettings writes settings back out, always in this shape.
+//
+// Files from before Warband Mode still read: Dungeon Mode's
+// { "floorsPerConfig", "floors" } (errors then name those keys), an enemy
+// group's "region" for its area, and "enemyCount": n as n enemies in the
+// north third.
 
-import type { DungeonConfig, DungeonSettings } from './dungeonConfigs.ts';
-import { createDungeonLevel } from './dungeonLevel.ts';
-import { countEnemies, getGroupRoom, NORTH_THIRD, type EnemyGroup, type SpawnRegion } from './enemySpawns.ts';
-import type { Grid, Point } from './grid.ts';
-import type { MapGenOptions } from './mapGen.ts';
-import { BUILDING_PALETTES, type BuildingPaletteName } from './tileset.ts';
+import { countEnemies, getGroupRoom, NORTH_THIRD, type EnemyGroup, type SpawnArea } from '../enemySpawns.ts';
+import type { Grid, Point } from '../grid.ts';
+import type { MapGenOptions } from '../mapGen.ts';
+import { BUILDING_PALETTES, type BuildingPaletteName } from '../tileset.ts';
+import type { RegionConfig, RegionSettings } from './regions.ts';
+import { createStageLevel } from './stageLevel.ts';
 
 // The bounds each number must fall in.
-export const DUNGEON_LIMITS = Object.freeze({
-  floorsPerConfig: [1, 100],
-  floors: [1, 50],
+export const REGION_LIMITS = Object.freeze({
+  stagesPerRegion: [1, 100],
+  regions: [1, 50],
   nameLength: [1, 40],
   descriptionLength: [0, 300],
   mapSize: [6, 48],
@@ -44,20 +48,20 @@ export const DUNGEON_LIMITS = Object.freeze({
   enemyDistance: [1, 100],
 } as const);
 
-// Seeds each floor is test-generated with.
+// Seeds each region is test-generated with.
 const CHECK_SEEDS = [1, 2, 3];
 
 const PATCH_COUNTS = ['lakes', 'mountains', 'forests', 'meadows', 'ruins', 'buildings'] as const;
 const PATCH_SIZES = ['lakeSize', 'mountainSize', 'forestSize', 'meadowSize'] as const;
 const TERRAIN_KEYS = ['width', 'height', ...PATCH_COUNTS, ...PATCH_SIZES, 'castle', 'turnChance'];
-const FLOOR_KEYS = ['name', 'description', 'terrain', 'enemies', 'enemyCount', 'treeChance', 'palette', 'objective'];
+const REGION_KEYS = ['name', 'description', 'terrain', 'enemies', 'enemyCount', 'treeChance', 'palette', 'objective'];
 
 type Json = Record<string, unknown>;
 
-class DungeonFileError extends Error {}
+class RegionsFileError extends Error {}
 
 function fail(path: string, message: string): never {
-  throw new DungeonFileError(`${path} ${message}`);
+  throw new RegionsFileError(`${path} ${message}`);
 }
 
 function object(value: unknown, path: string, keys: readonly string[]): Json {
@@ -82,8 +86,8 @@ function chance(value: unknown, path: string): number {
 
 function sizeRange(value: unknown, path: string): readonly [number, number] {
   if (!Array.isArray(value) || value.length !== 2) fail(path, 'must be a [min, max] pair');
-  const min = wholeNumber(value[0], `${path}[0]`, DUNGEON_LIMITS.patchSize);
-  const max = wholeNumber(value[1], `${path}[1]`, DUNGEON_LIMITS.patchSize);
+  const min = wholeNumber(value[0], `${path}[0]`, REGION_LIMITS.patchSize);
+  const max = wholeNumber(value[1], `${path}[1]`, REGION_LIMITS.patchSize);
   if (min > max) fail(path, 'must have min no larger than max');
   return Object.freeze([min, max] as const);
 }
@@ -91,11 +95,11 @@ function sizeRange(value: unknown, path: string): readonly [number, number] {
 function parseTerrain(value: unknown, path: string): MapGenOptions {
   const json = object(value, path, TERRAIN_KEYS);
   const terrain: Record<string, unknown> = {
-    width: wholeNumber(json.width, `${path}.width`, DUNGEON_LIMITS.mapSize),
-    height: wholeNumber(json.height, `${path}.height`, DUNGEON_LIMITS.mapSize),
+    width: wholeNumber(json.width, `${path}.width`, REGION_LIMITS.mapSize),
+    height: wholeNumber(json.height, `${path}.height`, REGION_LIMITS.mapSize),
   };
   for (const key of PATCH_COUNTS) {
-    if (json[key] !== undefined) terrain[key] = wholeNumber(json[key], `${path}.${key}`, DUNGEON_LIMITS.patchCount);
+    if (json[key] !== undefined) terrain[key] = wholeNumber(json[key], `${path}.${key}`, REGION_LIMITS.patchCount);
   }
   for (const key of PATCH_SIZES) {
     if (json[key] !== undefined) terrain[key] = sizeRange(json[key], `${path}.${key}`);
@@ -112,7 +116,7 @@ function parseTerrain(value: unknown, path: string): MapGenOptions {
 
 function parseDescription(value: unknown, path: string): string | undefined {
   if (value === undefined) return undefined;
-  const [, max] = DUNGEON_LIMITS.descriptionLength;
+  const [, max] = REGION_LIMITS.descriptionLength;
   if (typeof value !== 'string' || value.length > max) fail(path, `must be text of at most ${max} characters`);
   return value.trim();
 }
@@ -127,22 +131,25 @@ function fractions(value: unknown, path: string): readonly [number, number] {
   return Object.freeze([from, to] as const);
 }
 
-function parseRegion(value: unknown, path: string): SpawnRegion {
+function parseArea(value: unknown, path: string): SpawnArea {
   const json = object(value, path, ['x', 'y']);
-  const region: { x?: readonly [number, number]; y?: readonly [number, number] } = {};
-  if (json.x !== undefined) region.x = fractions(json.x, `${path}.x`);
-  if (json.y !== undefined) region.y = fractions(json.y, `${path}.y`);
-  return Object.freeze(region);
+  const area: { x?: readonly [number, number]; y?: readonly [number, number] } = {};
+  if (json.x !== undefined) area.x = fractions(json.x, `${path}.x`);
+  if (json.y !== undefined) area.y = fractions(json.y, `${path}.y`);
+  return Object.freeze(area);
 }
 
 function parseEnemyGroup(value: unknown, path: string): EnemyGroup {
-  const json = object(value, path, ['count', 'region', 'minDistance', 'maxDistance']);
+  // An old file's "region" is the group's area.
+  const json = object(value, path, ['count', 'area', 'region', 'minDistance', 'maxDistance']);
+  if (json.area !== undefined && json.region !== undefined) fail(path, 'must set area or region, not both');
   const group: { -readonly [K in keyof EnemyGroup]: EnemyGroup[K] } = {
-    count: wholeNumber(json.count, `${path}.count`, DUNGEON_LIMITS.enemyCount),
+    count: wholeNumber(json.count, `${path}.count`, REGION_LIMITS.enemyCount),
   };
-  if (json.region !== undefined) group.region = parseRegion(json.region, `${path}.region`);
+  const areaKey = json.region !== undefined ? 'region' : 'area';
+  if (json[areaKey] !== undefined) group.area = parseArea(json[areaKey], `${path}.${areaKey}`);
   for (const key of ['minDistance', 'maxDistance'] as const) {
-    if (json[key] !== undefined) group[key] = wholeNumber(json[key], `${path}.${key}`, DUNGEON_LIMITS.enemyDistance);
+    if (json[key] !== undefined) group[key] = wholeNumber(json[key], `${path}.${key}`, REGION_LIMITS.enemyDistance);
   }
   if (group.minDistance !== undefined && group.maxDistance !== undefined && group.minDistance > group.maxDistance) {
     fail(path, 'must have minDistance no larger than maxDistance');
@@ -150,29 +157,29 @@ function parseEnemyGroup(value: unknown, path: string): EnemyGroup {
   return Object.freeze(group);
 }
 
-// The floor's enemy groups: its `enemies` list, or an old file's
+// The region's enemy groups: its `enemies` list, or an old file's
 // `enemyCount` read as that many in the north third.
 function parseEnemies(json: Json, path: string): readonly EnemyGroup[] {
   if (json.enemies !== undefined && json.enemyCount !== undefined) {
     fail(path, 'must set enemies or enemyCount, not both');
   }
   if (json.enemyCount !== undefined) {
-    const count = wholeNumber(json.enemyCount, `${path}.enemyCount`, DUNGEON_LIMITS.enemyCount);
-    return Object.freeze([Object.freeze({ count, region: NORTH_THIRD })]);
+    const count = wholeNumber(json.enemyCount, `${path}.enemyCount`, REGION_LIMITS.enemyCount);
+    return Object.freeze([Object.freeze({ count, area: NORTH_THIRD })]);
   }
-  const [minGroups, maxGroups] = DUNGEON_LIMITS.enemyGroups;
+  const [minGroups, maxGroups] = REGION_LIMITS.enemyGroups;
   if (!Array.isArray(json.enemies) || json.enemies.length < minGroups || json.enemies.length > maxGroups) {
     fail(`${path}.enemies`, `must be a list of ${minGroups} to ${maxGroups} enemy groups`);
   }
   const groups = json.enemies.map((group, i) => parseEnemyGroup(group, `${path}.enemies[${i}]`));
-  const [, maxEnemies] = DUNGEON_LIMITS.enemyCount;
+  const [, maxEnemies] = REGION_LIMITS.enemyCount;
   if (countEnemies(groups) > maxEnemies) fail(`${path}.enemies`, `must add up to at most ${maxEnemies} enemies`);
   return Object.freeze(groups);
 }
 
-function parseFloor(value: unknown, path: string): DungeonConfig {
-  const json = object(value, path, FLOOR_KEYS);
-  const [minName, maxName] = DUNGEON_LIMITS.nameLength;
+function parseRegion(value: unknown, path: string): RegionConfig {
+  const json = object(value, path, REGION_KEYS);
+  const [minName, maxName] = REGION_LIMITS.nameLength;
   if (typeof json.name !== 'string' || json.name.trim().length < minName || json.name.trim().length > maxName) {
     fail(`${path}.name`, `must be text of ${minName} to ${maxName} characters`);
   }
@@ -180,7 +187,7 @@ function parseFloor(value: unknown, path: string): DungeonConfig {
     fail(`${path}.palette`, `must be one of ${Object.keys(BUILDING_PALETTES).join(', ')}`);
   }
   const description = parseDescription(json.description, `${path}.description`);
-  const floor: DungeonConfig = {
+  const region: RegionConfig = {
     name: json.name.trim(),
     // Only present when set, and right after the name, so files read in order.
     ...(description === undefined ? {} : { description }),
@@ -192,39 +199,40 @@ function parseFloor(value: unknown, path: string): DungeonConfig {
   if (json.objective !== undefined) {
     const objective = object(json.objective, `${path}.objective`, ['kind']);
     if (objective.kind !== 'rout') fail(`${path}.objective.kind`, 'must be "rout"');
-    floor.objective = Object.freeze({ kind: 'rout' });
+    region.objective = Object.freeze({ kind: 'rout' });
   }
-  return Object.freeze(floor);
+  return Object.freeze(region);
 }
 
-// Why a floor's enemies didn't all fit on a sample map, aimed at the
+// Why a region's enemies didn't all fit on a sample map, aimed at the
 // setting to change: [the setting's path, what's wrong and what to do].
-// Each group is checked on its own first; if every group has room alone,
-// they're crowding each other out.
+// `path` is the region's own, e.g. "regions[2]". Each group is checked on
+// its own first; if every group has room alone, they're crowding each
+// other out.
 export function explainEnemyShortfall(
-  floor: DungeonConfig,
-  index: number,
+  region: RegionConfig,
+  path: string,
   level: { grid: Grid; deploymentZone: readonly Point[] },
   placed: number,
 ): [string, string] {
-  for (const [g, group] of floor.enemies.entries()) {
-    const at = `floors[${index}].enemies[${g}]`;
+  for (const [g, group] of region.enemies.entries()) {
+    const at = `${path}.enemies[${g}]`;
     const room = getGroupRoom(level.grid, group, level.deploymentZone);
-    const where = group.region ? "in this group's region" : 'on the map';
+    const where = group.area ? "in this group's area" : 'on the map';
     const { minDistance: min, maxDistance: max } = group;
     if (room.nearest === null || room.farthest === null) {
-      return [`${at}.region`, 'has no spots your units can walk to on a sample map. Make it bigger.'];
+      return [`${at}.area`, 'has no spots your units can walk to on a sample map. Make it bigger.'];
     }
     if (max !== undefined && max < room.nearest) {
       return [
         `${at}.maxDistance`,
-        `is ${max}, but the closest spot ${where} is ${room.nearest} steps from where your units start (on a sample map). Set it to ${room.nearest} or more${group.region ? ', or move the region closer to the south edge' : ''}.`,
+        `is ${max}, but the closest spot ${where} is ${room.nearest} steps from where your units start (on a sample map). Set it to ${room.nearest} or more${group.area ? ', or move the area closer to the south edge' : ''}.`,
       ];
     }
     if (min !== undefined && min > room.farthest) {
       return [
         `${at}.minDistance`,
-        `is ${min}, but the farthest spot ${where} is only ${room.farthest} steps from where your units start (on a sample map). Set it to ${room.farthest} or less${group.region ? ', or make the region bigger' : ''}.`,
+        `is ${min}, but the farthest spot ${where} is only ${room.farthest} steps from where your units start (on a sample map). Set it to ${room.farthest} or less${group.area ? ', or make the area bigger' : ''}.`,
       ];
     }
     if (room.fits < group.count) {
@@ -236,63 +244,83 @@ export function explainEnemyShortfall(
     }
   }
   return [
-    `floors[${index}].enemies`,
-    `ask for ${countEnemies(floor.enemies)} enemies, but only ${placed} fit on a sample map because the groups compete for the same spots. Give the groups different regions or distances, or fewer enemies.`,
+    `${path}.enemies`,
+    `ask for ${countEnemies(region.enemies)} enemies, but only ${placed} fit on a sample map because the groups compete for the same spots. Give the groups different areas or distances, or fewer enemies.`,
   ];
 }
 
 const plural = (n: number, noun: string) => `${n} ${n === 1 ? noun : `${noun}s`}`;
-// Parses and checks a dungeon settings file. Throws an Error naming the
-// field at fault (or the floor that couldn't generate a map, or fit all its
-// enemies on one). `checkMaps` false skips generating each floor, for files
-// already known to work (the built-in one, which the test suite checks).
-export function parseDungeonSettings(text: string, { checkMaps = true } = {}): DungeonSettings {
+
+// The top-level keys of a regions file, and of a Dungeon Mode file from
+// before the rename.
+const SHAPES = [
+  { perRegion: 'stagesPerRegion', list: 'regions' },
+  { perRegion: 'floorsPerConfig', list: 'floors' },
+] as const;
+
+// Whether `json` is a Dungeon Mode file: old keys and none of the new.
+function isOldShape(json: unknown): boolean {
+  if (!json || typeof json !== 'object' || Array.isArray(json)) return false;
+  const has = (key: string) => key in json;
+  return !has('regions') && !has('stagesPerRegion') && (has('floors') || has('floorsPerConfig'));
+}
+
+// Parses and checks a regions file. Throws an Error naming the field at
+// fault (or the region that couldn't generate a map, or fit all its
+// enemies on one). `checkMaps` false skips generating each region, for
+// files already known to work (the built-in one, which the test suite
+// checks).
+export function parseRegionSettings(text: string, { checkMaps = true } = {}): RegionSettings {
   let json: unknown;
   try {
     json = JSON.parse(text);
   } catch (error) {
     throw new Error(`Not valid JSON: ${(error as Error).message}`);
   }
-  const root = object(json, 'settings', ['floorsPerConfig', 'floors']);
-  const floorsPerConfig = wholeNumber(root.floorsPerConfig, 'floorsPerConfig', DUNGEON_LIMITS.floorsPerConfig);
-  const [minFloors, maxFloors] = DUNGEON_LIMITS.floors;
-  if (!Array.isArray(root.floors) || root.floors.length < minFloors || root.floors.length > maxFloors) {
-    fail('floors', `must be a list of ${minFloors} to ${maxFloors} floor configs`);
+  // An old file is read in its own terms, so its errors name its keys.
+  const keys = SHAPES[isOldShape(json) ? 1 : 0];
+  const root = object(json, 'settings', [keys.perRegion, keys.list]);
+  const stagesPerRegion = wholeNumber(root[keys.perRegion], keys.perRegion, REGION_LIMITS.stagesPerRegion);
+  const [minRegions, maxRegions] = REGION_LIMITS.regions;
+  const list = root[keys.list];
+  if (!Array.isArray(list) || list.length < minRegions || list.length > maxRegions) {
+    fail(keys.list, `must be a list of ${minRegions} to ${maxRegions} regions`);
   }
-  const floors = root.floors.map((floor, i) => parseFloor(floor, `floors[${i}]`));
+  const regions = list.map((region, i) => parseRegion(region, `${keys.list}[${i}]`));
 
-  floors.forEach((floor, i) => {
+  regions.forEach((region, i) => {
     if (!checkMaps) return;
+    const path = `${keys.list}[${i}]`;
     for (const seed of CHECK_SEEDS) {
-      let level: ReturnType<typeof createDungeonLevel>;
+      let level: ReturnType<typeof createStageLevel>;
       try {
-        level = createDungeonLevel(seed, floor);
+        level = createStageLevel(seed, region);
       } catch (error) {
-        fail(`floors[${i}]`, `couldn't generate a map: ${(error as Error).message}`);
+        fail(path, `couldn't generate a map: ${(error as Error).message}`);
       }
       const placed = [...level.units.values()].filter((unit) => unit.team === 'enemy').length;
-      if (placed < countEnemies(floor.enemies)) fail(...explainEnemyShortfall(floor, i, level, placed));
+      if (placed < countEnemies(region.enemies)) fail(...explainEnemyShortfall(region, path, level, placed));
     }
   });
 
-  return Object.freeze({ floorsPerConfig, floors: Object.freeze(floors) });
+  return Object.freeze({ stagesPerRegion, regions: Object.freeze(regions) });
 }
 
-// The settings as a dungeon settings file, readable and ready to edit
-// (see formatDungeonJson).
-export function formatDungeonSettings(settings: DungeonSettings): string {
-  const { floorsPerConfig, floors } = settings;
-  return formatDungeonJson({ floorsPerConfig, floors });
+// The settings as a regions file, readable and ready to edit (see
+// formatRegionsJson).
+export function formatRegionSettings(settings: RegionSettings): string {
+  const { stagesPerRegion, regions } = settings;
+  return formatRegionsJson({ stagesPerRegion, regions });
 }
 
 // Lines the formatter keeps within, as the repo's Prettier config does.
 const LINE_WIDTH = 120;
 
-// Any JSON value laid out like a dungeon settings file, and as Prettier
+// Any JSON value laid out like a regions file, and as Prettier
 // keeps it: two-space indents, with any object or list that fits on its
 // line written on one (e.g. [min, max] pairs and short enemy groups). For
 // settings still being edited too, which may not parse yet.
-export function formatDungeonJson(json: unknown): string {
+export function formatRegionsJson(json: unknown): string {
   return `${layoutJson(json, '', 0)}\n`;
 }
 

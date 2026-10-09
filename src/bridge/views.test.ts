@@ -387,8 +387,8 @@ describe('toLevelUpView', () => {
 
 describe('toObjectiveView', () => {
   it('carries the battle title and the objective words, frozen', () => {
-    const view = toObjectiveView('Floor 2: Lakeside', { goal: 'Defeat all enemies', defeat: 'All your units fall' });
-    expect(view).toEqual({ battle: 'Floor 2: Lakeside', goal: 'Defeat all enemies', defeat: 'All your units fall' });
+    const view = toObjectiveView('Stage 2: Lakeside', { goal: 'Defeat all enemies', defeat: 'All your units fall' });
+    expect(view).toEqual({ battle: 'Stage 2: Lakeside', goal: 'Defeat all enemies', defeat: 'All your units fall' });
     expect(Object.isFrozen(view)).toBe(true);
   });
 });

@@ -1,6 +1,6 @@
-// Where a generated map's enemies stand. A floor lists its enemies as
+// Where a generated map's enemies stand. A region lists its enemies as
 // groups, each a count plus optional limits on where they may go:
-// - region: a box given as fractions of the map (0 is the west/north
+// - area: a box given as fractions of the map (0 is the west/north
 //   edge, 1 the east/south edge), so the same box fits any map size
 // - minDistance / maxDistance: how many steps a unit would walk from the
 //   nearest deployment tile, going around water, mountains and walls
@@ -15,7 +15,7 @@ import { shuffle } from './rng.ts';
 
 type Fractions = readonly [number, number];
 
-export interface SpawnRegion {
+export interface SpawnArea {
   // The columns and rows the box covers, as [from, to] fractions of the
   // map's width and height; the whole axis when unset.
   x?: Fractions;
@@ -24,14 +24,14 @@ export interface SpawnRegion {
 
 export interface EnemyGroup {
   count: number;
-  region?: SpawnRegion;
+  area?: SpawnArea;
   minDistance?: number;
   maxDistance?: number;
 }
 
-// The north third of the map: where enemies stood before floors could
+// The north third of the map: where enemies stood before regions could
 // place them, and still where an old file's `enemyCount` puts them.
-export const NORTH_THIRD: SpawnRegion = Object.freeze({ y: Object.freeze([0, 1 / 3] as const) });
+export const NORTH_THIRD: SpawnArea = Object.freeze({ y: Object.freeze([0, 1 / 3] as const) });
 
 const key = ({ x, y }: Point) => `${x},${y}`;
 
@@ -62,15 +62,15 @@ function inSpan(i: number, size: number, [from, to]: Fractions = [0, 1]): boolea
   return i >= Math.floor(from * size) && i < Math.floor(to * size);
 }
 
-// Whether `p` lies in `region` on a map `width` x `height` tiles.
-export function isInRegion(p: Point, region: SpawnRegion, width: number, height: number): boolean {
-  return inSpan(p.x, width, region.x) && inSpan(p.y, height, region.y);
+// Whether `p` lies in `area` on a map `width` x `height` tiles.
+export function isInArea(p: Point, area: SpawnArea, width: number, height: number): boolean {
+  return inSpan(p.x, width, area.x) && inSpan(p.y, height, area.y);
 }
 
 // The tiles for each group, in order: one list per group, at most `count`
 // long (shorter when too few tiles pass its limits). A tile qualifies when
 // it's walkable, reachable from the deployment zone, not in it, in the
-// group's region and within its distances, and no earlier group took it.
+// group's area and within its distances, and no earlier group took it.
 export function pickEnemyTiles(
   grid: Grid,
   groups: readonly EnemyGroup[],
@@ -79,7 +79,7 @@ export function pickEnemyTiles(
 ): Point[][] {
   const distances = getWalkingDistances(grid, deploymentZone);
   const taken = new Set(deploymentZone.map(key));
-  return groups.map(({ count, region = {}, minDistance = 0, maxDistance = Infinity }) => {
+  return groups.map(({ count, area = {}, minDistance = 0, maxDistance = Infinity }) => {
     const candidates = grid.cells.filter((c) => {
       const distance = distances.get(key(c));
       return (
@@ -87,7 +87,7 @@ export function pickEnemyTiles(
         distance >= minDistance &&
         distance <= maxDistance &&
         !taken.has(key(c)) &&
-        isInRegion(c, region, grid.width, grid.height)
+        isInArea(c, area, grid.width, grid.height)
       );
     });
     const tiles = shuffle(rng, candidates)
@@ -100,12 +100,12 @@ export function pickEnemyTiles(
 
 // How much room `group` has on its own (ignoring other groups), to explain
 // a group that can't be placed:
-// - inRegion: walkable tiles in its region the deployment zone can reach
+// - inArea: walkable tiles in its area the deployment zone can reach
 //   (the zone itself left out)
 // - nearest / farthest: the fewest and most steps to one of them (null for none)
 // - fits: how many of them are also within its distances
 export interface GroupRoom {
-  inRegion: number;
+  inArea: number;
   nearest: number | null;
   farthest: number | null;
   fits: number;
@@ -115,13 +115,11 @@ export function getGroupRoom(grid: Grid, group: EnemyGroup, deploymentZone: read
   const distances = getWalkingDistances(grid, deploymentZone);
   const zone = new Set(deploymentZone.map(key));
   const steps = grid.cells
-    .filter(
-      (c) => distances.has(key(c)) && !zone.has(key(c)) && isInRegion(c, group.region ?? {}, grid.width, grid.height),
-    )
+    .filter((c) => distances.has(key(c)) && !zone.has(key(c)) && isInArea(c, group.area ?? {}, grid.width, grid.height))
     .map((c) => distances.get(key(c))!);
   const { minDistance = 0, maxDistance = Infinity } = group;
   return {
-    inRegion: steps.length,
+    inArea: steps.length,
     nearest: steps.length > 0 ? Math.min(...steps) : null,
     farthest: steps.length > 0 ? Math.max(...steps) : null,
     fits: steps.filter((s) => s >= minDistance && s <= maxDistance).length,

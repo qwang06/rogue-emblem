@@ -208,7 +208,8 @@ map. In code a level picks one palette from `BUILDING_PALETTES` in `tileset.ts`
 (set A 0–4, set B 6–10, added to `BUILDING_ART`'s column for each kind), its
 rampart group (the wall autotile, via `getWallAutotile`), and whether it has
 flags. `getBuildingSprites` (`src/game/mapArt.ts`) draws every building from
-it. Dungeon Mode uses `a-stone`. The pagoda and keep at columns 24–28 aren't
+it. Each Warband Mode region names its own (`palette` in
+`src/data/regions.json`). The pagoda and keep at columns 24–28 aren't
 wired in, because their set A / set B rows don't line up with the palette
 columns.
 

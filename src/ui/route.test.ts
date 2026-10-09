@@ -19,22 +19,22 @@ describe('parseRoute', () => {
     expect(parseRoute('#/configs/unit-stats/')).toEqual({ page: 'config', id: 'unit-stats' });
   });
 
-  it("reads a dungeon floor config's preview", () => {
-    expect(parseRoute('#/configs/dungeon-floors/preview/2/12345')).toEqual({
-      page: 'dungeon-preview',
+  it("reads a region's preview", () => {
+    expect(parseRoute('#/configs/regions/preview/2/12345')).toEqual({
+      page: 'region-preview',
       index: 2,
       seed: 12345,
     });
-    expect(parseRoute('#/configs/dungeon-floors/preview/0/7/')).toEqual({ page: 'dungeon-preview', index: 0, seed: 7 });
+    expect(parseRoute('#/configs/regions/preview/0/7/')).toEqual({ page: 'region-preview', index: 0, seed: 7 });
   });
 
-  it('rejects malformed dungeon previews', () => {
-    expect(parseRoute('#/configs/dungeon-floors/preview')).toEqual({ page: 'game' });
-    expect(parseRoute('#/configs/dungeon-floors/preview/2')).toEqual({ page: 'game' });
-    expect(parseRoute('#/configs/dungeon-floors/preview/x/1')).toEqual({ page: 'game' });
-    expect(parseRoute('#/configs/dungeon-floors/preview/-1/1')).toEqual({ page: 'game' });
-    expect(parseRoute('#/configs/dungeon-floors/preview/1/2/3')).toEqual({ page: 'game' });
-    expect(parseRoute('#/configs/dungeon-floors/peek/1/2')).toEqual({ page: 'game' });
+  it('rejects malformed region previews', () => {
+    expect(parseRoute('#/configs/regions/preview')).toEqual({ page: 'game' });
+    expect(parseRoute('#/configs/regions/preview/2')).toEqual({ page: 'game' });
+    expect(parseRoute('#/configs/regions/preview/x/1')).toEqual({ page: 'game' });
+    expect(parseRoute('#/configs/regions/preview/-1/1')).toEqual({ page: 'game' });
+    expect(parseRoute('#/configs/regions/preview/1/2/3')).toEqual({ page: 'game' });
+    expect(parseRoute('#/configs/regions/peek/1/2')).toEqual({ page: 'game' });
     expect(parseRoute('#/configs/dialogs/preview/1/2')).toEqual({ page: 'game' });
   });
 
@@ -51,7 +51,7 @@ describe('routeHash', () => {
       { page: 'game' },
       { page: 'configs' },
       { page: 'config', id: 'dialogs' },
-      { page: 'dungeon-preview', index: 0, seed: 4294967295 },
+      { page: 'region-preview', index: 0, seed: 4294967295 },
     ];
     for (const route of routes) expect(parseRoute(routeHash(route))).toEqual(route);
   });

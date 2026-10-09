@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { createDemoLevel } from '../game/demoLevel.ts';
-import { DUNGEON_CONFIGS } from '../data/dungeon.ts';
-import { createDungeonLevel } from '../game/dungeonLevel.ts';
+import { REGION_CONFIGS } from '../data/regions.ts';
+import { createStageLevel } from '../game/warband/stageLevel.ts';
 import { getMapPreview } from './mapPreview.ts';
 
 describe('getMapPreview', () => {
-  const level = createDungeonLevel(5, DUNGEON_CONFIGS[0]);
+  const level = createStageLevel(5, REGION_CONFIGS[0]);
   const cells = getMapPreview(level);
   const at = (x: number, y: number) => cells.find((c) => c.x === x && c.y === y)!;
 

@@ -4,8 +4,8 @@ import { gameStore } from '../bridge/gameStore.ts';
 import { createActionMenu, getSelectedAction, moveSelection, selectIndex } from '../game/actionMenu.ts';
 import { SETTINGS_ACTIONS, TITLE_ACTIONS } from '../game/titleMenu.ts';
 import { getTrainingActions } from '../game/trainingLevel.ts';
-import { FIRST_STORY_CHAPTER, firstDungeonFloor } from '../game/battleSetup.ts';
-import { randomSeed } from '../game/dungeonLevel.ts';
+import { FIRST_STORY_CHAPTER, firstWarbandStage } from '../game/battleSetup.ts';
+import { randomSeed } from '../game/rng.ts';
 import { routeHash } from './route.ts';
 
 type View = 'main' | 'training' | 'settings';
@@ -20,7 +20,7 @@ function mainMenu(selectedIndex = 0) {
   return selectIndex(createActionMenu(TITLE_ACTIONS), selectedIndex);
 }
 
-// The landing screen: game title plus the Story Mode / Dungeon Mode /
+// The landing screen: game title plus the Story Mode / Warband Mode /
 // Training / Settings menu.
 // Training swaps in a second menu listing the unit classes; picking one
 // starts a small practice battle with that unit. Settings swaps in the
@@ -49,7 +49,7 @@ export function TitleScreen() {
     setView('main');
   }
 
-  // Carries out a menu choice. Dungeon Mode starts a battle on a freshly
+  // Carries out a menu choice. Warband Mode starts a battle on a freshly
   // generated map.
   function runAction(action: MenuAction | null) {
     if (!action) return;
@@ -59,8 +59,8 @@ export function TitleScreen() {
       gameStore.setState({ screen: 'battle', battleSetup: { mode: 'training', unitClass: action.id } });
     } else if (action.id === 'story') {
       gameStore.setState({ screen: 'battle', battleSetup: FIRST_STORY_CHAPTER });
-    } else if (action.id === 'dungeon') {
-      gameStore.setState({ screen: 'battle', battleSetup: firstDungeonFloor(randomSeed()) });
+    } else if (action.id === 'warband') {
+      gameStore.setState({ screen: 'battle', battleSetup: firstWarbandStage(randomSeed()) });
     } else if (action.id === 'training' || action.id === 'settings') {
       openSubmenu(action.id);
     }

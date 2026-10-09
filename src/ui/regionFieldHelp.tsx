@@ -1,28 +1,29 @@
-// What each Dungeon Floors setting means, shown in the info popover beside
+// What each Regions setting means, shown in the info popover beside
 // its field (see DraftFields.tsx), keyed by the setting's name in the file.
 
 import type { ReactNode } from 'react';
-import { DUNGEON_LIMITS } from '../game/dungeonConfigFile.ts';
+import { REGION_LIMITS } from '../game/warband/regionsFile.ts';
 
-const [MIN_SIZE, MAX_SIZE] = DUNGEON_LIMITS.mapSize;
+const [MIN_SIZE, MAX_SIZE] = REGION_LIMITS.mapSize;
 
-// A map seen from above with `x` / `y` (fractions, as in a region) shaded,
-// its edges labeled, and the player's start marked at the bottom.
-function RegionDiagram({ x = [0, 1], y = [0, 1], caption }: { x?: number[]; y?: number[]; caption: string }) {
+// A map seen from above with `x` / `y` (fractions, as in an enemy group's
+// area) shaded, its edges labeled, and the player's start marked at the
+// bottom.
+function AreaDiagram({ x = [0, 1], y = [0, 1], caption }: { x?: number[]; y?: number[]; caption: string }) {
   const pct = (n: number) => `${n * 100}%`;
   return (
-    <figure className="region-diagram">
-      <div className="region-diagram__frame">
-        <span className="region-diagram__edge region-diagram__edge--top">0 · north</span>
-        <span className="region-diagram__edge region-diagram__edge--bottom">1 · south, where your units start</span>
-        <span className="region-diagram__edge region-diagram__edge--left">0 · west</span>
-        <span className="region-diagram__edge region-diagram__edge--right">1 · east</span>
-        <div className="region-diagram__map">
+    <figure className="area-diagram">
+      <div className="area-diagram__frame">
+        <span className="area-diagram__edge area-diagram__edge--top">0 · north</span>
+        <span className="area-diagram__edge area-diagram__edge--bottom">1 · south, where your units start</span>
+        <span className="area-diagram__edge area-diagram__edge--left">0 · west</span>
+        <span className="area-diagram__edge area-diagram__edge--right">1 · east</span>
+        <div className="area-diagram__map">
           <span
-            className="region-diagram__area"
+            className="area-diagram__box"
             style={{ left: pct(x[0]), width: pct(x[1] - x[0]), top: pct(y[0]), height: pct(y[1] - y[0]) }}
           />
-          <span className="region-diagram__start" />
+          <span className="area-diagram__start" />
         </div>
       </div>
       <figcaption>{caption}</figcaption>
@@ -51,18 +52,19 @@ export interface FieldHelp {
 }
 
 const HELP: Record<string, FieldHelp> = {
-  floorsPerConfig: {
-    title: 'Floors per config',
+  stagesPerRegion: {
+    title: 'Stages per region',
     body: (
       <p>
-        How many dungeon floors in a row use each floor config before moving on to the next. With 2, floors 1–2 use the
-        first config, floors 3–4 the second, and so on. Once the configs run out, the last one repeats forever.
+        How many stages in a row a Warband Mode run spends in each region before moving on to the next. With 2, stages
+        1–2 are in the first region, stages 3–4 the second, and so on. Once the regions run out, the last one repeats
+        forever.
       </p>
     ),
   },
   name: {
     title: 'Name',
-    body: <p>Shown to the player on the Objective and Victory screens, e.g. &ldquo;Floor 2: Lakeside&rdquo;.</p>,
+    body: <p>Shown to the player on the Objective and Victory screens, e.g. &ldquo;Stage 2: Lakeside&rdquo;.</p>,
   },
   description: {
     title: 'Description',
@@ -168,15 +170,15 @@ const HELP: Record<string, FieldHelp> = {
           group can use the whole map.
         </p>
         <p>
-          Groups are placed in order, and a group can&apos;t use tiles an earlier group took. Saving checks the floor on
-          sample maps and tells you if a group&apos;s limits leave it nowhere to stand.
+          Groups are placed in order, and a group can&apos;t use tiles an earlier group took. Saving checks the region
+          on sample maps and tells you if a group&apos;s limits leave it nowhere to stand.
         </p>
       </>
     ),
   },
   count: {
     title: 'Count',
-    body: <p>How many enemy soldiers this group places ({DUNGEON_LIMITS.enemyCount[1]} at most across all groups).</p>,
+    body: <p>How many enemy soldiers this group places ({REGION_LIMITS.enemyCount[1]} at most across all groups).</p>,
   },
   minDistance: {
     title: 'Min distance',
@@ -199,36 +201,36 @@ const HELP: Record<string, FieldHelp> = {
           ambush. Blank: no maximum.
         </p>
         <p>
-          It has to reach the group&apos;s region: a region in the north of the map is far from your start, so a small
-          max distance there leaves the group nowhere to stand.
+          It has to reach the group&apos;s area: an area in the north of the map is far from your start, so a small max
+          distance there leaves the group nowhere to stand.
         </p>
         {distanceSteps}
       </>
     ),
   },
   x: {
-    title: 'Region x (columns)',
+    title: 'Area x (columns)',
     body: (
       <>
         <p>
           Which columns of the map the group may stand in, from left to right, as fractions of the width: 0 is the west
           (left) edge and 1 the east (right) edge, whatever the map&apos;s size. Blank: every column.
         </p>
-        <RegionDiagram x={[0, 0.5]} caption="x from 0 to 0.5: the left half." />
-        <p>Use it with Region y to pick a box. E.g. x 0.7 to 1 is a strip down the right side.</p>
+        <AreaDiagram x={[0, 0.5]} caption="x from 0 to 0.5: the left half." />
+        <p>Use it with Area y to pick a box. E.g. x 0.7 to 1 is a strip down the right side.</p>
       </>
     ),
   },
   y: {
-    title: 'Region y (rows)',
+    title: 'Area y (rows)',
     body: (
       <>
         <p>
           Which rows of the map the group may stand in, from top to bottom, as fractions of the height: 0 is the north
           (top) edge, farthest from your units, and 1 the south (bottom) edge, where they start. Blank: every row.
         </p>
-        <RegionDiagram y={[0, 0.34]} caption="y from 0 to 0.34: the top third, the classic enemy side." />
-        <p>Use it with Region x to pick a box. E.g. y 0.4 to 0.6 is a band across the middle.</p>
+        <AreaDiagram y={[0, 0.34]} caption="y from 0 to 0.34: the top third, the classic enemy side." />
+        <p>Use it with Area x to pick a box. E.g. y 0.4 to 0.6 is a band across the middle.</p>
       </>
     ),
   },

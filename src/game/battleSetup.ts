@@ -1,20 +1,21 @@
 // Which battle the map runs, and what comes after it. The title screen picks
 // a BattleSetup, the map scene builds its level with createBattleLevel, and
 // once the objective is completed getNextBattle says where to go next: the
-// next story chapter, the next dungeon floor, or nowhere (back to the title).
+// next story chapter, the next Warband Mode stage, or nowhere (back to the
+// title).
 
 import { DIALOGS } from '../data/dialogs.ts';
 import type { DialogFiles } from './dialogScript.ts';
-import { DUNGEON_SETTINGS } from '../data/dungeon.ts';
-import { getConfigFloors, getDungeonFloor, type DungeonSettings } from './dungeonConfigs.ts';
-import { createDungeonLevel } from './dungeonLevel.ts';
+import { REGION_SETTINGS } from '../data/regions.ts';
+import { getRegionStages, getStageRegion, type RegionSettings } from './warband/regions.ts';
+import { createStageLevel } from './warband/stageLevel.ts';
 import { createDemoLevel, type DemoLevel } from './demoLevel.ts';
 import { createTrainingLevel, type Level } from './trainingLevel.ts';
 
 export type BattleSetup =
   | { mode: 'story'; chapter: number }
   | { mode: 'training'; unitClass: string }
-  | { mode: 'dungeon'; seed: number; floor: number };
+  | { mode: 'warband'; seed: number; stage: number };
 
 // A battle's starting state, whichever mode built it.
 export type BattleLevel = Level & Partial<DemoLevel>;
@@ -24,11 +25,11 @@ export type BattleLevel = Level & Partial<DemoLevel>;
 export interface GameContent {
   // Every level's conversations, by dialog file name.
   dialogs: DialogFiles;
-  // Dungeon Mode's floor configs.
-  dungeon: DungeonSettings;
+  // Warband Mode's regions.
+  regions: RegionSettings;
 }
 
-export const DEFAULT_CONTENT: GameContent = Object.freeze({ dialogs: DIALOGS, dungeon: DUNGEON_SETTINGS });
+export const DEFAULT_CONTENT: GameContent = Object.freeze({ dialogs: DIALOGS, regions: REGION_SETTINGS });
 
 // A story chapter builds its level from the game content, picking out its
 // own dialog file.
@@ -45,8 +46,8 @@ export const STORY_CHAPTERS: readonly StoryChapter[] = Object.freeze([
 // The first battle of each mode that has one.
 export const FIRST_STORY_CHAPTER: BattleSetup = Object.freeze({ mode: 'story', chapter: 1 });
 
-export function firstDungeonFloor(seed: number): BattleSetup {
-  return { mode: 'dungeon', seed, floor: 1 };
+export function firstWarbandStage(seed: number): BattleSetup {
+  return { mode: 'warband', seed, stage: 1 };
 }
 
 function getStoryChapter(chapter: number, chapters: readonly StoryChapter[]): StoryChapter {
@@ -56,7 +57,7 @@ function getStoryChapter(chapter: number, chapters: readonly StoryChapter[]): St
 }
 
 // Builds the level a setup describes from `content` (its dialog, and a
-// dungeon floor's config).
+// Warband Mode stage's region).
 export function createBattleLevel(
   setup: BattleSetup,
   content: GameContent = DEFAULT_CONTENT,
@@ -67,14 +68,14 @@ export function createBattleLevel(
       return getStoryChapter(setup.chapter, chapters).createLevel(content);
     case 'training':
       return createTrainingLevel(setup.unitClass, content.dialogs.training);
-    case 'dungeon':
-      return createDungeonLevel(setup.seed, getDungeonFloor(setup.floor, content.dungeon));
+    case 'warband':
+      return createStageLevel(setup.seed, getStageRegion(setup.stage, content.regions));
   }
 }
 
 // The battle after `setup` is won, or null when there's none and the
 // player goes back to the title: story mode moves to the next chapter
-// until the last; a dungeon goes one floor down, on a new map made from
+// until the last; Warband Mode moves on a stage, on a new map made from
 // `seed`, and never ends; training is a single bout.
 export function getNextBattle(
   setup: BattleSetup,
@@ -86,13 +87,13 @@ export function getNextBattle(
       return setup.chapter < chapters.length ? { mode: 'story', chapter: setup.chapter + 1 } : null;
     case 'training':
       return null;
-    case 'dungeon':
-      return { mode: 'dungeon', seed, floor: setup.floor + 1 };
+    case 'warband':
+      return { mode: 'warband', seed, stage: setup.stage + 1 };
   }
 }
 
 // A short title for a battle, e.g. "Chapter 1: The Old Gate" or
-// "Floor 2: Lakeside".
+// "Stage 2: Lakeside".
 export function describeBattle(
   setup: BattleSetup,
   content: GameContent = DEFAULT_CONTENT,
@@ -103,16 +104,16 @@ export function describeBattle(
       return `Chapter ${setup.chapter}: ${getStoryChapter(setup.chapter, chapters).name}`;
     case 'training':
       return 'Training';
-    case 'dungeon':
-      return `Floor ${setup.floor}: ${getDungeonFloor(setup.floor, content.dungeon).name}`;
+    case 'warband':
+      return `Stage ${setup.stage}: ${getStageRegion(setup.stage, content.regions).name}`;
   }
 }
 
-// The battle that shows config `index` of `settings` as it plays: its first
-// floor, on a map made from `seed` (so the same map the config makes with
-// createDungeonLevel). Null when there's no such config.
-export function dungeonConfigPreview(index: number, seed: number, settings: DungeonSettings): BattleSetup | null {
-  if (!Number.isInteger(index) || index < 0 || index >= settings.floors.length) return null;
-  const { first } = getConfigFloors(index, settings.floors.length, settings.floorsPerConfig);
-  return { mode: 'dungeon', seed, floor: first };
+// The battle that shows region `index` of `settings` as it plays: its
+// first stage, on a map made from `seed` (so the same map the region makes
+// with createStageLevel). Null when there's no such region.
+export function regionPreview(index: number, seed: number, settings: RegionSettings): BattleSetup | null {
+  if (!Number.isInteger(index) || index < 0 || index >= settings.regions.length) return null;
+  const { first } = getRegionStages(index, settings.regions.length, settings.stagesPerRegion);
+  return { mode: 'warband', seed, stage: first };
 }

@@ -1,6 +1,6 @@
 import { existsSync, globSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DUNGEON_CONFIGS } from '../data/dungeon.ts';
+import { REGION_CONFIGS } from '../data/regions.ts';
 import { WEAPONS } from '../game/weapons.ts';
 import { getConfigCatalog, plural } from './configCatalog.ts';
 
@@ -20,7 +20,7 @@ describe('getConfigCatalog', () => {
 
   it('lists the configs the editor will cover', () => {
     expect(entries().map((entry) => entry.id)).toEqual(
-      expect.arrayContaining(['dialogs', 'dungeon-floors', 'unit-stats', 'unit-growths', 'unit-caps', 'weapons']),
+      expect.arrayContaining(['dialogs', 'regions', 'unit-stats', 'unit-growths', 'unit-caps', 'weapons']),
     );
   });
 
@@ -36,7 +36,7 @@ describe('getConfigCatalog', () => {
 
   it('summarizes from the live data', () => {
     const byId = Object.fromEntries(entries().map((entry) => [entry.id, entry]));
-    expect(byId['dungeon-floors'].summary).toBe(plural(DUNGEON_CONFIGS.length, 'floor config'));
+    expect(byId['regions'].summary).toBe(plural(REGION_CONFIGS.length, 'region'));
     expect(byId.weapons.summary).toBe(plural(WEAPONS.length, 'weapon'));
   });
 });
