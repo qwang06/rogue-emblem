@@ -118,3 +118,24 @@ export function gridToWorld(x: number, y: number, tileSize: number): Point {
 export function worldToGrid(px: number, py: number, tileSize: number): Point {
   return { x: Math.floor(px / tileSize), y: Math.floor(py / tileSize) };
 }
+
+// The tile under pixel (px, py), or null when that's off the grid.
+export function worldToTile(grid: Grid, px: number, py: number, tileSize: number): Point | null {
+  const tile = worldToGrid(px, py, tileSize);
+  return isInBounds(grid, tile.x, tile.y) ? tile : null;
+}
+
+// Orthogonal (Manhattan) distance between two tiles: the steps between
+// them with no diagonals, ignoring terrain and units.
+export function getDistance(a: Point, b: Point): number {
+  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+}
+
+export function isSameTile(a: Point, b: Point): boolean {
+  return a.x === b.x && a.y === b.y;
+}
+
+// The first entry of `tiles` standing on `tile`, or null if none does.
+export function findTileAt<T extends Point>(tiles: readonly T[], tile: Point): T | null {
+  return tiles.find((t) => isSameTile(t, tile)) ?? null;
+}

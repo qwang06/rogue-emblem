@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { createGrid, setTerrain, setUnit, type Point } from './grid.ts';
-import { extendMovePath, getMoveCost, getMovePath, getMovementRange, getPathCost } from './movement.ts';
+import {
+  canMoveAlongPath,
+  extendMovePath,
+  getMoveCost,
+  getMovePath,
+  getMovementRange,
+  getPathCost,
+} from './movement.ts';
 
 // Sorted "x,y" strings so assertions don't depend on traversal order.
 function tiles(range: readonly Point[]) {
@@ -341,5 +348,51 @@ describe('extendMovePath', () => {
     const path = [origin];
     extendMovePath(grid, path, { x: 3, y: 2 }, 3);
     expect(path).toEqual([origin]);
+  });
+});
+
+describe('canMoveAlongPath', () => {
+  const range = [
+    { x: 1, y: 1, cost: 0 },
+    { x: 2, y: 1, cost: 1 },
+    { x: 3, y: 1, cost: 2 },
+  ];
+  const path = [
+    { x: 1, y: 1 },
+    { x: 2, y: 1 },
+    { x: 3, y: 1 },
+  ];
+
+  it('accepts the in-range tile the route ends on', () => {
+    expect(canMoveAlongPath(range, path, { x: 3, y: 1 })).toBe(true);
+  });
+
+  it("accepts staying put on the mover's own tile", () => {
+    expect(canMoveAlongPath(range, [{ x: 1, y: 1 }], { x: 1, y: 1 })).toBe(true);
+  });
+
+  it('rejects an in-range tile the route does not end on', () => {
+    expect(canMoveAlongPath(range, path, { x: 2, y: 1 })).toBe(false);
+  });
+
+  it("rejects the route's end when it's out of range (e.g. an ally passed through)", () => {
+    const throughAlly = [...path, { x: 4, y: 1 }];
+    expect(canMoveAlongPath(range, throughAlly, { x: 4, y: 1 })).toBe(false);
+  });
+
+  it('rejects everything with an empty path or range', () => {
+    expect(canMoveAlongPath(range, [], { x: 1, y: 1 })).toBe(false);
+    expect(canMoveAlongPath([], path, { x: 3, y: 1 })).toBe(false);
+  });
+
+  it('agrees with getMovementRange and extendMovePath on a real map', () => {
+    const grid = setUnit(createGrid(5, 3), 2, 1, 'ally');
+    const options = { canPassThrough: (id: string) => id === 'ally' };
+    const origin = { x: 0, y: 1 };
+    const moveRange = getMovementRange(grid, origin, 3, options);
+    const toAlly = extendMovePath(grid, [origin], { x: 2, y: 1 }, 3, options);
+    expect(canMoveAlongPath(moveRange, toAlly, { x: 2, y: 1 })).toBe(false);
+    const pastAlly = extendMovePath(grid, toAlly, { x: 3, y: 1 }, 3, options);
+    expect(canMoveAlongPath(moveRange, pastAlly, { x: 3, y: 1 })).toBe(true);
   });
 });

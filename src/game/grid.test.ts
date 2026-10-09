@@ -1,16 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import {
   createGrid,
+  findTileAt,
   findUnit,
   getCornerTiles,
   getCell,
+  getDistance,
   getNeighbors,
   gridToWorld,
   isInBounds,
+  isSameTile,
   moveUnit,
   setTerrain,
   setUnit,
   worldToGrid,
+  worldToTile,
 } from './grid.ts';
 
 describe('createGrid', () => {
@@ -237,5 +241,75 @@ describe('getCornerTiles', () => {
   it('throws on an unknown corner', () => {
     // @ts-expect-error not a corner
     expect(() => getCornerTiles(grid, 'middle', 1)).toThrow();
+  });
+});
+
+describe('worldToTile', () => {
+  const grid = createGrid(3, 2);
+
+  it('returns the tile under a pixel on the grid', () => {
+    expect(worldToTile(grid, 0, 0, 32)).toEqual({ x: 0, y: 0 });
+    expect(worldToTile(grid, 95, 63, 32)).toEqual({ x: 2, y: 1 });
+  });
+
+  it('is null past the right or bottom edge', () => {
+    expect(worldToTile(grid, 96, 0, 32)).toBeNull();
+    expect(worldToTile(grid, 0, 64, 32)).toBeNull();
+  });
+
+  it('is null left of or above the grid, even within a tile of it', () => {
+    expect(worldToTile(grid, -1, 0, 32)).toBeNull();
+    expect(worldToTile(grid, 0, -0.5, 32)).toBeNull();
+  });
+});
+
+describe('getDistance', () => {
+  it('is 0 from a tile to itself', () => {
+    expect(getDistance({ x: 2, y: 3 }, { x: 2, y: 3 })).toBe(0);
+  });
+
+  it('is 1 for orthogonal neighbors and 2 for diagonal ones', () => {
+    expect(getDistance({ x: 2, y: 2 }, { x: 3, y: 2 })).toBe(1);
+    expect(getDistance({ x: 2, y: 2 }, { x: 2, y: 1 })).toBe(1);
+    expect(getDistance({ x: 2, y: 2 }, { x: 3, y: 3 })).toBe(2);
+  });
+
+  it('sums both axes and is symmetric', () => {
+    expect(getDistance({ x: 0, y: 0 }, { x: 4, y: 3 })).toBe(7);
+    expect(getDistance({ x: 4, y: 3 }, { x: 0, y: 0 })).toBe(7);
+  });
+
+  it('works for points off the grid', () => {
+    expect(getDistance({ x: -1, y: -1 }, { x: 1, y: 1 })).toBe(4);
+  });
+});
+
+describe('isSameTile', () => {
+  it('compares only x and y', () => {
+    expect(isSameTile({ x: 1, y: 2 }, { x: 1, y: 2 })).toBe(true);
+    expect(isSameTile({ x: 1, y: 2 }, { x: 2, y: 1 })).toBe(false);
+    const withExtras = { x: 1, y: 2, cost: 3 };
+    expect(isSameTile(withExtras, { x: 1, y: 2 })).toBe(true);
+  });
+});
+
+describe('findTileAt', () => {
+  const targets = [
+    { x: 1, y: 0, unitId: 'a' },
+    { x: 0, y: 1, unitId: 'b' },
+    { x: 0, y: 1, unitId: 'c' },
+  ];
+
+  it('returns the entry on that tile, keeping its extra fields', () => {
+    expect(findTileAt(targets, { x: 1, y: 0 })).toEqual({ x: 1, y: 0, unitId: 'a' });
+  });
+
+  it('returns the first entry when several share a tile', () => {
+    expect(findTileAt(targets, { x: 0, y: 1 })?.unitId).toBe('b');
+  });
+
+  it('is null when no entry is on the tile, or the list is empty', () => {
+    expect(findTileAt(targets, { x: 1, y: 1 })).toBeNull();
+    expect(findTileAt([], { x: 0, y: 0 })).toBeNull();
   });
 });
