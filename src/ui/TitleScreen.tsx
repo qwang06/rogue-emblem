@@ -16,7 +16,9 @@ import { randomSeed } from '../game/rng.ts';
 import { createRun, type RunState } from '../game/warband/run.ts';
 import { createStartingWarband } from '../game/warband/stageLevel.ts';
 import { loadSavedRun, saveRun } from '../data/runSave.ts';
+import { getUnitSprite } from '../game/tileset.ts';
 import { routeHash } from './route.ts';
+import { UnitSprite } from './UnitSprite.tsx';
 
 type View = 'main' | 'training' | 'warband' | 'new-run' | 'settings';
 
@@ -153,6 +155,7 @@ export function TitleScreen() {
             const classes = ['title-menu__item'];
             if (selected) classes.push('title-menu__item--selected');
             if (action.disabled) classes.push('title-menu__item--disabled');
+            if (view === 'new-run') classes.push('title-menu__item--class');
             return (
               <li key={action.id}>
                 <button
@@ -163,13 +166,16 @@ export function TitleScreen() {
                   onMouseEnter={() => setMenu((current) => selectIndex(current, index))}
                   onClick={() => runAction(action)}
                 >
+                  {view === 'new-run' && (
+                    <UnitSprite sprite={getUnitSprite(action.id)} scale={1.5} animated={selected} />
+                  )}
                   {action.label}
                 </button>
               </li>
             );
           })}
         </ul>
-        {description && (
+        {view === 'new-run' && (
           <p className="title-menu__description" aria-live="polite">
             {description}
           </p>

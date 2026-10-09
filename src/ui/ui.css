@@ -1377,8 +1377,23 @@ kbd {
   cursor: default;
 }
 
+/* New Run's class entries: the class's sprite beside its name, both
+   left-aligned so the sprites line up in a column. */
+.title-menu__item--class {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16px;
+  padding-left: 40px;
+}
+
+/* A fixed width and room for three lines whatever the class, so switching
+   classes doesn't resize the menu. */
 .title-menu__description {
-  max-width: 22rem;
+  box-sizing: border-box;
+  width: 22rem;
+  max-width: 100%;
+  min-height: calc(3 * 1.4em + 8px);
   margin: 8px auto 0;
   padding: 8px 16px 0;
   border-top: 1px solid rgb(232 200 114 / 25%);
