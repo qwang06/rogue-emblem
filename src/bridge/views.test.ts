@@ -8,6 +8,7 @@ import {
   toDamagePopupView,
   toDialogView,
   toObjectiveView,
+  toRunOverView,
   toPhaseBannerView,
   toRosterEntryView,
   toTileAnchorView,
@@ -23,6 +24,8 @@ import { advanceDialog, createDialog } from '../game/dialog.ts';
 import { HEALTH_POTION } from '../game/items.ts';
 import { FIRE, FISTS, IRON_SPEAR, weaponEntry } from '../game/weapons.ts';
 import { createTurnState, markDone } from '../game/turns.ts';
+import { applyBattleResult, createRun, restoreRoster } from '../game/warband/run.ts';
+import { createStartingWarband } from '../game/warband/stageLevel.ts';
 
 const makeUnit = () =>
   new Unit({ name: 'Soldier', health: 10, mana: 5, strength: 4, defense: 2, movement: 5, team: 'player' });
@@ -390,5 +393,22 @@ describe('toObjectiveView', () => {
     const view = toObjectiveView('Stage 2: Lakeside', { goal: 'Defeat all enemies', defeat: 'All your units fall' });
     expect(view).toEqual({ battle: 'Stage 2: Lakeside', goal: 'Defeat all enemies', defeat: 'All your units fall' });
     expect(Object.isFrozen(view)).toBe(true);
+  });
+});
+
+describe('toRunOverView', () => {
+  it('carries the stage and the names of the fallen in order, frozen', () => {
+    const run = createRun(1, createStartingWarband());
+    const units = restoreRoster(run);
+    units.get('villager-2')!.takeDamage(99);
+    units.get('villager-1')!.takeDamage(99);
+    const view = toRunOverView({ ...applyBattleResult(run, { units }), stage: 4 });
+    expect(view).toEqual({ stage: 4, fallen: ['Alden', 'Bryn'] });
+    expect(Object.isFrozen(view)).toBe(true);
+    expect(Object.isFrozen(view.fallen)).toBe(true);
+  });
+
+  it('has an empty list when nobody fell', () => {
+    expect(toRunOverView(createRun(1, createStartingWarband())).fallen).toEqual([]);
   });
 });

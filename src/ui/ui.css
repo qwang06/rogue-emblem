@@ -1029,6 +1029,17 @@ kbd {
   color: #fca5a5;
 }
 
+.battle-result--run-over .battle-result__title {
+  font-size: 2rem;
+  letter-spacing: 4px;
+}
+
+.battle-result__detail {
+  max-width: 24rem;
+  margin: 8px auto 0;
+  font-size: 0.875rem;
+}
+
 .battle-result__hint {
   margin: 8px 0 0;
   font-size: 0.75rem;

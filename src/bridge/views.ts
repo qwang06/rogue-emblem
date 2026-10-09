@@ -9,6 +9,7 @@ import type { ExperienceGain, GrowthStat, LevelUpResult } from '../game/experien
 import type { ObjectiveText } from '../game/objectives.ts';
 import type { Point } from '../game/grid.ts';
 import type { Team, TurnState } from '../game/turns.ts';
+import type { RunState } from '../game/warband/run.ts';
 import type { Unit } from '../game/Unit.ts';
 import { formatWeaponRange } from '../game/weapons.ts';
 
@@ -138,6 +139,14 @@ export interface PhaseBannerView extends TurnView {
 export interface ObjectiveView extends ObjectiveText {
   // The battle's title, e.g. "Stage 2: Lakeside" (see describeBattle).
   battle: string;
+}
+
+// What the result screen says when a Warband Mode run ends.
+export interface RunOverView {
+  // The stage the warband fell on.
+  stage: number;
+  // Every unit lost over the run, battle by battle.
+  fallen: readonly string[];
 }
 
 export interface DialogView {
@@ -440,4 +449,10 @@ export function toDialogView({
 // words (src/game/objectives.ts).
 export function toObjectiveView(battle: string, text: ObjectiveText): ObjectiveView {
   return Object.freeze({ battle, goal: text.goal, defeat: text.defeat });
+}
+
+// Snapshot for the result screen of a run that has ended
+// (src/game/warband/run.ts).
+export function toRunOverView(run: Pick<RunState, 'stage' | 'fallen'>): RunOverView {
+  return Object.freeze({ stage: run.stage, fallen: Object.freeze(run.fallen.map((unit) => unit.name)) });
 }

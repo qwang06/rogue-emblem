@@ -5,15 +5,17 @@ import {
   regionPreview,
   describeBattle,
   FIRST_STORY_CHAPTER,
-  firstWarbandStage,
   getNextBattle,
+  runStage,
   STORY_CHAPTERS,
   type GameContent,
   type StoryChapter,
 } from './battleSetup.ts';
 import { REGION_CONFIGS, REGION_SETTINGS } from '../data/regions.ts';
 import { getStageRegion } from './warband/regions.ts';
-import { createStageLevel } from './warband/stageLevel.ts';
+import { advanceStage, applyBattleResult, createRun, getStageSeed, restoreRoster } from './warband/run.ts';
+import { createStageLevel, createStartingWarband, WARBAND_MAX_DEPLOYED } from './warband/stageLevel.ts';
+import { Archer } from './Archer.ts';
 import { createDemoLevel } from './demoLevel.ts';
 import { parseCharacters, parseDialogScript } from './dialogScript.ts';
 import { terrainToRows } from './mapGen.ts';
@@ -98,9 +100,57 @@ describe('describeBattle', () => {
 });
 
 describe('first battles', () => {
-  it('start story mode on chapter 1 and Warband Mode on stage 1', () => {
+  it('start story mode on chapter 1', () => {
     expect(FIRST_STORY_CHAPTER).toEqual({ mode: 'story', chapter: 1 });
-    expect(firstWarbandStage(42)).toEqual({ mode: 'warband', seed: 42, stage: 1 });
+  });
+});
+
+describe('runStage', () => {
+  const run = createRun(42, createStartingWarband());
+
+  it("fights the run's current stage on its stage seed", () => {
+    expect(runStage(run)).toEqual({ mode: 'warband', seed: getStageSeed(42, 1), stage: 1, run });
+    expect(runStage(advanceStage(run))).toMatchObject({ seed: getStageSeed(42, 2), stage: 2 });
+  });
+
+  it("fields the run's roster as it stands, with the run's deploy cap", () => {
+    const units = restoreRoster(run);
+    units.get('villager-1')!.takeDamage(3);
+    units.get('villager-2')!.takeDamage(99);
+    const after = { ...advanceStage(applyBattleResult(run, { units })), deployCap: 2 };
+
+    const level = createBattleLevel(runStage(after));
+    expect(level.roster).toEqual(['villager-1', 'villager-3']);
+    expect(level.maxDeployed).toBe(2);
+    const alden = level.units.get('villager-1')!;
+    expect(alden.health).toBe(alden.maxHealth - 3);
+    expect(level.units.has('villager-2')).toBe(false);
+  });
+
+  it('builds the same map each time for the same run and stage', () => {
+    expect(terrainToRows(createBattleLevel(runStage(run)).grid)).toEqual(
+      terrainToRows(createBattleLevel(runStage(run)).grid),
+    );
+  });
+
+  it('has no next battle of its own', () => {
+    expect(() => getNextBattle(runStage(run), 0)).toThrow(/finishStage/);
+  });
+});
+
+describe('createStageLevel rosters', () => {
+  it('fields the starting warband without a roster', () => {
+    const level = createStageLevel(3, REGION_CONFIGS[0]);
+    expect(level.roster).toEqual([...createStartingWarband().keys()]);
+    expect(level.maxDeployed).toBe(WARBAND_MAX_DEPLOYED);
+  });
+
+  it('fields the roster it is given', () => {
+    const archer = new Archer({ name: 'Bryn', team: 'player' });
+    const level = createStageLevel(3, REGION_CONFIGS[0], new Map([['bryn', archer]]), 1);
+    expect(level.roster).toEqual(['bryn']);
+    expect(level.units.get('bryn')).toBe(archer);
+    expect(level.maxDeployed).toBe(1);
   });
 });
 

@@ -13,24 +13,40 @@ import { generateTerrain } from '../mapGen.ts';
 import { DEFAULT_OBJECTIVE } from '../objectives.ts';
 import { createSeededRng } from '../rng.ts';
 import { Soldier } from '../Soldier.ts';
+import type { Unit } from '../Unit.ts';
 import { BUILDING_ART, BUILDING_PALETTES, FOREST_ART, MOUNTAIN_ART } from '../tileset.ts';
 import { Villager } from '../Villager.ts';
 import type { RegionConfig } from './regions.ts';
 
 export const WARBAND_MAX_DEPLOYED = 3;
 
+// The warband a new run starts with (and a region preview fields): the
+// demo's villagers, by unitId.
+export function createStartingWarband(): Map<string, Unit> {
+  return new Map(
+    Object.entries(PLAYER_ROSTER).map(([unitId, name]) => [unitId, new Villager({ name, team: 'player' })]),
+  );
+}
+
 const key = ({ x, y }: Point) => `${x},${y}`;
 
 // Returns a level shaped like createDemoLevel's, generated from `seed` with
 // `region`'s terrain options:
 // - deploymentZone: the path's south end and the tiles either side of it
+// - roster: `roster`'s units (a run's warband), else createStartingWarband's,
+//   deploying up to `maxDeployed`
 // - enemies: a soldier on each tile pickEnemyTiles finds for region.enemies
 //   (fewer than asked when a group's limits leave too few tiles)
 // - buildings: the generator's, drawn in region.palette
 // - decorations: green ginkgos scattered (region.treeChance) on the grass no
 //   other art covers
 // - objective: region.objective, else a rout (defeat all enemies)
-export function createStageLevel(seed: number, region: RegionConfig): DemoLevel {
+export function createStageLevel(
+  seed: number,
+  region: RegionConfig,
+  roster: ReadonlyMap<string, Unit> = createStartingWarband(),
+  maxDeployed = WARBAND_MAX_DEPLOYED,
+): DemoLevel {
   const rng = createSeededRng(seed);
   const generated = generateTerrain(region.terrain, rng);
   const { path, buildings } = generated;
@@ -41,9 +57,7 @@ export function createStageLevel(seed: number, region: RegionConfig): DemoLevel 
 
   const enemyTiles = pickEnemyTiles(grid, region.enemies, deploymentZone, rng).flat();
 
-  const units = new Map(
-    Object.entries(PLAYER_ROSTER).map(([unitId, name]) => [unitId, new Villager({ name, team: 'player' })]),
-  );
+  const units = new Map(roster);
   enemyTiles.forEach(({ x, y }, i) => {
     const unitId = `enemy-${i + 1}`;
     units.set(unitId, new Soldier({ name: 'Enemy Soldier', team: 'enemy' }));
@@ -65,9 +79,9 @@ export function createStageLevel(seed: number, region: RegionConfig): DemoLevel 
   return {
     grid,
     units,
-    roster: Object.keys(PLAYER_ROSTER),
+    roster: [...roster.keys()],
     deploymentZone,
-    maxDeployed: WARBAND_MAX_DEPLOYED,
+    maxDeployed,
     dialogs: {},
     decorations,
     structures: [],

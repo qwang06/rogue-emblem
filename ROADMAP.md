@@ -11,7 +11,7 @@ The plan for growing Rogue Emblem into a Fire Emblem–style tactics game, one s
 
 ## Where we are
 
-Already built: grid and terrain move costs, movement range and arrow, player/enemy phases with win/loss, one-way attacks (`attack - defense`; counterattacks and FE-style stats since 1.1/1.2), skills with mana, consumable items, deployment, a rushing enemy AI, dialog, title/pause menus, and training mode. Phase 1 added counterattacks, hit/crit/doubling, the combat forecast, and XP with growth-rate level ups. Phase 2 has begun: units fight with weapons (2.1). 2.3 has begun: Villager and Soldier are joined by the Archer, the Vanguard and the Wizard. Warband Mode (Dungeon Mode until W.0) is a ladder of generated overworld maps with nothing carried between stages; Phase W turns it into the game's roguelike run.
+Already built: grid and terrain move costs, movement range and arrow, player/enemy phases with win/loss, one-way attacks (`attack - defense`; counterattacks and FE-style stats since 1.1/1.2), skills with mana, consumable items, deployment, a rushing enemy AI, dialog, title/pause menus, and training mode. Phase 1 added counterattacks, hit/crit/doubling, the combat forecast, and XP with growth-rate level ups. Phase 2 has begun: units fight with weapons (2.1). 2.3 has begun: Villager and Soldier are joined by the Archer, the Vanguard and the Wizard. Warband Mode (Dungeon Mode until W.0) is a run of generated overworld maps whose warband carries XP, HP, items and deaths from stage to stage (W.1); Phase W turns it into the game's roguelike run.
 
 ---
 
@@ -235,7 +235,7 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 - **Tests:** existing dungeon tests renamed and passing; an old-shape settings file still parses.
 - _Done:_ the modules live in `src/game/warband/` (`regions.ts`, `regionsFile.ts`, `stageLevel.ts`). An enemy group's spawn box is now `area` (it was `region`, which clashed with the new term); old files' `region` still reads. Uploads keep their old storage key so they still play.
 
-### [ ] W.1 Run state, carry-over and permadeath
+### [x] W.1 Run state, carry-over and permadeath
 
 - Pure `src/game/warband/run.ts`: `RunState = { seed, stage, roster, convoy, gold, relics, deployCap, fallen }`, with a `UnitSnapshot` (class, level, XP, stats, current HP, inventory) that round-trips to a `Unit`.
 - `applyBattleResult(run, result)` writes XP and levels, HP, weapon uses, items used and deaths back to the roster; the fallen leave it for good.
@@ -245,7 +245,7 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 - The run is saved to `localStorage` (try/catch) so it survives a reload; a run-scoped slice of 4.1.
 - Run-over and victory screens in React.
 - **Tests:** snapshot round-trip, battle results merged (XP, level ups, HP, broken weapons, used items), deaths removed, an empty roster ends the run, the same seed gives the same stages, corrupt saves rejected.
-- _Progress:_ the pure run state is in `src/game/warband/run.ts` (`RunState`, `UnitSnapshot`, `applyBattleResult`, `getStageSeed`, `serializeRun` / `parseRun`), with its tests. Still to do: `createStageLevel` taking the run's roster, battles writing results back, saving to `localStorage`, and the run-over and victory screens.
+- _Done:_ `src/game/warband/run.ts` holds the run (`RunState`, `UnitSnapshot`, `applyBattleResult`, `finishStage`, `getStageSeed`, `serializeRun` / `parseRun`), and `src/data/runSave.ts` keeps it in `localStorage`. Choosing Warband Mode starts a run with the three villagers, or, with one saved, offers Continue Run (Stage N) or New Run. A stage fields the run's roster as it stands; winning writes the battle back and saves the next stage, and losing ends the run (even with units left on the bench) on a "The Warband Fell" result naming the stage and everyone lost. The run is saved as each stage starts, so leaving or reloading mid-battle replays that stage from its start. Mana carries over like HP. _Deferred:_ the victory screen, until W.2's region bosses give a run an end to win, and picking a starting warband (W.10 widens the choice).
 
 ### [ ] W.2 Enemy scaling and region bosses
 

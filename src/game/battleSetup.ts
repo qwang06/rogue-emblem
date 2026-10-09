@@ -8,6 +8,7 @@ import { DIALOGS } from '../data/dialogs.ts';
 import type { DialogFiles } from './dialogScript.ts';
 import { REGION_SETTINGS } from '../data/regions.ts';
 import { getRegionStages, getStageRegion, type RegionSettings } from './warband/regions.ts';
+import { getStageSeed, restoreRoster, type RunState } from './warband/run.ts';
 import { createStageLevel } from './warband/stageLevel.ts';
 import { createDemoLevel, type DemoLevel } from './demoLevel.ts';
 import { createTrainingLevel, type Level } from './trainingLevel.ts';
@@ -15,7 +16,7 @@ import { createTrainingLevel, type Level } from './trainingLevel.ts';
 export type BattleSetup =
   | { mode: 'story'; chapter: number }
   | { mode: 'training'; unitClass: string }
-  | { mode: 'warband'; seed: number; stage: number };
+  | { mode: 'warband'; seed: number; stage: number; run?: RunState };
 
 // A battle's starting state, whichever mode built it.
 export type BattleLevel = Level & Partial<DemoLevel>;
@@ -46,8 +47,10 @@ export const STORY_CHAPTERS: readonly StoryChapter[] = Object.freeze([
 // The first battle of each mode that has one.
 export const FIRST_STORY_CHAPTER: BattleSetup = Object.freeze({ mode: 'story', chapter: 1 });
 
-export function firstWarbandStage(seed: number): BattleSetup {
-  return { mode: 'warband', seed, stage: 1 };
+// The battle for a run's current stage: its stage, on the map
+// getStageSeed gives it, fought by the run's roster.
+export function runStage(run: RunState): BattleSetup {
+  return { mode: 'warband', seed: getStageSeed(run.seed, run.stage), stage: run.stage, run };
 }
 
 function getStoryChapter(chapter: number, chapters: readonly StoryChapter[]): StoryChapter {
@@ -57,7 +60,9 @@ function getStoryChapter(chapter: number, chapters: readonly StoryChapter[]): St
 }
 
 // Builds the level a setup describes from `content` (its dialog, and a
-// Warband Mode stage's region).
+// Warband Mode stage's region). A stage of a run fields the run's roster
+// and deploy cap; one without a run (a region preview) the starting
+// warband.
 export function createBattleLevel(
   setup: BattleSetup,
   content: GameContent = DEFAULT_CONTENT,
@@ -69,14 +74,23 @@ export function createBattleLevel(
     case 'training':
       return createTrainingLevel(setup.unitClass, content.dialogs.training);
     case 'warband':
-      return createStageLevel(setup.seed, getStageRegion(setup.stage, content.regions));
+      return setup.run
+        ? createStageLevel(
+            setup.seed,
+            getStageRegion(setup.stage, content.regions),
+            restoreRoster(setup.run),
+            setup.run.deployCap,
+          )
+        : createStageLevel(setup.seed, getStageRegion(setup.stage, content.regions));
   }
 }
 
 // The battle after `setup` is won, or null when there's none and the
 // player goes back to the title: story mode moves to the next chapter
 // until the last; Warband Mode moves on a stage, on a new map made from
-// `seed`, and never ends; training is a single bout.
+// `seed`, and never ends; training is a single bout. A stage of a run
+// isn't moved on here, since its next stage depends on how the battle went
+// (see finishStage in warband/run.ts).
 export function getNextBattle(
   setup: BattleSetup,
   seed: number,
@@ -88,6 +102,7 @@ export function getNextBattle(
     case 'training':
       return null;
     case 'warband':
+      if (setup.run) throw new Error("A run's next stage comes from finishStage");
       return { mode: 'warband', seed, stage: setup.stage + 1 };
   }
 }
