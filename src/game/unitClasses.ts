@@ -3,6 +3,7 @@
 // choice of class (e.g. Training) don't need to know the subclasses.
 
 import { Archer } from './Archer.ts';
+import { Guard } from './Guard.ts';
 import { Soldier } from './Soldier.ts';
 import type { ClassUnitOptions, Unit } from './Unit.ts';
 import { Vanguard } from './Vanguard.ts';
@@ -21,6 +22,7 @@ export const UNIT_CLASSES: readonly UnitClass[] = Object.freeze([
   Object.freeze<UnitClass>({ id: 'archer', label: 'Archer', create: (options) => new Archer(options) }),
   Object.freeze<UnitClass>({ id: 'vanguard', label: 'Vanguard', create: (options) => new Vanguard(options) }),
   Object.freeze<UnitClass>({ id: 'wizard', label: 'Wizard', create: (options) => new Wizard(options) }),
+  Object.freeze<UnitClass>({ id: 'guard', label: 'Guard', create: (options) => new Guard(options) }),
 ]);
 
 // Builds a Unit of the class with the given id. `options` go to the class's
