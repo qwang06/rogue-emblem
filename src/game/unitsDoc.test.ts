@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { calculateDamage, getCombatForecast } from './combat.ts';
 import { getCritChance, getHitChance } from './combatStats.ts';
 import type { GrowthStat } from './experience.ts';
-import { calculateSkillDamage, POWER_STRIKE, SKILL_TREES, THROW_STONES } from './skills.ts';
+import { calculateSkillDamage, LONG_SHOT, POWER_STRIKE, SKILL_TREES, THROW_STONES, type Skill } from './skills.ts';
 import { createUnitOfClass, UNIT_CLASSES } from './unitClasses.ts';
 import type { Unit } from './Unit.ts';
 import { formatWeaponRange, WEAPONS } from './weapons.ts';
@@ -130,17 +130,19 @@ describe('UNITS.md', () => {
   });
 
   it('has the right level-1 matchup numbers', () => {
-    const units = {
+    const units: Record<string, Unit> = {
       Villager: createUnitOfClass('villager', { team: 'player' }),
       Soldier: createUnitOfClass('soldier', { team: 'enemy' }),
+      Archer: createUnitOfClass('archer', { team: 'player' }),
     };
     const text = section('Matchups at level 1');
     const attacks = tableWithHeader(text, 'Attacker');
-    expect(attacks.map(([attacker]) => attacker)).toEqual(['Villager', 'Soldier']);
-    for (const [attackerName, weapon, damage, hit, crit, strikes] of attacks) {
-      const attacker = units[attackerName as keyof typeof units];
-      const defender = attacker === units.Villager ? units.Soldier : units.Villager;
-      const forecast = getCombatForecast(attacker, defender, { distance: 1 });
+    expect(attacks.map(([attacker]) => attacker)).toEqual(['Villager', 'Soldier', 'Archer']);
+    for (const [attackerName, targetName, weapon, damage, hit, crit, strikes] of attacks) {
+      const attacker = units[attackerName];
+      const defender = units[targetName];
+      // From as close as the attacker's weapon reaches.
+      const forecast = getCombatForecast(attacker, defender, { distance: attacker.weapon!.minRange });
       expect(weapon).toBe(attacker.weapon!.label);
       expect(Number(damage), `${attackerName} damage`).toBe(calculateDamage(attacker, defender));
       expect(hit, `${attackerName} hit`).toBe(`${getHitChance(attacker, defender)}%`);
@@ -148,8 +150,15 @@ describe('UNITS.md', () => {
       expect(Number(strikes), `${attackerName} strikes`).toBe(forecast.attacker.strikes);
     }
 
-    const skills = Object.fromEntries(tableWithHeader(text, 'Skill').map((r) => [r[0], r]));
-    expect(Number(skills['Throw Stones'][2])).toBe(calculateSkillDamage(THROW_STONES, units.Villager, units.Soldier));
-    expect(Number(skills['Power Strike'][2])).toBe(calculateSkillDamage(POWER_STRIKE, units.Soldier, units.Villager));
+    const skills = tableWithHeader(text, 'Skill');
+    const SKILLS: Record<string, Skill> = {
+      'Throw Stones': THROW_STONES,
+      'Power Strike': POWER_STRIKE,
+      'Long Shot': LONG_SHOT,
+    };
+    expect(skills.map(([name]) => name)).toEqual(Object.keys(SKILLS));
+    for (const [name, user, target, damage] of skills) {
+      expect(Number(damage), `${name} damage`).toBe(calculateSkillDamage(SKILLS[name], units[user], units[target]));
+    }
   });
 });

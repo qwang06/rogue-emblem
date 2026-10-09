@@ -61,10 +61,23 @@ export const POWER_STRIKE: Skill = Object.freeze({
   animation: 'strike',
 });
 
+// An arrow loosed from further off than the bow reaches: the user's
+// regular attack from up to 3 tiles away. Like every skill it can't be
+// countered, and it can hit an adjacent foe the bow can't. Flies like a
+// thrown stone until it gets an arrow of its own.
+export const LONG_SHOT: Skill = Object.freeze({
+  id: 'long-shot',
+  label: 'Long Shot',
+  manaCost: 2,
+  range: 3,
+  animation: 'stone',
+});
+
 // unitClass -> [{ level, skill }]. Classes without an entry know no skills.
 export const SKILL_TREES: SkillTrees = Object.freeze({
   villager: Object.freeze([Object.freeze({ level: 1, skill: THROW_STONES })]),
   soldier: Object.freeze([Object.freeze({ level: 1, skill: POWER_STRIKE })]),
+  archer: Object.freeze([Object.freeze({ level: 1, skill: LONG_SHOT })]),
 });
 
 // Every skill a unit of unitClass knows at the given level, in tree order.

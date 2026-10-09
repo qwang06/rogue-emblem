@@ -2,6 +2,7 @@
 // names the class and builds a fresh Unit of it, so menus that offer a
 // choice of class (e.g. Training) don't need to know the subclasses.
 
+import { Archer } from './Archer.ts';
 import { Soldier } from './Soldier.ts';
 import type { ClassUnitOptions, Unit } from './Unit.ts';
 import { Villager } from './Villager.ts';
@@ -15,6 +16,7 @@ export interface UnitClass {
 export const UNIT_CLASSES: readonly UnitClass[] = Object.freeze([
   Object.freeze<UnitClass>({ id: 'villager', label: 'Villager', create: (options) => new Villager(options) }),
   Object.freeze<UnitClass>({ id: 'soldier', label: 'Soldier', create: (options) => new Soldier(options) }),
+  Object.freeze<UnitClass>({ id: 'archer', label: 'Archer', create: (options) => new Archer(options) }),
 ]);
 
 // Builds a Unit of the class with the given id. `options` go to the class's
