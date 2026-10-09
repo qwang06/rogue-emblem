@@ -73,11 +73,23 @@ export const LONG_SHOT: Skill = Object.freeze({
   animation: 'stone',
 });
 
+// A wild overhead swing against an adjacent foe: the user's regular
+// attack with 2 more power behind it.
+export const CLEAVE: Skill = Object.freeze({
+  id: 'cleave',
+  label: 'Cleave',
+  manaCost: 2,
+  range: 1,
+  might: 2,
+  animation: 'strike',
+});
+
 // unitClass -> [{ level, skill }]. Classes without an entry know no skills.
 export const SKILL_TREES: SkillTrees = Object.freeze({
   villager: Object.freeze([Object.freeze({ level: 1, skill: THROW_STONES })]),
   soldier: Object.freeze([Object.freeze({ level: 1, skill: POWER_STRIKE })]),
   archer: Object.freeze([Object.freeze({ level: 1, skill: LONG_SHOT })]),
+  vanguard: Object.freeze([Object.freeze({ level: 1, skill: CLEAVE })]),
 });
 
 // Every skill a unit of unitClass knows at the given level, in tree order.

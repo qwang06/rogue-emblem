@@ -7,7 +7,15 @@ import { describe, expect, it } from 'vitest';
 import { calculateDamage, getCombatForecast } from './combat.ts';
 import { getCritChance, getHitChance } from './combatStats.ts';
 import type { GrowthStat } from './experience.ts';
-import { calculateSkillDamage, LONG_SHOT, POWER_STRIKE, SKILL_TREES, THROW_STONES, type Skill } from './skills.ts';
+import {
+  calculateSkillDamage,
+  CLEAVE,
+  LONG_SHOT,
+  POWER_STRIKE,
+  SKILL_TREES,
+  THROW_STONES,
+  type Skill,
+} from './skills.ts';
 import { createUnitOfClass, UNIT_CLASSES } from './unitClasses.ts';
 import type { Unit } from './Unit.ts';
 import { formatWeaponRange, WEAPONS } from './weapons.ts';
@@ -134,10 +142,11 @@ describe('UNITS.md', () => {
       Villager: createUnitOfClass('villager', { team: 'player' }),
       Soldier: createUnitOfClass('soldier', { team: 'enemy' }),
       Archer: createUnitOfClass('archer', { team: 'player' }),
+      Vanguard: createUnitOfClass('vanguard', { team: 'player' }),
     };
     const text = section('Matchups at level 1');
     const attacks = tableWithHeader(text, 'Attacker');
-    expect(attacks.map(([attacker]) => attacker)).toEqual(['Villager', 'Soldier', 'Archer']);
+    expect(attacks.map(([attacker]) => attacker)).toEqual(['Villager', 'Soldier', 'Archer', 'Vanguard']);
     for (const [attackerName, targetName, weapon, damage, hit, crit, strikes] of attacks) {
       const attacker = units[attackerName];
       const defender = units[targetName];
@@ -155,6 +164,7 @@ describe('UNITS.md', () => {
       'Throw Stones': THROW_STONES,
       'Power Strike': POWER_STRIKE,
       'Long Shot': LONG_SHOT,
+      Cleave: CLEAVE,
     };
     expect(skills.map(([name]) => name)).toEqual(Object.keys(SKILLS));
     for (const [name, user, target, damage] of skills) {

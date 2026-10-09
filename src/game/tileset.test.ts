@@ -53,6 +53,7 @@ describe('getUnitSprite', () => {
     expect(getUnitSprite('villager')).toBe('Villager_01');
     expect(getUnitSprite('soldier')).toBe('Soldier_03');
     expect(getUnitSprite('archer')).toBe('Archer_02');
+    expect(getUnitSprite('vanguard')).toBe('Vanguard_04');
   });
 
   it('falls back to the default art for an unknown or missing class', () => {
