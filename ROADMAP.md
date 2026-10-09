@@ -84,12 +84,12 @@ The single biggest change to how the game feels. After this phase every attack i
 
 ### [ ] 2.2 Weapon triangle
 
-- _Revisit before building:_ since 2.1 the weapon types are `physical` / `magical` / `siege`, not sword / lance / axe, so this triangle no longer maps onto anything. Drop it or redesign it around the new types; decide that first.
-
-- Sword > Axe > Lance > Sword: advantage gives +15 hit and +1 damage, disadvantage the reverse. Magic/bows neutral (or a magic triangle later).
+- Physical > Magical > Siege > Physical, on the weapon `type` from 2.1: infantry rushes casters, magic burns engines, siege breaks infantry at range. The cycle pushes against the edges combat already has (magic hits low-RES physical units, siege can't defend itself up close) rather than stacking on them.
+- Compares the attacker's equipped weapon with the defender's: advantage gives +15 hit and +1 damage, disadvantage the reverse. Same type, or either side unarmed, is neutral. Tune the damage half once classes exist: +1 is about a third of a level-1 hit.
 - Forecast shows advantage arrows.
-- Pure `getTriangleModifier(attackerWeapon, defenderWeapon)`.
-- **Tests:** every pairing, neutral cases, unarmed defender.
+- Pure `getTriangleModifier(attackerWeapon, defenderWeapon)` in `weapons.ts`, applied in `combatStats.ts` (hit) and `combat.ts` (damage).
+- **Tests:** every pairing, neutral cases, unarmed attacker and defender, hit and damage clamps.
+- _Decided:_ chose this over a spear/axe/sword triangle on a new weapon field and over effectiveness tags (bonus might against flying or armored units, which could still come after 2.4).
 
 ### [ ] 2.3 New classes
 
