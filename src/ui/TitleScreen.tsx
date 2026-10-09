@@ -2,7 +2,14 @@ import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 
 import type { MenuAction } from '../game/actionMenu.ts';
 import { gameStore } from '../bridge/gameStore.ts';
 import { createActionMenu, getSelectedAction, moveSelection, selectIndex } from '../game/actionMenu.ts';
-import { getWarbandActions, SETTINGS_ACTIONS, TITLE_ACTIONS } from '../game/titleMenu.ts';
+import {
+  getFirstEnabledIndex,
+  getWarbandActions,
+  SETTINGS_ACTIONS,
+  STARTING_CLASS_ACTIONS,
+  TITLE_ACTIONS,
+  type StartingClassAction,
+} from '../game/titleMenu.ts';
 import { getTrainingActions } from '../game/trainingLevel.ts';
 import { FIRST_STORY_CHAPTER, runStage } from '../game/battleSetup.ts';
 import { randomSeed } from '../game/rng.ts';
@@ -11,25 +18,20 @@ import { createStartingWarband } from '../game/warband/stageLevel.ts';
 import { loadSavedRun, saveRun } from '../data/runSave.ts';
 import { routeHash } from './route.ts';
 
-type View = 'main' | 'training' | 'warband' | 'settings';
+type View = 'main' | 'training' | 'warband' | 'new-run' | 'settings';
 
 // The submenus title entries open: their heading, and the entries to list.
+// New Run is a submenu of Warband Mode's, and Back returns there.
 const SUBMENUS = {
   training: { heading: 'Training — Choose a Unit', label: 'Choose a unit to train', actions: getTrainingActions },
-  warband: {
-    heading: 'Warband Mode',
-    label: 'Warband Mode',
-    actions: () => {
-      const saved = loadSavedRun();
-      return saved ? getWarbandActions(saved) : [];
-    },
-  },
+  warband: { heading: 'Warband Mode', label: 'Warband Mode', actions: () => getWarbandActions(loadSavedRun()) },
+  'new-run': { heading: 'New Run — Choose a Class', label: 'Choose a class', actions: () => STARTING_CLASS_ACTIONS },
   settings: { heading: 'Settings', label: 'Settings', actions: () => SETTINGS_ACTIONS },
 } as const;
 
-// A fresh run with the starting warband.
-function newRun(): RunState {
-  return createRun(randomSeed(), createStartingWarband());
+// A fresh run with a starting warband of `classId`.
+function newRun(classId?: string): RunState {
+  return createRun(randomSeed(), createStartingWarband(classId));
 }
 
 function mainMenu(selectedIndex = 0) {
@@ -37,8 +39,9 @@ function mainMenu(selectedIndex = 0) {
 }
 
 // The landing screen: game title plus the Story Mode / Warband Mode /
-// Training / Settings menu. Warband Mode starts a new run, or with one
-// saved opens a submenu to continue it or start a new one.
+// Training / Settings menu. Warband Mode opens a submenu to continue the
+// saved run (disabled when there's none) or start a new one, and New Run
+// opens one more to pick the base class the warband starts as.
 // Training swaps in a second menu listing the unit classes; picking one
 // starts a small practice battle with that unit. Settings swaps in the
 // settings menu, whose Game Configs opens the config editor (#/configs). Works with the keyboard
@@ -55,34 +58,44 @@ export function TitleScreen() {
     listRef.current?.children[menu.selectedIndex]?.scrollIntoView({ block: 'nearest' });
   }, [menu.selectedIndex, view]);
 
-  function openSubmenu(submenu: Exclude<View, 'main'>) {
+  // Opens a submenu with `selectedId`'s entry selected, else its first
+  // enabled one.
+  function openSubmenu(submenu: Exclude<View, 'main'>, selectedId?: string) {
+    const actions = SUBMENUS[submenu].actions();
+    const selected = actions.findIndex((action) => action.id === selectedId);
     setView(submenu);
-    setMenu(createActionMenu(SUBMENUS[submenu].actions()));
+    setMenu(selectIndex(createActionMenu(actions), selected >= 0 ? selected : getFirstEnabledIndex(actions)));
   }
 
-  // Back to the main menu, with the entry that opened the submenu selected.
-  function backToMain() {
+  // Back a level, with the entry that opened the submenu selected: from
+  // New Run to Warband Mode's submenu, from the rest to the main menu.
+  function goBack() {
+    if (view === 'new-run') {
+      openSubmenu('warband', 'new-run');
+      return;
+    }
     setMenu(mainMenu(TITLE_ACTIONS.findIndex((action) => action.id === view)));
     setView('main');
   }
 
-  // Carries out a menu choice. Warband Mode starts a new run, or with a run
-  // saved opens a submenu to continue it or start over.
+  // Carries out a menu choice; disabled entries do nothing.
   function runAction(action: MenuAction | null) {
-    if (!action) return;
+    if (!action || action.disabled) return;
     if (view === 'settings') {
       if (action.id === 'configs') window.location.hash = routeHash({ page: 'configs' });
     } else if (view === 'warband') {
-      if (action.id === 'continue-run') playRun(loadSavedRun() ?? newRun());
-      else if (action.id === 'new-run') playRun(newRun());
+      if (action.id === 'continue-run') {
+        const saved = loadSavedRun();
+        if (saved) playRun(saved);
+        else openSubmenu('warband', 'new-run');
+      } else if (action.id === 'new-run') openSubmenu('new-run');
+    } else if (view === 'new-run') {
+      playRun(newRun(action.id));
     } else if (view === 'training') {
       gameStore.setState({ screen: 'battle', battleSetup: { mode: 'training', unitClass: action.id } });
     } else if (action.id === 'story') {
       gameStore.setState({ screen: 'battle', battleSetup: FIRST_STORY_CHAPTER });
-    } else if (action.id === 'warband') {
-      if (loadSavedRun()) openSubmenu('warband');
-      else playRun(newRun());
-    } else if (action.id === 'training' || action.id === 'settings') {
+    } else if (action.id === 'warband' || action.id === 'training' || action.id === 'settings') {
       openSubmenu(action.id);
     }
   }
@@ -104,7 +117,7 @@ export function TitleScreen() {
       } else if (event.key === 'Escape' || event.key === 'x' || event.key === 'X') {
         if (view !== 'main') {
           event.preventDefault();
-          backToMain();
+          goBack();
         }
       }
     }
@@ -114,10 +127,13 @@ export function TitleScreen() {
 
   function onContextMenu(event: ReactMouseEvent) {
     event.preventDefault();
-    if (view !== 'main') backToMain();
+    if (view !== 'main') goBack();
   }
 
   const submenu = view === 'main' ? null : SUBMENUS[view];
+  // The pitch of the class selected on the New Run submenu.
+  const description =
+    view === 'new-run' ? (getSelectedAction(menu) as StartingClassAction | null)?.description : undefined;
 
   return (
     <div className="title-screen" onContextMenu={onContextMenu}>
@@ -134,12 +150,16 @@ export function TitleScreen() {
         <ul className="title-menu__list" ref={listRef}>
           {menu.actions.map((action, index) => {
             const selected = index === menu.selectedIndex;
+            const classes = ['title-menu__item'];
+            if (selected) classes.push('title-menu__item--selected');
+            if (action.disabled) classes.push('title-menu__item--disabled');
             return (
               <li key={action.id}>
                 <button
                   type="button"
-                  className={selected ? 'title-menu__item title-menu__item--selected' : 'title-menu__item'}
+                  className={classes.join(' ')}
                   aria-current={selected ? 'true' : undefined}
+                  aria-disabled={action.disabled ? 'true' : undefined}
                   onMouseEnter={() => setMenu((current) => selectIndex(current, index))}
                   onClick={() => runAction(action)}
                 >
@@ -149,6 +169,11 @@ export function TitleScreen() {
             );
           })}
         </ul>
+        {description && (
+          <p className="title-menu__description" aria-live="polite">
+            {description}
+          </p>
+        )}
       </nav>
 
       <p className="title-screen__hint">

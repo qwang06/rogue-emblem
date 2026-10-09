@@ -14,17 +14,23 @@ import { DEFAULT_OBJECTIVE } from '../objectives.ts';
 import { createSeededRng } from '../rng.ts';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
+import { createUnitOfClass } from '../unitClasses.ts';
 import { BUILDING_ART, BUILDING_PALETTES, FOREST_ART, MOUNTAIN_ART } from '../tileset.ts';
-import { Villager } from '../Villager.ts';
 import type { RegionConfig } from './regions.ts';
+import { DEFAULT_STARTING_CLASS } from './startingClasses.ts';
 
 export const WARBAND_MAX_DEPLOYED = 3;
 
-// The warband a new run starts with (and a region preview fields): the
-// demo's villagers, by unitId.
-export function createStartingWarband(): Map<string, Unit> {
+// The warband a new run starts with (and a region preview fields): one
+// level-1 unit of `classId` (see STARTING_CLASSES) for each of the demo
+// roster's names, by unitId `<classId>-1`, `<classId>-2`, ... Throws on
+// an unknown class.
+export function createStartingWarband(classId: string = DEFAULT_STARTING_CLASS): Map<string, Unit> {
   return new Map(
-    Object.entries(PLAYER_ROSTER).map(([unitId, name]) => [unitId, new Villager({ name, team: 'player' })]),
+    Object.values(PLAYER_ROSTER).map((name, i) => [
+      `${classId}-${i + 1}`,
+      createUnitOfClass(classId, { name, team: 'player' }),
+    ]),
   );
 }
 

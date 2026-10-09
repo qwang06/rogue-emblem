@@ -14,6 +14,7 @@ Reference for every unit class: base stats, growth rates, caps, weapons and skil
 - **Healing:** a unit carrying a staff gets a **Heal** action. It restores the staff's power + the healer's `MAG` to a wounded ally in the staff's range, capped at the ally's missing HP, spends one use of the staff (a staff with none left breaks), and earns the healer 10 XP. Staves aren't weapons: they can't attack or counter.
 - **Uses:** every strike, hit or miss, spends one use of the striker's weapon. A weapon with no uses left breaks and is gone, and a unit whose weapon breaks mid-exchange stops striking. Fists never break (`∞`).
 - **Growths** are the % chance a stat rises by 1 on each level up. A stat never grows past its cap. Max level is 20, 100 XP per level.
+- **XP rate** scales every XP gain (combat, skills, healing): a unit with a 150% rate earns 15 XP where others earn 10, rounded to the nearest point and never below 1.
 - **Skills** always hit, never crit, and the target can't counter. Their damage is the user's regular hit (weapon might included) with any bonus `STR` added, then scaled; scaled damage rounds up. Using one costs mana, earns XP like a landed hit, and spends no weapon uses.
 
 Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.md` (`combat.ts`, `combatStats.ts`, `weapons.ts`, `experience.ts`, `skills.ts`).
@@ -34,24 +35,24 @@ One starter weapon per armed unit in the unit catalog. Fists, the Iron Spear, th
 
 ## Villager
 
-The player's townsfolk in the demo battle. For now a villager has the same stat line, growths and caps as a soldier; its identity comes from its skill and its bare fists.
+The player's townsfolk in the demo battle, and the late bloomer of Warband Mode's starting classes. A villager starts with a soldier's stat line but only its bare fists, so it's the weakest pick early on. In exchange it has the highest growth total and the highest caps of any class and earns XP half again as fast, so a villager that survives the early stages outgrows everyone else.
 
 | Stat | Base | Growth | Cap |
 | ---- | ---- | ------ | --- |
-| HP   | 10   | 70%    | 40  |
-| MP   | 5    | 40%    | 30  |
-| STR  | 4    | 45%    | 20  |
-| MAG  | 0    | 5%     | 20  |
-| SKL  | 3    | 40%    | 20  |
-| SPD  | 3    | 40%    | 20  |
-| LCK  | 2    | 30%    | 20  |
-| DEF  | 2    | 30%    | 20  |
-| RES  | 0    | 15%    | 20  |
+| HP   | 10   | 85%    | 50  |
+| MP   | 5    | 45%    | 35  |
+| STR  | 4    | 60%    | 25  |
+| MAG  | 0    | 10%    | 20  |
+| SKL  | 3    | 55%    | 25  |
+| SPD  | 3    | 55%    | 25  |
+| LCK  | 2    | 50%    | 25  |
+| DEF  | 2    | 45%    | 25  |
+| RES  | 0    | 25%    | 25  |
 | MOV  | 5    | –      | –   |
 
-| Weapon types | Starting weapon |
-| ------------ | --------------- |
-| physical     | Fists           |
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| physical     | Fists           | 150%    |
 
 | Skill        | Learned at | Mana | Range | Damage                           |
 | ------------ | ---------- | ---- | ----- | -------------------------------- |
@@ -76,9 +77,9 @@ The spear-and-shield infantry: the enemy in the demo battle, and a choice in Tra
 | RES  | 0    | 15%    | 20  |
 | MOV  | 5    | –      | –   |
 
-| Weapon types | Starting weapon |
-| ------------ | --------------- |
-| physical     | Iron Spear      |
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| physical     | Iron Spear      | 100%    |
 
 | Skill        | Learned at | Mana | Range | Damage                      |
 | ------------ | ---------- | ---- | ----- | --------------------------- |
@@ -103,9 +104,9 @@ The ranged infantry: frail but accurate. Its bow only reaches two tiles away, so
 | RES  | 1    | 20%    | 20  |
 | MOV  | 5    | –      | –   |
 
-| Weapon types | Starting weapon |
-| ------------ | --------------- |
-| physical     | Iron Bow        |
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| physical     | Iron Bow        | 100%    |
 
 | Skill     | Learned at | Mana | Range | Damage          |
 | --------- | ---------- | ---- | ----- | --------------- |
@@ -130,9 +131,9 @@ The axe-wielding front line: high HP and strength, low skill, speed and luck. It
 | RES  | 0    | 10%    | 20  |
 | MOV  | 5    | –      | –   |
 
-| Weapon types | Starting weapon |
-| ------------ | --------------- |
-| physical     | Iron Axe        |
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| physical     | Iron Axe        | 100%    |
 
 | Skill  | Learned at | Mana | Range | Damage                      |
 | ------ | ---------- | ---- | ----- | --------------------------- |
@@ -157,9 +158,9 @@ The spellcaster: magic instead of strength and resistance instead of defense, wi
 | RES  | 3    | 40%    | 20  |
 | MOV  | 5    | –      | –   |
 
-| Weapon types | Starting weapon |
-| ------------ | --------------- |
-| magical      | Fire            |
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| magical      | Fire            | 100%    |
 
 | Skill    | Learned at | Mana | Range | Damage                      |
 | -------- | ---------- | ---- | ----- | --------------------------- |
@@ -184,9 +185,9 @@ The armored infantry behind a tower shield: a soldier's strength and spear with 
 | RES  | 0    | 10%    | 20  |
 | MOV  | 4    | –      | –   |
 
-| Weapon types | Starting weapon |
-| ------------ | --------------- |
-| physical     | Iron Spear      |
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| physical     | Iron Spear      | 100%    |
 
 | Skill       | Learned at | Mana | Range | Damage                      |
 | ----------- | ---------- | ---- | ----- | --------------------------- |
@@ -211,9 +212,9 @@ The healer: it wields no weapon at all, so it can't attack or counter, and inste
 | RES  | 4    | 45%    | 20  |
 | MOV  | 5    | –      | –   |
 
-| Weapon types | Starting weapon |
-| ------------ | --------------- |
-| –            | –               |
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| –            | –               | 100%    |
 
 | Staff | Power | Rng | Uses | Heals at level 1 |
 | ----- | ----- | --- | ---- | ---------------- |
