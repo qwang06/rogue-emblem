@@ -2753,6 +2753,14 @@ textarea.draft-input {
   color: var(--yellow);
 }
 
+/* Item icons are one 32x32 tile, drawn at their pixel size. */
+.roster-screen__icon {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}
+
 .roster-screen__label {
   flex: 1;
   min-width: 0;

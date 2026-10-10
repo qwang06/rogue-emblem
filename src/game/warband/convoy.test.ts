@@ -9,6 +9,7 @@ import {
   canStoreInConvoy,
   equipInRoster,
   getEquippedIndex,
+  getWornIndices,
   giveFromConvoy,
   isMovable,
   isStackable,
@@ -170,5 +171,52 @@ describe('equipping', () => {
     expect(canEquipInRoster(run, 'alden', 3)).toBe(false);
     expect(() => equipInRoster(run, 'alden', 3)).toThrow();
     expect(canEquipInRoster(run, 'alden', 9)).toBe(false);
+  });
+});
+
+describe('equipping armor', () => {
+  const armored = (): RunState =>
+    giveFromConvoy(
+      giveFromConvoy(
+        campRun([
+          { itemId: 'wooden-shield', quantity: 1 },
+          { itemId: 'wooden-armor', quantity: 1 },
+        ]),
+        'alden',
+        0,
+      ),
+      'alden',
+      0,
+    );
+
+  it('wears the first armor of each slot as soon as it is carried', () => {
+    const run = armored();
+    expect(itemsOf(run, 'alden').map((e) => e.itemId)).toEqual([
+      'iron-spear',
+      'health-potion',
+      'mana-potion',
+      'wooden-shield',
+      'wooden-armor',
+    ]);
+    expect(getWornIndices(run, 'alden')).toEqual([3, 4]);
+    expect(canEquipInRoster(run, 'alden', 3)).toBe(false);
+    expect(getWornIndices(run, 'nobody')).toEqual([]);
+  });
+
+  it('wears a second piece of a slot by moving it to the front', () => {
+    const run = giveFromConvoy({ ...armored(), convoy: [{ itemId: 'wooden-shield', quantity: 1 }] }, 'alden', 0);
+    expect(canEquipInRoster(run, 'alden', 5)).toBe(true);
+    const after = equipInRoster(run, 'alden', 5);
+    expect(itemsOf(after, 'alden')[0].itemId).toBe('wooden-shield');
+    expect(getWornIndices(after, 'alden')).toEqual([0, 5]);
+    // The spear is still the weapon it fights with.
+    expect(getEquippedIndex(after, 'alden')).toBe(1);
+  });
+
+  it('lets any class wear armor and store it', () => {
+    const run = giveFromConvoy(campRun([{ itemId: 'wooden-armor', quantity: 1 }]), 'cato', 0);
+    expect(getWornIndices(run, 'cato')).toEqual([3]);
+    expect(canStoreInConvoy(run, 'cato', 3)).toBe(true);
+    expect(storeInConvoy(run, 'cato', 3).convoy).toEqual([{ itemId: 'wooden-armor', quantity: 1 }]);
   });
 });

@@ -10,7 +10,8 @@
 // tree and its level (see skills.ts). Items it carries — consumables and
 // weapons — are an inventory from items.ts; the first weapon in it the
 // unit can wield is the one it fights with (see weapons.ts), which sets
-// its range and the kind of damage it deals.
+// its range and the kind of damage it deals, and it wears the first armor
+// of each slot it carries, which adds to its defense (see items.ts).
 
 import type { Rng } from './combatStats.ts';
 import {
@@ -25,6 +26,10 @@ import { spendStaffUse, type Staff } from './healing.ts';
 import {
   createInventory,
   findItem,
+  getArmorDefense,
+  getWornArmor,
+  wearArmor,
+  type Armor,
   getItemRecovery,
   removeItem,
   type Inventory,
@@ -191,6 +196,24 @@ export class Unit {
   // The equipped weapon with its inventory slot and uses left, or null.
   get equippedWeapon(): EquippedWeapon | null {
     return getEquippedWeapon(this.items, this.weaponTypes);
+  }
+
+  // The armor it wears (the first of each slot it carries), with slots.
+  get wornArmor(): { armor: Armor; index: number }[] {
+    return getWornArmor(this.items);
+  }
+
+  // What its worn armor adds to its defense against physical hits.
+  get armorDefense(): number {
+    return getArmorDefense(this.items);
+  }
+
+  // Wears the armor in inventory slot `index` (moving it to the front).
+  // Throws if there's no armor there.
+  wear(index: number): Armor {
+    const armor = this.items[index]?.item;
+    this.items = wearArmor(this.items, index);
+    return armor as Armor;
   }
 
   // Every weapon it carries and can wield, equipped first.

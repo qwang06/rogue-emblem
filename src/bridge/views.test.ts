@@ -28,7 +28,7 @@ import { MAX_LEVEL } from '../game/experience.ts';
 import { Soldier } from '../game/Soldier.ts';
 import { Acolyte } from '../game/Acolyte.ts';
 import { advanceDialog, createDialog } from '../game/dialog.ts';
-import { HEALTH_POTION } from '../game/items.ts';
+import { HEALTH_POTION, WOODEN_SHIELD } from '../game/items.ts';
 import { FIRE, FISTS, IRON_SPEAR, weaponEntry } from '../game/weapons.ts';
 import { createTurnState, markDone } from '../game/turns.ts';
 import { applyBattleResult, createRun, restoreRoster, snapshotUnit } from '../game/warband/run.ts';
@@ -109,6 +109,24 @@ describe('toUnitView', () => {
     ]);
     expect(Object.isFrozen(view!.items)).toBe(true);
     expect(Object.isFrozen(view!.items[0])).toBe(true);
+  });
+
+  it('counts worn armor into defense and marks it equipped', () => {
+    const unit = new Unit({
+      name: 'Soldier',
+      health: 10,
+      strength: 4,
+      defense: 2,
+      movement: 5,
+      team: 'player',
+      items: [
+        { item: WOODEN_SHIELD, quantity: 1 },
+        { item: WOODEN_SHIELD, quantity: 1 },
+      ],
+    });
+    const view = toUnitView(unit)!;
+    expect(view.defense).toBe(3);
+    expect(view.items.map((item) => item.equipped)).toEqual([true, false]);
   });
 
   it('is a detached, frozen snapshot', () => {

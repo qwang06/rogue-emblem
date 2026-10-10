@@ -39,7 +39,7 @@ One starter weapon per armed unit in the unit catalog. Fists, the Iron Spear, th
 | Wooden Spear | physical | 1   | 75  | 0    | 2   | 1   | 20   | –                           |
 | Wooden Axe   | physical | 2   | 60  | 0    | 3   | 1   | 20   | –                           |
 
-The wooden set is the basic gear: lighter and weaker than iron, and it breaks after 20 strikes. No class starts with it. It comes with two pieces of armor, which can be carried but aren't worn yet, so their numbers don't affect combat:
+The wooden set is the basic gear: lighter and weaker than iron, and it breaks after 20 strikes. No class starts with it. It comes with two pieces of armor. A unit wears the first shield and the first body armor it carries (equip another on the camp's roster screen), and each adds its DEF against physical hits; weight isn't counted yet:
 
 | Armor         | Slot   | DEF | Wt  |
 | ------------- | ------ | --- | --- |

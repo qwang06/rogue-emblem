@@ -5,7 +5,8 @@
 // down move within one (wrapping), confirm acts on what's under the cursor
 // and cancel steps back:
 //   - units: confirm moves into that unit's items; cancel closes the screen
-//   - items: confirm opens the item's actions (Equip, Store); cancel goes
+//   - items: confirm opens the item's actions (Equip for weapons and
+//     armor, Store); cancel goes
 //     back to the units
 //   - convoy: confirm gives that item to the picked unit; cancel goes back
 //     to the units
@@ -15,8 +16,8 @@
 // frozen state and leaves its input alone.
 
 import { createActionMenu, moveSelection, selectIndex, type Menu, type MenuAction } from '../actionMenu.ts';
-import type { Item } from '../items.ts';
 import { UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
+import { isArmor, type Item } from '../items.ts';
 import { isWeapon } from '../weapons.ts';
 import {
   canEquipInRoster,
@@ -149,7 +150,8 @@ export function cancelRoster(state: RosterScreenState): RosterScreenState | null
 }
 
 // The actions for the picked unit's highlighted item: Equip for a weapon
-// (disabled when its class can't wield it or it's already equipped), and
+// or armor (disabled when its class can't wield the weapon or it's already
+// equipped or worn), and
 // Store (disabled for a natural weapon). None when there's no item there.
 export function getItemActions(state: RosterScreenState, rules: RosterRules = DEFAULT_RULES): RosterItemAction[] {
   const unit = getPickedUnit(state);
@@ -157,7 +159,7 @@ export function getItemActions(state: RosterScreenState, rules: RosterRules = DE
   if (!unit || !entry) return [];
   const item = lookUpItem(entry.itemId, rules.items);
   const actions: RosterItemAction[] = [];
-  if (isWeapon(item)) {
+  if (isWeapon(item) || isArmor(item)) {
     actions.push({
       id: 'equip',
       label: 'Equip',

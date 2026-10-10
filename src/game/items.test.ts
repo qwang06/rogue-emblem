@@ -13,7 +13,10 @@ import {
   canUseItem,
   createInventory,
   findItem,
+  getArmorDefense,
   getConsumables,
+  getWornArmor,
+  wearArmor,
   getItemActions,
   getItemRecovery,
   removeItem,
@@ -67,6 +70,45 @@ describe('armor', () => {
     const hurt = unitAt({ health: 1 });
     expect(canUseItem(hurt, WOODEN_ARMOR)).toBe(false);
     expect(getItemActions(hurt, createInventory([{ item: WOODEN_ARMOR, quantity: 1 }]))).toEqual([]);
+  });
+});
+
+describe('wearing armor', () => {
+  const entry = (item: typeof WOODEN_SHIELD) => ({ item, quantity: 1 });
+  const spare = { ...WOODEN_SHIELD, id: 'spare-shield', defense: 3 };
+
+  it('wears the first armor of each slot', () => {
+    const inventory = createInventory([
+      weaponEntry(IRON_SPEAR),
+      entry(WOODEN_SHIELD),
+      entry(spare),
+      entry(WOODEN_ARMOR),
+    ]);
+    expect(getWornArmor(inventory)).toEqual([
+      { armor: WOODEN_SHIELD, index: 1 },
+      { armor: WOODEN_ARMOR, index: 3 },
+    ]);
+    expect(getArmorDefense(inventory)).toBe(2);
+  });
+
+  it('adds nothing without armor', () => {
+    expect(getWornArmor(STARTING_ITEMS)).toEqual([]);
+    expect(getArmorDefense(createInventory())).toBe(0);
+  });
+
+  it('wears another by moving it to the front', () => {
+    const inventory = createInventory([weaponEntry(IRON_SPEAR), entry(WOODEN_SHIELD), entry(spare)]);
+    const after = wearArmor(inventory, 2);
+    expect(after.map(({ item }) => item.id)).toEqual(['spare-shield', 'iron-spear', 'wooden-shield']);
+    expect(getArmorDefense(after)).toBe(3);
+    expect(Object.isFrozen(after)).toBe(true);
+    expect(wearArmor(after, 0)).toBe(after);
+  });
+
+  it('throws where there is no armor', () => {
+    const inventory = createInventory([weaponEntry(IRON_SPEAR)]);
+    expect(() => wearArmor(inventory, 0)).toThrow(/No armor/);
+    expect(() => wearArmor(inventory, 4)).toThrow(/No armor/);
   });
 });
 

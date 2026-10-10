@@ -24,9 +24,10 @@ export interface Consumable {
 
 // Armor: { kind: 'armor', id, label, slot, defense, weight }. `slot` is
 // where it's worn ('shield' on the arm, 'body' on the chest), `defense` what
-// it adds to the wearer's defense and `weight` what it weighs. It's carried
-// like any other item (a slot each, never stacking); nothing wears it yet,
-// so its numbers don't reach combat.
+// it adds to the wearer's defense against physical hits and `weight` what
+// it weighs (not counted yet). It's carried like any other item (a slot
+// each, never stacking), and a unit wears the first armor of each slot in
+// its inventory (getWornArmor); wearing another moves it to the front.
 export type ArmorSlot = 'shield' | 'body';
 
 export interface Armor {
@@ -98,6 +99,32 @@ export const ARMORS: readonly Armor[] = Object.freeze([WOODEN_SHIELD, WOODEN_ARM
 
 export function isArmor(item: { kind: string }): item is Armor {
   return item.kind === 'armor';
+}
+
+// The armor a unit wears, as [{ armor, index }] in inventory order: the
+// first armor of each slot it carries.
+export function getWornArmor(inventory: Inventory): { armor: Armor; index: number }[] {
+  const worn: { armor: Armor; index: number }[] = [];
+  inventory.forEach(({ item }, index) => {
+    if (isArmor(item) && !worn.some(({ armor }) => armor.slot === item.slot)) worn.push({ armor: item, index });
+  });
+  return worn;
+}
+
+// What the worn armor adds to defense, all slots together.
+export function getArmorDefense(inventory: Inventory): number {
+  return getWornArmor(inventory).reduce((total, { armor }) => total + armor.defense, 0);
+}
+
+// Wears the armor at `index` by moving its entry to the front of the
+// inventory, so it's the first of its slot; everything else keeps its
+// order (the equipped weapon is the first one the unit can wield, wherever
+// it sits). Throws if there's no armor there.
+export function wearArmor(inventory: Inventory, index: number): Inventory {
+  const entry = inventory[index];
+  if (!entry || !isArmor(entry.item)) throw new Error(`No armor to wear at slot ${index}`);
+  if (index === 0) return inventory;
+  return Object.freeze([entry, ...inventory.filter((_, i) => i !== index)]);
 }
 
 // The potions every unit carries into battle (each class adds its weapon).
