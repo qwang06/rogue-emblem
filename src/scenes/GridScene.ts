@@ -61,6 +61,7 @@ import { getStructureTiles } from '../game/structures.ts';
 import { getConsumables, getItemActions } from '../game/items.ts';
 import { getWeaponActions, getWeaponReach, type Weapon, type WeaponAction } from '../game/weapons.ts';
 import { planRushAction } from '../game/enemyAI.ts';
+import { createAttackScorer } from '../game/aiScoring.ts';
 import {
   canDeployUnit,
   canPlaceUnit,
@@ -1166,7 +1167,15 @@ export class GridScene extends Phaser.Scene {
   takeEnemyAction(unitId: string, onDone: () => void) {
     const unit = this.units.get(unitId)!;
     const from = findUnit(this.grid, unitId)!;
-    const { path, target } = planRushAction(this.grid, from, unit, this.isHostileTo(unit), this.movementOptions(unit));
+    const scoreTarget = createAttackScorer(unit, (id) => this.units.get(id)!);
+    const { path, target } = planRushAction(
+      this.grid,
+      from,
+      unit,
+      this.isHostileTo(unit),
+      this.movementOptions(unit),
+      scoreTarget,
+    );
     const to = path[path.length - 1];
     const finish = () => {
       this.finishUnit(unitId);

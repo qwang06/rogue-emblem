@@ -142,6 +142,7 @@ _Decided:_ classes are named after the unit art in `src/assets/units/` (see the 
 - Target scoring instead of "first reachable": prefer kills, high expected damage, low counter damage, healers/mages; avoid suicidal attacks unless lethal. Pure `scoreAttack(forecast)`.
 - Clerics heal wounded allies; enemies use potions when low.
 - **Tests:** each behavior, scoring prefers lethal hits, no-target cases, guard never moves.
+- _Progress:_ target scoring is in: `src/game/aiScoring.ts` has `scoreAttack(forecast)` (kills, expected damage, counter damage, soft targets, suicidal attacks), and `planRushAction` picks the best-scoring (tile, target) pair, falling back to the cheapest tile on ties. Still to do: the `guard`/`wake`/`holdPosition` behaviors (they need a field on `EnemyGroup`, which W.2 also edits), healing and potion use.
 
 ### [ ] 3.3 Objectives
 
