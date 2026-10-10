@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Soldier } from './Soldier.ts';
-import { createUnitOfClass, UNIT_CLASSES } from './unitClasses.ts';
+import { createUnitOfClass, PLAYABLE_CLASSES, UNIT_CLASSES } from './unitClasses.ts';
 import type { ClassUnitOptions, Unit } from './Unit.ts';
 
 describe('UNIT_CLASSES', () => {
@@ -38,6 +38,27 @@ describe('UNIT_CLASSES', () => {
     for (const { id } of UNIT_CLASSES) {
       expect(createUnitOfClass(id, { team: 'player' }).unitClass).toBe(id);
     }
+  });
+});
+
+describe('PLAYABLE_CLASSES', () => {
+  it('lists the six player classes and none of the monsters', () => {
+    expect(PLAYABLE_CLASSES.map((c) => c.id)).toEqual([
+      'villager',
+      'soldier',
+      'archer',
+      'vanguard',
+      'guard',
+      'acolyte',
+    ]);
+  });
+
+  it('marks exactly the slime, the goblin and the skeleton as monsters', () => {
+    expect(UNIT_CLASSES.filter((c) => c.monster).map((c) => c.id)).toEqual(['slime', 'goblin', 'skeleton']);
+  });
+
+  it('is frozen', () => {
+    expect(Object.isFrozen(PLAYABLE_CLASSES)).toBe(true);
   });
 });
 

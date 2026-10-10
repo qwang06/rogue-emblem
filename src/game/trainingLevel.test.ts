@@ -13,11 +13,22 @@ import {
   TRAINEE_ID,
   TRAINEE_POSITION,
 } from './trainingLevel.ts';
-import { UNIT_CLASSES } from './unitClasses.ts';
+import { PLAYABLE_CLASSES, UNIT_CLASSES } from './unitClasses.ts';
 
 describe('getTrainingActions', () => {
-  it('offers one entry per unit class', () => {
-    expect(getTrainingActions()).toEqual(UNIT_CLASSES.map(({ id, label }) => ({ id, label })));
+  it('offers one entry per playable class', () => {
+    expect(getTrainingActions()).toEqual(PLAYABLE_CLASSES.map(({ id, label }) => ({ id, label })));
+  });
+
+  it('leaves out the monsters', () => {
+    const ids = getTrainingActions().map((a) => a.id);
+    expect(ids).not.toContain('slime');
+    expect(ids).not.toContain('goblin');
+    expect(ids).not.toContain('skeleton');
+  });
+
+  it('offers whatever classes it is given', () => {
+    expect(getTrainingActions(UNIT_CLASSES)).toHaveLength(UNIT_CLASSES.length);
   });
 
   it('is frozen', () => {
