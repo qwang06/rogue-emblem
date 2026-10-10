@@ -25,7 +25,8 @@ export interface Consumable {
 // Armor: { kind: 'armor', id, label, slot, defense, weight }. `slot` is
 // where it's worn ('shield' on the arm, 'body' on the chest), `defense` what
 // it adds to the wearer's defense against physical hits and `weight` what
-// it weighs (not counted yet). It's carried like any other item (a slot
+// it weighs (it slows a wearer weaker than it, along with the weapon; see
+// getAttackSpeed in combatStats.ts). It's carried like any other item (a slot
 // each, never stacking), and a unit wears the first armor of each slot in
 // its inventory (getWornArmor); wearing another moves it to the front.
 export type ArmorSlot = 'shield' | 'body';
@@ -114,6 +115,11 @@ export function getWornArmor(inventory: Inventory): { armor: Armor; index: numbe
 // What the worn armor adds to defense, all slots together.
 export function getArmorDefense(inventory: Inventory): number {
   return getWornArmor(inventory).reduce((total, { armor }) => total + armor.defense, 0);
+}
+
+// What the worn armor weighs, all slots together.
+export function getArmorWeight(inventory: Inventory): number {
+  return getWornArmor(inventory).reduce((total, { armor }) => total + armor.weight, 0);
 }
 
 // Wears the armor at `index` by moving its entry to the front of the

@@ -3,7 +3,7 @@
 // whole percentage, and what a strike actually rolls against is the
 // attacker's rate minus the defender's, clamped to 0–100. The unit's
 // equipped weapon (see weapons.ts) adds its hit and crit, and its weight
-// slows a wielder weaker than it. No Phaser, no hidden state; randomness
+// together with its worn armor's slows a unit weaker than the load. No Phaser, no hidden state; randomness
 // comes in through an injected `rng` (() => [0, 1)).
 
 // A crit deals this many times the strike's damage.
@@ -19,12 +19,14 @@ export interface WeaponStatLine {
 }
 
 // The stats these formulas read. Missing stats count as 0; a unit without
-// a weapon adds no hit or crit and carries no weight.
+// a weapon adds no hit or crit and carries no weight. `armorWeight` is what
+// its worn armor weighs (see getArmorWeight in items.ts).
 export interface CombatStatLine {
   strength?: number;
   skill?: number;
   speed?: number;
   luck?: number;
+  armorWeight?: number;
   weapon?: WeaponStatLine | null;
 }
 
@@ -35,10 +37,11 @@ function clampPercent(value: number): number {
   return Math.min(100, Math.max(0, value));
 }
 
-// How fast a unit fights: its speed, less however much its weapon's weight
-// exceeds its strength. Drives avoid and doubling.
+// How fast a unit fights: its speed, less however much its load (weapon
+// weight plus worn armor weight) exceeds its strength. Drives avoid and
+// doubling.
 export function getAttackSpeed(unit: CombatStatLine): number {
-  const weight = unit.weapon?.weight ?? 0;
+  const weight = (unit.weapon?.weight ?? 0) + (unit.armorWeight ?? 0);
   return (unit.speed ?? 0) - Math.max(0, weight - (unit.strength ?? 0));
 }
 

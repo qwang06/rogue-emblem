@@ -378,6 +378,7 @@ describe('Unit', () => {
       });
       expect(unit.wornArmor.map(({ armor }) => armor.id)).toEqual(['wooden-shield', 'wooden-armor']);
       expect(unit.armorDefense).toBe(2);
+      expect(unit.armorWeight).toBe(3);
       expect(unit.defense).toBe(2);
     });
 
@@ -394,6 +395,7 @@ describe('Unit', () => {
 
     it('wears nothing without armor', () => {
       expect(makeUnit().armorDefense).toBe(0);
+      expect(makeUnit().armorWeight).toBe(0);
     });
   });
 });
