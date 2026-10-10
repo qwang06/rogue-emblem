@@ -21,7 +21,6 @@ import { getUnitSprite } from '../game/tileset.ts';
 import { routeHash } from './route.ts';
 import { UnitSprite } from './UnitSprite.tsx';
 import { KeyHint } from './KeyHint.tsx';
-import { TITLE_LOGO } from './titleLogo.ts';
 import { NameField } from './NameField.tsx';
 
 const MENU_KEYS = [
@@ -175,9 +174,6 @@ export function TitleScreen() {
     <div className="title-screen" onContextMenu={onContextMenu}>
       <header className="title-screen__header">
         <h1 className="title-screen__title">Rogue Emblem</h1>
-        <pre className="title-screen__logo" aria-hidden="true">
-          {TITLE_LOGO}
-        </pre>
       </header>
 
       <nav className="panel title-menu" aria-label={submenu?.label ?? 'Main menu'}>

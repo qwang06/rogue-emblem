@@ -1,8 +1,10 @@
 /* ---- Theme ----------------------------------------------------------- */
 
-/* Tokyo Night, the default theme of Omarchy (the tiling Linux desktop
-   this UI takes its look from): square tiled windows with a thin border,
-   accent on the focused one, no shadows, one monospace face. */
+/* Tokyo Night, the palette of Omarchy (the tiling Linux desktop this UI
+   borrows from): calm dark windows with a thin border and the accent on
+   whichever one has focus. Text is a clean sans, big titles a carved
+   capital face that suits a tale of banners and swords, and monospace is
+   kept for key caps and file paths. */
 :root {
   /* Surfaces, darkest first: the desktop behind everything, a window, a
      raised strip inside one, and the selected row. */
@@ -31,9 +33,15 @@
   --blue-bg: rgb(122 162 247 / 10%);
   --rule: 1px solid var(--muted);
   --border: 2px solid var(--muted);
+  --sans: 'Figtree', system-ui, sans-serif;
+  --display: 'Cinzel', Georgia, serif;
   --mono: 'JetBrains Mono', ui-monospace, monospace;
-  /* The selection cue: the shell prompt's chevron, in the accent. */
-  --pointer: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 12'><path d='M5 1.5l5 4.5-5 4.5' fill='none' stroke='%237aa2f7' stroke-width='2.2' stroke-linecap='square'/></svg>");
+  --radius: 6px;
+  --radius-sm: 4px;
+  /* Lifts windows that float over the map off it. */
+  --lift: 0 6px 18px rgb(0 0 0 / 40%);
+  /* The selection cue: a small accent pennant pointing at the row. */
+  --pointer: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 12'><path d='M5 1.5 11.5 6 5 10.5Z' fill='%237aa2f7' stroke='%237aa2f7' stroke-width='1.5' stroke-linejoin='round'/></svg>");
 }
 
 html,
@@ -42,8 +50,9 @@ body {
   min-height: 100%;
   background: var(--desktop);
   color: var(--fg);
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-size: 14px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- Page layout ---------------------------------------------------- */
@@ -85,6 +94,12 @@ body {
   color: var(--fg-bright);
 }
 
+.page-header__name {
+  font-family: var(--display);
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+}
+
 .page-header__gem {
   font-size: 0.75rem;
   color: var(--accent);
@@ -118,7 +133,7 @@ body {
   color: var(--fg);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 0;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
@@ -188,8 +203,8 @@ a.header-button {
 
 /* The canvas and the HUD overlay share this box, which fills the stage
    area. Phaser's RESIZE mode keeps the canvas the same size, and the map
-   scene centers the map in it. The map is the focused window: a 2px
-   accent border, drawn as a shadow so it takes no space. */
+   scene centers the map in it, framed by a thin border drawn as a shadow
+   so it takes no space. */
 .stage {
   position: relative;
   flex: 1;
@@ -198,7 +213,9 @@ a.header-button {
   min-height: 0;
   margin: 2px;
   line-height: 0;
-  box-shadow: 0 0 0 2px var(--accent);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 0 0 1px var(--muted);
 }
 
 #game {
@@ -240,7 +257,11 @@ a.header-button {
   padding: 6px 10px;
   background: var(--bg);
   border: var(--border);
-  border-radius: 0;
+  border-radius: var(--radius);
+}
+
+.hud .panel {
+  box-shadow: var(--lift);
 }
 
 .panel--enemy {
@@ -316,7 +337,7 @@ a.header-button {
 .unit-panel__name {
   margin: 0;
   overflow: hidden;
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-size: 0.875rem;
   font-weight: 700;
   line-height: 1.3;
@@ -481,7 +502,7 @@ kbd {
   inset: 0;
   pointer-events: none;
   user-select: none;
-  font-family: var(--mono);
+  font-family: var(--sans);
   line-height: normal;
   color: var(--fg-bright);
 }
@@ -731,6 +752,7 @@ kbd {
 
 .level-up__title {
   margin: 0;
+  font-family: var(--display);
   font-size: 1.125rem;
   font-weight: 700;
   line-height: 1.3;
@@ -939,7 +961,7 @@ kbd {
 .damage-popup {
   position: absolute;
   transform: translate(-50%, -100%);
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-size: 1.375rem;
   font-weight: 800;
   line-height: 1;
@@ -1024,9 +1046,10 @@ kbd {
   transform: translateY(-50%);
   padding: 14px 0;
   text-align: center;
-  font-family: var(--mono);
-  font-size: 1.75rem;
-  font-weight: 800;
+  font-family: var(--display);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   line-height: 1.2;
   color: var(--band);
   background: rgb(19 20 28 / 88%);
@@ -1077,6 +1100,7 @@ kbd {
 
 .battle-result__title {
   margin: 0;
+  font-family: var(--display);
   font-size: 1.75rem;
   font-weight: 800;
   line-height: 1.2;
@@ -1263,15 +1287,16 @@ kbd {
   visibility: hidden;
 }
 
-/* Once the line is fully shown, a blinking block cursor asks for more. */
+/* Once the line is fully shown, a small bobbing arrow asks for more. */
 .dialog-box__next {
   position: absolute;
   right: 0;
-  bottom: 0.25em;
-  width: 0.6em;
-  height: 1.1em;
-  background: var(--accent);
-  animation: dialog-next 1s steps(2, jump-none) infinite;
+  bottom: 0.3em;
+  width: 0;
+  height: 0;
+  border-inline: 5px solid transparent;
+  border-top: 7px solid var(--accent);
+  animation: dialog-next 0.9s ease-in-out infinite alternate;
 }
 
 @keyframes dialog-rise {
@@ -1282,8 +1307,8 @@ kbd {
 }
 
 @keyframes dialog-next {
-  50% {
-    opacity: 0;
+  to {
+    transform: translateY(3px);
   }
 }
 
@@ -1321,23 +1346,29 @@ kbd {
   text-align: center;
 }
 
-/* The name is read by screen readers; the block-letter logo shows it. */
+/* The wordmark: carved capitals with a cold blue glow, like a name cut
+   into a standard. The rules either side are the banner's crossbar. */
 .title-screen__title {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 2vw, 22px);
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(2rem, min(8vw, 11vh), 5.25rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: 0.05em;
+  color: var(--fg-bright);
+  text-shadow: 0 0 28px rgb(122 162 247 / 45%);
 }
 
-/* Sized so its 80 columns and 18 rows fit both the width and the height. */
-.title-screen__logo {
-  margin: 0;
-  font-family: var(--mono);
-  font-size: clamp(4px, min(1.55vw, 2.2vh), 13px);
-  line-height: 1;
-  color: var(--accent);
+.title-screen__title::before,
+.title-screen__title::after {
+  content: '';
+  flex: none;
+  width: clamp(16px, 5vw, 64px);
+  height: 2px;
+  background: var(--accent);
 }
 
 /* The menu is the launcher: the focused window, title in its border. */
@@ -1368,7 +1399,7 @@ kbd {
   width: 100%;
   padding: clamp(3px, 0.7vh, 5px) 16px clamp(3px, 0.7vh, 5px) 30px;
   border: 0;
-  border-radius: 0;
+  border-radius: var(--radius-sm);
   background: none;
   font: inherit;
   font-size: 0.9375rem;
@@ -1471,7 +1502,7 @@ kbd {
   height: 28px;
   padding: 0;
   border: 1px solid var(--muted);
-  border-radius: 0;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--fg);
   cursor: pointer;
@@ -1552,7 +1583,7 @@ kbd {
 
 .configs-page__title {
   margin: 0;
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-size: 1.5rem;
   font-weight: 800;
   line-height: 1.2;
@@ -1574,7 +1605,7 @@ kbd {
 
 .configs-group__title {
   margin: 0 0 12px;
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-size: 0.9375rem;
   font-weight: 700;
   line-height: 1.3;
@@ -1608,7 +1639,7 @@ kbd {
 
 .config-card__title {
   margin: 0;
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-size: 1rem;
   font-weight: 700;
   line-height: 1.2;
@@ -1618,7 +1649,7 @@ kbd {
 .config-card__badge {
   flex: none;
   padding: 1px 6px;
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-size: 0.6875rem;
   color: var(--fg);
   border: 2px solid var(--desktop);
@@ -1714,7 +1745,7 @@ kbd {
 }
 
 .upload-drop__title {
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-size: 1.0625rem;
   color: var(--accent);
 }
@@ -1792,7 +1823,7 @@ kbd {
 }
 
 .dialog-triggers__name {
-  font-family: var(--mono);
+  font-family: var(--sans);
   color: var(--accent);
 }
 
@@ -1823,7 +1854,7 @@ kbd {
 }
 
 .dialog-lines__speaker {
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-weight: 700;
 }
 
@@ -1887,7 +1918,7 @@ kbd {
 
 .region-editor__section legend {
   padding: 0 4px;
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-size: 0.875rem;
   color: var(--accent);
 }
@@ -1932,7 +1963,7 @@ kbd {
   width: 16px;
   height: 16px;
   padding: 0;
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-size: 0.6875rem;
   font-style: italic;
   font-weight: bold;
@@ -1966,7 +1997,7 @@ kbd {
   box-sizing: border-box;
   width: min(21rem, calc(100vw - 32px));
   padding: 10px 12px;
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-size: 0.8125rem;
   font-weight: normal;
   font-style: normal;
@@ -1983,7 +2014,7 @@ kbd {
 }
 
 .info-popover__title {
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-size: 0.875rem;
   color: var(--accent);
 }
@@ -2009,7 +2040,7 @@ kbd {
 }
 
 .area-diagram__edge {
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-size: 0.6875rem;
   color: var(--fg);
 }
@@ -2101,7 +2132,7 @@ kbd {
 }
 
 .draft-input--number {
-  font-family: var(--mono);
+  font-family: var(--sans);
 }
 
 textarea.draft-input {
