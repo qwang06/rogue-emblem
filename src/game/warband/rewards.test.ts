@@ -7,10 +7,13 @@ import { Unit } from '../Unit.ts';
 import { createUnitOfClass, UNIT_CLASSES } from '../unitClasses.ts';
 import { MAX_LEVEL } from '../experience.ts';
 import { Villager } from '../Villager.ts';
-import { createRun, type RunState, type UnitSnapshot } from './run.ts';
+import { createRun, parseRun, serializeRun, type RunState, type UnitSnapshot } from './run.ts';
 import {
   addGold,
   applyExperienceReward,
+  clearPendingReward,
+  getPendingRewardOffer,
+  markRewardPending,
   getRerollCost,
   getSkipGold,
   rerollRewards,
@@ -441,5 +444,62 @@ describe('skipping and rerolling', () => {
   it("refuses a reroll the run can't afford", () => {
     expect(rerollRewards(addGold(fullRun(), REROLL_COST - 1), 3, 0)).toBeNull();
     expect(rerollRewards(addGold(fullRun(), REROLL_COST), 3, 0)).not.toBeNull();
+  });
+});
+
+describe('a reward pick owed across a reload', () => {
+  const pending = { stage: 2, rerolls: 0, clearGold: 20, flawless: true };
+  const owing = () => markRewardPending(addGold(fullRun(), 100), pending);
+
+  it('offers nothing when no pick is owed', () => {
+    expect(getPendingRewardOffer(fullRun())).toBeNull();
+  });
+
+  it('offers the same rewards the stage offered before the reload', () => {
+    const offer = getPendingRewardOffer(owing());
+    expect(offer).toMatchObject(pending);
+    expect(offer?.rewards).toEqual(rollStageRewards(owing(), 2));
+  });
+
+  it('keeps the rerolled offers, counting the reroll', () => {
+    const rerolled = rerollRewards(owing(), 2, 0)!;
+    expect(rerolled.run.pendingReward?.rerolls).toBe(1);
+    expect(getPendingRewardOffer(rerolled.run)?.rewards).toEqual(rerolled.rewards);
+  });
+
+  it('survives saving and loading', () => {
+    const loaded = parseRun(serializeRun(owing()))!;
+    expect(loaded.pendingReward).toEqual(pending);
+    expect(getPendingRewardOffer(loaded)?.rewards).toEqual(rollStageRewards(owing(), 2));
+  });
+
+  it('is settled by taking or skipping a reward', () => {
+    const run = owing();
+    const [reward] = rollStageRewards(run, 2);
+    expect(applyReward(run, reward).pendingReward).toBeUndefined();
+    expect(skipRewards(run, 2).pendingReward).toBeUndefined();
+  });
+
+  it('is settled by a reward that changes nothing (a recruit for a full roster)', () => {
+    const run = owing();
+    const recruit = rollRecruit(run, 2, createSeededRng(1));
+    const full = withRoster(
+      run,
+      Array.from({ length: MAX_ROSTER_SIZE }, (_, i) => ({ ...run.roster[0], id: `u${i}` })),
+    );
+    expect(applyReward(full, { kind: 'recruit', unit: recruit }).pendingReward).toBeUndefined();
+  });
+
+  it('is settled by the experience reward', () => {
+    const run = markRewardPending(fullRun(), { ...pending, stage: 1 });
+    const experience = rollStageRewards(run, 1).find((reward) => reward.kind === 'experience')!;
+    expect(experience.kind).toBe('experience');
+    if (experience.kind !== 'experience') return;
+    expect(applyExperienceReward(run, experience).run.pendingReward).toBeUndefined();
+  });
+
+  it('leaves a run that owes nothing as it is', () => {
+    const run = fullRun();
+    expect(clearPendingReward(run)).toBe(run);
   });
 });

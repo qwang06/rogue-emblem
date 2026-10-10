@@ -15,7 +15,14 @@ import { createSeededRng, randomInt, randomItem, shuffle } from '../rng.ts';
 import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
 import { WARBAND_NAMES } from './names.ts';
 import { STARTING_CLASSES } from './startingClasses.ts';
-import { restoreUnit, snapshotUnit, type ItemSnapshot, type RunState, type UnitSnapshot } from './run.ts';
+import {
+  restoreUnit,
+  snapshotUnit,
+  type ItemSnapshot,
+  type PendingReward,
+  type RunState,
+  type UnitSnapshot,
+} from './run.ts';
 
 // Gold for clearing any stage, plus more per stage reached.
 export const STAGE_CLEAR_GOLD = 10;
@@ -115,13 +122,37 @@ export function rerollRewards(
 ): { run: RunState; rewards: readonly Reward[] } | null {
   const cost = getRerollCost(rerolls);
   if (run.gold < cost) return null;
-  const after = freeze({ ...run, gold: run.gold - cost });
+  const pending = run.pendingReward && { ...run.pendingReward, rerolls: rerolls + 1 };
+  const after = freeze({ ...run, gold: run.gold - cost, ...(pending && { pendingReward: pending }) });
   return { run: after, rewards: rollStageRewards(after, stage, rerolls + 1) };
 }
 
 // The run after skipping the reward pick after `stage`: getSkipGold more.
 export function skipRewards(run: RunState, stage: number): RunState {
-  return addGold(run, getSkipGold(stage));
+  return clearPendingReward(addGold(run, getSkipGold(stage)));
+}
+
+// The run marked as owing the reward pick after a won stage, so a run
+// saved before the pick reopens on it (getPendingRewardOffer).
+export function markRewardPending(run: RunState, pending: PendingReward): RunState {
+  return freeze({ ...run, pendingReward: pending });
+}
+
+// The run with no reward pick owed. Taking or skipping a reward clears it.
+export function clearPendingReward(run: RunState): RunState {
+  if (!run.pendingReward) return run;
+  const { pendingReward: _settled, ...rest } = run;
+  return freeze(rest);
+}
+
+// The reward pick a saved run still owes, with the same offers it had when
+// it was saved (rolled again from the stage and its reroll count), or null
+// when it owes none.
+export function getPendingRewardOffer(run: RunState): (PendingReward & { rewards: readonly Reward[] }) | null {
+  const pending = run.pendingReward;
+  if (!pending) return null;
+  const rewards = rollStageRewards(run, pending.stage, pending.rerolls);
+  return rewards.length > 0 ? Object.freeze({ ...pending, rewards }) : null;
 }
 
 // The rewards offered after clearing `stage`, for `run` as it stands (the
@@ -227,10 +258,14 @@ export function rollRecruit(
   return snapshotUnit(id, unit);
 }
 
-// The run with `reward` applied. Rewards that can't do anything (a recruit
-// when the roster is full, supplies nobody has room for) leave units as
-// they are.
+// The run with `reward` applied, and no reward pick owed. Rewards that
+// can't do anything (a recruit when the roster is full, supplies nobody has
+// room for) leave units as they are.
 export function applyReward(run: RunState, reward: Reward, classes: readonly UnitClass[] = UNIT_CLASSES): RunState {
+  return clearPendingReward(applyRewardEffect(run, reward, classes));
+}
+
+function applyRewardEffect(run: RunState, reward: Reward, classes: readonly UnitClass[]): RunState {
   switch (reward.kind) {
     case 'recruit':
       if (run.roster.length >= MAX_ROSTER_SIZE) return run;
@@ -260,7 +295,7 @@ export interface RewardLevelUp {
   levelUp: LevelUpResult;
 }
 
-// The run after an experience reward: every unit given exactly the XP to
+// The run after an experience reward (with no reward pick owed): every unit given exactly the XP to
 // its next level (unscaled, so each lands on it with 0 XP; nothing for a
 // unit at the max level), its stat gains rolled from the reward's seed. Also
 // returns each level up, in roster order, so it can be shown.
@@ -277,7 +312,7 @@ export function applyExperienceReward(
     levelUps.push(...result.levelUps.map((levelUp) => ({ name: unit.name, levelUp })));
     return snapshotUnit(snapshot.id, unit);
   });
-  return { run: freeze({ ...run, roster }), levelUps: Object.freeze(levelUps) };
+  return { run: clearPendingReward(freeze({ ...run, roster })), levelUps: Object.freeze(levelUps) };
 }
 
 // The run with `amount` more gold.
@@ -343,5 +378,6 @@ function freeze(run: RunState): RunState {
         Object.freeze({ ...unit, items: Object.freeze(unit.items.map((item) => Object.freeze({ ...item }))) }),
       ),
     ),
+    ...(run.pendingReward && { pendingReward: Object.freeze({ ...run.pendingReward }) }),
   });
 }

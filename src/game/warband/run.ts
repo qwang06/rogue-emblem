@@ -76,6 +76,20 @@ export interface RunState {
   // Units that died, as they were when they died: battle by battle, in
   // roster order within a battle.
   fallen: readonly UnitSnapshot[];
+  // Set while a won stage's reward is still to be picked, so a run saved
+  // on the reward screen reopens there (see rewards.ts) rather than
+  // skipping the pick.
+  pendingReward?: PendingReward;
+}
+
+// A reward pick still owed after a won stage: the stage cleared, how many
+// times its offers have been rerolled (the offers are rolled again from
+// these), and the clear's gold and whether it was flawless, for showing.
+export interface PendingReward {
+  stage: number;
+  rerolls: number;
+  clearGold: number;
+  flawless: boolean;
 }
 
 // What a battle hands back: every unit that fought, by unitId, as it ended
@@ -246,7 +260,7 @@ export function parseRun(
     return null;
   }
   if (!isRecord(data)) return null;
-  const { seed, stage, roster, convoy, gold, relics, deployCap, fallen } = data;
+  const { seed, stage, roster, convoy, gold, relics, deployCap, fallen, pendingReward } = data;
   const itemIds = new Set(items.map((item) => item.id));
   const classIds = new Set(classes.map((unitClass) => unitClass.id));
   const isItems = (value: unknown): value is ItemSnapshot[] =>
@@ -264,12 +278,34 @@ export function parseRun(
     !relics.every((relic) => typeof relic === 'string') ||
     !isWholeNumber(deployCap) ||
     deployCap < 1 ||
-    !isUnits(fallen)
+    !isUnits(fallen) ||
+    (pendingReward !== undefined && !isPendingReward(pendingReward))
   ) {
     return null;
   }
   if (new Set(roster.map((unit) => unit.id)).size !== roster.length) return null;
-  return freezeRun({ seed, stage, roster, convoy, gold, relics, deployCap, fallen });
+  return freezeRun({
+    seed,
+    stage,
+    roster,
+    convoy,
+    gold,
+    relics,
+    deployCap,
+    fallen,
+    ...(pendingReward !== undefined && { pendingReward }),
+  });
+}
+
+function isPendingReward(value: unknown): value is PendingReward {
+  return (
+    isRecord(value) &&
+    isWholeNumber(value.stage) &&
+    (value.stage as number) >= 1 &&
+    isWholeNumber(value.rerolls) &&
+    isWholeNumber(value.clearGold) &&
+    typeof value.flawless === 'boolean'
+  );
 }
 
 function isUnitSnapshot(
@@ -334,5 +370,6 @@ function freezeRun(run: RunState): RunState {
     convoy: freezeItems(run.convoy),
     relics: Object.freeze([...run.relics]),
     fallen: Object.freeze(run.fallen.map(freezeSnapshot)),
+    ...(run.pendingReward && { pendingReward: Object.freeze({ ...run.pendingReward }) }),
   });
 }
