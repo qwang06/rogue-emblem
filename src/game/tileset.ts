@@ -160,7 +160,8 @@ export const DEFAULT_BUILDING_PALETTE: BuildingPaletteName = 'a-stone';
 
 // Unit art keyed by unit class, so every unit of a class looks alike
 // whichever side it's on. Each names a set of sheets, one per animation in
-// UNIT_ANIMATIONS (see unitSheetKey).
+// UNIT_ANIMATIONS (see unitSheetKey). The monsters (slime, goblin, skeleton)
+// have art but no unit class yet.
 export const UNIT_SPRITES: Record<string, string> = {
   villager: 'Villager_01',
   soldier: 'Soldier_03',
@@ -169,6 +170,9 @@ export const UNIT_SPRITES: Record<string, string> = {
   wizard: 'Vanguard_01',
   guard: 'Soldier_04',
   acolyte: 'Acolyte_02',
+  slime: 'Slime_01',
+  goblin: 'Goblin_01',
+  skeleton: 'Skeleton_01',
 };
 
 // Art for a unit whose class has none of its own (or no class).

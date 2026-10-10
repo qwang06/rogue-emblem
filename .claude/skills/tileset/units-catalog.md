@@ -6,6 +6,31 @@ from the pixels. Only `Villager_01`, `Soldier_03`, `Archer_02`, `Vanguard_04`,
 (`UNIT_SPRITES` in `src/game/tileset.ts`); everything else is ready to import
 in `src/assets/sprites.ts` when a class needs art.
 
+## Monsters (generated, not from the pack)
+
+`Slime_01`, `Goblin_01` and `Skeleton_01` are starter enemy monsters made with
+PixelLab (Pro Flash at 16x16, styled on the villager) and assembled by
+`scripts/build-unit-sheet.js`. They're in `SPRITE_URLS` and `UNIT_SPRITES`
+(keys `slime`, `goblin`, `skeleton`), waiting for unit classes of those ids.
+Same layout and scale as the pack (128x128, rows down/left/right/up, 4
+frames), RGBA instead of color-keyed, colors snapped to the pack's palette,
+no baked shadow, feet on y 28–29 in every facing.
+
+| Art           | What it shows                                                                                            | Footprint (down, frame 0) |
+| ------------- | -------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `Slime_01`    | Green jelly blob with two eyes, a mouth and a top-left highlight. Side views have a small pointed tail.  | x 4–27, y 6–29            |
+| `Goblin_01`   | Green goblin with wide pointed ears, orange eyes, a brown tunic and a club in its right hand.            | x 2–29, y 4–29            |
+| `Skeleton_01` | White skeleton: a big round skull with black eye sockets over a small ribcage and thin limbs. No weapon. | x 6–25, y 2–29            |
+
+Only the four facing stills were generated. The frames are made by the
+script: idle sinks the body 1px onto the feet for frames 2–3, and move hops
+1px up on frames 1 and 3 (no stepping feet). To redo one, save PixelLab's
+four rotation images as `<name>_{south,west,east,north}.png` and run
+`node .claude/skills/tileset/scripts/build-unit-sheet.js <dir> <Name>`.
+PixelLab's 16px output comes on a 32px canvas with pure black outlines and
+dozens of near-duplicate tones, which the script crops and remaps. Standard
+`create_character` at size 16 gave an 18px-tall stick figure that doesn't fit.
+
 ## Files and layout
 
 - **Names:** `{Unit}_{NN}_{Idle|Move}.png`, `NN` = variant `01`–`06`
