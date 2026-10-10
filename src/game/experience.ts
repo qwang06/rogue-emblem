@@ -1,7 +1,7 @@
 // Pure experience and growth rules, Fire Emblem style: a unit earns XP
 // from each combat it survives (more for hitting, most for killing, scaled
-// by how its level compares with its opponent's), every 100 XP is a level,
-// and each level rolls the unit's growth rates to decide which stats rise.
+// by how its level compares with its opponent's), every 100 XP is a level
+// (only 50 for the first, from level 1 to 2), and each level rolls the unit's growth rates to decide which stats rise.
 // No Phaser, no hidden state; randomness comes in through an injected
 // `rng` (() => [0, 1)). Applying the result to a Unit is the caller's job.
 
@@ -10,6 +10,9 @@ import type { Rng } from './combatStats.ts';
 import { SKILL_TREES, getSkillsLearnedBetween, type Skill, type SkillTrees } from './skills.ts';
 
 export const EXPERIENCE_PER_LEVEL = 100;
+// The XP from level 1 to 2, less than the rest so a new unit's first
+// level, and its first skill, come quickly.
+export const FIRST_LEVEL_EXPERIENCE = 50;
 export const MAX_LEVEL = 20;
 // XP for a combat in which the unit landed no damage (a miss, a 0-damage
 // hit, or never getting to strike).
@@ -77,6 +80,12 @@ export interface ExperienceGain {
   levelUps: LevelUpResult[];
 }
 
+// The XP a unit at `level` needs to reach the next one:
+// FIRST_LEVEL_EXPERIENCE at level 1, EXPERIENCE_PER_LEVEL after.
+export function getExperienceForLevel(level: number): number {
+  return level <= 1 ? FIRST_LEVEL_EXPERIENCE : EXPERIENCE_PER_LEVEL;
+}
+
 // XP for landing damage on an opponent: 10 at an even level, one more for
 // every three levels the opponent is above the unit (one less below),
 // never under 1.
@@ -113,13 +122,13 @@ export function getCombatExperience(level: number, enemyLevel: number, outcome: 
       : outcome === 'hit'
         ? getHitExperience(level, enemyLevel)
         : MISS_EXPERIENCE;
-  return Math.min(EXPERIENCE_PER_LEVEL, amount);
+  return Math.min(getExperienceForLevel(level), amount);
 }
 
 // The XP a unit at `level` with `experience` still needs for its next
 // level; 0 at MAX_LEVEL.
 export function getExperienceToNextLevel(level: number, experience: number): number {
-  return level >= MAX_LEVEL ? 0 : Math.max(0, EXPERIENCE_PER_LEVEL - experience);
+  return level >= MAX_LEVEL ? 0 : Math.max(0, getExperienceForLevel(level) - experience);
 }
 
 // XP to give a unit, and whether its XP rate scales it (see
@@ -161,9 +170,9 @@ export function scaleExperience(amount: number, rate: number = DEFAULT_EXPERIENC
 }
 
 // Adds `amount` XP to a unit at `level` with `experience`, carrying the
-// overflow past each EXPERIENCE_PER_LEVEL into the next level. Stops at
-// maxLevel, where experience stays 0. Returns { level, experience,
-// levelsGained }.
+// overflow past each level's getExperienceForLevel into the next level.
+// Stops at maxLevel, where experience stays 0. Returns { level,
+// experience, levelsGained }.
 export function addExperience(
   level: number,
   experience: number,
@@ -171,9 +180,13 @@ export function addExperience(
   maxLevel = MAX_LEVEL,
 ): { level: number; experience: number; levelsGained: number } {
   if (level >= maxLevel) return { level, experience: 0, levelsGained: 0 };
-  const total = experience + amount;
-  const newLevel = Math.min(maxLevel, level + Math.floor(total / EXPERIENCE_PER_LEVEL));
-  const newExperience = newLevel >= maxLevel ? 0 : total % EXPERIENCE_PER_LEVEL;
+  let newLevel = level;
+  let newExperience = experience + amount;
+  while (newLevel < maxLevel && newExperience >= getExperienceForLevel(newLevel)) {
+    newExperience -= getExperienceForLevel(newLevel);
+    newLevel++;
+  }
+  if (newLevel >= maxLevel) newExperience = 0;
   return { level: newLevel, experience: newExperience, levelsGained: newLevel - level };
 }
 

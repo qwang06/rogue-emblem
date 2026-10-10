@@ -4,11 +4,13 @@ import { HEALTH_POTION, MAX_INVENTORY_SLOTS } from '../items.ts';
 import { createSeededRng } from '../rng.ts';
 import { Soldier } from '../Soldier.ts';
 import { Unit } from '../Unit.ts';
-import { UNIT_CLASSES } from '../unitClasses.ts';
+import { createUnitOfClass, UNIT_CLASSES } from '../unitClasses.ts';
+import { MAX_LEVEL } from '../experience.ts';
 import { Villager } from '../Villager.ts';
 import { createRun, type RunState, type UnitSnapshot } from './run.ts';
 import {
   addGold,
+  applyExperienceReward,
   getRerollCost,
   getSkipGold,
   rerollRewards,
@@ -303,12 +305,19 @@ describe('stage 1 rewards', () => {
   const recruits = (rewards: readonly Reward[]) =>
     rewards.map((reward) => (reward.kind === 'recruit' ? reward.unit : null));
 
-  it('offers a recruit of each starting class, in order', () => {
+  it('offers experience first, then recruits of the starting classes the warband lacks, in order', () => {
     for (let seed = 0; seed < 20; seed++) {
       const rewards = rollRewards(lone(), 1, createSeededRng(seed));
-      expect(kinds(rewards)).toEqual(STARTING_CLASSES.map(() => 'recruit'));
-      expect(recruits(rewards).map((unit) => unit?.classId)).toEqual(STARTING_CLASSES.map(({ id }) => id));
+      expect(rewards).toHaveLength(REWARD_CHOICES);
+      expect(kinds(rewards)).toEqual(['experience', 'recruit', 'recruit']);
+      expect(recruits(rewards).map((unit) => unit?.classId)).toEqual([undefined, 'soldier', 'archer']);
     }
+  });
+
+  it('offers a class the warband has only once every other starting class is offered', () => {
+    const soldier = runOf(['alden', new Soldier({ name: 'Alden', team: 'player' })]);
+    const rewards = rollRewards(soldier, 1, createSeededRng(3), 4);
+    expect(recruits(rewards).map((unit) => unit?.classId)).toEqual([undefined, 'villager', 'archer', 'soldier']);
   });
 
   it('names each recruit differently, and none after the warband', () => {
@@ -320,11 +329,14 @@ describe('stage 1 rewards', () => {
   });
 
   it('brings the recruits in at level 1 beside a level 1 warband', () => {
-    for (const unit of recruits(rollRewards(lone(), 1, createSeededRng(4)))) expect(unit?.level).toBe(1);
+    for (const unit of recruits(rollRewards(lone(), 1, createSeededRng(4))).filter(Boolean))
+      expect(unit?.level).toBe(1);
   });
 
   it('still respects the count', () => {
-    expect(rollRewards(lone(), 1, createSeededRng(4), 2)).toHaveLength(2);
+    expect(kinds(rollRewards(lone(), 1, createSeededRng(4), 2))).toEqual(['experience', 'recruit']);
+    expect(kinds(rollRewards(lone(), 1, createSeededRng(4), 1))).toEqual(['experience']);
+    expect(rollRewards(lone(), 1, createSeededRng(4), 0)).toEqual([]);
   });
 
   it('falls back to the usual offers when the roster is full', () => {
@@ -337,8 +349,57 @@ describe('stage 1 rewards', () => {
   });
 
   it("describes a starting-class recruit with the class's pitch", () => {
-    const [villager] = recruits(rollRewards(lone(), 1, createSeededRng(4)));
-    expect(describeReward({ kind: 'recruit', unit: villager! }).description).toContain(STARTING_CLASSES[0].description);
+    const [, soldier] = recruits(rollRewards(lone(), 1, createSeededRng(4)));
+    expect(describeReward({ kind: 'recruit', unit: soldier! }).description).toContain(STARTING_CLASSES[1].description);
+  });
+});
+
+describe('the experience reward', () => {
+  const experience = (seed = 1) => ({ kind: 'experience', seed }) as const;
+
+  it('takes every starting class from level 1 to exactly level 2, with its first skill', () => {
+    for (const { id } of STARTING_CLASSES) {
+      const run = runOf([id, createUnitOfClass(id, { name: 'Alden', team: 'player' })]);
+      const { run: after, levelUps } = applyExperienceReward(run, experience());
+      expect(after.roster[0], id).toMatchObject({ level: 2, experience: 0 });
+      expect(levelUps, id).toHaveLength(1);
+      expect(levelUps[0].name).toBe('Alden');
+      expect(levelUps[0].levelUp.skills, id).toHaveLength(1);
+    }
+  });
+
+  it('gives each unit just what it still needs, so XP it had already earned is not wasted', () => {
+    const soldier = new Soldier({ name: 'Alden', team: 'player' });
+    soldier.gainExperience(30, () => 0);
+    soldier.gainExperience(70, () => 0);
+    expect(soldier).toMatchObject({ level: 2, experience: 50 });
+    const run = runOf(['alden', soldier], ['cato', new Villager({ name: 'Cato', team: 'player' })]);
+    const after = applyReward(run, experience());
+    expect(after.roster.map((unit) => [unit.level, unit.experience])).toEqual([
+      [3, 0],
+      [2, 0],
+    ]);
+  });
+
+  it('rolls the same stat gains for the same reward', () => {
+    const run = runOf(['alden', new Villager({ name: 'Alden', team: 'player' })]);
+    expect(applyReward(run, experience(5))).toEqual(applyReward(run, experience(5)));
+  });
+
+  it("leaves a unit at the max level as it is, and doesn't touch the run's gold or the fallen", () => {
+    const run = fullRun();
+    const maxed = withRoster(run, [{ ...run.roster[0], level: MAX_LEVEL, experience: 0 }]);
+    const { run: after, levelUps } = applyExperienceReward(maxed, experience());
+    expect(after.roster[0]).toEqual(maxed.roster[0]);
+    expect(levelUps).toEqual([]);
+    expect(after.gold).toBe(maxed.gold);
+  });
+
+  it('is described as a level for everyone', () => {
+    expect(describeReward(experience())).toEqual({
+      label: 'Experience',
+      description: 'Every unit gains enough XP to reach its next level.',
+    });
   });
 });
 

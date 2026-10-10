@@ -94,7 +94,6 @@ export function App() {
               <CombatForecast />
               <DamagePopups />
               <ExperienceBar />
-              <LevelUpPanel />
               <PhaseBanner />
               <DialogBox />
               <ObjectiveScreen />
@@ -102,6 +101,8 @@ export function App() {
               <PauseMenu />
               <BattleResult />
               <RewardScreen />
+              {/* Over the reward screen too, for an Experience reward's level ups. */}
+              <LevelUpPanel />
             </div>
           </div>
         </div>

@@ -303,7 +303,7 @@ describe('Unit', () => {
 
     it('levels up with its growths and carries the overflow', () => {
       const unit = makeGrower({ health: 100, strength: 100 });
-      unit.experience = 80;
+      unit.experience = 30;
       const result = unit.gainExperience(45, () => 0.5);
       expect(unit.level).toBe(2);
       expect(unit.experience).toBe(25);
@@ -315,7 +315,7 @@ describe('Unit', () => {
 
     it('applies several level ups at once', () => {
       const unit = makeGrower({ strength: 100 });
-      unit.gainExperience(250, () => 0);
+      unit.gainExperience(200, () => 0);
       expect(unit.level).toBe(3);
       expect(unit.strength).toBe(6);
       expect(unit.experience).toBe(50);
