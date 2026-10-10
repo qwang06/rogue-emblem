@@ -11,6 +11,7 @@ import { getMovementRange } from '../movement.ts';
 import { getBuildingSprites, getFeatureSprites } from '../mapArt.ts';
 import { getReachable, terrainToRows } from '../mapGen.ts';
 import { ROUT } from '../objectives.ts';
+import { getCombatAward } from '../experience.ts';
 import { BUILDING_ART, BUILDING_PALETTES, FOREST_ART, MOUNTAIN_ART } from '../tileset.ts';
 
 const SEEDS = Array.from({ length: 50 }, (_, i) => i * 104729 + 3);
@@ -134,6 +135,11 @@ describe('createStageLevel', () => {
     }
   });
 
+  it('makes a group’s enemies level their killer up only when the group says so', () => {
+    const level = createStageLevel(7, { ...FIRST, enemies: [{ count: 1, levelUpOnKill: true }, { count: 1 }] });
+    expect(['enemy-1', 'enemy-2'].map((unitId) => level.units.get(unitId)!.levelUpOnKill)).toEqual([true, false]);
+  });
+
   it('starts a group’s enemies on its health, never past their max', () => {
     const level = createStageLevel(1, {
       ...FIRST,
@@ -217,6 +223,19 @@ describe('stage 1', () => {
       const enemy = createStageLevel(seed, region).units.get('enemy-1')!;
       expect(enemy.health).toBeLessThan(enemy.maxHealth);
       expect(enemy.health).toBe(4);
+    }
+  });
+
+  it('levels up any starting class that kills the enemy, landing on exactly level 2 with its skill', () => {
+    for (const { id } of STARTING_CLASSES) {
+      const level = createStageLevel(1, region, createStartingWarband(id));
+      const unit = level.units.get(level.roster[0])!;
+      const enemy = level.units.get('enemy-1')!;
+      const { amount, scaled } = getCombatAward(unit, enemy, 'kill');
+      const result = unit.gainExperience(amount, () => 0, scaled);
+      expect(result, id).toMatchObject({ level: 2, experience: 0 });
+      expect(result.levelUps, id).toHaveLength(1);
+      expect(result.levelUps[0].skills, id).toHaveLength(1);
     }
   });
 

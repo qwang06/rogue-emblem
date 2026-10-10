@@ -57,8 +57,9 @@ describe('Villager', () => {
     expect(villager.weapon).toBe(FISTS);
   });
 
-  it('knows Throw Stones from level 1', () => {
-    expect(getLearnedSkills('villager', 1)).toEqual([THROW_STONES]);
+  it('learns Throw Stones at level 2', () => {
+    expect(getLearnedSkills('villager', 1)).toEqual([]);
+    expect(getLearnedSkills('villager', 2)).toEqual([THROW_STONES]);
   });
 
   it('starts no stronger than a soldier', () => {

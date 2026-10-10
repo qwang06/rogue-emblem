@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   SKILL_TREES,
+  SKILL_UNLOCK_LEVEL,
   THROW_STONES,
   POWER_STRIKE,
   calculateSkillDamage,
@@ -35,12 +36,25 @@ const trees: SkillTrees = {
 };
 
 describe('SKILL_TREES', () => {
-  it('teaches the soldier Power Strike at level 1', () => {
-    expect(getLearnedSkills('soldier', 1)).toEqual([POWER_STRIKE]);
+  it('teaches the soldier Power Strike at level 2, its first level up', () => {
+    expect(getLearnedSkills('soldier', 1)).toEqual([]);
+    expect(getSkillsLearnedBetween('soldier', 1, 2)).toEqual([POWER_STRIKE]);
   });
 
-  it('teaches the villager Throw Stones at level 1', () => {
-    expect(getLearnedSkills('villager', 1)).toEqual([THROW_STONES]);
+  it('teaches the villager Throw Stones at level 2, its first level up', () => {
+    expect(getLearnedSkills('villager', 1)).toEqual([]);
+    expect(getSkillsLearnedBetween('villager', 1, 2)).toEqual([THROW_STONES]);
+  });
+
+  it('teaches every class nothing at level 1 and its skill at SKILL_UNLOCK_LEVEL', () => {
+    for (const [unitClass, tree] of Object.entries(SKILL_TREES)) {
+      expect(getLearnedSkills(unitClass, 1), unitClass).toEqual([]);
+      expect(
+        tree.map((entry) => entry.level),
+        unitClass,
+      ).toEqual([SKILL_UNLOCK_LEVEL]);
+    }
+    expect(SKILL_UNLOCK_LEVEL).toBe(2);
   });
 
   it('keeps each skill to its own class', () => {

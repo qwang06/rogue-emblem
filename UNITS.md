@@ -56,7 +56,7 @@ The player's townsfolk in the demo battle, and the late bloomer of Warband Mode'
 
 | Skill        | Learned at | Mana | Range | Damage                           |
 | ------------ | ---------- | ---- | ----- | -------------------------------- |
-| Throw Stones | 1          | 2    | 1–4   | Half the regular hit, rounded up |
+| Throw Stones | 2          | 2    | 1–4   | Half the regular hit, rounded up |
 
 Carries Fists, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
@@ -83,7 +83,7 @@ The spear-and-shield infantry: the enemy in the demo battle, and a choice in Tra
 
 | Skill        | Learned at | Mana | Range | Damage                      |
 | ------------ | ---------- | ---- | ----- | --------------------------- |
-| Power Strike | 1          | 2    | 1     | The regular hit with +3 STR |
+| Power Strike | 2          | 2    | 1     | The regular hit with +3 STR |
 
 Carries an Iron Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
@@ -110,7 +110,7 @@ The ranged infantry: frail but accurate. Its bow only reaches two tiles away, so
 
 | Skill     | Learned at | Mana | Range | Damage          |
 | --------- | ---------- | ---- | ----- | --------------- |
-| Long Shot | 1          | 2    | 1–3   | The regular hit |
+| Long Shot | 2          | 2    | 1–3   | The regular hit |
 
 Carries an Iron Bow, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
@@ -137,7 +137,7 @@ The axe-wielding front line: high HP and strength, low skill, speed and luck. It
 
 | Skill  | Learned at | Mana | Range | Damage                      |
 | ------ | ---------- | ---- | ----- | --------------------------- |
-| Cleave | 1          | 2    | 1     | The regular hit with +2 STR |
+| Cleave | 2          | 2    | 1     | The regular hit with +2 STR |
 
 Carries an Iron Axe, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
@@ -164,7 +164,7 @@ The spellcaster: magic instead of strength and resistance instead of defense, wi
 
 | Skill    | Learned at | Mana | Range | Damage                      |
 | -------- | ---------- | ---- | ----- | --------------------------- |
-| Fireball | 1          | 3    | 1–3   | The regular hit with +1 MAG |
+| Fireball | 2          | 3    | 1–3   | The regular hit with +1 MAG |
 
 Carries Fire, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
@@ -191,7 +191,7 @@ The armored infantry behind a tower shield: a soldier's strength and spear with 
 
 | Skill       | Learned at | Mana | Range | Damage                      |
 | ----------- | ---------- | ---- | ----- | --------------------------- |
-| Shield Bash | 1          | 2    | 1     | The regular hit with +1 STR |
+| Shield Bash | 2          | 2    | 1     | The regular hit with +1 STR |
 
 Carries an Iron Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
@@ -238,6 +238,8 @@ Villager and Soldier share a stat line, so between them the difference is the we
 | Wizard   | Soldier  | Fire       | 6      | 84% | 0%   | 1       |
 | Guard    | Soldier  | Iron Spear | 3      | 78% | 0%   | 1       |
 | Soldier  | Guard    | Iron Spear | 0      | 84% | 0%   | 1       |
+
+Every class learns its skill at level 2, its first level up; the skill rows use level-1 stats.
 
 | Skill        | User     | Target   | Damage | Hit    | Crit  | Strikes       |
 | ------------ | -------- | -------- | ------ | ------ | ----- | ------------- |

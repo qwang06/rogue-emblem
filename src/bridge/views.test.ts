@@ -196,10 +196,13 @@ describe('toUnitDetailView', () => {
   });
 
   it("lists the skills the unit's class has taught it", () => {
-    expect(toUnitDetailView(new Soldier({ team: 'player' }))!.skills).toEqual([
+    expect(toUnitDetailView(new Soldier({ team: 'player', level: 2 }))!.skills).toEqual([
       { id: POWER_STRIKE.id, label: POWER_STRIKE.label, manaCost: POWER_STRIKE.manaCost, range: POWER_STRIKE.range },
     ]);
-    expect(toUnitDetailView(new Wizard({ team: 'enemy' }))!.skills.map((skill) => skill.id)).toEqual([FIREBALL.id]);
+    expect(toUnitDetailView(new Wizard({ team: 'enemy', level: 2 }))!.skills.map((skill) => skill.id)).toEqual([
+      FIREBALL.id,
+    ]);
+    expect(toUnitDetailView(new Soldier({ team: 'player' }))!.skills).toEqual([]);
     expect(toUnitDetailView(makeUnit())!.skills).toEqual([]);
   });
 

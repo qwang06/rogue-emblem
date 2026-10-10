@@ -51,8 +51,9 @@ describe('Archer', () => {
     expect(archer.weaponUses).toBe(IRON_BOW.uses);
   });
 
-  it('knows Long Shot from level 1', () => {
-    expect(getLearnedSkills('archer', 1)).toEqual([LONG_SHOT]);
+  it('learns Long Shot at level 2', () => {
+    expect(getLearnedSkills('archer', 1)).toEqual([]);
+    expect(getLearnedSkills('archer', 2)).toEqual([LONG_SHOT]);
   });
 
   it('accepts a custom name and level', () => {

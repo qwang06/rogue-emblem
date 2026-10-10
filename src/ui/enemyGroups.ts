@@ -24,6 +24,7 @@ export function describeEnemyGroup(group: EnemyGroup): string {
     span('rows', group.area?.y),
     distance(group),
     group.health !== undefined ? `${group.health} HP` : null,
+    group.levelUpOnKill ? 'level up on kill' : null,
   ];
   return parts.filter((part) => part !== null).join(' · ');
 }

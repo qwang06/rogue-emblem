@@ -5,7 +5,7 @@
 // - minDistance / maxDistance: how many steps a unit would walk from the
 //   nearest deployment tile, going around water, mountains and walls
 // A group can also start its enemies wounded (`health`), e.g. for an easy
-// first stage.
+// first stage, and make killing one level the killer up (`levelUpOnKill`).
 // Groups are placed in order, each on random tiles that pass all of its
 // limits and aren't already taken. Pure: the same inputs and Rng always
 // give the same tiles.
@@ -32,6 +32,9 @@ export interface EnemyGroup {
   // The HP its enemies start the battle with (at most their max HP); full
   // when unset.
   health?: number;
+  // Whether killing one of its enemies gives the killer exactly the XP it
+  // needs for its next level (see getCombatAward in experience.ts).
+  levelUpOnKill?: boolean;
 }
 
 // The north third of the map: where enemies stood before regions could

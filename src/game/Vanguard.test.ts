@@ -52,8 +52,9 @@ describe('Vanguard', () => {
     expect(vanguard.weaponUses).toBe(IRON_AXE.uses);
   });
 
-  it('knows Cleave from level 1', () => {
-    expect(getLearnedSkills('vanguard', 1)).toEqual([CLEAVE]);
+  it('learns Cleave at level 2', () => {
+    expect(getLearnedSkills('vanguard', 1)).toEqual([]);
+    expect(getLearnedSkills('vanguard', 2)).toEqual([CLEAVE]);
   });
 
   it('accepts a custom name and level', () => {

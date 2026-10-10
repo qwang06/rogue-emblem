@@ -51,8 +51,9 @@ describe('Wizard', () => {
     expect(wizard.weaponUses).toBe(FIRE.uses);
   });
 
-  it('knows Fireball from level 1', () => {
-    expect(getLearnedSkills('wizard', 1)).toEqual([FIREBALL]);
+  it('learns Fireball at level 2', () => {
+    expect(getLearnedSkills('wizard', 1)).toEqual([]);
+    expect(getLearnedSkills('wizard', 2)).toEqual([FIREBALL]);
   });
 
   it('accepts a custom name and level', () => {
