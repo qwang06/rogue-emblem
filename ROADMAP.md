@@ -130,11 +130,12 @@ _Decided:_ classes are named after the unit art in `src/assets/units/` (see the 
 
 ## Phase 3 — Strategy layer
 
-### [ ] 3.1 Enemy danger zone
+### [x] 3.1 Enemy danger zone
 
 - Toggle key (and button) to show the combined threat range of all enemies, using `getThreatRange` over each enemy's movement range and weapon range.
 - Optionally per-enemy: selecting an enemy shows its move + attack range.
 - **Tests:** combined threat merges ranges without duplicates; respects movement types and min range.
+- _Deferred:_ movement types (2.4) aren't in yet; they'll flow in through each enemy's `MovementOptions` with no change to `dangerZone.ts`. The zone uses enemies' weapons only, not skills.
 
 ### [ ] 3.2 Smarter enemy AI
 

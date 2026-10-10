@@ -8,6 +8,7 @@
 //   { type: 'confirm' }                  — same as pressing Enter/Z
 //   { type: 'cancel' }                   — same as pressing Esc/X
 //   { type: 'main-menu' }                — leave the battle for the title screen, whatever is going on
+//   { type: 'toggle-danger-zone' }       — show or hide every enemy's reach, same as pressing D
 
 // Store fields holding a menu React can point at.
 export type MenuField =
@@ -18,7 +19,8 @@ export type Command =
   | { type: 'select-menu'; menu: MenuField; index: number }
   | { type: 'confirm' }
   | { type: 'cancel' }
-  | { type: 'main-menu' };
+  | { type: 'main-menu' }
+  | { type: 'toggle-danger-zone' };
 
 export type CommandHandler<C> = (command: C) => void;
 

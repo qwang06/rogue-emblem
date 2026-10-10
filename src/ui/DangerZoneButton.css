@@ -1,0 +1,5 @@
+/* Pressed while the danger zone shows, like an open header popover's button. */
+.danger-zone-button[aria-pressed='true'] {
+  color: var(--ink);
+  background: var(--gold);
+}
