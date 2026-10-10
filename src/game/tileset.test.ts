@@ -57,6 +57,9 @@ describe('getUnitSprite', () => {
     expect(getUnitSprite('wizard')).toBe('Vanguard_01');
     expect(getUnitSprite('guard')).toBe('Soldier_04');
     expect(getUnitSprite('acolyte')).toBe('Acolyte_02');
+    expect(getUnitSprite('slime')).toBe('Slime_01');
+    expect(getUnitSprite('goblin')).toBe('Goblin_01');
+    expect(getUnitSprite('skeleton')).toBe('Skeleton_01');
   });
 
   it('falls back to the default art for an unknown or missing class', () => {
