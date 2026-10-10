@@ -11,8 +11,8 @@
 //   - convoy: confirm gives that item to the picked unit; cancel goes back
 //     to the units
 //   - actions: confirm takes the action; cancel closes them
-// The camp menu shown after a stage's reward offers the screen
-// (CAMP_ACTIONS). Everything here is pure: each function returns a new
+// The camp menu shown after a stage's reward offers the screen (see
+// camp.ts). Everything here is pure: each function returns a new
 // frozen state and leaves its input alone.
 
 import { createActionMenu, moveSelection, selectIndex, type Menu, type MenuAction } from '../actionMenu.ts';
@@ -29,12 +29,6 @@ import {
   storeInConvoy,
 } from './convoy.ts';
 import { RUN_ITEMS, type RunState } from './run.ts';
-
-// What the camp between stages offers once the reward is taken.
-export const CAMP_ACTIONS: readonly MenuAction[] = Object.freeze([
-  Object.freeze({ id: 'roster', label: 'Manage Roster' }),
-  Object.freeze({ id: 'march', label: 'Next Stage' }),
-]);
 
 export type RosterColumn = 'units' | 'items' | 'convoy';
 

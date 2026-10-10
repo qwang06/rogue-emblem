@@ -2827,3 +2827,63 @@ textarea.draft-input {
 .roster-screen__hint {
   margin: 0;
 }
+
+/* ---- Camp menu and merchant ----------------------------------------- */
+
+/* The warband's gold, cut into a window's border like its title: in the
+   camp menu's bottom border and the merchant's top-right one, so it
+   taking more digits never moves anything inside. */
+.camp-menu__gold,
+.merchant-screen__gold {
+  position: absolute;
+  right: 10px;
+  margin: 0;
+  padding: 0 6px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  color: var(--yellow);
+  background: var(--bg);
+}
+
+.camp-menu {
+  padding-bottom: 12px;
+}
+
+.camp-menu__gold {
+  bottom: -0.75em;
+}
+
+.merchant-screen__gold {
+  top: -0.75em;
+}
+
+.merchant-screen__scroll {
+  width: min(40rem, calc(100% - 32px));
+}
+
+.merchant-screen__columns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Stacked on narrow stages, like the roster screen's columns. */
+@container (max-width: 30rem) {
+  .merchant-screen__columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Room for the whole stock; the convoy scrolls past it. */
+.merchant-screen .merchant-screen__list {
+  height: calc(6 * var(--row));
+}
+
+.merchant-screen__price {
+  flex: none;
+  min-width: 4.5ch;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--yellow);
+}

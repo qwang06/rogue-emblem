@@ -1,3 +1,4 @@
+import type { MerchantColumn } from '../game/warband/merchantScreen.ts';
 import type { RosterTarget } from '../game/warband/rosterScreen.ts';
 
 // The React → Phaser direction of the bridge. React sends plain command
@@ -9,6 +10,8 @@ import type { RosterTarget } from '../game/warband/rosterScreen.ts';
 //   { type: 'select-menu', menu, index } — entry `index` of `menu` was clicked
 //   { type: 'hover-roster', target, index }  — pointer is over entry `index` of a roster screen column (or its item actions)
 //   { type: 'select-roster', target, index } — that entry was clicked
+//   { type: 'hover-merchant', column, index }  — pointer is over entry `index` of a merchant screen column
+//   { type: 'select-merchant', column, index } — that entry was clicked
 //   { type: 'confirm' }                  — same as pressing Enter/Z
 //   { type: 'cancel' }                   — same as pressing Esc/X
 //   { type: 'main-menu' }                — leave the battle for the title screen, whatever is going on
@@ -31,6 +34,8 @@ export type Command =
   | { type: 'select-menu'; menu: MenuField; index: number }
   | { type: 'hover-roster'; target: RosterTarget; index: number }
   | { type: 'select-roster'; target: RosterTarget; index: number }
+  | { type: 'hover-merchant'; column: MerchantColumn; index: number }
+  | { type: 'select-merchant'; column: MerchantColumn; index: number }
   | { type: 'confirm' }
   | { type: 'cancel' }
   | { type: 'main-menu' }
