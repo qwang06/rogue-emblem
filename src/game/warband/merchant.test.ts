@@ -3,7 +3,15 @@ import { HEAL_STAFF } from '../healing.ts';
 import { HEALTH_POTION, WOODEN_ARMOR, WOODEN_SHIELD, type Item } from '../items.ts';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
-import { FISTS, IRON_SPEAR, WOODEN_AXE, WOODEN_SPEAR, WOODEN_SWORD, type Weapon } from '../weapons.ts';
+import {
+  FISTS,
+  IRON_SPEAR,
+  NATURAL_WEAPON_IDS,
+  WOODEN_AXE,
+  WOODEN_SPEAR,
+  WOODEN_SWORD,
+  type Weapon,
+} from '../weapons.ts';
 import {
   buyItem,
   canBuy,
@@ -34,10 +42,10 @@ describe('MERCHANT_STOCK', () => {
     ]);
   });
 
-  it('prices everything it sells and every item a run can hold', () => {
+  it('prices everything it sells and every item a run can hold, but natural weapons and learned spells', () => {
     for (const item of RUN_ITEMS) {
-      if (item.id === FISTS.id || item.id === 'tackle' || item.id === 'club' || item.id === 'bone-claws') continue;
-      expect(getItemPrice(item), item.id).toBeGreaterThan(0);
+      if (NATURAL_WEAPON_IDS.has(item.id)) expect(getItemPrice(item), item.id).toBe(0);
+      else expect(getItemPrice(item), item.id).toBeGreaterThan(0);
     }
     for (const id of MERCHANT_STOCK) expect(ITEM_PRICES[id], id).toBeGreaterThan(0);
   });
