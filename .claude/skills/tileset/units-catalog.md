@@ -11,7 +11,7 @@ in `src/assets/sprites.ts` when a class needs art.
 `Slime_01`, `Goblin_01` and `Skeleton_01` are starter enemy monsters made with
 PixelLab (Pro Flash at 16x16, styled on the villager) and assembled by
 `scripts/build-unit-sheet.js`. They're in `SPRITE_URLS` and `UNIT_SPRITES`
-(keys `slime`, `goblin`, `skeleton`), waiting for unit classes of those ids.
+(the `slime`, `goblin` and `skeleton` classes).
 Same layout and scale as the pack (128x128, rows down/left/right/up, 4
 frames), RGBA instead of color-keyed, colors snapped to the pack's palette,
 no baked shadow, feet on y 28–29 in every facing.

@@ -171,6 +171,49 @@ export const BALLISTA = weapon({
   uses: 10,
 });
 
+// The monsters' natural weapons, which never break. The slime's body slam:
+// no might at all.
+export const TACKLE = weapon({
+  id: 'tackle',
+  label: 'Tackle',
+  type: 'physical',
+  might: 0,
+  hit: 75,
+  crit: 0,
+  weight: 0,
+  minRange: 1,
+  maxRange: 1,
+  uses: null,
+});
+
+// The goblin's club.
+export const CLUB = weapon({
+  id: 'club',
+  label: 'Club',
+  type: 'physical',
+  might: 2,
+  hit: 75,
+  crit: 0,
+  weight: 2,
+  minRange: 1,
+  maxRange: 1,
+  uses: null,
+});
+
+// The skeleton's claws.
+export const BONE_CLAWS = weapon({
+  id: 'bone-claws',
+  label: 'Bone Claws',
+  type: 'physical',
+  might: 2,
+  hit: 80,
+  crit: 0,
+  weight: 1,
+  minRange: 1,
+  maxRange: 1,
+  uses: null,
+});
+
 export const WEAPONS: readonly Weapon[] = Object.freeze([
   FISTS,
   IRON_SPEAR,
@@ -179,6 +222,9 @@ export const WEAPONS: readonly Weapon[] = Object.freeze([
   FIRE,
   POWDER_KEG,
   BALLISTA,
+  TACKLE,
+  CLUB,
+  BONE_CLAWS,
 ]);
 
 // A fresh inventory entry for weapon, with all its uses (1 for one that

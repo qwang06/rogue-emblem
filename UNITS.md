@@ -1,6 +1,6 @@
 # UNITS.md
 
-Reference for every unit class: base stats, growth rates, caps, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Villager.ts`, `src/game/Soldier.ts`, `src/game/Archer.ts`, `src/game/Vanguard.ts`, `src/game/Wizard.ts`, `src/game/Guard.ts`, `src/game/Acolyte.ts`, `src/game/healing.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
+Reference for every unit class: base stats, growth rates, caps, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Villager.ts`, `src/game/Soldier.ts`, `src/game/Archer.ts`, `src/game/Vanguard.ts`, `src/game/Wizard.ts`, `src/game/Guard.ts`, `src/game/Acolyte.ts`, `src/game/Slime.ts`, `src/game/Goblin.ts`, `src/game/Skeleton.ts`, `src/game/healing.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
 
 ## How the numbers work
 
@@ -21,7 +21,7 @@ Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.m
 
 ## Weapons
 
-One starter weapon per armed unit in the unit catalog. Fists, the Iron Spear, the Iron Bow, the Iron Axe and Fire are carried by a class; the rest wait for their classes (milestone 2.3).
+One starter weapon per armed unit in the unit catalog. Fists, the Iron Spear, the Iron Bow, the Iron Axe and Fire are carried by a class; the monsters fight with Tackle, Club and Bone Claws, which never break; the rest wait for their classes (milestone 2.3).
 
 | Weapon     | Type     | Mt  | Hit | Crit | Wt  | Rng | Uses | For (catalog art)           |
 | ---------- | -------- | --- | --- | ---- | --- | --- | ---- | --------------------------- |
@@ -32,6 +32,9 @@ One starter weapon per armed unit in the unit catalog. Fists, the Iron Spear, th
 | Fire       | magical  | 2   | 85  | 0    | 1   | 1–2 | 30   | Elemental, Vanguard (staff) |
 | Powder Keg | siege    | 5   | 70  | 0    | 6   | 1–2 | 5    | Sapper                      |
 | Ballista   | siege    | 6   | 70  | 0    | 8   | 2–3 | 10   | Siege                       |
+| Tackle     | physical | 0   | 75  | 0    | 0   | 1   | ∞    | Slime                       |
+| Club       | physical | 2   | 75  | 0    | 2   | 1   | ∞    | Goblin                      |
+| Bone Claws | physical | 2   | 80  | 0    | 1   | 1   | ∞    | Skeleton                    |
 
 ## Villager
 
@@ -224,6 +227,84 @@ The healer: it wields no weapon at all, so it can't attack or counter, and inste
 | ----- | ---------- | ---- | ----- | ------ |
 
 It learns no skills yet. Carries a Heal staff, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
+
+## Slime
+
+The weakest monster and Warband Mode's first fight: a slow blob of jelly that deals 1 damage to a level-1 villager and falls to two punches. It carries nothing but its Tackle.
+
+| Stat | Base | Growth | Cap |
+| ---- | ---- | ------ | --- |
+| HP   | 6    | 60%    | 40  |
+| MP   | 0    | 0%     | 0   |
+| STR  | 3    | 30%    | 20  |
+| MAG  | 0    | 0%     | 20  |
+| SKL  | 1    | 20%    | 20  |
+| SPD  | 1    | 20%    | 20  |
+| LCK  | 0    | 10%    | 20  |
+| DEF  | 0    | 20%    | 20  |
+| RES  | 2    | 30%    | 20  |
+| MOV  | 3    | –      | –   |
+
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| physical     | Tackle          | 100%    |
+
+| Skill | Learned at | Mana | Range | Damage |
+| ----- | ---------- | ---- | ----- | ------ |
+
+It learns no skills and carries no potions.
+
+## Goblin
+
+A quick, scrappy monster: as fast as anything at level 1 and hits about as hard as a soldier, but frail. It carries nothing but its Club.
+
+| Stat | Base | Growth | Cap |
+| ---- | ---- | ------ | --- |
+| HP   | 8    | 60%    | 40  |
+| MP   | 0    | 0%     | 0   |
+| STR  | 3    | 40%    | 20  |
+| MAG  | 0    | 0%     | 20  |
+| SKL  | 4    | 45%    | 20  |
+| SPD  | 5    | 50%    | 20  |
+| LCK  | 1    | 25%    | 20  |
+| DEF  | 1    | 20%    | 20  |
+| RES  | 0    | 10%    | 20  |
+| MOV  | 5    | –      | –   |
+
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| physical     | Club            | 100%    |
+
+| Skill | Learned at | Mana | Range | Damage |
+| ----- | ---------- | ---- | ----- | ------ |
+
+It learns no skills and carries no potions.
+
+## Skeleton
+
+The sturdy monster: slow and unlucky, but its bones shrug off weak hits and its claws hit harder than a spear. It carries nothing but its Bone Claws.
+
+| Stat | Base | Growth | Cap |
+| ---- | ---- | ------ | --- |
+| HP   | 10   | 70%    | 40  |
+| MP   | 0    | 0%     | 0   |
+| STR  | 4    | 45%    | 20  |
+| MAG  | 0    | 0%     | 20  |
+| SKL  | 3    | 35%    | 20  |
+| SPD  | 2    | 25%    | 20  |
+| LCK  | 0    | 5%     | 20  |
+| DEF  | 3    | 40%    | 20  |
+| RES  | 0    | 10%    | 20  |
+| MOV  | 4    | –      | –   |
+
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| physical     | Bone Claws      | 100%    |
+
+| Skill | Learned at | Mana | Range | Damage |
+| ----- | ---------- | ---- | ----- | ------ |
+
+It learns no skills and carries no potions.
 
 ## Matchups at level 1
 

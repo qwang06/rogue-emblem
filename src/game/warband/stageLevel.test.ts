@@ -10,7 +10,7 @@ import {
 } from './stageLevel.ts';
 import { getStageRegion } from './regions.ts';
 import { STARTING_CLASSES } from './startingClasses.ts';
-import { getAttackRange } from '../combat.ts';
+import { calculateDamage, getAttackRange } from '../combat.ts';
 import { countEnemies, getWalkingDistances, isInArea } from '../enemySpawns.ts';
 import { findUnit, getCell, setUnit } from '../grid.ts';
 import { getMovementRange } from '../movement.ts';
@@ -212,10 +212,12 @@ describe('the stage ramp', () => {
       Array.from({ length: group.count }, () => group.unitClass ?? DEFAULT_ENEMY_CLASS),
     );
 
-  it('goes from one villager, to two, to a villager and a soldier', () => {
-    expect(enemyClasses(1)).toEqual(['villager']);
-    expect(enemyClasses(2)).toEqual(['villager', 'villager']);
-    expect(enemyClasses(3)).toEqual(['villager', 'soldier']);
+  it('goes from one slime, to one goblin, then mixes in more monsters', () => {
+    expect(enemyClasses(1)).toEqual(['slime']);
+    expect(enemyClasses(2)).toEqual(['goblin']);
+    expect(enemyClasses(3)).toEqual(['slime', 'slime', 'goblin']);
+    expect(enemyClasses(4)).toEqual(['goblin', 'goblin', 'skeleton']);
+    expect(enemyClasses(5)).toEqual(['skeleton', 'skeleton', 'goblin', 'goblin']);
   });
 
   it('never fields fewer enemies than the stage before', () => {
@@ -228,11 +230,11 @@ describe('the stage ramp', () => {
 describe('stage 1', () => {
   const region = getStageRegion(1, REGION_SETTINGS);
 
-  it('is a single villager, so the battle is over quickly and easily', () => {
+  it('is a single slime, so the battle is over quickly and easily', () => {
     for (const seed of SEEDS) {
       const { units } = createStageLevel(seed, region);
       const enemies = [...units.values()].filter((unit) => unit.team === 'enemy');
-      expect(enemies.map((unit) => unit.unitClass)).toEqual(['villager']);
+      expect(enemies.map((unit) => unit.unitClass)).toEqual(['slime']);
     }
   });
 
@@ -255,11 +257,16 @@ describe('stage 1', () => {
     }
   });
 
-  it('starts the enemy wounded, so a lone level-1 unit can win', () => {
-    for (const seed of SEEDS) {
-      const enemy = createStageLevel(seed, region).units.get('enemy-1')!;
-      expect(enemy.health).toBeLessThan(enemy.maxHealth);
-      expect(enemy.health).toBe(4);
+  it('is weak enough that any lone level-1 starting class wins the trade', () => {
+    for (const { id } of STARTING_CLASSES) {
+      const level = createStageLevel(1, region, createStartingWarband(id));
+      const unit = level.units.get(level.roster[0])!;
+      const enemy = level.units.get('enemy-1')!;
+      expect(enemy.health).toBe(enemy.maxHealth);
+      const hitsToKill = Math.ceil(enemy.maxHealth / calculateDamage(unit, enemy));
+      const hitsToDie = Math.ceil(unit.maxHealth / Math.max(1, calculateDamage(enemy, unit)));
+      expect(hitsToKill, id).toBeLessThanOrEqual(3);
+      expect(hitsToDie, id).toBeGreaterThan(2 * hitsToKill);
     }
   });
 
