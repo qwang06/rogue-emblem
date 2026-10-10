@@ -130,11 +130,12 @@ _Decided:_ classes are named after the unit art in `src/assets/units/` (see the 
 
 ## Phase 3 — Strategy layer
 
-### [ ] 3.1 Enemy danger zone
+### [x] 3.1 Enemy danger zone
 
 - Toggle key (and button) to show the combined threat range of all enemies, using `getThreatRange` over each enemy's movement range and weapon range.
 - Optionally per-enemy: selecting an enemy shows its move + attack range.
 - **Tests:** combined threat merges ranges without duplicates; respects movement types and min range.
+- _Deferred:_ movement types (2.4) aren't in yet; they'll flow in through each enemy's `MovementOptions` with no change to `dangerZone.ts`. The zone uses enemies' weapons only, not skills.
 
 ### [ ] 3.2 Smarter enemy AI
 
@@ -142,6 +143,7 @@ _Decided:_ classes are named after the unit art in `src/assets/units/` (see the 
 - Target scoring instead of "first reachable": prefer kills, high expected damage, low counter damage, healers/mages; avoid suicidal attacks unless lethal. Pure `scoreAttack(forecast)`.
 - Clerics heal wounded allies; enemies use potions when low.
 - **Tests:** each behavior, scoring prefers lethal hits, no-target cases, guard never moves.
+- _Progress:_ target scoring is in: `src/game/aiScoring.ts` has `scoreAttack(forecast)` (kills, expected damage, counter damage, soft targets, suicidal attacks), and `planRushAction` picks the best-scoring (tile, target) pair, falling back to the cheapest tile on ties. Still to do: the `guard`/`wake`/`holdPosition` behaviors (they need a field on `EnemyGroup`, which W.2 also edits), healing and potion use.
 
 ### [ ] 3.3 Objectives
 

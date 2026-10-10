@@ -7,6 +7,7 @@ const CONTROLS = [
   { keys: ['Esc'], action: 'Pause (on the map)' },
   { keys: ['I'], action: 'Unit info (on a unit)' },
   { keys: ['Esc'], action: 'Skip dialog' },
+  { keys: ['D'], action: 'Show / hide enemy danger zone' },
   { keys: ['Mouse'], action: 'Point to move cursor' },
   { keys: ['Left click'], action: 'Confirm' },
   { keys: ['Right click'], action: 'Cancel / Pause' },

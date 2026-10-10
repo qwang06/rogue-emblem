@@ -1,6 +1,7 @@
 // Pure enemy decision-making. For now every enemy "rushes": it attacks a
-// hostile unit if it can reach one this phase, and otherwise marches as far
-// as it can toward the nearest one. No Phaser, no rendering, no hidden
+// hostile unit if it can reach one this phase (the best one by a scorer,
+// see aiScoring.ts), and otherwise marches as far as it can toward the
+// nearest one. No Phaser, no rendering, no hidden
 // state — the caller carries out the plan.
 
 import { getAttackTargets, type TargetTile } from './combat.ts';
@@ -27,6 +28,10 @@ export interface RushPlan {
   target: TargetTile | null;
 }
 
+// How much the unit wants to attack `target` from the tile `from`; higher
+// is better (createAttackScorer in aiScoring.ts builds one).
+export type AttackScorer = (from: Point, target: TargetTile) => number;
+
 // Movement budget for "anywhere on the map". Finite on purpose: impassable
 // terrain costs Infinity, and Infinity + 1 > Infinity is false.
 const UNLIMITED_MOVEMENT = Number.MAX_SAFE_INTEGER;
@@ -40,21 +45,28 @@ const UNLIMITED_MOVEMENT = Number.MAX_SAFE_INTEGER;
 // at origin — just [origin] to stay put), target the { x, y, unitId } to
 // attack from the end of it, or null.
 //
-// When several tiles allow an attack, the cheapest one to reach wins, so a
-// unit already next to a foe stays put and strikes.
+// Every (tile, target) attack it can make is scored with `scoreTarget`
+// and the highest wins; on a tie the cheapest tile to reach wins, so a unit
+// already next to a foe stays put and strikes. Without a scorer every
+// attack ties.
 export function planRushAction(
   grid: Grid,
   origin: Point,
   unit: Mover,
   isHostile: (unitId: string) => boolean,
   options: MovementOptions = {},
+  scoreTarget: AttackScorer = () => 0,
 ): RushPlan {
   const reachable = getMovementRange(grid, origin, unit.movement, options);
 
-  let best: { tile: RangeTile; target: TargetTile } | null = null;
+  let best: { tile: RangeTile; target: TargetTile; score: number } | null = null;
   for (const tile of reachable) {
-    const [target] = targetsFrom(grid, tile, unit, isHostile);
-    if (target && (!best || tile.cost < best.tile.cost)) best = { tile, target };
+    for (const target of targetsFrom(grid, tile, unit, isHostile)) {
+      const score = scoreTarget(tile, target);
+      if (!best || score > best.score || (score === best.score && tile.cost < best.tile.cost)) {
+        best = { tile, target, score };
+      }
+    }
   }
   if (best) {
     // The tile came from the movement range, so a path to it exists.

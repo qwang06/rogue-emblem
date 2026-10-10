@@ -1,8 +1,8 @@
 name: Deploy to GitHub Pages
 
+# Deploys only when run by hand (Actions > Deploy to GitHub Pages > Run
+# workflow); pushes to main are verified by ci.yml without deploying.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
