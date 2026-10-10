@@ -8,7 +8,7 @@ import type { DialogScripts } from './dialogScript.ts';
 import { setUnit, type Grid, type Point } from './grid.ts';
 import type { Objective } from './objectives.ts';
 import { parseTerrainMap } from './terrainMap.ts';
-import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from './unitClasses.ts';
+import { createUnitOfClass, PLAYABLE_CLASSES, type UnitClass } from './unitClasses.ts';
 import type { Unit } from './Unit.ts';
 
 // A battle's starting state (see createDemoLevel for what each part is).
@@ -33,9 +33,10 @@ export const SPARRING_PARTNER_POSITION = Object.freeze({ x: 2, y: 1 });
 export const TRAINEE_ID = 'trainee';
 export const SPARRING_PARTNER_ID = 'sparring-partner';
 
-// Entries for the Training menu: one per unit class, as { id, label } with
-// the class id, for the actionMenu.ts helpers.
-export function getTrainingActions(classes: readonly UnitClass[] = UNIT_CLASSES): readonly MenuAction[] {
+// Entries for the Training menu: one per playable unit class (monsters
+// aren't offered), as { id, label } with the class id, for the
+// actionMenu.ts helpers.
+export function getTrainingActions(classes: readonly UnitClass[] = PLAYABLE_CLASSES): readonly MenuAction[] {
   return Object.freeze(classes.map(({ id, label }) => Object.freeze({ id, label })));
 }
 
