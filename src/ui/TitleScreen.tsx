@@ -21,6 +21,7 @@ import { getUnitSprite } from '../game/tileset.ts';
 import { routeHash } from './route.ts';
 import { UnitSprite } from './UnitSprite.tsx';
 import { KeyHint } from './KeyHint.tsx';
+import { TITLE_LOGO } from './titleLogo.ts';
 import { NameField } from './NameField.tsx';
 
 const MENU_KEYS = [
@@ -173,8 +174,10 @@ export function TitleScreen() {
   return (
     <div className="title-screen" onContextMenu={onContextMenu}>
       <header className="title-screen__header">
-        <WarbandLineup />
         <h1 className="title-screen__title">Rogue Emblem</h1>
+        <pre className="title-screen__logo" aria-hidden="true">
+          {TITLE_LOGO}
+        </pre>
       </header>
 
       <nav className="panel title-menu" aria-label={submenu?.label ?? 'Main menu'}>
@@ -239,8 +242,7 @@ export function TitleScreen() {
   );
 }
 
-// The starting classes standing in a row on a strip of turf, idling. The
-// title screen's crest, and shown on the loading screen too.
+// The starting classes standing in a row, idling, on the loading screen.
 export function WarbandLineup() {
   return (
     <div className="warband-lineup" aria-hidden="true">
