@@ -3,7 +3,7 @@
   "regions": [
     {
       "name": "Meadowlands",
-      "description": "Open fields: the run's first, quick fight. A lone, wounded soldier stands three steps from the start, close enough to strike on turn one.",
+      "description": "Open fields: the run's first, quick fight. A lone, wounded soldier stands three steps from the start, close enough to strike on turn one. Killing it is worth a level up.",
       "terrain": {
         "width": 14,
         "height": 12,
@@ -15,7 +15,7 @@
         "ruins": 0,
         "buildings": 3
       },
-      "enemies": [{ "count": 1, "minDistance": 3, "maxDistance": 3, "health": 4 }],
+      "enemies": [{ "count": 1, "minDistance": 3, "maxDistance": 3, "health": 4, "levelUpOnKill": true }],
       "treeChance": 0.05,
       "palette": "a-stone"
     },

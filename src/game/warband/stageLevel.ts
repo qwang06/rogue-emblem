@@ -43,7 +43,8 @@ const key = ({ x, y }: Point) => `${x},${y}`;
 //   deploying up to `maxDeployed`
 // - enemies: a soldier on each tile pickEnemyTiles finds for region.enemies
 //   (fewer than asked when a group's limits leave too few tiles), starting
-//   on its group's health when it sets one
+//   on its group's health when it sets one, and levelling its killer up
+//   when the group sets levelUpOnKill
 // - buildings: the generator's, drawn in region.palette
 // - decorations: green ginkgos scattered (region.treeChance) on the grass no
 //   other art covers
@@ -71,6 +72,7 @@ export function createStageLevel(
     const unitId = `enemy-${i + 1}`;
     const enemy = new Soldier({ name: 'Enemy Soldier', team: 'enemy' });
     if (group.health !== undefined) enemy.health = Math.min(group.health, enemy.maxHealth);
+    enemy.levelUpOnKill = group.levelUpOnKill ?? false;
     units.set(unitId, enemy);
     grid = setUnit(grid, x, y, unitId);
   });

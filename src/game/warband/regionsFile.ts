@@ -142,7 +142,15 @@ function parseArea(value: unknown, path: string): SpawnArea {
 
 function parseEnemyGroup(value: unknown, path: string): EnemyGroup {
   // An old file's "region" is the group's area.
-  const json = object(value, path, ['count', 'area', 'region', 'minDistance', 'maxDistance', 'health']);
+  const json = object(value, path, [
+    'count',
+    'area',
+    'region',
+    'minDistance',
+    'maxDistance',
+    'health',
+    'levelUpOnKill',
+  ]);
   if (json.area !== undefined && json.region !== undefined) fail(path, 'must set area or region, not both');
   const group: { -readonly [K in keyof EnemyGroup]: EnemyGroup[K] } = {
     count: wholeNumber(json.count, `${path}.count`, REGION_LIMITS.enemyCount),
@@ -156,6 +164,10 @@ function parseEnemyGroup(value: unknown, path: string): EnemyGroup {
     fail(path, 'must have minDistance no larger than maxDistance');
   }
   if (json.health !== undefined) group.health = wholeNumber(json.health, `${path}.health`, REGION_LIMITS.enemyHealth);
+  if (json.levelUpOnKill !== undefined) {
+    if (typeof json.levelUpOnKill !== 'boolean') fail(`${path}.levelUpOnKill`, 'must be true or false');
+    group.levelUpOnKill = json.levelUpOnKill;
+  }
   return Object.freeze(group);
 }
 

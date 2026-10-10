@@ -36,7 +36,7 @@ import {
   type StageClearView,
 } from '../bridge/views.ts';
 import { createActionMenu, getSelectedAction, getUnitActions, moveSelection, selectIndex } from '../game/actionMenu.ts';
-import { getCombatExperience, getCombatOutcome } from '../game/experience.ts';
+import { getCombatAward, getCombatOutcome, type ExperienceAward } from '../game/experience.ts';
 import {
   findUsableStaff,
   getHealAmount,
@@ -1620,21 +1620,20 @@ export class GridScene extends Phaser.Scene {
       return;
     }
     const opponent = sides[side === 'attacker' ? 'defender' : 'attacker'].unit;
-    const amount = getCombatExperience(unit.level, opponent.level, getCombatOutcome(strikes, side!));
-    this.showExperienceGain(unit, amount, onDone);
+    this.showExperienceGain(unit, getCombatAward(unit, opponent, getCombatOutcome(strikes, side!)), onDone);
   }
 
-  // Gives the unit `amount` XP (Unit.gainExperience rolls any level ups)
-  // and shows it: React's XP bar fills for EXPERIENCE_BAR_MS, then one
+  // Gives the unit the award's XP (Unit.gainExperience rolls any level
+  // ups) and shows it: React's XP bar fills for EXPERIENCE_BAR_MS, then one
   // level-up panel per level gained holds for LEVEL_UP_MS each. Calls
   // onDone straight away when there's no XP to give.
-  showExperienceGain(unit: Unit, amount: number, onDone: () => void) {
+  showExperienceGain(unit: Unit, { amount, scaled }: ExperienceAward, onDone: () => void) {
     if (amount <= 0) {
       onDone();
       return;
     }
     const from = { level: unit.level, experience: unit.experience };
-    const result = unit.gainExperience(amount);
+    const result = unit.gainExperience(amount, Math.random, scaled);
     const experienceGain = toExperienceGainView({
       id: this.nextProgressId++,
       name: unit.name,
@@ -1696,8 +1695,8 @@ export class GridScene extends Phaser.Scene {
       const strikes: Strike[] = [
         { by: 'attacker', target: 'defender', damage, hit: true, crit: false, lethal: !defender.isAlive() },
       ];
-      const amount = getCombatExperience(unit.level, defender.level, getCombatOutcome(strikes, 'attacker'));
-      this.showExperienceGain(unit, amount, () => this.finishPlayerAction(unitId));
+      const award = getCombatAward(unit, defender, getCombatOutcome(strikes, 'attacker'));
+      this.showExperienceGain(unit, award, () => this.finishPlayerAction(unitId));
     });
   }
 
@@ -1724,7 +1723,7 @@ export class GridScene extends Phaser.Scene {
     this.showDamagePopup(sprite, amount, 'health');
     playPotionGlow(this, sprite, center, POTION_COLORS.health, () => {
       this.activeUnit = null;
-      this.showExperienceGain(unit, HEAL_EXPERIENCE, () => this.finishPlayerAction(unitId));
+      this.showExperienceGain(unit, { amount: HEAL_EXPERIENCE, scaled: true }, () => this.finishPlayerAction(unitId));
     });
   }
 

@@ -5,7 +5,9 @@ import {
   MAX_LEVEL,
   MISS_EXPERIENCE,
   addExperience,
+  getCombatAward,
   getCombatExperience,
+  getExperienceToNextLevel,
   getCombatOutcome,
   getGrowthStatValue,
   getHitExperience,
@@ -291,13 +293,69 @@ describe('resolveExperienceGain', () => {
 
   it('lists the skills learned at each new level', () => {
     const trees = { soldier: [{ level: 3, skill: POWER_STRIKE }] };
-    const result = resolveExperienceGain(unit({ unitClass: 'soldier' }), 200, () => 0, trees);
+    const result = resolveExperienceGain(unit({ unitClass: 'soldier' }), 200, () => 0, { trees });
     expect(result.levelUps.map((l) => l.skills)).toEqual([[], [POWER_STRIKE]]);
+  });
+
+  it('skips the XP rate for an unscaled gain', () => {
+    const result = resolveExperienceGain(unit({ experienceRate: 150 }), 100, () => 0, { scaled: false });
+    expect(result).toMatchObject({ amount: 100, level: 2, experience: 0 });
   });
 
   it('does not mutate the unit', () => {
     const original = unit();
     resolveExperienceGain(original, 250, () => 0);
     expect(original).toEqual(unit());
+  });
+});
+
+describe('getExperienceToNextLevel', () => {
+  it('is what is left of the current level', () => {
+    expect(getExperienceToNextLevel(1, 0)).toBe(100);
+    expect(getExperienceToNextLevel(4, 73)).toBe(27);
+  });
+
+  it('is 0 at the top level', () => {
+    expect(getExperienceToNextLevel(MAX_LEVEL, 0)).toBe(0);
+  });
+});
+
+describe('getCombatAward', () => {
+  it("is getCombatExperience's XP, scaled, for an ordinary opponent", () => {
+    expect(getCombatAward({ level: 1 }, { level: 1 }, 'kill')).toEqual({
+      amount: getCombatExperience(1, 1, 'kill'),
+      scaled: true,
+    });
+    expect(getCombatAward({ level: 3 }, { level: 1, levelUpOnKill: false }, 'hit')).toEqual({
+      amount: getCombatExperience(3, 1, 'hit'),
+      scaled: true,
+    });
+  });
+
+  it('is exactly the XP to the next level, unscaled, for killing a levelUpOnKill opponent', () => {
+    const opponent = { level: 1, levelUpOnKill: true };
+    expect(getCombatAward({ level: 1, experience: 0 }, opponent, 'kill')).toEqual({ amount: 100, scaled: false });
+    expect(getCombatAward({ level: 5, experience: 64 }, opponent, 'kill')).toEqual({ amount: 36, scaled: false });
+  });
+
+  it('lands every XP rate on the next level with 0 XP', () => {
+    for (const experienceRate of [50, 100, 150]) {
+      const leveller = { unitClass: null, level: 1, experience: 30, maxHealth: 10, maxMana: 0, experienceRate };
+      const { amount, scaled } = getCombatAward(leveller, { level: 1, levelUpOnKill: true }, 'kill');
+      expect(resolveExperienceGain(leveller, amount, () => 0, { scaled })).toMatchObject({ level: 2, experience: 0 });
+    }
+  });
+
+  it('gives the usual XP for anything short of a kill on a levelUpOnKill opponent', () => {
+    const opponent = { level: 1, levelUpOnKill: true };
+    expect(getCombatAward({ level: 1 }, opponent, 'hit')).toEqual({
+      amount: getCombatExperience(1, 1, 'hit'),
+      scaled: true,
+    });
+    expect(getCombatAward({ level: 1 }, opponent, 'died')).toEqual({ amount: 0, scaled: true });
+  });
+
+  it('gives nothing at the top level', () => {
+    expect(getCombatAward({ level: MAX_LEVEL }, { level: 1, levelUpOnKill: true }, 'kill').amount).toBe(0);
   });
 });

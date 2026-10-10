@@ -217,6 +217,15 @@ const HELP: Record<string, FieldHelp> = {
       </p>
     ),
   },
+  levelUpOnKill: {
+    title: 'Level up on kill',
+    body: (
+      <p>
+        Whether killing one of these enemies gives the killer exactly the XP it needs for its next level, whatever its
+        class, e.g. so a first stage&apos;s kill always earns a level up. Off: the usual XP.
+      </p>
+    ),
+  },
   x: {
     title: 'Area x (columns)',
     body: (

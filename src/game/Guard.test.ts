@@ -52,8 +52,9 @@ describe('Guard', () => {
     expect(guard.weapon).toBe(IRON_SPEAR);
   });
 
-  it('knows Shield Bash from level 1', () => {
-    expect(getLearnedSkills('guard', 1)).toEqual([SHIELD_BASH]);
+  it('learns Shield Bash at level 2', () => {
+    expect(getLearnedSkills('guard', 1)).toEqual([]);
+    expect(getLearnedSkills('guard', 2)).toEqual([SHIELD_BASH]);
   });
 
   it('accepts a custom name and level', () => {

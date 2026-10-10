@@ -107,14 +107,18 @@ export const SHIELD_BASH: Skill = Object.freeze({
   animation: 'strike',
 });
 
+// The level each class's first skill unlocks at: a new unit starts with
+// none and learns it on its first level up.
+export const SKILL_UNLOCK_LEVEL = 2;
+
 // unitClass -> [{ level, skill }]. Classes without an entry know no skills.
 export const SKILL_TREES: SkillTrees = Object.freeze({
-  villager: Object.freeze([Object.freeze({ level: 1, skill: THROW_STONES })]),
-  soldier: Object.freeze([Object.freeze({ level: 1, skill: POWER_STRIKE })]),
-  archer: Object.freeze([Object.freeze({ level: 1, skill: LONG_SHOT })]),
-  vanguard: Object.freeze([Object.freeze({ level: 1, skill: CLEAVE })]),
-  wizard: Object.freeze([Object.freeze({ level: 1, skill: FIREBALL })]),
-  guard: Object.freeze([Object.freeze({ level: 1, skill: SHIELD_BASH })]),
+  villager: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: THROW_STONES })]),
+  soldier: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: POWER_STRIKE })]),
+  archer: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: LONG_SHOT })]),
+  vanguard: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: CLEAVE })]),
+  wizard: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: FIREBALL })]),
+  guard: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: SHIELD_BASH })]),
 });
 
 // Every skill a unit of unitClass knows at the given level, in tree order.

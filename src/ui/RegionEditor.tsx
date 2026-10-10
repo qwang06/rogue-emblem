@@ -241,6 +241,12 @@ export function RegionEditor({
                     placeholder="any"
                   />
                   <NumberField form={form} path={at('enemies', g, 'health')} label="Health" placeholder="full" />
+                  <CheckboxField
+                    form={form}
+                    path={at('enemies', g, 'levelUpOnKill')}
+                    label="Level up on kill"
+                    fallback={false}
+                  />
                   <PairField
                     form={form}
                     path={at('enemies', g, 'area', 'x')}

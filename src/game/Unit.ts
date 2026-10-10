@@ -98,6 +98,9 @@ export class Unit {
   growths: GrowthTable;
   caps: GrowthTable;
   experienceRate: number;
+  // Killing this unit gives the killer exactly the XP it needs for its next
+  // level (see getCombatAward), e.g. a first stage's lone enemy.
+  levelUpOnKill = false;
 
   constructor({
     name,
@@ -261,12 +264,12 @@ export class Unit {
     return this.level;
   }
 
-  // Gains `amount` XP, leveling up (rolling growths with `rng`) for every
-  // 100 it crosses, with the overflow carried. Returns the
-  // resolveExperienceGain result, whose levelUps say what each level
-  // raised and which skills it taught.
-  gainExperience(amount: number, rng: Rng = Math.random): ExperienceGain {
-    const result = resolveExperienceGain(this, amount, rng);
+  // Gains `amount` XP (scaled by its XP rate unless `scaled` is false),
+  // leveling up (rolling growths with `rng`) for every 100 it crosses, with
+  // the overflow carried. Returns the resolveExperienceGain result, whose
+  // levelUps say what each level raised and which skills it taught.
+  gainExperience(amount: number, rng: Rng = Math.random, scaled = true): ExperienceGain {
+    const result = resolveExperienceGain(this, amount, rng, { scaled });
     for (const { gains } of result.levelUps) this.levelUp(gains);
     this.experience = result.experience;
     return result;
