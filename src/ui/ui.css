@@ -1137,13 +1137,18 @@ kbd {
   justify-content: center;
   gap: 4px 16px;
   font-size: 0.75rem;
-  color: var(--fg-dim);
+  color: var(--fg);
 }
 
+/* Each entry sits on its own dark chip, so it stays readable when the
+   hint floats over the map's bright terrain. */
 .key-hint__entry {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
+  padding: 2px 8px 2px 2px;
+  background: rgb(19 20 28 / 88%);
+  border-radius: var(--radius-sm);
 }
 
 /* ---- Objective screen ---------------------------------------------- */
