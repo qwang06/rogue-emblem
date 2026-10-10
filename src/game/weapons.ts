@@ -6,8 +6,9 @@
 // one in the inventory the unit can wield; equipping another moves it to
 // the front. A weapon entry's `quantity` is the uses it has left, one
 // spent per strike, and a weapon that runs out breaks and is gone —
-// unless its `uses` is null, which never breaks. No Phaser, no rendering,
-// no hidden state.
+// unless its `uses` is null, which never breaks. A tome is a magical
+// weapon that teaches its spell to a unit that fights with it often enough
+// (see tomes.ts). No Phaser, no rendering, no hidden state.
 
 import type { MenuAction } from './actionMenu.ts';
 import type { DamageType } from './combat.ts';
@@ -23,6 +24,8 @@ export type WeaponType = 'physical' | 'magical' | 'siege';
 // `hit` and `crit` to its hit and crit rates, `weight` slows a wielder
 // weaker than it (see getAttackSpeed in combatStats.ts). `uses` is how
 // many strikes a fresh one has, or null for one that never breaks.
+// `teaches` makes it a tome: a unit that strikes with it `afterUses` times
+// learns the spell weapon `spellId` (see tomes.ts).
 export interface Weapon {
   kind: 'weapon';
   id: string;
@@ -35,6 +38,14 @@ export interface Weapon {
   minRange: number;
   maxRange: number;
   uses: number | null;
+  teaches?: TomeLesson;
+}
+
+// What a tome teaches: the id of the spell (a weapon that never breaks)
+// and how many strikes with the tome it takes to learn it.
+export interface TomeLesson {
+  spellId: string;
+  afterUses: number;
 }
 
 // The equipped weapon and where it sits in the inventory.
@@ -65,7 +76,8 @@ export const WEAPON_DAMAGE_TYPES: Readonly<Record<WeaponType, DamageType>> = Obj
 });
 
 function weapon(fields: Omit<Weapon, 'kind'>): Weapon {
-  return Object.freeze({ kind: 'weapon', ...fields });
+  const { teaches, ...rest } = fields;
+  return Object.freeze({ kind: 'weapon', ...rest, ...(teaches && { teaches: Object.freeze({ ...teaches }) }) });
 }
 
 // The starter weapons, one per armed unit in the unit catalog (see the
@@ -128,11 +140,11 @@ export const IRON_BOW = weapon({
   uses: 40,
 });
 
-// The elementals' spell: magic against resistance, near or
-// one tile further.
+// The Fire tome: magic against resistance, near or one tile further. A
+// unit that casts from it 5 times learns Fire (FIRE_SPELL) for good.
 export const FIRE = weapon({
   id: 'fire',
-  label: 'Fire',
+  label: 'Fire Tome',
   type: 'magical',
   might: 2,
   hit: 85,
@@ -141,6 +153,21 @@ export const FIRE = weapon({
   minRange: 1,
   maxRange: 2,
   uses: 30,
+  teaches: { spellId: 'fire-spell', afterUses: 5 },
+});
+
+// Fire once learned from its tome: the same numbers, and it never runs out.
+export const FIRE_SPELL = weapon({
+  id: 'fire-spell',
+  label: 'Fire',
+  type: 'magical',
+  might: 2,
+  hit: 85,
+  crit: 0,
+  weight: 1,
+  minRange: 1,
+  maxRange: 2,
+  uses: null,
 });
 
 // The sapper's bomb: a heavy blast, near or thrown, with few to spare.
@@ -264,6 +291,7 @@ export const WEAPONS: readonly Weapon[] = Object.freeze([
   IRON_AXE,
   IRON_BOW,
   FIRE,
+  FIRE_SPELL,
   POWDER_KEG,
   BALLISTA,
   TACKLE,
@@ -274,9 +302,15 @@ export const WEAPONS: readonly Weapon[] = Object.freeze([
   WOODEN_AXE,
 ]);
 
-// The weapons a body comes with rather than carries: fists and the
-// monsters' natural weapons. They can't be handed over or stored.
-export const NATURAL_WEAPON_IDS: ReadonlySet<string> = new Set([FISTS.id, TACKLE.id, CLUB.id, BONE_CLAWS.id]);
+// The weapons a body comes with rather than carries: fists, the monsters'
+// natural weapons and learned spells. They can't be handed over or stored.
+export const NATURAL_WEAPON_IDS: ReadonlySet<string> = new Set([
+  FISTS.id,
+  TACKLE.id,
+  CLUB.id,
+  BONE_CLAWS.id,
+  FIRE_SPELL.id,
+]);
 
 // A fresh inventory entry for weapon, with all its uses (1 for one that
 // never breaks — its count is never spent).

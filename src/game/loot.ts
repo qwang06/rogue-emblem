@@ -9,15 +9,16 @@
 import type { Rng } from './combatStats.ts';
 import { addItem, canAddItem, WOODEN_ARMOR, WOODEN_SHIELD, type Inventory, type Item } from './items.ts';
 import { randomItem, shuffle } from './rng.ts';
-import { WOODEN_AXE, WOODEN_SPEAR, WOODEN_SWORD } from './weapons.ts';
+import { FIRE, WOODEN_AXE, WOODEN_SPEAR, WOODEN_SWORD } from './weapons.ts';
 
-// What an enemy can drop: the wooden set.
+// What an enemy can drop: the wooden set and the Fire tome.
 export const LOOT_ITEMS: readonly Item[] = Object.freeze([
   WOODEN_SWORD,
   WOODEN_SPEAR,
   WOODEN_AXE,
   WOODEN_SHIELD,
   WOODEN_ARMOR,
+  FIRE,
 ]);
 
 // How many enemies carry loot in each Warband Mode stage, from stage 1.

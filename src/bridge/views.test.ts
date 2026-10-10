@@ -88,7 +88,7 @@ describe('toUnitView', () => {
       weaponTypes: ['magical'],
       items: [weaponEntry(FIRE)],
     });
-    expect(toUnitView(unit)).toMatchObject({ range: '1–2', weapon: 'Fire' });
+    expect(toUnitView(unit)).toMatchObject({ range: '1–2', weapon: 'Fire Tome' });
   });
 
   it('lists the items the unit carries', () => {
@@ -110,7 +110,7 @@ describe('toUnitView', () => {
     const view = toUnitView(unit);
     expect(view!.items).toEqual([
       { id: 'health-potion', label: 'Health Potion', quantity: 2, weapon: false, equipped: false },
-      { id: 'fire', label: 'Fire', quantity: 30, weapon: true, equipped: false },
+      { id: 'fire', label: 'Fire Tome', quantity: 30, weapon: true, equipped: false },
       { id: 'iron-spear', label: 'Iron Spear', quantity: 7, weapon: true, equipped: true },
       { id: 'fists', label: 'Fists', quantity: null, weapon: true, equipped: false },
     ]);
@@ -222,7 +222,7 @@ describe('toUnitDetailView', () => {
     const view = toUnitDetailView(unit)!;
     expect(view.damageType).toBe('magical');
     expect(view.attack).toBe(unit.magic + FIRE.might);
-    expect(view.equippedWeapon).toMatchObject({ label: 'Fire', range: '1–2' });
+    expect(view.equippedWeapon).toMatchObject({ label: 'Fire Tome', range: '1–2' });
   });
 
   it('fights bare-handed without a weapon', () => {
@@ -324,6 +324,9 @@ describe('toDamagePopupView', () => {
     expect(toDamagePopupView({ id: 1, amount: 9, kind: 'crit', x: 0, y: 0, durationMs: 700 }).text).toBe('Crit! 9');
     expect(toDamagePopupView({ id: 1, amount: 0, kind: 'miss', x: 0, y: 0, durationMs: 700 }).text).toBe('Miss');
     expect(toDamagePopupView({ id: 1, amount: 0, kind: 'broke', x: 0, y: 0, durationMs: 700 }).text).toBe('Broke!');
+    expect(
+      toDamagePopupView({ id: 1, amount: 0, kind: 'learned', label: 'Fire', x: 0, y: 0, durationMs: 700 }).text,
+    ).toBe('Learned Fire!');
   });
 
   it('names loot picked up or sent to the convoy', () => {

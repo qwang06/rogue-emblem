@@ -139,7 +139,7 @@ export interface CombatForecastView {
   anchor: TileAnchorView;
 }
 
-export type PopupKind = 'damage' | 'crit' | 'miss' | 'health' | 'mana' | 'broke' | 'loot' | 'stored';
+export type PopupKind = 'damage' | 'crit' | 'miss' | 'health' | 'mana' | 'broke' | 'loot' | 'stored' | 'learned';
 
 export interface DamagePopupView {
   id: number;
@@ -411,8 +411,8 @@ export function toCombatForecastView({
 
 // How each kind of popup reads: damage is the bare number (a crit calls
 // itself out), a miss says so, recovery says what was restored, a weapon
-// that wore out says it broke, and loot names the item picked up (or sent
-// to the convoy).
+// that wore out says it broke, loot names the item picked up (or sent to
+// the convoy), and a spell learned from a tome names the spell.
 const POPUP_TEXT: Readonly<Record<PopupKind, (amount: number, label: string) => string>> = Object.freeze({
   damage: (amount) => `${amount}`,
   crit: (amount) => `Crit! ${amount}`,
@@ -422,13 +422,15 @@ const POPUP_TEXT: Readonly<Record<PopupKind, (amount: number, label: string) => 
   broke: () => 'Broke!',
   loot: (_, label) => `Got ${label}`,
   stored: (_, label) => `${label} to convoy`,
+  learned: (_, label) => `Learned ${label}!`,
 });
 
 // Snapshot of one floating number over a unit: damage taken (plain, a
 // crit, or a miss), health or mana recovered, its weapon breaking, or loot
-// picked up or sent to the convoy (`kind` is 'damage' | 'crit' | 'miss' |
-// 'health' | 'mana' | 'broke' | 'loot' | 'stored', which the UI colors by;
-// `text` is what it shows, naming `label`, the item, for loot). `x`/`y` are the point the number
+// picked up or sent to the convoy, or a spell learned (`kind` is 'damage' |
+// 'crit' | 'miss' | 'health' | 'mana' | 'broke' | 'loot' | 'stored' |
+// 'learned', which the UI colors by; `text` is what it shows, naming
+// `label`, the item or spell, for loot and learning). `x`/`y` are the point the number
 // rises from, as fractions of the canvas (see toCanvasFraction); `durationMs` is how long it stays up,
 // so the UI animation and the store entry's lifetime agree.
 export function toDamagePopupView({

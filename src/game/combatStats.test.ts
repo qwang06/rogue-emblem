@@ -45,6 +45,15 @@ describe('getAttackSpeed', () => {
     expect(getAttackSpeed({ speed: 1, strength: 0, weapon: weapon({ weight: 6 }) })).toBe(-5);
   });
 
+  it('adds worn armor weight to the weapon weight', () => {
+    expect(getAttackSpeed({ speed: 5, strength: 4, armorWeight: 3, weapon: weapon({ weight: 1 }) })).toBe(5);
+    expect(getAttackSpeed({ speed: 5, strength: 4, armorWeight: 3, weapon: weapon({ weight: 3 }) })).toBe(3);
+  });
+
+  it('counts armor weight without a weapon', () => {
+    expect(getAttackSpeed({ speed: 5, strength: 1, armorWeight: 3 })).toBe(3);
+  });
+
   it('is plain speed without a weapon', () => {
     expect(getAttackSpeed({ speed: 5 })).toBe(5);
     expect(getAttackSpeed({})).toBe(0);

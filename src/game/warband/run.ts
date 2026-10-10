@@ -9,6 +9,7 @@
 import { HEAL_STAFF } from '../healing.ts';
 import { ARMORS, HEALTH_POTION, MANA_POTION, type Inventory, type Item } from '../items.ts';
 import { createSeededRng } from '../rng.ts';
+import type { TomeProgress } from '../tomes.ts';
 import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
 import type { BattleOutcome } from '../turns.ts';
 import type { Unit } from '../Unit.ts';
@@ -34,7 +35,9 @@ export interface ItemSnapshot {
 
 // A player unit between battles. `id` is its unitId in every battle of the
 // run; `classId` is one of UNIT_CLASSES' ids, which supplies what isn't
-// stored (movement, weapon types, growths, caps).
+// stored (movement, weapon types, growths, caps). `tomeProgress` is how far
+// it is into learning each tome it has struck with (see tomes.ts), absent
+// when it's learning none.
 export interface UnitSnapshot {
   id: string;
   name: string;
@@ -53,6 +56,7 @@ export interface UnitSnapshot {
   defense: number;
   resistance: number;
   items: readonly ItemSnapshot[];
+  tomeProgress?: TomeProgress;
 }
 
 export interface RunState {
@@ -129,11 +133,12 @@ export function snapshotUnit(id: string, unit: Unit): UnitSnapshot {
     classId: unit.unitClass,
     ...stats,
     items: unit.items.map(({ item, quantity }) => ({ itemId: item.id, quantity })),
+    ...(Object.keys(unit.tomeProgress).length > 0 && { tomeProgress: unit.tomeProgress }),
   });
 }
 
 // A player Unit rebuilt from `snapshot`: its class's unit with the
-// snapshot's name, level, XP, stats and inventory. Throws on an unknown
+// snapshot's name, level, XP, stats, inventory and tome progress. Throws on an unknown
 // class or item.
 export function restoreUnit(
   snapshot: UnitSnapshot,
@@ -146,6 +151,7 @@ export function restoreUnit(
     classes,
   );
   for (const field of STAT_FIELDS) unit[field] = snapshot[field];
+  unit.tomeProgress = Object.freeze({ ...snapshot.tomeProgress });
   return unit;
 }
 
@@ -281,8 +287,13 @@ function isUnitSnapshot(
     (value.level as number) >= 1 &&
     (value.health as number) <= (value.maxHealth as number) &&
     (value.mana as number) <= (value.maxMana as number) &&
-    isItems(value.items)
+    isItems(value.items) &&
+    (value.tomeProgress === undefined || isTomeProgress(value.tomeProgress))
   );
+}
+
+function isTomeProgress(value: unknown): value is TomeProgress {
+  return isRecord(value) && Object.values(value).every(isWholeNumber);
 }
 
 function isItemSnapshot(value: unknown, itemIds: ReadonlySet<string>): value is ItemSnapshot {
@@ -304,7 +315,12 @@ function isWholeNumber(value: unknown): value is number {
 }
 
 function freezeSnapshot(snapshot: UnitSnapshot): UnitSnapshot {
-  return Object.freeze({ ...snapshot, items: freezeItems(snapshot.items) });
+  const { tomeProgress } = snapshot;
+  return Object.freeze({
+    ...snapshot,
+    items: freezeItems(snapshot.items),
+    ...(tomeProgress && { tomeProgress: Object.freeze({ ...tomeProgress }) }),
+  });
 }
 
 function freezeItems(items: readonly ItemSnapshot[]): readonly ItemSnapshot[] {

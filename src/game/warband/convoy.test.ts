@@ -45,6 +45,8 @@ describe('item kinds', () => {
   it('keeps natural weapons with their bodies', () => {
     expect(isMovable(lookUpItem('fists'))).toBe(false);
     expect(isMovable(lookUpItem('iron-axe'))).toBe(true);
+    expect(isMovable(lookUpItem('fire-spell'))).toBe(false);
+    expect(isMovable(lookUpItem('fire'))).toBe(true);
   });
 
   it('throws on an unknown item', () => {
