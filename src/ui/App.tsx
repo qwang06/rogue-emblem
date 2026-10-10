@@ -24,6 +24,7 @@ import { PauseMenu } from './PauseMenu.tsx';
 import { PhaseBanner } from './PhaseBanner.tsx';
 import { RewardScreen } from './RewardScreen.tsx';
 import { RosterMenu } from './RosterMenu.tsx';
+import { MerchantScreen } from './MerchantScreen.tsx';
 import { RosterScreen } from './RosterScreen.tsx';
 import { SettingsButton } from './SettingsButton.tsx';
 import { SkillMenu } from './SkillMenu.tsx';
@@ -105,6 +106,7 @@ export function App() {
               <RewardScreen />
               <CampMenu />
               <RosterScreen />
+              <MerchantScreen />
               {/* Over the reward screen too, for an Experience reward's level ups. */}
               <LevelUpPanel />
             </div>

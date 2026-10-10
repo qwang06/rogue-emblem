@@ -75,8 +75,16 @@ import {
   type RewardLevelUp,
 } from '../game/warband/rewards.ts';
 import { clearSavedRun, saveRun } from '../data/runSave.ts';
+import { getCampActions, restAtCamp } from '../game/warband/camp.ts';
 import {
-  CAMP_ACTIONS,
+  confirmMerchant,
+  moveMerchantCursor,
+  openMerchantScreen,
+  pointMerchantCursor,
+  type MerchantScreenState,
+} from '../game/warband/merchantScreen.ts';
+import { toMerchantScreenView } from '../bridge/merchantView.ts';
+import {
   cancelRoster,
   confirmRoster,
   moveRosterCursor,
@@ -280,6 +288,7 @@ export class GridScene extends Phaser.Scene {
   campRun: RunState | null = null;
   campMenu: Menu | null = null;
   rosterScreen: RosterScreenState | null = null;
+  merchantScreen: MerchantScreenState | null = null;
   pauseMenu: Menu | null = null;
   placingUnitId: string | null = null;
   zoneTiles: Phaser.GameObjects.Rectangle[] | null = null;
@@ -342,8 +351,9 @@ export class GridScene extends Phaser.Scene {
     this.rewardOffer = null; // the run and its reward picks after a won Warband stage
     this.rewardMenu = null; // the reward screen's menu while it's up
     this.campRun = null; // the run between a won Warband stage's reward and the next stage
-    this.campMenu = null; // the camp's Manage Roster / Next Stage menu while it's up
+    this.campMenu = null; // the camp's menu (getCampActions) while it's up
     this.rosterScreen = null; // the roster screen's state while it's open
+    this.merchantScreen = null; // the merchant screen's state while it's open
     // Configs uploaded in the config editor replace the built-in ones.
     this.content = getActiveContent();
     const level = createBattleLevel(setup, this.content);
@@ -491,6 +501,11 @@ export class GridScene extends Phaser.Scene {
 
     if (this.rosterScreen) {
       this.updateRosterScreen(dx, dy, confirm, cancel);
+      return;
+    }
+
+    if (this.merchantScreen) {
+      this.updateMerchantScreen(dx, dy, confirm, cancel);
       return;
     }
 
@@ -900,24 +915,42 @@ export class GridScene extends Phaser.Scene {
   }
 
   // ---- Camp -------------------------------------------------------------
-  // Once a won Warband stage's reward is taken, the camp offers Manage
-  // Roster, which opens the roster screen (src/game/warband/rosterScreen.ts)
-  // to equip units and move items to and from the convoy, and Next Stage.
-  // Every change on the roster screen is saved straight away.
+  // Once a won Warband stage's reward is taken, the camp (see
+  // src/game/warband/camp.ts) offers Manage Roster, which opens the roster
+  // screen (src/game/warband/rosterScreen.ts) to equip units and move items
+  // to and from the convoy; Merchant, which opens the merchant screen
+  // (src/game/warband/merchantScreen.ts) to buy into and sell from the
+  // convoy; Rest, a full heal for gold; and Next Stage. Every change at
+  // camp is saved straight away.
 
   openCamp(run: RunState) {
-    this.campRun = run;
     this.inputLocked = false;
     this.publishMenu('rewardMenu', null);
-    this.publishMenu('campMenu', createActionMenu(CAMP_ACTIONS));
+    this.setCampRun(run);
+  }
+
+  // Keeps `run` as the camp's run, saving it when it changed, and
+  // republishes the camp menu (Rest's state and the gold follow the run),
+  // keeping its highlight.
+  setCampRun(run: RunState) {
+    if (this.campRun && run !== this.campRun) saveRun(run);
+    this.campRun = run;
+    const selected = this.campMenu?.selectedIndex ?? 0;
+    this.publishMenu('campMenu', selectIndex(createActionMenu(getCampActions(run)), selected));
+    gameStore.setState({ campGold: run.gold });
   }
 
   updateCampMenu(dy: number, confirm: boolean) {
     if (confirm) {
       const action = getSelectedAction(this.campMenu!);
-      if (action?.id === 'roster') {
+      if (!action || action.disabled) return;
+      if (action.id === 'roster') {
         this.publishRosterScreen(openRosterScreen(this.campRun!));
-      } else if (action?.id === 'march') {
+      } else if (action.id === 'merchant') {
+        this.publishMerchantScreen(openMerchantScreen(this.campRun!));
+      } else if (action.id === 'rest') {
+        this.setCampRun(restAtCamp(this.campRun!));
+      } else if (action.id === 'march') {
         this.nextBattle = runStage(this.campRun!);
         this.leaveBattle();
       }
@@ -941,12 +974,29 @@ export class GridScene extends Phaser.Scene {
   // for null), saving the run whenever it changed.
   publishRosterScreen(state: RosterScreenState | null) {
     if (state === this.rosterScreen) return;
-    if (state && state.run !== this.campRun) {
-      this.campRun = state.run;
-      saveRun(state.run);
-    }
+    if (state && state.run !== this.campRun) this.setCampRun(state.run);
     this.rosterScreen = state;
     gameStore.setState({ rosterScreen: state && toRosterScreenView(state) });
+  }
+
+  updateMerchantScreen(dx: number, dy: number, confirm: boolean, cancel: boolean) {
+    const state = this.merchantScreen!;
+    if (cancel) {
+      this.publishMerchantScreen(null);
+    } else if (confirm) {
+      this.publishMerchantScreen(confirmMerchant(state));
+    } else if (dx !== 0 || dy !== 0) {
+      this.publishMerchantScreen(moveMerchantCursor(state, dx, dy));
+    }
+  }
+
+  // Shows the merchant screen in `state` (or closes it, back to the camp,
+  // for null), saving the run whenever a purchase or sale changed it.
+  publishMerchantScreen(state: MerchantScreenState | null) {
+    if (state === this.merchantScreen) return;
+    if (state && state.run !== this.campRun) this.setCampRun(state.run);
+    this.merchantScreen = state;
+    gameStore.setState({ merchantScreen: state && toMerchantScreenView(state) });
   }
 
   // After the result: on to the next battle if the victory leads to one,
@@ -2062,7 +2112,7 @@ export class GridScene extends Phaser.Scene {
           break;
         case 'click-tile':
           // The reward screen and the camp are picked from, not clicked through.
-          if (this.rewardMenu || this.campMenu || this.rosterScreen) break;
+          if (this.rewardMenu || this.campMenu || this.rosterScreen || this.merchantScreen) break;
           if (this.battleOutcome) {
             result.confirm = true;
           } else if (this.canRoamCursor()) {
@@ -2082,6 +2132,12 @@ export class GridScene extends Phaser.Scene {
           if (!this.rosterScreen) break;
           this.publishRosterScreen(pointRosterCursor(this.rosterScreen, command.target, command.index));
           if (command.type === 'select-roster') result.confirm = true;
+          break;
+        case 'hover-merchant':
+        case 'select-merchant':
+          if (!this.merchantScreen) break;
+          this.publishMerchantScreen(pointMerchantCursor(this.merchantScreen, command.column, command.index));
+          if (command.type === 'select-merchant') result.confirm = true;
           break;
         case 'confirm':
           result.confirm = true;

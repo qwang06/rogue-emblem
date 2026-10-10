@@ -4,6 +4,7 @@ import type { SkillAction } from '../game/skills.ts';
 import type { WeaponAction } from '../game/weapons.ts';
 import type { BattleSetup } from '../game/battleSetup.ts';
 import type { BattleOutcome } from '../game/turns.ts';
+import type { MerchantScreenView } from './merchantView.ts';
 import type { RosterScreenView } from './rosterView.ts';
 import { createStore } from './store.ts';
 import type {
@@ -64,7 +65,9 @@ export interface BattleState {
   stageClear: StageClearView | null;
   rewardMenu: Menu<RewardAction> | null;
   campMenu: Menu | null;
+  campGold: number | null;
   rosterScreen: RosterScreenView | null;
+  merchantScreen: MerchantScreenView | null;
 }
 
 export interface GameState extends BattleState {
@@ -105,8 +108,10 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   runOver: null, // RunOverView from toRunOverView() once a Warband Mode run has ended, or null
   stageClear: null, // StageClearView from toStageClearView() once a Warband Mode stage is won, or null
   rewardMenu: null, // frozen menu of RewardActions (toRewardAction) while the reward screen is up after a won stage, or null
-  campMenu: null, // frozen Manage Roster / Next Stage menu (CAMP_ACTIONS) once a won stage's reward is taken, or null
+  campMenu: null, // frozen camp menu (getCampActions: Manage Roster / Merchant / Rest / Next Stage) once a won stage's reward is taken, or null
+  campGold: null, // the warband's gold while at camp (shown on the camp menu), or null
   rosterScreen: null, // RosterScreenView from toRosterScreenView() while the roster screen is open between stages, or null
+  merchantScreen: null, // MerchantScreenView from toMerchantScreenView() while the camp's merchant screen is open, or null
 });
 
 // The single app-wide store shared by Phaser (writer) and React (reader).

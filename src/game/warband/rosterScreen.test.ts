@@ -4,7 +4,6 @@ import type { Unit } from '../Unit.ts';
 import { Villager } from '../Villager.ts';
 import { createRun, type ItemSnapshot, type RunState } from './run.ts';
 import {
-  CAMP_ACTIONS,
   cancelRoster,
   confirmRoster,
   getItemActions,
@@ -31,12 +30,6 @@ function campRun(convoy: ItemSnapshot[] = []): RunState {
 function ids(state: RosterScreenState) {
   return getPickedUnit(state)!.items.map((entry) => entry.itemId);
 }
-
-describe('CAMP_ACTIONS', () => {
-  it('offers the roster before moving on', () => {
-    expect(CAMP_ACTIONS.map((action) => action.id)).toEqual(['roster', 'march']);
-  });
-});
 
 describe('moving the cursor', () => {
   it('opens on the first unit', () => {
