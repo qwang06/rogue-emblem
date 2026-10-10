@@ -21,17 +21,14 @@ import { DEFAULT_STARTING_CLASS } from './startingClasses.ts';
 
 export const WARBAND_MAX_DEPLOYED = 3;
 
-// The warband a new run starts with (and a region preview fields): one
-// level-1 unit of `classId` (see STARTING_CLASSES) for each of the demo
-// roster's names, by unitId `<classId>-1`, `<classId>-2`, ... Throws on
-// an unknown class.
+// The name of the unit a run starts with: the demo roster's first.
+export const WARBAND_LEADER_NAME = Object.values(PLAYER_ROSTER)[0];
+
+// The warband a new run starts with (and a region preview fields): a
+// single level-1 unit of `classId` (see STARTING_CLASSES), by unitId
+// `<classId>-1`. Throws on an unknown class.
 export function createStartingWarband(classId: string = DEFAULT_STARTING_CLASS): Map<string, Unit> {
-  return new Map(
-    Object.values(PLAYER_ROSTER).map((name, i) => [
-      `${classId}-${i + 1}`,
-      createUnitOfClass(classId, { name, team: 'player' }),
-    ]),
-  );
+  return new Map([[`${classId}-1`, createUnitOfClass(classId, { name: WARBAND_LEADER_NAME, team: 'player' })]]);
 }
 
 const key = ({ x, y }: Point) => `${x},${y}`;
@@ -42,7 +39,8 @@ const key = ({ x, y }: Point) => `${x},${y}`;
 // - roster: `roster`'s units (a run's warband), else createStartingWarband's,
 //   deploying up to `maxDeployed`
 // - enemies: a soldier on each tile pickEnemyTiles finds for region.enemies
-//   (fewer than asked when a group's limits leave too few tiles)
+//   (fewer than asked when a group's limits leave too few tiles), starting
+//   on its group's health when it sets one
 // - buildings: the generator's, drawn in region.palette
 // - decorations: green ginkgos scattered (region.treeChance) on the grass no
 //   other art covers
@@ -61,12 +59,16 @@ export function createStageLevel(
   const start = path[0];
   const deploymentZone = [-1, 0, 1].map((dx) => ({ x: start.x + dx, y: start.y }));
 
-  const enemyTiles = pickEnemyTiles(grid, region.enemies, deploymentZone, rng).flat();
+  const enemyTiles = pickEnemyTiles(grid, region.enemies, deploymentZone, rng).flatMap((tiles, g) =>
+    tiles.map((tile) => ({ ...tile, group: region.enemies[g] })),
+  );
 
   const units = new Map(roster);
-  enemyTiles.forEach(({ x, y }, i) => {
+  enemyTiles.forEach(({ x, y, group }, i) => {
     const unitId = `enemy-${i + 1}`;
-    units.set(unitId, new Soldier({ name: 'Enemy Soldier', team: 'enemy' }));
+    const enemy = new Soldier({ name: 'Enemy Soldier', team: 'enemy' });
+    if (group.health !== undefined) enemy.health = Math.min(group.health, enemy.maxHealth);
+    units.set(unitId, enemy);
     grid = setUnit(grid, x, y, unitId);
   });
 

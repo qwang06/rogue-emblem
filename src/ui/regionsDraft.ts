@@ -153,6 +153,7 @@ const SETTING_LABELS: Readonly<Record<string, string>> = Object.freeze({
   count: 'Count',
   minDistance: 'Min distance',
   maxDistance: 'Max distance',
+  health: 'Health',
   treeChance: 'Tree chance',
   palette: 'Palette',
   objective: 'Objective',

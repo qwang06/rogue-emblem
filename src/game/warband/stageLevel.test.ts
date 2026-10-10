@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { PLAYER_ROSTER } from '../demoLevel.ts';
-import { REGION_CONFIGS } from '../../data/regions.ts';
-import { createStageLevel, createStartingWarband, WARBAND_MAX_DEPLOYED } from './stageLevel.ts';
+import { REGION_CONFIGS, REGION_SETTINGS } from '../../data/regions.ts';
+import { createStageLevel, createStartingWarband, WARBAND_LEADER_NAME, WARBAND_MAX_DEPLOYED } from './stageLevel.ts';
+import { getStageRegion } from './regions.ts';
 import { STARTING_CLASSES } from './startingClasses.ts';
+import { getAttackRange } from '../combat.ts';
 import { countEnemies, getWalkingDistances, isInArea } from '../enemySpawns.ts';
-import { findUnit, getCell } from '../grid.ts';
+import { findUnit, getCell, setUnit } from '../grid.ts';
+import { getMovementRange } from '../movement.ts';
 import { getBuildingSprites, getFeatureSprites } from '../mapArt.ts';
 import { getReachable, terrainToRows } from '../mapGen.ts';
 import { ROUT } from '../objectives.ts';
@@ -19,22 +22,22 @@ const BATTLES = REGION_CONFIGS.flatMap((region) =>
 );
 
 describe('createStartingWarband', () => {
-  it('starts with the demo roster as villagers by default', () => {
+  it('starts with a single villager by default', () => {
     const warband = createStartingWarband();
-    expect([...warband.keys()]).toEqual(['villager-1', 'villager-2', 'villager-3']);
-    expect([...warband.values()].map((u) => u.name)).toEqual(Object.values(PLAYER_ROSTER));
-    expect([...warband.values()].every((u) => u.unitClass === 'villager')).toBe(true);
+    expect([...warband.keys()]).toEqual(['villager-1']);
+    expect(warband.get('villager-1')!.name).toBe(WARBAND_LEADER_NAME);
+    expect(warband.get('villager-1')!.unitClass).toBe('villager');
   });
 
-  it('builds the warband from the chosen class', () => {
+  it('is a single unit of the chosen class', () => {
     for (const { id } of STARTING_CLASSES) {
       const warband = createStartingWarband(id);
-      expect([...warband.keys()]).toEqual([`${id}-1`, `${id}-2`, `${id}-3`]);
-      for (const unit of warband.values()) {
-        expect(unit.unitClass).toBe(id);
-        expect(unit.team).toBe('player');
-        expect(unit.level).toBe(1);
-      }
+      expect([...warband.keys()]).toEqual([`${id}-1`]);
+      const unit = warband.get(`${id}-1`)!;
+      expect(unit.name).toBe(Object.values(PLAYER_ROSTER)[0]);
+      expect(unit.unitClass).toBe(id);
+      expect(unit.team).toBe('player');
+      expect(unit.level).toBe(1);
     }
   });
 
@@ -68,14 +71,14 @@ describe('createStageLevel', () => {
     expect(maps.size).toBe(REGION_CONFIGS.length);
   });
 
-  it('is sized by its region and offers the demo roster', () => {
+  it('is sized by its region and offers the starting warband', () => {
     for (const region of REGION_CONFIGS) {
       const level = createStageLevel(1, region);
       expect(level.grid.width).toBe(region.terrain.width);
       expect(level.grid.height).toBe(region.terrain.height);
     }
     const level = createStageLevel(1, FIRST);
-    expect(level.roster).toEqual(Object.keys(PLAYER_ROSTER));
+    expect(level.roster).toEqual([...createStartingWarband().keys()]);
     expect(level.maxDeployed).toBe(WARBAND_MAX_DEPLOYED);
     for (const unitId of level.roster) expect(findUnit(level.grid, unitId)).toBeNull();
   });
@@ -127,6 +130,15 @@ describe('createStageLevel', () => {
     }
   });
 
+  it('starts a group’s enemies on its health, never past their max', () => {
+    const level = createStageLevel(1, {
+      ...FIRST,
+      enemies: [{ count: 2, health: 4 }, { count: 1, health: 99 }, { count: 1 }],
+    });
+    const health = ['enemy-1', 'enemy-2', 'enemy-3', 'enemy-4'].map((unitId) => level.units.get(unitId)!);
+    expect(health.map((unit) => unit.health)).toEqual([4, 4, health[2].maxHealth, health[3].maxHealth]);
+  });
+
   it('places fewer enemies when a group asks for more than fit', () => {
     const level = createStageLevel(1, { ...FIRST, enemies: [{ count: 3, minDistance: 100 }] });
     expect([...level.units.values()].filter((unit) => unit.team === 'enemy')).toEqual([]);
@@ -164,5 +176,51 @@ describe('stage objectives', () => {
     }
     const special = { ...REGION_CONFIGS[0], objective: { kind: 'rout' } as const };
     expect(createStageLevel(1, special).objective).toBe(special.objective);
+  });
+});
+
+describe('stage 1', () => {
+  const region = getStageRegion(1, REGION_SETTINGS);
+
+  it('is a single enemy, so the battle is over quickly', () => {
+    for (const seed of SEEDS) {
+      const { units } = createStageLevel(seed, region);
+      expect([...units.values()].filter((unit) => unit.team === 'enemy')).toHaveLength(1);
+    }
+  });
+
+  it('puts the enemy in reach on turn 1, from any deployment tile, whichever class the run starts as', () => {
+    for (const { id } of STARTING_CLASSES) {
+      for (const seed of SEEDS) {
+        const level = createStageLevel(seed, region, createStartingWarband(id));
+        const [unitId] = level.roster;
+        const unit = level.units.get(unitId)!;
+        const { minRange, maxRange } = unit.weapon!;
+        const enemy = findUnit(level.grid, 'enemy-1')!;
+        for (const tile of level.deploymentZone) {
+          const grid = setUnit(level.grid, tile.x, tile.y, unitId);
+          const inReach = getMovementRange(grid, tile, unit.movement).some((stop) =>
+            getAttackRange(grid, stop, maxRange, minRange).some(({ x, y }) => x === enemy.x && y === enemy.y),
+          );
+          expect(inReach, `${id} on seed ${seed} from ${tile.x},${tile.y}`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('starts the enemy wounded, so a lone level-1 unit can win', () => {
+    for (const seed of SEEDS) {
+      const enemy = createStageLevel(seed, region).units.get('enemy-1')!;
+      expect(enemy.health).toBeLessThan(enemy.maxHealth);
+      expect(enemy.health).toBe(4);
+    }
+  });
+
+  it('keeps the enemy off the deployment tiles’ doorstep', () => {
+    for (const seed of SEEDS) {
+      const { grid, deploymentZone } = createStageLevel(seed, region);
+      const enemy = findUnit(grid, 'enemy-1')!;
+      expect(getWalkingDistances(grid, deploymentZone).get(`${enemy.x},${enemy.y}`)).toBeGreaterThanOrEqual(3);
+    }
   });
 });

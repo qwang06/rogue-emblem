@@ -208,6 +208,15 @@ const HELP: Record<string, FieldHelp> = {
       </>
     ),
   },
+  health: {
+    title: 'Health',
+    body: (
+      <p>
+        The HP these enemies start the battle with, e.g. low for a first stage the player should win. It never goes past
+        a soldier&apos;s max HP. Blank: full health.
+      </p>
+    ),
+  },
   x: {
     title: 'Area x (columns)',
     body: (

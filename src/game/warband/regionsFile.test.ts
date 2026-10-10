@@ -48,11 +48,11 @@ describe('parseRegionSettings', () => {
     expect(parseRegionSettings(file([region({ name: '  Glade ' })])).regions[0].name).toBe('Glade');
   });
 
-  it('reads enemy groups with areas and distances', () => {
+  it('reads enemy groups with areas, distances and health', () => {
     const enemies = [
       { count: 2, area: { x: [0, 0.5], y: [0, 0.4] }, minDistance: 6 },
       { count: 1, maxDistance: 8 },
-      { count: 1, minDistance: 3, maxDistance: 3 },
+      { count: 1, minDistance: 3, maxDistance: 3, health: 4 },
     ];
     expect(parseRegionSettings(file([region({ enemies })])).regions[0].enemies).toEqual(enemies);
   });
@@ -167,6 +167,11 @@ describe('parseRegionSettings', () => {
       'a fractional distance',
       file([region({ enemies: [{ count: 1, maxDistance: 2.5 }] })]),
       /maxDistance must be a whole number from 1 to 100/,
+    ],
+    [
+      'an enemy health of 0',
+      file([region({ enemies: [{ count: 1, health: 0 }] })]),
+      /enemies\[0\]\.health must be a whole number from 1 to 99/,
     ],
     [
       'a backwards distance',

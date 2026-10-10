@@ -46,6 +46,7 @@ export const REGION_LIMITS = Object.freeze({
   enemyCount: [1, 30],
   enemyGroups: [1, 10],
   enemyDistance: [1, 100],
+  enemyHealth: [1, 99],
 } as const);
 
 // Seeds each region is test-generated with.
@@ -141,7 +142,7 @@ function parseArea(value: unknown, path: string): SpawnArea {
 
 function parseEnemyGroup(value: unknown, path: string): EnemyGroup {
   // An old file's "region" is the group's area.
-  const json = object(value, path, ['count', 'area', 'region', 'minDistance', 'maxDistance']);
+  const json = object(value, path, ['count', 'area', 'region', 'minDistance', 'maxDistance', 'health']);
   if (json.area !== undefined && json.region !== undefined) fail(path, 'must set area or region, not both');
   const group: { -readonly [K in keyof EnemyGroup]: EnemyGroup[K] } = {
     count: wholeNumber(json.count, `${path}.count`, REGION_LIMITS.enemyCount),
@@ -154,6 +155,7 @@ function parseEnemyGroup(value: unknown, path: string): EnemyGroup {
   if (group.minDistance !== undefined && group.maxDistance !== undefined && group.minDistance > group.maxDistance) {
     fail(path, 'must have minDistance no larger than maxDistance');
   }
+  if (json.health !== undefined) group.health = wholeNumber(json.health, `${path}.health`, REGION_LIMITS.enemyHealth);
   return Object.freeze(group);
 }
 

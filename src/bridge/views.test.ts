@@ -26,6 +26,8 @@ import { FIRE, FISTS, IRON_SPEAR, weaponEntry } from '../game/weapons.ts';
 import { createTurnState, markDone } from '../game/turns.ts';
 import { applyBattleResult, createRun, restoreRoster } from '../game/warband/run.ts';
 import { createStartingWarband } from '../game/warband/stageLevel.ts';
+import { PLAYER_ROSTER } from '../game/demoLevel.ts';
+import { Villager } from '../game/Villager.ts';
 
 const makeUnit = () =>
   new Unit({ name: 'Soldier', health: 10, mana: 5, strength: 4, defense: 2, movement: 5, team: 'player' });
@@ -398,7 +400,10 @@ describe('toObjectiveView', () => {
 
 describe('toRunOverView', () => {
   it('carries the stage and the names of the fallen in order, frozen', () => {
-    const run = createRun(1, createStartingWarband());
+    const villagers = Object.entries(PLAYER_ROSTER).map(
+      ([id, name]) => [id, new Villager({ name, team: 'player' })] as const,
+    );
+    const run = createRun(1, new Map(villagers));
     const units = restoreRoster(run);
     units.get('villager-2')!.takeDamage(99);
     units.get('villager-1')!.takeDamage(99);

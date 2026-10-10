@@ -1,5 +1,5 @@
 // Short descriptions of a region's enemy groups for its card, e.g.
-// "2 · rows 0–34% · 6–12 steps".
+// "2 · rows 0–34% · 6–12 steps · 4 HP".
 
 import type { EnemyGroup } from '../game/enemySpawns.ts';
 
@@ -16,8 +16,14 @@ function distance({ minDistance: min, maxDistance: max }: EnemyGroup): string | 
   return null;
 }
 
-// The group's count, then whichever of its limits are set.
+// The group's count, then whichever of its limits and its health are set.
 export function describeEnemyGroup(group: EnemyGroup): string {
-  const parts = [String(group.count), span('columns', group.area?.x), span('rows', group.area?.y), distance(group)];
+  const parts = [
+    String(group.count),
+    span('columns', group.area?.x),
+    span('rows', group.area?.y),
+    distance(group),
+    group.health !== undefined ? `${group.health} HP` : null,
+  ];
   return parts.filter((part) => part !== null).join(' · ');
 }

@@ -240,6 +240,7 @@ export function RegionEditor({
                     label="Max distance"
                     placeholder="any"
                   />
+                  <NumberField form={form} path={at('enemies', g, 'health')} label="Health" placeholder="full" />
                   <PairField
                     form={form}
                     path={at('enemies', g, 'area', 'x')}
