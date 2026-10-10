@@ -27,6 +27,7 @@ import {
   createInventory,
   findItem,
   getArmorDefense,
+  getArmorWeight,
   getWornArmor,
   wearArmor,
   type Armor,
@@ -210,6 +211,11 @@ export class Unit {
   // What its worn armor adds to its defense against physical hits.
   get armorDefense(): number {
     return getArmorDefense(this.items);
+  }
+
+  // What its worn armor weighs; it slows the unit along with its weapon.
+  get armorWeight(): number {
+    return getArmorWeight(this.items);
   }
 
   // Wears the armor in inventory slot `index` (moving it to the front).
