@@ -94,6 +94,7 @@ import { getArrowPieces } from '../game/moveArrow.ts';
 import { getQuarterFrameMap, getTileFrame, type Autotile } from '../game/autotile.ts';
 import { getBuildingSprites, getFeatureSprites, getWallAutotile, type MapSprite } from '../game/mapArt.ts';
 import { canMoveAlongPath, extendMovePath, getMovementRange } from '../game/movement.ts';
+import { getDangerZone } from '../game/dangerZone.ts';
 import { PAUSE_ACTIONS } from '../game/pauseMenu.ts';
 import {
   createTurnState,
@@ -155,6 +156,10 @@ const SKILL_RANGE_COLOR = 0xf97316;
 const SKILL_RANGE_ALPHA = 0.45;
 const HEAL_RANGE_COLOR = 0x22c55e;
 const HEAL_RANGE_ALPHA = 0.45;
+// The enemy danger zone: darker than an attack range, and fainter, since it
+// sits under every other highlight.
+const DANGER_ZONE_COLOR = 0x9f1239;
+const DANGER_ZONE_ALPHA = 0.35;
 const DEPLOYMENT_ZONE_COLOR = 0xfacc15;
 const DEPLOYMENT_ZONE_ALPHA = 0.4;
 // Deployment menu entries, by index, for re-opening it on a given one.
@@ -182,7 +187,7 @@ const LEVEL_UP_MS = 2400;
 const DONE_TINT = 0x808080;
 
 type Sprite = Phaser.GameObjects.Sprite;
-type ActionKey = 'confirm' | 'confirmAlt' | 'cancel' | 'cancelAlt';
+type ActionKey = 'confirm' | 'confirmAlt' | 'cancel' | 'cancelAlt' | 'dangerZone';
 type RangeMode = 'move' | 'attack' | 'skill' | 'heal';
 
 // The unit whose menu or range is open, where it stands, and (after a move)
@@ -237,6 +242,10 @@ export class GridScene extends Phaser.Scene {
   activeSkill: Skill | null = null;
   activeStaff: CarriedStaff | null = null;
   rangeTiles: Phaser.GameObjects.Rectangle[] | null = null;
+  dangerZoneVisible = false;
+  dangerZoneTiles: Phaser.GameObjects.Rectangle[] = [];
+  inspectedEnemyId: string | null = null;
+  inspectedTiles: Phaser.GameObjects.Rectangle[] = [];
   moveRange: RangeTile[] | null = null;
   movePath: readonly Point[] | null = null;
   arrowSprites: Sprite[] = [];
@@ -322,6 +331,7 @@ export class GridScene extends Phaser.Scene {
       confirmAlt: Phaser.Input.Keyboard.KeyCodes.Z,
       cancel: Phaser.Input.Keyboard.KeyCodes.ESC,
       cancelAlt: Phaser.Input.Keyboard.KeyCodes.X,
+      dangerZone: Phaser.Input.Keyboard.KeyCodes.D,
     }) as Record<ActionKey, Phaser.Input.Keyboard.Key>;
     this.createPointerInput();
 
@@ -340,6 +350,10 @@ export class GridScene extends Phaser.Scene {
     this.activeSkill = null; // the skill being aimed while rangeMode is 'skill'
     this.activeStaff = null; // the staff being aimed while rangeMode is 'heal'
     this.rangeTiles = null; // highlight rectangles for the current range
+    this.dangerZoneVisible = false; // whether every enemy's reach is shaded (toggled with D or the header button)
+    this.dangerZoneTiles = []; // highlight rectangles for the danger zone
+    this.inspectedEnemyId = null; // an enemy picked on the bare map to show just its reach
+    this.inspectedTiles = []; // highlight rectangles for that enemy's reach
     this.moveRange = null; // [{ x, y, cost }] the active unit can end its move on
     this.movePath = null; // planned route [{ x, y }] from the active unit to the cursor
     this.arrowSprites = []; // arrow pieces drawn along movePath
@@ -397,6 +411,8 @@ export class GridScene extends Phaser.Scene {
     const pointer = this.drainPointerInput();
     const confirm = JustDown(this.actionKeys.confirm) || JustDown(this.actionKeys.confirmAlt) || pointer.confirm;
     const cancel = JustDown(this.actionKeys.cancel) || JustDown(this.actionKeys.cancelAlt) || pointer.cancel;
+    // Only shading, so it toggles even while the enemy phase plays out.
+    if (JustDown(this.actionKeys.dangerZone)) this.toggleDangerZone();
 
     if (this.inputLocked) return;
 
@@ -493,10 +509,17 @@ export class GridScene extends Phaser.Scene {
       // Units that are done for the phase can't be picked again.
       const unitId = getCell(this.grid, this.cursor.x, this.cursor.y)!.unitId!;
       if (isDone(this.turnState!, unitId)) return;
+      this.hideEnemyReach();
       // Selecting a unit goes straight to choosing where it moves; the
       // action menu opens once it has (confirming its own tile stays put).
       this.activeUnit = { unitId, unit: this.hoveredUnit, x: this.cursor.x, y: this.cursor.y };
       this.showMoveRange();
+      return;
+    } else if (confirm && this.hoveredUnit) {
+      this.toggleEnemyReach(getCell(this.grid, this.cursor.x, this.cursor.y)!.unitId!);
+      return;
+    } else if (cancel && this.inspectedEnemyId) {
+      this.hideEnemyReach();
       return;
     } else if (cancel) {
       // Nothing to back out of on the bare map, so cancel opens the pause menu.
@@ -1010,6 +1033,7 @@ export class GridScene extends Phaser.Scene {
     if (!canPlaceUnit(this.grid, this.deploymentZone, unitId, x, y)) return;
 
     this.grid = placeUnit(this.grid, this.deploymentZone, unitId, x, y);
+    this.refreshDangerZone();
     const sprite = this.unitSprites.get(unitId);
     if (sprite) {
       const pos = gridToWorld(x, y, TILE_SIZE);
@@ -1056,6 +1080,7 @@ export class GridScene extends Phaser.Scene {
   // hands input to the player or runs the enemies.
   startPhase(turnState: TurnState) {
     this.turnState = turnState;
+    this.hideEnemyReach();
     for (const sprite of this.unitSprites.values()) sprite.clearTint();
     gameStore.setState({ turn: toTurnView(turnState) });
 
@@ -1091,6 +1116,7 @@ export class GridScene extends Phaser.Scene {
   finishUnit(unitId: string) {
     this.turnState = markDone(this.turnState!, unitId);
     this.unitSprites.get(unitId)?.setTint(DONE_TINT);
+    this.refreshDangerZone();
   }
 
   // Called once a player unit's action has fully played out: finishes the
@@ -1328,6 +1354,56 @@ export class GridScene extends Phaser.Scene {
     this.clearMoveArrow();
     this.moveRange = null;
     this.movePath = null;
+  }
+
+  // ---- Danger zone ------------------------------------------------------
+  // Shades every tile some enemy could strike next phase
+  // (src/game/dangerZone.ts), under every other highlight, while toggled
+  // on. It's redrawn whenever a unit finishes acting, falls, or is placed,
+  // since any of those can change who reaches where. Separately, picking
+  // an enemy on the bare map shows just that enemy's reach.
+
+  toggleDangerZone() {
+    if (this.preview || this.battleOutcome) return;
+    this.dangerZoneVisible = !this.dangerZoneVisible;
+    gameStore.setState({ dangerZoneVisible: this.dangerZoneVisible });
+    this.refreshDangerZone();
+  }
+
+  refreshDangerZone() {
+    for (const tile of this.dangerZoneTiles) tile.destroy();
+    this.dangerZoneTiles = [];
+    if (!this.dangerZoneVisible) return;
+
+    const sources = this.teamUnitIds('enemy').flatMap((unitId) => {
+      const unit = this.units.get(unitId)!;
+      const origin = findUnit(this.grid, unitId);
+      if (!origin) return [];
+      const ranges = unit.wieldableWeapons.map(({ weapon }) => weapon);
+      return [{ origin, movement: unit.movement, ranges, options: this.movementOptions(unit) }];
+    });
+    this.dangerZoneTiles = this.drawTileHighlights(
+      getDangerZone(this.grid, sources),
+      DANGER_ZONE_COLOR,
+      DANGER_ZONE_ALPHA,
+    );
+    for (const tile of this.dangerZoneTiles) tile.setDepth(0.45);
+  }
+
+  // Shows where the enemy `unitId` can move and strike, or hides it again
+  // if it's the one already shown.
+  toggleEnemyReach(unitId: string) {
+    const picked = this.inspectedEnemyId;
+    this.hideEnemyReach();
+    if (unitId === picked) return;
+    this.inspectedEnemyId = unitId;
+    this.inspectedTiles = this.drawUnitReach(this.units.get(unitId)!, this.cursor).tiles;
+  }
+
+  hideEnemyReach() {
+    for (const tile of this.inspectedTiles) tile.destroy();
+    this.inspectedTiles = [];
+    this.inspectedEnemyId = null;
   }
 
   // Moves the active unit to the tile under the cursor, if that tile is in
@@ -1649,10 +1725,12 @@ export class GridScene extends Phaser.Scene {
 
   // Takes a defeated unit off the board: grid cell, registry, and sprite.
   removeUnit({ x, y, unitId }: TargetTile) {
+    if (unitId === this.inspectedEnemyId) this.hideEnemyReach();
     this.grid = setUnit(this.grid, x, y, null);
     this.units.delete(unitId);
     this.unitSprites.get(unitId)!.destroy();
     this.unitSprites.delete(unitId);
+    this.refreshDangerZone();
   }
 
   // Walks a sprite through each tile of path (path[0] is where it already
@@ -1729,6 +1807,7 @@ export class GridScene extends Phaser.Scene {
       this.exitToTitle();
       return result;
     }
+    if (queue.some((command) => command.type === 'toggle-danger-zone')) this.toggleDangerZone();
     if (this.inputLocked) return result;
 
     for (const command of queue) {

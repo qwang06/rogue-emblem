@@ -6,6 +6,7 @@ import { CombatForecast } from './CombatForecast.tsx';
 import { ConfigEditor } from './ConfigEditor.tsx';
 import { ControlsButton } from './ControlsButton.tsx';
 import { DamagePopups } from './DamagePopups.tsx';
+import { DangerZoneButton } from './DangerZoneButton.tsx';
 import { DeploymentBanner } from './DeploymentBanner.tsx';
 import { DeploymentMenu } from './DeploymentMenu.tsx';
 import { DialogBox } from './DialogBox.tsx';
@@ -56,6 +57,7 @@ export function App() {
       <PageHeader
         actions={
           <>
+            <DangerZoneButton />
             <ControlsButton />
             <SettingsButton />
             {preview ? <RegionPreviewActions {...preview} /> : <MainMenuButton />}

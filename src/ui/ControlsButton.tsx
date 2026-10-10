@@ -6,6 +6,7 @@ const CONTROLS = [
   { keys: ['Esc', 'X'], action: 'Cancel' },
   { keys: ['Esc'], action: 'Pause (on the map)' },
   { keys: ['Esc'], action: 'Skip dialog' },
+  { keys: ['D'], action: 'Show / hide enemy danger zone' },
   { keys: ['Mouse'], action: 'Point to move cursor' },
   { keys: ['Left click'], action: 'Confirm' },
   { keys: ['Right click'], action: 'Cancel / Pause' },

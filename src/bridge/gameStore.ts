@@ -44,6 +44,7 @@ export interface BattleState {
   skillMenu: Menu<SkillAction> | null;
   itemMenu: Menu<ItemAction> | null;
   combatForecast: CombatForecastView | null;
+  dangerZoneVisible: boolean;
   menuAnchor: TileAnchorView | null;
   experienceGain: ExperienceGainView | null;
   levelUp: LevelUpView | null;
@@ -80,6 +81,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   skillMenu: null, // frozen menu of the active unit's skills (from getSkillActions) while open, or null
   itemMenu: null, // frozen menu of the active unit's items (from getItemActions) while open, or null
   combatForecast: null, // CombatForecastView from toCombatForecastView() while aiming an attack at a target, or null
+  dangerZoneVisible: false, // whether the map shades every tile an enemy could strike next phase (toggled with D)
   menuAnchor: null, // TileAnchorView from toTileAnchorView() of the active unit's tile, which its menus open beside, or null
   experienceGain: null, // ExperienceGainView from toExperienceGainView() while a unit's XP bar fills after combat, or null
   levelUp: null, // LevelUpView from toLevelUpView() while a level up is being shown, or null
