@@ -44,16 +44,18 @@ export const ACOLYTE_CAPS = Object.freeze({
   resistance: 20,
 });
 
-// The weapon types an acolyte can wield: none. It heals with a staff
-// instead, which isn't a weapon, so it can't attack or counter.
-export const ACOLYTE_WEAPON_TYPES: readonly WeaponType[] = Object.freeze([]);
+// The weapon types an acolyte can wield: magical ones, i.e. tomes (see
+// tomes.ts) and the spells they teach. It starts with none, healing with a
+// staff, which isn't a weapon, so until it finds a tome it can't attack or
+// counter.
+export const ACOLYTE_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['magical']);
 
 // What an acolyte carries into battle: its Heal staff and the potions.
 export const ACOLYTE_ITEMS: Inventory = Object.freeze([staffEntry(HEAL_STAFF), ...STARTING_ITEMS]);
 
 // The healer. Starts at level 1 with the acolyte stat line; its skills come
-// from the 'acolyte' skill tree (none yet), it wields no weapons, and it
-// carries a Heal staff (see healing.ts) and the potions unless given other
+// from the 'acolyte' skill tree (none yet), it wields tomes and spells
+// but starts with none, and it carries a Heal staff (see healing.ts) and the potions unless given other
 // items. Levels up with the acolyte growth rates and caps.
 export class Acolyte extends Unit {
   constructor({ name = 'Acolyte', team, level = 1, items = ACOLYTE_ITEMS }: ClassUnitOptions) {

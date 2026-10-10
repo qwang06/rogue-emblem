@@ -13,6 +13,7 @@ Reference for every unit class: base stats, growth rates, caps, weapons and skil
 - **Counters:** the defender strikes back if the attacker is within its weapon's range (`Rng`). Bows and siege engines can't strike adjacent foes.
 - **Healing:** a unit carrying a staff gets a **Heal** action. It restores the staff's power + the healer's `MAG` to a wounded ally in the staff's range, capped at the ally's missing HP, spends one use of the staff (a staff with none left breaks), and earns the healer 10 XP. Staves aren't weapons: they can't attack or counter.
 - **Uses:** every strike, hit or miss, spends one use of the striker's weapon. A weapon with no uses left breaks and is gone, and a unit whose weapon breaks mid-exchange stops striking. Fists never break (`∞`).
+- **Tomes:** a tome is a magical weapon that teaches its spell. Each strike with it counts towards learning the spell (Fire Tome: 5); on the strike that reaches the count the spell takes the tome's slot and never breaks, and the tome keeps its remaining uses in the next free slot (or goes to the convoy when there's none) so another unit can learn from it. A unit that already knows the spell just uses the tome up. Progress is kept per unit, per tome, between stages.
 - **Growths** are the % chance a stat rises by 1 on each level up. A stat never grows past its cap. Max level is 20. Level 1 to 2 takes 50 XP, every level after 100 XP.
 - **XP rate** scales every XP gain (combat, skills, healing): a unit with a 150% rate earns 15 XP where others earn 10, rounded to the nearest point and never below 1.
 - **Skills** always hit, never crit, and the target can't counter. Their damage is the user's regular hit (weapon might included) with any bonus `STR` added, then scaled; scaled damage rounds up. Using one costs mana, earns XP like a landed hit, and spends no weapon uses.
@@ -21,7 +22,7 @@ Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.m
 
 ## Weapons
 
-One starter weapon per armed unit in the unit catalog. Fists, the Iron Spear, the Iron Bow and the Iron Axe are carried by a class; the monsters fight with Tackle, Club and Bone Claws, which never break; the Fire spell, Powder Keg and Ballista wait for their classes (milestone 2.3), and the wooden set is basic gear no class starts with.
+One starter weapon per armed unit in the unit catalog. Fists, the Iron Spear, the Iron Bow and the Iron Axe are carried by a class; the monsters fight with Tackle, Club and Bone Claws, which never break; the Powder Keg and Ballista wait for their classes (milestone 2.3); the wooden set is basic gear no class starts with; and the Fire Tome drops as loot for an Acolyte to learn Fire from.
 
 | Weapon       | Type     | Mt  | Hit | Crit | Wt  | Rng | Uses | For (catalog art)           |
 | ------------ | -------- | --- | --- | ---- | --- | --- | ---- | --------------------------- |
@@ -29,7 +30,8 @@ One starter weapon per armed unit in the unit catalog. Fists, the Iron Spear, th
 | Iron Spear   | physical | 1   | 80  | 0    | 3   | 1   | 40   | Soldier                     |
 | Iron Axe     | physical | 3   | 65  | 0    | 5   | 1   | 40   | Vanguard (axe)              |
 | Iron Bow     | physical | 2   | 80  | 0    | 2   | 2   | 40   | Archer                      |
-| Fire         | magical  | 2   | 85  | 0    | 1   | 1–2 | 30   | Elemental, Vanguard (staff) |
+| Fire Tome    | magical  | 2   | 85  | 0    | 1   | 1–2 | 30   | Elemental, Vanguard (staff) |
+| Fire         | magical  | 2   | 85  | 0    | 1   | 1–2 | ∞    | Learned from the Fire Tome  |
 | Powder Keg   | siege    | 5   | 70  | 0    | 6   | 1–2 | 5    | Sapper                      |
 | Ballista     | siege    | 6   | 70  | 0    | 8   | 2–3 | 10   | Siege                       |
 | Tackle       | physical | 0   | 75  | 0    | 0   | 1   | ∞    | Slime                       |
@@ -183,7 +185,7 @@ Carries an Iron Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
 ## Acolyte
 
-The healer: it wields no weapon at all, so it can't attack or counter, and instead mends a wounded ally next to it with its Heal staff. At level 1 a heal restores 5 HP (the staff's 2 power + 3 MAG). Frail, but its RES and LCK make it hard to hurt with magic or crit.
+The healer and the warband's magic user: it starts with no weapon, so it can't attack or counter until it finds a tome (see Tomes above), and instead mends a wounded ally next to it with its Heal staff. At level 1 a heal restores 5 HP (the staff's 2 power + 3 MAG). Frail, but its RES and LCK make it hard to hurt with magic or crit.
 
 | Stat | Base | Growth | Cap |
 | ---- | ---- | ------ | --- |
@@ -200,7 +202,7 @@ The healer: it wields no weapon at all, so it can't attack or counter, and inste
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| –            | –               | 100%    |
+| magical      | –               | 100%    |
 
 | Staff | Power | Rng | Uses | Heals at level 1 |
 | ----- | ----- | --- | ---- | ---------------- |
