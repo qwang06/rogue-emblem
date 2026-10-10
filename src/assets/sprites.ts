@@ -19,8 +19,6 @@ import soldier03Idle from './units/Soldier_03_Idle.png';
 import soldier03Move from './units/Soldier_03_Move.png';
 import soldier04Idle from './units/Soldier_04_Idle.png';
 import soldier04Move from './units/Soldier_04_Move.png';
-import vanguard01Idle from './units/Vanguard_01_Idle.png';
-import vanguard01Move from './units/Vanguard_01_Move.png';
 import vanguard04Idle from './units/Vanguard_04_Idle.png';
 import vanguard04Move from './units/Vanguard_04_Move.png';
 import villager01Idle from './units/Villager_01_Idle.png';
@@ -44,8 +42,6 @@ export const SPRITE_URLS: Readonly<Record<string, string>> = {
   Soldier_03_Move: soldier03Move,
   Soldier_04_Idle: soldier04Idle,
   Soldier_04_Move: soldier04Move,
-  Vanguard_01_Idle: vanguard01Idle,
-  Vanguard_01_Move: vanguard01Move,
   Vanguard_04_Idle: vanguard04Idle,
   Vanguard_04_Move: vanguard04Move,
   Villager_01_Idle: villager01Idle,

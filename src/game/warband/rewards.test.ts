@@ -284,10 +284,10 @@ describe('addGold', () => {
 describe('describeReward', () => {
   it('names each reward with a line of description', () => {
     const run = fullRun();
-    const unit = { ...rollRecruit(run, 1, createSeededRng(1)), name: 'Dara', classId: 'wizard', level: 2 };
+    const unit = { ...rollRecruit(run, 1, createSeededRng(1)), name: 'Dara', classId: 'acolyte', level: 2 };
     expect(describeReward({ kind: 'recruit', unit })).toEqual({
       label: 'Recruit Dara',
-      description: 'A level 2 Wizard joins the warband.',
+      description: 'A level 2 Acolyte joins the warband.',
     });
     expect(describeReward({ kind: 'rest' }).label).toBe('Rest');
     expect(
@@ -346,8 +346,8 @@ describe('rollRecruit options', () => {
   it('uses the given class and skips taken names', () => {
     const run = fullRun();
     const taken = WARBAND_NAMES.filter((name) => name !== 'Dara');
-    const unit = rollRecruit(run, 2, createSeededRng(1), undefined, { classId: 'wizard', takenNames: taken });
-    expect(unit.classId).toBe('wizard');
+    const unit = rollRecruit(run, 2, createSeededRng(1), undefined, { classId: 'acolyte', takenNames: taken });
+    expect(unit.classId).toBe('acolyte');
     expect(unit.name).toBe(WARBAND_NAMES.includes('Dara') ? 'Dara' : 'Recruit');
   });
 });

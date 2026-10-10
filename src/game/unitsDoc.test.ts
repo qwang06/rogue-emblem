@@ -10,7 +10,6 @@ import type { GrowthStat } from './experience.ts';
 import {
   calculateSkillDamage,
   CLEAVE,
-  FIREBALL,
   LONG_SHOT,
   POWER_STRIKE,
   SHIELD_BASH,
@@ -146,7 +145,6 @@ describe('UNITS.md', () => {
       Soldier: createUnitOfClass('soldier', { team: 'enemy' }),
       Archer: createUnitOfClass('archer', { team: 'player' }),
       Vanguard: createUnitOfClass('vanguard', { team: 'player' }),
-      Wizard: createUnitOfClass('wizard', { team: 'player' }),
       Guard: createUnitOfClass('guard', { team: 'player' }),
     };
     const text = section('Matchups at level 1');
@@ -156,7 +154,6 @@ describe('UNITS.md', () => {
       'Soldier',
       'Archer',
       'Vanguard',
-      'Wizard',
       'Guard',
       'Soldier',
     ]);
@@ -178,7 +175,6 @@ describe('UNITS.md', () => {
       'Power Strike': POWER_STRIKE,
       'Long Shot': LONG_SHOT,
       Cleave: CLEAVE,
-      Fireball: FIREBALL,
       'Shield Bash': SHIELD_BASH,
     };
     expect(skills.map(([name]) => name)).toEqual(Object.keys(SKILLS));
