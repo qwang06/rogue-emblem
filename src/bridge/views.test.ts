@@ -67,7 +67,14 @@ describe('toUnitView', () => {
       range: '–',
       weapon: null,
       items: [],
+      loot: null,
     });
+  });
+
+  it('names the item the unit drops', () => {
+    const unit = makeUnit();
+    unit.loot = WOODEN_SHIELD;
+    expect(toUnitView(unit)!.loot).toBe('Wooden Shield');
   });
 
   it("shows the equipped weapon's range and name", () => {
@@ -317,6 +324,12 @@ describe('toDamagePopupView', () => {
     expect(toDamagePopupView({ id: 1, amount: 9, kind: 'crit', x: 0, y: 0, durationMs: 700 }).text).toBe('Crit! 9');
     expect(toDamagePopupView({ id: 1, amount: 0, kind: 'miss', x: 0, y: 0, durationMs: 700 }).text).toBe('Miss');
     expect(toDamagePopupView({ id: 1, amount: 0, kind: 'broke', x: 0, y: 0, durationMs: 700 }).text).toBe('Broke!');
+  });
+
+  it('names loot picked up or sent to the convoy', () => {
+    const popup = { id: 1, amount: 0, label: 'Wooden Axe', x: 0, y: 0, durationMs: 700 };
+    expect(toDamagePopupView({ ...popup, kind: 'loot' }).text).toBe('Got Wooden Axe');
+    expect(toDamagePopupView({ ...popup, kind: 'stored' }).text).toBe('Wooden Axe to convoy');
   });
 
   it('shows a recovery of 0 rather than hiding it', () => {

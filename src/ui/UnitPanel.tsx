@@ -21,7 +21,8 @@ const STATS = [
 // to six, see MAX_INVENTORY_SLOTS) one per row — potions with their count,
 // weapons with their uses left (∞ if they never break) and the equipped
 // one in gold — long names cut short with an ellipsis; left out when it
-// has none. The team shows as the accent color. It sits in the corner away
+// has none. An enemy carrying loot (see loot.ts) shows it under a "Drops"
+// line in yellow. The team shows as the accent color. It sits in the corner away
 // from the hovered unit so it never covers it, and steps aside while the
 // combat forecast (which already shows both fighters) or the unit info
 // screen (the full sheet, see UnitInfoScreen.tsx) is up.
@@ -78,6 +79,15 @@ export function UnitPanel() {
             </li>
           ))}
         </ul>
+      )}
+
+      {unit.loot && (
+        <p className="unit-panel__loot">
+          <span className="unit-panel__item-label" title={unit.loot}>
+            {unit.loot}
+          </span>
+          <span className="unit-panel__item-quantity">Drops</span>
+        </p>
       )}
     </section>
   );

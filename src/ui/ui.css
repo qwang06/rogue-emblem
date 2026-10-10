@@ -455,6 +455,18 @@ a.header-button {
   color: var(--accent);
 }
 
+/* The item an enemy drops, under its own rule. */
+.unit-panel__loot {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  min-width: 0;
+  margin: 5px 0 0;
+  padding: 4px 0 0;
+  border-top: var(--rule);
+  color: var(--yellow);
+}
+
 .controls-list {
   min-width: 17rem;
   margin: 0;
@@ -998,6 +1010,14 @@ kbd {
 .damage-popup--broke {
   font-size: 1rem;
   color: var(--yellow);
+}
+
+/* Loot picked up (or sent to the convoy) names the item. */
+.damage-popup--loot,
+.damage-popup--stored {
+  font-size: 1rem;
+  color: var(--yellow);
+  white-space: nowrap;
 }
 
 @keyframes damage-popup-rise {

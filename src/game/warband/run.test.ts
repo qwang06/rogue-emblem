@@ -5,7 +5,7 @@ import { Soldier } from '../Soldier.ts';
 import { Unit } from '../Unit.ts';
 import { UNIT_CLASSES } from '../unitClasses.ts';
 import { Villager } from '../Villager.ts';
-import { FISTS, IRON_BOW, IRON_SPEAR } from '../weapons.ts';
+import { FISTS, IRON_BOW, IRON_SPEAR, WOODEN_SWORD } from '../weapons.ts';
 import {
   advanceStage,
   applyBattleResult,
@@ -129,6 +129,19 @@ describe('applyBattleResult', () => {
     expect(aldenAfter.health).toBe(alden.maxHealth - 3);
     expect(aldenAfter.items[0]).toEqual({ itemId: IRON_SPEAR.id, quantity: IRON_SPEAR.uses! - 1 });
     expect(brynAfter.items.map((item) => item.itemId)).toEqual([IRON_BOW.id, MANA_POTION.id]);
+  });
+
+  it('adds what the battle sent to the convoy at its end', () => {
+    const run = { ...startingRun(), convoy: [{ itemId: HEALTH_POTION.id, quantity: 2 }] };
+    const after = applyBattleResult(run, {
+      units: restoreRoster(run),
+      convoy: [{ itemId: WOODEN_SWORD.id, quantity: 20 }],
+    });
+    expect(after.convoy).toEqual([
+      { itemId: HEALTH_POTION.id, quantity: 2 },
+      { itemId: WOODEN_SWORD.id, quantity: 20 },
+    ]);
+    expect(applyBattleResult(run, { units: restoreRoster(run) }).convoy).toEqual(run.convoy);
   });
 
   it('drops a weapon that broke', () => {

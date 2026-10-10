@@ -9,6 +9,7 @@ import { PLAYER_ROSTER, type DemoLevel, type TreePlacement } from '../demoLevel.
 import { setUnit, type Point } from '../grid.ts';
 import { getBuildingSprites, getFeatureSprites } from '../mapArt.ts';
 import { pickEnemyTiles } from '../enemySpawns.ts';
+import { assignLoot } from '../loot.ts';
 import { generateTerrain } from '../mapGen.ts';
 import { DEFAULT_OBJECTIVE } from '../objectives.ts';
 import { createSeededRng } from '../rng.ts';
@@ -51,11 +52,15 @@ const key = ({ x, y }: Point) => `${x},${y}`;
 // - decorations: green ginkgos scattered (region.treeChance) on the grass no
 //   other art covers
 // - objective: region.objective, else a rout (defeat all enemies)
+// - loot: `lootCount` of the enemies (as many as there are, if fewer) each
+//   carry an item to drop (see assignLoot), picked after everything else so
+//   the map is the same whatever the count
 export function createStageLevel(
   seed: number,
   region: RegionConfig,
   roster: ReadonlyMap<string, Unit> = createStartingWarband(),
   maxDeployed = WARBAND_MAX_DEPLOYED,
+  lootCount = 0,
 ): DemoLevel {
   const rng = createSeededRng(seed);
   const generated = generateTerrain(region.terrain, rng);
@@ -92,6 +97,9 @@ export function createStageLevel(
     .filter((c) => c.terrain === 'grass' && !c.unitId && !covered.has(key(c)))
     .filter(() => rng() < region.treeChance)
     .map(({ x, y }) => ({ x, y, tree: 'green_ginkgo' }));
+
+  const enemyIds = enemyTiles.map((_, i) => `enemy-${i + 1}`);
+  for (const [unitId, item] of assignLoot(enemyIds, lootCount, rng)) units.get(unitId)!.loot = item;
 
   return {
     grid,

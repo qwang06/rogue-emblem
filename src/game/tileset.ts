@@ -197,6 +197,11 @@ export function getItemSprite(itemId: string): string | null {
   return ITEM_SPRITES[itemId] ?? null;
 }
 
+// Where an enemy carrying loot shows its item: the item's icon drawn
+// `size` pixels square with its top-left corner at (x, y) within the
+// unit's tile, in tile pixels (the top-right quarter).
+export const LOOT_MARKER = Object.freeze({ x: 16, y: 0, size: 16 });
+
 // Every unit sheet is a grid of one-tile frames, `columns` wide: one row per
 // facing direction (`rows`, keyed by the facings in src/game/facing.ts), one
 // column per animation frame. A unit loops its facing's row, `frames` columns
