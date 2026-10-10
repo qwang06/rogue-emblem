@@ -59,7 +59,7 @@ import {
   runStage,
   type GameContent,
 } from '../game/battleSetup.ts';
-import { finishStage, type ItemSnapshot, type RunState } from '../game/warband/run.ts';
+import { finishStage, type ItemSnapshot, type PendingReward, type RunState } from '../game/warband/run.ts';
 import { claimLoot, getLootQuantity } from '../game/loot.ts';
 import {
   addGold,
@@ -71,6 +71,8 @@ import {
   rerollRewards,
   rollStageRewards,
   skipRewards,
+  getPendingRewardOffer,
+  markRewardPending,
   type Reward,
   type RewardLevelUp,
 } from '../game/warband/rewards.ts';
@@ -439,6 +441,16 @@ export class GridScene extends Phaser.Scene {
     this.preview = gameStore.getState().screen === 'preview';
     if (this.preview) {
       this.startPreview();
+      gameStore.setState({ mapLoadProgress: 1, mapReady: true });
+      return;
+    }
+    // A run saved before its last reward pick reopens on the reward screen,
+    // over the next stage's map; taking it goes to camp, and marching on
+    // from there starts that stage afresh.
+    const savedRun = setup.mode === 'warband' ? setup.run : undefined;
+    const pendingReward = savedRun ? getPendingRewardOffer(savedRun) : null;
+    if (savedRun && pendingReward) {
+      this.resumeRewardPick(savedRun, pendingReward);
       gameStore.setState({ mapLoadProgress: 1, mapReady: true });
       return;
     }
@@ -873,6 +885,17 @@ export class GridScene extends Phaser.Scene {
   // skips them for a little gold: it's applied to the run, which is saved,
   // and the next stage starts. Rerolling spends gold for new offers and
   // keeps the screen up.
+
+  // Reopens the reward screen for a run saved before its pick (see
+  // getPendingRewardOffer), with the same offers and the stage's clear.
+  resumeRewardPick(run: RunState, pending: PendingReward & { rewards: readonly Reward[] }) {
+    this.setCursorVisible(false);
+    this.rewardOffer = { run, stage: pending.stage, rewards: pending.rewards, rerolls: pending.rerolls };
+    gameStore.setState({
+      stageClear: toStageClearView(pending.stage, { gold: pending.clearGold, flawless: pending.flawless }, run.gold),
+    });
+    this.openRewardMenu();
+  }
 
   openRewardMenu(selectedIndex = 0) {
     const { run, stage, rewards, rerolls } = this.rewardOffer!;
@@ -1421,7 +1444,17 @@ export class GridScene extends Phaser.Scene {
         run = addGold(run, clear.gold);
         stageClear = toStageClearView(before.stage, clear, run.gold);
         const rewards = rollStageRewards(run, before.stage);
-        this.rewardOffer = rewards.length > 0 ? { run, stage: before.stage, rewards, rerolls: 0 } : null;
+        // The run is saved owing the pick, so a reload reopens the reward
+        // screen (resumeRewardPick) instead of skipping it.
+        if (rewards.length > 0) {
+          run = markRewardPending(run, {
+            stage: before.stage,
+            rerolls: 0,
+            clearGold: clear.gold,
+            flawless: clear.flawless,
+          });
+          this.rewardOffer = { run, stage: before.stage, rewards, rerolls: 0 };
+        }
         saveRun(run);
       }
       this.nextBattle = finished.over ? null : runStage(run);

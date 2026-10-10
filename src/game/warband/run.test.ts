@@ -320,6 +320,7 @@ describe('serializeRun and parseRun', () => {
       gold: 120,
       relics: ['lucky-coin'],
       convoy: [{ itemId: FISTS.id, quantity: 1 }],
+      pendingReward: { stage: 1, rerolls: 2, clearGold: 25, flawless: false },
     };
 
     const parsed = parseRun(serializeRun(withExtras));
@@ -353,6 +354,10 @@ describe('serializeRun and parseRun', () => {
       { ...run, roster: [{ ...unit, strength: 'lots' }] },
       { ...run, roster: [unit, unit] },
       { ...run, fallen: 'none' },
+      { ...run, pendingReward: null },
+      { ...run, pendingReward: { stage: 0, rerolls: 0, clearGold: 20, flawless: true } },
+      { ...run, pendingReward: { stage: 1, rerolls: -1, clearGold: 20, flawless: true } },
+      { ...run, pendingReward: { stage: 1, rerolls: 0, clearGold: 20 } },
     ];
     for (const bad of cases) expect(parseRun(JSON.stringify(bad))).toBeNull();
   });
