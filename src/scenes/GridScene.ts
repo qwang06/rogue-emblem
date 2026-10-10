@@ -20,7 +20,9 @@ import {
   toExperienceGainView,
   toLevelUpView,
   toObjectiveView,
+  toRewardAction,
   toRunOverView,
+  toStageClearView,
   toPhaseBannerView,
   toCanvasFraction,
   toRosterEntryView,
@@ -29,7 +31,9 @@ import {
   toUnitDetailView,
   toUnitView,
   worldToScreen,
+  type RewardAction,
   type RunOverView,
+  type StageClearView,
 } from '../bridge/views.ts';
 import { createActionMenu, getSelectedAction, getUnitActions, moveSelection, selectIndex } from '../game/actionMenu.ts';
 import { getCombatExperience, getCombatOutcome } from '../game/experience.ts';
@@ -55,9 +59,17 @@ import {
   runStage,
   type GameContent,
 } from '../game/battleSetup.ts';
-import { finishStage } from '../game/warband/run.ts';
+import { finishStage, type RunState } from '../game/warband/run.ts';
+import {
+  addGold,
+  applyReward,
+  getRewardSeed,
+  getStageClearGold,
+  rollRewards,
+  type Reward,
+} from '../game/warband/rewards.ts';
 import { clearSavedRun, saveRun } from '../data/runSave.ts';
-import { randomSeed } from '../game/rng.ts';
+import { createSeededRng, randomSeed } from '../game/rng.ts';
 import { getStructureTiles } from '../game/structures.ts';
 import { getConsumables, getItemActions } from '../game/items.ts';
 import { getWeaponActions, getWeaponReach, type Weapon, type WeaponAction } from '../game/weapons.ts';
@@ -238,6 +250,10 @@ export class GridScene extends Phaser.Scene {
   itemMenu: Menu<ItemAction> | null = null;
   deploymentMenu: Menu | null = null;
   rosterMenu: Menu<RosterMenuEntry> | null = null;
+  rewardMenu: Menu<RewardAction> | null = null;
+  // After a won Warband stage: the run as it stands (the battle written
+  // back, the clear's gold paid) and the rewards it offers to pick from.
+  rewardOffer: { run: RunState; rewards: readonly Reward[] } | null = null;
   pauseMenu: Menu | null = null;
   placingUnitId: string | null = null;
   zoneTiles: Phaser.GameObjects.Rectangle[] | null = null;
@@ -297,6 +313,8 @@ export class GridScene extends Phaser.Scene {
 
     this.setup = setup;
     this.nextBattle = null; // the BattleSetup a victory leads to, once won
+    this.rewardOffer = null; // the run and its reward picks after a won Warband stage
+    this.rewardMenu = null; // the reward screen's menu while it's up
     // Configs uploaded in the config editor replace the built-in ones.
     this.content = getActiveContent();
     const level = createBattleLevel(setup, this.content);
@@ -441,8 +459,17 @@ export class GridScene extends Phaser.Scene {
       return;
     }
 
+    if (this.rewardMenu) {
+      // The cards sit side by side, so either arrow axis moves the pick.
+      this.updateRewardMenu(dx || dy, confirm);
+      return;
+    }
+
     if (this.battleOutcome) {
-      if (confirm) this.leaveBattle();
+      if (confirm) {
+        if (this.rewardOffer) this.openRewardMenu();
+        else this.leaveBattle();
+      }
       return;
     }
 
@@ -783,6 +810,29 @@ export class GridScene extends Phaser.Scene {
     }
 
     if (dy !== 0) this.publishMenu('pauseMenu', moveSelection(this.pauseMenu!, dy));
+  }
+
+  // ---- Rewards ----------------------------------------------------------
+  // After a won Warband stage's result, the reward screen offers a few
+  // rewards (src/game/warband/rewards.ts) and the player takes one: it's
+  // applied to the run, which is saved, and the next stage starts.
+
+  openRewardMenu() {
+    const rewards = this.rewardOffer!.rewards;
+    this.publishMenu('rewardMenu', createActionMenu(rewards.map(toRewardAction)));
+  }
+
+  updateRewardMenu(delta: number, confirm: boolean) {
+    if (confirm) {
+      const { run, rewards } = this.rewardOffer!;
+      const after = applyReward(run, rewards[this.rewardMenu!.selectedIndex]);
+      saveRun(after);
+      this.rewardOffer = null;
+      this.nextBattle = runStage(after);
+      this.leaveBattle();
+      return;
+    }
+    if (delta !== 0) this.publishMenu('rewardMenu', moveSelection(this.rewardMenu!, delta));
   }
 
   // After the result: on to the next battle if the victory leads to one,
@@ -1191,22 +1241,33 @@ export class GridScene extends Phaser.Scene {
     this.setCursorVisible(false);
     // Completing the objective moves on to the next chapter or stage.
     let runOver: RunOverView | null = null;
+    let stageClear: StageClearView | null = null;
     if (this.setup.mode === 'warband' && this.setup.run) {
       // A run writes the battle back to its roster and saves the next
-      // stage, or forgets the run once the warband has fallen.
-      const finished = finishStage(this.setup.run, { units: this.deployedUnits }, outcome);
+      // stage, or forgets the run once the warband has fallen. A win pays
+      // the clear's gold and rolls the rewards the reward screen offers.
+      const before = this.setup.run;
+      const finished = finishStage(before, { units: this.deployedUnits }, outcome);
+      let run = finished.run;
       if (finished.over) {
         clearSavedRun();
-        runOver = toRunOverView(finished.run);
+        runOver = toRunOverView(run);
       } else {
-        saveRun(finished.run);
+        const clear = getStageClearGold(before.stage, run.fallen.length - before.fallen.length);
+        run = addGold(run, clear.gold);
+        stageClear = toStageClearView(before.stage, clear, run.gold);
+        const rewards = rollRewards(run, before.stage, createSeededRng(getRewardSeed(run.seed, before.stage)));
+        this.rewardOffer = rewards.length > 0 ? { run, rewards } : null;
+        saveRun(run);
       }
-      this.nextBattle = finished.over ? null : runStage(finished.run);
+      this.nextBattle = finished.over ? null : runStage(run);
     } else {
       this.nextBattle = outcome === 'victory' ? getNextBattle(this.setup, randomSeed()) : null;
     }
     const nextBattle = this.nextBattle && describeBattle(this.nextBattle, this.content);
-    this.playTriggeredDialog(outcome, () => gameStore.setState({ battleOutcome: outcome, nextBattle, runOver }));
+    this.playTriggeredDialog(outcome, () =>
+      gameStore.setState({ battleOutcome: outcome, nextBattle, runOver, stageClear }),
+    );
     return true;
   }
 
@@ -1854,6 +1915,8 @@ export class GridScene extends Phaser.Scene {
           if (this.canRoamCursor()) this.pointCursorAt(command.x, command.y);
           break;
         case 'click-tile':
+          // The reward screen is picked from, not clicked through.
+          if (this.rewardMenu) break;
           if (this.battleOutcome) {
             result.confirm = true;
           } else if (this.canRoamCursor()) {

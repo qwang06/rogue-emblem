@@ -21,6 +21,7 @@ import { ObjectiveScreen } from './ObjectiveScreen.tsx';
 import { PageHeader } from './PageHeader.tsx';
 import { PauseMenu } from './PauseMenu.tsx';
 import { PhaseBanner } from './PhaseBanner.tsx';
+import { RewardScreen } from './RewardScreen.tsx';
 import { RosterMenu } from './RosterMenu.tsx';
 import { SettingsButton } from './SettingsButton.tsx';
 import { SkillMenu } from './SkillMenu.tsx';
@@ -100,6 +101,7 @@ export function App() {
               <UnitInfoScreen />
               <PauseMenu />
               <BattleResult />
+              <RewardScreen />
             </div>
           </div>
         </div>
