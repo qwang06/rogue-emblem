@@ -2504,13 +2504,19 @@ textarea.draft-input {
 /* ---- Reward screen (after a won Warband stage) ---------------------- */
 
 .reward-screen {
+  /* A set width, not one shrink-wrapped to the header's text, so the
+     cards always get the room the stage has; the padding keeps the
+     picked card's lift and outline inside the scroll box. */
+  box-sizing: border-box;
+  width: min(48rem, calc(100% - 32px));
+  max-height: calc(100% - 24px);
+  padding: 8px;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 12px;
-  max-width: min(46rem, calc(100% - 32px));
-  max-height: calc(100% - 24px);
-  overflow-y: auto;
+  container-type: inline-size;
 }
 
 .reward-screen__header {
@@ -2546,12 +2552,18 @@ textarea.draft-input {
 
 .reward-screen__choices {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
-  width: 100%;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* Side by side while three fit, else one column: never two and one. */
+@container (max-width: 34rem) {
+  .reward-screen__choices {
+    grid-template-columns: 1fr;
+  }
 }
 
 .reward-card {
@@ -2616,8 +2628,8 @@ textarea.draft-input {
 
 .reward-card__stats {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 2px 8px;
+  grid-template-columns: repeat(2, minmax(0, 5.5rem));
+  gap: 2px 16px;
   margin: 4px 0 0;
   padding-top: 6px;
   border-top: var(--groove);
