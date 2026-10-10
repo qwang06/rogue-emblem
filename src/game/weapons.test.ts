@@ -11,6 +11,7 @@ import {
   getWeaponActions,
   getWeaponReach,
   getWieldableWeapons,
+  IRON_AXE,
   IRON_BOW,
   IRON_SPEAR,
   isWeapon,
@@ -19,6 +20,9 @@ import {
   WEAPON_DAMAGE_TYPES,
   WEAPON_TYPES,
   WEAPONS,
+  WOODEN_AXE,
+  WOODEN_SPEAR,
+  WOODEN_SWORD,
   weaponEntry,
   type Weapon,
 } from './weapons.ts';
@@ -45,6 +49,18 @@ describe('the starter weapons', () => {
   it('keep bows and siege engines off adjacent tiles', () => {
     expect(IRON_BOW.minRange).toBe(2);
     expect(BALLISTA.minRange).toBe(2);
+  });
+
+  it('include a wooden sword, spear and axe that are lighter than iron and break sooner', () => {
+    for (const wooden of [WOODEN_SWORD, WOODEN_SPEAR, WOODEN_AXE]) {
+      expect(WEAPONS).toContain(wooden);
+      expect(wooden).toMatchObject({ type: 'physical', minRange: 1, maxRange: 1, uses: 20 });
+    }
+    expect(WOODEN_SPEAR.weight).toBeLessThan(IRON_SPEAR.weight);
+    expect(WOODEN_AXE.weight).toBeLessThan(IRON_AXE.weight);
+    expect(WOODEN_AXE.might).toBeLessThan(IRON_AXE.might);
+    expect(WOODEN_SWORD.hit).toBeGreaterThan(WOODEN_SPEAR.hit);
+    expect(WOODEN_SPEAR.hit).toBeGreaterThan(WOODEN_AXE.hit);
   });
 
   it('cover every weapon type', () => {

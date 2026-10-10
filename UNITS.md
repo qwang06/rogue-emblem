@@ -21,20 +21,30 @@ Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.m
 
 ## Weapons
 
-One starter weapon per armed unit in the unit catalog. Fists, the Iron Spear, the Iron Bow and the Iron Axe are carried by a class; the monsters fight with Tackle, Club and Bone Claws, which never break; the rest wait for their classes (milestone 2.3).
+One starter weapon per armed unit in the unit catalog. Fists, the Iron Spear, the Iron Bow and the Iron Axe are carried by a class; the monsters fight with Tackle, Club and Bone Claws, which never break; the Fire spell, Powder Keg and Ballista wait for their classes (milestone 2.3), and the wooden set is basic gear no class starts with.
 
-| Weapon     | Type     | Mt  | Hit | Crit | Wt  | Rng | Uses | For (catalog art)           |
-| ---------- | -------- | --- | --- | ---- | --- | --- | ---- | --------------------------- |
-| Fists      | physical | 0   | 80  | 0    | 0   | 1   | ∞    | Villager                    |
-| Iron Spear | physical | 1   | 80  | 0    | 3   | 1   | 40   | Soldier                     |
-| Iron Axe   | physical | 3   | 65  | 0    | 5   | 1   | 40   | Vanguard (axe)              |
-| Iron Bow   | physical | 2   | 80  | 0    | 2   | 2   | 40   | Archer                      |
-| Fire       | magical  | 2   | 85  | 0    | 1   | 1–2 | 30   | Elemental, Vanguard (staff) |
-| Powder Keg | siege    | 5   | 70  | 0    | 6   | 1–2 | 5    | Sapper                      |
-| Ballista   | siege    | 6   | 70  | 0    | 8   | 2–3 | 10   | Siege                       |
-| Tackle     | physical | 0   | 75  | 0    | 0   | 1   | ∞    | Slime                       |
-| Club       | physical | 2   | 75  | 0    | 2   | 1   | ∞    | Goblin                      |
-| Bone Claws | physical | 2   | 80  | 0    | 1   | 1   | ∞    | Skeleton                    |
+| Weapon       | Type     | Mt  | Hit | Crit | Wt  | Rng | Uses | For (catalog art)           |
+| ------------ | -------- | --- | --- | ---- | --- | --- | ---- | --------------------------- |
+| Fists        | physical | 0   | 80  | 0    | 0   | 1   | ∞    | Villager                    |
+| Iron Spear   | physical | 1   | 80  | 0    | 3   | 1   | 40   | Soldier                     |
+| Iron Axe     | physical | 3   | 65  | 0    | 5   | 1   | 40   | Vanguard (axe)              |
+| Iron Bow     | physical | 2   | 80  | 0    | 2   | 2   | 40   | Archer                      |
+| Fire         | magical  | 2   | 85  | 0    | 1   | 1–2 | 30   | Elemental, Vanguard (staff) |
+| Powder Keg   | siege    | 5   | 70  | 0    | 6   | 1–2 | 5    | Sapper                      |
+| Ballista     | siege    | 6   | 70  | 0    | 8   | 2–3 | 10   | Siege                       |
+| Tackle       | physical | 0   | 75  | 0    | 0   | 1   | ∞    | Slime                       |
+| Club         | physical | 2   | 75  | 0    | 2   | 1   | ∞    | Goblin                      |
+| Bone Claws   | physical | 2   | 80  | 0    | 1   | 1   | ∞    | Skeleton                    |
+| Wooden Sword | physical | 1   | 90  | 0    | 1   | 1   | 20   | –                           |
+| Wooden Spear | physical | 1   | 75  | 0    | 2   | 1   | 20   | –                           |
+| Wooden Axe   | physical | 2   | 60  | 0    | 3   | 1   | 20   | –                           |
+
+The wooden set is the basic gear: lighter and weaker than iron, and it breaks after 20 strikes. No class starts with it. It comes with two pieces of armor, which can be carried but aren't worn yet, so their numbers don't affect combat:
+
+| Armor         | Slot   | DEF | Wt  |
+| ------------- | ------ | --- | --- |
+| Wooden Shield | shield | 1   | 1   |
+| Wooden Armor  | body   | 1   | 2   |
 
 ## Villager
 
