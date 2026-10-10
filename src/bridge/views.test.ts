@@ -9,6 +9,7 @@ import {
   toDialogView,
   toObjectiveView,
   toRewardAction,
+  toRewardMenuActions,
   toRunOverView,
   toStageClearView,
   toPhaseBannerView,
@@ -555,5 +556,23 @@ describe('toStageClearView', () => {
     const view = toStageClearView(3, { gold: 35, flawless: true }, 80);
     expect(view).toEqual({ stage: 3, gold: 35, flawless: true, totalGold: 80 });
     expect(Object.isFrozen(view)).toBe(true);
+  });
+});
+
+describe('toRewardMenuActions', () => {
+  it('lists the cards, then Skip and Reroll with their gold', () => {
+    const actions = toRewardMenuActions([{ kind: 'rest' }], { skipGold: 15, rerollCost: 10, gold: 30 });
+    expect(actions.map(({ id, label }) => [id, label])).toEqual([
+      ['rest-0', 'Rest'],
+      ['skip', 'Skip (+15 gold)'],
+      ['reroll', 'Reroll (10 gold)'],
+    ]);
+    expect(actions.some((action) => action.disabled)).toBe(false);
+  });
+
+  it("disables Reroll when the warband can't afford it", () => {
+    const actions = toRewardMenuActions([], { skipGold: 15, rerollCost: 20, gold: 19 });
+    expect(actions.find(({ kind }) => kind === 'reroll')?.disabled).toBe(true);
+    expect(actions.find(({ kind }) => kind === 'skip')?.disabled).toBeUndefined();
   });
 });

@@ -20,7 +20,7 @@ import {
   toExperienceGainView,
   toLevelUpView,
   toObjectiveView,
-  toRewardAction,
+  toRewardMenuActions,
   toRunOverView,
   toStageClearView,
   toPhaseBannerView,
@@ -63,13 +63,16 @@ import { finishStage, type RunState } from '../game/warband/run.ts';
 import {
   addGold,
   applyReward,
-  getRewardSeed,
+  getRerollCost,
+  getSkipGold,
   getStageClearGold,
-  rollRewards,
+  rerollRewards,
+  rollStageRewards,
+  skipRewards,
   type Reward,
 } from '../game/warband/rewards.ts';
 import { clearSavedRun, saveRun } from '../data/runSave.ts';
-import { createSeededRng, randomSeed } from '../game/rng.ts';
+import { randomSeed } from '../game/rng.ts';
 import { getStructureTiles } from '../game/structures.ts';
 import { getConsumables, getItemActions } from '../game/items.ts';
 import { getWeaponActions, getWeaponReach, type Weapon, type WeaponAction } from '../game/weapons.ts';
@@ -253,7 +256,7 @@ export class GridScene extends Phaser.Scene {
   rewardMenu: Menu<RewardAction> | null = null;
   // After a won Warband stage: the run as it stands (the battle written
   // back, the clear's gold paid) and the rewards it offers to pick from.
-  rewardOffer: { run: RunState; rewards: readonly Reward[] } | null = null;
+  rewardOffer: { run: RunState; stage: number; rewards: readonly Reward[]; rerolls: number } | null = null;
   pauseMenu: Menu | null = null;
   placingUnitId: string | null = null;
   zoneTiles: Phaser.GameObjects.Rectangle[] | null = null;
@@ -814,18 +817,40 @@ export class GridScene extends Phaser.Scene {
 
   // ---- Rewards ----------------------------------------------------------
   // After a won Warband stage's result, the reward screen offers a few
-  // rewards (src/game/warband/rewards.ts) and the player takes one: it's
-  // applied to the run, which is saved, and the next stage starts.
+  // rewards (src/game/warband/rewards.ts) and the player takes one, or
+  // skips them for a little gold: it's applied to the run, which is saved,
+  // and the next stage starts. Rerolling spends gold for new offers and
+  // keeps the screen up.
 
-  openRewardMenu() {
-    const rewards = this.rewardOffer!.rewards;
-    this.publishMenu('rewardMenu', createActionMenu(rewards.map(toRewardAction)));
+  openRewardMenu(selectedIndex = 0) {
+    const { run, stage, rewards, rerolls } = this.rewardOffer!;
+    const actions = toRewardMenuActions(rewards, {
+      skipGold: getSkipGold(stage),
+      rerollCost: getRerollCost(rerolls),
+      gold: run.gold,
+    });
+    this.publishMenu('rewardMenu', selectIndex(createActionMenu(actions), selectedIndex));
   }
 
   updateRewardMenu(delta: number, confirm: boolean) {
     if (confirm) {
-      const { run, rewards } = this.rewardOffer!;
-      const after = applyReward(run, rewards[this.rewardMenu!.selectedIndex]);
+      const offer = this.rewardOffer!;
+      const action = this.rewardMenu!.actions[this.rewardMenu!.selectedIndex];
+      if (action.disabled) return;
+      if (action.kind === 'reroll') {
+        const rerolled = rerollRewards(offer.run, offer.stage, offer.rerolls);
+        if (!rerolled) return;
+        saveRun(rerolled.run);
+        this.rewardOffer = { ...offer, run: rerolled.run, rewards: rerolled.rewards, rerolls: offer.rerolls + 1 };
+        const stageClear = gameStore.getState().stageClear;
+        if (stageClear) gameStore.setState({ stageClear: { ...stageClear, totalGold: rerolled.run.gold } });
+        this.openRewardMenu(this.rewardMenu!.selectedIndex);
+        return;
+      }
+      const after =
+        action.kind === 'skip'
+          ? skipRewards(offer.run, offer.stage)
+          : applyReward(offer.run, offer.rewards[this.rewardMenu!.selectedIndex]);
       saveRun(after);
       this.rewardOffer = null;
       this.nextBattle = runStage(after);
@@ -1256,8 +1281,8 @@ export class GridScene extends Phaser.Scene {
         const clear = getStageClearGold(before.stage, run.fallen.length - before.fallen.length);
         run = addGold(run, clear.gold);
         stageClear = toStageClearView(before.stage, clear, run.gold);
-        const rewards = rollRewards(run, before.stage, createSeededRng(getRewardSeed(run.seed, before.stage)));
-        this.rewardOffer = rewards.length > 0 ? { run, rewards } : null;
+        const rewards = rollStageRewards(run, before.stage);
+        this.rewardOffer = rewards.length > 0 ? { run, stage: before.stage, rewards, rerolls: 0 } : null;
         saveRun(run);
       }
       this.nextBattle = finished.over ? null : runStage(run);

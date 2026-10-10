@@ -196,7 +196,8 @@ export interface ObjectiveView extends ObjectiveText {
 // A reward offered after a Warband Mode stage, as a menu entry. A recruit
 // carries its stat line, so it can be judged before it's picked.
 export interface RewardAction extends MenuAction {
-  kind: RewardKind;
+  // A reward's kind, or 'skip' / 'reroll' for the buttons under the cards.
+  kind: RewardKind | 'skip' | 'reroll';
   description: string;
   stats: readonly { label: string; value: number }[] | null;
 }
@@ -617,4 +618,20 @@ export function toStageClearView(
   totalGold: number,
 ): StageClearView {
   return Object.freeze({ stage, gold: clear.gold, flawless: clear.flawless, totalGold });
+}
+
+// The reward screen's menu entries: a card per reward, then Skip (with the
+// gold it pays) and Reroll (with its cost, disabled when the warband can't
+// afford it).
+export function toRewardMenuActions(
+  rewards: readonly Reward[],
+  { skipGold, rerollCost, gold }: { skipGold: number; rerollCost: number; gold: number },
+): readonly RewardAction[] {
+  const button = (kind: 'skip' | 'reroll', label: string, description: string, disabled: boolean): RewardAction =>
+    Object.freeze({ id: kind, label, kind, description, stats: null, ...(disabled ? { disabled } : {}) });
+  return Object.freeze([
+    ...rewards.map(toRewardAction),
+    button('skip', `Skip (+${skipGold} gold)`, 'Take a little gold instead of a reward.', false),
+    button('reroll', `Reroll (${rerollCost} gold)`, 'Offer three new rewards.', gold < rerollCost),
+  ]);
 }
