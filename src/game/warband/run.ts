@@ -7,7 +7,7 @@
 // pure: each function returns a new frozen run and leaves its input alone.
 
 import { HEAL_STAFF } from '../healing.ts';
-import { HEALTH_POTION, MANA_POTION, type Inventory, type Item } from '../items.ts';
+import { ARMORS, HEALTH_POTION, MANA_POTION, type Inventory, type Item } from '../items.ts';
 import { createSeededRng } from '../rng.ts';
 import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
 import type { BattleOutcome } from '../turns.ts';
@@ -18,7 +18,13 @@ import { WEAPONS } from '../weapons.ts';
 export const STARTING_DEPLOY_CAP = 3;
 
 // Every item a saved inventory can name, by id.
-export const RUN_ITEMS: readonly Item[] = Object.freeze([...WEAPONS, HEAL_STAFF, HEALTH_POTION, MANA_POTION]);
+export const RUN_ITEMS: readonly Item[] = Object.freeze([
+  ...WEAPONS,
+  ...ARMORS,
+  HEAL_STAFF,
+  HEALTH_POTION,
+  MANA_POTION,
+]);
 
 // An inventory entry by item id: a weapon's quantity is its uses left.
 export interface ItemSnapshot {

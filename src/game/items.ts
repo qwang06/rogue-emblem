@@ -1,5 +1,5 @@
 // Pure rules for items. A unit carries an inventory — a frozen list of
-// { item, quantity } entries — of consumables, weapons and staves. Using a
+// { item, quantity } entries — of consumables, weapons, staves and armor. Using a
 // consumable restores one of its stats and uses one up; weapons are
 // fought with (see weapons.ts) and staves heal allies (see healing.ts),
 // and a weapon or staff entry's quantity is the uses it has left. No Phaser, no rendering, no hidden state.
@@ -22,7 +22,23 @@ export interface Consumable {
   amount: number;
 }
 
-export type Item = Consumable | Weapon | Staff;
+// Armor: { kind: 'armor', id, label, slot, defense, weight }. `slot` is
+// where it's worn ('shield' on the arm, 'body' on the chest), `defense` what
+// it adds to the wearer's defense and `weight` what it weighs. It's carried
+// like any other item (a slot each, never stacking); nothing wears it yet,
+// so its numbers don't reach combat.
+export type ArmorSlot = 'shield' | 'body';
+
+export interface Armor {
+  kind: 'armor';
+  id: string;
+  label: string;
+  slot: ArmorSlot;
+  defense: number;
+  weight: number;
+}
+
+export type Item = Consumable | Weapon | Staff | Armor;
 
 export interface InventoryEntry {
   item: Item;
@@ -58,6 +74,31 @@ export const MANA_POTION: Consumable = Object.freeze({
   stat: 'mana',
   amount: 3,
 });
+
+// The wooden set's armor, to go with the wooden weapons in weapons.ts.
+export const WOODEN_SHIELD: Armor = Object.freeze({
+  kind: 'armor',
+  id: 'wooden-shield',
+  label: 'Wooden Shield',
+  slot: 'shield',
+  defense: 1,
+  weight: 1,
+});
+
+export const WOODEN_ARMOR: Armor = Object.freeze({
+  kind: 'armor',
+  id: 'wooden-armor',
+  label: 'Wooden Armor',
+  slot: 'body',
+  defense: 1,
+  weight: 2,
+});
+
+export const ARMORS: readonly Armor[] = Object.freeze([WOODEN_SHIELD, WOODEN_ARMOR]);
+
+export function isArmor(item: { kind: string }): item is Armor {
+  return item.kind === 'armor';
+}
 
 // The potions every unit carries into battle (each class adds its weapon).
 export const STARTING_ITEMS: Inventory = Object.freeze([

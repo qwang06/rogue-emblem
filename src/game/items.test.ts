@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ARMORS,
+  WOODEN_ARMOR,
+  WOODEN_SHIELD,
+  isArmor,
   HEALTH_POTION,
   MANA_POTION,
   MAX_INVENTORY_SLOTS,
@@ -36,6 +40,33 @@ describe('item definitions', () => {
       { item: HEALTH_POTION, quantity: 1 },
       { item: MANA_POTION, quantity: 1 },
     ]);
+  });
+});
+
+describe('armor', () => {
+  it('has a wooden shield and wooden armor, one per slot', () => {
+    expect(ARMORS).toEqual([WOODEN_SHIELD, WOODEN_ARMOR]);
+    expect(ARMORS.map((armor) => armor.slot)).toEqual(['shield', 'body']);
+    for (const armor of ARMORS) {
+      expect(isArmor(armor)).toBe(true);
+      expect(armor.defense).toBeGreaterThan(0);
+      expect(Object.isFrozen(armor)).toBe(true);
+    }
+    expect(isArmor(HEALTH_POTION)).toBe(false);
+  });
+
+  it('is carried in a slot of its own and never stacks', () => {
+    const inventory = addItem(addItem(createInventory(), WOODEN_SHIELD), WOODEN_SHIELD);
+    expect(inventory.map(({ item, quantity }) => [item.id, quantity])).toEqual([
+      ['wooden-shield', 1],
+      ['wooden-shield', 1],
+    ]);
+  });
+
+  it("isn't a usable item: it restores nothing and stays out of the item menu", () => {
+    const hurt = unitAt({ health: 1 });
+    expect(canUseItem(hurt, WOODEN_ARMOR)).toBe(false);
+    expect(getItemActions(hurt, createInventory([{ item: WOODEN_ARMOR, quantity: 1 }]))).toEqual([]);
   });
 });
 

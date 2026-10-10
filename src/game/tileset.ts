@@ -182,6 +182,21 @@ export function getUnitSprite(unitClass: string | null | undefined): string {
   return (unitClass != null ? UNIT_SPRITES[unitClass] : undefined) ?? DEFAULT_UNIT_SPRITE;
 }
 
+// Item icons keyed by item id (weapons.ts, items.ts): each is a one-tile
+// image in src/assets/items/. Items without an entry have no icon yet.
+export const ITEM_SPRITES: Record<string, string> = {
+  'wooden-sword': 'wooden-sword',
+  'wooden-spear': 'wooden-spear',
+  'wooden-axe': 'wooden-axe',
+  'wooden-shield': 'wooden-shield',
+  'wooden-armor': 'wooden-armor',
+};
+
+// The icon for an item id (a key of SPRITE_URLS), or null if it has none.
+export function getItemSprite(itemId: string): string | null {
+  return ITEM_SPRITES[itemId] ?? null;
+}
+
 // Every unit sheet is a grid of one-tile frames, `columns` wide: one row per
 // facing direction (`rows`, keyed by the facings in src/game/facing.ts), one
 // column per animation frame. A unit loops its facing's row, `frames` columns

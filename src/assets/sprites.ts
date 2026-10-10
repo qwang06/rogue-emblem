@@ -1,4 +1,4 @@
-// Texture key -> URL for every standalone sprite sheet. GridScene preloads
+// Texture key -> URL for every standalone sprite sheet and item icon. GridScene preloads
 // them all under these keys; the React UI looks unit portraits up here.
 // src/game/tileset.ts names which key each unit draws with.
 
@@ -23,6 +23,11 @@ import vanguard04Idle from './units/Vanguard_04_Idle.png';
 import vanguard04Move from './units/Vanguard_04_Move.png';
 import villager01Idle from './units/Villager_01_Idle.png';
 import villager01Move from './units/Villager_01_Move.png';
+import woodenArmor from './items/wooden-armor.png';
+import woodenAxe from './items/wooden-axe.png';
+import woodenShield from './items/wooden-shield.png';
+import woodenSpear from './items/wooden-spear.png';
+import woodenSword from './items/wooden-sword.png';
 
 export const SPRITE_URLS: Readonly<Record<string, string>> = {
   Acolyte_02_Idle: acolyte02Idle,
@@ -46,4 +51,9 @@ export const SPRITE_URLS: Readonly<Record<string, string>> = {
   Vanguard_04_Move: vanguard04Move,
   Villager_01_Idle: villager01Idle,
   Villager_01_Move: villager01Move,
+  'wooden-armor': woodenArmor,
+  'wooden-axe': woodenAxe,
+  'wooden-shield': woodenShield,
+  'wooden-spear': woodenSpear,
+  'wooden-sword': woodenSword,
 };

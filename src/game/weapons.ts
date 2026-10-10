@@ -214,6 +214,50 @@ export const BONE_CLAWS = weapon({
   uses: null,
 });
 
+// The wooden set: basic practice arms, lighter and weaker than iron and
+// quicker to break (their icons are ITEM_SPRITES in tileset.ts). The sword
+// is the accurate one.
+export const WOODEN_SWORD = weapon({
+  id: 'wooden-sword',
+  label: 'Wooden Sword',
+  type: 'physical',
+  might: 1,
+  hit: 90,
+  crit: 0,
+  weight: 1,
+  minRange: 1,
+  maxRange: 1,
+  uses: 20,
+});
+
+// A sharpened pole: the iron spear's might, less sure to land.
+export const WOODEN_SPEAR = weapon({
+  id: 'wooden-spear',
+  label: 'Wooden Spear',
+  type: 'physical',
+  might: 1,
+  hit: 75,
+  crit: 0,
+  weight: 2,
+  minRange: 1,
+  maxRange: 1,
+  uses: 20,
+});
+
+// Hits hardest of the three and misses most.
+export const WOODEN_AXE = weapon({
+  id: 'wooden-axe',
+  label: 'Wooden Axe',
+  type: 'physical',
+  might: 2,
+  hit: 60,
+  crit: 0,
+  weight: 3,
+  minRange: 1,
+  maxRange: 1,
+  uses: 20,
+});
+
 export const WEAPONS: readonly Weapon[] = Object.freeze([
   FISTS,
   IRON_SPEAR,
@@ -225,6 +269,9 @@ export const WEAPONS: readonly Weapon[] = Object.freeze([
   TACKLE,
   CLUB,
   BONE_CLAWS,
+  WOODEN_SWORD,
+  WOODEN_SPEAR,
+  WOODEN_AXE,
 ]);
 
 // The weapons a body comes with rather than carries: fists and the

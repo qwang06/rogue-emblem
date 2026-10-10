@@ -4,6 +4,8 @@ import { FACINGS } from './facing.ts';
 import {
   ARROW_TILES,
   CURSOR_ANIMATION,
+  ITEM_SPRITES,
+  getItemSprite,
   STRUCTURE_SPRITES,
   TERRAIN_SHEET,
   TILE_SIZE,
@@ -19,6 +21,8 @@ import {
   type UnitAnimation,
 } from './tileset.ts';
 import { UNIT_CLASSES } from './unitClasses.ts';
+import { WOODEN_ARMOR, WOODEN_SHIELD } from './items.ts';
+import { WOODEN_AXE, WOODEN_SPEAR, WOODEN_SWORD } from './weapons.ts';
 
 describe('sprite keys', () => {
   it('names an image for every unit animation', () => {
@@ -26,6 +30,20 @@ describe('sprite keys', () => {
       for (const animation of Object.keys(UNIT_ANIMATIONS) as UnitAnimation[]) {
         expect(SPRITE_URLS).toHaveProperty([unitSheetKey(sprite, animation)]);
       }
+    }
+  });
+
+  it('names an image for every item icon, and none for an item without one', () => {
+    for (const [itemId, key] of Object.entries(ITEM_SPRITES)) {
+      expect(SPRITE_URLS).toHaveProperty([key]);
+      expect(getItemSprite(itemId)).toBe(key);
+    }
+    expect(getItemSprite('health-potion')).toBeNull();
+  });
+
+  it('has an icon for the whole wooden set', () => {
+    for (const item of [WOODEN_SWORD, WOODEN_SPEAR, WOODEN_AXE, WOODEN_SHIELD, WOODEN_ARMOR]) {
+      expect(getItemSprite(item.id), item.id).not.toBeNull();
     }
   });
 
