@@ -2558,17 +2558,34 @@ textarea.draft-input {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 10px 12px 12px;
+  position: relative;
+  /* The wide left padding is the pointing hand's reserved spot. */
+  padding: 10px 12px 12px 24px;
   color: var(--bone);
   cursor: pointer;
 }
 
 /* The pick lifts and gets a straw outline (straw marks what is selected),
-   with the pointing hand beside its name. */
+   with the pointing hand in the spot its left padding keeps for it, beside
+   the name (inside the card, since the screen scrolls and would clip it
+   outside). None of it
+   takes up space, so picking a card never rewraps its text or
+   resizes the screen (see "UI layout" in AGENTS.md). */
 .reward-card--selected {
   outline: 2px solid var(--straw);
   outline-offset: 2px;
   transform: translateY(-4px);
+}
+
+.reward-card--selected::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 36px;
+  width: 16px;
+  height: 12px;
+  background: var(--pointer) center / 16px 12px no-repeat;
+  image-rendering: pixelated;
 }
 
 .reward-card__kind {
@@ -2590,16 +2607,6 @@ textarea.draft-input {
   line-height: 1;
   color: var(--straw);
   text-shadow: 2px 2px 0 var(--outline);
-}
-
-.reward-card--selected .reward-card__label::before {
-  content: '';
-  display: inline-block;
-  width: 16px;
-  height: 12px;
-  margin-right: 6px;
-  background: var(--pointer) center / 16px 12px no-repeat;
-  image-rendering: pixelated;
 }
 
 .reward-card__description {

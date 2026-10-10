@@ -20,6 +20,14 @@ Any work that touches art — picking or changing terrain frame indices or sprit
 - **Unit test the pure functions.** Every pure function implementing a game rule gets unit tests covering normal cases and edge cases (e.g. zero movement, blocked tiles, unit death, boundary of the map). Tests should not require Phaser or a running game instance to execute.
 - **Don't rely on visual/browser testing to verify game logic.** As game rules grow more complex, eyeballing a rendered scene stops being a tractable way to confirm correctness. Unit tests on the pure functions are the source of truth — run those to verify a change instead of launching the game in a browser.
 
+## UI layout
+
+A UI box keeps its size and its text keeps its line breaks when its state changes. Selecting, hovering, highlighting, typing out text or ticking a number must never reflow a menu, card or panel, or shift what is around it:
+
+- **Selection cues take no space.** A pointer, cursor or marker is absolutely positioned (in the box's padding, or hanging off its edge), never an inline element or a `::before` in the text flow. The selected state changes only color, background, outline, box-shadow, opacity or `transform`, never padding, margin, border width, font size, font weight or letter spacing.
+- **Space for changing content is reserved.** Text that types out, swaps (a selected item's description) or counts up is laid out at its full or largest size, e.g. the untyped rest kept invisible, a fixed-size box, a `min-height`, or `font-variant-numeric: tabular-nums`, so the box doesn't grow or shrink with it.
+- **Check the longest case.** Look at a layout with its longest label selected, at the narrowest width it supports, before calling it done.
+
 ## Running tests
 
 `npm test` runs only the test files affected by what changed since `main` (committed on the branch or not), using Vitest's `--changed`: a test runs when it imports a changed file, directly or indirectly. Use it to verify a change. Run the full suite with `npm run test:all` only when asked to; CI runs the full suite on every pull request to `main` and every push to it.
