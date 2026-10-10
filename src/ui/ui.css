@@ -2654,3 +2654,44 @@ textarea.draft-input {
 .reward-screen__hint {
   margin: 0;
 }
+
+/* Skip and Reroll, under the cards. Like the cards, the pick only
+   outlines and the hand sits in padding reserved for it, so moving onto a
+   button never resizes it. */
+.reward-screen__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px 16px;
+}
+
+.reward-button {
+  position: relative;
+  padding: 6px 14px 6px 26px;
+  font: inherit;
+  white-space: nowrap;
+  color: var(--bone);
+  cursor: pointer;
+}
+
+.reward-button--selected {
+  outline: 2px solid var(--straw);
+  outline-offset: 2px;
+}
+
+.reward-button--selected::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  width: 16px;
+  height: 12px;
+  transform: translateY(-50%);
+  background: var(--pointer) center / 16px 12px no-repeat;
+  image-rendering: pixelated;
+}
+
+.reward-button[aria-disabled='true'] {
+  color: var(--frost-dim);
+  cursor: default;
+}

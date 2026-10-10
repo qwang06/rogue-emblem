@@ -45,6 +45,13 @@ export const TRAINING_MAX_HEALTH = 2;
 export const PURSE_GOLD = 30;
 export const PURSE_GOLD_PER_STAGE = 10;
 
+// Skipping the pick pays a little gold instead: a base plus more per stage.
+export const SKIP_GOLD = 10;
+export const SKIP_GOLD_PER_STAGE = 5;
+// Rerolling the offers costs gold, more for each reroll after a stage.
+export const REROLL_COST = 10;
+export const REROLL_COST_STEP = 10;
+
 export type RewardKind = 'recruit' | 'rest' | 'supplies' | 'training' | 'gold';
 
 export type Reward =
@@ -75,6 +82,43 @@ export function getStageClearGold(stage: number, losses: number): { gold: number
 export function getRewardSeed(runSeed: number, stage: number): number {
   const rng = createSeededRng((runSeed ^ Math.imul(stage + 0x51ed, 0x85ebca6b)) >>> 0);
   return Math.floor(rng() * 2 ** 32);
+}
+
+// The gold skipping the reward pick after `stage` pays.
+export function getSkipGold(stage: number): number {
+  return SKIP_GOLD + SKIP_GOLD_PER_STAGE * stage;
+}
+
+// What rerolling the offers costs when they've already been rerolled
+// `rerolls` times this stage.
+export function getRerollCost(rerolls: number): number {
+  return REROLL_COST + REROLL_COST_STEP * rerolls;
+}
+
+// The offers after `stage`, rerolled `rerolls` times: rollRewards seeded
+// from getRewardSeed and the reroll count, so a stage's offers, and each
+// reroll of them, are always the same.
+export function rollStageRewards(run: RunState, stage: number, rerolls: number = 0): readonly Reward[] {
+  return rollRewards(run, stage, createSeededRng((getRewardSeed(run.seed, stage) + rerolls) >>> 0));
+}
+
+// Rerolling the offers after `stage` for the `rerolls + 1`th time: the run
+// with getRerollCost(rerolls) gold spent and the new offers, or null when
+// the run can't afford it.
+export function rerollRewards(
+  run: RunState,
+  stage: number,
+  rerolls: number,
+): { run: RunState; rewards: readonly Reward[] } | null {
+  const cost = getRerollCost(rerolls);
+  if (run.gold < cost) return null;
+  const after = freeze({ ...run, gold: run.gold - cost });
+  return { run: after, rewards: rollStageRewards(after, stage, rerolls + 1) };
+}
+
+// The run after skipping the reward pick after `stage`: getSkipGold more.
+export function skipRewards(run: RunState, stage: number): RunState {
+  return addGold(run, getSkipGold(stage));
 }
 
 // The rewards offered after clearing `stage`, for `run` as it stands (the

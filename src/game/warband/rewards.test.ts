@@ -9,6 +9,15 @@ import { Villager } from '../Villager.ts';
 import { createRun, type RunState, type UnitSnapshot } from './run.ts';
 import {
   addGold,
+  getRerollCost,
+  getSkipGold,
+  rerollRewards,
+  rollStageRewards,
+  skipRewards,
+  REROLL_COST,
+  REROLL_COST_STEP,
+  SKIP_GOLD,
+  SKIP_GOLD_PER_STAGE,
   applyReward,
   describeReward,
   FLAWLESS_BONUS_GOLD,
@@ -340,5 +349,36 @@ describe('rollRecruit options', () => {
     const unit = rollRecruit(run, 2, createSeededRng(1), undefined, { classId: 'wizard', takenNames: taken });
     expect(unit.classId).toBe('wizard');
     expect(unit.name).toBe(WARBAND_NAMES.includes('Dara') ? 'Dara' : 'Recruit');
+  });
+});
+
+describe('skipping and rerolling', () => {
+  it('pays more for a skip on later stages', () => {
+    expect(getSkipGold(1)).toBe(SKIP_GOLD + SKIP_GOLD_PER_STAGE);
+    expect(getSkipGold(4)).toBe(SKIP_GOLD + SKIP_GOLD_PER_STAGE * 4);
+    expect(skipRewards(fullRun(), 2).gold).toBe(getSkipGold(2));
+  });
+
+  it('costs more with each reroll', () => {
+    expect(getRerollCost(0)).toBe(REROLL_COST);
+    expect(getRerollCost(2)).toBe(REROLL_COST + REROLL_COST_STEP * 2);
+  });
+
+  it('gives the same offers for the same stage and reroll count', () => {
+    expect(rollStageRewards(fullRun(), 3, 1)).toEqual(rollStageRewards(fullRun(), 3, 1));
+  });
+
+  it('gives new offers and spends the gold', () => {
+    const rich = addGold(fullRun(), 100);
+    const rerolled = rerollRewards(rich, 3, 0)!;
+    expect(rerolled.run.gold).toBe(100 - getRerollCost(0));
+    expect(rerolled.rewards).toEqual(rollStageRewards(rerolled.run, 3, 1));
+    const offers = Array.from({ length: 5 }, (_, i) => rollStageRewards(rich, 3, i));
+    expect(new Set(offers.map((rewards) => JSON.stringify(rewards))).size).toBeGreaterThan(1);
+  });
+
+  it("refuses a reroll the run can't afford", () => {
+    expect(rerollRewards(addGold(fullRun(), REROLL_COST - 1), 3, 0)).toBeNull();
+    expect(rerollRewards(addGold(fullRun(), REROLL_COST), 3, 0)).not.toBeNull();
   });
 });

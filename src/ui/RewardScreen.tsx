@@ -4,12 +4,16 @@ import { menuItemPointerProps } from './menuPointer.ts';
 
 // Shown after a won Warband Mode stage's result: what the clear paid, and
 // the rewards to pick one of, side by side like Slay the Spire's card
-// pick. GridScene handles the input (arrows move the pick, confirm takes
-// it and moves on to the next stage); the mouse is forwarded to it.
+// pick, with Skip and Reroll buttons under the cards. GridScene handles
+// the input (arrows move the pick through the cards and then the buttons,
+// confirm takes it); the mouse is forwarded to it.
 export function RewardScreen() {
   const menu = useGameStore((state) => state.rewardMenu);
   const stageClear = useGameStore((state) => state.stageClear);
   if (!menu) return null;
+  const entries = menu.actions.map((action, index) => ({ action, index, selected: index === menu.selectedIndex }));
+  const cards = entries.filter(({ action }) => action.kind !== 'skip' && action.kind !== 'reroll');
+  const buttons = entries.filter(({ action }) => action.kind === 'skip' || action.kind === 'reroll');
 
   return (
     <div className="pause-overlay">
@@ -25,8 +29,7 @@ export function RewardScreen() {
           )}
         </header>
         <ul className="reward-screen__choices">
-          {menu.actions.map((reward, index) => {
-            const selected = index === menu.selectedIndex;
+          {cards.map(({ action: reward, index, selected }) => {
             return (
               <li
                 key={reward.id}
@@ -51,6 +54,22 @@ export function RewardScreen() {
             );
           })}
         </ul>
+        <div className="reward-screen__buttons">
+          {buttons.map(({ action, index, selected }) => (
+            <button
+              key={action.id}
+              type="button"
+              className={`panel reward-button${selected ? ' reward-button--selected' : ''}`}
+              aria-current={selected ? 'true' : undefined}
+              aria-disabled={action.disabled ? 'true' : undefined}
+              title={action.description}
+              tabIndex={-1}
+              {...menuItemPointerProps('rewardMenu', index)}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
         <KeyHint
           className="reward-screen__hint"
           entries={[
