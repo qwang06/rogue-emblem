@@ -19,6 +19,12 @@ import { loadSavedRun, saveRun } from '../data/runSave.ts';
 import { getUnitSprite } from '../game/tileset.ts';
 import { routeHash } from './route.ts';
 import { UnitSprite } from './UnitSprite.tsx';
+import { KeyHint } from './KeyHint.tsx';
+
+const MENU_KEYS = [
+  ['↑↓', 'Select'],
+  ['Enter', 'Confirm'],
+] as const;
 
 type View = 'main' | 'training' | 'warband' | 'new-run' | 'settings';
 
@@ -140,14 +146,11 @@ export function TitleScreen() {
   return (
     <div className="title-screen" onContextMenu={onContextMenu}>
       <header className="title-screen__header">
-        <Crest />
+        <WarbandLineup />
         <h1 className="title-screen__title">Rogue Emblem</h1>
-        <div className="title-screen__rule" aria-hidden="true">
-          <span>◆</span>
-        </div>
       </header>
 
-      <nav className="title-menu" aria-label={submenu?.label ?? 'Main menu'}>
+      <nav className="panel title-menu" aria-label={submenu?.label ?? 'Main menu'}>
         {submenu && <h2 className="title-menu__heading">{submenu.heading}</h2>}
         <ul className="title-menu__list" ref={listRef}>
           {menu.actions.map((action, index) => {
@@ -182,24 +185,19 @@ export function TitleScreen() {
         )}
       </nav>
 
-      <p className="title-screen__hint">
-        {submenu ? '↑↓ Select · Enter Confirm · Esc Back' : '↑↓ Select · Enter Confirm'}
-      </p>
+      <KeyHint className="title-screen__hint" entries={submenu ? [...MENU_KEYS, ['Esc', 'Back']] : MENU_KEYS} />
     </div>
   );
 }
 
-// A simple heraldic mark: a sword laid over a diamond. Also shown on the
-// loading screen.
-export function Crest() {
+// The starting classes standing in a row on a strip of turf, idling. The
+// title screen's crest, and shown on the loading screen too.
+export function WarbandLineup() {
   return (
-    <svg className="title-screen__crest" viewBox="0 0 64 64" aria-hidden="true">
-      <path d="M32 4 L58 32 L32 60 L6 32 Z" fill="none" stroke="currentColor" strokeWidth="2" />
-      <path d="M32 12 L50 32 L32 52 L14 32 Z" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.5" />
-      <path d="M32 10 L35 16 L35 40 L29 40 L29 16 Z" fill="currentColor" />
-      <rect x="23" y="40" width="18" height="3" fill="currentColor" />
-      <rect x="30.5" y="43" width="3" height="8" fill="currentColor" />
-      <circle cx="32" cy="53" r="2.5" fill="currentColor" />
-    </svg>
+    <div className="warband-lineup" aria-hidden="true">
+      {STARTING_CLASS_ACTIONS.map((action) => (
+        <UnitSprite key={action.id} sprite={getUnitSprite(action.id)} scale={3} animated />
+      ))}
+    </div>
   );
 }
