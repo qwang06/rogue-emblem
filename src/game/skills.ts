@@ -84,18 +84,6 @@ export const CLEAVE: Skill = Object.freeze({
   animation: 'strike',
 });
 
-// A ball of flame hurled at a foe up to 3 tiles away: the user's regular
-// spell with 1 more power behind it. Flies like a thrown stone until it
-// gets an animation of its own.
-export const FIREBALL: Skill = Object.freeze({
-  id: 'fireball',
-  label: 'Fireball',
-  manaCost: 3,
-  range: 3,
-  might: 1,
-  animation: 'stone',
-});
-
 // A shove with the tower shield behind the spear: the user's regular
 // attack with 1 more power behind it, against an adjacent foe.
 export const SHIELD_BASH: Skill = Object.freeze({
@@ -117,7 +105,6 @@ export const SKILL_TREES: SkillTrees = Object.freeze({
   soldier: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: POWER_STRIKE })]),
   archer: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: LONG_SHOT })]),
   vanguard: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: CLEAVE })]),
-  wizard: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: FIREBALL })]),
   guard: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: SHIELD_BASH })]),
 });
 

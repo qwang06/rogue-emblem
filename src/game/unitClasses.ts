@@ -14,7 +14,6 @@ import { Soldier } from './Soldier.ts';
 import type { ClassUnitOptions, Unit } from './Unit.ts';
 import { Vanguard } from './Vanguard.ts';
 import { Villager } from './Villager.ts';
-import { Wizard } from './Wizard.ts';
 
 export interface UnitClass {
   id: string;
@@ -27,7 +26,6 @@ export const UNIT_CLASSES: readonly UnitClass[] = Object.freeze([
   Object.freeze<UnitClass>({ id: 'soldier', label: 'Soldier', create: (options) => new Soldier(options) }),
   Object.freeze<UnitClass>({ id: 'archer', label: 'Archer', create: (options) => new Archer(options) }),
   Object.freeze<UnitClass>({ id: 'vanguard', label: 'Vanguard', create: (options) => new Vanguard(options) }),
-  Object.freeze<UnitClass>({ id: 'wizard', label: 'Wizard', create: (options) => new Wizard(options) }),
   Object.freeze<UnitClass>({ id: 'guard', label: 'Guard', create: (options) => new Guard(options) }),
   Object.freeze<UnitClass>({ id: 'acolyte', label: 'Acolyte', create: (options) => new Acolyte(options) }),
   Object.freeze<UnitClass>({ id: 'slime', label: 'Slime', create: (options) => new Slime(options) }),

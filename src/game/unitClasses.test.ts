@@ -4,13 +4,12 @@ import { createUnitOfClass, UNIT_CLASSES } from './unitClasses.ts';
 import type { ClassUnitOptions, Unit } from './Unit.ts';
 
 describe('UNIT_CLASSES', () => {
-  it('lists the seven player classes, then the slime, the goblin and the skeleton', () => {
+  it('lists the six player classes, then the slime, the goblin and the skeleton', () => {
     expect(UNIT_CLASSES.map((c) => c.id)).toEqual([
       'villager',
       'soldier',
       'archer',
       'vanguard',
-      'wizard',
       'guard',
       'acolyte',
       'slime',
@@ -22,7 +21,6 @@ describe('UNIT_CLASSES', () => {
       'Soldier',
       'Archer',
       'Vanguard',
-      'Wizard',
       'Guard',
       'Acolyte',
       'Slime',

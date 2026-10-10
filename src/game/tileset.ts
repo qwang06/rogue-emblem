@@ -166,7 +166,6 @@ export const UNIT_SPRITES: Record<string, string> = {
   soldier: 'Soldier_03',
   archer: 'Archer_02',
   vanguard: 'Vanguard_04',
-  wizard: 'Vanguard_01',
   guard: 'Soldier_04',
   acolyte: 'Acolyte_02',
   slime: 'Slime_01',

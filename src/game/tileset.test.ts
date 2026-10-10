@@ -54,7 +54,6 @@ describe('getUnitSprite', () => {
     expect(getUnitSprite('soldier')).toBe('Soldier_03');
     expect(getUnitSprite('archer')).toBe('Archer_02');
     expect(getUnitSprite('vanguard')).toBe('Vanguard_04');
-    expect(getUnitSprite('wizard')).toBe('Vanguard_01');
     expect(getUnitSprite('guard')).toBe('Soldier_04');
     expect(getUnitSprite('acolyte')).toBe('Acolyte_02');
     expect(getUnitSprite('slime')).toBe('Slime_01');
