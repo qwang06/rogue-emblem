@@ -27,6 +27,7 @@ import {
   type Reward,
 } from './rewards.ts';
 import { WARBAND_NAMES } from './names.ts';
+import { STARTING_CLASSES } from './startingClasses.ts';
 
 function runOf(...units: [string, Unit][]): RunState {
   return createRun(7, new Map(units));
@@ -88,7 +89,7 @@ describe('rollRewards', () => {
   it('always offers a recruit first while the roster is smaller than the deploy cap', () => {
     const lone = runOf(['alden', new Villager({ name: 'Alden', team: 'player' })]);
     for (let seed = 0; seed < 30; seed++) {
-      expect(rollRewards(lone, 1, createSeededRng(seed))[0].kind).toBe('recruit');
+      expect(rollRewards(lone, 2, createSeededRng(seed))[0].kind).toBe('recruit');
     }
   });
 
@@ -285,5 +286,59 @@ describe('describeReward', () => {
     ).toContain('Health Potion');
     expect(describeReward({ kind: 'training', maxHealth: 2 }).description).toContain('+2 max HP');
     expect(describeReward({ kind: 'gold', amount: 40 }).label).toBe('40 Gold');
+  });
+});
+
+describe('stage 1 rewards', () => {
+  const lone = () => runOf(['alden', new Villager({ name: 'Alden', team: 'player' })]);
+  const recruits = (rewards: readonly Reward[]) =>
+    rewards.map((reward) => (reward.kind === 'recruit' ? reward.unit : null));
+
+  it('offers a recruit of each starting class, in order', () => {
+    for (let seed = 0; seed < 20; seed++) {
+      const rewards = rollRewards(lone(), 1, createSeededRng(seed));
+      expect(kinds(rewards)).toEqual(STARTING_CLASSES.map(() => 'recruit'));
+      expect(recruits(rewards).map((unit) => unit?.classId)).toEqual(STARTING_CLASSES.map(({ id }) => id));
+    }
+  });
+
+  it('names each recruit differently, and none after the warband', () => {
+    for (let seed = 0; seed < 20; seed++) {
+      const names = recruits(rollRewards(lone(), 1, createSeededRng(seed))).map((unit) => unit?.name);
+      expect(new Set(names).size).toBe(names.length);
+      expect(names).not.toContain('Alden');
+    }
+  });
+
+  it('brings the recruits in at level 1 beside a level 1 warband', () => {
+    for (const unit of recruits(rollRewards(lone(), 1, createSeededRng(4)))) expect(unit?.level).toBe(1);
+  });
+
+  it('still respects the count', () => {
+    expect(rollRewards(lone(), 1, createSeededRng(4), 2)).toHaveLength(2);
+  });
+
+  it('falls back to the usual offers when the roster is full', () => {
+    const run = fullRun();
+    const full = withRoster(
+      run,
+      Array.from({ length: MAX_ROSTER_SIZE }, (_, i) => ({ ...run.roster[0], id: `u${i}` })),
+    );
+    expect(kinds(rollRewards(full, 1, createSeededRng(4)))).not.toContain('recruit');
+  });
+
+  it("describes a starting-class recruit with the class's pitch", () => {
+    const [villager] = recruits(rollRewards(lone(), 1, createSeededRng(4)));
+    expect(describeReward({ kind: 'recruit', unit: villager! }).description).toContain(STARTING_CLASSES[0].description);
+  });
+});
+
+describe('rollRecruit options', () => {
+  it('uses the given class and skips taken names', () => {
+    const run = fullRun();
+    const taken = WARBAND_NAMES.filter((name) => name !== 'Dara');
+    const unit = rollRecruit(run, 2, createSeededRng(1), undefined, { classId: 'wizard', takenNames: taken });
+    expect(unit.classId).toBe('wizard');
+    expect(unit.name).toBe(WARBAND_NAMES.includes('Dara') ? 'Dara' : 'Recruit');
   });
 });
