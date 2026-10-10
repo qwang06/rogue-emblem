@@ -12,7 +12,8 @@ import {
 } from '../game/titleMenu.ts';
 import { getTrainingActions } from '../game/trainingLevel.ts';
 import { FIRST_STORY_CHAPTER, runStage } from '../game/battleSetup.ts';
-import { randomSeed } from '../game/rng.ts';
+import { createSeededRng, randomSeed } from '../game/rng.ts';
+import { generateName } from '../game/warband/names.ts';
 import { createRun, type RunState } from '../game/warband/run.ts';
 import { createStartingWarband } from '../game/warband/stageLevel.ts';
 import { loadSavedRun, saveRun } from '../data/runSave.ts';
@@ -20,6 +21,7 @@ import { getUnitSprite } from '../game/tileset.ts';
 import { routeHash } from './route.ts';
 import { UnitSprite } from './UnitSprite.tsx';
 import { KeyHint } from './KeyHint.tsx';
+import { NameField } from './NameField.tsx';
 
 const MENU_KEYS = [
   ['↑↓', 'Select'],
@@ -37,9 +39,19 @@ const SUBMENUS = {
   settings: { heading: 'Settings', label: 'Settings', actions: () => SETTINGS_ACTIONS },
 } as const;
 
-// A fresh run with a starting warband of `classId`.
-function newRun(classId?: string): RunState {
-  return createRun(randomSeed(), createStartingWarband(classId));
+const NAME_KEYS = [
+  ['R', 'New name'],
+  ['E', 'Rename'],
+] as const;
+
+// A fresh run with a starting warband of `classId` named `name`.
+function newRun(classId: string, name: string): RunState {
+  return createRun(randomSeed(), createStartingWarband(classId, name));
+}
+
+// A generated name for the unit a new run starts with, other than `current`.
+function rollName(current?: string): string {
+  return generateName(createSeededRng(randomSeed()), current);
 }
 
 function mainMenu(selectedIndex = 0) {
@@ -49,7 +61,9 @@ function mainMenu(selectedIndex = 0) {
 // The landing screen: game title plus the Story Mode / Warband Mode /
 // Training / Settings menu. Warband Mode opens a submenu to continue the
 // saved run (disabled when there's none) or start a new one, and New Run
-// opens one more to pick the base class the warband starts as.
+// opens one more to pick the base class the warband starts as, and the
+// name of its unit: generated, with buttons (and R / E) to roll another
+// or type one.
 // Training swaps in a second menu listing the unit classes; picking one
 // starts a small practice battle with that unit. Settings swaps in the
 // settings menu, whose Game Configs opens the config editor (#/configs). Works with the keyboard
@@ -58,6 +72,8 @@ function mainMenu(selectedIndex = 0) {
 export function TitleScreen() {
   const [view, setView] = useState<View>('main');
   const [menu, setMenu] = useState(() => mainMenu());
+  const [unitName, setUnitName] = useState(rollName);
+  const [editingName, setEditingName] = useState(false);
   const listRef = useRef<HTMLUListElement>(null);
 
   // On short windows the screen scrolls; keep the selected entry in view as
@@ -71,6 +87,8 @@ export function TitleScreen() {
   function openSubmenu(submenu: Exclude<View, 'main'>, selectedId?: string) {
     const actions = SUBMENUS[submenu].actions();
     const selected = actions.findIndex((action) => action.id === selectedId);
+    if (submenu === 'new-run') setUnitName(rollName);
+    setEditingName(false);
     setView(submenu);
     setMenu(selectIndex(createActionMenu(actions), selected >= 0 ? selected : getFirstEnabledIndex(actions)));
   }
@@ -98,7 +116,7 @@ export function TitleScreen() {
         else openSubmenu('warband', 'new-run');
       } else if (action.id === 'new-run') openSubmenu('new-run');
     } else if (view === 'new-run') {
-      playRun(newRun(action.id));
+      playRun(newRun(action.id, unitName));
     } else if (view === 'training') {
       gameStore.setState({ screen: 'battle', battleSetup: { mode: 'training', unitClass: action.id } });
     } else if (action.id === 'story') {
@@ -116,7 +134,15 @@ export function TitleScreen() {
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+      // The name box handles its own keys.
+      if (editingName || event.target instanceof HTMLInputElement) return;
+      if (view === 'new-run' && (event.key === 'r' || event.key === 'R')) {
+        event.preventDefault();
+        setUnitName(rollName);
+      } else if (view === 'new-run' && (event.key === 'e' || event.key === 'E')) {
+        event.preventDefault();
+        setEditingName(true);
+      } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
         event.preventDefault();
         setMenu((current) => moveSelection(current, event.key === 'ArrowUp' ? -1 : 1));
       } else if (event.key === 'Enter' || event.key === 'z' || event.key === 'Z') {
@@ -134,6 +160,7 @@ export function TitleScreen() {
   });
 
   function onContextMenu(event: ReactMouseEvent) {
+    if (editingName) return;
     event.preventDefault();
     if (view !== 'main') goBack();
   }
@@ -179,13 +206,35 @@ export function TitleScreen() {
           })}
         </ul>
         {view === 'new-run' && (
+          <NameField
+            name={unitName}
+            editing={editingName}
+            onReroll={() => setUnitName(rollName)}
+            onEdit={() => setEditingName(true)}
+            onRename={(name) => {
+              setUnitName(name);
+              setEditingName(false);
+            }}
+            onCancel={() => setEditingName(false)}
+          />
+        )}
+        {view === 'new-run' && (
           <p className="title-menu__description" aria-live="polite">
             {description}
           </p>
         )}
       </nav>
 
-      <KeyHint className="title-screen__hint" entries={submenu ? [...MENU_KEYS, ['Esc', 'Back']] : MENU_KEYS} />
+      <KeyHint
+        className="title-screen__hint"
+        entries={
+          view === 'new-run'
+            ? [...MENU_KEYS, ...NAME_KEYS, ['Esc', 'Back']]
+            : submenu
+              ? [...MENU_KEYS, ['Esc', 'Back']]
+              : MENU_KEYS
+        }
+      />
     </div>
   );
 }

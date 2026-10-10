@@ -12,6 +12,7 @@ import { rollLevelUp } from '../experience.ts';
 import type { Rng } from '../combatStats.ts';
 import { createSeededRng, randomInt, randomItem, shuffle } from '../rng.ts';
 import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
+import { WARBAND_NAMES } from './names.ts';
 import { snapshotUnit, type ItemSnapshot, type RunState, type UnitSnapshot } from './run.ts';
 
 // Gold for clearing any stage, plus more per stage reached.
@@ -35,30 +36,6 @@ export const RECRUIT_CLASS_IDS: readonly string[] = Object.freeze([
   'wizard',
   'guard',
   'acolyte',
-]);
-
-// Names a recruit can be given, skipping any the run has already used.
-export const RECRUIT_NAMES: readonly string[] = Object.freeze([
-  'Bryn',
-  'Cato',
-  'Dara',
-  'Edric',
-  'Fenna',
-  'Gareth',
-  'Hilde',
-  'Ivo',
-  'Jora',
-  'Kael',
-  'Lise',
-  'Maren',
-  'Nils',
-  'Orla',
-  'Piers',
-  'Quinn',
-  'Rhea',
-  'Sten',
-  'Tova',
-  'Ulric',
 ]);
 
 // How much max HP Training adds to every unit.
@@ -142,7 +119,7 @@ function createReward(kind: RewardKind, run: RunState, stage: number, rng: Rng, 
 
 // A recruit for `run`: a random RECRUIT_CLASS_IDS class at the roster's
 // average level (rounded down, at least 1), its level ups rolled from its
-// growths, named from RECRUIT_NAMES (one nobody in the run has; "Recruit"
+// growths, named from WARBAND_NAMES (one nobody in the run has; "Recruit"
 // once they've all been used), with an id no unit in the run has.
 export function rollRecruit(
   run: RunState,
@@ -152,7 +129,7 @@ export function rollRecruit(
 ): UnitSnapshot {
   const everyone = [...run.roster, ...run.fallen];
   const usedNames = new Set(everyone.map((unit) => unit.name));
-  const names = RECRUIT_NAMES.filter((name) => !usedNames.has(name));
+  const names = WARBAND_NAMES.filter((name) => !usedNames.has(name));
   const name = names.length > 0 ? randomItem(rng, names) : 'Recruit';
   const classId = randomItem(rng, RECRUIT_CLASS_IDS);
   const totalLevel = run.roster.reduce((sum, unit) => sum + unit.level, 0);

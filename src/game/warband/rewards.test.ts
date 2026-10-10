@@ -18,7 +18,6 @@ import {
   PURSE_GOLD,
   PURSE_GOLD_PER_STAGE,
   RECRUIT_CLASS_IDS,
-  RECRUIT_NAMES,
   REWARD_CHOICES,
   rollRecruit,
   rollRewards,
@@ -27,6 +26,7 @@ import {
   TRAINING_MAX_HEALTH,
   type Reward,
 } from './rewards.ts';
+import { WARBAND_NAMES } from './names.ts';
 
 function runOf(...units: [string, Unit][]): RunState {
   return createRun(7, new Map(units));
@@ -147,7 +147,7 @@ describe('rollRecruit', () => {
       const recruit = rollRecruit(leveled, 3, createSeededRng(seed));
       expect(RECRUIT_CLASS_IDS).toContain(recruit.classId);
       expect(recruit.level).toBe(2);
-      expect(RECRUIT_NAMES).toContain(recruit.name);
+      expect(WARBAND_NAMES).toContain(recruit.name);
       expect(['Alden', 'Bryn', 'Cato']).not.toContain(recruit.name);
       expect(run.roster.map((unit) => unit.id)).not.toContain(recruit.id);
       expect(recruit.health).toBe(recruit.maxHealth);
@@ -177,7 +177,7 @@ describe('rollRecruit', () => {
 
   it('falls back to "Recruit" once every name is used', () => {
     const run = fullRun();
-    const fallen = RECRUIT_NAMES.map((name, i) => ({ ...run.roster[0], id: `f${i}`, name }));
+    const fallen = WARBAND_NAMES.map((name, i) => ({ ...run.roster[0], id: `f${i}`, name }));
     expect(rollRecruit({ ...run, fallen }, 2, createSeededRng(3)).name).toBe('Recruit');
   });
 

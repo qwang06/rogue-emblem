@@ -254,7 +254,7 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 ### [x] W.1b Warband menu and starting class
 
 - Choosing Warband Mode always opens a menu: Continue Run (Stage N), disabled when nothing is saved, and New Run. There's still a single save slot.
-- New Run picks the base class the warband starts as: Villager, Soldier or Archer (`src/game/warband/startingClasses.ts`), each with a one-line pitch. The starting warband is a single unit of that class (Alden); recruits come with W.3's rewards.
+- New Run picks the base class the warband starts as: Villager, Soldier or Archer (`src/game/warband/startingClasses.ts`), each with a one-line pitch. The starting warband is a single unit of that class, under a generated name (`src/game/warband/names.ts`) the player can reroll or type over; recruits come with W.3's rewards.
 - Stage 1 (Meadowlands) is a quick first win for that lone unit: one soldier, wounded to 4 HP (an enemy group's `health`), exactly three steps from the deployment zone, so every starting class can reach and strike it on turn 1.
 - The Villager is the late bloomer: a soldier's stat line but only fists, so it's the weakest start, with the highest growth total and caps of any class and a 150% XP rate (`scaleExperience` in `experience.ts`, a `Unit.experienceRate`), so it outgrows the others later in a run.
 - **Tests:** the menu entries with and without a save, starting classes, a warband per class, XP scaling, the villager's growths and caps against the soldier's and archer's.
