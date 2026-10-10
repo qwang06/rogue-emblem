@@ -1,8 +1,6 @@
-/* Pressed while the danger zone shows: held down, in the enemy's red. */
+/* Pressed while the danger zone shows: lit in the enemy's red. */
 .danger-zone-button[aria-pressed='true'] {
-  background: var(--madder);
-  box-shadow:
-    inset 2px 2px 0 var(--madder-lo),
-    0 1px 0 var(--outline);
-  transform: translateY(2px);
+  color: var(--red);
+  background: var(--red-bg);
+  border-color: var(--red);
 }
