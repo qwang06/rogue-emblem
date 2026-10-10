@@ -242,13 +242,13 @@ export const UNIT_SHADOW: Shadow = {
 
 // The blob shadow drawn at the foot of every tree, in the same terms as
 // UNIT_SHADOW: wider than the trunk and a bit under the canopy's spread, so
-// the tree sits on the ground, centered on where the gold ginkgo's trunk
-// meets it (x 10–20, y 26–28).
+// the tree sits on the ground, centered on the foot of the ginkgos' trunk
+// (x 12–19, y 28–29).
 export const TREE_SHADOW: Shadow = {
-  width: 26,
-  height: 8,
+  width: 20,
+  height: 6,
   centerX: 16,
-  centerY: 27,
+  centerY: 29,
   alpha: 0.35,
 };
 
