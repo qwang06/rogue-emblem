@@ -12,7 +12,7 @@
 
 // Store fields holding a menu React can point at.
 export type MenuField =
-  'actionMenu' | 'weaponMenu' | 'skillMenu' | 'itemMenu' | 'deploymentMenu' | 'rosterMenu' | 'pauseMenu';
+  'actionMenu' | 'weaponMenu' | 'skillMenu' | 'itemMenu' | 'deploymentMenu' | 'rosterMenu' | 'pauseMenu' | 'rewardMenu';
 
 export type Command =
   | { type: 'hover-menu'; menu: MenuField; index: number }

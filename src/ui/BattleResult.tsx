@@ -8,12 +8,15 @@ const TITLES = { victory: 'Victory', defeat: 'Defeat' };
 // input: confirm (or a click) moves on to `nextBattle` after a victory that
 // leads to one, else returns to the title screen. When the battle ended a
 // Warband Mode run, it says so, with the stage it ended on and the units
-// lost along the way.
+// lost along the way. A won stage of a run shows the gold it paid, and
+// confirm opens the reward screen (RewardScreen) instead.
 export function BattleResult() {
   const outcome = useGameStore((state) => state.battleOutcome);
   const nextBattle = useGameStore((state) => state.nextBattle);
   const runOver = useGameStore((state) => state.runOver);
-  if (!outcome) return null;
+  const stageClear = useGameStore((state) => state.stageClear);
+  const choosingReward = useGameStore((state) => state.rewardMenu !== null);
+  if (!outcome || choosingReward) return null;
 
   return (
     <div className="pause-overlay">
@@ -28,9 +31,16 @@ export function BattleResult() {
             Fell on stage {runOver.stage}.{runOver.fallen.length > 0 && ` Lost ${runOver.fallen.join(', ')}.`}
           </p>
         )}
+        {stageClear && (
+          <p className="battle-result__detail">
+            +{stageClear.gold} gold{stageClear.flawless && ' (flawless)'}
+          </p>
+        )}
         <KeyHint
           className="battle-result__hint"
-          entries={[['Enter', nextBattle ? `Continue to ${nextBattle}` : 'Return to title']]}
+          entries={[
+            ['Enter', stageClear ? 'Choose a reward' : nextBattle ? `Continue to ${nextBattle}` : 'Return to title'],
+          ]}
         />
       </section>
     </div>

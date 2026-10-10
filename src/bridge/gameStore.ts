@@ -14,7 +14,9 @@ import type {
   ObjectiveView,
   PhaseBannerView,
   RosterEntryView,
+  RewardAction,
   RunOverView,
+  StageClearView,
   TileAnchorView,
   TurnView,
   UnitDetailView,
@@ -58,6 +60,8 @@ export interface BattleState {
   objective: ObjectiveView | null;
   nextBattle: string | null;
   runOver: RunOverView | null;
+  stageClear: StageClearView | null;
+  rewardMenu: Menu<RewardAction> | null;
 }
 
 export interface GameState extends BattleState {
@@ -96,6 +100,8 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   objective: null, // ObjectiveView from toObjectiveView() while the Objective screen is up, or null
   nextBattle: null, // describeBattle() of the battle a victory leads to (shown on the result), or null
   runOver: null, // RunOverView from toRunOverView() once a Warband Mode run has ended, or null
+  stageClear: null, // StageClearView from toStageClearView() once a Warband Mode stage is won, or null
+  rewardMenu: null, // frozen menu of RewardActions (toRewardAction) while the reward screen is up after a won stage, or null
 });
 
 // The single app-wide store shared by Phaser (writer) and React (reader).

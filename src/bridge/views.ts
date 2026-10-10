@@ -11,6 +11,8 @@ import type { ObjectiveText } from '../game/objectives.ts';
 import type { Point } from '../game/grid.ts';
 import type { Team, TurnState } from '../game/turns.ts';
 import type { RunState } from '../game/warband/run.ts';
+import { describeReward, type Reward, type RewardKind } from '../game/warband/rewards.ts';
+import type { MenuAction } from '../game/actionMenu.ts';
 import { getLearnedSkills } from '../game/skills.ts';
 import type { Unit } from '../game/Unit.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
@@ -189,6 +191,26 @@ export interface PhaseBannerView extends TurnView {
 export interface ObjectiveView extends ObjectiveText {
   // The battle's title, e.g. "Stage 2: Lakeside" (see describeBattle).
   battle: string;
+}
+
+// A reward offered after a Warband Mode stage, as a menu entry. A recruit
+// carries its stat line, so it can be judged before it's picked.
+export interface RewardAction extends MenuAction {
+  kind: RewardKind;
+  description: string;
+  stats: readonly { label: string; value: number }[] | null;
+}
+
+// What a cleared Warband Mode stage paid, shown on the result and the
+// reward screen.
+export interface StageClearView {
+  // The stage just cleared.
+  stage: number;
+  // Gold the clear paid, and whether that included the flawless bonus.
+  gold: number;
+  flawless: boolean;
+  // The warband's gold after the clear.
+  totalGold: number;
 }
 
 // What the result screen says when a Warband Mode run ends.
@@ -563,4 +585,36 @@ export function toObjectiveView(battle: string, text: ObjectiveText): ObjectiveV
 // (src/game/warband/run.ts).
 export function toRunOverView(run: Pick<RunState, 'stage' | 'fallen'>): RunOverView {
   return Object.freeze({ stage: run.stage, fallen: Object.freeze(run.fallen.map((unit) => unit.name)) });
+}
+
+// A reward as an entry of the reward screen's menu (see
+// src/game/warband/rewards.ts).
+export function toRewardAction(reward: Reward, index: number): RewardAction {
+  const { label, description } = describeReward(reward);
+  const unit = reward.kind === 'recruit' ? reward.unit : null;
+  const stats = unit
+    ? Object.freeze(
+        (
+          [
+            ['HP', unit.maxHealth],
+            ['STR', unit.strength],
+            ['MAG', unit.magic],
+            ['SKL', unit.skill],
+            ['SPD', unit.speed],
+            ['DEF', unit.defense],
+            ['RES', unit.resistance],
+          ] as const
+        ).map(([stat, value]) => Object.freeze({ label: stat, value })),
+      )
+    : null;
+  return Object.freeze({ id: `${reward.kind}-${index}`, label, kind: reward.kind, description, stats });
+}
+
+// Snapshot of what a cleared stage paid (see getStageClearGold).
+export function toStageClearView(
+  stage: number,
+  clear: { gold: number; flawless: boolean },
+  totalGold: number,
+): StageClearView {
+  return Object.freeze({ stage, gold: clear.gold, flawless: clear.flawless, totalGold });
 }

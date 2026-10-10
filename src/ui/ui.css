@@ -2418,3 +2418,136 @@ textarea.draft-input {
 .roster-menu__count {
   color: var(--frost);
 }
+
+/* ---- Reward screen (after a won Warband stage) ---------------------- */
+
+.reward-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: min(46rem, calc(100% - 32px));
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+}
+
+.reward-screen__header {
+  padding: 8px 24px 10px;
+  text-align: center;
+}
+
+.reward-screen__title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 2.75rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--straw);
+  text-shadow:
+    3px 3px 0 var(--woad-lo),
+    6px 6px 0 var(--outline);
+}
+
+.reward-screen__gold {
+  margin: 6px 0 0;
+  color: var(--bone);
+}
+
+.reward-screen__coin,
+.reward-screen__flawless {
+  color: var(--straw);
+}
+
+.reward-screen__total {
+  color: var(--frost);
+}
+
+.reward-screen__choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reward-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px 12px;
+  color: var(--bone);
+  cursor: pointer;
+}
+
+/* The pick lifts and gets a straw outline (straw marks what is selected),
+   with the pointing hand beside its name. */
+.reward-card--selected {
+  outline: 2px solid var(--straw);
+  outline-offset: 2px;
+  transform: translateY(-4px);
+}
+
+.reward-card__kind {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--frost);
+}
+
+.reward-card--selected .reward-card__kind {
+  color: var(--bone);
+}
+
+.reward-card__label {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.75rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--straw);
+  text-shadow: 2px 2px 0 var(--outline);
+}
+
+.reward-card--selected .reward-card__label::before {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 12px;
+  margin-right: 6px;
+  background: var(--pointer) center / 16px 12px no-repeat;
+  image-rendering: pixelated;
+}
+
+.reward-card__description {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.reward-card__stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2px 8px;
+  margin: 4px 0 0;
+  padding-top: 6px;
+  border-top: var(--groove);
+  font-size: 0.8125rem;
+}
+
+.reward-card__stat {
+  display: flex;
+  justify-content: space-between;
+}
+
+.reward-card__stat dt {
+  color: var(--frost);
+}
+
+.reward-card__stat dd {
+  margin: 0;
+}
+
+.reward-screen__hint {
+  margin: 0;
+}

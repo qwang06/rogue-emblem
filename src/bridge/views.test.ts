@@ -8,7 +8,9 @@ import {
   toDamagePopupView,
   toDialogView,
   toObjectiveView,
+  toRewardAction,
   toRunOverView,
+  toStageClearView,
   toPhaseBannerView,
   toRosterEntryView,
   toTileAnchorView,
@@ -28,7 +30,7 @@ import { advanceDialog, createDialog } from '../game/dialog.ts';
 import { HEALTH_POTION } from '../game/items.ts';
 import { FIRE, FISTS, IRON_SPEAR, weaponEntry } from '../game/weapons.ts';
 import { createTurnState, markDone } from '../game/turns.ts';
-import { applyBattleResult, createRun, restoreRoster } from '../game/warband/run.ts';
+import { applyBattleResult, createRun, restoreRoster, snapshotUnit } from '../game/warband/run.ts';
 import { createStartingWarband } from '../game/warband/stageLevel.ts';
 import { PLAYER_ROSTER } from '../game/demoLevel.ts';
 import { Villager } from '../game/Villager.ts';
@@ -520,5 +522,35 @@ describe('toRunOverView', () => {
 
   it('has an empty list when nobody fell', () => {
     expect(toRunOverView(createRun(1, createStartingWarband())).fallen).toEqual([]);
+  });
+});
+
+describe('toRewardAction', () => {
+  it("is a menu entry with the reward's label and description, frozen", () => {
+    const action = toRewardAction({ kind: 'gold', amount: 40 }, 2);
+    expect(action).toEqual({
+      id: 'gold-2',
+      label: '40 Gold',
+      kind: 'gold',
+      description: 'A purse of coin, for the camp to come.',
+      stats: null,
+    });
+    expect(Object.isFrozen(action)).toBe(true);
+  });
+
+  it("carries a recruit's stat line", () => {
+    const unit = snapshotUnit('recruit-1', new Wizard({ name: 'Dara', team: 'player' }));
+    const action = toRewardAction({ kind: 'recruit', unit }, 0);
+    expect(action.label).toBe('Recruit Dara');
+    expect(action.stats?.map(({ label }) => label)).toEqual(['HP', 'STR', 'MAG', 'SKL', 'SPD', 'DEF', 'RES']);
+    expect(action.stats?.find(({ label }) => label === 'MAG')?.value).toBe(unit.magic);
+  });
+});
+
+describe('toStageClearView', () => {
+  it('carries the stage, the gold paid and the total, frozen', () => {
+    const view = toStageClearView(3, { gold: 35, flawless: true }, 80);
+    expect(view).toEqual({ stage: 3, gold: 35, flawless: true, totalGold: 80 });
+    expect(Object.isFrozen(view)).toBe(true);
   });
 });
