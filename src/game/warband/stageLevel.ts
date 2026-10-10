@@ -25,10 +25,13 @@ export const WARBAND_MAX_DEPLOYED = 3;
 export const WARBAND_LEADER_NAME = Object.values(PLAYER_ROSTER)[0];
 
 // The warband a new run starts with (and a region preview fields): a
-// single level-1 unit of `classId` (see STARTING_CLASSES), by unitId
-// `<classId>-1`. Throws on an unknown class.
-export function createStartingWarband(classId: string = DEFAULT_STARTING_CLASS): Map<string, Unit> {
-  return new Map([[`${classId}-1`, createUnitOfClass(classId, { name: WARBAND_LEADER_NAME, team: 'player' })]]);
+// single level-1 unit of `classId` (see STARTING_CLASSES) named `name`, by
+// unitId `<classId>-1`. Throws on an unknown class.
+export function createStartingWarband(
+  classId: string = DEFAULT_STARTING_CLASS,
+  name: string = WARBAND_LEADER_NAME,
+): Map<string, Unit> {
+  return new Map([[`${classId}-1`, createUnitOfClass(classId, { name, team: 'player' })]]);
 }
 
 const key = ({ x, y }: Point) => `${x},${y}`;

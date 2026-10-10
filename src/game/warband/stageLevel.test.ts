@@ -41,6 +41,10 @@ describe('createStartingWarband', () => {
     }
   });
 
+  it('names the unit as asked', () => {
+    expect(createStartingWarband('archer', 'Wren').get('archer-1')!.name).toBe('Wren');
+  });
+
   it('gives each call fresh units', () => {
     const a = createStartingWarband('soldier').get('soldier-1')!;
     a.takeDamage(3);
