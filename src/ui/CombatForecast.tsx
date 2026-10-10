@@ -16,14 +16,20 @@ export function CombatForecast() {
 
   const { attacker, defender } = forecast;
   return (
-    <section className="panel combat-forecast" aria-label="Combat forecast" {...placement}>
-      <div className="combat-forecast__names">
-        <span className={`combat-forecast__name combat-forecast__name--${attacker.team}`}>{attacker.name}</span>
-        <span className={`combat-forecast__name combat-forecast__name--${defender.team}`}>{defender.name}</span>
-      </div>
-      <div className="combat-forecast__weapons">
-        <span>{attacker.weapon ?? '–'}</span>
-        <span>{defender.weapon ?? '–'}</span>
+    <section
+      className={`panel combat-forecast combat-forecast--attacker-${attacker.team} combat-forecast--defender-${defender.team}`}
+      aria-label="Combat forecast"
+      {...placement}
+    >
+      <div className="combat-forecast__head">
+        <div className="combat-forecast__names">
+          <span className={`combat-forecast__name combat-forecast__name--${attacker.team}`}>{attacker.name}</span>
+          <span className={`combat-forecast__name combat-forecast__name--${defender.team}`}>{defender.name}</span>
+        </div>
+        <div className="combat-forecast__weapons">
+          <span>{attacker.weapon ?? '–'}</span>
+          <span>{defender.weapon ?? '–'}</span>
+        </div>
       </div>
       <div className="combat-forecast__rows">
         <Row label="HP" attacker={attacker.health} defender={defender.health} />

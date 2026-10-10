@@ -1,4 +1,4 @@
-import { Crest } from './TitleScreen.tsx';
+import { WarbandLineup } from './TitleScreen.tsx';
 import { useGameStore } from './useGameStore.ts';
 
 // Covers the page while a battle's map loads, so starting one never shows
@@ -12,7 +12,7 @@ export function LoadingScreen() {
 
   return (
     <div className={ready ? 'loading-screen loading-screen--done' : 'loading-screen'} aria-hidden={ready}>
-      <Crest />
+      <WarbandLineup />
       <p className="loading-screen__label" role="status">
         Preparing the battlefield…
       </p>

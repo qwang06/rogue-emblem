@@ -6,6 +6,7 @@ import { UnitSprite } from './UnitSprite.tsx';
 import { Meter } from './UnitPanel.tsx';
 import { useGameStore } from './useGameStore.ts';
 import './UnitInfoScreen.css';
+import { KeyHint } from './KeyHint.tsx';
 
 const WEAPON_TYPE_LABELS = { physical: 'Physical', magical: 'Magic', siege: 'Siege' } as const;
 
@@ -27,7 +28,7 @@ export function UnitInfoScreen() {
         <Identity unit={unit} />
         <Stats unit={unit} />
         <Combat unit={unit} />
-        <p className="unit-info__hint">I, Enter or click · Close</p>
+        <KeyHint className="unit-info__hint" entries={[['I', 'Close']]} />
       </section>
     </div>
   );
@@ -43,7 +44,7 @@ function Identity({ unit }: { unit: UnitDetailView }) {
         {unit.name}
       </h2>
       <p className="unit-info__class">
-        {unit.classLabel ?? 'No class'} · Lv {unit.level}
+        {unit.classLabel ?? 'No class'}, level {unit.level}
       </p>
       {unit.team === 'player' && (
         <p className="unit-info__xp">{unit.maxLevel ? 'Max level' : `XP ${unit.experience}/${EXPERIENCE_PER_LEVEL}`}</p>
@@ -113,8 +114,11 @@ function Combat({ unit }: { unit: UnitDetailView }) {
         <p className="unit-info__weapon">
           <span className="unit-info__weapon-name">{weapon.label}</span>
           <span className="unit-info__weapon-numbers">
-            Mt {weapon.might} · Hit {weapon.hit} · Crit {weapon.crit} · Wt {weapon.weight} · Uses{' '}
-            {weapon.uses === null ? '∞' : `${weapon.uses}/${weapon.maxUses}`}
+            <span>Mt {weapon.might}</span>
+            <span>Hit {weapon.hit}</span>
+            <span>Crit {weapon.crit}</span>
+            <span>Wt {weapon.weight}</span>
+            <span>Uses {weapon.uses === null ? '∞' : `${weapon.uses}/${weapon.maxUses}`}</span>
           </span>
         </p>
       ) : (
@@ -142,7 +146,7 @@ function Combat({ unit }: { unit: UnitDetailView }) {
             <li key={skill.id}>
               <span>{skill.label}</span>
               <span>
-                {skill.manaCost} MP · RNG {skill.range}
+                {skill.manaCost} MP, RNG {skill.range}
               </span>
             </li>
           ))}

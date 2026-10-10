@@ -1,5 +1,6 @@
 import { gameCommands } from '../bridge/commands.ts';
 import { useGameStore } from './useGameStore.ts';
+import { KeyHint } from './KeyHint.tsx';
 
 const TITLES = { victory: 'Victory', defeat: 'Defeat' };
 
@@ -24,13 +25,13 @@ export function BattleResult() {
         <h2 className="battle-result__title">{runOver ? 'The Warband Fell' : TITLES[outcome]}</h2>
         {runOver && (
           <p className="battle-result__detail">
-            Fell on stage {runOver.stage}
-            {runOver.fallen.length > 0 && ` · Lost: ${runOver.fallen.join(', ')}`}
+            Fell on stage {runOver.stage}.{runOver.fallen.length > 0 && ` Lost ${runOver.fallen.join(', ')}.`}
           </p>
         )}
-        <p className="battle-result__hint">
-          Enter or click · {nextBattle ? `Continue to ${nextBattle}` : 'Return to title'}
-        </p>
+        <KeyHint
+          className="battle-result__hint"
+          entries={[['Enter', nextBattle ? `Continue to ${nextBattle}` : 'Return to title']]}
+        />
       </section>
     </div>
   );

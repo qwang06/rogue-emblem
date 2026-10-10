@@ -2,8 +2,8 @@ import { useGameStore } from './useGameStore.ts';
 
 const HINTS = {
   menu: 'Place your units, then Start',
-  roster: 'Choose a unit · Esc Back',
-  placing: 'Place on a highlighted tile · Esc Back',
+  roster: 'Choose a unit, or Esc to go back',
+  placing: 'Place on a highlighted tile, or Esc to go back',
 };
 
 // Header status during deployment: names the phase and says what the

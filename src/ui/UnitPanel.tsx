@@ -44,8 +44,8 @@ export function UnitPanel() {
         <div className="unit-panel__identity">
           <h2 className="unit-panel__name">{unit.name}</h2>
           <p className="unit-panel__level">
-            Lv {unit.level}
-            {unit.team === 'player' && <> · {unit.experience} XP</>}
+            <span>Lv {unit.level}</span>
+            {unit.team === 'player' && <span>{unit.experience} XP</span>}
           </p>
         </div>
       </div>

@@ -2,25 +2,55 @@
 
 /* The title screen's navy-and-gold palette, shared by the whole page. */
 :root {
-  --gold: #e8c872;
-  --gold-dim: #a8893f;
-  --ink: #0c1226;
-  --navy: #16204a;
-  --parchment: #f3ead3;
-  --parchment-dim: rgb(243 234 211 / 65%);
-  --serif: 'Cinzel', Georgia, 'Times New Roman', serif;
-  --mono: ui-monospace, 'Courier New', monospace;
+  /* Window colors. Player-side and system windows are woad blue, enemy
+     windows madder red, as in the GBA-era tactics games this follows. Each
+     has a light bevel (-hi) and a dark one (-lo), and every window is drawn
+     with the same outline as the unit sprites. */
+  --outline: #120e1a;
+  --woad: #3a5a9c;
+  --woad-hi: #6f93d6;
+  --woad-lo: #263c6e;
+  --madder: #9a3a40;
+  --madder-hi: #d06a66;
+  --madder-lo: #66222a;
+  --slate: #3d3550;
+  --dusk: #231d30;
+  --dusk-deep: #1a1524;
+  --shadow: rgb(18 14 26 / 55%);
+  /* Text: bone on any window, frost for labels and secondary text. */
+  --bone: #f4ecd6;
+  --frost: #b6c6ea;
+  --frost-dim: rgb(182 198 234 / 55%);
+  /* Accents, each with one job: straw marks what is selected or gained,
+     moss is health, sky is mana. Faction text reads on a dark ground. */
+  --straw: #ffd25a;
+  --moss: #9cc23b;
+  --sky: #63b7e6;
+  --player-text: #a9c8ff;
+  --enemy-text: #ff9a92;
+  --groove: 2px solid var(--woad-lo);
+  /* A faint 32px tile grid, the map's own unit, under every screen. */
+  --page-bg:
+    linear-gradient(90deg, rgb(255 255 255 / 2.5%) 2px, transparent 2px) 0 0 / 32px 32px,
+    linear-gradient(rgb(255 255 255 / 2.5%) 2px, transparent 2px) 0 0 / 32px 32px, var(--dusk);
+  --display: 'Jersey 10', 'Pixelify Sans', sans-serif;
+  --body: 'Pixelify Sans', system-ui, sans-serif;
+  /* 9-slice window frames (6x6 sprites drawn at 2x): a stepped corner,
+     the outline, then a bevel. See .panel. */
+  --frame-woad: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='6' height='6' shape-rendering='crispEdges'><path fill='%23120e1a' d='M1 0h1v1h-1zM2 0h1v1h-1zM3 0h1v1h-1zM4 0h1v1h-1zM0 1h1v1h-1zM5 1h1v1h-1zM0 2h1v1h-1zM5 2h1v1h-1zM0 3h1v1h-1zM5 3h1v1h-1zM0 4h1v1h-1zM5 4h1v1h-1zM1 5h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM4 5h1v1h-1z'/><path fill='%236f93d6' d='M1 1h1v1h-1zM2 1h1v1h-1zM3 1h1v1h-1zM4 1h1v1h-1zM1 2h1v1h-1zM1 3h1v1h-1z'/><path fill='%233a5a9c' d='M2 2h1v1h-1zM3 2h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1z'/><path fill='%23263c6e' d='M4 2h1v1h-1zM4 3h1v1h-1zM1 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1z'/></svg>");
+  --frame-madder: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='6' height='6' shape-rendering='crispEdges'><path fill='%23120e1a' d='M1 0h1v1h-1zM2 0h1v1h-1zM3 0h1v1h-1zM4 0h1v1h-1zM0 1h1v1h-1zM5 1h1v1h-1zM0 2h1v1h-1zM5 2h1v1h-1zM0 3h1v1h-1zM5 3h1v1h-1zM0 4h1v1h-1zM5 4h1v1h-1zM1 5h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM4 5h1v1h-1z'/><path fill='%23d06a66' d='M1 1h1v1h-1zM2 1h1v1h-1zM3 1h1v1h-1zM4 1h1v1h-1zM1 2h1v1h-1zM1 3h1v1h-1z'/><path fill='%239a3a40' d='M2 2h1v1h-1zM3 2h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1z'/><path fill='%2366222a' d='M4 2h1v1h-1zM4 3h1v1h-1zM1 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1z'/></svg>");
+  --frame-slate: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='6' height='6' shape-rendering='crispEdges'><path fill='%23120e1a' d='M1 0h1v1h-1zM2 0h1v1h-1zM3 0h1v1h-1zM4 0h1v1h-1zM0 1h1v1h-1zM5 1h1v1h-1zM0 2h1v1h-1zM5 2h1v1h-1zM0 3h1v1h-1zM5 3h1v1h-1zM0 4h1v1h-1zM5 4h1v1h-1zM1 5h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM4 5h1v1h-1z'/><path fill='%23625a7a' d='M1 1h1v1h-1zM2 1h1v1h-1zM3 1h1v1h-1zM4 1h1v1h-1zM1 2h1v1h-1zM1 3h1v1h-1z'/><path fill='%233d3550' d='M2 2h1v1h-1zM3 2h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1z'/><path fill='%2329233a' d='M4 2h1v1h-1zM4 3h1v1h-1zM1 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1z'/></svg>");
+  --pointer: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='6' shape-rendering='crispEdges'><path fill='%23120e1a' d='M0 0h1v1h-1zM1 0h1v1h-1zM2 0h1v1h-1zM3 0h1v1h-1zM0 1h1v1h-1zM4 1h1v1h-1zM5 1h1v1h-1zM6 1h1v1h-1zM0 2h1v1h-1zM7 2h1v1h-1zM0 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM5 3h1v1h-1zM6 3h1v1h-1zM0 4h1v1h-1zM4 4h1v1h-1zM1 5h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1z'/><path fill='%23f4ecd6' d='M1 1h1v1h-1zM2 1h1v1h-1zM3 1h1v1h-1zM1 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM5 2h1v1h-1zM6 2h1v1h-1zM1 3h1v1h-1zM2 3h1v1h-1zM1 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1z'/></svg>");
 }
 
 html,
 body {
   margin: 0;
   min-height: 100%;
-  background:
-    radial-gradient(ellipse at 50% 30%, rgb(64 86 160 / 35%), transparent 70%),
-    linear-gradient(180deg, #111a3a 0%, var(--ink) 100%) fixed;
-  background-color: var(--ink);
-  color: var(--parchment);
+  background: var(--page-bg);
+  color: var(--bone);
+  font-family: var(--body);
+  -webkit-font-smoothing: none;
 }
 
 /* ---- Page layout ---------------------------------------------------- */
@@ -47,8 +77,6 @@ body {
      never wraps or grows, so the map below never resizes as the status
      changes. */
   height: 2.75rem;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgb(168 137 63 / 45%);
 }
 
 .page-header__brand {
@@ -56,17 +84,19 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-family: var(--serif);
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: 3px;
-  color: var(--gold);
-  text-shadow: 0 2px 0 #5a4318;
+  font-family: var(--display);
+  font-size: 2.25rem;
+  line-height: 1;
+  color: var(--bone);
+  text-shadow:
+    2px 2px 0 var(--woad-lo),
+    4px 4px 0 var(--outline);
 }
 
 .page-header__gem {
-  font-size: 0.875rem;
-  text-shadow: none;
+  font-size: 1rem;
+  color: var(--straw);
+  text-shadow: 2px 2px 0 var(--outline);
 }
 
 /* The status takes whatever width the brand and buttons leave, and clips
@@ -74,7 +104,6 @@ body {
 .page-header__status {
   min-width: 0;
   overflow: hidden;
-  font-family: var(--serif);
 }
 
 .page-header__end {
@@ -83,20 +112,25 @@ body {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 10px;
 }
 
+/* Chunky pixel keys: a slate face on a hard ledge that the press pushes
+   the face down into. */
 .header-button {
   flex: none;
-  padding: 5px 12px;
+  padding: 4px 12px 5px;
   white-space: nowrap;
-  font-family: var(--serif);
-  font-size: 0.875rem;
-  letter-spacing: 1px;
-  color: var(--gold);
-  background: rgb(22 32 74 / 90%);
-  border: 1px solid var(--gold-dim);
-  border-radius: 3px;
+  font-family: var(--body);
+  font-size: 0.9375rem;
+  line-height: 1.2;
+  color: var(--bone);
+  background: var(--slate);
+  border: 2px solid var(--outline);
+  border-radius: 0;
+  box-shadow:
+    inset 2px 2px 0 rgb(255 255 255 / 14%),
+    0 3px 0 var(--outline);
   cursor: pointer;
 }
 
@@ -107,18 +141,21 @@ a.header-button {
 }
 
 .header-button:hover {
-  color: var(--ink);
-  background: var(--gold);
+  background: var(--woad);
+}
+
+.header-button:active,
+.header-button[aria-expanded='true'] {
+  background: var(--woad);
+  box-shadow:
+    inset 2px 2px 0 var(--woad-lo),
+    0 1px 0 var(--outline);
+  transform: translateY(2px);
 }
 
 .header-button:focus-visible {
-  outline: 2px solid var(--gold);
-  outline-offset: 2px;
-}
-
-.header-button[aria-expanded='true'] {
-  color: var(--ink);
-  background: var(--gold);
+  outline: 2px solid var(--straw);
+  outline-offset: 3px;
 }
 
 /* Icon-only header buttons (Controls): square-ish, icon centered. */
@@ -133,31 +170,30 @@ a.header-button {
   position: relative;
 }
 
-/* Nested so its opaque background beats .panel's, which comes later. */
+/* Nested so its padding beats .panel's, which comes later. */
 .header-popover .header-popover__panel {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 10px);
   right: 0;
   z-index: 20;
   min-width: 14rem;
-  padding: 10px 14px;
-  background: var(--navy);
-  font-family: var(--mono);
-  color: var(--parchment);
+  padding: 8px 12px;
+  color: var(--bone);
 }
 
 .header-popover__title {
   margin: 0 0 6px;
-  font-family: var(--serif);
-  font-size: 1rem;
-  letter-spacing: 1px;
-  color: var(--gold);
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--bone);
 }
 
 .settings__empty {
   margin: 0;
-  font-size: 0.8125rem;
-  color: var(--parchment-dim);
+  font-size: 0.875rem;
+  color: var(--frost);
 }
 
 .page__main {
@@ -170,14 +206,15 @@ a.header-button {
 .stage-area {
   flex: 1;
   min-width: 0;
-  padding: 6px;
+  padding: 8px;
   display: flex;
 }
 
 /* The canvas and the HUD overlay share this box, which fills the stage
    area. Phaser's RESIZE mode keeps the canvas the same size, and the map
-   scene centers the map in it. The frame is outline + shadow rather than a
-   border so it takes no space. */
+   scene centers the map in it. The frame is drawn with shadows rather than
+   a border so it takes no space: outline, a slate rim, outline again, like
+   the windows. */
 .stage {
   position: relative;
   flex: 1;
@@ -185,12 +222,10 @@ a.header-button {
   min-width: 0;
   min-height: 0;
   line-height: 0;
-  outline: 2px solid var(--gold-dim);
-  border-radius: 2px;
   box-shadow:
-    0 0 0 5px var(--ink),
-    0 0 0 6px rgb(232 200 114 / 25%),
-    0 8px 24px 6px rgb(0 0 0 / 45%);
+    0 0 0 2px var(--outline),
+    0 0 0 6px var(--slate),
+    0 0 0 8px var(--outline);
 }
 
 #game {
@@ -212,8 +247,7 @@ a.header-button {
   }
 
   .page-header__brand {
-    font-size: 1.125rem;
-    letter-spacing: 2px;
+    font-size: 1.75rem;
   }
 
   .page-header__end {
@@ -227,33 +261,47 @@ a.header-button {
   }
 }
 
+/* ---- Windows ---------------------------------------------------------- */
+
+/* Every in-game window: a 9-slice pixel frame (stepped corners, the
+   sprites' outline, a bevel) with a hard drop shadow that follows the
+   stepped corners. Windows default to woad; --frame swaps the colorway,
+   e.g. madder for anything that belongs to the enemy. */
+.panel {
+  --frame: var(--frame-woad);
+  pointer-events: auto;
+  padding: 6px 8px;
+  border: 4px solid transparent;
+  border-image: var(--frame) 2 fill / 4px stretch;
+  border-radius: 0;
+  filter: drop-shadow(4px 4px 0 var(--shadow));
+}
+
+.panel--enemy {
+  --frame: var(--frame-madder);
+}
+
 /* ---- Unit panel (docked in a top corner of the map) ----------------- */
 
-/* Nested so it beats .panel, which comes later. It's read-only, so the
-   pointer passes through to the map: hovering a tile under it moves the
-   cursor there, and the panel then flips to the other corner. The team
-   shows as the accent: the left border and the name. */
+/* Nested so it beats .panel. It's read-only, so the pointer passes
+   through to the map: hovering a tile under it moves the cursor there,
+   and the panel then flips to the other corner. The team shows as the
+   window's color. */
 .hud .unit-panel {
-  --team: var(--gold);
   position: absolute;
   top: 12px;
-  width: 11.5rem;
+  width: 12.5rem;
   max-height: calc(100% - 24px);
   overflow: hidden;
   box-sizing: border-box;
-  padding: 6px 10px 8px;
-  border-width: 1px;
-  border-left: 3px solid var(--team);
-  font-size: 0.75rem;
+  padding: 4px 8px 6px;
+  font-size: 0.875rem;
+  line-height: 1.25;
   pointer-events: none;
 }
 
-.unit-panel--player {
-  --team: #93c5fd;
-}
-
 .unit-panel--enemy {
-  --team: #fca5a5;
+  --frame: var(--frame-madder);
 }
 
 .unit-panel--left {
@@ -278,19 +326,24 @@ a.header-button {
 .unit-panel__name {
   margin: 0;
   overflow: hidden;
-  font-family: var(--serif);
-  font-size: 0.875rem;
-  font-weight: 700;
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-weight: 400;
+  line-height: 1;
   white-space: nowrap;
   text-overflow: ellipsis;
-  color: var(--team);
+  color: var(--bone);
+  text-shadow: 2px 2px 0 var(--outline);
 }
 
 .unit-panel__level {
   margin: 0;
-  color: var(--parchment-dim);
+  display: flex;
+  gap: 8px;
+  color: var(--frost);
 }
 
+/* Pixel gauges: an outlined trough, a flat fill with a light top row. */
 .meter {
   display: grid;
   grid-template-columns: 1.5rem 1fr auto;
@@ -300,44 +353,51 @@ a.header-button {
 }
 
 .meter__label {
-  color: var(--parchment-dim);
+  color: var(--frost);
 }
 
 .meter__track {
-  height: 4px;
-  background: rgb(0 0 0 / 45%);
-  border-radius: 2px;
+  height: 6px;
+  background: var(--outline);
+  border: 2px solid var(--outline);
   overflow: hidden;
 }
 
 .meter__fill {
   display: block;
   height: 100%;
-  transition: width 200ms ease-out;
+  box-shadow: inset 0 2px 0 rgb(255 255 255 / 35%);
+  transition: width 200ms steps(6, end);
 }
 
 .meter--hp .meter__fill {
-  background: #4ade80;
+  background: var(--moss);
 }
 
 .meter--mp .meter__fill {
-  background: #60a5fa;
+  background: var(--sky);
 }
 
 .meter__value {
   min-width: 2.75rem;
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
-/* Three columns of "STR 5", divided from the bars by a hairline. */
+/* Three columns of "STR 5", grooved off from the bars. */
 .unit-panel__stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   column-gap: 10px;
-  row-gap: 1px;
+  row-gap: 0;
   margin: 6px 0 0;
-  padding-top: 5px;
-  border-top: 1px solid rgb(168 137 63 / 30%);
+  padding-top: 4px;
+  border-top: var(--groove);
+}
+
+.unit-panel--enemy .unit-panel__stats,
+.unit-panel--enemy .unit-panel__items {
+  border-top-color: var(--madder-lo);
 }
 
 .unit-panel__stat {
@@ -346,22 +406,29 @@ a.header-button {
 }
 
 .unit-panel__stat dt {
-  color: var(--parchment-dim);
+  color: var(--frost);
+}
+
+.unit-panel--enemy dt,
+.unit-panel--enemy .unit-panel__level,
+.unit-panel--enemy .meter__label,
+.unit-panel--enemy .unit-panel__item-quantity {
+  color: #f1c1b8;
 }
 
 .unit-panel__stat dd {
   margin: 0;
-  color: #fff8e2;
+  color: var(--bone);
 }
 
-/* One item per row under a hairline: the name takes what room is left
+/* One item per row under a groove: the name takes what room is left
    and is cut short with an ellipsis, the count stays whole. */
 .unit-panel__items {
   margin: 5px 0 0;
   padding: 4px 0 0;
   list-style: none;
-  border-top: 1px solid rgb(168 137 63 / 30%);
-  color: #fff8e2;
+  border-top: var(--groove);
+  color: var(--bone);
 }
 
 .unit-panel__item {
@@ -380,11 +447,11 @@ a.header-button {
 
 .unit-panel__item-quantity {
   flex: none;
-  color: var(--parchment-dim);
+  color: var(--frost);
 }
 
 .unit-panel__item--equipped .unit-panel__item-label {
-  color: var(--gold);
+  color: var(--straw);
 }
 
 .controls-list {
@@ -402,25 +469,27 @@ a.header-button {
 
 .controls-list__row dt {
   display: flex;
-  gap: 3px;
+  gap: 4px;
 }
 
 .controls-list__row dd {
   margin: 0;
-  color: var(--parchment-dim);
+  color: var(--frost);
 }
 
+/* Key caps, the same chunky keys as the header buttons, in miniature. */
 kbd {
+  display: inline-block;
   min-width: 12px;
-  padding: 1px 5px;
-  font-family: var(--mono);
-  font-size: 0.6875rem;
+  padding: 0 5px;
+  font-family: var(--body);
+  font-size: 0.8125rem;
+  line-height: 1.35;
   text-align: center;
-  color: var(--parchment);
-  background: rgb(0 0 0 / 35%);
-  border: 1px solid var(--gold-dim);
-  border-bottom-width: 2px;
-  border-radius: 3px;
+  color: var(--bone);
+  background: var(--slate);
+  border: 2px solid var(--outline);
+  box-shadow: 0 2px 0 var(--outline);
 }
 
 /* ---- HUD overlay (on top of the canvas) ---------------------------- */
@@ -433,25 +502,16 @@ kbd {
   inset: 0;
   pointer-events: none;
   user-select: none;
-  font-family: var(--mono);
+  font-family: var(--body);
   line-height: normal;
-  color: var(--parchment);
-}
-
-.panel {
-  pointer-events: auto;
-  background: rgb(22 32 74 / 90%);
-  border: 2px solid var(--gold-dim);
-  border-radius: 4px;
-  box-shadow: 0 6px 16px rgb(0 0 0 / 45%);
-  padding: 8px;
+  color: var(--bone);
 }
 
 .action-menu {
   position: absolute;
   right: 12px;
   top: 12px;
-  min-width: 7.5rem;
+  min-width: 8rem;
   box-sizing: border-box;
 }
 
@@ -472,11 +532,12 @@ kbd {
   list-style: none;
   margin: 0;
   padding: 0;
-  font-size: 0.9375rem;
+  font-size: 1rem;
 }
 
+/* Room on the left for the pointing hand. */
 .action-menu__item {
-  padding: 3px 8px 3px 20px;
+  padding: 2px 8px 2px 24px;
   position: relative;
   cursor: pointer;
 }
@@ -485,84 +546,122 @@ kbd {
   cursor: pointer;
 }
 
+/* The selected row: a lighter band of the window's own color, and the
+   pointing hand from the GBA-era menus. */
 .action-menu__item--selected {
-  color: #fff8e2;
-  background: linear-gradient(90deg, rgb(232 200 114 / 22%), transparent);
+  color: var(--bone);
+  background: var(--woad-hi);
+  box-shadow:
+    inset 0 2px 0 rgb(255 255 255 / 20%),
+    inset 0 -2px 0 var(--woad-lo);
 }
 
 .action-menu__item--selected::before {
-  content: '▶';
+  content: '';
   position: absolute;
-  left: 6px;
+  left: 4px;
   top: 50%;
+  width: 16px;
+  height: 12px;
   transform: translateY(-50%);
-  font-size: 0.5625rem;
-  color: var(--gold);
+  background: var(--pointer) center / 16px 12px no-repeat;
+  image-rendering: pixelated;
 }
 
 .action-menu__item--disabled {
-  color: rgb(243 234 211 / 35%);
+  color: var(--frost-dim);
   cursor: default;
 }
 
 /* ---- Combat forecast -------------------------------------------------- */
 
-/* Opens beside the two fighters; usePanelBesideAnchor sets left / top. */
+/* Opens beside the two fighters; usePanelBesideAnchor sets left / top.
+   Each fighter's column sits on their side's color, so who strikes for
+   what reads at a glance; the labels run down the middle on slate. */
 .combat-forecast {
   position: absolute;
-  min-width: 11rem;
+  min-width: 13rem;
   box-sizing: border-box;
+  padding: 0;
   pointer-events: none;
-  font-size: 0.9375rem;
+  font-size: 1rem;
+  --frame: var(--frame-slate);
+  --left: var(--woad);
+  --right: var(--madder);
+}
+
+.combat-forecast--attacker-enemy {
+  --left: var(--madder);
+}
+
+.combat-forecast--defender-player {
+  --right: var(--woad);
+}
+
+/* Names and weapons head the window on slate; below, each fighter's
+   numbers sit on their side's color. */
+.combat-forecast__head {
+  padding: 2px 8px 4px;
+  border-bottom: 2px solid var(--outline);
 }
 
 .combat-forecast__names {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding-bottom: 4px;
-  margin-bottom: 4px;
-  border-bottom: 1px solid rgb(168 137 63 / 45%);
-  font-family: var(--serif);
-  font-size: 0.8125rem;
-  font-weight: 700;
+  font-family: var(--display);
+  font-size: 1.375rem;
+  line-height: 1.05;
+  text-shadow: 2px 2px 0 var(--outline);
 }
 
 .combat-forecast__weapons {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 4px;
-  font-size: 0.75rem;
-  color: var(--parchment-dim);
+  font-size: 0.8125rem;
+  color: var(--frost);
+}
+
+.combat-forecast__rows {
+  padding: 2px 8px 4px;
+  background: linear-gradient(
+    90deg,
+    var(--left) 0 calc(50% - 1.75rem),
+    transparent calc(50% - 1.75rem) calc(50% + 1.75rem),
+    var(--right) calc(50% + 1.75rem)
+  );
 }
 
 .combat-forecast__name--player {
-  color: #93c5fd;
+  color: var(--player-text);
 }
 
 .combat-forecast__name--enemy {
-  color: #fca5a5;
+  color: var(--enemy-text);
 }
 
 .combat-forecast__row {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 1fr 3rem 1fr;
   align-items: baseline;
-  gap: 10px;
-  padding: 1px 0;
+  gap: 4px;
+  padding: 0;
 }
 
 .combat-forecast__label {
-  font-size: 0.75rem;
-  color: var(--gold);
+  font-size: 0.8125rem;
+  color: var(--frost);
   text-align: center;
 }
 
 .combat-forecast__value {
   margin: 0;
-  font-weight: bold;
-  color: #fff8e2;
+  font-family: var(--display);
+  font-size: 1.875rem;
+  line-height: 1.05;
+  color: var(--bone);
+  text-shadow: 2px 2px 0 var(--outline);
 }
 
 .combat-forecast__row .combat-forecast__value:first-child {
@@ -574,9 +673,9 @@ kbd {
 }
 
 .combat-forecast__double {
-  margin-left: 4px;
-  font-size: 0.75rem;
-  color: #fcd34d;
+  margin-left: 2px;
+  font-size: 1rem;
+  color: var(--straw);
 }
 
 /* ---- Experience and level ups ----------------------------------------- */
@@ -597,32 +696,32 @@ kbd {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  margin-bottom: 6px;
-  font-size: 0.875rem;
+  margin-bottom: 4px;
+  font-size: 0.9375rem;
 }
 
 .experience-bar__name {
-  font-family: var(--serif);
-  font-weight: 700;
-  color: #93c5fd;
+  font-family: var(--display);
+  font-size: 1.375rem;
+  line-height: 1;
+  color: var(--bone);
+  text-shadow: 2px 2px 0 var(--outline);
 }
 
 .experience-bar__level {
-  color: var(--parchment-dim);
+  color: var(--frost);
 }
 
 .experience-bar__gain {
   margin-left: auto;
-  font-weight: bold;
-  color: var(--gold);
+  color: var(--straw);
 }
 
 .experience-bar__track {
   display: block;
-  height: 10px;
-  background: rgb(0 0 0 / 45%);
-  border: 1px solid var(--gold-dim);
-  border-radius: 2px;
+  height: 8px;
+  background: var(--outline);
+  border: 2px solid var(--outline);
   overflow: hidden;
 }
 
@@ -630,7 +729,8 @@ kbd {
   display: block;
   height: 100%;
   width: var(--xp-to);
-  background: linear-gradient(180deg, #fde68a, #e8c872 60%, #a8893f);
+  background: var(--straw);
+  box-shadow: inset 0 2px 0 rgb(255 255 255 / 45%);
   animation: experience-fill var(--xp-duration) ease-out;
 }
 
@@ -647,42 +747,46 @@ kbd {
 
 /* The level-up panel shows over a lightly dimmed map. */
 .level-up-overlay {
-  background: rgb(12 18 38 / 35%);
+  background: rgb(26 21 36 / 35%);
 }
 
 .level-up {
-  min-width: 14rem;
-  padding: 12px 16px;
+  min-width: 15rem;
+  padding: 8px 14px 12px;
   text-align: center;
-  animation: level-up-pop 240ms ease-out;
+  animation: level-up-pop 160ms steps(3, end);
 }
 
 .level-up__title {
   margin: 0;
-  font-family: var(--serif);
-  font-size: 1.5rem;
-  letter-spacing: 4px;
-  text-transform: uppercase;
-  color: #fde68a;
+  font-family: var(--display);
+  font-size: 2.75rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--straw);
+  text-shadow:
+    2px 2px 0 #c8962a,
+    4px 4px 0 var(--outline);
 }
 
 .level-up__name {
-  margin: 4px 0 10px;
-  font-family: var(--serif);
+  margin: 2px 0 8px;
   font-weight: 700;
-  color: #93c5fd;
+  color: var(--bone);
 }
 
 .level-up__level {
   margin-left: 6px;
-  color: var(--parchment);
+  color: var(--frost);
 }
 
 .level-up__stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 4px 14px;
+  gap: 2px 14px;
   margin: 0;
+  padding-top: 6px;
+  border-top: var(--groove);
   text-align: left;
 }
 
@@ -690,43 +794,40 @@ kbd {
   display: flex;
   justify-content: space-between;
   gap: 6px;
-  color: var(--parchment-dim);
+  color: var(--frost-dim);
 }
 
 .level-up__stat dt {
-  font-size: 0.75rem;
   align-self: center;
 }
 
 .level-up__stat dd {
   margin: 0;
-  font-weight: bold;
 }
 
 .level-up__stat--up {
-  color: #fff8e2;
+  color: var(--bone);
 }
 
 .level-up__stat--up dt {
-  color: var(--gold);
+  color: var(--frost);
 }
 
 .level-up__gain {
   margin-left: 4px;
-  font-size: 0.75rem;
-  color: #86efac;
+  color: var(--straw);
 }
 
 .level-up__skills {
   margin: 10px 0 0;
-  font-size: 0.875rem;
-  color: var(--gold);
+  color: var(--straw);
 }
 
+/* Windows pop open in three steps, like a sprite frame, not a smooth zoom. */
 @keyframes level-up-pop {
   from {
     opacity: 0;
-    transform: scale(0.92);
+    transform: scale(0.9);
   }
   to {
     opacity: 1;
@@ -743,7 +844,11 @@ kbd {
 }
 
 .skill-menu__cost {
-  opacity: 0.7;
+  color: var(--frost);
+}
+
+.action-menu__item--selected .skill-menu__cost {
+  color: var(--bone);
 }
 
 /* ---- Weapon menu ------------------------------------------------------ */
@@ -752,11 +857,11 @@ kbd {
 .weapon-menu__stats {
   display: grid;
   grid-template-columns: repeat(3, auto);
-  gap: 2px 12px;
+  gap: 0 12px;
   margin: 6px 0 0;
-  padding: 5px 4px 0;
-  border-top: 1px solid rgb(168 137 63 / 30%);
-  font-size: 0.8125rem;
+  padding: 4px 4px 0;
+  border-top: var(--groove);
+  font-size: 0.875rem;
 }
 
 .weapon-menu__stat {
@@ -770,12 +875,12 @@ kbd {
 }
 
 .weapon-menu__stat dt {
-  color: var(--gold);
+  color: var(--frost);
 }
 
 .weapon-menu__stat dd {
   margin: 0;
-  color: #fff8e2;
+  color: var(--bone);
   text-transform: capitalize;
 }
 
@@ -787,11 +892,12 @@ kbd {
 
 .deployment-banner__title {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: var(--gold);
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--straw);
+  text-shadow: 2px 2px 0 var(--outline);
 }
 
 /* One line, cut off with an ellipsis when it doesn't fit (the full text is
@@ -801,25 +907,25 @@ kbd {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  color: var(--parchment-dim);
+  font-size: 0.875rem;
+  color: var(--frost);
 }
 
 .roster-menu {
-  min-width: 9rem;
+  min-width: 10rem;
 }
 
 .roster-menu__title {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: 12px;
-  margin: 0 0 6px;
-  font-family: var(--serif);
-  font-size: 0.75rem;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--gold);
+  margin: 0 0 4px;
+  font-family: var(--display);
+  font-size: 1.375rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--bone);
 }
 
 .roster-menu__item {
@@ -828,15 +934,10 @@ kbd {
   gap: 8px;
 }
 
-.roster-menu__item.action-menu__item--selected::before {
-  top: 50%;
-  transform: translateY(-50%);
-}
-
 .roster-menu__tag {
   margin-left: auto;
-  font-size: 0.625rem;
-  color: var(--parchment-dim);
+  font-size: 0.75rem;
+  color: var(--frost);
 }
 
 .unit-sprite {
@@ -860,70 +961,74 @@ kbd {
 
 /* ---- Pause menu ------------------------------------------------------ */
 
+/* Overlays dim the map with a flat wash of the page's dusk. */
 .pause-overlay {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgb(12 18 38 / 55%);
+  background: rgb(26 21 36 / 60%);
 }
 
 .pause-menu {
   position: static;
-  min-width: 9rem;
+  min-width: 10rem;
 }
 
 .pause-menu__title {
-  margin: 0 0 6px;
-  font-family: var(--serif);
-  font-size: 0.75rem;
-  letter-spacing: 2px;
-  text-transform: uppercase;
+  margin: 0 0 4px;
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-weight: 400;
+  line-height: 1;
   text-align: center;
-  color: var(--gold);
+  color: var(--bone);
 }
 
+/* Damage numbers in the display face, outlined like the sprites. */
 .damage-popup {
   position: absolute;
   transform: translate(-50%, -100%);
-  font-size: 1.625rem;
-  font-weight: bold;
-  color: #fff;
+  font-family: var(--display);
+  font-size: 2.25rem;
+  line-height: 1;
+  color: var(--bone);
   text-shadow:
-    -2px 0 #1f1f1f,
-    2px 0 #1f1f1f,
-    0 -2px #1f1f1f,
-    0 2px #1f1f1f;
+    -2px 0 var(--outline),
+    2px 0 var(--outline),
+    0 -2px var(--outline),
+    0 2px var(--outline),
+    2px 2px var(--outline);
   animation-name: damage-popup-rise;
-  animation-timing-function: ease-in;
+  animation-timing-function: steps(8, end);
   animation-fill-mode: forwards;
 }
 
 /* Recovery reads in the color of the meter it fills. */
 .damage-popup--health {
-  color: #86efac;
+  color: var(--moss);
 }
 
 .damage-popup--mana {
-  color: #93c5fd;
+  color: var(--sky);
 }
 
 /* A crit reads hot and big; a miss is a quiet grey. */
 .damage-popup--crit {
-  font-size: 2rem;
-  color: #fcd34d;
+  font-size: 3rem;
+  color: var(--straw);
 }
 
 .damage-popup--miss {
-  font-size: 1.25rem;
-  color: #d4d4d8;
+  font-size: 1.75rem;
+  color: #b3adbf;
 }
 
 /* A weapon wearing out reads as a warning. */
 .damage-popup--broke {
-  font-size: 1.125rem;
-  color: #fdba74;
+  font-size: 1.5rem;
+  color: #f0a060;
 }
 
 @keyframes damage-popup-rise {
@@ -939,111 +1044,148 @@ kbd {
 
 /* ---- Turns --------------------------------------------------------- */
 
+/* The turn count, then the phase on a plate of that side's color. */
 .turn-indicator {
   display: flex;
-  align-items: baseline;
-  gap: 14px;
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 3px;
-  text-transform: uppercase;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--display);
+  font-size: 1.5rem;
+  line-height: 1;
   white-space: nowrap;
 }
 
 .turn-indicator__turn {
-  color: var(--parchment-dim);
+  color: var(--frost);
 }
 
-.turn-indicator--player .turn-indicator__phase {
-  color: #93c5fd;
+.turn-indicator__phase {
+  padding: 2px 10px 3px;
+  color: var(--bone);
+  text-shadow: 2px 2px 0 var(--outline);
+  border: 4px solid transparent;
+  border-image: var(--frame-woad) 2 fill / 4px stretch;
 }
 
 .turn-indicator--enemy .turn-indicator__phase {
-  color: #fca5a5;
+  border-image-source: var(--frame-madder);
 }
 
+/* A full-width band of the phase's side color, outlined top and bottom. */
 .phase-banner {
   position: absolute;
   left: 0;
   right: 0;
   top: 50%;
   transform: translateY(-50%);
-  padding: 14px 0;
+  padding: 6px 0 10px;
   text-align: center;
-  font-family: var(--serif);
-  font-size: 2.5rem;
-  font-weight: 700;
-  letter-spacing: 8px;
-  text-transform: uppercase;
-  text-shadow: 0 2px 0 rgb(0 0 0 / 60%);
+  font-family: var(--display);
+  font-size: 4.5rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--bone);
+  text-shadow:
+    3px 3px 0 var(--band-lo),
+    6px 6px 0 var(--outline);
+  background: var(--band);
+  box-shadow:
+    inset 0 4px 0 var(--band-hi),
+    inset 0 -4px 0 var(--band-lo),
+    0 4px 0 var(--outline),
+    0 -4px 0 var(--outline);
   animation-name: phase-banner-sweep;
-  animation-timing-function: ease-in-out;
+  animation-timing-function: steps(6, end);
   animation-fill-mode: forwards;
 }
 
 .phase-banner--player {
-  background: linear-gradient(90deg, transparent, rgb(37 99 235 / 80%) 20%, rgb(37 99 235 / 80%) 80%, transparent);
+  --band: var(--woad);
+  --band-hi: var(--woad-hi);
+  --band-lo: var(--woad-lo);
 }
 
 .phase-banner--enemy {
-  background: linear-gradient(90deg, transparent, rgb(185 28 28 / 80%) 20%, rgb(185 28 28 / 80%) 80%, transparent);
+  --band: var(--madder);
+  --band-hi: var(--madder-hi);
+  --band-lo: var(--madder-lo);
 }
 
-/* Slides in from the left, holds, and slides out to the right. */
+/* Wipes in from the left, holds, and wipes out to the right. */
 @keyframes phase-banner-sweep {
   0% {
-    opacity: 0;
     clip-path: inset(0 100% 0 0);
   }
   20%,
   80% {
-    opacity: 1;
     clip-path: inset(0 0 0 0);
   }
   100% {
-    opacity: 0;
     clip-path: inset(0 0 0 100%);
   }
 }
 
 .battle-result {
   position: static;
-  min-width: 17.5rem;
-  padding: 20px 32px;
+  min-width: 18rem;
+  padding: 12px 28px 16px;
   text-align: center;
+}
+
+.battle-result--defeat {
+  --frame: var(--frame-madder);
 }
 
 .battle-result__title {
   margin: 0;
-  font-family: var(--serif);
-  font-size: 2.75rem;
-  letter-spacing: 6px;
-  text-transform: uppercase;
+  font-family: var(--display);
+  font-size: 4rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--bone);
+  text-shadow:
+    3px 3px 0 var(--woad-lo),
+    6px 6px 0 var(--outline);
 }
 
 .battle-result--victory .battle-result__title {
-  color: #fde68a;
+  color: var(--straw);
 }
 
 .battle-result--defeat .battle-result__title {
-  color: #fca5a5;
+  text-shadow:
+    3px 3px 0 var(--madder-lo),
+    6px 6px 0 var(--outline);
 }
 
 .battle-result--run-over .battle-result__title {
-  font-size: 2rem;
-  letter-spacing: 4px;
+  font-size: 3rem;
 }
 
 .battle-result__detail {
   max-width: 24rem;
   margin: 8px auto 0;
-  font-size: 0.875rem;
 }
 
 .battle-result__hint {
-  margin: 8px 0 0;
-  font-size: 0.75rem;
-  color: var(--parchment-dim);
+  margin: 12px 0 0;
+}
+
+/* ---- Key hints ------------------------------------------------------ */
+
+.key-hint {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 16px;
+  font-size: 0.875rem;
+  color: var(--frost);
+}
+
+.key-hint__entry {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
 }
 
 /* ---- Objective screen ---------------------------------------------- */
@@ -1056,59 +1198,56 @@ kbd {
 
 .objective {
   position: static;
-  min-width: 17.5rem;
-  padding: 20px 32px;
+  min-width: 18rem;
+  padding: 12px 28px 14px;
   text-align: center;
-  animation: level-up-pop 200ms ease-out;
+  animation: level-up-pop 160ms steps(3, end);
 }
 
 .objective__battle {
-  margin: 0 0 12px;
-  font-family: var(--serif);
-  font-size: 1.125rem;
-  color: var(--parchment);
+  margin: 0 0 8px;
+  color: var(--frost);
 }
 
 .objective__title {
   margin: 0;
-  font-family: var(--serif);
-  font-size: 0.875rem;
-  letter-spacing: 4px;
-  text-transform: uppercase;
-  color: var(--gold);
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--frost);
 }
 
 .objective__goal {
-  margin: 10px 0 0;
-  font-family: var(--serif);
-  font-size: 1.75rem;
-  color: #fff8e2;
+  margin: 0;
+  font-family: var(--display);
+  font-size: 3rem;
+  line-height: 1;
+  color: var(--bone);
+  text-shadow:
+    3px 3px 0 var(--woad-lo),
+    6px 6px 0 var(--outline);
 }
 
 .objective__defeat {
   margin: 10px 0 0;
-  font-size: 0.875rem;
-  color: var(--parchment-dim);
+  color: var(--frost);
 }
 
 .objective__label {
   margin-right: 6px;
-  font-size: 0.75rem;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: #fca5a5;
+  padding: 0 6px;
+  color: var(--bone);
+  background: var(--madder);
+  box-shadow: 0 0 0 2px var(--outline);
 }
 
 .objective__hint {
   margin: 14px 0 0;
-  font-size: 0.75rem;
-  color: var(--parchment-dim);
 }
 
 /* ---- Dialog box ------------------------------------------------------ */
 
 /* Covers the map so a click anywhere reaches GridScene's confirm, with the
-   box itself along the bottom and a soft shade behind it for legibility. */
+   box itself along the bottom. */
 .dialog-layer {
   position: absolute;
   inset: 0;
@@ -1116,12 +1255,12 @@ kbd {
   align-items: flex-end;
   justify-content: center;
   padding: 12px;
-  background: linear-gradient(transparent 55%, rgb(12 18 38 / 55%));
   pointer-events: auto;
   cursor: pointer;
 }
 
 .dialog-box {
+  position: relative;
   display: flex;
   gap: 12px;
   align-items: stretch;
@@ -1129,7 +1268,7 @@ kbd {
   padding: 10px 12px;
   cursor: pointer;
   user-select: text;
-  animation: dialog-rise 180ms ease-out;
+  animation: dialog-rise 120ms steps(3, end);
 }
 
 /* A speaker on the right has their portrait on the right. */
@@ -1141,7 +1280,8 @@ kbd {
   margin-left: auto;
 }
 
-/* Sized for 96px portrait art; the 3x unit sprite fills it until then. */
+/* Sized for 96px portrait art; the 3x unit sprite fills it until then. A
+   recessed well: dark bevel on top, light below. */
 .dialog-box__portrait {
   flex: none;
   width: 96px;
@@ -1149,9 +1289,11 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at 50% 40%, rgb(232 200 114 / 18%), rgb(12 18 38 / 70%));
-  border: 2px solid var(--gold-dim);
-  border-radius: 3px;
+  background: var(--woad-lo);
+  border: 2px solid var(--outline);
+  box-shadow:
+    inset 2px 2px 0 rgb(18 14 26 / 60%),
+    inset -2px -2px 0 var(--woad-hi);
 }
 
 .dialog-box__portrait-art {
@@ -1168,23 +1310,26 @@ kbd {
   flex-direction: column;
 }
 
+/* The speaker's name on a straw tab. */
 .dialog-box__speaker {
   width: fit-content;
   margin: 0 0 6px;
-  padding: 1px 10px;
-  font-family: var(--serif);
-  font-size: 1rem;
-  letter-spacing: 1px;
-  color: var(--ink);
-  background: var(--gold);
-  border-radius: 2px;
+  padding: 0 8px 1px;
+  font-family: var(--display);
+  font-size: 1.375rem;
+  line-height: 1.1;
+  color: var(--outline);
+  background: var(--straw);
+  box-shadow:
+    0 0 0 2px var(--outline),
+    inset 0 -2px 0 #c8962a;
 }
 
 .dialog-box__text {
   position: relative;
   margin: 0;
   padding-right: 16px;
-  font-size: 1rem;
+  font-size: 1.125rem;
   line-height: 1.5;
   min-height: 3em;
 }
@@ -1200,9 +1345,9 @@ kbd {
   bottom: 0;
   width: 0;
   height: 0;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-top: 7px solid var(--gold);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid var(--straw);
   animation: dialog-next 900ms steps(2, jump-none) infinite;
 }
 
@@ -1221,11 +1366,12 @@ kbd {
 
 /* ---- Title screen ---------------------------------------------------- */
 
-/* Sizes scale with the window (clamp on vw/vh) so the crest, title and menu
-   all fit from phones to desktops. When the window is still too short (a
-   landscape phone, a long submenu) the screen scrolls instead of clipping:
-   the auto margins center the header and menu in the free space and pin the
-   hint below them, and collapse to nothing once there's no space left. */
+/* Sizes scale with the window (clamp on vw/vh) so the warband, title and
+   menu all fit from phones to desktops. When the window is still too short
+   (a landscape phone, a long submenu) the screen scrolls instead of
+   clipping: the auto margins center the header and menu in the free space
+   and pin the hint below them, and collapse to nothing once there's no
+   space left. */
 .title-screen {
   position: fixed;
   inset: 0;
@@ -1234,15 +1380,12 @@ kbd {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(16px, 5vh, 48px);
+  gap: clamp(16px, 4vh, 40px);
   padding: clamp(12px, 3vh, 24px) 16px;
   box-sizing: border-box;
   overflow-y: auto;
-  background:
-    radial-gradient(ellipse at 50% 35%, rgb(64 86 160 / 45%), transparent 65%),
-    linear-gradient(180deg, #111a3a 0%, var(--ink) 100%);
-  font-family: var(--serif);
-  color: var(--parchment);
+  background: var(--page-bg);
+  color: var(--bone);
   user-select: none;
 }
 
@@ -1255,74 +1398,55 @@ kbd {
   text-align: center;
 }
 
-.title-screen__crest {
-  flex: none;
-  width: clamp(40px, 10vh, 80px);
-  height: clamp(40px, 10vh, 80px);
-  color: var(--gold);
-  margin-bottom: clamp(4px, 1.5vh, 12px);
-  filter: drop-shadow(0 0 8px rgb(232 200 114 / 35%));
+/* The starting classes, idling on a strip of turf: the game's own art is
+   the title's crest. */
+.warband-lineup {
+  display: flex;
+  justify-content: center;
+  gap: clamp(0px, 1vw, 12px);
+  padding: 0 16px;
+  margin-bottom: clamp(8px, 2vh, 16px);
+  /* Turf: a moss top edge over earth, both outlined. */
+  background:
+    linear-gradient(var(--moss), var(--moss)) left calc(100% - 10px) / 100% 4px no-repeat,
+    linear-gradient(#6b4a32, #6b4a32) left bottom / 100% 10px no-repeat;
+  box-shadow: 0 2px 0 var(--outline);
+}
+
+.warband-lineup .unit-sprite {
+  margin-bottom: 6px;
 }
 
 .title-screen__title {
   margin: 0;
-  font-size: clamp(1.75rem, min(9vw, 9vh), 4rem);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  line-height: 1.1;
-  color: var(--gold);
+  font-family: var(--display);
+  font-size: clamp(3.5rem, min(16vw, 15vh), 8.5rem);
+  font-weight: 400;
+  line-height: 0.85;
+  color: var(--bone);
   text-shadow:
-    0 2px 0 #5a4318,
-    0 0 18px rgb(232 200 114 / 30%);
-}
-
-/* Thin gold rule with a centered gem under the title. */
-.title-screen__rule {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: min(320px, 80vw);
-  margin-top: clamp(6px, 1.5vh, 12px);
-  color: var(--gold);
-  font-size: 0.625rem;
-}
-
-.title-screen__rule::before,
-.title-screen__rule::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--gold-dim));
-}
-
-.title-screen__rule::after {
-  background: linear-gradient(90deg, var(--gold-dim), transparent);
+    4px 4px 0 var(--woad-lo),
+    8px 8px 0 var(--outline);
 }
 
 .title-menu {
   flex: none;
   width: max-content;
-  min-width: min(14rem, 100%);
+  min-width: min(16rem, 100%);
   max-width: min(28rem, 100%);
-  padding: clamp(6px, 1.5vh, 12px) 8px;
+  padding: 6px;
   box-sizing: border-box;
-  background: rgb(22 32 74 / 85%);
-  border: 2px solid var(--gold-dim);
-  outline: 1px solid rgb(232 200 114 / 25%);
-  outline-offset: 3px;
-  border-radius: 4px;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
 }
 
 .title-menu__heading {
-  margin: 0 0 8px;
-  padding: 0 16px 8px;
-  border-bottom: 1px solid rgb(232 200 114 / 25%);
-  font-size: 0.875rem;
+  margin: 0 0 4px;
+  padding: 0 8px 4px;
+  border-bottom: var(--groove);
+  font-family: var(--display);
+  font-size: 1.75rem;
   font-weight: 400;
-  letter-spacing: 2px;
-  text-align: center;
-  color: var(--gold);
+  line-height: 1;
+  color: var(--bone);
 }
 
 .title-menu__list {
@@ -1335,16 +1459,15 @@ kbd {
   position: relative;
   display: block;
   width: 100%;
-  padding: clamp(4px, 1vh, 6px) 28px;
+  padding: clamp(2px, 0.6vh, 4px) 16px clamp(2px, 0.6vh, 4px) 32px;
   border: 0;
-  border-radius: 2px;
+  border-radius: 0;
   background: none;
   font: inherit;
-  font-size: clamp(1rem, min(4.5vw, 3.5vh), 1.375rem);
-  letter-spacing: 0.1em;
+  font-size: clamp(1.0625rem, min(4.5vw, 3.2vh), 1.375rem);
   line-height: 1.3;
-  color: #cfc6ae;
-  text-align: center;
+  color: var(--bone);
+  text-align: left;
   overflow-wrap: anywhere;
   cursor: pointer;
 }
@@ -1354,37 +1477,45 @@ kbd {
 }
 
 .title-menu__item:focus-visible {
-  outline: 1px dashed var(--gold-dim);
+  outline: 2px solid var(--straw);
+  outline-offset: -2px;
 }
 
 .title-menu__item--selected {
-  color: #fff8e2;
-  background: linear-gradient(90deg, transparent, rgb(232 200 114 / 18%), transparent);
+  background: var(--woad-hi);
+  box-shadow:
+    inset 0 2px 0 rgb(255 255 255 / 20%),
+    inset 0 -2px 0 var(--woad-lo);
 }
 
 .title-menu__item--selected::before {
-  content: '▶';
+  content: '';
   position: absolute;
-  left: 10px;
+  left: 8px;
   top: 50%;
+  width: 16px;
+  height: 12px;
   transform: translateY(-50%);
-  font-size: 0.625rem;
-  color: var(--gold);
+  background: var(--pointer) center / 16px 12px no-repeat;
+  image-rendering: pixelated;
 }
 
 .title-menu__item--disabled {
-  color: rgb(207 198 174 / 35%);
+  color: var(--frost-dim);
   cursor: default;
 }
 
-/* New Run's class entries: the class's sprite beside its name, both
-   left-aligned so the sprites line up in a column. */
+.title-menu__item--selected.title-menu__item--disabled,
+.action-menu__item--selected.action-menu__item--disabled {
+  color: var(--woad-lo);
+}
+
+/* New Run's class entries: the class's sprite beside its name, so the
+   sprites line up in a column. */
 .title-menu__item--class {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 16px;
-  padding-left: 40px;
+  gap: 12px;
 }
 
 /* A fixed width and room for three lines whatever the class, so switching
@@ -1394,23 +1525,17 @@ kbd {
   width: 22rem;
   max-width: 100%;
   min-height: calc(3 * 1.4em + 8px);
-  margin: 8px auto 0;
-  padding: 8px 16px 0;
-  border-top: 1px solid rgb(232 200 114 / 25%);
-  font-size: 0.8125rem;
+  margin: 6px auto 0;
+  padding: 6px 8px 0;
+  border-top: var(--groove);
+  font-size: 0.9375rem;
   line-height: 1.4;
-  text-align: center;
-  color: #cfc6ae;
+  color: var(--frost);
 }
 
 /* In the flow (not absolutely placed) so it can never sit on the menu. */
 .title-screen__hint {
   margin: auto 0 0;
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  letter-spacing: 1px;
-  text-align: center;
-  color: var(--parchment-dim);
 }
 
 /* Touch screens have no keyboard to hint at. */
@@ -1420,11 +1545,10 @@ kbd {
   }
 }
 
-/* Very short windows (landscape phones): drop the crest and rule so the
-   menu gets the room. */
+/* Very short windows (landscape phones): drop the lineup so the menu gets
+   the room. */
 @media (max-height: 26rem) {
-  .title-screen .title-screen__crest,
-  .title-screen__rule {
+  .title-screen .warband-lineup {
     display: none;
   }
 }
@@ -1440,10 +1564,8 @@ kbd {
   overflow-y: auto;
   padding: 32px max(16px, calc((100% - 1080px) / 2)) 48px;
   box-sizing: border-box;
-  background:
-    radial-gradient(ellipse at 50% 0%, rgb(64 86 160 / 35%), transparent 60%),
-    linear-gradient(180deg, #111a3a 0%, var(--ink) 100%) fixed;
-  color: var(--parchment);
+  background: var(--page-bg);
+  color: var(--bone);
 }
 
 .configs-page__header {
@@ -1452,21 +1574,25 @@ kbd {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--gold-dim);
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--slate);
 }
 
 .configs-page__title {
   margin: 0;
-  font-family: var(--serif);
-  font-size: 2rem;
-  letter-spacing: 3px;
-  color: var(--gold);
+  font-family: var(--display);
+  font-size: 3.5rem;
+  font-weight: 400;
+  line-height: 0.9;
+  color: var(--bone);
+  text-shadow:
+    3px 3px 0 var(--woad-lo),
+    6px 6px 0 var(--outline);
 }
 
 .configs-page__lede {
   margin: 6px 0 0;
-  color: var(--parchment-dim);
+  color: var(--frost);
 }
 
 .configs-page__back {
@@ -1479,11 +1605,11 @@ kbd {
 
 .configs-group__title {
   margin: 0 0 12px;
-  font-family: var(--serif);
-  font-size: 1.125rem;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--gold);
+  font-family: var(--display);
+  font-size: 2rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--frost);
 }
 
 .configs-group__list {
@@ -1500,9 +1626,8 @@ kbd {
   flex-direction: column;
   gap: 8px;
   padding: 14px 16px;
-  background: rgb(22 32 74 / 80%);
-  border: 1px solid rgb(168 137 63 / 55%);
-  border-radius: 4px;
+  background: var(--woad);
+  border: var(--groove);
 }
 
 .config-card__head {
@@ -1514,33 +1639,33 @@ kbd {
 
 .config-card__title {
   margin: 0;
-  font-family: var(--serif);
-  font-size: 1rem;
-  letter-spacing: 1px;
-  color: var(--parchment);
+  font-family: var(--display);
+  font-size: 1.625rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--bone);
 }
 
 .config-card__badge {
   flex: none;
   padding: 1px 6px;
-  font-family: var(--mono);
+  font-family: var(--body);
   font-size: 0.6875rem;
-  color: var(--parchment-dim);
-  border: 1px solid rgb(243 234 211 / 25%);
-  border-radius: 3px;
+  color: var(--frost);
+  border: 2px solid var(--outline);
 }
 
 .config-card__description {
   margin: 0;
   font-size: 0.875rem;
   line-height: 1.4;
-  color: var(--parchment-dim);
+  color: var(--frost);
 }
 
 .config-card__summary {
   margin: 0;
   font-size: 0.875rem;
-  color: var(--gold);
+  color: var(--straw);
 }
 
 .config-card__sources {
@@ -1550,9 +1675,9 @@ kbd {
   margin: auto 0 0;
   padding: 0;
   list-style: none;
-  font-family: var(--mono);
+  font-family: var(--body);
   font-size: 0.75rem;
-  color: var(--parchment-dim);
+  color: var(--frost);
   overflow-wrap: anywhere;
 }
 
@@ -1562,7 +1687,8 @@ kbd {
 }
 
 .config-card--link:hover {
-  border-color: var(--gold);
+  outline: 2px solid var(--straw);
+  outline-offset: 2px;
 }
 
 .config-card__title a {
@@ -1581,13 +1707,13 @@ kbd {
 }
 
 .config-card--link:focus-within {
-  outline: 2px solid var(--gold);
+  outline: 2px solid var(--straw);
   outline-offset: 2px;
 }
 
 .config-card__badge--ready {
-  color: var(--gold);
-  border-color: var(--gold-dim);
+  color: var(--straw);
+  border-color: var(--woad-lo);
 }
 
 /* Dialogs page: the upload drop zone. The input is hidden but still
@@ -1599,17 +1725,16 @@ kbd {
   gap: 6px;
   padding: 28px 16px;
   text-align: center;
-  background: rgb(22 32 74 / 55%);
-  border: 2px dashed var(--gold-dim);
-  border-radius: 6px;
+  background: var(--woad);
+  border: 2px dashed var(--frost-dim);
   cursor: pointer;
 }
 
 .upload-drop:hover,
 .upload-drop--active,
 .upload-drop:focus-within {
-  border-color: var(--gold);
-  background: rgb(22 32 74 / 85%);
+  border-color: var(--straw);
+  background: var(--woad);
 }
 
 .upload-drop__input {
@@ -1620,15 +1745,14 @@ kbd {
 }
 
 .upload-drop__title {
-  font-family: var(--serif);
+  font-family: var(--body);
   font-size: 1.0625rem;
-  letter-spacing: 1px;
-  color: var(--gold);
+  color: var(--straw);
 }
 
 .upload-drop__hint {
   font-size: 0.875rem;
-  color: var(--parchment-dim);
+  color: var(--frost);
 }
 
 .upload-notices {
@@ -1644,38 +1768,36 @@ kbd {
   margin: 0;
   padding: 8px 12px;
   font-size: 0.875rem;
-  border-radius: 3px;
   overflow-wrap: anywhere;
 }
 
 .upload-notice--ok {
   background: rgb(74 160 96 / 18%);
-  border: 1px solid rgb(120 200 140 / 50%);
+  border: 2px solid var(--moss);
 }
 
 .upload-notice--error {
   background: rgb(200 70 70 / 18%);
-  border: 1px solid rgb(240 130 130 / 50%);
+  border: 2px solid var(--madder-hi);
 }
 
 .dialog-format {
   margin-top: 12px;
   font-size: 0.875rem;
-  color: var(--parchment-dim);
+  color: var(--frost);
 }
 
 .dialog-format summary {
   cursor: pointer;
-  color: var(--gold);
+  color: var(--straw);
 }
 
 .dialog-format pre {
   overflow-x: auto;
   padding: 10px 12px;
-  font-family: var(--mono);
-  color: var(--parchment);
-  background: rgb(12 18 38 / 70%);
-  border-radius: 3px;
+  font-family: var(--body);
+  color: var(--bone);
+  background: rgb(26 21 36 / 70%);
 }
 
 .dialog-files {
@@ -1701,13 +1823,13 @@ kbd {
 }
 
 .dialog-triggers__name {
-  font-family: var(--mono);
-  color: var(--gold);
+  font-family: var(--body);
+  color: var(--straw);
 }
 
 .dialog-triggers__count {
   font-size: 0.8125rem;
-  color: var(--parchment-dim);
+  color: var(--frost);
 }
 
 .dialog-lines {
@@ -1724,8 +1846,7 @@ kbd {
 .dialog-lines__line {
   max-width: 85%;
   padding: 4px 10px;
-  background: rgb(12 18 38 / 60%);
-  border-radius: 3px;
+  background: rgb(26 21 36 / 60%);
 }
 
 .dialog-lines__line--right {
@@ -1733,16 +1854,16 @@ kbd {
 }
 
 .dialog-lines__speaker {
-  font-family: var(--serif);
+  font-family: var(--body);
   font-weight: 700;
 }
 
 .dialog-lines__speaker--player {
-  color: #93c5fd;
+  color: var(--player-text);
 }
 
 .dialog-lines__speaker--enemy {
-  color: #fca5a5;
+  color: var(--enemy-text);
 }
 
 .dialog-files__actions {
@@ -1792,16 +1913,14 @@ kbd {
   min-width: 0;
   margin: 0;
   padding: 10px 12px 12px;
-  border: 1px solid rgb(243 234 211 / 18%);
-  border-radius: 3px;
+  border: 2px solid var(--slate);
 }
 
 .region-editor__section legend {
   padding: 0 4px;
-  font-family: var(--serif);
+  font-family: var(--body);
   font-size: 0.875rem;
-  letter-spacing: 1px;
-  color: var(--gold);
+  color: var(--straw);
 }
 
 .region-editor__grid {
@@ -1844,26 +1963,26 @@ kbd {
   width: 16px;
   height: 16px;
   padding: 0;
-  font-family: Georgia, serif;
+  font-family: var(--body);
   font-size: 0.6875rem;
   font-style: italic;
   font-weight: bold;
   line-height: 1;
-  color: var(--gold);
+  color: var(--straw);
   background: transparent;
-  border: 1px solid var(--gold-dim);
+  border: 2px solid var(--outline);
   border-radius: 50%;
   cursor: pointer;
 }
 
 .info-popover__button:hover,
 .info-popover__button[aria-expanded='true'] {
-  color: var(--ink);
-  background: var(--gold);
+  color: var(--outline);
+  background: var(--straw);
 }
 
 .info-popover__button:focus-visible {
-  outline: 2px solid var(--gold);
+  outline: 2px solid var(--straw);
   outline-offset: 2px;
 }
 
@@ -1878,18 +1997,17 @@ kbd {
   box-sizing: border-box;
   width: min(21rem, calc(100vw - 32px));
   padding: 10px 12px;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--body);
   font-size: 0.8125rem;
   font-weight: normal;
   font-style: normal;
   line-height: 1.45;
   letter-spacing: normal;
   text-transform: none;
-  color: var(--parchment);
-  background: var(--navy);
-  border: 1px solid var(--gold-dim);
-  border-radius: 4px;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+  color: var(--bone);
+  background: var(--woad);
+  border: 2px solid var(--outline);
+  filter: drop-shadow(4px 4px 0 var(--shadow));
 }
 
 .info-popover__panel p {
@@ -1897,10 +2015,9 @@ kbd {
 }
 
 .info-popover__title {
-  font-family: var(--serif);
+  font-family: var(--body);
   font-size: 0.875rem;
-  letter-spacing: 1px;
-  color: var(--gold);
+  color: var(--straw);
 }
 
 .region-editor__section legend {
@@ -1924,9 +2041,9 @@ kbd {
 }
 
 .area-diagram__edge {
-  font-family: var(--mono);
+  font-family: var(--body);
   font-size: 0.6875rem;
-  color: var(--parchment-dim);
+  color: var(--frost);
 }
 
 .area-diagram__edge--top {
@@ -1955,14 +2072,13 @@ kbd {
   aspect-ratio: 4 / 3;
   background: #3f6b3a;
   border: 1px solid rgb(243 234 211 / 35%);
-  border-radius: 2px;
 }
 
 .area-diagram__box {
   position: absolute;
   box-sizing: border-box;
-  background: rgb(232 200 114 / 45%);
-  border: 2px solid var(--gold);
+  background: rgb(255 210 90 / 45%);
+  border: 2px solid var(--straw);
 }
 
 .area-diagram__start {
@@ -1971,8 +2087,8 @@ kbd {
   left: 50%;
   width: 10px;
   height: 10px;
-  background: #93c5fd;
-  border: 1px solid var(--ink);
+  background: var(--player-text);
+  border: 1px solid var(--outline);
   border-radius: 50%;
   transform: translateX(-50%);
 }
@@ -1980,19 +2096,18 @@ kbd {
 .area-diagram figcaption {
   margin-top: 4px;
   font-size: 0.75rem;
-  color: var(--parchment-dim);
+  color: var(--frost);
   text-align: center;
 }
 
 .draft-field__label {
   font-size: 0.75rem;
-  letter-spacing: 0.5px;
-  color: var(--parchment-dim);
+  color: var(--frost);
 }
 
 .draft-field__hint {
   font-size: 0.75rem;
-  color: var(--parchment-dim);
+  color: var(--frost);
 }
 
 .draft-input {
@@ -2002,10 +2117,9 @@ kbd {
   padding: 5px 8px;
   font: inherit;
   font-size: 0.875rem;
-  color: var(--parchment);
-  background: rgb(12 18 38 / 70%);
-  border: 1px solid rgb(243 234 211 / 25%);
-  border-radius: 3px;
+  color: var(--bone);
+  background: rgb(26 21 36 / 70%);
+  border: 2px solid var(--outline);
 }
 
 .draft-input::placeholder {
@@ -2014,12 +2128,12 @@ kbd {
 
 .draft-input:focus-visible,
 .draft-checkbox:focus-visible {
-  outline: 2px solid var(--gold);
+  outline: 2px solid var(--straw);
   outline-offset: 1px;
 }
 
 .draft-input--number {
-  font-family: var(--mono);
+  font-family: var(--body);
 }
 
 textarea.draft-input {
@@ -2029,10 +2143,10 @@ textarea.draft-input {
 .draft-field__error {
   font-size: 0.75rem;
   line-height: 1.35;
-  color: #fca5a5;
+  color: var(--enemy-text);
 }
 .draft-field--invalid .draft-field__label {
-  color: #fca5a5;
+  color: var(--enemy-text);
 }
 
 .draft-input[aria-invalid='true'] {
@@ -2043,7 +2157,7 @@ textarea.draft-input {
   width: 18px;
   height: 18px;
   margin: 4px 0;
-  accent-color: var(--gold);
+  accent-color: var(--straw);
 }
 
 .draft-pair {
@@ -2066,9 +2180,8 @@ textarea.draft-input {
   flex-direction: column;
   gap: 8px;
   padding: 8px 10px;
-  background: rgb(12 18 38 / 35%);
-  border: 1px solid rgb(243 234 211 / 12%);
-  border-radius: 3px;
+  background: rgb(26 21 36 / 35%);
+  border: 2px solid var(--slate);
 }
 
 .enemy-group--invalid {
@@ -2084,7 +2197,7 @@ textarea.draft-input {
 
 .enemy-group__title {
   font-size: 0.875rem;
-  color: var(--parchment);
+  color: var(--bone);
 }
 
 .regions-summary__fields {
@@ -2094,8 +2207,8 @@ textarea.draft-input {
 .header-button:disabled {
   opacity: 0.45;
   cursor: default;
-  color: var(--gold);
-  background: rgb(22 32 74 / 90%);
+  color: var(--straw);
+  background: var(--woad);
 }
 
 /* Unsaved changes: pinned to the bottom of the scrolling page. */
@@ -2110,10 +2223,9 @@ textarea.draft-input {
   gap: 8px 16px;
   margin-top: 24px;
   padding: 10px 16px;
-  background: rgb(22 32 74 / 97%);
-  border: 1px solid var(--gold-dim);
-  border-radius: 4px;
-  box-shadow: 0 -6px 18px rgb(0 0 0 / 35%);
+  background: var(--woad);
+  border: 2px solid var(--outline);
+  box-shadow: 0 -4px 0 var(--shadow);
 }
 
 .save-bar__status {
@@ -2124,18 +2236,17 @@ textarea.draft-input {
 }
 
 .save-bar__save:not(:disabled) {
-  color: var(--ink);
-  background: var(--gold);
+  color: var(--outline);
+  background: var(--straw);
 }
 
 /* A region card's thumbnail opens its full map preview. */
 .map-preview-link {
   display: block;
-  border-radius: 3px;
 }
 
 .map-preview-link:hover .map-preview {
-  outline: 1px solid var(--gold);
+  outline: 1px solid var(--straw);
 }
 
 /* A generated map, one square per tile, colored by terrain; markers draw
@@ -2144,8 +2255,7 @@ textarea.draft-input {
   display: grid;
   gap: 1px;
   padding: 4px;
-  background: rgb(12 18 38 / 70%);
-  border-radius: 3px;
+  background: rgb(26 21 36 / 70%);
 }
 
 .map-preview__cell {
@@ -2194,13 +2304,12 @@ textarea.draft-input {
 }
 
 .map-preview__cell--player::after {
-  background: #60a5fa;
+  background: var(--sky);
 }
 
 .map-preview__cell--building::after {
   inset: 15%;
-  border-radius: 1px;
-  background: var(--parchment);
+  background: var(--bone);
 }
 
 .map-preview__cell--tree::after {
@@ -2209,13 +2318,13 @@ textarea.draft-input {
 }
 
 .map-preview__cell--deploy {
-  box-shadow: inset 0 0 0 2px #60a5fa;
+  box-shadow: inset 0 0 0 2px var(--sky);
 }
 
 /* ---- Loading screen --------------------------------------------------- */
 
-/* Same backdrop as the title screen, so starting a battle reads as one
-   continuous screen until the map is ready; then it fades out over it. */
+/* Same backdrop and lineup as the title screen, so starting a battle reads
+   as one continuous screen until the map is ready; then it cuts away. */
 .loading-screen {
   position: fixed;
   inset: 0;
@@ -2224,16 +2333,13 @@ textarea.draft-input {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 20px;
-  background:
-    radial-gradient(ellipse at 50% 35%, rgb(64 86 160 / 45%), transparent 65%),
-    linear-gradient(180deg, #111a3a 0%, var(--ink) 100%);
-  font-family: var(--serif);
-  color: var(--parchment);
+  gap: 16px;
+  background: var(--page-bg);
+  color: var(--bone);
   user-select: none;
   transition:
-    opacity 300ms ease-out,
-    visibility 0s linear 300ms;
+    opacity 240ms steps(4, end),
+    visibility 0s linear 240ms;
 }
 
 .loading-screen--done {
@@ -2242,38 +2348,33 @@ textarea.draft-input {
   pointer-events: none;
 }
 
-.loading-screen .title-screen__crest {
-  width: 56px;
-  height: 56px;
+.loading-screen .warband-lineup {
   margin: 0;
-  animation: loading-pulse 1.4s ease-in-out infinite;
 }
 
 .loading-screen__label {
   margin: 0;
-  font-size: 1.25rem;
-  letter-spacing: 3px;
-  color: var(--gold);
+  font-family: var(--display);
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--bone);
+  text-shadow: 2px 2px 0 var(--outline);
 }
 
+/* A segmented pixel bar. */
 .loading-screen__bar {
   width: min(320px, 70vw);
-  height: 8px;
+  height: 12px;
   padding: 2px;
-  border: 2px solid var(--gold-dim);
-  background: rgb(22 32 74 / 85%);
+  background: var(--outline);
+  border: 2px solid var(--slate);
+  box-shadow: 0 0 0 2px var(--outline);
 }
 
 .loading-screen__fill {
   height: 100%;
-  background: var(--gold);
-  transition: width 150ms linear;
-}
-
-@keyframes loading-pulse {
-  50% {
-    opacity: 0.55;
-  }
+  background: repeating-linear-gradient(90deg, var(--straw) 0 10px, transparent 10px 12px);
+  transition: width 150ms steps(3, end);
 }
 
 /* ---- Reduced motion ------------------------------------------------- */
@@ -2293,11 +2394,11 @@ textarea.draft-input {
 
   .experience-bar__fill,
   .level-up,
-  .objective {
+  .objective,
+  .unit-sprite--animated {
     animation: none;
   }
 
-  .loading-screen .title-screen__crest,
   .dialog-box,
   .dialog-box__next {
     animation: none;
@@ -2315,5 +2416,5 @@ textarea.draft-input {
 }
 
 .roster-menu__count {
-  color: var(--parchment-dim);
+  color: var(--frost);
 }

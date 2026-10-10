@@ -1,5 +1,6 @@
 import { gameCommands } from '../bridge/commands.ts';
 import { useGameStore } from './useGameStore.ts';
+import { KeyHint } from './KeyHint.tsx';
 
 // Shown over the map before the battle starts (after the opening dialog):
 // what wins the battle and what loses it. GridScene handles the input
@@ -19,7 +20,7 @@ export function ObjectiveScreen() {
         <p className="objective__defeat">
           <span className="objective__label">Defeat</span> {objective.defeat}
         </p>
-        <p className="objective__hint">Enter or click · Continue</p>
+        <KeyHint className="objective__hint" entries={[['Enter', 'Continue']]} />
       </section>
     </div>
   );

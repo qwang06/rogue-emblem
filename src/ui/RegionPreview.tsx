@@ -12,7 +12,7 @@ import { useGameStore } from './useGameStore.ts';
 type PreviewRoute = { index: number; seed: number };
 
 const REGIONS_PAGE = routeHash({ page: 'config', id: 'regions' });
-const HINT = 'Click a unit to see its reach · Esc Back';
+const HINT = 'Click a unit to see its reach, or Esc to go back.';
 
 // #/configs/regions/preview/<index>/<seed>: region `index` (from the
 // regions Warband Mode plays, uploads included) on the map `seed` makes,
@@ -59,9 +59,9 @@ export function RegionPreviewBanner({ index }: PreviewRoute) {
 
   return (
     <div className="deployment-banner">
-      <h2 className="deployment-banner__title">Preview · {region.name}</h2>
+      <h2 className="deployment-banner__title">Preview of {region.name}</h2>
       <p className="deployment-banner__hint" title={HINT}>
-        {stageLabel(first, last)} · {HINT}
+        {stageLabel(first, last)}. {HINT}
       </p>
     </div>
   );
