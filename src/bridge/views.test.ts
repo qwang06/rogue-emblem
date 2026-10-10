@@ -14,12 +14,16 @@ import {
   toTileAnchorView,
   toTurnView,
   toCanvasFraction,
+  toUnitDetailView,
   toUnitView,
   worldToScreen,
   type TileAnchorView,
 } from './views.ts';
 import type { ExperienceGain } from '../game/experience.ts';
-import { POWER_STRIKE } from '../game/skills.ts';
+import { FIREBALL, POWER_STRIKE } from '../game/skills.ts';
+import { MAX_LEVEL } from '../game/experience.ts';
+import { Soldier } from '../game/Soldier.ts';
+import { Wizard } from '../game/Wizard.ts';
 import { advanceDialog, createDialog } from '../game/dialog.ts';
 import { HEALTH_POTION } from '../game/items.ts';
 import { FIRE, FISTS, IRON_SPEAR, weaponEntry } from '../game/weapons.ts';
@@ -108,6 +112,107 @@ describe('toUnitView', () => {
     unit.takeDamage(3);
     expect(view!.health).toBe(10);
     expect(Object.isFrozen(view)).toBe(true);
+  });
+});
+
+describe('toUnitDetailView', () => {
+  it('returns null for no unit', () => {
+    expect(toUnitDetailView(null)).toBeNull();
+    expect(toUnitDetailView(undefined)).toBeNull();
+  });
+
+  it('includes everything toUnitView shows', () => {
+    const unit = new Soldier({ team: 'player' });
+    expect(toUnitDetailView(unit)).toMatchObject(toUnitView(unit)!);
+  });
+
+  it("names the class and lists each stat with its class's cap", () => {
+    const unit = new Soldier({ team: 'player' });
+    const view = toUnitDetailView(unit)!;
+    expect(view.classLabel).toBe('Soldier');
+    expect(view.stats.map((stat) => stat.label)).toEqual(['STR', 'MAG', 'SKL', 'SPD', 'LCK', 'DEF', 'RES']);
+    expect(view.stats[0]).toEqual({ id: 'strength', label: 'STR', value: unit.strength, cap: unit.caps.strength });
+  });
+
+  it('leaves the class and caps blank for a unit without them', () => {
+    const view = toUnitDetailView(makeUnit())!;
+    expect(view.classLabel).toBeNull();
+    expect(view.stats.every((stat) => stat.cap === null)).toBe(true);
+  });
+
+  it('works out the rates it fights with from its stats and weapon', () => {
+    const unit = new Unit({
+      name: 'Soldier',
+      health: 10,
+      strength: 2,
+      skill: 3,
+      speed: 5,
+      luck: 4,
+      defense: 2,
+      movement: 5,
+      team: 'player',
+      weaponTypes: ['physical'],
+      items: [{ item: IRON_SPEAR, quantity: 7 }],
+    });
+    expect(toUnitDetailView(unit)).toMatchObject({
+      damageType: 'physical',
+      attack: 2 + IRON_SPEAR.might,
+      hit: IRON_SPEAR.hit + 3 * 2 + 2,
+      crit: IRON_SPEAR.crit + 1,
+      // The spear's weight (3) is 1 more than the unit's strength (2).
+      attackSpeed: 4,
+      avoid: 4 * 2 + 4,
+      equippedWeapon: {
+        label: 'Iron Spear',
+        type: 'physical',
+        might: IRON_SPEAR.might,
+        hit: IRON_SPEAR.hit,
+        crit: IRON_SPEAR.crit,
+        weight: IRON_SPEAR.weight,
+        range: '1',
+        uses: 7,
+        maxUses: IRON_SPEAR.uses,
+      },
+      weaponTypes: ['physical'],
+    });
+  });
+
+  it('powers a magical weapon with magic', () => {
+    const unit = new Wizard({ team: 'player' });
+    const view = toUnitDetailView(unit)!;
+    expect(view.damageType).toBe('magical');
+    expect(view.attack).toBe(unit.magic + FIRE.might);
+    expect(view.equippedWeapon).toMatchObject({ label: 'Fire', range: '1–2' });
+  });
+
+  it('fights bare-handed without a weapon', () => {
+    const view = toUnitDetailView(makeUnit())!;
+    expect(view.equippedWeapon).toBeNull();
+    expect(view).toMatchObject({ damageType: 'physical', attack: 4, hit: 0, crit: 0 });
+  });
+
+  it("lists the skills the unit's class has taught it", () => {
+    expect(toUnitDetailView(new Soldier({ team: 'player' }))!.skills).toEqual([
+      { id: POWER_STRIKE.id, label: POWER_STRIKE.label, manaCost: POWER_STRIKE.manaCost, range: POWER_STRIKE.range },
+    ]);
+    expect(toUnitDetailView(new Wizard({ team: 'enemy' }))!.skills.map((skill) => skill.id)).toEqual([FIREBALL.id]);
+    expect(toUnitDetailView(makeUnit())!.skills).toEqual([]);
+  });
+
+  it('says when the unit has reached the top level', () => {
+    expect(toUnitDetailView(makeUnit())!.maxLevel).toBe(false);
+    expect(toUnitDetailView(new Soldier({ team: 'player', level: MAX_LEVEL }))!.maxLevel).toBe(true);
+  });
+
+  it('is a detached, frozen snapshot', () => {
+    const unit = new Soldier({ team: 'player' });
+    const view = toUnitDetailView(unit)!;
+    unit.takeDamage(3);
+    expect(view.health).toBe(unit.maxHealth);
+    expect(Object.isFrozen(view)).toBe(true);
+    expect(Object.isFrozen(view.stats)).toBe(true);
+    expect(Object.isFrozen(view.skills)).toBe(true);
+    expect(Object.isFrozen(view.equippedWeapon)).toBe(true);
   });
 });
 

@@ -3,15 +3,18 @@
 // like takeDamage() can't silently change what's on screen without a new
 // snapshot being published (and a re-render being triggered).
 
-import type { CombatSide, ForecastSide } from '../game/combat.ts';
+import { DAMAGE_TYPES, getDamageType, type CombatSide, type DamageType, type ForecastSide } from '../game/combat.ts';
+import { getAttackSpeed, getAvoid, getCrit, getHit } from '../game/combatStats.ts';
 import type { Dialog, DialogSide } from '../game/dialog.ts';
-import type { ExperienceGain, GrowthStat, LevelUpResult } from '../game/experience.ts';
+import { MAX_LEVEL, type ExperienceGain, type GrowthStat, type LevelUpResult } from '../game/experience.ts';
 import type { ObjectiveText } from '../game/objectives.ts';
 import type { Point } from '../game/grid.ts';
 import type { Team, TurnState } from '../game/turns.ts';
 import type { RunState } from '../game/warband/run.ts';
+import { getLearnedSkills } from '../game/skills.ts';
 import type { Unit } from '../game/Unit.ts';
-import { formatWeaponRange } from '../game/weapons.ts';
+import { UNIT_CLASSES } from '../game/unitClasses.ts';
+import { formatWeaponRange, type WeaponType } from '../game/weapons.ts';
 
 // One inventory slot. `quantity` is how many are left (for a weapon, its
 // uses left), or null for a weapon that never breaks; `equipped` marks
@@ -45,6 +48,53 @@ export interface UnitView {
   range: string;
   weapon: string | null;
   items: readonly ItemView[];
+}
+
+// One stat on the unit info screen: its value and the most its class can
+// raise it to (null when the class sets no cap).
+export interface StatLineView {
+  id: GrowthStat;
+  label: string;
+  value: number;
+  cap: number | null;
+}
+
+// The equipped weapon's full numbers, for the unit info screen.
+export interface WeaponDetailView {
+  label: string;
+  type: WeaponType;
+  might: number;
+  hit: number;
+  crit: number;
+  weight: number;
+  range: string;
+  uses: number | null;
+  maxUses: number | null;
+}
+
+export interface SkillView {
+  id: string;
+  label: string;
+  manaCost: number;
+  range: number;
+}
+
+// The unit info screen's full stat sheet: everything the hover panel shows
+// plus the class name, stat caps, the rates it fights with, its equipped
+// weapon's numbers, the weapon types it can wield and the skills it knows.
+export interface UnitDetailView extends UnitView {
+  classLabel: string | null;
+  maxLevel: boolean;
+  stats: readonly StatLineView[];
+  damageType: DamageType;
+  attack: number;
+  hit: number;
+  avoid: number;
+  crit: number;
+  attackSpeed: number;
+  equippedWeapon: WeaponDetailView | null;
+  weaponTypes: readonly WeaponType[];
+  skills: readonly SkillView[];
 }
 
 // The visible world rectangle's top-left plus the zoom.
@@ -195,6 +245,64 @@ export function toUnitView(unit: Unit | null | undefined): UnitView | null {
           weapon: item.kind === 'weapon',
           equipped: index === equipped?.index,
         }),
+      ),
+    ),
+  });
+}
+
+// The stats on the unit info screen, in display order (HP and MP show as bars).
+const DETAIL_STATS: readonly (readonly [Exclude<GrowthStat, 'health' | 'mana'>, string])[] = Object.freeze([
+  ['strength', 'STR'],
+  ['magic', 'MAG'],
+  ['skill', 'SKL'],
+  ['speed', 'SPD'],
+  ['luck', 'LCK'],
+  ['defense', 'DEF'],
+  ['resistance', 'RES'],
+]);
+
+// Snapshot of a unit for the unit info screen: toUnitView's fields plus
+// its class's display name, each stat with its cap, the rates it fights
+// with before any opponent is counted (attack is its power stat plus its
+// weapon's might; hit, avoid, crit and attack speed from combatStats.ts),
+// its equipped weapon's numbers, the weapon types it can wield and the
+// skills it has learned. `maxLevel` is set once it can't level any more.
+export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView | null {
+  const view = toUnitView(unit);
+  if (!unit || !view) return null;
+  const equipped = unit.equippedWeapon;
+  const weapon = equipped?.weapon ?? null;
+  const damageType = getDamageType(unit);
+  return Object.freeze({
+    ...view,
+    classLabel: UNIT_CLASSES.find((c) => c.id === unit.unitClass)?.label ?? unit.unitClass,
+    maxLevel: unit.level >= MAX_LEVEL,
+    stats: Object.freeze(
+      DETAIL_STATS.map(([id, label]) => Object.freeze({ id, label, value: unit[id], cap: unit.caps[id] ?? null })),
+    ),
+    damageType,
+    attack: unit[DAMAGE_TYPES[damageType].power] + (weapon?.might ?? 0),
+    hit: getHit(unit),
+    avoid: getAvoid(unit),
+    crit: getCrit(unit),
+    attackSpeed: getAttackSpeed(unit),
+    equippedWeapon: weapon
+      ? Object.freeze({
+          label: weapon.label,
+          type: weapon.type,
+          might: weapon.might,
+          hit: weapon.hit,
+          crit: weapon.crit,
+          weight: weapon.weight,
+          range: formatWeaponRange(weapon),
+          uses: equipped!.uses,
+          maxUses: weapon.uses,
+        })
+      : null,
+    weaponTypes: unit.weaponTypes,
+    skills: Object.freeze(
+      getLearnedSkills(unit.unitClass, unit.level).map(({ id, label, manaCost, range }) =>
+        Object.freeze({ id, label, manaCost, range }),
       ),
     ),
   });

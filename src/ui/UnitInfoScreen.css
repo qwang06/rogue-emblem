@@ -1,0 +1,221 @@
+/* ---- Unit info screen -------------------------------------------------- */
+
+/* Covers the map so a click anywhere closes it (see UnitInfoScreen.tsx). */
+.unit-info-layer {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* Three columns: who the unit is, its stats, and how it fights. They stack
+   when the stage is too narrow. */
+.unit-info {
+  --team: #93c5fd;
+  display: grid;
+  grid-template-columns: 10rem 11rem 14.5rem;
+  gap: 4px 20px;
+  max-width: calc(100% - 24px);
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 14px 18px;
+  border-left: 4px solid var(--team);
+  font-size: 0.8125rem;
+  animation: level-up-pop 200ms ease-out;
+}
+
+.unit-info--enemy {
+  --team: #fca5a5;
+}
+
+@media (width < 46rem) {
+  .unit-info {
+    grid-template-columns: minmax(0, 15rem);
+  }
+
+  .unit-info__column {
+    margin-top: 8px;
+  }
+}
+
+.unit-info__identity {
+  min-width: 0;
+}
+
+.unit-info__portrait {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 4px;
+  background: rgb(0 0 0 / 25%);
+  border-radius: 4px;
+}
+
+.unit-info__name {
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--serif);
+  font-size: 1.125rem;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--team);
+}
+
+.unit-info__class,
+.unit-info__xp {
+  margin: 0 0 2px;
+  color: var(--parchment-dim);
+}
+
+.unit-info__pairs {
+  margin: 8px 0 0;
+}
+
+.unit-info__pairs div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.unit-info__pairs dt,
+.unit-info__rate dt {
+  color: var(--parchment-dim);
+}
+
+.unit-info__pairs dd,
+.unit-info__rate dd {
+  margin: 0;
+  font-weight: bold;
+}
+
+.unit-info__heading {
+  margin: 0 0 4px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid rgb(232 200 114 / 30%);
+  font-family: var(--serif);
+  font-size: 0.75rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.unit-info__heading:not(:first-child) {
+  margin-top: 10px;
+}
+
+/* "STR [=====   ] 5/12": the bar fills toward the class's cap. */
+.unit-info__stats {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+
+.unit-info__stat {
+  display: grid;
+  grid-template-columns: 2rem 1fr 3rem;
+  align-items: center;
+  gap: 8px;
+}
+
+.unit-info__stat dt {
+  color: var(--parchment-dim);
+}
+
+.unit-info__stat dd {
+  margin: 0;
+  font-weight: bold;
+  text-align: right;
+}
+
+.unit-info__stat-track {
+  height: 5px;
+  background: rgb(0 0 0 / 45%);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.unit-info__stat-fill {
+  display: block;
+  height: 100%;
+  background: var(--gold-dim);
+}
+
+.unit-info__stat--capped .unit-info__stat-fill {
+  background: #86efac;
+}
+
+.unit-info__stat--capped dd {
+  color: #86efac;
+}
+
+.unit-info__cap {
+  font-weight: normal;
+  color: var(--parchment-dim);
+}
+
+.unit-info__rates {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 3px 16px;
+  margin: 0;
+}
+
+.unit-info__rate {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.unit-info__weapon {
+  margin: 0;
+}
+
+.unit-info__weapon-name {
+  display: block;
+  font-weight: bold;
+  color: var(--gold);
+}
+
+.unit-info__weapon-numbers {
+  font-size: 0.75rem;
+  color: var(--parchment-dim);
+}
+
+.unit-info__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.unit-info__list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.unit-info__list li span:last-child {
+  flex-shrink: 0;
+  color: var(--parchment-dim);
+}
+
+.unit-info__item--equipped span:first-child {
+  color: var(--gold);
+}
+
+.unit-info__empty {
+  margin: 0;
+  color: var(--parchment-dim);
+}
+
+.unit-info__hint {
+  grid-column: 1 / -1;
+  margin: 10px 0 0;
+  font-size: 0.75rem;
+  text-align: center;
+  color: var(--parchment-dim);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .unit-info {
+    animation: none;
+  }
+}

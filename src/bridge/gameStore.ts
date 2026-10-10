@@ -17,6 +17,7 @@ import type {
   RunOverView,
   TileAnchorView,
   TurnView,
+  UnitDetailView,
   UnitView,
 } from './views.ts';
 
@@ -39,6 +40,7 @@ export interface BattleState {
   pauseMenu: Menu | null;
   hoveredUnit: UnitView | null;
   hoveredAnchor: TileAnchorView | null;
+  unitInfo: UnitDetailView | null;
   actionMenu: Menu | null;
   weaponMenu: Menu<WeaponAction> | null;
   skillMenu: Menu<SkillAction> | null;
@@ -76,6 +78,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   pauseMenu: null, // frozen End Turn / Main Menu / Settings menu while open, or null
   hoveredUnit: null, // UnitView from toUnitView(), or null
   hoveredAnchor: null, // TileAnchorView from toTileAnchorView() of the hovered unit's tile (the unit panel docks away from it), or null
+  unitInfo: null, // UnitDetailView from toUnitDetailView() while the unit info screen is open, or null
   actionMenu: null, // frozen menu from src/game/actionMenu.ts while open, or null
   weaponMenu: null, // frozen menu of the active unit's weapons (from getWeaponActions) after choosing Attack, or null
   skillMenu: null, // frozen menu of the active unit's skills (from getSkillActions) while open, or null

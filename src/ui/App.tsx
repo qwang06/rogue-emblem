@@ -26,6 +26,7 @@ import { SettingsButton } from './SettingsButton.tsx';
 import { SkillMenu } from './SkillMenu.tsx';
 import { TitleScreen } from './TitleScreen.tsx';
 import { TurnIndicator } from './TurnIndicator.tsx';
+import { UnitInfoScreen } from './UnitInfoScreen.tsx';
 import { UnitPanel } from './UnitPanel.tsx';
 import { useGameStore } from './useGameStore.ts';
 import { useRoute } from './useRoute.ts';
@@ -96,6 +97,7 @@ export function App() {
               <PhaseBanner />
               <DialogBox />
               <ObjectiveScreen />
+              <UnitInfoScreen />
               <PauseMenu />
               <BattleResult />
             </div>
