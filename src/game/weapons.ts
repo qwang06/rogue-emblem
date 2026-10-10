@@ -227,6 +227,10 @@ export const WEAPONS: readonly Weapon[] = Object.freeze([
   BONE_CLAWS,
 ]);
 
+// The weapons a body comes with rather than carries: fists and the
+// monsters' natural weapons. They can't be handed over or stored.
+export const NATURAL_WEAPON_IDS: ReadonlySet<string> = new Set([FISTS.id, TACKLE.id, CLUB.id, BONE_CLAWS.id]);
+
 // A fresh inventory entry for weapon, with all its uses (1 for one that
 // never breaks — its count is never spent).
 export function weaponEntry(weapon: Weapon): InventoryEntry {

@@ -9,14 +9,18 @@ const TITLES = { victory: 'Victory', defeat: 'Defeat' };
 // leads to one, else returns to the title screen. When the battle ended a
 // Warband Mode run, it says so, with the stage it ended on and the units
 // lost along the way. A won stage of a run shows the gold it paid, and
-// confirm opens the reward screen (RewardScreen) instead.
+// confirm opens the reward screen (RewardScreen) instead, and the camp
+// (CampMenu) after that.
 export function BattleResult() {
   const outcome = useGameStore((state) => state.battleOutcome);
   const nextBattle = useGameStore((state) => state.nextBattle);
   const runOver = useGameStore((state) => state.runOver);
   const stageClear = useGameStore((state) => state.stageClear);
-  const choosingReward = useGameStore((state) => state.rewardMenu !== null);
-  if (!outcome || choosingReward) return null;
+  // The reward screen, then the camp, take over from the result.
+  const pastResult = useGameStore(
+    (state) => state.rewardMenu !== null || state.campMenu !== null || state.rosterScreen !== null,
+  );
+  if (!outcome || pastResult) return null;
 
   return (
     <div className="pause-overlay">

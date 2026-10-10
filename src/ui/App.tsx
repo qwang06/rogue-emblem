@@ -2,6 +2,7 @@ import type { MouseEvent } from 'react';
 import { gameCommands } from '../bridge/commands.ts';
 import { ActionMenu } from './ActionMenu.tsx';
 import { BattleResult } from './BattleResult.tsx';
+import { CampMenu } from './CampMenu.tsx';
 import { CombatForecast } from './CombatForecast.tsx';
 import { ConfigEditor } from './ConfigEditor.tsx';
 import { ControlsButton } from './ControlsButton.tsx';
@@ -23,6 +24,7 @@ import { PauseMenu } from './PauseMenu.tsx';
 import { PhaseBanner } from './PhaseBanner.tsx';
 import { RewardScreen } from './RewardScreen.tsx';
 import { RosterMenu } from './RosterMenu.tsx';
+import { RosterScreen } from './RosterScreen.tsx';
 import { SettingsButton } from './SettingsButton.tsx';
 import { SkillMenu } from './SkillMenu.tsx';
 import { TitleScreen } from './TitleScreen.tsx';
@@ -101,6 +103,8 @@ export function App() {
               <PauseMenu />
               <BattleResult />
               <RewardScreen />
+              <CampMenu />
+              <RosterScreen />
               {/* Over the reward screen too, for an Experience reward's level ups. */}
               <LevelUpPanel />
             </div>

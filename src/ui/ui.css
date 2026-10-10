@@ -276,7 +276,8 @@ a.header-button {
 .title-menu__heading,
 .header-popover__title,
 .objective__title,
-.reward-screen__title {
+.reward-screen__title,
+.roster-screen__title {
   position: absolute;
   top: -0.75em;
   left: 10px;
@@ -2600,4 +2601,199 @@ textarea.draft-input {
 .reward-button[aria-disabled='true'] {
   color: var(--fg-dim);
   cursor: default;
+}
+
+/* ---- Roster screen (between Warband stages) ---------------------------- */
+
+/* Three columns of fixed rows: the units, the picked unit's six slots and
+   the convoy. Each list keeps its height whatever it holds (the convoy
+   scrolls), so moving the cursor or moving an item never resizes the
+   screen (see "UI layout" in AGENTS.md). */
+/* Scrolls on short stages; the top padding keeps the title cut into the
+   window's border inside the scroll box. */
+.roster-screen__scroll {
+  box-sizing: border-box;
+  width: min(54rem, calc(100% - 32px));
+  max-height: calc(100% - 24px);
+  padding-top: 12px;
+  overflow-y: auto;
+  container-type: inline-size;
+}
+
+.roster-screen {
+  --row: 40px;
+  position: relative;
+  padding: 16px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-color: var(--accent);
+}
+
+.roster-screen__columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+/* One column at a time on narrow stages, stacked. */
+@container (max-width: 40rem) {
+  .roster-screen__columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Stacked, each list takes only the room it needs: every unit (they
+     don't change here), the six slots, and a short scrolling convoy. */
+  .roster-screen .roster-screen__list--units {
+    height: auto;
+  }
+
+  .roster-screen .roster-screen__list--items {
+    height: calc(6 * var(--row));
+  }
+
+  .roster-screen .roster-screen__list--convoy {
+    height: calc(5 * var(--row));
+  }
+
+  /* No column beside the items to hang over: drop below the row. */
+  .roster-screen .roster-screen__actions {
+    top: calc(100% - 4px);
+    right: 8px;
+    left: auto;
+  }
+}
+
+.roster-screen__column {
+  min-width: 0;
+  border: var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.roster-screen__column--focused {
+  border-color: var(--accent);
+}
+
+.roster-screen__heading {
+  margin: 0;
+  padding: 4px 10px;
+  overflow: hidden;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--fg-dim);
+  border-bottom: var(--rule);
+}
+
+.roster-screen__column--focused .roster-screen__heading {
+  color: var(--accent);
+}
+
+/* Room for the most units a warband holds (eight). */
+.roster-screen__list {
+  height: calc(8 * var(--row));
+}
+
+.roster-screen__list--convoy {
+  overflow-y: auto;
+}
+
+.roster-screen__row {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--row);
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* Where the cursor was in a column that doesn't have it. */
+.roster-screen__row--picked {
+  background: var(--bg-light);
+}
+
+.roster-screen__row--empty {
+  padding-left: 22px;
+  color: var(--fg-dim);
+}
+
+.roster-screen__unit {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.roster-screen__name,
+.roster-screen__meta,
+.roster-screen__label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.roster-screen__name {
+  color: var(--fg-bright);
+}
+
+.roster-screen__meta {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-dim);
+}
+
+/* The equipped mark keeps its spot on every row, filled or not. */
+.roster-screen__equipped {
+  flex: none;
+  width: 1ch;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--yellow);
+}
+
+.roster-screen__label {
+  flex: 1;
+  min-width: 0;
+}
+
+.roster-screen__count {
+  flex: none;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-dim);
+}
+
+/* An item's actions hang off the right of its row, over the convoy. */
+.roster-screen__actions {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: calc(100% - 4px);
+  min-width: 7rem;
+  box-shadow: var(--lift);
+  cursor: default;
+}
+
+/* Two lines reserved, so a longer description never grows the screen. */
+.roster-screen__detail {
+  min-height: 2.6em;
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  color: var(--fg);
+}
+
+.roster-screen__detail-label {
+  font-weight: 700;
+  color: var(--fg-bright);
+}
+
+.roster-screen__detail-hint {
+  color: var(--fg-dim);
+}
+
+.roster-screen__hint {
+  margin: 0;
 }
