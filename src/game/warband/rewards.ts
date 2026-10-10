@@ -13,6 +13,7 @@ import type { Rng } from '../combatStats.ts';
 import { createSeededRng, randomInt, randomItem, shuffle } from '../rng.ts';
 import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
 import { WARBAND_NAMES } from './names.ts';
+import { STARTING_CLASSES } from './startingClasses.ts';
 import { snapshotUnit, type ItemSnapshot, type RunState, type UnitSnapshot } from './run.ts';
 
 // Gold for clearing any stage, plus more per stage reached.
@@ -85,6 +86,9 @@ export function getRewardSeed(runSeed: number, stage: number): number {
 // - rest, when anyone is missing HP or mana
 // - supplies, when anyone has room for a Health Potion
 // - training and gold, always
+// Stage 1 is different: its offers are one recruit of each starting class
+// (see rollFirstStageRecruits), so the lone unit a run starts with gets to
+// pick its first companion.
 export function rollRewards(
   run: RunState,
   stage: number,
@@ -92,6 +96,8 @@ export function rollRewards(
   count: number = REWARD_CHOICES,
   classes: readonly UnitClass[] = UNIT_CLASSES,
 ): readonly Reward[] {
+  if (stage === 1 && run.roster.length < MAX_ROSTER_SIZE)
+    return rollFirstStageRecruits(run, stage, rng, count, classes);
   const needsRecruit = run.roster.length < run.deployCap && run.roster.length < MAX_ROSTER_SIZE;
   const kinds: RewardKind[] = [];
   if (run.roster.length < MAX_ROSTER_SIZE && !needsRecruit) kinds.push('recruit');
@@ -100,6 +106,24 @@ export function rollRewards(
   kinds.push('training', 'gold');
   const picked = [...(needsRecruit ? ['recruit' as const] : []), ...shuffle(rng, kinds)].slice(0, Math.max(0, count));
   return Object.freeze(picked.map((kind) => Object.freeze(createReward(kind, run, stage, rng, classes))));
+}
+
+// The rewards after stage 1: a recruit of each STARTING_CLASSES class, in
+// that order, each with a different name, up to `count`.
+export function rollFirstStageRecruits(
+  run: RunState,
+  stage: number,
+  rng: Rng,
+  count: number = REWARD_CHOICES,
+  classes: readonly UnitClass[] = UNIT_CLASSES,
+): readonly Reward[] {
+  const takenNames: string[] = [];
+  const rewards = STARTING_CLASSES.slice(0, Math.max(0, count)).map(({ id }) => {
+    const unit = rollRecruit(run, stage, rng, classes, { classId: id, takenNames });
+    takenNames.push(unit.name);
+    return Object.freeze<Reward>({ kind: 'recruit', unit });
+  });
+  return Object.freeze(rewards);
 }
 
 function createReward(kind: RewardKind, run: RunState, stage: number, rng: Rng, classes: readonly UnitClass[]): Reward {
@@ -117,21 +141,23 @@ function createReward(kind: RewardKind, run: RunState, stage: number, rng: Rng, 
   }
 }
 
-// A recruit for `run`: a random RECRUIT_CLASS_IDS class at the roster's
-// average level (rounded down, at least 1), its level ups rolled from its
-// growths, named from WARBAND_NAMES (one nobody in the run has; "Recruit"
-// once they've all been used), with an id no unit in the run has.
+// A recruit for `run`: a `classId` unit (a random RECRUIT_CLASS_IDS class
+// when none is given) at the roster's average level (rounded down, at least
+// 1), its level ups rolled from its growths, named from WARBAND_NAMES (one
+// nobody in the run has and that isn't in `takenNames`; "Recruit" once
+// they've all been used), with an id no unit in the run has.
 export function rollRecruit(
   run: RunState,
   stage: number,
   rng: Rng,
   classes: readonly UnitClass[] = UNIT_CLASSES,
+  { classId, takenNames = [] }: { classId?: string; takenNames?: readonly string[] } = {},
 ): UnitSnapshot {
   const everyone = [...run.roster, ...run.fallen];
-  const usedNames = new Set(everyone.map((unit) => unit.name));
+  const usedNames = new Set([...everyone.map((unit) => unit.name), ...takenNames]);
   const names = WARBAND_NAMES.filter((name) => !usedNames.has(name));
   const name = names.length > 0 ? randomItem(rng, names) : 'Recruit';
-  const classId = randomItem(rng, RECRUIT_CLASS_IDS);
+  classId ??= randomItem(rng, RECRUIT_CLASS_IDS);
   const totalLevel = run.roster.reduce((sum, unit) => sum + unit.level, 0);
   const level = Math.max(1, Math.floor(totalLevel / Math.max(1, run.roster.length)));
   const unit = createUnitOfClass(classId, { name, team: 'player' }, classes);
@@ -182,9 +208,10 @@ export function describeReward(
     case 'recruit': {
       const { unit } = reward;
       const className = classes.find((unitClass) => unitClass.id === unit.classId)?.label ?? unit.classId;
+      const pitch = STARTING_CLASSES.find((starting) => starting.id === unit.classId)?.description;
       return {
         label: `Recruit ${unit.name}`,
-        description: `A level ${unit.level} ${className} joins the warband.`,
+        description: `A level ${unit.level} ${className} joins the warband.${pitch ? ` ${pitch}` : ''}`,
       };
     }
     case 'rest':
