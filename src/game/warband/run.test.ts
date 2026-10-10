@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { Acolyte } from '../Acolyte.ts';
 import { Archer } from '../Archer.ts';
 import { HEALTH_POTION, MANA_POTION } from '../items.ts';
 import { Soldier } from '../Soldier.ts';
 import { Unit } from '../Unit.ts';
 import { UNIT_CLASSES } from '../unitClasses.ts';
 import { Villager } from '../Villager.ts';
-import { FISTS, IRON_BOW, IRON_SPEAR, WOODEN_SWORD } from '../weapons.ts';
+import { FIRE, FIRE_SPELL, FISTS, IRON_BOW, IRON_SPEAR, weaponEntry, WOODEN_SWORD } from '../weapons.ts';
 import {
   advanceStage,
   applyBattleResult,
@@ -90,6 +91,38 @@ describe('snapshotUnit and restoreUnit', () => {
     expect(restored).toEqual(soldier);
     expect(restored.weapon).toBe(IRON_SPEAR);
     expect(restored.team).toBe('player');
+  });
+
+  it('round-trips tome progress and a learned spell, through a save too', () => {
+    const acolyte = new Acolyte({ name: 'Iris', team: 'player', items: [weaponEntry(FIRE)] });
+    acolyte.spendWeaponUse();
+    acolyte.spendWeaponUse();
+    const snapshot = snapshotUnit('iris', acolyte);
+    expect(snapshot.tomeProgress).toEqual({ fire: 2 });
+    expect(restoreUnit(snapshot).tomeProgress).toEqual({ fire: 2 });
+    const saved = parseRun(serializeRun(createRun(1, new Map([['iris', acolyte]]))));
+    expect(saved?.roster[0].tomeProgress).toEqual({ fire: 2 });
+
+    for (let strike = 0; strike < 3; strike++) acolyte.spendWeaponUse();
+    const learned = snapshotUnit('iris', acolyte);
+    expect(learned.tomeProgress).toBeUndefined();
+    expect(learned.items).toEqual([
+      { itemId: FIRE_SPELL.id, quantity: 1 },
+      { itemId: FIRE.id, quantity: FIRE.uses! - 5 },
+    ]);
+    expect(restoreUnit(learned).weapon).toBe(FIRE_SPELL);
+  });
+
+  it('reads a save from before tomes as no progress, and refuses bad progress', () => {
+    const snapshot = snapshotUnit('a', new Soldier({ team: 'player' }));
+    expect(snapshot).not.toHaveProperty('tomeProgress');
+    expect(restoreUnit(snapshot).tomeProgress).toEqual({});
+    const run = createRun(1, new Map([['a', new Soldier({ team: 'player' })]]));
+    const withProgress = (tomeProgress: unknown) =>
+      JSON.stringify({ ...run, roster: [{ ...run.roster[0], tomeProgress }] });
+    expect(parseRun(withProgress({ fire: 3 }))?.roster[0].tomeProgress).toEqual({ fire: 3 });
+    expect(parseRun(withProgress({ fire: -1 }))).toBeNull();
+    expect(parseRun(withProgress([3]))).toBeNull();
   });
 
   it('keeps the class movement and growths, which snapshots do not store', () => {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GrowthTable } from './experience.ts';
 import { HEALTH_POTION, MANA_POTION, WOODEN_ARMOR, WOODEN_SHIELD, type InventoryEntry } from './items.ts';
 import { Unit } from './Unit.ts';
-import { FIRE, FISTS, IRON_BOW, IRON_SPEAR, weaponEntry, type WeaponType } from './weapons.ts';
+import { FIRE, FIRE_SPELL, FISTS, IRON_BOW, IRON_SPEAR, weaponEntry, type WeaponType } from './weapons.ts';
 
 function makeUnit(overrides = {}) {
   return new Unit({
@@ -67,6 +67,55 @@ describe('Unit', () => {
     const armed = (items: InventoryEntry[], weaponTypes: WeaponType[] = ['physical']) =>
       makeUnit({ items, weaponTypes });
 
+    describe('learning from a tome', () => {
+      const mage = (items: InventoryEntry[]) => armed(items, ['magical']);
+
+      it('learns Fire on the fifth strike with the Fire tome and keeps the tome', () => {
+        const unit = mage([weaponEntry(FIRE)]);
+        for (let strike = 1; strike < 5; strike++) {
+          expect(unit.spendWeaponUse()).toMatchObject({ weapon: FIRE, learned: null });
+          expect(unit.tomeProgress).toEqual({ fire: strike });
+        }
+        expect(unit.spendWeaponUse()).toEqual({ weapon: FIRE, broke: false, learned: FIRE_SPELL, leftover: null });
+        expect(unit.tomeProgress).toEqual({});
+        expect(unit.items).toEqual([weaponEntry(FIRE_SPELL), { item: FIRE, quantity: 25 }]);
+        expect(unit.weapon).toBe(FIRE_SPELL);
+      });
+
+      it('picks up where it left off', () => {
+        const unit = makeUnit({ items: [weaponEntry(FIRE)], weaponTypes: ['magical'], tomeProgress: { fire: 4 } });
+        expect(unit.spendWeaponUse().learned).toBe(FIRE_SPELL);
+      });
+
+      it('learns even when the strike that teaches it breaks the tome', () => {
+        const unit = mage([{ item: FIRE, quantity: 1 }]);
+        unit.tomeProgress = { fire: 4 };
+        expect(unit.spendWeaponUse()).toEqual({ weapon: FIRE, broke: true, learned: FIRE_SPELL, leftover: null });
+        expect(unit.items).toEqual([weaponEntry(FIRE_SPELL)]);
+      });
+
+      it('hands the tome back when its bag is full', () => {
+        const fillers = Array.from({ length: 5 }, () => ({ item: HEALTH_POTION, quantity: 1 }));
+        const unit = mage([weaponEntry(FIRE), ...fillers]);
+        unit.tomeProgress = { fire: 4 };
+        expect(unit.spendWeaponUse().leftover).toEqual({ item: FIRE, quantity: 29 });
+        expect(unit.items[0]).toEqual(weaponEntry(FIRE_SPELL));
+        expect(unit.items).toHaveLength(6);
+      });
+
+      it('makes no progress once it knows the spell', () => {
+        const unit = mage([weaponEntry(FIRE), weaponEntry(FIRE_SPELL)]);
+        expect(unit.spendWeaponUse()).toEqual({ weapon: FIRE, broke: false, learned: null, leftover: null });
+        expect(unit.tomeProgress).toEqual({});
+      });
+
+      it('never wears out the learned spell', () => {
+        const unit = mage([weaponEntry(FIRE_SPELL)]);
+        expect(unit.spendWeaponUse()).toMatchObject({ weapon: FIRE_SPELL, broke: false, learned: null });
+        expect(unit.items).toEqual([weaponEntry(FIRE_SPELL)]);
+      });
+    });
+
     it('masters no weapon types and has no weapon by default', () => {
       const unit = makeUnit();
       expect(unit.weaponTypes).toEqual([]);
@@ -107,13 +156,13 @@ describe('Unit', () => {
 
     it('wears the equipped weapon down one use per strike', () => {
       const unit = armed([weaponEntry(IRON_SPEAR)]);
-      expect(unit.spendWeaponUse()).toEqual({ weapon: IRON_SPEAR, broke: false });
+      expect(unit.spendWeaponUse()).toEqual({ weapon: IRON_SPEAR, broke: false, learned: null, leftover: null });
       expect(unit.weaponUses).toBe(39);
     });
 
     it('loses a weapon that breaks and falls back on the next one', () => {
       const unit = armed([{ item: IRON_SPEAR, quantity: 1 }, weaponEntry(FISTS)]);
-      expect(unit.spendWeaponUse()).toEqual({ weapon: IRON_SPEAR, broke: true });
+      expect(unit.spendWeaponUse()).toEqual({ weapon: IRON_SPEAR, broke: true, learned: null, leftover: null });
       expect(unit.items).toEqual([weaponEntry(FISTS)]);
       expect(unit.weapon).toBe(FISTS);
     });

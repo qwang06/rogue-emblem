@@ -1699,10 +1699,18 @@ export class GridScene extends Phaser.Scene {
         this.awardCombatExperience(sides, strikes, onDone);
         return;
       }
-      // Every strike wears the striker's weapon, hit or miss.
+      // Every strike wears the striker's weapon, hit or miss, and one
+      // made with a tome can teach its spell (see tomes.ts).
       const striker = sides[strike.by];
-      if (striker.unit.spendWeaponUse().broke) {
-        this.showDamagePopup(this.unitSprites.get(striker.tile.unitId)!, 0, 'broke');
+      const { broke, learned, leftover } = striker.unit.spendWeaponUse();
+      const strikerSprite = this.unitSprites.get(striker.tile.unitId)!;
+      if (learned) {
+        if (leftover && striker.unit.team === 'player') {
+          this.convoyLoot.push({ itemId: leftover.item.id, quantity: leftover.quantity });
+        }
+        this.showDamagePopup(strikerSprite, 0, 'learned', learned.label);
+      } else if (broke) {
+        this.showDamagePopup(strikerSprite, 0, 'broke');
       }
       const struck = sides[strike.target];
       const sprite = this.unitSprites.get(struck.tile.unitId)!;

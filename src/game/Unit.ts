@@ -12,6 +12,7 @@
 // unit can wield is the one it fights with (see weapons.ts), which sets
 // its range and the kind of damage it deals, and it wears the first armor
 // of each slot it carries, which adds to its defense (see items.ts).
+// Striking with a tome often enough teaches its spell (see tomes.ts).
 
 import type { Rng } from './combatStats.ts';
 import {
@@ -37,6 +38,7 @@ import {
   type Consumable,
   type Item,
 } from './items.ts';
+import { getTomeSpell, isTome, knowsSpell, learnSpell, recordTomeUse, type TomeProgress } from './tomes.ts';
 import type { Team } from './turns.ts';
 import {
   equipWeapon,
@@ -70,6 +72,8 @@ export interface UnitOptions {
   caps?: GrowthTable;
   // Percent of each XP gain the unit earns (see scaleExperience).
   experienceRate?: number;
+  // Strikes made with tomes not yet learned from (see tomes.ts).
+  tomeProgress?: TomeProgress;
 }
 
 // The options a class (Soldier, Villager, ...) takes: the class fills in
@@ -104,6 +108,7 @@ export class Unit {
   growths: GrowthTable;
   caps: GrowthTable;
   experienceRate: number;
+  tomeProgress: TomeProgress;
   // Killing this unit gives the killer exactly the XP it needs for its next
   // level (see getCombatAward), e.g. a first stage's lone enemy.
   levelUpOnKill = false;
@@ -132,6 +137,7 @@ export class Unit {
     growths = {},
     caps = {},
     experienceRate = DEFAULT_EXPERIENCE_RATE,
+    tomeProgress = {},
   }: UnitOptions) {
     this.name = name;
     this.unitClass = unitClass;
@@ -155,6 +161,7 @@ export class Unit {
     this.growths = growths;
     this.caps = caps;
     this.experienceRate = experienceRate;
+    this.tomeProgress = Object.freeze({ ...tomeProgress });
   }
 
   isAlive(): boolean {
@@ -233,15 +240,27 @@ export class Unit {
   }
 
   // Spends one use of the equipped weapon, for a strike made with it.
-  // Returns { weapon, broke }: a weapon that runs out is removed from the
-  // inventory, and the next one it can wield (if any) is equipped. Throws
-  // if it has no weapon.
-  spendWeaponUse(): { weapon: Weapon; broke: boolean } {
+  // Returns { weapon, broke, learned, leftover }: a weapon that runs out is
+  // removed from the inventory, and the next one it can wield (if any) is
+  // equipped. A strike with a tome whose spell it doesn't know counts
+  // towards learning it; the strike that learns it puts the spell in the
+  // tome's slot (`learned` is the spell, else null) and keeps the tome if
+  // there's room, else hands it back as `leftover` (see learnSpell).
+  // Throws if it has no weapon.
+  spendWeaponUse(): { weapon: Weapon; broke: boolean; learned: Weapon | null; leftover: InventoryEntry | null } {
     const equipped = this.equippedWeapon;
     if (!equipped) throw new Error(`${this.name} has no weapon`);
+    const { weapon } = equipped;
     const { inventory, broke } = spendWeaponUse(this.items, equipped.index);
     this.items = inventory;
-    return { weapon: equipped.weapon, broke };
+    if (!isTome(weapon) || knowsSpell(this.items, weapon)) return { weapon, broke, learned: null, leftover: null };
+    const { progress, learned } = recordTomeUse(this.tomeProgress, weapon);
+    this.tomeProgress = progress;
+    if (!learned) return { weapon, broke, learned: null, leftover: null };
+    const spell = getTomeSpell(weapon);
+    const taught = learnSpell(this.items, broke ? null : equipped.index, spell);
+    this.items = taught.inventory;
+    return { weapon, broke, learned: spell, leftover: taught.leftover };
   }
 
   // Spends one use of the staff in inventory slot `index`, for a heal made

@@ -1012,9 +1012,11 @@ kbd {
   color: var(--yellow);
 }
 
-/* Loot picked up (or sent to the convoy) names the item. */
+/* Loot picked up (or sent to the convoy) names the item, and a spell
+   learned from a tome names the spell. */
 .damage-popup--loot,
-.damage-popup--stored {
+.damage-popup--stored,
+.damage-popup--learned {
   font-size: 1rem;
   color: var(--yellow);
   white-space: nowrap;

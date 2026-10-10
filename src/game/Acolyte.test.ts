@@ -44,11 +44,11 @@ describe('Acolyte', () => {
     expect(acolyte.items.map((entry) => entry.item)).toEqual([HEAL_STAFF, HEALTH_POTION, MANA_POTION]);
   });
 
-  it('wields no weapons, so it has nothing to attack with', () => {
-    const acolyte = new Acolyte({ team: 'player', items: [weaponEntry(IRON_SPEAR), weaponEntry(FIRE)] });
-    expect(acolyte.weaponTypes).toEqual([]);
-    expect(acolyte.weapon).toBeNull();
+  it('wields magical weapons only, and starts with none to attack with', () => {
     expect(new Acolyte({ team: 'player' }).weapon).toBeNull();
+    const acolyte = new Acolyte({ team: 'player', items: [weaponEntry(IRON_SPEAR), weaponEntry(FIRE)] });
+    expect(acolyte.weaponTypes).toEqual(['magical']);
+    expect(acolyte.weapon).toBe(FIRE);
   });
 
   it("can't counter", () => {

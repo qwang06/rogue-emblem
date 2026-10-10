@@ -5,13 +5,14 @@ import { createSeededRng } from './rng.ts';
 import { FISTS, IRON_SPEAR, WOODEN_AXE, WOODEN_SPEAR, WOODEN_SWORD } from './weapons.ts';
 
 describe('LOOT_ITEMS', () => {
-  it('is the wooden set', () => {
+  it('is the wooden set and the Fire tome', () => {
     expect(LOOT_ITEMS.map((item) => item.id)).toEqual([
       'wooden-sword',
       'wooden-spear',
       'wooden-axe',
       'wooden-shield',
       'wooden-armor',
+      'fire',
     ]);
   });
 });
