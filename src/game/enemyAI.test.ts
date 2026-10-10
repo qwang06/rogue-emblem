@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { planRushAction } from './enemyAI.ts';
+import { planRushAction, type AttackScorer } from './enemyAI.ts';
 import { createGrid, setTerrain, setUnit, type Grid, type Point } from './grid.ts';
 import { FIRE, IRON_BOW, IRON_SPEAR } from './weapons.ts';
 
@@ -97,6 +97,58 @@ describe('planRushAction', () => {
       p2: { x: 7, y: 0 },
     });
     const { path, target } = planRushAction(grid, { x: 3, y: 0 }, soldier, isHostile, options);
+    expect(path).toHaveLength(3);
+    expect(target!.unitId).toBe('p1');
+  });
+
+  it('attacks the target the scorer rates highest, not the cheapest', () => {
+    const grid = place(createGrid(9, 1, 'grass'), {
+      p1: { x: 0, y: 0 },
+      e1: { x: 3, y: 0 },
+      p2: { x: 6, y: 0 },
+    });
+    const preferP2: AttackScorer = (_from, target) => (target.unitId === 'p2' ? 10 : 1);
+    const { path, target } = planRushAction(grid, { x: 3, y: 0 }, soldier, isHostile, options, preferP2);
+    expect(last(path)).toEqual({ x: 5, y: 0 });
+    expect(target!.unitId).toBe('p2');
+  });
+
+  it('weighs every foe in reach of a tile, not just the first', () => {
+    // From where e1 stands both p1 (left) and p2 (right) are adjacent.
+    const grid = place(createGrid(5, 1, 'grass'), {
+      p1: { x: 1, y: 0 },
+      e1: { x: 2, y: 0 },
+      p2: { x: 3, y: 0 },
+    });
+    const preferP2: AttackScorer = (_from, target) => (target.unitId === 'p2' ? 1 : 0);
+    const { path, target } = planRushAction(grid, { x: 2, y: 0 }, soldier, isHostile, options, preferP2);
+    expect(path).toEqual([{ x: 2, y: 0 }]);
+    expect(target).toEqual({ x: 3, y: 0, unitId: 'p2' });
+  });
+
+  it('scores each tile, so it can pick where to strike from', () => {
+    // Fire reaches p1 from 1 or 2 away; the scorer prefers striking from range.
+    const grid = place(createGrid(8, 1, 'grass'), { e1: { x: 2, y: 0 }, p1: { x: 3, y: 0 } });
+    const preferRange: AttackScorer = (from, target) => Math.abs(from.x - target.x);
+    const { path, target } = planRushAction(
+      grid,
+      { x: 2, y: 0 },
+      { movement: 3, weapon: FIRE },
+      isHostile,
+      options,
+      preferRange,
+    );
+    expect(last(path)).toEqual({ x: 1, y: 0 });
+    expect(target!.unitId).toBe('p1');
+  });
+
+  it('breaks score ties by the cheapest tile', () => {
+    const grid = place(createGrid(9, 1, 'grass'), {
+      p1: { x: 0, y: 0 },
+      e1: { x: 3, y: 0 },
+      p2: { x: 7, y: 0 },
+    });
+    const { path, target } = planRushAction(grid, { x: 3, y: 0 }, soldier, isHostile, options, () => 5);
     expect(path).toHaveLength(3);
     expect(target!.unitId).toBe('p1');
   });
