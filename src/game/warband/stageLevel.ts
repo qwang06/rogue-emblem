@@ -12,9 +12,8 @@ import { pickEnemyTiles } from '../enemySpawns.ts';
 import { generateTerrain } from '../mapGen.ts';
 import { DEFAULT_OBJECTIVE } from '../objectives.ts';
 import { createSeededRng } from '../rng.ts';
-import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
-import { createUnitOfClass } from '../unitClasses.ts';
+import { createUnitOfClass, UNIT_CLASSES } from '../unitClasses.ts';
 import { BUILDING_ART, BUILDING_PALETTES, FOREST_ART, MOUNTAIN_ART } from '../tileset.ts';
 import type { RegionConfig } from './regions.ts';
 import { DEFAULT_STARTING_CLASS } from './startingClasses.ts';
@@ -34,6 +33,9 @@ export function createStartingWarband(
   return new Map([[`${classId}-1`, createUnitOfClass(classId, { name, team: 'player' })]]);
 }
 
+// The class an enemy group's units are when it doesn't set one.
+export const DEFAULT_ENEMY_CLASS = 'soldier';
+
 const key = ({ x, y }: Point) => `${x},${y}`;
 
 // Returns a level shaped like createDemoLevel's, generated from `seed` with
@@ -41,7 +43,7 @@ const key = ({ x, y }: Point) => `${x},${y}`;
 // - deploymentZone: the path's south end and the tiles either side of it
 // - roster: `roster`'s units (a run's warband), else createStartingWarband's,
 //   deploying up to `maxDeployed`
-// - enemies: a soldier on each tile pickEnemyTiles finds for region.enemies
+// - enemies: a unit of its group's class (a soldier when unset) on each tile pickEnemyTiles finds for region.enemies
 //   (fewer than asked when a group's limits leave too few tiles), starting
 //   on its group's health when it sets one, and levelling its killer up
 //   when the group sets levelUpOnKill
@@ -70,7 +72,9 @@ export function createStageLevel(
   const units = new Map(roster);
   enemyTiles.forEach(({ x, y, group }, i) => {
     const unitId = `enemy-${i + 1}`;
-    const enemy = new Soldier({ name: 'Enemy Soldier', team: 'enemy' });
+    const classId = group.unitClass ?? DEFAULT_ENEMY_CLASS;
+    const label = UNIT_CLASSES.find((c) => c.id === classId)?.label ?? classId;
+    const enemy = createUnitOfClass(classId, { name: `Enemy ${label}`, team: 'enemy' });
     if (group.health !== undefined) enemy.health = Math.min(group.health, enemy.maxHealth);
     enemy.levelUpOnKill = group.levelUpOnKill ?? false;
     units.set(unitId, enemy);

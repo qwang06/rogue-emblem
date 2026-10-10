@@ -151,6 +151,7 @@ const SETTING_LABELS: Readonly<Record<string, string>> = Object.freeze({
   turnChance: 'Path winding',
   enemyCount: 'Enemy count',
   count: 'Count',
+  unitClass: 'Class',
   minDistance: 'Min distance',
   maxDistance: 'Max distance',
   health: 'Health',

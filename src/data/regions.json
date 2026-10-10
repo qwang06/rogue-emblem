@@ -3,7 +3,7 @@
   "regions": [
     {
       "name": "Meadowlands",
-      "description": "Open fields: the run's first, quick fight. A lone, wounded soldier stands three steps from the start, close enough to strike on turn one. Killing it is worth a level up.",
+      "description": "Open fields: the run's first, quick fight. A lone, wounded villager with only its fists stands three steps from the start, close enough to strike on turn one. Killing it is worth a level up.",
       "terrain": {
         "width": 14,
         "height": 12,
@@ -15,7 +15,9 @@
         "ruins": 0,
         "buildings": 3
       },
-      "enemies": [{ "count": 1, "minDistance": 3, "maxDistance": 3, "health": 4, "levelUpOnKill": true }],
+      "enemies": [
+        { "count": 1, "unitClass": "villager", "minDistance": 3, "maxDistance": 3, "health": 4, "levelUpOnKill": true }
+      ],
       "treeChance": 0.05,
       "palette": "a-stone"
     },
@@ -33,7 +35,7 @@
         "ruins": 1,
         "buildings": 2
       },
-      "enemies": [{ "count": 2, "area": { "y": [0, 0.34] } }],
+      "enemies": [{ "count": 2, "unitClass": "villager", "area": { "y": [0, 0.34] } }],
       "treeChance": 0.04,
       "palette": "b-blue"
     },
@@ -52,7 +54,10 @@
         "buildings": 1,
         "turnChance": 0.55
       },
-      "enemies": [{ "count": 3, "area": { "y": [0, 0.34] } }],
+      "enemies": [
+        { "count": 1, "unitClass": "villager", "area": { "y": [0, 0.34] } },
+        { "count": 1, "unitClass": "soldier", "area": { "y": [0, 0.34] } }
+      ],
       "treeChance": 0.1,
       "palette": "a-brown"
     },
@@ -70,7 +75,10 @@
         "ruins": 2,
         "buildings": 2
       },
-      "enemies": [{ "count": 4, "area": { "y": [0, 0.34] } }],
+      "enemies": [
+        { "count": 1, "unitClass": "villager", "area": { "y": [0, 0.34] } },
+        { "count": 2, "unitClass": "soldier", "area": { "y": [0, 0.34] } }
+      ],
       "treeChance": 0.03,
       "palette": "b-white"
     },
@@ -87,7 +95,10 @@
         "ruins": 3,
         "buildings": 3
       },
-      "enemies": [{ "count": 5, "area": { "y": [0, 0.34] } }],
+      "enemies": [
+        { "count": 3, "unitClass": "soldier", "area": { "y": [0, 0.34] } },
+        { "count": 1, "unitClass": "archer", "area": { "y": [0, 0.34] } }
+      ],
       "treeChance": 0.04,
       "palette": "b-red"
     }

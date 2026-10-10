@@ -26,6 +26,9 @@ export interface SpawnArea {
 
 export interface EnemyGroup {
   count: number;
+  // The class id (see UNIT_CLASSES) its enemies are, e.g. 'villager';
+  // soldiers when unset.
+  unitClass?: string;
   area?: SpawnArea;
   minDistance?: number;
   maxDistance?: number;

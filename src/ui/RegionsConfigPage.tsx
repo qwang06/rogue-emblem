@@ -6,6 +6,7 @@ import { randomSeed } from '../game/rng.ts';
 import { BUILDING_PALETTES } from '../game/tileset.ts';
 import { getRegionStages, type RegionSettings } from '../game/warband/regions.ts';
 import { formatRegionSettings, parseRegionSettings, REGION_LIMITS } from '../game/warband/regionsFile.ts';
+import { UNIT_CLASSES } from '../game/unitClasses.ts';
 import { ConfigLayout } from './ConfigLayout.tsx';
 import { plural } from './configCatalog.ts';
 import { NumberField, type DraftForm } from './DraftFields.tsx';
@@ -395,13 +396,14 @@ function RegionsFormat() {
         </li>
         <li>
           <code>enemies</code>: {REGION_LIMITS.enemyGroups[0]} to {REGION_LIMITS.enemyGroups[1]} groups, up to{' '}
-          {REGION_LIMITS.enemyCount[1]} enemies in all, placed in order. Each has a <code>count</code> and optional
-          limits on where they stand: <code>area</code>, a box as <code>[from, to]</code> fractions of the map&apos;s
-          columns (<code>x</code>) and rows (<code>y</code>), 0 being the west or north edge; and{' '}
-          <code>minDistance</code> / <code>maxDistance</code>, how many steps a unit walks from the deployment zone to
-          reach them ({REGION_LIMITS.enemyDistance[0]} to {REGION_LIMITS.enemyDistance[1]}). Optional{' '}
-          <code>health</code> starts them wounded, and <code>levelUpOnKill</code> (true/false) makes killing one give
-          the killer exactly a level up. A file whose limits leave too little room for its enemies is turned away.
+          {REGION_LIMITS.enemyCount[1]} enemies in all, placed in order. Each has a <code>count</code>, an optional{' '}
+          <code>unitClass</code> ({UNIT_CLASSES.map((c) => c.id).join(', ')}; soldier when unset) and optional limits on
+          where they stand: <code>area</code>, a box as <code>[from, to]</code> fractions of the map&apos;s columns (
+          <code>x</code>) and rows (<code>y</code>), 0 being the west or north edge; and <code>minDistance</code> /{' '}
+          <code>maxDistance</code>, how many steps a unit walks from the deployment zone to reach them (
+          {REGION_LIMITS.enemyDistance[0]} to {REGION_LIMITS.enemyDistance[1]}). Optional <code>health</code> starts
+          them wounded, and <code>levelUpOnKill</code> (true/false) makes killing one give the killer exactly a level
+          up. A file whose limits leave too little room for its enemies is turned away.
         </li>
         <li>
           <code>treeChance</code>: 0–1.

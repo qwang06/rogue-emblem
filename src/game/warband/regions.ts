@@ -18,7 +18,7 @@ export interface RegionConfig {
   description?: string;
   // The generator's options, map size included (see mapGen.ts).
   terrain: MapGenOptions;
-  // The enemy soldiers, in groups that each say where they may stand (see
+  // The enemies, in groups that each say their class and where they may stand (see
   // enemySpawns.ts).
   enemies: readonly EnemyGroup[];
   // Chance (0–1) each free grass tile gets a decorative tree.

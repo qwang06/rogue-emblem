@@ -6,6 +6,12 @@ describe('describeEnemyGroup', () => {
     expect(describeEnemyGroup({ count: 3 })).toBe('3');
   });
 
+  it('puts a set class after the count', () => {
+    expect(describeEnemyGroup({ count: 2, unitClass: 'villager', area: { y: [0, 0.34] } })).toBe(
+      '2 villager · rows 0–34%',
+    );
+  });
+
   it('lists the area as percentages of the map', () => {
     expect(describeEnemyGroup({ count: 2, area: { y: [0, 0.34] } })).toBe('2 · rows 0–34%');
     expect(describeEnemyGroup({ count: 1, area: { x: [0.5, 1], y: [0.25, 0.75] } })).toBe(
