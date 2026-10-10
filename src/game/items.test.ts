@@ -14,6 +14,7 @@ import {
   createInventory,
   findItem,
   getArmorDefense,
+  getArmorWeight,
   getConsumables,
   getWornArmor,
   wearArmor,
@@ -75,7 +76,7 @@ describe('armor', () => {
 
 describe('wearing armor', () => {
   const entry = (item: typeof WOODEN_SHIELD) => ({ item, quantity: 1 });
-  const spare = { ...WOODEN_SHIELD, id: 'spare-shield', defense: 3 };
+  const spare = { ...WOODEN_SHIELD, id: 'spare-shield', defense: 3, weight: 4 };
 
   it('wears the first armor of each slot', () => {
     const inventory = createInventory([
@@ -89,11 +90,13 @@ describe('wearing armor', () => {
       { armor: WOODEN_ARMOR, index: 3 },
     ]);
     expect(getArmorDefense(inventory)).toBe(2);
+    expect(getArmorWeight(inventory)).toBe(3);
   });
 
   it('adds nothing without armor', () => {
     expect(getWornArmor(STARTING_ITEMS)).toEqual([]);
     expect(getArmorDefense(createInventory())).toBe(0);
+    expect(getArmorWeight(createInventory())).toBe(0);
   });
 
   it('wears another by moving it to the front', () => {
@@ -101,6 +104,7 @@ describe('wearing armor', () => {
     const after = wearArmor(inventory, 2);
     expect(after.map(({ item }) => item.id)).toEqual(['spare-shield', 'iron-spear', 'wooden-shield']);
     expect(getArmorDefense(after)).toBe(3);
+    expect(getArmorWeight(after)).toBe(4);
     expect(Object.isFrozen(after)).toBe(true);
     expect(wearArmor(after, 0)).toBe(after);
   });
