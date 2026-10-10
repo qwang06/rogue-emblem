@@ -282,6 +282,7 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 - **Rest:** a free partial heal, or a full heal for gold.
 - **Interest:** +1 gold per 10 banked at each camp, capped, so saving is a strategy.
 - **Tests:** buy and sell prices, can't overspend, deploy cap steps, rerolls, roster cap, interest math and cap, rest healing clamps to max HP.
+- _Progress:_ the camp menu (Manage Roster / Next Stage) shows once a won stage's reward is taken, and Manage Roster opens the roster screen: pick a unit, equip a weapon, store its items in the convoy or give it items from the convoy (`src/game/warband/convoy.ts`, `rosterScreen.ts`). Nothing fills the convoy yet beyond what units store; the merchant, weapon rewards and trading between units are still to do.
 
 ### [ ] W.5 Modifier pipeline and relics
 

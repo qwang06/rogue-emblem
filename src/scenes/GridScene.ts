@@ -74,6 +74,16 @@ import {
   type RewardLevelUp,
 } from '../game/warband/rewards.ts';
 import { clearSavedRun, saveRun } from '../data/runSave.ts';
+import {
+  CAMP_ACTIONS,
+  cancelRoster,
+  confirmRoster,
+  moveRosterCursor,
+  openRosterScreen,
+  pointRosterCursor,
+  type RosterScreenState,
+} from '../game/warband/rosterScreen.ts';
+import { toRosterScreenView } from '../bridge/rosterView.ts';
 import { randomSeed } from '../game/rng.ts';
 import { getStructureTiles } from '../game/structures.ts';
 import { getConsumables, getItemActions } from '../game/items.ts';
@@ -259,6 +269,11 @@ export class GridScene extends Phaser.Scene {
   // After a won Warband stage: the run as it stands (the battle written
   // back, the clear's gold paid) and the rewards it offers to pick from.
   rewardOffer: { run: RunState; stage: number; rewards: readonly Reward[]; rerolls: number } | null = null;
+  // After the reward is taken: the run as it then stands, while the camp
+  // menu (Manage Roster / Next Stage) or the roster screen is up.
+  campRun: RunState | null = null;
+  campMenu: Menu | null = null;
+  rosterScreen: RosterScreenState | null = null;
   pauseMenu: Menu | null = null;
   placingUnitId: string | null = null;
   zoneTiles: Phaser.GameObjects.Rectangle[] | null = null;
@@ -320,6 +335,9 @@ export class GridScene extends Phaser.Scene {
     this.nextBattle = null; // the BattleSetup a victory leads to, once won
     this.rewardOffer = null; // the run and its reward picks after a won Warband stage
     this.rewardMenu = null; // the reward screen's menu while it's up
+    this.campRun = null; // the run between a won Warband stage's reward and the next stage
+    this.campMenu = null; // the camp's Manage Roster / Next Stage menu while it's up
+    this.rosterScreen = null; // the roster screen's state while it's open
     // Configs uploaded in the config editor replace the built-in ones.
     this.content = getActiveContent();
     const level = createBattleLevel(setup, this.content);
@@ -461,6 +479,16 @@ export class GridScene extends Phaser.Scene {
 
     if (this.onObjectiveDone) {
       if (confirm || cancel) this.hideObjective();
+      return;
+    }
+
+    if (this.rosterScreen) {
+      this.updateRosterScreen(dx, dy, confirm, cancel);
+      return;
+    }
+
+    if (this.campMenu) {
+      this.updateCampMenu(dy, confirm);
       return;
     }
 
@@ -857,12 +885,61 @@ export class GridScene extends Phaser.Scene {
           : { run: reward ? applyReward(offer.run, reward) : skipRewards(offer.run, offer.stage), levelUps: [] };
       saveRun(after);
       this.rewardOffer = null;
-      this.nextBattle = runStage(after);
       this.inputLocked = true;
-      this.showLevelUps(levelUps, () => this.leaveBattle());
+      this.showLevelUps(levelUps, () => this.openCamp(after));
       return;
     }
     if (delta !== 0) this.publishMenu('rewardMenu', moveSelection(this.rewardMenu!, delta));
+  }
+
+  // ---- Camp -------------------------------------------------------------
+  // Once a won Warband stage's reward is taken, the camp offers Manage
+  // Roster, which opens the roster screen (src/game/warband/rosterScreen.ts)
+  // to equip units and move items to and from the convoy, and Next Stage.
+  // Every change on the roster screen is saved straight away.
+
+  openCamp(run: RunState) {
+    this.campRun = run;
+    this.inputLocked = false;
+    this.publishMenu('rewardMenu', null);
+    this.publishMenu('campMenu', createActionMenu(CAMP_ACTIONS));
+  }
+
+  updateCampMenu(dy: number, confirm: boolean) {
+    if (confirm) {
+      const action = getSelectedAction(this.campMenu!);
+      if (action?.id === 'roster') {
+        this.publishRosterScreen(openRosterScreen(this.campRun!));
+      } else if (action?.id === 'march') {
+        this.nextBattle = runStage(this.campRun!);
+        this.leaveBattle();
+      }
+      return;
+    }
+    if (dy !== 0) this.publishMenu('campMenu', moveSelection(this.campMenu!, dy));
+  }
+
+  updateRosterScreen(dx: number, dy: number, confirm: boolean, cancel: boolean) {
+    const state = this.rosterScreen!;
+    if (cancel) {
+      this.publishRosterScreen(cancelRoster(state));
+    } else if (confirm) {
+      this.publishRosterScreen(confirmRoster(state));
+    } else if (dx !== 0 || dy !== 0) {
+      this.publishRosterScreen(moveRosterCursor(state, dx, dy));
+    }
+  }
+
+  // Shows the roster screen in `state` (or closes it, back to the camp,
+  // for null), saving the run whenever it changed.
+  publishRosterScreen(state: RosterScreenState | null) {
+    if (state === this.rosterScreen) return;
+    if (state && state.run !== this.campRun) {
+      this.campRun = state.run;
+      saveRun(state.run);
+    }
+    this.rosterScreen = state;
+    gameStore.setState({ rosterScreen: state && toRosterScreenView(state) });
   }
 
   // After the result: on to the next battle if the victory leads to one,
@@ -1955,8 +2032,8 @@ export class GridScene extends Phaser.Scene {
           if (this.canRoamCursor()) this.pointCursorAt(command.x, command.y);
           break;
         case 'click-tile':
-          // The reward screen is picked from, not clicked through.
-          if (this.rewardMenu) break;
+          // The reward screen and the camp are picked from, not clicked through.
+          if (this.rewardMenu || this.campMenu || this.rosterScreen) break;
           if (this.battleOutcome) {
             result.confirm = true;
           } else if (this.canRoamCursor()) {
@@ -1970,6 +2047,12 @@ export class GridScene extends Phaser.Scene {
           if (!this[command.menu]) break;
           this.publishMenu(command.menu, selectIndex(this[command.menu]!, command.index));
           if (command.type === 'select-menu') result.confirm = true;
+          break;
+        case 'hover-roster':
+        case 'select-roster':
+          if (!this.rosterScreen) break;
+          this.publishRosterScreen(pointRosterCursor(this.rosterScreen, command.target, command.index));
+          if (command.type === 'select-roster') result.confirm = true;
           break;
         case 'confirm':
           result.confirm = true;
