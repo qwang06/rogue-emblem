@@ -1,15 +1,15 @@
 // Warband Mode's convoy: the items a run holds for the whole warband rather
 // than for one unit (RunState.convoy). Between stages the roster screen
 // moves items between it and the units: giving a unit an item from the
-// convoy, storing a unit's item in it, and equipping a weapon a unit
-// carries. Consumables move one at a time and stack, on both sides; every
+// convoy, storing a unit's item in it, and equipping a weapon or armor a
+// unit carries. Consumables move one at a time and stack, on both sides; every
 // other item (a weapon or staff with its uses left, or any gear) moves as
 // its whole entry. The convoy has no slot limit; a unit carries at most
 // MAX_INVENTORY_SLOTS entries. A natural weapon (fists, claws) belongs to
 // its body and never moves. Everything here is pure: each function returns
 // a new frozen run and leaves its input alone.
 
-import { MAX_INVENTORY_SLOTS, type Item } from '../items.ts';
+import { getWornArmor, isArmor, MAX_INVENTORY_SLOTS, wearArmor, type Item } from '../items.ts';
 import { UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
 import { equipWeapon, getEquippedWeapon, isWeapon, NATURAL_WEAPON_IDS } from '../weapons.ts';
 import {
@@ -126,8 +126,16 @@ export function getEquippedIndex(
   return getEquippedWeapon(restoreInventory(unit.items, items), weaponTypesOf(unit, classes, items))?.index ?? null;
 }
 
+// The inventory slots of the armor the unit `unitId` wears (the first of
+// each slot it carries).
+export function getWornIndices(run: RunState, unitId: string, items: readonly Item[] = RUN_ITEMS): number[] {
+  const unit = findUnit(run, unitId);
+  return unit ? getWornArmor(restoreInventory(unit.items, items)).map(({ index }) => index) : [];
+}
+
 // Whether the unit `unitId` can equip its item at `itemIndex`: a weapon
-// its class wields that isn't already the equipped one.
+// its class wields that isn't already the equipped one, or armor it isn't
+// already wearing (any class wears armor).
 export function canEquipInRoster(
   run: RunState,
   unitId: string,
@@ -139,6 +147,7 @@ export function canEquipInRoster(
   const entry = unit?.items[itemIndex];
   if (!unit || !entry) return false;
   const item = lookUpItem(entry.itemId, items);
+  if (isArmor(item)) return !getWornIndices(run, unitId, items).includes(itemIndex);
   return (
     isWeapon(item) &&
     weaponTypesOf(unit, classes, items).includes(item.type) &&
@@ -146,9 +155,10 @@ export function canEquipInRoster(
   );
 }
 
-// The run with the unit `unitId`'s weapon at `itemIndex` equipped, which
-// moves it to the front of its inventory (see equipWeapon). Throws if it
-// can't wield a weapon there.
+// The run with the unit `unitId`'s weapon or armor at `itemIndex`
+// equipped, which moves it to the front of its inventory (see equipWeapon
+// and wearArmor). Throws if there's no armor there and no weapon it can
+// wield.
 export function equipInRoster(
   run: RunState,
   unitId: string,
@@ -157,7 +167,11 @@ export function equipInRoster(
   items: readonly Item[] = RUN_ITEMS,
 ): RunState {
   const unit = requireUnit(run, unitId);
-  const inventory = equipWeapon(restoreInventory(unit.items, items), itemIndex, weaponTypesOf(unit, classes, items));
+  const carried = restoreInventory(unit.items, items);
+  const inventory =
+    carried[itemIndex] && isArmor(carried[itemIndex].item)
+      ? wearArmor(carried, itemIndex)
+      : equipWeapon(carried, itemIndex, weaponTypesOf(unit, classes, items));
   return freezeRun({
     ...run,
     roster: replaceUnit(run, {

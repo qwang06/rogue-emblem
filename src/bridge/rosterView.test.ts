@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { HEAL_STAFF } from '../game/healing.ts';
-import { HEALTH_POTION } from '../game/items.ts';
+import { HEALTH_POTION, WOODEN_ARMOR, WOODEN_SHIELD } from '../game/items.ts';
 import { Soldier } from '../game/Soldier.ts';
 import type { Unit } from '../game/Unit.ts';
 import { Villager } from '../game/Villager.ts';
@@ -35,7 +35,15 @@ describe('toRosterScreenView', () => {
     ]);
     expect(view.slots).toBe(6);
     expect(view.convoy).toEqual([
-      { key: 'iron-axe@0', label: 'Iron Axe', kind: 'weapon', quantity: 12, equipped: false, disabled: false },
+      {
+        key: 'iron-axe@0',
+        label: 'Iron Axe',
+        icon: null,
+        kind: 'weapon',
+        quantity: 12,
+        equipped: false,
+        disabled: false,
+      },
     ]);
     expect(view.detail).toBeNull();
     expect(Object.isFrozen(view)).toBe(true);
@@ -66,11 +74,30 @@ describe('toRosterScreenView', () => {
   });
 });
 
+describe('armor and icons', () => {
+  it('shows worn armor as equipped, without a count, with its icon', () => {
+    const run = campRun([
+      { itemId: 'wooden-shield', quantity: 1 },
+      { itemId: 'wooden-sword', quantity: 20 },
+    ]);
+    const view = toRosterScreenView(confirmRoster(pointRosterCursor(openRosterScreen(run), 'convoy', 0)));
+    expect(view.items[3]).toMatchObject({
+      label: 'Wooden Shield',
+      icon: 'wooden-shield',
+      quantity: null,
+      equipped: true,
+    });
+    expect(view.convoy[0]).toMatchObject({ icon: 'wooden-sword', quantity: 20 });
+  });
+});
+
 describe('describeItem', () => {
   it('describes weapons, staves and consumables', () => {
     expect(describeItem(IRON_AXE).description).toBe('Physical weapon · Mt 3 · Hit 65 · Crt 0 · Wt 5 · Rng 1 · 40 uses');
     expect(describeItem(FISTS).description).toMatch(/never breaks$/);
     expect(describeItem(HEAL_STAFF).description).toMatch(/^Staff · Heals 2 \+ MAG/);
+    expect(describeItem(WOODEN_SHIELD).description).toBe('Shield · DEF +1 against physical hits · Wt 1');
+    expect(describeItem(WOODEN_ARMOR).description).toMatch(/^Body armor · DEF \+1/);
     expect(describeItem(HEALTH_POTION)).toEqual({ label: 'Health Potion', description: 'Restores up to 5 HP.' });
   });
 });

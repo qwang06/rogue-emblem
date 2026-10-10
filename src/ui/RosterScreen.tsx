@@ -1,4 +1,5 @@
 import type { MouseEvent } from 'react';
+import { SPRITE_URLS } from '../assets/sprites.ts';
 import { gameCommands } from '../bridge/commands.ts';
 import type { RosterItemView } from '../bridge/rosterView.ts';
 import type { RosterTarget } from '../game/warband/rosterScreen.ts';
@@ -26,14 +27,24 @@ function rowClass(selected: boolean, focused: boolean, disabled = false) {
   return classes.join(' ');
 }
 
+// An item's icon, or an empty spot of the same size for one without.
+function ItemIcon({ item }: { item: RosterItemView }) {
+  const url = item.icon ? SPRITE_URLS[item.icon] : undefined;
+  return url ? <img className="roster-screen__icon" src={url} alt="" /> : <span className="roster-screen__icon" />;
+}
+
+// How many are left (a weapon's uses), ∞ for one that never breaks, and
+// nothing for armor, which doesn't wear out.
 function ItemCount({ item }: { item: RosterItemView }) {
-  return <span className="roster-screen__count">{item.quantity ?? '∞'}</span>;
+  const count = item.quantity ?? (item.kind === 'armor' ? '' : '∞');
+  return <span className="roster-screen__count">{count}</span>;
 }
 
 // Warband Mode's roster screen between stages (see
 // src/game/warband/rosterScreen.ts): the units, the picked unit's
-// inventory and the convoy side by side. Picking an item in the inventory
-// opens its actions (Equip, Store) beside it; picking one in the convoy
+// inventory and the convoy side by side, items with their icons. Picking
+// an item in the inventory opens its actions (Equip for weapons and armor,
+// Store) beside it; picking one in the convoy
 // gives it to the picked unit. Every column keeps its size as the cursor
 // moves and items change hands. GridScene handles the input; the mouse is
 // forwarded to it.
@@ -92,6 +103,7 @@ export function RosterScreen() {
                       <span className="roster-screen__equipped" aria-label={item.equipped ? 'Equipped' : undefined}>
                         {item.equipped ? 'E' : ''}
                       </span>
+                      <ItemIcon item={item} />
                       <span className="roster-screen__label">{item.label}</span>
                       <ItemCount item={item} />
                       {showActions && (
@@ -144,6 +156,7 @@ export function RosterScreen() {
                       {...pointerProps('convoy', index)}
                     >
                       <span className="roster-screen__equipped" />
+                      <ItemIcon item={item} />
                       <span className="roster-screen__label">{item.label}</span>
                       <ItemCount item={item} />
                     </li>

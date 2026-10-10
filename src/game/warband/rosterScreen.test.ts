@@ -107,6 +107,17 @@ describe('item actions', () => {
     expect(getItemActions(pointRosterCursor(state, 'items', 1)).map((a) => a.id)).toEqual(['store']);
   });
 
+  it('offers Equip for armor', () => {
+    const run = campRun([{ itemId: 'wooden-shield', quantity: 1 }]);
+    const given = confirmRoster(pointRosterCursor(openRosterScreen(run), 'convoy', 0));
+    const state = pointRosterCursor(given, 'items', 3);
+    // Already worn: it's the only shield it carries.
+    expect(getItemActions(state).map((a) => [a.id, a.disabled])).toEqual([
+      ['equip', true],
+      ['store', false],
+    ]);
+  });
+
   it('cannot store a natural weapon', () => {
     const state = pointRosterCursor(moveRosterCursor(openRosterScreen(campRun()), 0, 1), 'items', 0);
     expect(getItemActions(state)).toEqual([

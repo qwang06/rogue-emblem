@@ -25,11 +25,13 @@ export type CombatSide = 'attacker' | 'defender';
 export type CombatWeapon = Pick<Weapon, 'type' | 'might' | 'hit' | 'crit' | 'weight' | 'minRange' | 'maxRange'>;
 
 // What the damage formulas read off a unit. Missing stats count as 0; a
-// unit without a weapon hits physically with no might.
+// unit without a weapon hits physically with no might. `armorDefense` is
+// what its worn armor adds to its defense (see getArmorDefense in items.ts).
 export interface DamageStats {
   strength?: number;
   magic?: number;
   defense?: number;
+  armorDefense?: number;
   resistance?: number;
   weapon?: Pick<CombatWeapon, 'type' | 'might'> | null;
 }
@@ -151,13 +153,14 @@ export function getDamageType(attacker: Pick<DamageStats, 'weapon'>): DamageType
   return WEAPON_DAMAGE_TYPES[type];
 }
 
-// Damage one hit deals: strength plus weapon might minus defense for a
-// physical hit, magic plus might minus resistance for a magical one, never
-// below zero. Missing stats count as 0.
+// Damage one hit deals: strength plus weapon might minus defense (and
+// worn armor) for a physical hit, magic plus might minus resistance for a
+// magical one, never below zero. Missing stats count as 0.
 export function calculateDamage(attacker: DamageStats, defender: DamageStats): number {
   const { power, guard } = DAMAGE_TYPES[getDamageType(attacker)];
   const might = attacker.weapon?.might ?? 0;
-  return Math.max(0, (attacker[power] ?? 0) + might - (defender[guard] ?? 0));
+  const armor = guard === 'defense' ? (defender.armorDefense ?? 0) : 0;
+  return Math.max(0, (attacker[power] ?? 0) + might - (defender[guard] ?? 0) - armor);
 }
 
 // Whether a unit can strike something `distance` orthogonal steps away

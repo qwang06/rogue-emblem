@@ -190,6 +190,13 @@ describe('calculateDamage', () => {
     expect(calculateDamage({ magic: 3, weapon: arms({ type: 'magical' }) }, defender)).toBe(0);
   });
 
+  it('subtracts worn armor from physical hits only', () => {
+    const armored = { defense: 2, armorDefense: 2, resistance: 1 };
+    expect(calculateDamage({ strength: 7, weapon: arms() }, armored)).toBe(3);
+    expect(calculateDamage({ magic: 7, weapon: arms({ type: 'magical' }) }, armored)).toBe(6);
+    expect(calculateDamage({ strength: 3 }, armored)).toBe(0);
+  });
+
   it('counts a missing guard stat as 0', () => {
     expect(calculateDamage({ magic: 4, weapon: arms({ type: 'magical' }) }, { defense: 3 })).toBe(4);
   });

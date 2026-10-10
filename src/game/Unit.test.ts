@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GrowthTable } from './experience.ts';
-import { HEALTH_POTION, MANA_POTION, type InventoryEntry } from './items.ts';
+import { HEALTH_POTION, MANA_POTION, WOODEN_ARMOR, WOODEN_SHIELD, type InventoryEntry } from './items.ts';
 import { Unit } from './Unit.ts';
 import { FIRE, FISTS, IRON_BOW, IRON_SPEAR, weaponEntry, type WeaponType } from './weapons.ts';
 
@@ -319,6 +319,32 @@ describe('Unit', () => {
       expect(unit.level).toBe(3);
       expect(unit.strength).toBe(6);
       expect(unit.experience).toBe(50);
+    });
+  });
+
+  describe('armor', () => {
+    it('wears the first armor of each slot, adding its defense apart from the stat', () => {
+      const unit = makeUnit({
+        items: [weaponEntry(IRON_SPEAR), { item: WOODEN_SHIELD, quantity: 1 }, { item: WOODEN_ARMOR, quantity: 1 }],
+      });
+      expect(unit.wornArmor.map(({ armor }) => armor.id)).toEqual(['wooden-shield', 'wooden-armor']);
+      expect(unit.armorDefense).toBe(2);
+      expect(unit.defense).toBe(2);
+    });
+
+    it('wears a piece by moving it to the front, keeping the equipped weapon', () => {
+      const unit = makeUnit({
+        weaponTypes: ['physical'],
+        items: [weaponEntry(IRON_SPEAR), { item: WOODEN_SHIELD, quantity: 1 }],
+      });
+      expect(unit.wear(1)).toBe(WOODEN_SHIELD);
+      expect(unit.items[0].item).toBe(WOODEN_SHIELD);
+      expect(unit.weapon).toBe(IRON_SPEAR);
+      expect(() => unit.wear(1)).toThrow(/No armor/);
+    });
+
+    it('wears nothing without armor', () => {
+      expect(makeUnit().armorDefense).toBe(0);
     });
   });
 });

@@ -245,6 +245,7 @@ export interface DialogView {
 export function toUnitView(unit: Unit | null | undefined): UnitView | null {
   if (!unit) return null;
   const equipped = unit.equippedWeapon;
+  const worn = unit.wornArmor.map(({ index }) => index);
   return Object.freeze({
     name: unit.name,
     unitClass: unit.unitClass,
@@ -260,7 +261,7 @@ export function toUnitView(unit: Unit | null | undefined): UnitView | null {
     skill: unit.skill,
     speed: unit.speed,
     luck: unit.luck,
-    defense: unit.defense,
+    defense: unit.defense + unit.armorDefense,
     resistance: unit.resistance,
     movement: unit.movement,
     range: equipped ? formatWeaponRange(equipped.weapon) : '–',
@@ -272,7 +273,7 @@ export function toUnitView(unit: Unit | null | undefined): UnitView | null {
           label: item.label,
           quantity: item.kind === 'weapon' && item.uses === null ? null : quantity,
           weapon: item.kind === 'weapon',
-          equipped: index === equipped?.index,
+          equipped: index === equipped?.index || worn.includes(index),
         }),
       ),
     ),

@@ -5,10 +5,10 @@
 
 import type { Menu } from '../game/actionMenu.ts';
 import { MAX_INVENTORY_SLOTS, type Item } from '../game/items.ts';
-import { getUnitSprite } from '../game/tileset.ts';
+import { getItemSprite, getUnitSprite } from '../game/tileset.ts';
 import { UNIT_CLASSES, type UnitClass } from '../game/unitClasses.ts';
 import { formatWeaponRange } from '../game/weapons.ts';
-import { canGiveFromConvoy, getEquippedIndex, lookUpItem } from '../game/warband/convoy.ts';
+import { canGiveFromConvoy, getEquippedIndex, getWornIndices, lookUpItem } from '../game/warband/convoy.ts';
 import { RUN_ITEMS, type ItemSnapshot } from '../game/warband/run.ts';
 import {
   getPickedUnit,
@@ -27,13 +27,15 @@ export interface RosterUnitView {
   sprite: string;
 }
 
-// An item in a unit's inventory or the convoy. `quantity` is how many (a
-// weapon's or staff's uses left), or null for a weapon that never breaks;
-// `equipped` marks the weapon the unit fights with; `disabled` marks a
-// convoy item the picked unit has no room for.
+// An item in a unit's inventory or the convoy. `icon` is its sprite key
+// (null for items with no icon yet); `quantity` is how many (a weapon's or
+// staff's uses left), or null for a weapon that never breaks or armor;
+// `equipped` marks the weapon the unit fights with and the armor it wears;
+// `disabled` marks a convoy item the picked unit has no room for.
 export interface RosterItemView {
   key: string;
   label: string;
+  icon: string | null;
   kind: string;
   quantity: number | null;
   equipped: boolean;
@@ -65,20 +67,24 @@ export function toRosterScreenView(
 ): RosterScreenView {
   const unit = getPickedUnit(state);
   const equipped = unit ? getEquippedIndex(state.run, unit.id, classes, items) : null;
+  const worn = unit ? getWornIndices(state.run, unit.id, items) : [];
   const toItem = (entry: ItemSnapshot, index: number, extra: Partial<RosterItemView>): RosterItemView => {
     const item = lookUpItem(entry.itemId, items);
-    const neverBreaks = item.kind === 'weapon' && item.uses === null;
+    const uncounted = (item.kind === 'weapon' && item.uses === null) || item.kind === 'armor';
     return Object.freeze({
       key: `${entry.itemId}@${index}`,
       label: item.label,
+      icon: getItemSprite(item.id),
       kind: item.kind,
-      quantity: neverBreaks ? null : entry.quantity,
+      quantity: uncounted ? null : entry.quantity,
       equipped: false,
       disabled: false,
       ...extra,
     });
   };
-  const unitItems = (unit?.items ?? []).map((entry, index) => toItem(entry, index, { equipped: index === equipped }));
+  const unitItems = (unit?.items ?? []).map((entry, index) =>
+    toItem(entry, index, { equipped: index === equipped || worn.includes(index) }),
+  );
   const convoy = state.run.convoy.map((entry, index) =>
     toItem(entry, index, { disabled: !unit || !canGiveFromConvoy(state.run, unit.id, index, items) }),
   );
@@ -117,9 +123,8 @@ export function toRosterScreenView(
   });
 }
 
-// An item's name and a line on what it does: a weapon's numbers, a staff's
-// healing, a consumable's recovery. Gear the screen doesn't know yet gets
-// just its name.
+// An item's name and a line on what it does: a weapon's numbers, armor's
+// defense, a staff's healing, a consumable's recovery.
 export function describeItem(item: Item): { label: string; description: string } {
   const describe = (description: string) => Object.freeze({ label: item.label, description });
   if (item.kind === 'weapon') {
@@ -132,8 +137,9 @@ export function describeItem(item: Item): { label: string; description: string }
   if (item.kind === 'staff') {
     return describe(`Staff · Heals ${item.power} + MAG · Rng ${formatWeaponRange(item)} · ${item.uses} uses`);
   }
-  if (item.kind === 'consumable') {
-    return describe(`Restores up to ${item.amount} ${item.stat === 'health' ? 'HP' : 'mana'}.`);
+  if (item.kind === 'armor') {
+    const slot = item.slot === 'shield' ? 'Shield' : 'Body armor';
+    return describe(`${slot} · DEF +${item.defense} against physical hits · Wt ${item.weight}`);
   }
-  return describe('');
+  return describe(`Restores up to ${item.amount} ${item.stat === 'health' ? 'HP' : 'mana'}.`);
 }
