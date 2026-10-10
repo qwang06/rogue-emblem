@@ -10,7 +10,7 @@ Living documentation of how Rogue Emblem is structured. This tracks the _shape_ 
 - [TypeScript](https://www.typescriptlang.org/) in `strict` mode for all source. Vite strips types; `tsc` (`npm run typecheck`, and the first step of `npm run build`) only type-checks.
 - [Vitest](https://vitest.dev/) for unit tests.
 - [Prettier](https://prettier.io/) formats code and Markdown (`npm run format`); CI fails on unformatted files.
-- [GitHub Actions](https://docs.github.com/actions) (`.github/workflows/deploy.yml`) runs the tests, builds, and deploys to GitHub Pages on every push to `main`. Vite builds with a relative `base` so the game works from the Pages subpath.
+- [GitHub Actions](https://docs.github.com/actions): `.github/workflows/ci.yml` checks formatting, runs the full test suite and builds on every pull request to `main` and every push to it; `.github/workflows/deploy.yml` runs the same checks, builds, and deploys to GitHub Pages only when run manually (`workflow_dispatch`). Vite builds with a relative `base` so the game works from the Pages subpath.
 
 ## Layering
 

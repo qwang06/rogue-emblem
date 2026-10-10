@@ -22,7 +22,7 @@ Any work that touches art — picking or changing terrain frame indices or sprit
 
 ## Running tests
 
-`npm test` runs only the test files affected by what changed since `main` (committed on the branch or not), using Vitest's `--changed`: a test runs when it imports a changed file, directly or indirectly. Use it to verify a change. Run the full suite with `npm run test:all` only when asked to; CI runs the full suite on every push.
+`npm test` runs only the test files affected by what changed since `main` (committed on the branch or not), using Vitest's `--changed`: a test runs when it imports a changed file, directly or indirectly. Use it to verify a change. Run the full suite with `npm run test:all` only when asked to; CI runs the full suite on every pull request to `main` and every push to it.
 
 ## TypeScript
 
