@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   GROWTH_STATS,
   KILL_BONUS,
+  EXPERIENCE_PER_LEVEL,
+  FIRST_LEVEL_EXPERIENCE,
+  getExperienceForLevel,
   MAX_LEVEL,
   MISS_EXPERIENCE,
   addExperience,
@@ -110,7 +113,8 @@ describe('getCombatExperience', () => {
   });
 
   it('caps a single combat at one level', () => {
-    expect(getCombatExperience(1, 30, 'kill')).toBe(100);
+    expect(getCombatExperience(2, 30, 'kill')).toBe(EXPERIENCE_PER_LEVEL);
+    expect(getCombatExperience(1, 30, 'kill')).toBe(FIRST_LEVEL_EXPERIENCE);
   });
 
   it('gives nothing at the max level', () => {
@@ -118,13 +122,28 @@ describe('getCombatExperience', () => {
   });
 });
 
+describe('getExperienceForLevel', () => {
+  it('is FIRST_LEVEL_EXPERIENCE from level 1 to 2, then EXPERIENCE_PER_LEVEL', () => {
+    expect(getExperienceForLevel(1)).toBe(FIRST_LEVEL_EXPERIENCE);
+    expect(FIRST_LEVEL_EXPERIENCE).toBeLessThan(EXPERIENCE_PER_LEVEL);
+    expect(getExperienceForLevel(2)).toBe(EXPERIENCE_PER_LEVEL);
+    expect(getExperienceForLevel(MAX_LEVEL - 1)).toBe(EXPERIENCE_PER_LEVEL);
+  });
+});
+
 describe('addExperience', () => {
   it('adds XP within a level', () => {
-    expect(addExperience(1, 20, 30)).toEqual({ level: 1, experience: 50, levelsGained: 0 });
+    expect(addExperience(2, 20, 30)).toEqual({ level: 2, experience: 50, levelsGained: 0 });
+    expect(addExperience(1, 20, 20)).toEqual({ level: 1, experience: 40, levelsGained: 0 });
   });
 
   it('levels up at exactly 100', () => {
-    expect(addExperience(1, 70, 30)).toEqual({ level: 2, experience: 0, levelsGained: 1 });
+    expect(addExperience(2, 70, 30)).toEqual({ level: 3, experience: 0, levelsGained: 1 });
+  });
+
+  it('levels up from 1 to 2 at only 50', () => {
+    expect(addExperience(1, 20, 30)).toEqual({ level: 2, experience: 0, levelsGained: 1 });
+    expect(addExperience(1, 40, 25)).toEqual({ level: 2, experience: 15, levelsGained: 1 });
   });
 
   it('carries the overflow', () => {
@@ -132,7 +151,8 @@ describe('addExperience', () => {
   });
 
   it('gains several levels at once', () => {
-    expect(addExperience(1, 50, 260)).toEqual({ level: 4, experience: 10, levelsGained: 3 });
+    expect(addExperience(2, 50, 260)).toEqual({ level: 5, experience: 10, levelsGained: 3 });
+    expect(addExperience(1, 20, 260)).toEqual({ level: 4, experience: 30, levelsGained: 3 });
   });
 
   it('stops at the max level with no XP left over', () => {
@@ -272,13 +292,13 @@ describe('resolveExperienceGain', () => {
       experience: 45,
       levelUps: [],
     });
-    const result = resolveExperienceGain(unit({ experience: 90, experienceRate: 150 }), 20, () => 0);
+    const result = resolveExperienceGain(unit({ experience: 40, experienceRate: 150 }), 20, () => 0);
     expect(result).toMatchObject({ amount: 30, level: 2, experience: 20 });
     expect(result.levelUps).toHaveLength(1);
   });
 
   it('rolls one level up per level gained, with the running stats', () => {
-    const result = resolveExperienceGain(unit({ experience: 90 }), 120, () => 0);
+    const result = resolveExperienceGain(unit({ experience: 40 }), 120, () => 0);
     expect(result.level).toBe(3);
     expect(result.experience).toBe(10);
     expect(result.levelUps.map((l) => l.level)).toEqual([2, 3]);
@@ -298,8 +318,8 @@ describe('resolveExperienceGain', () => {
   });
 
   it('skips the XP rate for an unscaled gain', () => {
-    const result = resolveExperienceGain(unit({ experienceRate: 150 }), 100, () => 0, { scaled: false });
-    expect(result).toMatchObject({ amount: 100, level: 2, experience: 0 });
+    const result = resolveExperienceGain(unit({ experienceRate: 150 }), 50, () => 0, { scaled: false });
+    expect(result).toMatchObject({ amount: 50, level: 2, experience: 0 });
   });
 
   it('does not mutate the unit', () => {
@@ -311,7 +331,8 @@ describe('resolveExperienceGain', () => {
 
 describe('getExperienceToNextLevel', () => {
   it('is what is left of the current level', () => {
-    expect(getExperienceToNextLevel(1, 0)).toBe(100);
+    expect(getExperienceToNextLevel(1, 0)).toBe(FIRST_LEVEL_EXPERIENCE);
+    expect(getExperienceToNextLevel(1, 35)).toBe(15);
     expect(getExperienceToNextLevel(4, 73)).toBe(27);
   });
 
@@ -334,7 +355,7 @@ describe('getCombatAward', () => {
 
   it('is exactly the XP to the next level, unscaled, for killing a levelUpOnKill opponent', () => {
     const opponent = { level: 1, levelUpOnKill: true };
-    expect(getCombatAward({ level: 1, experience: 0 }, opponent, 'kill')).toEqual({ amount: 100, scaled: false });
+    expect(getCombatAward({ level: 1, experience: 0 }, opponent, 'kill')).toEqual({ amount: 50, scaled: false });
     expect(getCombatAward({ level: 5, experience: 64 }, opponent, 'kill')).toEqual({ amount: 36, scaled: false });
   });
 

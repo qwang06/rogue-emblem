@@ -453,18 +453,18 @@ describe('toCombatForecastView', () => {
 
 describe('toExperienceGainView', () => {
   it('fills the bar from the old XP to the new', () => {
-    const result = { amount: 30, level: 1, experience: 50, levelUps: [] };
+    const result = { amount: 30, level: 2, experience: 50, levelUps: [] };
     const view = toExperienceGainView({
       id: 1,
       name: 'Ana',
-      from: { level: 1, experience: 20 },
+      from: { level: 2, experience: 20 },
       result,
       durationMs: 900,
     });
     expect(view).toEqual({
       id: 1,
       name: 'Ana',
-      level: 1,
+      level: 2,
       gained: 30,
       startPercent: 20,
       endPercent: 50,
@@ -473,13 +473,26 @@ describe('toExperienceGainView', () => {
     expect(Object.isFrozen(view)).toBe(true);
   });
 
+  it("measures level 1's bar against its smaller XP need", () => {
+    const result = { amount: 15, level: 1, experience: 35, levelUps: [] };
+    const view = toExperienceGainView({
+      id: 3,
+      name: 'Ana',
+      from: { level: 1, experience: 20 },
+      result,
+      durationMs: 900,
+    });
+    expect(view.startPercent).toBe(40);
+    expect(view.endPercent).toBe(70);
+  });
+
   it('fills the bar to 100 on a level up', () => {
     // Only the number of level ups matters here.
-    const result = { amount: 30, level: 2, experience: 10, levelUps: [{}] } as ExperienceGain;
+    const result = { amount: 30, level: 3, experience: 10, levelUps: [{}] } as ExperienceGain;
     const view = toExperienceGainView({
       id: 2,
       name: 'Ana',
-      from: { level: 1, experience: 80 },
+      from: { level: 2, experience: 80 },
       result,
       durationMs: 900,
     });

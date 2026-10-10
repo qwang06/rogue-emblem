@@ -3,7 +3,7 @@
   "regions": [
     {
       "name": "Meadowlands",
-      "description": "Open fields: the run's first, quick fight. A lone slime stands three steps from the start, close enough to strike on turn one. Killing it is worth a level up.",
+      "description": "Open fields: the run's first, quick fight. A lone slime stands three steps from the start, close enough to strike on turn one.",
       "terrain": {
         "width": 14,
         "height": 12,
@@ -15,7 +15,7 @@
         "ruins": 0,
         "buildings": 3
       },
-      "enemies": [{ "count": 1, "unitClass": "slime", "minDistance": 3, "maxDistance": 3, "levelUpOnKill": true }],
+      "enemies": [{ "count": 1, "unitClass": "slime", "minDistance": 3, "maxDistance": 3 }],
       "treeChance": 0.05,
       "palette": "a-stone"
     },

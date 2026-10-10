@@ -93,8 +93,8 @@ describe('Villager', () => {
 
   it('reaches a level a soldier would still be working toward', () => {
     const villager = new Villager({ team: 'player' });
-    villager.gainExperience(70, () => 0);
+    villager.gainExperience(40, () => 0);
     expect(villager.level).toBe(2);
-    expect(villager.experience).toBe(5);
+    expect(villager.experience).toBe(10);
   });
 });

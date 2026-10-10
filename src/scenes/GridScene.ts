@@ -62,6 +62,7 @@ import {
 import { finishStage, type RunState } from '../game/warband/run.ts';
 import {
   addGold,
+  applyExperienceReward,
   applyReward,
   getRerollCost,
   getSkipGold,
@@ -70,6 +71,7 @@ import {
   rollStageRewards,
   skipRewards,
   type Reward,
+  type RewardLevelUp,
 } from '../game/warband/rewards.ts';
 import { clearSavedRun, saveRun } from '../data/runSave.ts';
 import { randomSeed } from '../game/rng.ts';
@@ -847,14 +849,17 @@ export class GridScene extends Phaser.Scene {
         this.openRewardMenu(this.rewardMenu!.selectedIndex);
         return;
       }
-      const after =
-        action.kind === 'skip'
-          ? skipRewards(offer.run, offer.stage)
-          : applyReward(offer.run, offer.rewards[this.rewardMenu!.selectedIndex]);
+      const reward = action.kind === 'skip' ? null : offer.rewards[this.rewardMenu!.selectedIndex];
+      // Experience shows each level up it gives before moving on.
+      const { run: after, levelUps } =
+        reward?.kind === 'experience'
+          ? applyExperienceReward(offer.run, reward)
+          : { run: reward ? applyReward(offer.run, reward) : skipRewards(offer.run, offer.stage), levelUps: [] };
       saveRun(after);
       this.rewardOffer = null;
       this.nextBattle = runStage(after);
-      this.leaveBattle();
+      this.inputLocked = true;
+      this.showLevelUps(levelUps, () => this.leaveBattle());
       return;
     }
     if (delta !== 0) this.publishMenu('rewardMenu', moveSelection(this.rewardMenu!, delta));
@@ -1668,22 +1673,33 @@ export class GridScene extends Phaser.Scene {
     });
     gameStore.setState({ experienceGain });
 
+    this.time.delayedCall(EXPERIENCE_BAR_MS, () => {
+      gameStore.setState({ experienceGain: null });
+      this.showLevelUps(
+        result.levelUps.map((levelUp) => ({ name: unit.name, levelUp })),
+        () => {
+          this.publishHoveredUnit();
+          onDone();
+        },
+      );
+    });
+  }
+
+  // Shows React's level-up panel for each level up in turn, holding each
+  // for LEVEL_UP_MS, then calls onDone (straight away when there are none).
+  showLevelUps(levelUps: readonly RewardLevelUp[], onDone: () => void) {
     const showLevelUp = (index: number) => {
-      const levelUp = result.levelUps[index];
-      if (!levelUp) {
-        gameStore.setState({ levelUp: null });
-        this.publishHoveredUnit();
+      const entry = levelUps[index];
+      if (!entry) {
+        if (index > 0) gameStore.setState({ levelUp: null });
         onDone();
         return;
       }
-      const view = toLevelUpView({ id: this.nextProgressId++, name: unit.name, levelUp, durationMs: LEVEL_UP_MS });
+      const view = toLevelUpView({ id: this.nextProgressId++, ...entry, durationMs: LEVEL_UP_MS });
       gameStore.setState({ levelUp: view });
       this.time.delayedCall(LEVEL_UP_MS, () => showLevelUp(index + 1));
     };
-    this.time.delayedCall(EXPERIENCE_BAR_MS, () => {
-      gameStore.setState({ experienceGain: null });
-      showLevelUp(0);
-    });
+    showLevelUp(0);
   }
 
   // Uses the aimed skill on the unit under the cursor, if it's a hostile

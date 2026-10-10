@@ -7,7 +7,7 @@ import { CHARACTERS, DIALOGS } from '../data/dialogs.ts';
 import { STORY_CHAPTERS } from '../game/battleSetup.ts';
 import { CRIT_MULTIPLIER, DOUBLE_THRESHOLD } from '../game/combatStats.ts';
 import { REGION_CONFIGS } from '../data/regions.ts';
-import { EXPERIENCE_PER_LEVEL, GROWTH_STATS, MAX_LEVEL } from '../game/experience.ts';
+import { EXPERIENCE_PER_LEVEL, FIRST_LEVEL_EXPERIENCE, GROWTH_STATS, MAX_LEVEL } from '../game/experience.ts';
 import { STARTING_ITEMS } from '../game/items.ts';
 import { TERRAIN_MOVE_COSTS } from '../game/movement.ts';
 import { SKILL_TREES } from '../game/skills.ts';
@@ -150,7 +150,7 @@ export function getConfigCatalog(): readonly ConfigGroup[] {
           title: 'Experience & Leveling',
           description: 'XP per level, the level cap, and XP for misses and kills.',
           sources: ['src/game/experience.ts'],
-          summary: `${EXPERIENCE_PER_LEVEL} XP per level · cap ${MAX_LEVEL}`,
+          summary: `${FIRST_LEVEL_EXPERIENCE} XP to level 2, ${EXPERIENCE_PER_LEVEL} per level after · cap ${MAX_LEVEL}`,
         },
         {
           id: 'combat',

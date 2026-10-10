@@ -6,7 +6,13 @@
 import { DAMAGE_TYPES, getDamageType, type CombatSide, type DamageType, type ForecastSide } from '../game/combat.ts';
 import { getAttackSpeed, getAvoid, getCrit, getHit } from '../game/combatStats.ts';
 import type { Dialog, DialogSide } from '../game/dialog.ts';
-import { MAX_LEVEL, type ExperienceGain, type GrowthStat, type LevelUpResult } from '../game/experience.ts';
+import {
+  getExperienceForLevel,
+  MAX_LEVEL,
+  type ExperienceGain,
+  type GrowthStat,
+  type LevelUpResult,
+} from '../game/experience.ts';
 import type { ObjectiveText } from '../game/objectives.ts';
 import type { Point } from '../game/grid.ts';
 import type { Team, TurnState } from '../game/turns.ts';
@@ -450,8 +456,8 @@ export function toRosterEntryView({
 }
 
 // Snapshot of the XP bar shown after a player unit's combat: its name, the
-// level it started at, how many XP it gained, and the bar's fill (0–100)
-// before and after — a level up fills it to 100, and the level-up panel
+// level it started at, how many XP it gained, and the bar's fill (0–100,
+// of the XP that level needs) before and after — a level up fills it to 100, and the level-up panel
 // takes over from there. `from` is the unit's { level, experience } before
 // the gain and `result` the resolveExperienceGain result (src/game/
 // experience.ts). `id` changes per bar so the UI restarts its animation.
@@ -473,8 +479,8 @@ export function toExperienceGainView({
     name,
     level: from.level,
     gained: result.amount,
-    startPercent: from.experience,
-    endPercent: result.levelUps.length > 0 ? 100 : result.experience,
+    startPercent: (from.experience / getExperienceForLevel(from.level)) * 100,
+    endPercent: result.levelUps.length > 0 ? 100 : (result.experience / getExperienceForLevel(from.level)) * 100,
     durationMs,
   });
 }

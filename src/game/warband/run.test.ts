@@ -71,7 +71,7 @@ describe('snapshotUnit and restoreUnit', () => {
 
   it('round-trips a leveled, wounded unit with a worn weapon and a used potion', () => {
     const soldier = new Soldier({ name: 'Alden', team: 'player' });
-    soldier.gainExperience(250, alwaysGrow);
+    soldier.gainExperience(200, alwaysGrow);
     soldier.takeDamage(4);
     soldier.spendMana(1);
     soldier.spendWeaponUse();
@@ -115,7 +115,7 @@ describe('applyBattleResult', () => {
     const run = startingRun();
     const units = restoreRoster(run);
     const alden = units.get('alden')!;
-    alden.gainExperience(130, alwaysGrow);
+    alden.gainExperience(80, alwaysGrow);
     alden.takeDamage(3);
     alden.spendWeaponUse();
     const bryn = units.get('bryn')!;

@@ -1,6 +1,6 @@
 import { gameCommands } from '../bridge/commands.ts';
 import type { UnitDetailView } from '../bridge/views.ts';
-import { EXPERIENCE_PER_LEVEL } from '../game/experience.ts';
+import { getExperienceForLevel } from '../game/experience.ts';
 import { getUnitSprite } from '../game/tileset.ts';
 import { UnitSprite } from './UnitSprite.tsx';
 import { Meter } from './UnitPanel.tsx';
@@ -47,7 +47,9 @@ function Identity({ unit }: { unit: UnitDetailView }) {
         {unit.classLabel ?? 'No class'}, level {unit.level}
       </p>
       {unit.team === 'player' && (
-        <p className="unit-info__xp">{unit.maxLevel ? 'Max level' : `XP ${unit.experience}/${EXPERIENCE_PER_LEVEL}`}</p>
+        <p className="unit-info__xp">
+          {unit.maxLevel ? 'Max level' : `XP ${unit.experience}/${getExperienceForLevel(unit.level)}`}
+        </p>
       )}
       <Meter label="HP" value={unit.health} max={unit.maxHealth} kind="hp" />
       <Meter label="MP" value={unit.mana} max={unit.maxMana} kind="mp" />
