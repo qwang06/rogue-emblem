@@ -5,6 +5,7 @@ const CONTROLS = [
   { keys: ['Enter', 'Z'], action: 'Confirm' },
   { keys: ['Esc', 'X'], action: 'Cancel' },
   { keys: ['Esc'], action: 'Pause (on the map)' },
+  { keys: ['I'], action: 'Unit info (on a unit)' },
   { keys: ['Esc'], action: 'Skip dialog' },
   { keys: ['Mouse'], action: 'Point to move cursor' },
   { keys: ['Left click'], action: 'Confirm' },

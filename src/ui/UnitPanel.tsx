@@ -23,13 +23,15 @@ const STATS = [
 // one in gold — long names cut short with an ellipsis; left out when it
 // has none. The team shows as the accent color. It sits in the corner away
 // from the hovered unit so it never covers it, and steps aside while the
-// combat forecast (which already shows both fighters) is up.
+// combat forecast (which already shows both fighters) or the unit info
+// screen (the full sheet, see UnitInfoScreen.tsx) is up.
 export function UnitPanel() {
   const unit = useGameStore((state) => state.hoveredUnit);
   const anchor = useGameStore((state) => state.hoveredAnchor);
   const forecastOpen = useGameStore((state) => state.combatForecast !== null);
+  const infoOpen = useGameStore((state) => state.unitInfo !== null);
 
-  if (!unit || forecastOpen) return null;
+  if (!unit || forecastOpen || infoOpen) return null;
 
   const corner = pickCornerAwayFromTile(anchor);
   return (
@@ -81,7 +83,7 @@ export function UnitPanel() {
   );
 }
 
-function Meter({ label, value, max, kind }: { label: string; value: number; max: number; kind: string }) {
+export function Meter({ label, value, max, kind }: { label: string; value: number; max: number; kind: string }) {
   const percent = max > 0 ? (value / max) * 100 : 0;
   return (
     <div className={`meter meter--${kind}`}>

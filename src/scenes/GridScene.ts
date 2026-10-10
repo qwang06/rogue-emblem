@@ -26,6 +26,7 @@ import {
   toRosterEntryView,
   toTileAnchorView,
   toTurnView,
+  toUnitDetailView,
   toUnitView,
   worldToScreen,
   type RunOverView,
@@ -218,6 +219,9 @@ export class GridScene extends Phaser.Scene {
   // A unit picked in the preview, and the reach highlights drawn for it.
   previewUnitId: string | null = null;
   onObjectiveDone: (() => void) | null = null;
+  // The unit the info screen shows while it's open: see the Unit info section.
+  unitInfoUnit: Unit | null = null;
+  infoKey!: Phaser.Input.Keyboard.Key;
   keys!: Phaser.Types.Input.Keyboard.CursorKeys;
   arrowRepeat!: KeyRepeatState;
   actionKeys!: Record<ActionKey, Phaser.Input.Keyboard.Key>;
@@ -323,6 +327,7 @@ export class GridScene extends Phaser.Scene {
       cancelAlt: Phaser.Input.Keyboard.KeyCodes.X,
     }) as Record<ActionKey, Phaser.Input.Keyboard.Key>;
     this.createPointerInput();
+    this.infoKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.I); // opens the unit info screen
 
     this.phase = 'deployment'; // 'deployment' | 'battle'
     this.actionMenu = null;
@@ -356,6 +361,7 @@ export class GridScene extends Phaser.Scene {
     this.dialogLineId = null; // changes per line so the dialog box restarts its typing
     this.nextDialogLineId = 1;
     this.onObjectiveDone = null; // set while the Objective screen is up
+    this.unitInfoUnit = null; // set while the unit info screen is up
     this.previewUnitId = null;
     this.preview = gameStore.getState().screen === 'preview';
     if (this.preview) {
@@ -396,10 +402,12 @@ export class GridScene extends Phaser.Scene {
     const pointer = this.drainPointerInput();
     const confirm = JustDown(this.actionKeys.confirm) || JustDown(this.actionKeys.confirmAlt) || pointer.confirm;
     const cancel = JustDown(this.actionKeys.cancel) || JustDown(this.actionKeys.cancelAlt) || pointer.cancel;
+    const info = JustDown(this.infoKey);
 
     if (this.inputLocked) return;
 
     if (this.preview) {
+      if (this.updateUnitInfo(info, confirm, cancel)) return;
       this.updatePreview(dx, dy, confirm, cancel);
       return;
     }
@@ -420,6 +428,8 @@ export class GridScene extends Phaser.Scene {
       if (confirm) this.leaveBattle();
       return;
     }
+
+    if (this.updateUnitInfo(info, confirm, cancel)) return;
 
     if (this.pauseMenu) {
       this.updatePauseMenu(dy, confirm, cancel);
@@ -787,6 +797,34 @@ export class GridScene extends Phaser.Scene {
     this.onObjectiveDone = null;
     gameStore.setState({ objective: null });
     onDone?.();
+  }
+
+  // ---- Unit info --------------------------------------------------------
+  // Pressing I with the cursor on a unit, whenever the cursor is free to
+  // roam, opens React's full stat sheet for it (src/ui/UnitInfoScreen.tsx).
+  // It owns input while open, and I, confirm or cancel closes it.
+
+  // Returns true when the unit info screen took this frame's input.
+  updateUnitInfo(info: boolean, confirm: boolean, cancel: boolean): boolean {
+    if (this.unitInfoUnit) {
+      if (info || confirm || cancel) this.hideUnitInfo();
+      return true;
+    }
+    if (info && this.hoveredUnit && this.canRoamCursor()) {
+      this.showUnitInfo(this.hoveredUnit);
+      return true;
+    }
+    return false;
+  }
+
+  showUnitInfo(unit: Unit) {
+    this.unitInfoUnit = unit;
+    gameStore.setState({ unitInfo: toUnitDetailView(unit) });
+  }
+
+  hideUnitInfo() {
+    this.unitInfoUnit = null;
+    gameStore.setState({ unitInfo: null });
   }
 
   // ---- Preview ----------------------------------------------------------
@@ -1760,6 +1798,7 @@ export class GridScene extends Phaser.Scene {
       this.cursorSprite.visible &&
       !this.battleOutcome &&
       !this.dialog &&
+      !this.unitInfoUnit &&
       !this.pauseMenu &&
       !this.deploymentMenu &&
       !this.rosterMenu &&

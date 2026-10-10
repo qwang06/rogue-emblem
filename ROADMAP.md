@@ -339,7 +339,7 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 
 - Battle animation scene (cut-in when attacking), toggleable.
 - Map-scroll and unit-move speed settings; skip enemy phase animations.
-- Unit info screen (full stats, inventory, growths hidden).
+- Unit info screen (full stats, inventory, growths hidden) — done: press I on a unit (`UnitInfoScreen.tsx`).
 - Turn-start "Player Phase"-style banners per objective.
 - Sound effects and music.
 - Undo last move (before acting) — partially exists via `unmarkMoved`.
