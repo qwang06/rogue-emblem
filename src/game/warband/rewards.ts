@@ -34,7 +34,6 @@ export const RECRUIT_CLASS_IDS: readonly string[] = Object.freeze([
   'soldier',
   'archer',
   'vanguard',
-  'wizard',
   'guard',
   'acolyte',
 ]);

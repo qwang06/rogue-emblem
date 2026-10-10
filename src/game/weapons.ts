@@ -128,7 +128,7 @@ export const IRON_BOW = weapon({
   uses: 40,
 });
 
-// The elementals' and wizards' spell: magic against resistance, near or
+// The elementals' spell: magic against resistance, near or
 // one tile further.
 export const FIRE = weapon({
   id: 'fire',

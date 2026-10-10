@@ -1,6 +1,6 @@
 # UNITS.md
 
-Reference for every unit class: base stats, growth rates, caps, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Villager.ts`, `src/game/Soldier.ts`, `src/game/Archer.ts`, `src/game/Vanguard.ts`, `src/game/Wizard.ts`, `src/game/Guard.ts`, `src/game/Acolyte.ts`, `src/game/Slime.ts`, `src/game/Goblin.ts`, `src/game/Skeleton.ts`, `src/game/healing.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
+Reference for every unit class: base stats, growth rates, caps, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Villager.ts`, `src/game/Soldier.ts`, `src/game/Archer.ts`, `src/game/Vanguard.ts`, `src/game/Guard.ts`, `src/game/Acolyte.ts`, `src/game/Slime.ts`, `src/game/Goblin.ts`, `src/game/Skeleton.ts`, `src/game/healing.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
 
 ## How the numbers work
 
@@ -21,7 +21,7 @@ Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.m
 
 ## Weapons
 
-One starter weapon per armed unit in the unit catalog. Fists, the Iron Spear, the Iron Bow, the Iron Axe and Fire are carried by a class; the monsters fight with Tackle, Club and Bone Claws, which never break; the rest wait for their classes (milestone 2.3).
+One starter weapon per armed unit in the unit catalog. Fists, the Iron Spear, the Iron Bow and the Iron Axe are carried by a class; the monsters fight with Tackle, Club and Bone Claws, which never break; the rest wait for their classes (milestone 2.3).
 
 | Weapon     | Type     | Mt  | Hit | Crit | Wt  | Rng | Uses | For (catalog art)           |
 | ---------- | -------- | --- | --- | ---- | --- | --- | ---- | --------------------------- |
@@ -143,33 +143,6 @@ The axe-wielding front line: high HP and strength, low skill, speed and luck. It
 | Cleave | 2          | 2    | 1     | The regular hit with +2 STR |
 
 Carries an Iron Axe, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
-
-## Wizard
-
-The spellcaster: magic instead of strength and resistance instead of defense, with more mana than anyone. Fire hits with `MAG` against the target's `RES`, so a soldier's armor doesn't help it, and reaches two tiles, so the wizard can strike without being countered by a melee foe. In return it has the least HP and no defense.
-
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 8    | 50%    | 40  |
-| MP   | 8    | 60%    | 30  |
-| STR  | 1    | 10%    | 20  |
-| MAG  | 4    | 55%    | 20  |
-| SKL  | 3    | 40%    | 20  |
-| SPD  | 3    | 40%    | 20  |
-| LCK  | 2    | 30%    | 20  |
-| DEF  | 0    | 10%    | 20  |
-| RES  | 3    | 40%    | 20  |
-| MOV  | 5    | –      | –   |
-
-| Weapon types | Starting weapon | XP rate |
-| ------------ | --------------- | ------- |
-| magical      | Fire            | 100%    |
-
-| Skill    | Learned at | Mana | Range | Damage                      |
-| -------- | ---------- | ---- | ----- | --------------------------- |
-| Fireball | 2          | 3    | 1–3   | The regular hit with +1 MAG |
-
-Carries Fire, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
 ## Guard
 
@@ -316,7 +289,6 @@ Villager and Soldier share a stat line, so between them the difference is the we
 | Soldier  | Villager | Iron Spear | 3      | 79% | 0%   | 1       |
 | Archer   | Soldier  | Iron Bow   | 3      | 83% | 0%   | 1       |
 | Vanguard | Soldier  | Iron Axe   | 6      | 61% | 0%   | 1       |
-| Wizard   | Soldier  | Fire       | 6      | 84% | 0%   | 1       |
 | Guard    | Soldier  | Iron Spear | 3      | 78% | 0%   | 1       |
 | Soldier  | Guard    | Iron Spear | 0      | 84% | 0%   | 1       |
 
@@ -328,5 +300,4 @@ Every class learns its skill at level 2, its first level up; the skill rows use 
 | Power Strike | Soldier  | Villager | 6      | always | never | 1, no counter |
 | Long Shot    | Archer   | Soldier  | 3      | always | never | 1, no counter |
 | Cleave       | Vanguard | Soldier  | 8      | always | never | 1, no counter |
-| Fireball     | Wizard   | Soldier  | 7      | always | never | 1, no counter |
 | Shield Bash  | Guard    | Soldier  | 4      | always | never | 1, no counter |

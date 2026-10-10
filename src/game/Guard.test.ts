@@ -6,7 +6,6 @@ import { HEALTH_POTION, MANA_POTION } from './items.ts';
 import { getLearnedSkills, SHIELD_BASH } from './skills.ts';
 import { Soldier } from './Soldier.ts';
 import { Unit } from './Unit.ts';
-import { Wizard } from './Wizard.ts';
 import { FIRE, IRON_SPEAR, weaponEntry } from './weapons.ts';
 
 describe('Guard', () => {
@@ -75,7 +74,17 @@ describe('Guard', () => {
   });
 
   it('has no answer to magic', () => {
-    const wizard = new Wizard({ team: 'enemy' });
-    expect(calculateDamage(wizard, new Guard({ team: 'player' }))).toBe(wizard.magic + FIRE.might);
+    const caster = new Unit({
+      name: 'Caster',
+      team: 'enemy',
+      health: 8,
+      strength: 1,
+      magic: 4,
+      defense: 0,
+      movement: 5,
+      weaponTypes: ['magical'],
+      items: [weaponEntry(FIRE)],
+    });
+    expect(calculateDamage(caster, new Guard({ team: 'player' }))).toBe(caster.magic + FIRE.might);
   });
 });

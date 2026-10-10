@@ -23,10 +23,10 @@ import {
   type TileAnchorView,
 } from './views.ts';
 import type { ExperienceGain } from '../game/experience.ts';
-import { FIREBALL, POWER_STRIKE } from '../game/skills.ts';
+import { POWER_STRIKE } from '../game/skills.ts';
 import { MAX_LEVEL } from '../game/experience.ts';
 import { Soldier } from '../game/Soldier.ts';
-import { Wizard } from '../game/Wizard.ts';
+import { Acolyte } from '../game/Acolyte.ts';
 import { advanceDialog, createDialog } from '../game/dialog.ts';
 import { HEALTH_POTION } from '../game/items.ts';
 import { FIRE, FISTS, IRON_SPEAR, weaponEntry } from '../game/weapons.ts';
@@ -183,7 +183,17 @@ describe('toUnitDetailView', () => {
   });
 
   it('powers a magical weapon with magic', () => {
-    const unit = new Wizard({ team: 'player' });
+    const unit = new Unit({
+      name: 'Caster',
+      team: 'player',
+      health: 8,
+      strength: 1,
+      magic: 4,
+      defense: 0,
+      movement: 5,
+      weaponTypes: ['magical'],
+      items: [weaponEntry(FIRE)],
+    });
     const view = toUnitDetailView(unit)!;
     expect(view.damageType).toBe('magical');
     expect(view.attack).toBe(unit.magic + FIRE.might);
@@ -199,9 +209,6 @@ describe('toUnitDetailView', () => {
   it("lists the skills the unit's class has taught it", () => {
     expect(toUnitDetailView(new Soldier({ team: 'player', level: 2 }))!.skills).toEqual([
       { id: POWER_STRIKE.id, label: POWER_STRIKE.label, manaCost: POWER_STRIKE.manaCost, range: POWER_STRIKE.range },
-    ]);
-    expect(toUnitDetailView(new Wizard({ team: 'enemy', level: 2 }))!.skills.map((skill) => skill.id)).toEqual([
-      FIREBALL.id,
     ]);
     expect(toUnitDetailView(new Soldier({ team: 'player' }))!.skills).toEqual([]);
     expect(toUnitDetailView(makeUnit())!.skills).toEqual([]);
@@ -543,7 +550,7 @@ describe('toRewardAction', () => {
   });
 
   it("carries a recruit's stat line", () => {
-    const unit = snapshotUnit('recruit-1', new Wizard({ name: 'Dara', team: 'player' }));
+    const unit = snapshotUnit('recruit-1', new Acolyte({ name: 'Dara', team: 'player' }));
     const action = toRewardAction({ kind: 'recruit', unit }, 0);
     expect(action.label).toBe('Recruit Dara');
     expect(action.stats?.map(({ label }) => label)).toEqual(['HP', 'STR', 'MAG', 'SKL', 'SPD', 'DEF', 'RES']);
