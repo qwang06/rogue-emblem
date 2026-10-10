@@ -33,6 +33,7 @@ import type { MapGenOptions } from '../mapGen.ts';
 import { BUILDING_PALETTES, type BuildingPaletteName } from '../tileset.ts';
 import type { RegionConfig, RegionSettings } from './regions.ts';
 import { createStageLevel } from './stageLevel.ts';
+import { UNIT_CLASSES } from '../unitClasses.ts';
 
 // The bounds each number must fall in.
 export const REGION_LIMITS = Object.freeze({
@@ -144,6 +145,7 @@ function parseEnemyGroup(value: unknown, path: string): EnemyGroup {
   // An old file's "region" is the group's area.
   const json = object(value, path, [
     'count',
+    'unitClass',
     'area',
     'region',
     'minDistance',
@@ -155,6 +157,12 @@ function parseEnemyGroup(value: unknown, path: string): EnemyGroup {
   const group: { -readonly [K in keyof EnemyGroup]: EnemyGroup[K] } = {
     count: wholeNumber(json.count, `${path}.count`, REGION_LIMITS.enemyCount),
   };
+  if (json.unitClass !== undefined) {
+    if (typeof json.unitClass !== 'string' || !UNIT_CLASSES.some((c) => c.id === json.unitClass)) {
+      fail(`${path}.unitClass`, `must be one of ${UNIT_CLASSES.map((c) => c.id).join(', ')}`);
+    }
+    group.unitClass = json.unitClass;
+  }
   const areaKey = json.region !== undefined ? 'region' : 'area';
   if (json[areaKey] !== undefined) group.area = parseArea(json[areaKey], `${path}.${areaKey}`);
   for (const key of ['minDistance', 'maxDistance'] as const) {

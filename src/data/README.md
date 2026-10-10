@@ -64,10 +64,11 @@ Warband Mode's regions. A run fights stage after stage; every `stagesPerRegion` 
 
 - **name**: shown on the Objective and Victory screens ("Stage 2: Lakeside"). **description** is optional notes for whoever edits the file.
 - **terrain**: the map generator's settings. `width` and `height` (6–48 tiles) are required; the rest are optional: how many patches to grow (`lakes`, `mountains`, `forests`, `meadows`), their sizes as `[min, max]` tiles (`lakeSize`, `mountainSize`, `forestSize`, `meadowSize`), how many walled `ruins` and lone `buildings`, whether there's a `castle` (true/false), and `turnChance` (0–1, how much the path winds).
-- **enemies**: 1–10 groups of enemy soldiers, up to 30 in all, placed in order on random tiles the player can walk to. Each group has a `count` and optional limits:
+- **enemies**: 1–10 groups of enemies, up to 30 in all, placed in order on random tiles the player can walk to. Each group has a `count` and optional limits:
+  - `unitClass`: the class its enemies are (`villager`, `soldier`, `archer`, ... as in `UNIT_CLASSES`, `src/game/unitClasses.ts`), e.g. villagers, who fight with their fists, for an easy first stage. Unset, they're soldiers.
   - `area`: a box as `[from, to]` fractions of the map's columns (`x`) and rows (`y`), 0 being the west or north edge and 1 the east or south. It covers the tiles from `from × size` up to, but not including, `to × size`, rounded down, so `[0, 0.5]` and `[0.5, 1]` split the map into halves. Unset, an axis covers the whole map. `{ "y": [0, 0.34] }` is the north third.
   - `minDistance` / `maxDistance`: 1–100 steps a unit would walk from the nearest deployment tile, going around water, mountains and walls.
-  - `health`: 1–99, the HP the group's enemies start the battle with (never past their max), e.g. a wounded soldier for an easy first stage. Unset, they start at full health.
+  - `health`: 1–99, the HP the group's enemies start the battle with (never past their max), e.g. a wounded villager for an easy first stage. Unset, they start at full health.
 
   A file whose limits leave too few tiles for its enemies on a test map is turned away. An older file's `"enemyCount": n` still loads, as `n` enemies in the north third, and so does a group's `region` (what `area` used to be called).
 

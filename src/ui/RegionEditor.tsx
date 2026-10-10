@@ -9,6 +9,7 @@ import { MAP_GEN_DEFAULTS } from '../game/mapGen.ts';
 import { BUILDING_PALETTES } from '../game/tileset.ts';
 import type { RegionConfig } from '../game/warband/regions.ts';
 import { REGION_LIMITS } from '../game/warband/regionsFile.ts';
+import { UNIT_CLASSES } from '../game/unitClasses.ts';
 import { createStageLevel } from '../game/warband/stageLevel.ts';
 import { CheckboxField, NumberField, PairField, SelectField, TextField, type DraftForm } from './DraftFields.tsx';
 import {
@@ -34,6 +35,7 @@ const PATCHES = [
 ] as const;
 
 const PALETTES = Object.keys(BUILDING_PALETTES);
+const ENEMY_CLASSES = UNIT_CLASSES.map((c) => c.id);
 const [MIN_SIZE, MAX_SIZE] = REGION_LIMITS.mapSize;
 
 const defaultHint = (value: number | boolean) => `default ${value}`;
@@ -228,6 +230,7 @@ export function RegionEditor({
                 )}
                 <div className="region-editor__grid">
                   <NumberField form={form} path={at('enemies', g, 'count')} label="Count" />
+                  <SelectField form={form} path={at('enemies', g, 'unitClass')} label="Class" options={ENEMY_CLASSES} />
                   <NumberField
                     form={form}
                     path={at('enemies', g, 'minDistance')}

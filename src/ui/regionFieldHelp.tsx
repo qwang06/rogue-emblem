@@ -166,8 +166,8 @@ const HELP: Record<string, FieldHelp> = {
     body: (
       <>
         <p>
-          Each group places some enemy soldiers on random tiles that pass all of its limits. Leave a limit blank and the
-          group can use the whole map.
+          Each group places some enemies of one class on random tiles that pass all of its limits. Leave a limit blank
+          and the group can use the whole map.
         </p>
         <p>
           Groups are placed in order, and a group can&apos;t use tiles an earlier group took. Saving checks the region
@@ -178,7 +178,16 @@ const HELP: Record<string, FieldHelp> = {
   },
   count: {
     title: 'Count',
-    body: <p>How many enemy soldiers this group places ({REGION_LIMITS.enemyCount[1]} at most across all groups).</p>,
+    body: <p>How many enemies this group places ({REGION_LIMITS.enemyCount[1]} at most across all groups).</p>,
+  },
+  unitClass: {
+    title: 'Class',
+    body: (
+      <p>
+        The unit class these enemies are, e.g. villagers (fists only) for an easy early stage, soldiers or archers for a
+        harder one. Blank: soldiers.
+      </p>
+    ),
   },
   minDistance: {
     title: 'Min distance',
@@ -213,7 +222,7 @@ const HELP: Record<string, FieldHelp> = {
     body: (
       <p>
         The HP these enemies start the battle with, e.g. low for a first stage the player should win. It never goes past
-        a soldier&apos;s max HP. Blank: full health.
+        their max HP. Blank: full health.
       </p>
     ),
   },

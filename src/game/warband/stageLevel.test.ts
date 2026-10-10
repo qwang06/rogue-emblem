@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { PLAYER_ROSTER } from '../demoLevel.ts';
 import { REGION_CONFIGS, REGION_SETTINGS } from '../../data/regions.ts';
-import { createStageLevel, createStartingWarband, WARBAND_LEADER_NAME, WARBAND_MAX_DEPLOYED } from './stageLevel.ts';
+import {
+  createStageLevel,
+  DEFAULT_ENEMY_CLASS,
+  createStartingWarband,
+  WARBAND_LEADER_NAME,
+  WARBAND_MAX_DEPLOYED,
+} from './stageLevel.ts';
 import { getStageRegion } from './regions.ts';
 import { STARTING_CLASSES } from './startingClasses.ts';
 import { getAttackRange } from '../combat.ts';
@@ -135,6 +141,17 @@ describe('createStageLevel', () => {
     }
   });
 
+  it('makes a group’s enemies its class, soldiers when it sets none', () => {
+    const level = createStageLevel(7, {
+      ...FIRST,
+      enemies: [{ count: 1, unitClass: 'villager' }, { count: 1, unitClass: 'archer' }, { count: 1 }],
+    });
+    const enemies = ['enemy-1', 'enemy-2', 'enemy-3'].map((unitId) => level.units.get(unitId)!);
+    expect(enemies.map((unit) => unit.unitClass)).toEqual(['villager', 'archer', 'soldier']);
+    expect(enemies.map((unit) => unit.name)).toEqual(['Enemy Villager', 'Enemy Archer', 'Enemy Soldier']);
+    expect(enemies.every((unit) => unit.team === 'enemy')).toBe(true);
+  });
+
   it('makes a group’s enemies level their killer up only when the group says so', () => {
     const level = createStageLevel(7, { ...FIRST, enemies: [{ count: 1, levelUpOnKill: true }, { count: 1 }] });
     expect(['enemy-1', 'enemy-2'].map((unitId) => level.units.get(unitId)!.levelUpOnKill)).toEqual([true, false]);
@@ -189,13 +206,33 @@ describe('stage objectives', () => {
   });
 });
 
+describe('the stage ramp', () => {
+  const enemyClasses = (stage: number) =>
+    getStageRegion(stage, REGION_SETTINGS).enemies.flatMap((group) =>
+      Array.from({ length: group.count }, () => group.unitClass ?? DEFAULT_ENEMY_CLASS),
+    );
+
+  it('goes from one villager, to two, to a villager and a soldier', () => {
+    expect(enemyClasses(1)).toEqual(['villager']);
+    expect(enemyClasses(2)).toEqual(['villager', 'villager']);
+    expect(enemyClasses(3)).toEqual(['villager', 'soldier']);
+  });
+
+  it('never fields fewer enemies than the stage before', () => {
+    for (let stage = 2; stage <= REGION_CONFIGS.length + 1; stage++) {
+      expect(enemyClasses(stage).length).toBeGreaterThanOrEqual(enemyClasses(stage - 1).length);
+    }
+  });
+});
+
 describe('stage 1', () => {
   const region = getStageRegion(1, REGION_SETTINGS);
 
-  it('is a single enemy, so the battle is over quickly', () => {
+  it('is a single villager, so the battle is over quickly and easily', () => {
     for (const seed of SEEDS) {
       const { units } = createStageLevel(seed, region);
-      expect([...units.values()].filter((unit) => unit.team === 'enemy')).toHaveLength(1);
+      const enemies = [...units.values()].filter((unit) => unit.team === 'enemy');
+      expect(enemies.map((unit) => unit.unitClass)).toEqual(['villager']);
     }
   });
 
