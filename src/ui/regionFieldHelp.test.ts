@@ -23,6 +23,7 @@ const EXPLAINED = [
   'count',
   'minDistance',
   'maxDistance',
+  'health',
   'x',
   'y',
 ];

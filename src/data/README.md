@@ -67,6 +67,7 @@ Warband Mode's regions. A run fights stage after stage; every `stagesPerRegion` 
 - **enemies**: 1–10 groups of enemy soldiers, up to 30 in all, placed in order on random tiles the player can walk to. Each group has a `count` and optional limits:
   - `area`: a box as `[from, to]` fractions of the map's columns (`x`) and rows (`y`), 0 being the west or north edge and 1 the east or south. It covers the tiles from `from × size` up to, but not including, `to × size`, rounded down, so `[0, 0.5]` and `[0.5, 1]` split the map into halves. Unset, an axis covers the whole map. `{ "y": [0, 0.34] }` is the north third.
   - `minDistance` / `maxDistance`: 1–100 steps a unit would walk from the nearest deployment tile, going around water, mountains and walls.
+  - `health`: 1–99, the HP the group's enemies start the battle with (never past their max), e.g. a wounded soldier for an easy first stage. Unset, they start at full health.
 
   A file whose limits leave too few tiles for its enemies on a test map is turned away. An older file's `"enemyCount": n` still loads, as `n` enemies in the north third, and so does a group's `region` (what `area` used to be called).
 

@@ -4,6 +4,8 @@
 //   edge, 1 the east/south edge), so the same box fits any map size
 // - minDistance / maxDistance: how many steps a unit would walk from the
 //   nearest deployment tile, going around water, mountains and walls
+// A group can also start its enemies wounded (`health`), e.g. for an easy
+// first stage.
 // Groups are placed in order, each on random tiles that pass all of its
 // limits and aren't already taken. Pure: the same inputs and Rng always
 // give the same tiles.
@@ -27,6 +29,9 @@ export interface EnemyGroup {
   area?: SpawnArea;
   minDistance?: number;
   maxDistance?: number;
+  // The HP its enemies start the battle with (at most their max HP); full
+  // when unset.
+  health?: number;
 }
 
 // The north third of the map: where enemies stood before regions could

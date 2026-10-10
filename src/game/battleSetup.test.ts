@@ -16,9 +16,10 @@ import { getStageRegion } from './warband/regions.ts';
 import { advanceStage, applyBattleResult, createRun, getStageSeed, restoreRoster } from './warband/run.ts';
 import { createStageLevel, createStartingWarband, WARBAND_MAX_DEPLOYED } from './warband/stageLevel.ts';
 import { Archer } from './Archer.ts';
-import { createDemoLevel } from './demoLevel.ts';
+import { createDemoLevel, PLAYER_ROSTER } from './demoLevel.ts';
 import { parseCharacters, parseDialogScript } from './dialogScript.ts';
 import { terrainToRows } from './mapGen.ts';
+import { Villager } from './Villager.ts';
 
 const CHAPTERS: readonly StoryChapter[] = [
   { name: 'One', createLevel: () => createDemoLevel() },
@@ -106,7 +107,11 @@ describe('first battles', () => {
 });
 
 describe('runStage', () => {
-  const run = createRun(42, createStartingWarband());
+  // A run that has grown past its starting unit: the demo roster's three villagers.
+  const run = createRun(
+    42,
+    new Map(Object.entries(PLAYER_ROSTER).map(([id, name]) => [id, new Villager({ name, team: 'player' })])),
+  );
 
   it("fights the run's current stage on its stage seed", () => {
     expect(runStage(run)).toEqual({ mode: 'warband', seed: getStageSeed(42, 1), stage: 1, run });
