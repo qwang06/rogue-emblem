@@ -1518,6 +1518,88 @@ kbd {
   gap: 12px;
 }
 
+/* New Run's name row: the starting unit's name, with buttons to roll a new
+   one or type one. A fixed height, so editing doesn't move the menu. */
+.name-field {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 22rem;
+  max-width: 100%;
+  min-height: 36px;
+  margin: 6px auto 0;
+  padding: 6px 8px 0;
+  border-top: var(--groove);
+}
+
+.name-field__label {
+  font-size: 0.9375rem;
+  color: var(--frost);
+}
+
+.name-field__name,
+.name-field__input {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.125rem;
+  line-height: 1.2;
+}
+
+.name-field__name {
+  padding: 3px 10px;
+  border: 2px solid transparent;
+  color: var(--straw);
+  overflow-wrap: anywhere;
+}
+
+.name-field__input.draft-input {
+  font-size: 1.125rem;
+  padding: 3px 8px;
+}
+
+.name-field__button {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid var(--outline);
+  border-radius: 0;
+  background: var(--woad);
+  box-shadow:
+    inset 2px 2px 0 var(--woad-hi),
+    inset -2px -2px 0 var(--woad-lo);
+  color: var(--bone);
+  cursor: pointer;
+}
+
+.name-field__button:hover:not(:disabled) {
+  background: var(--woad-hi);
+}
+
+.name-field__button:active:not(:disabled) {
+  box-shadow:
+    inset 2px 2px 0 var(--woad-lo),
+    inset -2px -2px 0 var(--woad-hi);
+}
+
+.name-field__button:focus-visible {
+  outline: 2px solid var(--straw);
+  outline-offset: 1px;
+}
+
+.name-field__button:disabled {
+  color: var(--frost-dim);
+  cursor: default;
+}
+
+.name-field__icon {
+  width: 20px;
+  height: 20px;
+}
+
 /* A fixed width and room for three lines whatever the class, so switching
    classes doesn't resize the menu. */
 .title-menu__description {
