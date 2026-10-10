@@ -84,6 +84,12 @@ describe('createBattleLevel', () => {
     expect(terrainToRows(stage3.grid)).toEqual(terrainToRows(expected.grid));
   });
 
+  it('gives one enemy loot in each of the first three Warband stages and none after', () => {
+    const carriers = (stage: number) =>
+      [...createBattleLevel({ mode: 'warband', seed: 5, stage }).units.values()].filter((unit) => unit.loot).length;
+    expect([1, 2, 3, 4].map(carriers)).toEqual([1, 1, 1, 0]);
+  });
+
   it('rejects a story chapter that does not exist', () => {
     expect(() => createBattleLevel({ mode: 'story', chapter: 0 })).toThrow();
     expect(() => createBattleLevel({ mode: 'story', chapter: STORY_CHAPTERS.length + 1 })).toThrow();

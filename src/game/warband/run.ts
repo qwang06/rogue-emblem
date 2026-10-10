@@ -77,8 +77,11 @@ export interface RunState {
 // What a battle hands back: every unit that fought, by unitId, as it ended
 // the battle (dead ones with 0 health). Units that aren't on the roster
 // (enemies) are ignored, and roster units that didn't deploy are absent.
+// `convoy` is what the battle sent to the convoy (loot a full-handed unit
+// couldn't carry), if anything.
 export interface BattleResult {
   units: ReadonlyMap<string, Unit>;
+  convoy?: readonly ItemSnapshot[];
 }
 
 // The stats a snapshot stores besides its identity and inventory.
@@ -168,8 +171,8 @@ export function restoreInventory(snapshots: readonly ItemSnapshot[], items: read
 // The run after a battle: each roster unit in result.units has its XP,
 // levels, stats, HP and inventory (spent weapon uses, broken weapons,
 // used items) written back, and those that died move from the roster to
-// `fallen`. Undeployed units are unchanged. The stage doesn't advance
-// (see advanceStage).
+// `fallen`. Undeployed units are unchanged. Items the battle sent to the
+// convoy join the end of it. The stage doesn't advance (see advanceStage).
 export function applyBattleResult(run: RunState, result: BattleResult): RunState {
   const roster: UnitSnapshot[] = [];
   const fallen = [...run.fallen];
@@ -183,7 +186,7 @@ export function applyBattleResult(run: RunState, result: BattleResult): RunState
     if (unit.isAlive()) roster.push(after);
     else fallen.push(after);
   }
-  return freezeRun({ ...run, roster, fallen });
+  return freezeRun({ ...run, roster, fallen, convoy: [...run.convoy, ...(result.convoy ?? [])] });
 }
 
 // The run moved on to its next stage.

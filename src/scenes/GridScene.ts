@@ -59,7 +59,8 @@ import {
   runStage,
   type GameContent,
 } from '../game/battleSetup.ts';
-import { finishStage, type RunState } from '../game/warband/run.ts';
+import { finishStage, type ItemSnapshot, type RunState } from '../game/warband/run.ts';
+import { claimLoot, getLootQuantity } from '../game/loot.ts';
 import {
   addGold,
   applyExperienceReward,
@@ -150,11 +151,13 @@ import {
   TREE_SPRITES,
   UNIT_ANIMATIONS,
   UNIT_SHEET,
+  getItemSprite,
   getUnitSprite,
   unitSheetKey,
 } from '../game/tileset.ts';
 import { POTION_COLORS, playHitFlash, playLunge, playPotionGlow, playStoneThrow } from './effects.ts';
 import { addTreeShadow, addUnitShadow } from './unitShadow.ts';
+import { addLootMarker } from './lootMarker.ts';
 import type { Menu } from '../game/actionMenu.ts';
 import type { Dialog, DialogLine } from '../game/dialog.ts';
 import type { DialogScripts } from '../game/dialogScript.ts';
@@ -238,6 +241,9 @@ export class GridScene extends Phaser.Scene {
   // The roster units placed when the battle started, kept after they fall
   // (units drops them), so a Warband run can write the battle back.
   deployedUnits!: Map<string, Unit>;
+  // Loot sent to the convoy because its finder's bag was full (see
+  // dropLoot), handed to a Warband run when the battle ends.
+  convoyLoot: ItemSnapshot[] = [];
   deploymentZone!: Point[];
   deploymentLimit!: number;
   dialogs!: DialogScripts;
@@ -345,6 +351,7 @@ export class GridScene extends Phaser.Scene {
     this.units = level.units; // unitId -> Unit, player roster and enemies alike
     this.roster = level.roster; // player unitIds that can be deployed
     this.deployedUnits = new Map(); // filled in when the battle starts
+    this.convoyLoot = [];
     this.deploymentZone = level.deploymentZone;
     // How many roster units can be placed: the level's max, capped by roster and zone size.
     this.deploymentLimit = getDeploymentLimit(level.roster, level.deploymentZone, level.maxDeployed);
@@ -1354,7 +1361,7 @@ export class GridScene extends Phaser.Scene {
       // stage, or forgets the run once the warband has fallen. A win pays
       // the clear's gold and rolls the rewards the reward screen offers.
       const before = this.setup.run;
-      const finished = finishStage(before, { units: this.deployedUnits }, outcome);
+      const finished = finishStage(before, { units: this.deployedUnits, convoy: this.convoyLoot }, outcome);
       let run = finished.run;
       if (finished.over) {
         clearSavedRun();
@@ -1709,7 +1716,10 @@ export class GridScene extends Phaser.Scene {
       this.showDamagePopup(sprite, strike.damage, strike.crit ? 'crit' : 'damage');
       if (strike.crit) this.cameras.main.shake(CRIT_SHAKE_MS, CRIT_SHAKE_INTENSITY);
       playHitFlash(this, sprite, () => {
-        if (!struck.unit.isAlive()) this.removeUnit(struck.tile);
+        if (!struck.unit.isAlive()) {
+          this.dropLoot(struck.unit, striker.unit, striker.tile.unitId);
+          this.removeUnit(struck.tile);
+        }
         playStrike(index + 1);
       });
     };
@@ -1807,7 +1817,10 @@ export class GridScene extends Phaser.Scene {
       this.showDamagePopup(defenderSprite, damage);
     };
     this.playSkillAnimation(skill.animation, userSprite, defenderSprite, onImpact, () => {
-      if (!defender.isAlive()) this.removeUnit(target);
+      if (!defender.isAlive()) {
+        this.dropLoot(defender, unit, unitId);
+        this.removeUnit(target);
+      }
       this.activeUnit = null;
       // A skill earns XP like a single strike that always lands.
       const strikes: Strike[] = [
@@ -1914,9 +1927,10 @@ export class GridScene extends Phaser.Scene {
   }
 
   // Publishes a number rising from the top center of a sprite for the
-  // React HUD to draw — damage by default, or a recovery when `kind` is
-  // 'health' / 'mana' — and takes it back down once it's run its course.
-  showDamagePopup(sprite: Sprite, amount: number, kind: PopupKind = 'damage') {
+  // React HUD to draw — damage by default, a recovery when `kind` is
+  // 'health' / 'mana', or loot named by `label` when it's 'loot' / 'stored'
+  // — and takes it back down once it's run its course.
+  showDamagePopup(sprite: Sprite, amount: number, kind: PopupKind = 'damage', label?: string) {
     const { worldView, zoom } = this.cameras.main;
     const { x, y } = toCanvasFraction(
       worldToScreen({ x: sprite.x + sprite.displayWidth / 2, y: sprite.y }, { x: worldView.x, y: worldView.y, zoom }),
@@ -1926,6 +1940,7 @@ export class GridScene extends Phaser.Scene {
       id: this.nextPopupId++,
       amount,
       kind,
+      label,
       x,
       y,
       durationMs: DAMAGE_POPUP_DURATION_MS,
@@ -1937,6 +1952,20 @@ export class GridScene extends Phaser.Scene {
         damagePopups: state.damagePopups.filter((p) => p !== popup),
       }));
     });
+  }
+
+  // When a player unit (the killer, by unitId) defeats a unit carrying
+  // loot, the item goes into the killer's inventory, or to the convoy when
+  // it has no room (see claimLoot), and a popup over the killer names it.
+  dropLoot(dead: Unit, killer: Unit, killerId: string) {
+    const loot = dead.loot;
+    if (!loot || killer.team !== 'player') return;
+    dead.loot = null;
+    const { inventory, stored } = claimLoot(killer.items, loot);
+    killer.items = inventory;
+    if (stored) this.convoyLoot.push({ itemId: loot.id, quantity: getLootQuantity(loot) });
+    this.publishHoveredUnit();
+    this.showDamagePopup(this.unitSprites.get(killerId)!, 0, stored ? 'stored' : 'loot', loot.label);
   }
 
   // Takes a defeated unit off the board: grid cell, registry, and sprite.
@@ -2256,6 +2285,8 @@ export class GridScene extends Phaser.Scene {
       .setData('facing', UNIT_SHEET.defaultFacing)
       .play(this.unitAnimation(art, 'idle', UNIT_SHEET.defaultFacing));
     addUnitShadow(this, sprite);
+    const lootIcon = unit.loot && getItemSprite(unit.loot.id);
+    if (lootIcon) addLootMarker(this, sprite, lootIcon);
     this.unitSprites.set(unitId, sprite);
   }
 

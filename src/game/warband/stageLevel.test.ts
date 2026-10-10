@@ -9,6 +9,7 @@ import {
   WARBAND_MAX_DEPLOYED,
 } from './stageLevel.ts';
 import { getStageRegion } from './regions.ts';
+import { LOOT_ITEMS } from '../loot.ts';
 import { STARTING_CLASSES } from './startingClasses.ts';
 import { calculateDamage, getAttackRange } from '../combat.ts';
 import { countEnemies, getWalkingDistances, isInArea } from '../enemySpawns.ts';
@@ -155,6 +156,20 @@ describe('createStageLevel', () => {
   it('makes a group’s enemies level their killer up only when the group says so', () => {
     const level = createStageLevel(7, { ...FIRST, enemies: [{ count: 1, levelUpOnKill: true }, { count: 1 }] });
     expect(['enemy-1', 'enemy-2'].map((unitId) => level.units.get(unitId)!.levelUpOnKill)).toEqual([true, false]);
+  });
+
+  it('gives `lootCount` enemies an item to drop, keeping the map the same', () => {
+    const region = { ...FIRST, enemies: [{ count: 3 }] };
+    const plain = createStageLevel(11, region);
+    const looted = createStageLevel(11, region, undefined, undefined, 1);
+    expect([...plain.units.values()].some((unit) => unit.loot)).toBe(false);
+    const carriers = [...looted.units.values()].filter((unit) => unit.loot);
+    expect(carriers).toHaveLength(1);
+    expect(carriers[0].team).toBe('enemy');
+    expect(LOOT_ITEMS).toContain(carriers[0].loot);
+    expect(terrainToRows(looted.grid)).toEqual(terrainToRows(plain.grid));
+    expect(looted.grid.cells.map((c) => c.unitId)).toEqual(plain.grid.cells.map((c) => c.unitId));
+    expect(looted.decorations).toEqual(plain.decorations);
   });
 
   it('starts a group’s enemies on its health, never past their max', () => {

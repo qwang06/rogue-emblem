@@ -10,6 +10,7 @@ import { REGION_SETTINGS } from '../data/regions.ts';
 import { getRegionStages, getStageRegion, type RegionSettings } from './warband/regions.ts';
 import { getStageSeed, restoreRoster, type RunState } from './warband/run.ts';
 import { createStageLevel } from './warband/stageLevel.ts';
+import { getStageLootCount } from './loot.ts';
 import { createDemoLevel, type DemoLevel } from './demoLevel.ts';
 import { createTrainingLevel, type Level } from './trainingLevel.ts';
 
@@ -62,7 +63,7 @@ function getStoryChapter(chapter: number, chapters: readonly StoryChapter[]): St
 // Builds the level a setup describes from `content` (its dialog, and a
 // Warband Mode stage's region). A stage of a run fields the run's roster
 // and deploy cap; one without a run (a region preview) the starting
-// warband.
+// warband. Either way the stage's enemies carry its loot (getStageLootCount).
 export function createBattleLevel(
   setup: BattleSetup,
   content: GameContent = DEFAULT_CONTENT,
@@ -80,8 +81,15 @@ export function createBattleLevel(
             getStageRegion(setup.stage, content.regions),
             restoreRoster(setup.run),
             setup.run.deployCap,
+            getStageLootCount(setup.stage),
           )
-        : createStageLevel(setup.seed, getStageRegion(setup.stage, content.regions));
+        : createStageLevel(
+            setup.seed,
+            getStageRegion(setup.stage, content.regions),
+            undefined,
+            undefined,
+            getStageLootCount(setup.stage),
+          );
   }
 }
 

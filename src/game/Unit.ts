@@ -35,6 +35,7 @@ import {
   type Inventory,
   type InventoryEntry,
   type Consumable,
+  type Item,
 } from './items.ts';
 import type { Team } from './turns.ts';
 import {
@@ -106,6 +107,9 @@ export class Unit {
   // Killing this unit gives the killer exactly the XP it needs for its next
   // level (see getCombatAward), e.g. a first stage's lone enemy.
   levelUpOnKill = false;
+  // An item this unit drops when it's defeated (see loot.ts), carried apart
+  // from its inventory so it never fights with it.
+  loot: Item | null = null;
 
   constructor({
     name,

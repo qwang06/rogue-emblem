@@ -56,6 +56,8 @@ export interface UnitView {
   range: string;
   weapon: string | null;
   items: readonly ItemView[];
+  // The label of the item it drops when defeated (see loot.ts), if any.
+  loot: string | null;
 }
 
 // One stat on the unit info screen: its value and the most its class can
@@ -137,7 +139,7 @@ export interface CombatForecastView {
   anchor: TileAnchorView;
 }
 
-export type PopupKind = 'damage' | 'crit' | 'miss' | 'health' | 'mana' | 'broke';
+export type PopupKind = 'damage' | 'crit' | 'miss' | 'health' | 'mana' | 'broke' | 'loot' | 'stored';
 
 export interface DamagePopupView {
   id: number;
@@ -277,6 +279,7 @@ export function toUnitView(unit: Unit | null | undefined): UnitView | null {
         }),
       ),
     ),
+    loot: unit.loot?.label ?? null,
   });
 }
 
@@ -407,32 +410,37 @@ export function toCombatForecastView({
 }
 
 // How each kind of popup reads: damage is the bare number (a crit calls
-// itself out), a miss says so, recovery says what was restored, and a
-// weapon that wore out says it broke.
-const POPUP_TEXT: Readonly<Record<PopupKind, (amount: number) => string>> = Object.freeze({
+// itself out), a miss says so, recovery says what was restored, a weapon
+// that wore out says it broke, and loot names the item picked up (or sent
+// to the convoy).
+const POPUP_TEXT: Readonly<Record<PopupKind, (amount: number, label: string) => string>> = Object.freeze({
   damage: (amount) => `${amount}`,
   crit: (amount) => `Crit! ${amount}`,
   miss: () => 'Miss',
   health: (amount) => `+${amount} HP`,
   mana: (amount) => `+${amount} MP`,
   broke: () => 'Broke!',
+  loot: (_, label) => `Got ${label}`,
+  stored: (_, label) => `${label} to convoy`,
 });
 
 // Snapshot of one floating number over a unit: damage taken (plain, a
-// crit, or a miss), health or mana recovered, or its weapon breaking
-// (`kind` is 'damage' | 'crit' | 'miss' | 'health' | 'mana' | 'broke', which the UI
-// colors by; `text` is what it shows). `x`/`y` are the point the number
+// crit, or a miss), health or mana recovered, its weapon breaking, or loot
+// picked up or sent to the convoy (`kind` is 'damage' | 'crit' | 'miss' |
+// 'health' | 'mana' | 'broke' | 'loot' | 'stored', which the UI colors by;
+// `text` is what it shows, naming `label`, the item, for loot). `x`/`y` are the point the number
 // rises from, as fractions of the canvas (see toCanvasFraction); `durationMs` is how long it stays up,
 // so the UI animation and the store entry's lifetime agree.
 export function toDamagePopupView({
   id,
   amount,
   kind = 'damage',
+  label = '',
   x,
   y,
   durationMs,
-}: Omit<DamagePopupView, 'kind' | 'text'> & { kind?: PopupKind }): DamagePopupView {
-  const text = (POPUP_TEXT[kind] ?? POPUP_TEXT.damage)(amount);
+}: Omit<DamagePopupView, 'kind' | 'text'> & { kind?: PopupKind; label?: string }): DamagePopupView {
+  const text = (POPUP_TEXT[kind] ?? POPUP_TEXT.damage)(amount, label);
   return Object.freeze({ id, amount, kind, text, x, y, durationMs });
 }
 
