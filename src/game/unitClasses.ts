@@ -1,10 +1,15 @@
 // The unit classes the game knows how to build, in menu order. Each entry
 // names the class and builds a fresh Unit of it, so menus that offer a
-// choice of class (e.g. Training) don't need to know the subclasses.
+// choice of class (e.g. Training) don't need to know the subclasses. The
+// monsters (slime, goblin, skeleton) come last: they're enemies in Warband
+// Mode, never recruits or starting picks.
 
 import { Acolyte } from './Acolyte.ts';
 import { Archer } from './Archer.ts';
+import { Goblin } from './Goblin.ts';
 import { Guard } from './Guard.ts';
+import { Skeleton } from './Skeleton.ts';
+import { Slime } from './Slime.ts';
 import { Soldier } from './Soldier.ts';
 import type { ClassUnitOptions, Unit } from './Unit.ts';
 import { Vanguard } from './Vanguard.ts';
@@ -25,6 +30,9 @@ export const UNIT_CLASSES: readonly UnitClass[] = Object.freeze([
   Object.freeze<UnitClass>({ id: 'wizard', label: 'Wizard', create: (options) => new Wizard(options) }),
   Object.freeze<UnitClass>({ id: 'guard', label: 'Guard', create: (options) => new Guard(options) }),
   Object.freeze<UnitClass>({ id: 'acolyte', label: 'Acolyte', create: (options) => new Acolyte(options) }),
+  Object.freeze<UnitClass>({ id: 'slime', label: 'Slime', create: (options) => new Slime(options) }),
+  Object.freeze<UnitClass>({ id: 'goblin', label: 'Goblin', create: (options) => new Goblin(options) }),
+  Object.freeze<UnitClass>({ id: 'skeleton', label: 'Skeleton', create: (options) => new Skeleton(options) }),
 ]);
 
 // Builds a Unit of the class with the given id. `options` go to the class's

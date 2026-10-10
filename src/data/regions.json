@@ -3,7 +3,7 @@
   "regions": [
     {
       "name": "Meadowlands",
-      "description": "Open fields: the run's first, quick fight. A lone, wounded villager with only its fists stands three steps from the start, close enough to strike on turn one. Killing it is worth a level up.",
+      "description": "Open fields: the run's first, quick fight. A lone slime stands three steps from the start, close enough to strike on turn one. Killing it is worth a level up.",
       "terrain": {
         "width": 14,
         "height": 12,
@@ -15,15 +15,13 @@
         "ruins": 0,
         "buildings": 3
       },
-      "enemies": [
-        { "count": 1, "unitClass": "villager", "minDistance": 3, "maxDistance": 3, "health": 4, "levelUpOnKill": true }
-      ],
+      "enemies": [{ "count": 1, "unitClass": "slime", "minDistance": 3, "maxDistance": 3, "levelUpOnKill": true }],
       "treeChance": 0.05,
       "palette": "a-stone"
     },
     {
       "name": "Lakeside",
-      "description": "Lake country: big lakes that funnel units onto the path.",
+      "description": "Lake country: big lakes that funnel units onto the path. A single goblin waits at the far end.",
       "terrain": {
         "width": 16,
         "height": 14,
@@ -35,7 +33,7 @@
         "ruins": 1,
         "buildings": 2
       },
-      "enemies": [{ "count": 2, "unitClass": "villager", "area": { "y": [0, 0.34] } }],
+      "enemies": [{ "count": 1, "unitClass": "goblin", "area": { "y": [0, 0.34] } }],
       "treeChance": 0.04,
       "palette": "b-blue"
     },
@@ -55,8 +53,8 @@
         "turnChance": 0.55
       },
       "enemies": [
-        { "count": 1, "unitClass": "villager", "area": { "y": [0, 0.34] } },
-        { "count": 1, "unitClass": "soldier", "area": { "y": [0, 0.34] } }
+        { "count": 2, "unitClass": "slime", "area": { "y": [0, 0.34] } },
+        { "count": 1, "unitClass": "goblin", "area": { "y": [0, 0.34] } }
       ],
       "treeChance": 0.1,
       "palette": "a-brown"
@@ -76,15 +74,15 @@
         "buildings": 2
       },
       "enemies": [
-        { "count": 1, "unitClass": "villager", "area": { "y": [0, 0.34] } },
-        { "count": 2, "unitClass": "soldier", "area": { "y": [0, 0.34] } }
+        { "count": 2, "unitClass": "goblin", "area": { "y": [0, 0.34] } },
+        { "count": 1, "unitClass": "skeleton", "area": { "y": [0, 0.34] } }
       ],
       "treeChance": 0.03,
       "palette": "b-white"
     },
     {
       "name": "Fortress",
-      "description": "A fortified borderland: the biggest map, walled ruins and a garrison.",
+      "description": "A fortified borderland: the biggest map, walled ruins and a garrison of skeletons and goblins.",
       "terrain": {
         "width": 18,
         "height": 16,
@@ -96,8 +94,8 @@
         "buildings": 3
       },
       "enemies": [
-        { "count": 3, "unitClass": "soldier", "area": { "y": [0, 0.34] } },
-        { "count": 1, "unitClass": "archer", "area": { "y": [0, 0.34] } }
+        { "count": 2, "unitClass": "skeleton", "area": { "y": [0, 0.34] } },
+        { "count": 2, "unitClass": "goblin", "area": { "y": [0, 0.34] } }
       ],
       "treeChance": 0.04,
       "palette": "b-red"
