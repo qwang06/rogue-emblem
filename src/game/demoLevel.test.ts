@@ -15,7 +15,7 @@ import {
 import { findUnit, getCell } from './grid.ts';
 import { getMovePath, getMoveCost } from './movement.ts';
 import { Soldier } from './Soldier.ts';
-import { Villager } from './Villager.ts';
+import { Warrior } from './Warrior.ts';
 import { STRUCTURE_SPRITES, TREE_SPRITES } from './tileset.ts';
 
 describe('createDemoLevel', () => {
@@ -59,7 +59,7 @@ describe('createDemoLevel', () => {
   });
 
   it('offers three named player soldiers for deployment', () => {
-    expect(level.roster).toEqual(['villager-1', 'villager-2', 'villager-3']);
+    expect(level.roster).toEqual(['warrior-1', 'warrior-2', 'warrior-3']);
     for (const unitId of level.roster) {
       expect(level.units.get(unitId)!.team).toBe('player');
       expect(level.units.get(unitId)!.name).toBe(PLAYER_ROSTER[unitId]);
@@ -110,9 +110,9 @@ describe('createDemoLevel', () => {
     }
   });
 
-  it('makes the player units level 1 villagers and the enemies level 1 soldiers', () => {
+  it('makes the player units level 1 warriors and the enemies level 1 soldiers', () => {
     for (const unit of level.units.values()) {
-      expect(unit).toBeInstanceOf(unit.team === 'player' ? Villager : Soldier);
+      expect(unit).toBeInstanceOf(unit.team === 'player' ? Warrior : Soldier);
       expect(unit.level).toBe(1);
     }
   });
@@ -130,7 +130,7 @@ describe('createDemoLevel', () => {
   it('leaves the whole deployment zone open and placeable', () => {
     for (const { x, y } of level.deploymentZone) {
       expect(getMoveCost(getCell(level.grid, x, y)!.terrain)).toBe(1);
-      expect(canPlaceUnit(level.grid, level.deploymentZone, 'villager-1', x, y)).toBe(true);
+      expect(canPlaceUnit(level.grid, level.deploymentZone, 'warrior-1', x, y)).toBe(true);
     }
   });
 
@@ -151,13 +151,13 @@ describe('createDemoLevel', () => {
     for (const name of Object.values(PLAYER_ROSTER)) expect(speakers.has(name)).toBe(true);
     for (const line of level.dialogs.opening) {
       expect(line.side).toBe(line.team === 'player' ? 'left' : 'right');
-      // The stand-in art matches the units on the map: villagers vs. soldiers.
-      expect(line.unitClass).toBe(line.team === 'player' ? 'villager' : 'soldier');
+      // The stand-in art matches the units on the map: warriors vs. soldiers.
+      expect(line.unitClass).toBe(line.team === 'player' ? 'warrior' : 'soldier');
     }
   });
 
   it('builds a fresh level each call', () => {
     const other = createDemoLevel();
-    expect(other.units.get('villager-1')).not.toBe(level.units.get('villager-1'));
+    expect(other.units.get('warrior-1')).not.toBe(level.units.get('warrior-1'));
   });
 });

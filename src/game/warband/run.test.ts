@@ -5,7 +5,7 @@ import { HEALTH_POTION, MANA_POTION } from '../items.ts';
 import { Soldier } from '../Soldier.ts';
 import { Unit } from '../Unit.ts';
 import { UNIT_CLASSES } from '../unitClasses.ts';
-import { Villager } from '../Villager.ts';
+import { Warrior } from '../Warrior.ts';
 import { FIRE, FIRE_SPELL, FISTS, IRON_BOW, IRON_SPEAR, weaponEntry, WOODEN_SWORD } from '../weapons.ts';
 import {
   advanceStage,
@@ -29,7 +29,7 @@ function startingRun(): RunState {
     new Map<string, Unit>([
       ['alden', new Soldier({ name: 'Alden', team: 'player' })],
       ['bryn', new Archer({ name: 'Bryn', team: 'player' })],
-      ['cato', new Villager({ name: 'Cato', team: 'player' })],
+      ['cato', new Warrior({ name: 'Cato', team: 'player' })],
     ]),
   );
 }
@@ -45,7 +45,7 @@ describe('createRun', () => {
     expect(run.roster.map((unit) => [unit.id, unit.name, unit.classId])).toEqual([
       ['alden', 'Alden', 'soldier'],
       ['bryn', 'Bryn', 'archer'],
-      ['cato', 'Cato', 'villager'],
+      ['cato', 'Cato', 'warrior'],
     ]);
     expect(run.convoy).toEqual([]);
     expect(run.gold).toBe(0);

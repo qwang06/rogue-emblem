@@ -10,7 +10,7 @@ import {
 } from './dialog.ts';
 
 const SCRIPT: DialogLineInput[] = [
-  { speaker: 'Alden', team: 'player', unitClass: 'villager', side: 'left', text: 'Hello.' },
+  { speaker: 'Alden', team: 'player', unitClass: 'warrior', side: 'left', text: 'Hello.' },
   { speaker: 'Foe', team: 'enemy', unitClass: 'soldier', side: 'right', text: 'Begone!' },
 ];
 

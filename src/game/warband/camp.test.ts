@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
-import { Villager } from '../Villager.ts';
+import { Warrior } from '../Warrior.ts';
 import { canRest, getCampActions, needsRest, REST_COST, restAtCamp } from './camp.ts';
 import { createRun, type RunState } from './run.ts';
 
@@ -10,7 +10,7 @@ function campRun(gold: number, hurt = true): RunState {
     7,
     new Map<string, Unit>([
       ['alden', new Soldier({ name: 'Alden', team: 'player' })],
-      ['cato', new Villager({ name: 'Cato', team: 'player' })],
+      ['cato', new Warrior({ name: 'Cato', team: 'player' })],
     ]),
   );
   const roster = hurt ? run.roster.map((unit, i) => (i === 0 ? { ...unit, health: 1 } : unit)) : run.roster;

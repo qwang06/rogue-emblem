@@ -88,7 +88,8 @@ function weapon(fields: Omit<Weapon, 'kind'>): Weapon {
 // tileset skill's units-catalog.md). Numbers are scaled to the game's small
 // stat lines (10 HP, 4 STR at level 1).
 
-// Bare hands: what villagers fight with. Never breaks.
+// Bare hands: what a warrior falls back on once its sword breaks. Never
+// breaks.
 export const FISTS = weapon({
   id: 'fists',
   label: 'Fists',

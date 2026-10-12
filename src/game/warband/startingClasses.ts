@@ -12,8 +12,8 @@ export interface StartingClass {
 
 export const STARTING_CLASSES: readonly StartingClass[] = Object.freeze([
   Object.freeze({
-    id: 'villager',
-    label: 'Villager',
+    id: 'warrior',
+    label: 'Warrior',
     description: 'Weakest at the start, but learns fastest and grows into the strongest unit of all.',
   }),
   Object.freeze({
@@ -28,4 +28,4 @@ export const STARTING_CLASSES: readonly StartingClass[] = Object.freeze([
   }),
 ]);
 
-export const DEFAULT_STARTING_CLASS = 'villager';
+export const DEFAULT_STARTING_CLASS = 'warrior';

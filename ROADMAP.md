@@ -11,7 +11,7 @@ The plan for growing Rogue Emblem into a Fire Emblem–style tactics game, one s
 
 ## Where we are
 
-Already built: grid and terrain move costs, movement range and arrow, player/enemy phases with win/loss, one-way attacks (`attack - defense`; counterattacks and FE-style stats since 1.1/1.2), skills with mana, consumable items, deployment, a rushing enemy AI, dialog, title/pause menus, and training mode. Phase 1 added counterattacks, hit/crit/doubling, the combat forecast, and XP with growth-rate level ups. Phase 2 has begun: units fight with weapons (2.1). 2.3 has begun: Villager and Soldier are joined by the Archer, the Vanguard, the Guard and the Acolyte. Warband Mode (Dungeon Mode until W.0) is a run of generated overworld maps whose warband carries XP, HP, items and deaths from stage to stage (W.1); Phase W turns it into the game's roguelike run.
+Already built: grid and terrain move costs, movement range and arrow, player/enemy phases with win/loss, one-way attacks (`attack - defense`; counterattacks and FE-style stats since 1.1/1.2), skills with mana, consumable items, deployment, a rushing enemy AI, dialog, title/pause menus, and training mode. Phase 1 added counterattacks, hit/crit/doubling, the combat forecast, and XP with growth-rate level ups. Phase 2 has begun: units fight with weapons (2.1). 2.3 has begun: Warrior (which replaced the Villager) and Soldier are joined by the Archer, the Vanguard, the Guard and the Acolyte. Warband Mode (Dungeon Mode until W.0) is a run of generated overworld maps whose warband carries XP, HP, items and deaths from stage to stage (W.1); Phase W turns it into the game's roguelike run.
 
 ---
 
@@ -253,11 +253,11 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 ### [x] W.1b Warband menu and starting class
 
 - Choosing Warband Mode always opens a menu: Continue Run (Stage N), disabled when nothing is saved, and New Run. There's still a single save slot.
-- New Run picks the base class the warband starts as: Villager, Soldier or Archer (`src/game/warband/startingClasses.ts`), each with a one-line pitch. The starting warband is a single unit of that class, under a generated name (`src/game/warband/names.ts`) the player can reroll or type over; recruits come with W.3's rewards.
+- New Run picks the base class the warband starts as: Warrior, Soldier or Archer (`src/game/warband/startingClasses.ts`), each with a one-line pitch. The starting warband is a single unit of that class, under a generated name (`src/game/warband/names.ts`) the player can reroll or type over; recruits come with W.3's rewards.
 - Stage 1 (Meadowlands) is a quick first win for that lone unit: one soldier, wounded to 4 HP (an enemy group's `health`), exactly three steps from the deployment zone, so every starting class can reach and strike it on turn 1.
-- The Villager is the late bloomer: a soldier's stat line but only fists, so it's the weakest start, with the highest growth total and caps of any class and a 150% XP rate (`scaleExperience` in `experience.ts`, a `Unit.experienceRate`), so it outgrows the others later in a run.
-- **Tests:** the menu entries with and without a save, starting classes, a warband per class, XP scaling, the villager's growths and caps against the soldier's and archer's.
-- _Deferred:_ mixed starting warbands (one pick plus fixed companions) and meta-unlocked starting classes (W.10). Promotion (W.7) could give the villager a further payoff.
+- The Warrior (it replaced the Villager, with PixelLab art in a plain tunic) is the late bloomer: a soldier's stat line with a point less strength and only a wooden sword, so it's the weakest start, with the highest growth total and caps of any class and a 150% XP rate (`scaleExperience` in `experience.ts`, a `Unit.experienceRate`), so it outgrows the others later in a run.
+- **Tests:** the menu entries with and without a save, starting classes, a warband per class, XP scaling, the warrior's growths and caps against the soldier's and archer's.
+- _Deferred:_ mixed starting warbands (one pick plus fixed companions) and meta-unlocked starting classes (W.10). Promotion (W.7) could give the warrior a further payoff.
 
 ### [ ] W.2 Enemy scaling and region bosses
 
@@ -272,7 +272,7 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 - After a win, pick **1 of 3** rewards: a recruit, a weapon or item, a relic (once W.5 lands) or gold. Pure `rollRewards(stage, rng, pools)`.
 - A React reward screen between the battle result and the next stage.
 - **Tests:** gold amounts, reward rolls with a stubbed RNG, no duplicate offers, pools that run dry.
-- _Progress:_ `src/game/warband/rewards.ts` and the React `RewardScreen`. Every win pays gold (10 + 5 per stage, +10 flawless) and then offers 3 of: Recruit (a random non-villager class at the warband's average level; always offered while the warband is smaller than its deploy cap), Rest (full heal), Supplies (a Health Potion each), Training (+2 max HP each) and a gold purse. Stage 1's offers are instead a recruit of each starting class, so the lone starting unit picks its first companion. Offers are seeded from the run, so a stage always offers the same picks. _Still to do:_ gold for kills and a fast-clear bonus, weapon rewards, relics (W.5). Skip (+10 gold, +5 per stage) and Reroll (10 gold, +10 per reroll that stage) are in. The run is saved owing the pick (`pendingReward`), so reloading on the reward screen reopens it with the same offers.
+- _Progress:_ `src/game/warband/rewards.ts` and the React `RewardScreen`. Every win pays gold (10 + 5 per stage, +10 flawless) and then offers 3 of: Recruit (a random non-warrior class at the warband's average level; always offered while the warband is smaller than its deploy cap), Rest (full heal), Supplies (a Health Potion each), Training (+2 max HP each) and a gold purse. Stage 1's offers are instead a recruit of each starting class, so the lone starting unit picks its first companion. Offers are seeded from the run, so a stage always offers the same picks. _Still to do:_ gold for kills and a fast-clear bonus, weapon rewards, relics (W.5). Skip (+10 gold, +5 per stage) and Reroll (10 gold, +10 per reroll that stage) are in. The run is saved owing the pick (`pendingReward`), so reloading on the reward screen reopens it with the same offers.
 - _Loot drops:_ one enemy in each of stages 1–3 carries a wooden-set item, shown by its icon on the map and on the unit panel, and drops it to whoever kills it (or to the convoy if their bag is full; `src/game/loot.ts`). `STAGE_LOOT_DROPS` sets how many drop per stage; later stages drop nothing until they're tuned.
 
 ### [ ] W.4 Camp: merchant, hire, rest
@@ -300,13 +300,13 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 - Active traits show in the deployment banner and the unit panel, so deployment becomes a puzzle.
 - A starting point, using the catalog art's classes (tune once they exist):
 
-  | Trait    | Classes                   | (2)                    | (3+)                    |
-  | -------- | ------------------------- | ---------------------- | ----------------------- |
-  | Militia  | Villager, Soldier, Sapper | +1 DEF                 | +2 DEF, +10 avoid       |
-  | Vanguard | Soldier, Vanguard         | +10 hit when attacking | strike first on counter |
-  | Marksman | Archer, Siege             | +10 hit, +5 crit       | +1 max range            |
-  | Arcane   | Elemental, Acolyte        | +2 MAG                 | regain 1 MP per turn    |
-  | Engineer | Sapper, Siege             | siege +2 might         | siege ignores half DEF  |
+  | Trait    | Classes                  | (2)                    | (3+)                    |
+  | -------- | ------------------------ | ---------------------- | ----------------------- |
+  | Militia  | Warrior, Soldier, Sapper | +1 DEF                 | +2 DEF, +10 avoid       |
+  | Vanguard | Soldier, Vanguard        | +10 hit when attacking | strike first on counter |
+  | Marksman | Archer, Siege            | +10 hit, +5 crit       | +1 max range            |
+  | Arcane   | Elemental, Acolyte       | +2 MAG                 | regain 1 MP per turn    |
+  | Engineer | Sapper, Siege            | siege +2 might         | siege ignores half DEF  |
 
 - Record each class's traits in `UNITS.md`.
 - **Tests:** thresholds (one short, exact, over), units without the trait unaffected, undeployed units don't count, tier upgrades.

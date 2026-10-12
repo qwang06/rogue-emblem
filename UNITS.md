@@ -1,6 +1,6 @@
 # UNITS.md
 
-Reference for every unit class: base stats, growth rates, caps, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Villager.ts`, `src/game/Soldier.ts`, `src/game/Archer.ts`, `src/game/Vanguard.ts`, `src/game/Guard.ts`, `src/game/Acolyte.ts`, `src/game/Slime.ts`, `src/game/Goblin.ts`, `src/game/Skeleton.ts`, `src/game/healing.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
+Reference for every unit class: base stats, growth rates, caps, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Warrior.ts`, `src/game/Soldier.ts`, `src/game/Archer.ts`, `src/game/Vanguard.ts`, `src/game/Guard.ts`, `src/game/Acolyte.ts`, `src/game/Slime.ts`, `src/game/Goblin.ts`, `src/game/Skeleton.ts`, `src/game/healing.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
 
 ## How the numbers work
 
@@ -22,41 +22,41 @@ Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.m
 
 ## Weapons
 
-One starter weapon per armed unit in the unit catalog. Fists, the Iron Spear, the Iron Bow and the Iron Axe are carried by a class; the monsters fight with Tackle, Club and Bone Claws, which never break; the Powder Keg and Ballista wait for their classes (milestone 2.3); the wooden set is basic gear no class starts with; and the Fire Tome drops as loot for an Acolyte to learn Fire from.
+One starter weapon per armed unit in the unit catalog. Fists, the Wooden Sword, the Iron Spear, the Iron Bow and the Iron Axe are carried by a class; the monsters fight with Tackle, Club and Bone Claws, which never break; the Powder Keg and Ballista wait for their classes (milestone 2.3); the rest of the wooden set is basic gear no class starts with; and the Fire Tome drops as loot for an Acolyte to learn Fire from.
 
-| Weapon       | Type     | Mt  | Hit | Crit | Wt  | Rng | Uses | For (catalog art)           |
-| ------------ | -------- | --- | --- | ---- | --- | --- | ---- | --------------------------- |
-| Fists        | physical | 0   | 80  | 0    | 0   | 1   | ∞    | Villager                    |
-| Iron Spear   | physical | 1   | 80  | 0    | 3   | 1   | 40   | Soldier                     |
-| Iron Axe     | physical | 3   | 65  | 0    | 5   | 1   | 40   | Vanguard (axe)              |
-| Iron Bow     | physical | 2   | 80  | 0    | 2   | 2   | 40   | Archer                      |
-| Fire Tome    | magical  | 2   | 85  | 0    | 1   | 1–2 | 30   | Elemental, Vanguard (staff) |
-| Fire         | magical  | 2   | 85  | 0    | 1   | 1–2 | ∞    | Learned from the Fire Tome  |
-| Powder Keg   | siege    | 5   | 70  | 0    | 6   | 1–2 | 5    | Sapper                      |
-| Ballista     | siege    | 6   | 70  | 0    | 8   | 2–3 | 10   | Siege                       |
-| Tackle       | physical | 0   | 75  | 0    | 0   | 1   | ∞    | Slime                       |
-| Club         | physical | 2   | 75  | 0    | 2   | 1   | ∞    | Goblin                      |
-| Bone Claws   | physical | 2   | 80  | 0    | 1   | 1   | ∞    | Skeleton                    |
-| Wooden Sword | physical | 1   | 90  | 0    | 1   | 1   | 20   | –                           |
-| Wooden Spear | physical | 1   | 75  | 0    | 2   | 1   | 20   | –                           |
-| Wooden Axe   | physical | 2   | 60  | 0    | 3   | 1   | 20   | –                           |
+| Weapon       | Type     | Mt  | Hit | Crit | Wt  | Rng | Uses | For (catalog art)               |
+| ------------ | -------- | --- | --- | ---- | --- | --- | ---- | ------------------------------- |
+| Fists        | physical | 0   | 80  | 0    | 0   | 1   | ∞    | Warrior (once its sword breaks) |
+| Iron Spear   | physical | 1   | 80  | 0    | 3   | 1   | 40   | Soldier                         |
+| Iron Axe     | physical | 3   | 65  | 0    | 5   | 1   | 40   | Vanguard (axe)                  |
+| Iron Bow     | physical | 2   | 80  | 0    | 2   | 2   | 40   | Archer                          |
+| Fire Tome    | magical  | 2   | 85  | 0    | 1   | 1–2 | 30   | Elemental, Vanguard (staff)     |
+| Fire         | magical  | 2   | 85  | 0    | 1   | 1–2 | ∞    | Learned from the Fire Tome      |
+| Powder Keg   | siege    | 5   | 70  | 0    | 6   | 1–2 | 5    | Sapper                          |
+| Ballista     | siege    | 6   | 70  | 0    | 8   | 2–3 | 10   | Siege                           |
+| Tackle       | physical | 0   | 75  | 0    | 0   | 1   | ∞    | Slime                           |
+| Club         | physical | 2   | 75  | 0    | 2   | 1   | ∞    | Goblin                          |
+| Bone Claws   | physical | 2   | 80  | 0    | 1   | 1   | ∞    | Skeleton                        |
+| Wooden Sword | physical | 1   | 90  | 0    | 1   | 1   | 20   | Warrior                         |
+| Wooden Spear | physical | 1   | 75  | 0    | 2   | 1   | 20   | –                               |
+| Wooden Axe   | physical | 2   | 60  | 0    | 3   | 1   | 20   | –                               |
 
-The wooden set is the basic gear: lighter and weaker than iron, and it breaks after 20 strikes. No class starts with it. It comes with two pieces of armor. A unit wears the first shield and the first body armor it carries (equip another on the camp's roster screen), and each adds its DEF against physical hits. Its weight adds to the weapon's: a unit loses SPD (for avoid and doubling) by however much weapon and armor weight together exceed its STR:
+The wooden set is the basic gear: lighter and weaker than iron, and it breaks after 20 strikes. Only the warrior starts with a piece of it, the sword. It comes with two pieces of armor. A unit wears the first shield and the first body armor it carries (equip another on the camp's roster screen), and each adds its DEF against physical hits. Its weight adds to the weapon's: a unit loses SPD (for avoid and doubling) by however much weapon and armor weight together exceed its STR:
 
 | Armor         | Slot   | DEF | Wt  |
 | ------------- | ------ | --- | --- |
 | Wooden Shield | shield | 1   | 1   |
 | Wooden Armor  | body   | 1   | 2   |
 
-## Villager
+## Warrior
 
-The player's townsfolk in the demo battle, and the late bloomer of Warband Mode's starting classes. A villager starts with a soldier's stat line but only its bare fists, so it's the weakest pick early on. In exchange it has the highest growth total and the highest caps of any class and earns XP half again as fast, so a villager that survives the early stages outgrows everyone else.
+The common fighter in a plain tunic and no armor: the player's units in the demo battle, and the late bloomer of Warband Mode's starting classes. A warrior starts a point of strength below a soldier and swings only a wooden sword, so it's the weakest pick early on. In exchange it has the highest growth total and the highest caps of any class and earns XP half again as fast, so a warrior that survives the early stages outgrows everyone else.
 
 | Stat | Base | Growth | Cap |
 | ---- | ---- | ------ | --- |
 | HP   | 10   | 85%    | 50  |
 | MP   | 5    | 45%    | 35  |
-| STR  | 4    | 60%    | 25  |
+| STR  | 3    | 60%    | 25  |
 | MAG  | 0    | 10%    | 20  |
 | SKL  | 3    | 55%    | 25  |
 | SPD  | 3    | 55%    | 25  |
@@ -67,13 +67,13 @@ The player's townsfolk in the demo battle, and the late bloomer of Warband Mode'
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| physical     | Fists           | 150%    |
+| physical     | Wooden Sword    | 150%    |
 
 | Skill        | Learned at | Mana | Range | Damage                           |
 | ------------ | ---------- | ---- | ----- | -------------------------------- |
 | Throw Stones | 2          | 2    | 1–4   | Half the regular hit, rounded up |
 
-Carries Fists, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
+Carries a Wooden Sword, its Fists for when the sword breaks, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
 ## Soldier
 
@@ -215,7 +215,7 @@ It learns no skills yet. Carries a Heal staff, a Health Potion (+5 HP) and a Man
 
 ## Slime
 
-The weakest monster and Warband Mode's first fight: a slow blob of jelly that deals 1 damage to a level-1 villager and falls to two punches. It carries nothing but its Tackle.
+The weakest monster and Warband Mode's first fight: a slow blob of jelly that deals 1 damage to a level-1 warrior and falls to two sword swings. It carries nothing but its Tackle.
 
 | Stat | Base | Growth | Cap |
 | ---- | ---- | ------ | --- |
@@ -293,23 +293,23 @@ It learns no skills and carries no potions.
 
 ## Matchups at level 1
 
-Villager and Soldier share a stat line, so between them the difference is the weapon: the soldier's spear adds 1 might. Each attack is from as close as the attacker's weapon reaches (2 tiles for the bow).
+Warrior and Soldier differ by a point of strength and their weapons: the wooden sword has the spear's might but lands more often. Each attack is from as close as the attacker's weapon reaches (2 tiles for the bow).
 
-| Attacker | Target   | Weapon     | Damage | Hit | Crit | Strikes |
-| -------- | -------- | ---------- | ------ | --- | ---- | ------- |
-| Villager | Soldier  | Fists      | 2      | 79% | 0%   | 1       |
-| Soldier  | Villager | Iron Spear | 3      | 79% | 0%   | 1       |
-| Archer   | Soldier  | Iron Bow   | 3      | 83% | 0%   | 1       |
-| Vanguard | Soldier  | Iron Axe   | 6      | 61% | 0%   | 1       |
-| Guard    | Soldier  | Iron Spear | 3      | 78% | 0%   | 1       |
-| Soldier  | Guard    | Iron Spear | 0      | 84% | 0%   | 1       |
+| Attacker | Target  | Weapon       | Damage | Hit | Crit | Strikes |
+| -------- | ------- | ------------ | ------ | --- | ---- | ------- |
+| Warrior  | Soldier | Wooden Sword | 2      | 89% | 0%   | 1       |
+| Soldier  | Warrior | Iron Spear   | 3      | 79% | 0%   | 1       |
+| Archer   | Soldier | Iron Bow     | 3      | 83% | 0%   | 1       |
+| Vanguard | Soldier | Iron Axe     | 6      | 61% | 0%   | 1       |
+| Guard    | Soldier | Iron Spear   | 3      | 78% | 0%   | 1       |
+| Soldier  | Guard   | Iron Spear   | 0      | 84% | 0%   | 1       |
 
 Every class learns its skill at level 2, its first level up; the skill rows use level-1 stats.
 
-| Skill        | User     | Target   | Damage | Hit    | Crit  | Strikes       |
-| ------------ | -------- | -------- | ------ | ------ | ----- | ------------- |
-| Throw Stones | Villager | Soldier  | 1      | always | never | 1, no counter |
-| Power Strike | Soldier  | Villager | 6      | always | never | 1, no counter |
-| Long Shot    | Archer   | Soldier  | 3      | always | never | 1, no counter |
-| Cleave       | Vanguard | Soldier  | 8      | always | never | 1, no counter |
-| Shield Bash  | Guard    | Soldier  | 4      | always | never | 1, no counter |
+| Skill        | User     | Target  | Damage | Hit    | Crit  | Strikes       |
+| ------------ | -------- | ------- | ------ | ------ | ----- | ------------- |
+| Throw Stones | Warrior  | Soldier | 1      | always | never | 1, no counter |
+| Power Strike | Soldier  | Warrior | 6      | always | never | 1, no counter |
+| Long Shot    | Archer   | Soldier | 3      | always | never | 1, no counter |
+| Cleave       | Vanguard | Soldier | 8      | always | never | 1, no counter |
+| Shield Bash  | Guard    | Soldier | 4      | always | never | 1, no counter |

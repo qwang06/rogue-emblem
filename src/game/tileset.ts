@@ -162,7 +162,7 @@ export const DEFAULT_BUILDING_PALETTE: BuildingPaletteName = 'a-stone';
 // whichever side it's on. Each names a set of sheets, one per animation in
 // UNIT_ANIMATIONS (see unitSheetKey).
 export const UNIT_SPRITES: Record<string, string> = {
-  villager: 'Villager_01',
+  warrior: 'Warrior_01',
   soldier: 'Soldier_03',
   archer: 'Archer_02',
   vanguard: 'Vanguard_04',
@@ -174,7 +174,7 @@ export const UNIT_SPRITES: Record<string, string> = {
 };
 
 // Art for a unit whose class has none of its own (or no class).
-export const DEFAULT_UNIT_SPRITE = UNIT_SPRITES.villager;
+export const DEFAULT_UNIT_SPRITE = UNIT_SPRITES.warrior;
 
 // The unit art for a unit class (a key of UNIT_SPRITES), falling back to
 // DEFAULT_UNIT_SPRITE.
@@ -229,7 +229,7 @@ export const UNIT_ANIMATIONS: Record<UnitAnimation, { sheet: string; frameMs: nu
 };
 
 // The texture key of a unit's sheet for an animation, e.g.
-// ('Villager_01', 'move') -> 'Villager_01_Move'.
+// ('Warrior_01', 'move') -> 'Warrior_01_Move'.
 export function unitSheetKey(sprite: string, animation: UnitAnimation): string {
   return `${sprite}_${UNIT_ANIMATIONS[animation].sheet}`;
 }

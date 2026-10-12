@@ -77,7 +77,7 @@ export interface UnitOptions {
   tomeProgress?: TomeProgress;
 }
 
-// The options a class (Soldier, Villager, ...) takes: the class fills in
+// The options a class (Soldier, Warrior, ...) takes: the class fills in
 // everything else.
 export interface ClassUnitOptions {
   name?: string;

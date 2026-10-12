@@ -6,7 +6,7 @@ import type { ClassUnitOptions, Unit } from './Unit.ts';
 describe('UNIT_CLASSES', () => {
   it('lists the six player classes, then the slime, the goblin and the skeleton', () => {
     expect(UNIT_CLASSES.map((c) => c.id)).toEqual([
-      'villager',
+      'warrior',
       'soldier',
       'archer',
       'vanguard',
@@ -17,7 +17,7 @@ describe('UNIT_CLASSES', () => {
       'skeleton',
     ]);
     expect(UNIT_CLASSES.map((c) => c.label)).toEqual([
-      'Villager',
+      'Warrior',
       'Soldier',
       'Archer',
       'Vanguard',
@@ -43,14 +43,7 @@ describe('UNIT_CLASSES', () => {
 
 describe('PLAYABLE_CLASSES', () => {
   it('lists the six player classes and none of the monsters', () => {
-    expect(PLAYABLE_CLASSES.map((c) => c.id)).toEqual([
-      'villager',
-      'soldier',
-      'archer',
-      'vanguard',
-      'guard',
-      'acolyte',
-    ]);
+    expect(PLAYABLE_CLASSES.map((c) => c.id)).toEqual(['warrior', 'soldier', 'archer', 'vanguard', 'guard', 'acolyte']);
   });
 
   it('marks exactly the slime, the goblin and the skeleton as monsters', () => {

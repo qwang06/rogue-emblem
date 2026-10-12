@@ -8,7 +8,7 @@ import type { BuildingPlacement } from './buildings.ts';
 import type { DialogScripts } from './dialogScript.ts';
 import { setUnit, type Point } from './grid.ts';
 import { Soldier } from './Soldier.ts';
-import { Villager } from './Villager.ts';
+import { Warrior } from './Warrior.ts';
 import { parseTerrainMap } from './terrainMap.ts';
 import type { BuildingPaletteName } from './tileset.ts';
 import type { Level } from './trainingLevel.ts';
@@ -100,12 +100,12 @@ export const TREE_POSITIONS: readonly TreePlacement[] = Object.freeze(
 // (and the menu jumps to Start) once this many are placed.
 export const DEMO_MAX_DEPLOYED = 3;
 
-// The player's roster of villagers, by unitId -> name. One unit per
+// The player's roster of warriors, by unitId -> name. One unit per
 // deployment tile.
 export const PLAYER_ROSTER: Readonly<Record<string, string>> = Object.freeze({
-  'villager-1': 'Alden',
-  'villager-2': 'Bryn',
-  'villager-3': 'Cato',
+  'warrior-1': 'Alden',
+  'warrior-2': 'Bryn',
+  'warrior-3': 'Cato',
 });
 
 // Returns { grid, units, roster, deploymentZone, maxDeployed, dialogs,
@@ -120,7 +120,7 @@ export function createDemoLevel(dialogs: DialogScripts = DIALOGS.demo): DemoLeve
   let grid = parseTerrainMap(DEMO_MAP);
 
   const units = new Map(
-    Object.entries(PLAYER_ROSTER).map(([unitId, name]) => [unitId, new Villager({ name, team: 'player' })]),
+    Object.entries(PLAYER_ROSTER).map(([unitId, name]) => [unitId, new Warrior({ name, team: 'player' })]),
   );
 
   ENEMY_POSITIONS.forEach(({ x, y }, i) => {

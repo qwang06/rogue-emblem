@@ -34,7 +34,7 @@ import { createTurnState, markDone } from '../game/turns.ts';
 import { applyBattleResult, createRun, restoreRoster, snapshotUnit } from '../game/warband/run.ts';
 import { createStartingWarband } from '../game/warband/stageLevel.ts';
 import { PLAYER_ROSTER } from '../game/demoLevel.ts';
-import { Villager } from '../game/Villager.ts';
+import { Warrior } from '../game/Warrior.ts';
 
 const makeUnit = () =>
   new Unit({ name: 'Soldier', health: 10, mana: 5, strength: 4, defense: 2, movement: 5, team: 'player' });
@@ -358,8 +358,8 @@ describe('toDamagePopupView', () => {
 
 describe('toRosterEntryView', () => {
   it('snapshots the unit for the roster menu', () => {
-    const view = toRosterEntryView({ id: 'soldier', unit: makeUnit(), sprite: 'Villager_01', placed: false });
-    expect(view).toEqual({ id: 'soldier', label: 'Soldier', sprite: 'Villager_01', placed: false, disabled: false });
+    const view = toRosterEntryView({ id: 'soldier', unit: makeUnit(), sprite: 'Warrior_01', placed: false });
+    expect(view).toEqual({ id: 'soldier', label: 'Soldier', sprite: 'Warrior_01', placed: false, disabled: false });
     expect(Object.isFrozen(view)).toBe(true);
   });
 
@@ -367,7 +367,7 @@ describe('toRosterEntryView', () => {
     const view = toRosterEntryView({
       id: 'soldier',
       unit: makeUnit(),
-      sprite: 'Villager_01',
+      sprite: 'Warrior_01',
       placed: false,
       disabled: true,
     });
@@ -409,14 +409,14 @@ describe('toDialogView', () => {
   ]);
 
   it('snapshots the current line with its stand-in sprite and typing speed', () => {
-    const view = toDialogView({ id: 3, dialog, sprite: 'Villager_01', charsPerSecond: 40 });
+    const view = toDialogView({ id: 3, dialog, sprite: 'Warrior_01', charsPerSecond: 40 });
     expect(view).toEqual({
       id: 3,
       speaker: 'Alden',
       side: 'left',
       text: 'Onward.',
       portrait: null,
-      sprite: 'Villager_01',
+      sprite: 'Warrior_01',
       revealed: false,
       charsPerSecond: 40,
       isLast: false,
@@ -583,13 +583,13 @@ describe('toObjectiveView', () => {
 
 describe('toRunOverView', () => {
   it('carries the stage and the names of the fallen in order, frozen', () => {
-    const villagers = Object.entries(PLAYER_ROSTER).map(
-      ([id, name]) => [id, new Villager({ name, team: 'player' })] as const,
+    const warriors = Object.entries(PLAYER_ROSTER).map(
+      ([id, name]) => [id, new Warrior({ name, team: 'player' })] as const,
     );
-    const run = createRun(1, new Map(villagers));
+    const run = createRun(1, new Map(warriors));
     const units = restoreRoster(run);
-    units.get('villager-2')!.takeDamage(99);
-    units.get('villager-1')!.takeDamage(99);
+    units.get('warrior-2')!.takeDamage(99);
+    units.get('warrior-1')!.takeDamage(99);
     const view = toRunOverView({ ...applyBattleResult(run, { units }), stage: 4 });
     expect(view).toEqual({ stage: 4, fallen: ['Alden', 'Bryn'] });
     expect(Object.isFrozen(view)).toBe(true);

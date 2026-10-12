@@ -41,9 +41,9 @@ describe('SKILL_TREES', () => {
     expect(getSkillsLearnedBetween('soldier', 1, 2)).toEqual([POWER_STRIKE]);
   });
 
-  it('teaches the villager Throw Stones at level 2, its first level up', () => {
-    expect(getLearnedSkills('villager', 1)).toEqual([]);
-    expect(getSkillsLearnedBetween('villager', 1, 2)).toEqual([THROW_STONES]);
+  it('teaches the warrior Throw Stones at level 2, its first level up', () => {
+    expect(getLearnedSkills('warrior', 1)).toEqual([]);
+    expect(getSkillsLearnedBetween('warrior', 1, 2)).toEqual([THROW_STONES]);
   });
 
   it('teaches every class nothing at level 1 and its skill at SKILL_UNLOCK_LEVEL', () => {
@@ -58,7 +58,7 @@ describe('SKILL_TREES', () => {
   });
 
   it('keeps each skill to its own class', () => {
-    expect(getLearnedSkills('villager', 20)).not.toContain(POWER_STRIKE);
+    expect(getLearnedSkills('warrior', 20)).not.toContain(POWER_STRIKE);
     expect(getLearnedSkills('soldier', 20)).not.toContain(THROW_STONES);
   });
 
@@ -166,10 +166,10 @@ describe('THROW_STONES', () => {
   });
 
   it('deals half the damage of a regular attack, rounded up', () => {
-    const villager = { strength: 4, defense: 2 };
-    expect(calculateSkillDamage(THROW_STONES, villager, { defense: 2 })).toBe(1); // regular: 2
-    expect(calculateSkillDamage(THROW_STONES, villager, { defense: 1 })).toBe(2); // regular: 3
-    expect(calculateSkillDamage(THROW_STONES, villager, { defense: 0 })).toBe(2); // regular: 4
+    const warrior = { strength: 4, defense: 2 };
+    expect(calculateSkillDamage(THROW_STONES, warrior, { defense: 2 })).toBe(1); // regular: 2
+    expect(calculateSkillDamage(THROW_STONES, warrior, { defense: 1 })).toBe(2); // regular: 3
+    expect(calculateSkillDamage(THROW_STONES, warrior, { defense: 0 })).toBe(2); // regular: 4
   });
 
   it('deals nothing where a regular attack would', () => {

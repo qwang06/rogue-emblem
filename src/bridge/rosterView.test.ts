@@ -3,7 +3,7 @@ import { HEAL_STAFF } from '../game/healing.ts';
 import { HEALTH_POTION, WOODEN_ARMOR, WOODEN_SHIELD } from '../game/items.ts';
 import { Soldier } from '../game/Soldier.ts';
 import type { Unit } from '../game/Unit.ts';
-import { Villager } from '../game/Villager.ts';
+import { Warrior } from '../game/Warrior.ts';
 import { FISTS, IRON_AXE } from '../game/weapons.ts';
 import { createRun, type ItemSnapshot, type RunState } from '../game/warband/run.ts';
 import { confirmRoster, openRosterScreen, pointRosterCursor } from '../game/warband/rosterScreen.ts';
@@ -14,7 +14,7 @@ function campRun(convoy: ItemSnapshot[] = []): RunState {
     7,
     new Map<string, Unit>([
       ['alden', new Soldier({ name: 'Alden', team: 'player' })],
-      ['cato', new Villager({ name: 'Cato', team: 'player' })],
+      ['cato', new Warrior({ name: 'Cato', team: 'player' })],
     ]),
   );
   return { ...run, convoy };
@@ -25,7 +25,7 @@ describe('toRosterScreenView', () => {
     const view = toRosterScreenView(openRosterScreen(campRun([{ itemId: 'iron-axe', quantity: 12 }])));
     expect(view.units.map((u) => [u.name, u.classLabel, u.level])).toEqual([
       ['Alden', 'Soldier', 1],
-      ['Cato', 'Villager', 1],
+      ['Cato', 'Warrior', 1],
     ]);
     expect(view.unitName).toBe('Alden');
     expect(view.items.map((i) => [i.label, i.quantity, i.equipped])).toEqual([
@@ -51,7 +51,7 @@ describe('toRosterScreenView', () => {
 
   it('shows a weapon that never breaks without a count', () => {
     const state = pointRosterCursor(openRosterScreen(campRun()), 'units', 1);
-    expect(toRosterScreenView(state).items[0]).toMatchObject({ label: 'Fists', quantity: null, equipped: true });
+    expect(toRosterScreenView(state).items[1]).toMatchObject({ label: 'Fists', quantity: null, equipped: false });
   });
 
   it('disables convoy items the picked unit has no room for', () => {

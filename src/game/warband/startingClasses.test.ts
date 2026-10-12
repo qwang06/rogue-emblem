@@ -3,9 +3,9 @@ import { UNIT_CLASSES } from '../unitClasses.ts';
 import { DEFAULT_STARTING_CLASS, STARTING_CLASSES } from './startingClasses.ts';
 
 describe('STARTING_CLASSES', () => {
-  it('offers the Villager, the Soldier and the Archer, in that order', () => {
-    expect(STARTING_CLASSES.map((c) => c.id)).toEqual(['villager', 'soldier', 'archer']);
-    expect(STARTING_CLASSES.map((c) => c.label)).toEqual(['Villager', 'Soldier', 'Archer']);
+  it('offers the Warrior, the Soldier and the Archer, in that order', () => {
+    expect(STARTING_CLASSES.map((c) => c.id)).toEqual(['warrior', 'soldier', 'archer']);
+    expect(STARTING_CLASSES.map((c) => c.label)).toEqual(['Warrior', 'Soldier', 'Archer']);
   });
 
   it('names only real classes, with their own labels', () => {
