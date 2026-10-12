@@ -184,6 +184,8 @@ export interface LevelUpStatView {
 export interface LevelUpView {
   id: number;
   name: string;
+  // The unit's class, for its portrait.
+  unitClass: string | null;
   level: number;
   stats: readonly LevelUpStatView[];
   skills: readonly string[];
@@ -532,17 +534,20 @@ const LEVEL_UP_STATS: readonly (readonly [GrowthStat, string])[] = Object.freeze
 export function toLevelUpView({
   id,
   name,
+  unitClass = null,
   levelUp,
   durationMs,
 }: {
   id: number;
   name: string;
+  unitClass?: string | null;
   levelUp: LevelUpResult;
   durationMs: number;
 }): LevelUpView {
   return Object.freeze({
     id,
     name,
+    unitClass,
     level: levelUp.level,
     stats: Object.freeze(
       LEVEL_UP_STATS.map(([stat, label]) =>

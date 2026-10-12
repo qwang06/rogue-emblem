@@ -366,7 +366,7 @@ describe('the experience reward', () => {
       const { run: after, levelUps } = applyExperienceReward(run, experience());
       expect(after.roster[0], id).toMatchObject({ level: 2, experience: 0 });
       expect(levelUps, id).toHaveLength(1);
-      expect(levelUps[0].name).toBe('Alden');
+      expect(levelUps[0]).toMatchObject({ name: 'Alden', unitClass: id });
       expect(levelUps[0].levelUp.skills, id).toHaveLength(1);
     }
   });

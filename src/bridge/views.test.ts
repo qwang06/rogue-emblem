@@ -555,6 +555,13 @@ describe('toLevelUpView', () => {
     expect(Object.isFrozen(view)).toBe(true);
     expect(Object.isFrozen(view.stats[0])).toBe(true);
   });
+
+  it("carries the unit's class for its portrait, none if not given", () => {
+    expect(toLevelUpView({ id: 4, name: 'Ana', unitClass: 'soldier', levelUp, durationMs: 2000 }).unitClass).toBe(
+      'soldier',
+    );
+    expect(toLevelUpView({ id: 4, name: 'Ana', levelUp, durationMs: 2000 }).unitClass).toBeNull();
+  });
 });
 
 describe('toObjectiveView', () => {

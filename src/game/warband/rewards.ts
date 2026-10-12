@@ -292,6 +292,7 @@ function applyRewardEffect(run: RunState, reward: Reward, classes: readonly Unit
 // A unit's level up from an experience reward, for showing it.
 export interface RewardLevelUp {
   name: string;
+  unitClass: string | null;
   levelUp: LevelUpResult;
 }
 
@@ -309,7 +310,7 @@ export function applyExperienceReward(
   const roster = run.roster.map((snapshot) => {
     const unit = restoreUnit(snapshot, classes);
     const result = unit.gainExperience(getExperienceToNextLevel(unit.level, unit.experience), rng, false);
-    levelUps.push(...result.levelUps.map((levelUp) => ({ name: unit.name, levelUp })));
+    levelUps.push(...result.levelUps.map((levelUp) => ({ name: unit.name, unitClass: unit.unitClass, levelUp })));
     return snapshotUnit(snapshot.id, unit);
   });
   return { run: clearPendingReward(freeze({ ...run, roster })), levelUps: Object.freeze(levelUps) };
