@@ -1,47 +1,125 @@
 /* ---- Theme ----------------------------------------------------------- */
 
-/* Tokyo Night, the palette of Omarchy (the tiling Linux desktop this UI
-   borrows from): calm dark windows with a thin border and the accent on
-   whichever one has focus. Text is a clean sans, big titles a carved
-   capital face that suits a tale of banners and swords, and monospace is
-   kept for key caps and file paths. */
+/* A GBA tactics look: windows are parchment in a dark brown frame with
+   gold corner plates, text is a chunky pixel font in dark brown, and the
+   selection cue is a white gauntlet pointing at the row. The page around
+   the map is dark wood, so anything drawn straight on it (the header, the
+   title and config pages) uses the light text set in `.on-dark`. */
 :root {
-  /* Surfaces, darkest first: the desktop behind everything, a window, a
-     raised strip inside one, and the selected row. */
-  --desktop: #13141c;
-  --bg: #1a1b26;
-  --bg-light: #24283b;
-  --selection: #292e42;
-  /* Lines: an inactive window's border, and the focused one's accent. */
-  --muted: #414868;
-  --accent: #7aa2f7;
-  /* Text, brightest first. */
-  --fg-bright: #c0caf5;
-  --fg: #a9b1d6;
-  --fg-dim: #565f89;
+  /* One art pixel. Borders, the pointer and other pixel art are sized in
+     whole multiples of it so their pixels stay square and crisp. */
+  --px: 2px;
+  /* Surfaces: the wood behind everything, a window's parchment, a raised
+     strip inside one, and the selected row's band. */
+  --desktop: #2a1a10;
+  --bg: #f0d9a8;
+  --bg-light: #e4c68c;
+  --selection: #e2c07e;
+  /* Lines: a window's dark brown frame, and the gold trim that marks the
+     focused one. */
+  --muted: #7a4a22;
+  --accent: #b8801c;
+  /* Text, strongest first, for parchment. */
+  --fg-bright: #2a170a;
+  --fg: #3a2414;
+  --fg-dim: #8a6a48;
   /* Palette colors, each with one job: blue is the player's side, red the
      enemy's, green health, cyan mana, yellow gold and gains, magenta
-     experience and level ups. */
+     experience and level ups. Dark enough to read on parchment. */
+  --blue: #2f5fc8;
+  --red: #c0342a;
+  --green: #2e9a3a;
+  --cyan: #1c86a8;
+  --yellow: #a86a08;
+  --magenta: #8a3ab8;
+  --orange: #c8601c;
+  --red-bg: rgb(192 52 42 / 14%);
+  --blue-bg: rgb(47 95 200 / 12%);
+  /* The game's bars, as in the reference: green HP, blue EXP. */
+  --hp: #48c048;
+  --exp: #3c9ce0;
+  /* The blue selection bar for item rows, with its light text. */
+  --bar: #3858b0;
+  --bar-fg: #fff8e8;
+  --rule: var(--px) solid var(--muted);
+  --border: var(--px) solid var(--muted);
+  /* One face for everything: a pixel font, set in caps where the GBA
+     would. */
+  --pixel: 'Pixelify Sans', ui-monospace, monospace;
+  --sans: var(--pixel);
+  --display: var(--pixel);
+  --mono: var(--pixel);
+  --radius: 0;
+  --radius-sm: 0;
+  /* Lifts windows that float over the map off it: a hard pixel drop. */
+  --lift: var(--px) var(--px) 0 rgb(0 0 0 / 35%);
+  /* The selection cue: a white gauntlet (14x10 art pixels), drawn hanging
+     off the left of the row it points at. */
+  --pointer: url('../assets/ui/hand-pointer.png');
+  --pointer-w: calc(14 * var(--px));
+  --pointer-h: calc(10 * var(--px));
+}
+
+/* Windows set the parchment tokens again, so one opened from the header
+   (a popover) reads dark on light like every other. */
+.panel,
+.frame {
+  --fg-bright: #2a170a;
+  --fg: #3a2414;
+  --fg-dim: #8a6a48;
+  --accent: #b8801c;
+  --selection: #e2c07e;
+  --muted: #7a4a22;
+  --bg: #f0d9a8;
+  --blue: #2f5fc8;
+  --red: #c0342a;
+  --green: #2e9a3a;
+  --cyan: #1c86a8;
+  --yellow: #a86a08;
+  --magenta: #8a3ab8;
+}
+
+/* Light text for anything drawn straight on the dark wood, or on a blue
+   banner. */
+.on-dark,
+.page-header,
+.title-screen,
+.configs-page,
+.frame--banner,
+.frame--banner-red {
+  --fg-bright: #fff3d6;
+  --fg: #f0d9a8;
+  --fg-dim: #b0946c;
+  --accent: #e8b030;
+  --selection: #4a3020;
+  --muted: #7a5a3a;
+  --bg: #3a2416;
   --blue: #7aa2f7;
   --red: #f7768e;
   --green: #9ece6a;
-  --cyan: #0db9d7;
-  --yellow: #e0af68;
-  --magenta: #bb9af7;
-  --orange: #ff9e64;
-  --red-bg: rgb(247 118 142 / 10%);
-  --blue-bg: rgb(122 162 247 / 10%);
-  --rule: 1px solid var(--muted);
-  --border: 2px solid var(--muted);
-  --sans: 'Figtree', system-ui, sans-serif;
-  --display: 'Cinzel', Georgia, serif;
-  --mono: 'JetBrains Mono', ui-monospace, monospace;
-  --radius: 6px;
-  --radius-sm: 4px;
-  /* Lifts windows that float over the map off it. */
-  --lift: 0 6px 18px rgb(0 0 0 / 40%);
-  /* The selection cue: a small accent pennant pointing at the row. */
-  --pointer: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 12'><path d='M5 1.5 11.5 6 5 10.5Z' fill='%237aa2f7' stroke='%237aa2f7' stroke-width='1.5' stroke-linejoin='round'/></svg>");
+  --cyan: #4fd6f0;
+  --yellow: #e8b030;
+  --magenta: #c8a0f8;
+}
+
+/* Pixel art is never smoothed. */
+img,
+.unit-sprite {
+  image-rendering: pixelated;
+}
+
+/* Bob the hand toward the row, as the GBA's does. `translate` leaves the
+   rules' own `transform` alone. */
+@keyframes pointer-bob {
+  50% {
+    translate: calc(-1 * var(--px)) 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class*='--selected']::before {
+    animation: none;
+  }
 }
 
 html,
@@ -248,25 +326,39 @@ a.header-button {
 
 /* ---- Windows ---------------------------------------------------------- */
 
-/* Every in-game window is a tile: square, a flat window background, a 2px
-   border in the muted line color, no shadow. Windows that take input (the
-   menus) get the accent border, like the focused window on the desktop;
-   anything that belongs to the enemy is tinted red. */
-.panel {
+/* Every in-game window is a framed parchment box: a 9-slice of pixel art
+   (src/assets/ui/frame-*.png, drawn by the tileset skill's draw-ui-art.js)
+   with a dark brown frame and gold corner plates. `<Frame>` renders one;
+   `.panel` is the same box for windows that predate it. The banner
+   variants are the blue (player) and red (enemy) boxes for phase and turn
+   readouts. */
+.panel,
+.frame {
   pointer-events: auto;
-  padding: 6px 10px;
-  background: var(--bg);
-  border: var(--border);
-  border-radius: var(--radius);
+  padding: 2px 6px;
+  color: var(--fg);
+  background: none;
+  border-style: solid;
+  border-width: calc(8 * var(--px));
+  border-image: url('../assets/ui/frame-parchment.png') 8 fill / calc(8 * var(--px)) stretch;
+  image-rendering: pixelated;
 }
 
-.hud .panel {
+.frame--banner {
+  border-image-source: url('../assets/ui/frame-banner.png');
+}
+
+.frame--banner-red {
+  border-image-source: url('../assets/ui/frame-banner-red.png');
+}
+
+.hud .panel,
+.hud .frame {
   box-shadow: var(--lift);
 }
 
 .panel--enemy {
-  background: linear-gradient(var(--red-bg), var(--red-bg)), var(--bg);
-  border-color: var(--red);
+  background: none;
 }
 
 /* A window's title sits in its top border, as in the desktop's system
@@ -631,12 +723,14 @@ kbd {
 .action-menu__item--selected::before {
   content: '';
   position: absolute;
-  left: 4px;
+  left: -8px;
   top: 50%;
-  width: 16px;
-  height: 12px;
+  width: var(--pointer-w);
+  height: var(--pointer-h);
   transform: translateY(-50%);
-  background: var(--pointer) center / 16px 12px no-repeat;
+  background: var(--pointer) center / 100% 100% no-repeat;
+  image-rendering: pixelated;
+  animation: pointer-bob 0.8s steps(1) infinite;
 }
 
 .action-menu__item--disabled {
@@ -1718,12 +1812,14 @@ kbd {
 .title-menu__item--selected::before {
   content: '';
   position: absolute;
-  left: 8px;
+  left: 0;
   top: 50%;
-  width: 16px;
-  height: 12px;
+  width: var(--pointer-w);
+  height: var(--pointer-h);
   transform: translateY(-50%);
-  background: var(--pointer) center / 16px 12px no-repeat;
+  background: var(--pointer) center / 100% 100% no-repeat;
+  image-rendering: pixelated;
+  animation: pointer-bob 0.8s steps(1) infinite;
 }
 
 .title-menu__item--disabled {
@@ -2785,11 +2881,13 @@ textarea.draft-input {
 .reward-card--selected::before {
   content: '';
   position: absolute;
-  left: 5px;
+  left: -6px;
   top: 32px;
-  width: 16px;
-  height: 12px;
-  background: var(--pointer) center / 16px 12px no-repeat;
+  width: var(--pointer-w);
+  height: var(--pointer-h);
+  background: var(--pointer) center / 100% 100% no-repeat;
+  image-rendering: pixelated;
+  animation: pointer-bob 0.8s steps(1) infinite;
 }
 
 .reward-card__kind {
@@ -2875,12 +2973,14 @@ textarea.draft-input {
 .reward-button--selected::before {
   content: '';
   position: absolute;
-  left: 6px;
+  left: -4px;
   top: 50%;
-  width: 16px;
-  height: 12px;
+  width: var(--pointer-w);
+  height: var(--pointer-h);
   transform: translateY(-50%);
-  background: var(--pointer) center / 16px 12px no-repeat;
+  background: var(--pointer) center / 100% 100% no-repeat;
+  image-rendering: pixelated;
+  animation: pointer-bob 0.8s steps(1) infinite;
 }
 
 .reward-button[aria-disabled='true'] {
