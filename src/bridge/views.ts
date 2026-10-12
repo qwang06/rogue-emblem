@@ -38,9 +38,13 @@ export interface ItemView {
 export interface UnitView {
   name: string;
   unitClass: string | null;
+  // The class's display name (see UNIT_CLASSES), or its id if it has none.
+  classLabel: string | null;
   team: Team;
   level: number;
   experience: number;
+  // The XP its current level takes to finish, or null at the level cap.
+  experienceToLevel: number | null;
   health: number;
   maxHealth: number;
   mana: number;
@@ -93,7 +97,6 @@ export interface SkillView {
 // plus the class name, stat caps, the rates it fights with, its equipped
 // weapon's numbers, the weapon types it can wield and the skills it knows.
 export interface UnitDetailView extends UnitView {
-  classLabel: string | null;
   maxLevel: boolean;
   stats: readonly StatLineView[];
   damageType: DamageType;
@@ -131,6 +134,8 @@ export interface ForecastSideView extends ForecastSide {
   name: string;
   team: Team;
   weapon: string | null;
+  // The weapon's item id, for its icon.
+  weaponId: string | null;
 }
 
 export interface CombatForecastView {
@@ -242,6 +247,10 @@ export interface DialogView {
   isLast: boolean;
 }
 
+function getClassLabel(unitClass: string | null): string | null {
+  return UNIT_CLASSES.find((c) => c.id === unitClass)?.label ?? unitClass;
+}
+
 // Snapshot of a unit for the HUD. `range` is its equipped weapon's range
 // ("1", "1–2"), or "–" with no weapon, and `weapon` that weapon's name.
 export function toUnitView(unit: Unit | null | undefined): UnitView | null {
@@ -251,9 +260,11 @@ export function toUnitView(unit: Unit | null | undefined): UnitView | null {
   return Object.freeze({
     name: unit.name,
     unitClass: unit.unitClass,
+    classLabel: getClassLabel(unit.unitClass),
     team: unit.team,
     level: unit.level,
     experience: unit.experience,
+    experienceToLevel: unit.level >= MAX_LEVEL ? null : getExperienceForLevel(unit.level),
     health: unit.health,
     maxHealth: unit.maxHealth,
     mana: unit.mana,
@@ -308,7 +319,6 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
   const damageType = getDamageType(unit);
   return Object.freeze({
     ...view,
-    classLabel: UNIT_CLASSES.find((c) => c.id === unit.unitClass)?.label ?? unit.unitClass,
     maxLevel: unit.level >= MAX_LEVEL,
     stats: Object.freeze(
       DETAIL_STATS.map(([id, label]) => Object.freeze({ id, label, value: unit[id], cap: unit.caps[id] ?? null })),
@@ -401,7 +411,13 @@ export function toCombatForecastView({
   anchor: TileAnchorView;
 }): CombatForecastView {
   const side = (unit: Pick<Unit, 'name' | 'team' | 'weapon'>, numbers: ForecastSide) =>
-    Object.freeze({ name: unit.name, team: unit.team, weapon: unit.weapon?.label ?? null, ...numbers });
+    Object.freeze({
+      name: unit.name,
+      team: unit.team,
+      weapon: unit.weapon?.label ?? null,
+      weaponId: unit.weapon?.id ?? null,
+      ...numbers,
+    });
   return Object.freeze({
     attacker: side(attacker, forecast.attacker),
     defender: side(defender, forecast.defender),

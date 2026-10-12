@@ -301,7 +301,7 @@ a.header-button {
 .hud .unit-panel {
   position: absolute;
   top: 12px;
-  width: 12.5rem;
+  width: 15rem;
   max-height: calc(100% - 24px);
   overflow: hidden;
   box-sizing: border-box;
@@ -324,26 +324,62 @@ a.header-button {
   right: 12px;
 }
 
+/* As on the GBA's status window: a framed portrait on the left, the
+   unit's NAME / CLASS / LV lines beside it. */
 .unit-panel__header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   margin-bottom: 4px;
 }
 
-.unit-panel__identity {
+/* A square frame the size of two map tiles; the map sprite stands in,
+   enlarged with crisp pixels, until units have portraits. */
+.unit-panel__portrait {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  background: var(--bg-light);
+  border: var(--border);
+  border-radius: var(--radius-sm);
+  image-rendering: pixelated;
+}
+
+.unit-panel__lines {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+/* "NAME  Alric": a dim caps label, the value cut short with an ellipsis
+   when it doesn't fit. */
+.unit-panel__line {
+  display: flex;
+  gap: 6px;
   min-width: 0;
 }
 
-.unit-panel__name {
+.unit-panel__line dt {
+  flex: none;
+  width: 2.75rem;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.unit-panel__line dd {
+  min-width: 0;
   margin: 0;
   overflow: hidden;
-  font-family: var(--sans);
-  font-size: 0.875rem;
-  font-weight: 700;
-  line-height: 1.3;
   white-space: nowrap;
   text-overflow: ellipsis;
+  color: var(--fg-bright);
+}
+
+.unit-panel__line .unit-panel__name {
+  font-weight: 700;
   color: var(--blue);
 }
 
@@ -351,24 +387,32 @@ a.header-button {
   color: var(--red);
 }
 
-.unit-panel__level {
-  margin: 0;
-  display: flex;
-  gap: 8px;
-  color: var(--fg-dim);
-}
-
 /* Gauges as in the system monitor: a flat bar on a dim trough. */
 .meter {
   display: grid;
-  grid-template-columns: 1.5rem 1fr auto;
+  grid-template-columns: 2rem 1fr auto;
   align-items: center;
   gap: 6px;
   margin-top: 2px;
 }
 
+/* Each bar's label is caps in its bar's color, as on the GBA. */
 .meter__label {
+  font-weight: 700;
+  text-transform: uppercase;
   color: var(--fg-dim);
+}
+
+.meter--hp .meter__label {
+  color: var(--green);
+}
+
+.meter--mp .meter__label {
+  color: var(--cyan);
+}
+
+.meter--exp .meter__label {
+  color: var(--blue);
 }
 
 .meter__track {
@@ -391,8 +435,12 @@ a.header-button {
   background: var(--cyan);
 }
 
+.meter--exp .meter__fill {
+  background: var(--blue);
+}
+
 .meter__value {
-  min-width: 2.75rem;
+  min-width: 3.5rem;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -434,12 +482,19 @@ a.header-button {
 
 .unit-panel__item {
   display: flex;
-  gap: 8px;
-  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
 }
 
+/* Item icons in the panel are half a tile, so a row stays one line tall. */
+.unit-panel__item .item-icon {
+  width: 16px;
+  height: 16px;
+}
+
 .unit-panel__item-label {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
@@ -546,11 +601,13 @@ kbd {
   border-color: var(--accent);
 }
 
+/* Entries read in caps, as on the GBA. */
 .action-menu__list {
   list-style: none;
   margin: 0;
   padding: 0;
   font-size: 0.875rem;
+  text-transform: uppercase;
 }
 
 /* Room on the left for the chevron. */
@@ -621,24 +678,49 @@ kbd {
   justify-content: space-between;
   gap: 12px;
   font-weight: 700;
+  text-transform: uppercase;
   line-height: 1.3;
 }
 
 .combat-forecast__weapons {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
   font-size: 0.75rem;
   color: var(--fg-dim);
+}
+
+/* A weapon's icon and name; the defender's sits against the right edge. */
+.combat-forecast__weapon {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.combat-forecast__weapon:last-child {
+  flex-direction: row-reverse;
+}
+
+.combat-forecast__weapon .item-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.combat-forecast__weapon-label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .combat-forecast__rows {
   padding: 4px 10px 6px;
   background: linear-gradient(
     90deg,
-    var(--left) 0 calc(50% - 1.5rem),
-    transparent calc(50% - 1.5rem) calc(50% + 1.5rem),
-    var(--right) calc(50% + 1.5rem)
+    var(--left) 0 calc(50% - 2rem),
+    transparent calc(50% - 2rem) calc(50% + 2rem),
+    var(--right) calc(50% + 2rem)
   );
 }
 
@@ -652,16 +734,21 @@ kbd {
 
 .combat-forecast__row {
   display: grid;
-  grid-template-columns: 1fr 3rem 1fr;
-  align-items: baseline;
+  grid-template-columns: 1fr 4rem 1fr;
+  align-items: center;
   gap: 0;
   padding: 0;
 }
 
+/* "♥ HP": the stat's icon, then its caps label. */
 .combat-forecast__label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   font-size: 0.75rem;
+  text-transform: uppercase;
   color: var(--fg-dim);
-  text-align: center;
 }
 
 .combat-forecast__value {
@@ -685,6 +772,50 @@ kbd {
   margin-left: 2px;
   font-size: 0.8125rem;
   color: var(--yellow);
+}
+
+/* ---- Item and stat icons ---------------------------------------------- */
+
+/* Item icons are one 32x32 tile at full size; windows that need a smaller
+   one set its width and height. An item with no icon keeps the spot. */
+.item-icon {
+  flex: none;
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}
+
+/* StatIcon's 8x8 bitmaps at two screen pixels per art pixel. */
+.stat-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+/* The icons' colors: blade, light, dark, gold, red and white. */
+.stat-icon__b {
+  fill: var(--blue);
+}
+
+.stat-icon__l {
+  fill: var(--fg-bright);
+}
+
+.stat-icon__d {
+  fill: var(--fg-dim);
+}
+
+.stat-icon__g {
+  fill: var(--yellow);
+}
+
+.stat-icon__r {
+  fill: var(--red);
+}
+
+.stat-icon__w {
+  fill: #fff;
 }
 
 /* ---- Experience and level ups ----------------------------------------- */
@@ -853,17 +984,83 @@ kbd {
   color: var(--cyan);
 }
 
-/* ---- Weapon menu ------------------------------------------------------ */
+/* ---- Item and weapon menus ------------------------------------------- */
 
-/* The highlighted weapon's numbers, under the list. */
+/* The item menu: icon, name, then the count against the right edge. */
+.item-menu__item {
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.item-menu__item .item-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.item-menu__label {
+  flex: 1;
+}
+
+/* The weapon menu, as on the GBA's item window: the list on the left,
+   the highlighted weapon's numbers in a column on the right. */
+.weapon-menu {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.weapon-menu__list {
+  min-width: 11rem;
+}
+
+/* A row is the icon beside the name over its uses. Every row keeps the
+   uses line (hidden unless selected), so the selection moving never
+   changes the list's height. */
+.weapon-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.weapon-menu__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.weapon-menu__label {
+  white-space: nowrap;
+}
+
+.weapon-menu__uses {
+  align-self: flex-end;
+  font-size: 0.6875rem;
+  white-space: nowrap;
+  visibility: hidden;
+  color: var(--fg-dim);
+}
+
+.action-menu__item--selected .weapon-menu__uses {
+  visibility: visible;
+}
+
+.weapon-menu__side {
+  flex: none;
+  width: 5.5rem;
+  padding-left: 10px;
+  border-left: var(--rule);
+  font-size: 0.8125rem;
+}
+
+.weapon-menu__icons {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
 .weapon-menu__stats {
-  display: grid;
-  grid-template-columns: repeat(3, auto);
-  gap: 0 12px;
-  margin: 6px 0 0;
-  padding: 4px 2px 0;
-  border-top: var(--rule);
-  font-size: 0.75rem;
+  margin: 0;
 }
 
 .weapon-menu__stat {
@@ -872,18 +1069,22 @@ kbd {
   gap: 6px;
 }
 
-.weapon-menu__stat--wide {
-  grid-column: span 3;
-}
-
 .weapon-menu__stat dt {
+  text-transform: uppercase;
   color: var(--fg-dim);
 }
 
 .weapon-menu__stat dd {
   margin: 0;
+  font-weight: 700;
   color: var(--fg-bright);
-  text-transform: capitalize;
+}
+
+.weapon-menu__type {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--fg-dim);
 }
 
 /* ---- Deployment phase ------------------------------------------------- */
@@ -1035,59 +1236,83 @@ kbd {
 
 /* ---- Turns --------------------------------------------------------- */
 
-/* Bar modules: the turn count, then the phase in its side's color. */
+/* The GBA's phase banner colors: a deep blue (or red, for the enemy)
+   fill in a gold frame, with bright caps on it. */
+.turn-indicator,
+.phase-banner {
+  --banner-fill: #1d3f94;
+  --banner-text: #7fe8ff;
+  --banner-trim: #d9a441;
+  --banner-edge: #4a2a10;
+}
+
+.turn-indicator--enemy,
+.phase-banner--enemy {
+  --banner-fill: #8c1f2a;
+  --banner-text: #ffd0b0;
+}
+
+/* Two small banners in the header: the phase in its side's color, then
+   "TURN n" on a dark plate in the same gold frame. */
 .turn-indicator {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   white-space: nowrap;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
+.turn-indicator__phase,
 .turn-indicator__turn {
-  padding: 3px 9px;
-  color: var(--fg-dim);
-  background: var(--bg);
+  padding: 2px 9px;
+  line-height: 1.3;
+  border: 2px solid var(--banner-trim);
+  border-radius: var(--radius-sm);
+  box-shadow:
+    0 0 0 1px var(--banner-edge),
+    inset 0 0 0 1px rgb(0 0 0 / 35%);
 }
 
 .turn-indicator__phase {
-  padding: 3px 9px;
-  font-weight: 700;
-  color: var(--desktop);
-  background: var(--blue);
+  color: var(--banner-text);
+  background: var(--banner-fill);
 }
 
-.turn-indicator--enemy .turn-indicator__phase {
-  background: var(--red);
+.turn-indicator__turn {
+  color: var(--fg-bright);
+  background: #2a3146;
 }
 
-/* A full-width strip in the phase's side color, between two lines of it. */
+/* The phase announcement: a gold-framed banner in the middle of the map,
+   in its side's color, with the phase in big bright caps. */
 .phase-banner {
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 50%;
   top: 50%;
-  transform: translateY(-50%);
-  padding: 14px 0;
+  transform: translate(-50%, -50%);
+  padding: 10px 28px;
+  white-space: nowrap;
   text-align: center;
+  text-transform: uppercase;
   font-family: var(--display);
   font-size: 2rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   line-height: 1.2;
-  color: var(--band);
-  background: rgb(19 20 28 / 88%);
-  border-block: 2px solid var(--band);
+  color: var(--banner-text);
+  text-shadow: 2px 2px 0 rgb(0 0 0 / 45%);
+  background: var(--banner-fill);
+  border: 4px solid var(--banner-trim);
+  border-radius: var(--radius);
+  box-shadow:
+    0 0 0 2px var(--banner-edge),
+    inset 0 0 0 2px rgb(0 0 0 / 35%),
+    var(--lift);
   animation-name: phase-banner-sweep;
   animation-timing-function: ease-in-out;
   animation-fill-mode: forwards;
-}
-
-.phase-banner--player {
-  --band: var(--blue);
-}
-
-.phase-banner--enemy {
-  --band: var(--red);
 }
 
 /* Wipes in from the left, holds, and wipes out to the right. */

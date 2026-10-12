@@ -1,9 +1,10 @@
+import { ItemIcon } from './ItemIcon.tsx';
 import { useGameStore } from './useGameStore.ts';
 import { menuItemPointerProps } from './menuPointer.ts';
 import { useMenuBesideUnit } from './useMenuBesideUnit.ts';
 
 // Displays the active unit's items, opened from the action menu. Each
-// entry shows how many are left; items that would restore nothing (e.g. a
+// entry shows its icon and how many are left; items that would restore nothing (e.g. a
 // health potion at full health) are greyed out. Selection is driven by
 // GridScene; the mouse is forwarded to it.
 export function ItemMenu() {
@@ -16,7 +17,7 @@ export function ItemMenu() {
       <ul className="action-menu__list">
         {menu.actions.map((item, index) => {
           const selected = index === menu.selectedIndex;
-          const classes = ['action-menu__item', 'skill-menu__item'];
+          const classes = ['action-menu__item', 'skill-menu__item', 'item-menu__item'];
           if (selected) classes.push('action-menu__item--selected');
           if (item.disabled) classes.push('action-menu__item--disabled');
           return (
@@ -27,7 +28,8 @@ export function ItemMenu() {
               {...menuItemPointerProps('itemMenu', index)}
               aria-disabled={item.disabled ? 'true' : undefined}
             >
-              <span>{item.label}</span>
+              <ItemIcon itemId={item.id} />
+              <span className="item-menu__label">{item.label}</span>
               <span className="skill-menu__cost">×{item.quantity}</span>
             </li>
           );
