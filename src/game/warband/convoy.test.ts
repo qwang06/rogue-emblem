@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MAX_INVENTORY_SLOTS } from '../items.ts';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
-import { Villager } from '../Villager.ts';
+import { Warrior } from '../Warrior.ts';
 import {
   canEquipInRoster,
   canGiveFromConvoy,
@@ -19,13 +19,13 @@ import {
 import { createRun, type ItemSnapshot, type RunState } from './run.ts';
 
 // Alden the soldier carries [Iron Spear (40), Health Potion, Mana Potion];
-// Cato the villager [Fists, Health Potion, Mana Potion].
+// Cato the warrior [Fists, Health Potion, Mana Potion].
 function campRun(convoy: ItemSnapshot[] = []): RunState {
   const run = createRun(
     7,
     new Map<string, Unit>([
       ['alden', new Soldier({ name: 'Alden', team: 'player' })],
-      ['cato', new Villager({ name: 'Cato', team: 'player' })],
+      ['cato', new Warrior({ name: 'Cato', team: 'player' })],
     ]),
   );
   return { ...run, convoy };
@@ -89,8 +89,8 @@ describe('storeInConvoy', () => {
 
   it('refuses a natural weapon, an empty slot and an unknown unit', () => {
     const run = campRun();
-    expect(canStoreInConvoy(run, 'cato', 0)).toBe(false);
-    expect(() => storeInConvoy(run, 'cato', 0)).toThrow();
+    expect(canStoreInConvoy(run, 'cato', 1)).toBe(false);
+    expect(() => storeInConvoy(run, 'cato', 1)).toThrow();
     expect(canStoreInConvoy(run, 'alden', 5)).toBe(false);
     expect(() => storeInConvoy(run, 'alden', 5)).toThrow();
     expect(canStoreInConvoy(run, 'nobody', 0)).toBe(false);
@@ -217,8 +217,8 @@ describe('equipping armor', () => {
 
   it('lets any class wear armor and store it', () => {
     const run = giveFromConvoy(campRun([{ itemId: 'wooden-armor', quantity: 1 }]), 'cato', 0);
-    expect(getWornIndices(run, 'cato')).toEqual([3]);
-    expect(canStoreInConvoy(run, 'cato', 3)).toBe(true);
-    expect(storeInConvoy(run, 'cato', 3).convoy).toEqual([{ itemId: 'wooden-armor', quantity: 1 }]);
+    expect(getWornIndices(run, 'cato')).toEqual([4]);
+    expect(canStoreInConvoy(run, 'cato', 4)).toBe(true);
+    expect(storeInConvoy(run, 'cato', 4).convoy).toEqual([{ itemId: 'wooden-armor', quantity: 1 }]);
   });
 });

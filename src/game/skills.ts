@@ -101,7 +101,7 @@ export const SKILL_UNLOCK_LEVEL = 2;
 
 // unitClass -> [{ level, skill }]. Classes without an entry know no skills.
 export const SKILL_TREES: SkillTrees = Object.freeze({
-  villager: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: THROW_STONES })]),
+  warrior: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: THROW_STONES })]),
   soldier: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: POWER_STRIKE })]),
   archer: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: LONG_SHOT })]),
   vanguard: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: CLEAVE })]),

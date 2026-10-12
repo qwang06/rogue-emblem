@@ -44,10 +44,10 @@ describe('getTrainingActions', () => {
 
 describe('getTrainingDialogs', () => {
   it('keeps every conversation from training.txt, with the given class on each line', () => {
-    const dialogs = getTrainingDialogs('villager');
+    const dialogs = getTrainingDialogs('warrior');
     expect(Object.keys(dialogs)).toEqual(Object.keys(DIALOGS.training));
     for (const [trigger, lines] of Object.entries(dialogs)) {
-      expect(lines).toEqual(DIALOGS.training[trigger].map((line) => ({ ...line, unitClass: 'villager' })));
+      expect(lines).toEqual(DIALOGS.training[trigger].map((line) => ({ ...line, unitClass: 'warrior' })));
     }
   });
 
@@ -116,16 +116,16 @@ describe('createTrainingLevel', () => {
   it("gives the sparring partner the trainee's class as its portrait", () => {
     const allLines = (dialogs: DialogScripts) => Object.values(dialogs).flat();
     expect(allLines(level.dialogs).every((line) => line.unitClass === 'soldier')).toBe(true);
-    const villagerLevel = createTrainingLevel('villager');
-    expect(allLines(villagerLevel.dialogs).every((line) => line.unitClass === 'villager')).toBe(true);
+    const warriorLevel = createTrainingLevel('warrior');
+    expect(allLines(warriorLevel.dialogs).every((line) => line.unitClass === 'warrior')).toBe(true);
   });
 
-  it('pits a villager against a villager when the villager is chosen', () => {
-    const villagerLevel = createTrainingLevel('villager');
-    const trainee = villagerLevel.units.get(TRAINEE_ID);
-    const partner = villagerLevel.units.get(SPARRING_PARTNER_ID);
-    expect(trainee).toMatchObject({ team: 'player', unitClass: 'villager' });
-    expect(partner).toMatchObject({ team: 'enemy', unitClass: 'villager' });
+  it('pits a warrior against a warrior when the warrior is chosen', () => {
+    const warriorLevel = createTrainingLevel('warrior');
+    const trainee = warriorLevel.units.get(TRAINEE_ID);
+    const partner = warriorLevel.units.get(SPARRING_PARTNER_ID);
+    expect(trainee).toMatchObject({ team: 'player', unitClass: 'warrior' });
+    expect(partner).toMatchObject({ team: 'enemy', unitClass: 'warrior' });
   });
 
   it('throws on an unknown class', () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
-import { Villager } from '../Villager.ts';
+import { Warrior } from '../Warrior.ts';
 import { createRun, type ItemSnapshot, type RunState } from './run.ts';
 import {
   cancelRoster,
@@ -15,13 +15,13 @@ import {
 } from './rosterScreen.ts';
 
 // Alden the soldier carries [Iron Spear, Health Potion, Mana Potion]; Cato
-// the villager [Fists, Health Potion, Mana Potion].
+// the warrior [Fists, Health Potion, Mana Potion].
 function campRun(convoy: ItemSnapshot[] = []): RunState {
   const run = createRun(
     7,
     new Map<string, Unit>([
       ['alden', new Soldier({ name: 'Alden', team: 'player' })],
-      ['cato', new Villager({ name: 'Cato', team: 'player' })],
+      ['cato', new Warrior({ name: 'Cato', team: 'player' })],
     ]),
   );
   return { ...run, convoy };
@@ -111,10 +111,10 @@ describe('item actions', () => {
     ]);
   });
 
-  it('cannot store a natural weapon', () => {
-    const state = pointRosterCursor(moveRosterCursor(openRosterScreen(campRun()), 0, 1), 'items', 0);
+  it('can equip a natural weapon but not store it', () => {
+    const state = pointRosterCursor(moveRosterCursor(openRosterScreen(campRun()), 0, 1), 'items', 1);
     expect(getItemActions(state)).toEqual([
-      { id: 'equip', label: 'Equip', disabled: true },
+      { id: 'equip', label: 'Equip', disabled: false },
       { id: 'store', label: 'Store', disabled: true },
     ]);
   });

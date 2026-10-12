@@ -21,8 +21,8 @@ import soldier04Idle from './units/Soldier_04_Idle.png';
 import soldier04Move from './units/Soldier_04_Move.png';
 import vanguard04Idle from './units/Vanguard_04_Idle.png';
 import vanguard04Move from './units/Vanguard_04_Move.png';
-import villager01Idle from './units/Villager_01_Idle.png';
-import villager01Move from './units/Villager_01_Move.png';
+import warrior01Idle from './units/Warrior_01_Idle.png';
+import warrior01Move from './units/Warrior_01_Move.png';
 import woodenArmor from './items/wooden-armor.png';
 import woodenAxe from './items/wooden-axe.png';
 import woodenShield from './items/wooden-shield.png';
@@ -49,8 +49,8 @@ export const SPRITE_URLS: Readonly<Record<string, string>> = {
   Soldier_04_Move: soldier04Move,
   Vanguard_04_Idle: vanguard04Idle,
   Vanguard_04_Move: vanguard04Move,
-  Villager_01_Idle: villager01Idle,
-  Villager_01_Move: villager01Move,
+  Warrior_01_Idle: warrior01Idle,
+  Warrior_01_Move: warrior01Move,
   'wooden-armor': woodenArmor,
   'wooden-axe': woodenAxe,
   'wooden-shield': woodenShield,

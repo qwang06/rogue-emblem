@@ -7,8 +7,8 @@ describe('describeEnemyGroup', () => {
   });
 
   it('puts a set class after the count', () => {
-    expect(describeEnemyGroup({ count: 2, unitClass: 'villager', area: { y: [0, 0.34] } })).toBe(
-      '2 villager · rows 0–34%',
+    expect(describeEnemyGroup({ count: 2, unitClass: 'warrior', area: { y: [0, 0.34] } })).toBe(
+      '2 warrior · rows 0–34%',
     );
   });
 

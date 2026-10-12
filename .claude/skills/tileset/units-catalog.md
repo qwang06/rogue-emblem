@@ -1,10 +1,26 @@
 # Unit sprite catalog
 
 What's in `src/assets/units/`: every unit sheet from the source pack, read
-from the pixels. Only `Villager_01`, `Soldier_03`, `Archer_02`, `Vanguard_04`,
+from the pixels. Only `Soldier_03`, `Archer_02`, `Vanguard_04`,
 `Soldier_04` and `Acolyte_02` are wired into the game
 (`UNIT_SPRITES` in `src/game/tileset.ts`); everything else is ready to import
 in `src/assets/sprites.ts` when a class needs art.
+
+## Warrior (generated, not from the pack)
+
+`Warrior_01` is the warrior class's art (`UNIT_SPRITES.warrior`, also
+`DEFAULT_UNIT_SPRITE`). It replaced `Villager_01`, which stays in the folder
+with the rest of the pack but is no longer loaded. Unlike everything else
+here it is **true 32px art, not 16px doubled**: a common fighter in a brown
+tunic, tan trousers and boots, messy brown hair, a sword held in front (hidden
+behind the body in the up facing), thick dark outline, 25–37 colors per
+facing. Made with PixelLab's `create_character_pro_flash` at 32x32, low
+top-down, styled on a unit cropped from a mockup; the prompt and source PNGs
+are in the project's `art/warrior/` folder. PixelLab gave one still frame per
+facing, so both sheets reuse it: Idle bobs the body up 1px on frames 2–3, Move
+on frames 1 and 3 (no stepping feet yet). Same layout as the pack (128x128,
+rows down/left/right/up, RGBA). Footprint: x 2–29, y 1–30; feet on y 30
+(y 29 on bobbed frames), a row lower than the pack's.
 
 ## Monsters (generated, not from the pack)
 
@@ -104,7 +120,7 @@ Footprint is the opaque area of the down-facing idle frame 0, in sheet pixels
    their file names as keys, e.g. `Archer_02_Idle`, `Archer_02_Move`.
 2. Map the class to the art name in `UNIT_SPRITES` (`archer: 'Archer_02'`).
 3. Check the shadow. `addUnitShadow` draws a translucent ellipse at the feet
-   for every unit (`UNIT_SHADOW`), tuned for the villager and soldier
+   for every unit (`UNIT_SHADOW`), tuned for the pack's villager and soldier
    (feet at y 28–31). Units that bring their own shadow (`Beast`,
    `BeastRider`, gyrocopter `Scout`s, every ship's water shadow) would get a
    second one, so they'd need a per-art opt-out before going on the map.

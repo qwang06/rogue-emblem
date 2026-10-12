@@ -30,11 +30,11 @@ const BATTLES = REGION_CONFIGS.flatMap((region) =>
 );
 
 describe('createStartingWarband', () => {
-  it('starts with a single villager by default', () => {
+  it('starts with a single warrior by default', () => {
     const warband = createStartingWarband();
-    expect([...warband.keys()]).toEqual(['villager-1']);
-    expect(warband.get('villager-1')!.name).toBe(WARBAND_LEADER_NAME);
-    expect(warband.get('villager-1')!.unitClass).toBe('villager');
+    expect([...warband.keys()]).toEqual(['warrior-1']);
+    expect(warband.get('warrior-1')!.name).toBe(WARBAND_LEADER_NAME);
+    expect(warband.get('warrior-1')!.unitClass).toBe('warrior');
   });
 
   it('is a single unit of the chosen class', () => {
@@ -145,11 +145,11 @@ describe('createStageLevel', () => {
   it('makes a group’s enemies its class, soldiers when it sets none', () => {
     const level = createStageLevel(7, {
       ...FIRST,
-      enemies: [{ count: 1, unitClass: 'villager' }, { count: 1, unitClass: 'archer' }, { count: 1 }],
+      enemies: [{ count: 1, unitClass: 'warrior' }, { count: 1, unitClass: 'archer' }, { count: 1 }],
     });
     const enemies = ['enemy-1', 'enemy-2', 'enemy-3'].map((unitId) => level.units.get(unitId)!);
-    expect(enemies.map((unit) => unit.unitClass)).toEqual(['villager', 'archer', 'soldier']);
-    expect(enemies.map((unit) => unit.name)).toEqual(['Enemy Villager', 'Enemy Archer', 'Enemy Soldier']);
+    expect(enemies.map((unit) => unit.unitClass)).toEqual(['warrior', 'archer', 'soldier']);
+    expect(enemies.map((unit) => unit.name)).toEqual(['Enemy Warrior', 'Enemy Archer', 'Enemy Soldier']);
     expect(enemies.every((unit) => unit.team === 'enemy')).toBe(true);
   });
 

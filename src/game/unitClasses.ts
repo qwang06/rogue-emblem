@@ -13,7 +13,7 @@ import { Slime } from './Slime.ts';
 import { Soldier } from './Soldier.ts';
 import type { ClassUnitOptions, Unit } from './Unit.ts';
 import { Vanguard } from './Vanguard.ts';
-import { Villager } from './Villager.ts';
+import { Warrior } from './Warrior.ts';
 
 export interface UnitClass {
   id: string;
@@ -24,7 +24,7 @@ export interface UnitClass {
 }
 
 export const UNIT_CLASSES: readonly UnitClass[] = Object.freeze([
-  Object.freeze<UnitClass>({ id: 'villager', label: 'Villager', create: (options) => new Villager(options) }),
+  Object.freeze<UnitClass>({ id: 'warrior', label: 'Warrior', create: (options) => new Warrior(options) }),
   Object.freeze<UnitClass>({ id: 'soldier', label: 'Soldier', create: (options) => new Soldier(options) }),
   Object.freeze<UnitClass>({ id: 'archer', label: 'Archer', create: (options) => new Archer(options) }),
   Object.freeze<UnitClass>({ id: 'vanguard', label: 'Vanguard', create: (options) => new Vanguard(options) }),

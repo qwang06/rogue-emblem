@@ -1,5 +1,5 @@
 // Short descriptions of a region's enemy groups for its card, e.g.
-// "2 villager · rows 0–34% · 6–12 steps · 4 HP".
+// "2 warrior · rows 0–34% · 6–12 steps · 4 HP".
 
 import type { EnemyGroup } from '../game/enemySpawns.ts';
 

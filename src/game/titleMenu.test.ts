@@ -67,8 +67,8 @@ describe('getWarbandActions', () => {
 
 describe('STARTING_CLASS_ACTIONS', () => {
   it('offers each starting class by its id, with its pitch', () => {
-    expect(STARTING_CLASS_ACTIONS.map((a) => a.id)).toEqual(['villager', 'soldier', 'archer']);
-    expect(STARTING_CLASS_ACTIONS.map((a) => a.label)).toEqual(['Villager', 'Soldier', 'Archer']);
+    expect(STARTING_CLASS_ACTIONS.map((a) => a.id)).toEqual(['warrior', 'soldier', 'archer']);
+    expect(STARTING_CLASS_ACTIONS.map((a) => a.label)).toEqual(['Warrior', 'Soldier', 'Archer']);
     expect(STARTING_CLASS_ACTIONS.map((a) => a.description)).toEqual(STARTING_CLASSES.map((c) => c.description));
   });
 

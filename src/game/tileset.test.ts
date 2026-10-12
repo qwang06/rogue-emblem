@@ -68,7 +68,7 @@ describe('sprite keys', () => {
 
 describe('getUnitSprite', () => {
   it('picks the art by unit class', () => {
-    expect(getUnitSprite('villager')).toBe('Villager_01');
+    expect(getUnitSprite('warrior')).toBe('Warrior_01');
     expect(getUnitSprite('soldier')).toBe('Soldier_03');
     expect(getUnitSprite('archer')).toBe('Archer_02');
     expect(getUnitSprite('vanguard')).toBe('Vanguard_04');
@@ -128,8 +128,8 @@ describe('ARROW_TILES', () => {
 
 describe('unitSheetKey', () => {
   it('names the sheet for each animation', () => {
-    expect(unitSheetKey('Villager_01', 'idle')).toBe('Villager_01_Idle');
-    expect(unitSheetKey('Villager_01', 'move')).toBe('Villager_01_Move');
+    expect(unitSheetKey('Warrior_01', 'idle')).toBe('Warrior_01_Idle');
+    expect(unitSheetKey('Warrior_01', 'move')).toBe('Warrior_01_Move');
   });
 });
 

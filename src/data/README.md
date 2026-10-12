@@ -8,14 +8,14 @@ Everyone who can speak in dialog, by id:
 
 ```json
 {
-  "alden": { "name": "Alden", "team": "player", "unitClass": "villager", "portrait": null }
+  "alden": { "name": "Alden", "team": "player", "unitClass": "warrior", "portrait": null }
 }
 ```
 
 - **id**: lowercase letters, digits, and `_`. Dialog files refer to speakers by it.
 - **name**: shown on the dialog box's name plate.
 - **team**: `player` or `enemy`. Player speakers stand on the left of the dialog box, enemies on the right.
-- **unitClass**: the unit class (`villager`, `soldier`, ...) whose sprite fills the portrait frame until there's portrait art, or `null` for an empty frame. Optional. The Sparring Partner leaves it `null` because Training fills in whichever class you picked.
+- **unitClass**: the unit class (`warrior`, `soldier`, ...) whose sprite fills the portrait frame until there's portrait art, or `null` for an empty frame. Optional. The Sparring Partner leaves it `null` because Training fills in whichever class you picked.
 - **portrait**: the sprite key of the character's portrait art, or `null` for none yet. A new portrait image goes in `src/assets/sprites.ts` like the other sprites.
 
 ## `dialog/*.txt`
@@ -65,7 +65,7 @@ Warband Mode's regions. A run fights stage after stage; every `stagesPerRegion` 
 - **name**: shown on the Objective and Victory screens ("Stage 2: Lakeside"). **description** is optional notes for whoever edits the file.
 - **terrain**: the map generator's settings. `width` and `height` (6–48 tiles) are required; the rest are optional: how many patches to grow (`lakes`, `mountains`, `forests`, `meadows`), their sizes as `[min, max]` tiles (`lakeSize`, `mountainSize`, `forestSize`, `meadowSize`), how many walled `ruins` and lone `buildings`, whether there's a `castle` (true/false), and `turnChance` (0–1, how much the path winds).
 - **enemies**: 1–10 groups of enemies, up to 30 in all, placed in order on random tiles the player can walk to. Each group has a `count` and optional limits:
-  - `unitClass`: the class its enemies are (`villager`, `soldier`, `archer`, ... as in `UNIT_CLASSES`, `src/game/unitClasses.ts`), e.g. villagers, who fight with their fists, for an easy first stage. Unset, they're soldiers.
+  - `unitClass`: the class its enemies are (`warrior`, `soldier`, `archer`, ... as in `UNIT_CLASSES`, `src/game/unitClasses.ts`), e.g. warriors, who fight with wooden swords, for an easy first stage. Unset, they're soldiers.
   - `area`: a box as `[from, to]` fractions of the map's columns (`x`) and rows (`y`), 0 being the west or north edge and 1 the east or south. It covers the tiles from `from × size` up to, but not including, `to × size`, rounded down, so `[0, 0.5]` and `[0.5, 1]` split the map into halves. Unset, an axis covers the whole map. `{ "y": [0, 0.34] }` is the north third.
   - `minDistance` / `maxDistance`: 1–100 steps a unit would walk from the nearest deployment tile, going around water, mountains and walls.
   - `health`: 1–99, the HP the group's enemies start the battle with (never past their max), e.g. a wounded soldier for an easier fight. Unset, they start at full health.

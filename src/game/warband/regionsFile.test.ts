@@ -52,7 +52,7 @@ describe('parseRegionSettings', () => {
     const enemies = [
       { count: 2, area: { x: [0, 0.5], y: [0, 0.4] }, minDistance: 6 },
       { count: 1, maxDistance: 8, levelUpOnKill: false },
-      { count: 1, unitClass: 'villager', minDistance: 3, maxDistance: 3, health: 4, levelUpOnKill: true },
+      { count: 1, unitClass: 'warrior', minDistance: 3, maxDistance: 3, health: 4, levelUpOnKill: true },
       { count: 1, unitClass: 'archer' },
     ];
     expect(parseRegionSettings(file([region({ enemies })])).regions[0].enemies).toEqual(enemies);
@@ -177,7 +177,7 @@ describe('parseRegionSettings', () => {
     [
       'an unknown enemy class',
       file([region({ enemies: [{ count: 1, unitClass: 'dragon' }] })]),
-      /enemies\[0\]\.unitClass must be one of villager, soldier, archer/,
+      /enemies\[0\]\.unitClass must be one of warrior, soldier, archer/,
     ],
     [
       'a levelUpOnKill that is not true or false',

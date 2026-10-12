@@ -20,7 +20,7 @@ export const MISS_EXPERIENCE = 1;
 // Extra XP for a kill against an opponent of the same level.
 export const KILL_BONUS = 20;
 // The XP rate (percent of every gain) of a unit whose class doesn't set
-// one. Villagers learn faster (see Villager.ts).
+// one. Warriors learn faster (see Warrior.ts).
 export const DEFAULT_EXPERIENCE_RATE = 100;
 
 // The stats a level up can raise, in the order they're rolled. Health and

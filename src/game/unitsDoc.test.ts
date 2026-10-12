@@ -141,7 +141,7 @@ describe('UNITS.md', () => {
 
   it('has the right level-1 matchup numbers', () => {
     const units: Record<string, Unit> = {
-      Villager: createUnitOfClass('villager', { team: 'player' }),
+      Warrior: createUnitOfClass('warrior', { team: 'player' }),
       Soldier: createUnitOfClass('soldier', { team: 'enemy' }),
       Archer: createUnitOfClass('archer', { team: 'player' }),
       Vanguard: createUnitOfClass('vanguard', { team: 'player' }),
@@ -150,7 +150,7 @@ describe('UNITS.md', () => {
     const text = section('Matchups at level 1');
     const attacks = tableWithHeader(text, 'Attacker');
     expect(attacks.map(([attacker]) => attacker)).toEqual([
-      'Villager',
+      'Warrior',
       'Soldier',
       'Archer',
       'Vanguard',
