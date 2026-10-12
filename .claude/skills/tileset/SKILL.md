@@ -95,3 +95,7 @@ node .claude/skills/tileset/scripts/map-preview.ts --scale 1 --palette a-stone <
 3. New art should be 32x32, or a clean fraction of it (16x16 is drawn at 2x), so it drops onto the grid without special-casing.
 4. An autotile set only borders its own cells against _anything else_, so any number of terrains can each be a layer over grass. Two sets that meet directly (e.g. sand next to water) just butt their borders together.
 5. To preview terrain art without a browser, compose tiles with `decode` from `scripts/dump-png.js` and the pure `autotile.ts` functions into a PNG, and view that.
+
+## Title screen art: src/assets/title/
+
+Not map art, so it isn't in `tileset.ts` or `sprites.ts`: `ui.css` uses these directly in the title screen's rules. `background.webp` is a painted pixel-art landscape at dusk (castle on a cliff at the left, mountains, a valley with a road winding to the bottom right), 1920x1072, cropped by `cover` and anchored left of center so the castle stays in view. The rest are tiny SVGs drawn pixel by pixel with `shape-rendering: crispEdges`, scaled up with `image-rendering: pixelated`: `sword.svg` (15x83, the logo's sword: blue-gem pommel, brown grip, gold guard, pale blue blade), `pointer.svg` (18x12, a white gauntlet pointing right with a blue cuff) and `corner.svg` (12x12, a gold L-bracket with a blue gem, drawn as the top-left corner and flipped for the others).

@@ -58,7 +58,7 @@ function mainMenu(selectedIndex = 0) {
   return selectIndex(createActionMenu(TITLE_ACTIONS), selectedIndex);
 }
 
-// The landing screen: game title plus the Story Mode / Warband Mode /
+// The landing screen: the logo over a castle landscape, plus the Story Mode / Warband Mode /
 // Training / Settings menu. Warband Mode opens a submenu to continue the
 // saved run (disabled when there's none) or start a new one, and New Run
 // opens one more to pick the base class the warband starts as, and the
@@ -172,11 +172,18 @@ export function TitleScreen() {
 
   return (
     <div className="title-screen" onContextMenu={onContextMenu}>
+      <Corners className="title-screen__frame" />
+
       <header className="title-screen__header">
-        <h1 className="title-screen__title">Rogue Emblem</h1>
+        <h1 className="title-logo" aria-label="Rogue Emblem">
+          <span className="title-logo__sword" aria-hidden="true" />
+          <LogoLine className="title-logo__rogue" text="Rogue" />
+          <LogoLine className="title-logo__emblem" text="Emblem" />
+        </h1>
       </header>
 
-      <nav className="panel title-menu" aria-label={submenu?.label ?? 'Main menu'}>
+      <nav className="title-menu" aria-label={submenu?.label ?? 'Main menu'}>
+        <Corners className="title-menu__corners" />
         {submenu && <h2 className="title-menu__heading">{submenu.heading}</h2>}
         <ul className="title-menu__list" ref={listRef}>
           {menu.actions.map((action, index) => {
@@ -235,6 +242,30 @@ export function TitleScreen() {
         }
       />
     </div>
+  );
+}
+
+// One line of the logo: the word three times over, stacked, so it can be
+// drawn as a dark outline, a gold rim and a blue fill (see ui.css).
+function LogoLine({ text, className }: { text: string; className: string }) {
+  return (
+    <span className={`title-logo__line ${className}`} aria-hidden="true">
+      <span className="title-logo__outline">{text}</span>
+      <span className="title-logo__rim">{text}</span>
+      <span className="title-logo__fill">{text}</span>
+    </span>
+  );
+}
+
+// Gold ornaments on a box's four corners, laid over its border.
+function Corners({ className }: { className: string }) {
+  return (
+    <span className={`title-corners ${className}`} aria-hidden="true">
+      <span className="title-corners__piece title-corners__piece--tl" />
+      <span className="title-corners__piece title-corners__piece--tr" />
+      <span className="title-corners__piece title-corners__piece--bl" />
+      <span className="title-corners__piece title-corners__piece--br" />
+    </span>
   );
 }
 
