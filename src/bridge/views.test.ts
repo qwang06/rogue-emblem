@@ -49,9 +49,11 @@ describe('toUnitView', () => {
     expect(toUnitView(makeUnit())).toEqual({
       name: 'Soldier',
       unitClass: null,
+      classLabel: null,
       team: 'player',
       level: 1,
       experience: 0,
+      experienceToLevel: 50,
       health: 10,
       maxHealth: 10,
       mana: 5,
@@ -475,8 +477,8 @@ describe('toCombatForecastView', () => {
     const defender = new Unit({ name: 'Bandit', health: 10, strength: 4, defense: 2, movement: 5, team: 'enemy' });
     const view = toCombatForecastView({ forecast, attacker, defender, anchor });
     expect(view).toEqual({
-      attacker: { name: 'Soldier', team: 'player', weapon: 'Iron Spear', ...forecast.attacker },
-      defender: { name: 'Bandit', team: 'enemy', weapon: null, ...forecast.defender },
+      attacker: { name: 'Soldier', team: 'player', weapon: 'Iron Spear', weaponId: 'iron-spear', ...forecast.attacker },
+      defender: { name: 'Bandit', team: 'enemy', weapon: null, weaponId: null, ...forecast.defender },
       anchor,
     });
     expect(Object.isFrozen(view)).toBe(true);
@@ -552,6 +554,13 @@ describe('toLevelUpView', () => {
     expect(view.skills).toEqual(['Power Strike']);
     expect(Object.isFrozen(view)).toBe(true);
     expect(Object.isFrozen(view.stats[0])).toBe(true);
+  });
+
+  it("carries the unit's class for its portrait, none if not given", () => {
+    expect(toLevelUpView({ id: 4, name: 'Ana', unitClass: 'soldier', levelUp, durationMs: 2000 }).unitClass).toBe(
+      'soldier',
+    );
+    expect(toLevelUpView({ id: 4, name: 'Ana', levelUp, durationMs: 2000 }).unitClass).toBeNull();
   });
 });
 
