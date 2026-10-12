@@ -72,19 +72,8 @@ function drawFrame({ edge, fill }) {
 }
 
 // A white gauntlet pointing right: a blue-grey cuff on the left, the index
-// finger out along the top, three folded knuckles under it.
-const HAND = [
-  '....ooo.......',
-  '..oowwwoooooo.',
-  'ooawwwwwwwwwwo',
-  'oawwwwwoooooo.',
-  'oawwwwwwso....',
-  'oawwwwwoo.....',
-  'oawwwwwwso....',
-  'ooawwwwoo.....',
-  '..oasssso.....',
-  '...ooooo......',
-];
+// finger out along the top, folded knuckles under it.
+const HAND = ['...oo.....', '.oowwooooo', 'oawwwwwwwo', 'oawwwoooo.', 'oawwwwso..', 'ooawwso...', '.ooooo....'];
 const HAND_COLORS = { o: '#2a170a', w: '#f8f8f0', s: '#b8c0d0', a: '#8a96b8' };
 
 function drawHand() {
