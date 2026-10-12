@@ -73,6 +73,15 @@ describe('toUnitView', () => {
     });
   });
 
+  it('names the class and the XP its level takes, none at the cap', () => {
+    expect(toUnitView(new Soldier({ team: 'player', level: 3 }))).toMatchObject({
+      unitClass: 'soldier',
+      classLabel: 'Soldier',
+      experienceToLevel: 100,
+    });
+    expect(toUnitView(new Soldier({ team: 'player', level: MAX_LEVEL }))!.experienceToLevel).toBeNull();
+  });
+
   it('names the item the unit drops', () => {
     const unit = makeUnit();
     unit.loot = WOODEN_SHIELD;
