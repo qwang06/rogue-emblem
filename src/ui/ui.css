@@ -1,5 +1,20 @@
 /* ---- Theme ----------------------------------------------------------- */
 
+/* Silver (Poppy Works, CC BY 4.0), cut down to Latin, punctuation, arrows
+   and the symbols the UI draws. Its capitals are under half its em, so it
+   is scaled up to Pixelify Sans's proportions (capitals 0.7em, a line
+   0.92em above the baseline and 0.28em below), which the UI's sizes and
+   line heights were set for. */
+@font-face {
+  font-family: 'Silver';
+  src: url('../assets/fonts/silver.woff2') format('woff2');
+  font-display: block;
+  size-adjust: 150%;
+  /* Percentages of the adjusted size: 0.92em and 0.28em after it. */
+  ascent-override: 61%;
+  descent-override: 19%;
+}
+
 /* A GBA tactics look: windows are parchment in a dark brown frame with
    gold corner plates, text is a chunky pixel font in dark brown, and the
    selection cue is a white gauntlet pointing at the row. The page around
@@ -45,7 +60,7 @@
   --border: var(--px) solid var(--muted);
   /* One face for everything: a pixel font, set in caps where the GBA
      would. */
-  --pixel: 'Pixelify Sans', ui-monospace, monospace;
+  --pixel: 'Silver', ui-monospace, monospace;
   --sans: var(--pixel);
   --display: var(--pixel);
   --mono: var(--pixel);
@@ -129,10 +144,14 @@ body {
   background: var(--desktop);
   color: var(--fg);
   font-family: var(--sans);
-  font-size: 14px;
+  /* Every size is in rem, so this sets the scale of all the UI's text
+     and the boxes sized around it: 28px from a 560px wide window up,
+     shrinking with the window below that so phones still fit. */
+  font-size: clamp(16px, 5vw, 28px);
   font-variant-numeric: tabular-nums;
-  /* The pixel font's "fi" and "fl" ligatures draw as other letters
-     ("Flawless" reads "Aawless"), so letters are never joined. */
+  /* Pixel fonts' "fi" and "fl" ligatures can draw as other letters
+     ("Flawless" read "Aawless" in Pixelify Sans), so letters are never
+     joined. */
   font-variant-ligatures: none;
 }
 
@@ -322,6 +341,15 @@ a.header-button {
 }
 
 @media (max-width: 36rem) {
+  .page-header {
+    gap: 4px;
+    font-size: 0.6875rem;
+  }
+
+  .header-button {
+    padding: 3px 5px;
+  }
+
   .page-header__name,
   .turn-indicator__word {
     display: none;
@@ -1171,6 +1199,13 @@ kbd {
   min-width: 11rem;
 }
 
+/* Phones: a narrower list, so the list and its numbers fit the stage. */
+@media (max-width: 36rem) {
+  .weapon-menu__list {
+    min-width: 8rem;
+  }
+}
+
 /* A row is the icon beside the name over its uses. Every row keeps the
    uses line (hidden unless selected), so the selection moving never
    changes the list's height. */
@@ -1824,7 +1859,7 @@ kbd {
   margin: 0;
   padding: 0.3em 0 0.34em;
   font-family: 'Cinzel', Georgia, serif;
-  font-size: clamp(2.75rem, min(13vw, 15vh), 10rem);
+  font-size: clamp(38.5px, min(13vw, 15vh), 140px);
   font-weight: 900;
   line-height: 0.95;
   text-transform: uppercase;
@@ -1929,7 +1964,7 @@ kbd {
   border: 0;
   background: none;
   font: inherit;
-  font-size: clamp(1.25rem, 3.7vh, 1.8rem);
+  font-size: clamp(1.25rem, 5.5vh, 1.8rem);
   font-weight: 600;
   line-height: 1.3;
   letter-spacing: 0.04em;
@@ -2087,7 +2122,7 @@ kbd {
   margin: auto 0 0;
   align-items: center;
   gap: 4px 18px;
-  font-size: clamp(0.85rem, 2.2vh, 1.3rem);
+  font-size: clamp(0.85rem, 4.4vh, 1.3rem);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: #d9ccff;
@@ -3193,7 +3228,8 @@ textarea.draft-input {
 }
 
 .roster-screen {
-  --row: 40px;
+  /* Room for a unit's two lines of text, or a 32px item icon. */
+  --row: max(40px, 2.4rem);
   position: relative;
   padding: 16px 12px 10px;
   display: flex;
