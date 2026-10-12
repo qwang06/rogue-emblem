@@ -20,6 +20,7 @@ import { loadSavedRun, saveRun } from '../data/runSave.ts';
 import { getUnitSprite } from '../game/tileset.ts';
 import { routeHash } from './route.ts';
 import { UnitSprite } from './UnitSprite.tsx';
+import { Frame } from './Frame.tsx';
 import { KeyHint } from './KeyHint.tsx';
 import { NameField } from './NameField.tsx';
 
@@ -182,8 +183,7 @@ export function TitleScreen() {
         </h1>
       </header>
 
-      <nav className="title-menu" aria-label={submenu?.label ?? 'Main menu'}>
-        <Corners className="title-menu__corners" />
+      <Frame as="nav" className="title-menu" aria-label={submenu?.label ?? 'Main menu'}>
         {submenu && <h2 className="title-menu__heading">{submenu.heading}</h2>}
         <ul className="title-menu__list" ref={listRef}>
           {menu.actions.map((action, index) => {
@@ -229,7 +229,7 @@ export function TitleScreen() {
             {description}
           </p>
         )}
-      </nav>
+      </Frame>
 
       <KeyHint
         className="title-screen__hint"
@@ -257,7 +257,7 @@ function LogoLine({ text, className }: { text: string; className: string }) {
   );
 }
 
-// Gold ornaments on a box's four corners, laid over its border.
+// Gold ornaments on the screen frame's four corners, laid over its border.
 function Corners({ className }: { className: string }) {
   return (
     <span className={`title-corners ${className}`} aria-hidden="true">
