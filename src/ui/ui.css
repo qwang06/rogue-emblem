@@ -131,6 +131,9 @@ body {
   font-family: var(--sans);
   font-size: 14px;
   font-variant-numeric: tabular-nums;
+  /* The pixel font's "fi" and "fl" ligatures draw as other letters
+     ("Flawless" reads "Aawless"), so letters are never joined. */
+  font-variant-ligatures: none;
 }
 
 /* ---- Page layout ---------------------------------------------------- */
@@ -319,8 +322,14 @@ a.header-button {
 }
 
 @media (max-width: 36rem) {
-  .page-header__name {
+  .page-header__name,
+  .turn-indicator__word {
     display: none;
+  }
+
+  .turn-indicator {
+    gap: 2px;
+    letter-spacing: 0;
   }
 }
 
@@ -361,27 +370,33 @@ a.header-button {
   background: none;
 }
 
-/* A window's title sits in its top border, as in the desktop's system
-   monitor: a label cut into the line, which takes no room in the window. */
+/* A window's title is a name plate on its top frame, as on the GBA: a
+   small parchment tab in a dark brown outline, in caps, which takes no
+   room in the window. */
 .pause-menu__title,
 .roster-menu__title,
 .title-menu__heading,
 .header-popover__title,
 .objective__title,
 .reward-screen__title,
-.roster-screen__title {
+.roster-screen__title,
+.dialog-box__speaker {
   position: absolute;
-  top: -0.75em;
+  top: 0;
   left: 10px;
+  transform: translateY(-80%);
   margin: 0;
-  padding: 0 6px;
+  padding: 0 8px;
   font-size: 0.8125rem;
   font-weight: 700;
-  line-height: 1.4;
-  letter-spacing: 0;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
   text-align: left;
-  color: var(--accent);
+  text-transform: uppercase;
+  color: var(--fg-bright);
   background: var(--bg);
+  border: var(--border);
+  box-shadow: inset 0 0 0 var(--px) var(--bg-light);
 }
 
 /* ---- Unit panel (docked in a top corner of the map) ----------------- */
@@ -406,6 +421,13 @@ a.header-button {
 .unit-panel--enemy {
   background: linear-gradient(var(--red-bg), var(--red-bg)), var(--bg);
   border-color: var(--red);
+}
+
+/* Phones: a narrower card, so it covers less of the map. */
+@media (max-width: 36rem) {
+  .hud .unit-panel {
+    width: 15rem;
+  }
 }
 
 .unit-panel--left {
@@ -1473,8 +1495,10 @@ kbd {
   margin: 0;
   font-family: var(--display);
   font-size: 1.75rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--fg-bright);
 }
 
@@ -1511,15 +1535,22 @@ kbd {
   color: var(--fg);
 }
 
-/* Each entry sits on its own dark chip, so it stays readable when the
-   hint floats over the map's bright terrain. */
+/* Each entry sits on its own dark wood chip with light text, so it stays
+   readable on parchment and when the hint floats over the map's bright
+   terrain; its key cap is a parchment plate. */
 .key-hint__entry {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
   padding: 2px 8px 2px 2px;
-  background: rgb(19 20 28 / 88%);
+  color: #f0d9a8;
+  background: #3a2416;
   border-radius: var(--radius-sm);
+}
+
+.key-hint__entry kbd {
+  color: #2a170a;
+  background: #f0d9a8;
 }
 
 /* ---- Objective screen ---------------------------------------------- */
@@ -1613,6 +1644,7 @@ kbd {
   align-items: center;
   justify-content: center;
   background: var(--bg-light);
+  border: var(--border);
 }
 
 .dialog-box__portrait-art {
@@ -1631,19 +1663,6 @@ kbd {
 
 /* The speaker's name is the window's title, cut into its top border on
    their side. */
-.dialog-box__speaker {
-  position: absolute;
-  top: -0.75em;
-  left: 10px;
-  margin: 0;
-  padding: 0 6px;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  line-height: 1.4;
-  color: var(--accent);
-  background: var(--bg);
-}
-
 .dialog-box--right .dialog-box__speaker {
   left: auto;
   right: 10px;
@@ -1653,7 +1672,7 @@ kbd {
   position: relative;
   margin: 0;
   padding-right: 16px;
-  font-size: 0.9375rem;
+  font-size: 1.0625rem;
   line-height: 1.6;
   min-height: 3.2em;
   color: var(--fg-bright);
@@ -1947,6 +1966,11 @@ kbd {
   box-sizing: border-box;
   background: var(--desktop);
   color: var(--fg-bright);
+  /* The plain variant for the config editor, a dev tool of dense forms:
+     body text and fields in a readable system sans, headings keep the
+     pixel face. */
+  --sans: system-ui, sans-serif;
+  font-family: var(--sans);
 }
 
 .configs-page__header {
@@ -2883,6 +2907,7 @@ textarea.draft-input {
 
 .reward-card__kind {
   font-size: 0.75rem;
+  text-transform: uppercase;
   color: var(--fg-dim);
 }
 
@@ -3184,21 +3209,24 @@ textarea.draft-input {
 
 /* ---- Camp menu and merchant ----------------------------------------- */
 
-/* The warband's gold, cut into a window's border like its title: in the
-   camp menu's bottom border and the merchant's top-right one, so it
+/* The warband's gold, a name plate on a window's frame like its title:
+   on the camp menu's bottom edge and the merchant's top-right one, so it
    taking more digits never moves anything inside. */
 .camp-menu__gold,
 .merchant-screen__gold {
   position: absolute;
   right: 10px;
   margin: 0;
-  padding: 0 6px;
+  padding: 0 8px;
   font-size: 0.8125rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  line-height: 1.4;
+  line-height: 1.5;
+  text-transform: uppercase;
   color: var(--yellow);
   background: var(--bg);
+  border: var(--border);
+  box-shadow: inset 0 0 0 var(--px) var(--bg-light);
 }
 
 .camp-menu {
@@ -3206,11 +3234,13 @@ textarea.draft-input {
 }
 
 .camp-menu__gold {
-  bottom: -0.75em;
+  bottom: 0;
+  transform: translateY(80%);
 }
 
 .merchant-screen__gold {
-  top: -0.75em;
+  top: 0;
+  transform: translateY(-80%);
 }
 
 .merchant-screen__scroll {
