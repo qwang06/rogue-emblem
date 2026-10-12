@@ -1854,7 +1854,7 @@ export class GridScene extends Phaser.Scene {
     this.time.delayedCall(EXPERIENCE_BAR_MS, () => {
       gameStore.setState({ experienceGain: null });
       this.showLevelUps(
-        result.levelUps.map((levelUp) => ({ name: unit.name, levelUp })),
+        result.levelUps.map((levelUp) => ({ name: unit.name, unitClass: unit.unitClass, levelUp })),
         () => {
           this.publishHoveredUnit();
           onDone();

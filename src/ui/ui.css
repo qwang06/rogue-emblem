@@ -131,6 +131,9 @@ body {
   font-family: var(--sans);
   font-size: 14px;
   font-variant-numeric: tabular-nums;
+  /* The pixel font's "fi" and "fl" ligatures draw as other letters
+     ("Flawless" reads "Aawless"), so letters are never joined. */
+  font-variant-ligatures: none;
 }
 
 /* ---- Page layout ---------------------------------------------------- */
@@ -319,8 +322,14 @@ a.header-button {
 }
 
 @media (max-width: 36rem) {
-  .page-header__name {
+  .page-header__name,
+  .turn-indicator__word {
     display: none;
+  }
+
+  .turn-indicator {
+    gap: 2px;
+    letter-spacing: 0;
   }
 }
 
@@ -361,27 +370,33 @@ a.header-button {
   background: none;
 }
 
-/* A window's title sits in its top border, as in the desktop's system
-   monitor: a label cut into the line, which takes no room in the window. */
+/* A window's title is a name plate on its top frame, as on the GBA: a
+   small parchment tab in a dark brown outline, in caps, which takes no
+   room in the window. */
 .pause-menu__title,
 .roster-menu__title,
 .title-menu__heading,
 .header-popover__title,
 .objective__title,
 .reward-screen__title,
-.roster-screen__title {
+.roster-screen__title,
+.dialog-box__speaker {
   position: absolute;
-  top: -0.75em;
+  top: 0;
   left: 10px;
+  transform: translateY(-80%);
   margin: 0;
-  padding: 0 6px;
+  padding: 0 8px;
   font-size: 0.8125rem;
   font-weight: 700;
-  line-height: 1.4;
-  letter-spacing: 0;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
   text-align: left;
-  color: var(--accent);
+  text-transform: uppercase;
+  color: var(--fg-bright);
   background: var(--bg);
+  border: var(--border);
+  box-shadow: inset 0 0 0 var(--px) var(--bg-light);
 }
 
 /* ---- Unit panel (docked in a top corner of the map) ----------------- */
@@ -393,7 +408,7 @@ a.header-button {
 .hud .unit-panel {
   position: absolute;
   top: 12px;
-  width: 12.5rem;
+  width: 18rem;
   max-height: calc(100% - 24px);
   overflow: hidden;
   box-sizing: border-box;
@@ -408,6 +423,13 @@ a.header-button {
   border-color: var(--red);
 }
 
+/* Phones: a narrower card, so it covers less of the map. */
+@media (max-width: 36rem) {
+  .hud .unit-panel {
+    width: 15rem;
+  }
+}
+
 .unit-panel--left {
   left: 12px;
 }
@@ -416,26 +438,62 @@ a.header-button {
   right: 12px;
 }
 
+/* As on the GBA's status window: a framed portrait on the left, the
+   unit's NAME / CLASS / LV lines beside it. */
 .unit-panel__header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   margin-bottom: 4px;
 }
 
-.unit-panel__identity {
+/* A square frame the size of two map tiles; the map sprite stands in,
+   enlarged with crisp pixels, until units have portraits. */
+.unit-panel__portrait {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  background: var(--bg-light);
+  border: var(--border);
+  border-radius: var(--radius-sm);
+  image-rendering: pixelated;
+}
+
+.unit-panel__lines {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+/* "NAME  Alric": a dim caps label, the value cut short with an ellipsis
+   when it doesn't fit. */
+.unit-panel__line {
+  display: flex;
+  gap: 6px;
   min-width: 0;
 }
 
-.unit-panel__name {
+.unit-panel__line dt {
+  flex: none;
+  width: 2.75rem;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.unit-panel__line dd {
+  min-width: 0;
   margin: 0;
   overflow: hidden;
-  font-family: var(--sans);
-  font-size: 0.875rem;
-  font-weight: 700;
-  line-height: 1.3;
   white-space: nowrap;
   text-overflow: ellipsis;
+  color: var(--fg-bright);
+}
+
+.unit-panel__line .unit-panel__name {
+  font-weight: 700;
   color: var(--blue);
 }
 
@@ -443,29 +501,40 @@ a.header-button {
   color: var(--red);
 }
 
-.unit-panel__level {
-  margin: 0;
-  display: flex;
-  gap: 8px;
-  color: var(--fg-dim);
-}
-
 /* Gauges as in the system monitor: a flat bar on a dim trough. */
 .meter {
   display: grid;
-  grid-template-columns: 1.5rem 1fr auto;
+  grid-template-columns: 2rem 1fr auto;
   align-items: center;
   gap: 6px;
   margin-top: 2px;
 }
 
+/* Each bar's label is caps in its bar's color, as on the GBA. */
 .meter__label {
+  font-weight: 700;
+  text-transform: uppercase;
   color: var(--fg-dim);
 }
 
+.meter--hp .meter__label {
+  color: var(--green);
+}
+
+.meter--mp .meter__label {
+  color: var(--cyan);
+}
+
+.meter--exp .meter__label {
+  color: var(--blue);
+}
+
+/* A dark trough in a dark brown outline, as the GBA's bars are. The
+   outline is a shadow, so it takes no room. */
 .meter__track {
-  height: 6px;
-  background: var(--bg-light);
+  height: calc(4 * var(--px));
+  background: #3a3040;
+  box-shadow: 0 0 0 var(--px) var(--fg-bright);
   overflow: hidden;
 }
 
@@ -476,15 +545,19 @@ a.header-button {
 }
 
 .meter--hp .meter__fill {
-  background: var(--green);
+  background: var(--hp);
 }
 
 .meter--mp .meter__fill {
   background: var(--cyan);
 }
 
+.meter--exp .meter__fill {
+  background: var(--exp);
+}
+
 .meter__value {
-  min-width: 2.75rem;
+  min-width: 3.5rem;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -526,12 +599,19 @@ a.header-button {
 
 .unit-panel__item {
   display: flex;
-  gap: 8px;
-  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
 }
 
+/* Item icons in the panel are half a tile, so a row stays one line tall. */
+.unit-panel__item .item-icon {
+  width: 16px;
+  height: 16px;
+}
+
 .unit-panel__item-label {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
@@ -544,7 +624,7 @@ a.header-button {
 }
 
 .unit-panel__item--equipped .unit-panel__item-label {
-  color: var(--accent);
+  color: var(--blue);
 }
 
 /* The item an enemy drops, under its own rule. */
@@ -638,11 +718,13 @@ kbd {
   border-color: var(--accent);
 }
 
+/* Entries read in caps, as on the GBA. */
 .action-menu__list {
   list-style: none;
   margin: 0;
   padding: 0;
   font-size: 0.875rem;
+  text-transform: uppercase;
 }
 
 /* Room on the left for the chevron. */
@@ -715,24 +797,49 @@ kbd {
   justify-content: space-between;
   gap: 12px;
   font-weight: 700;
+  text-transform: uppercase;
   line-height: 1.3;
 }
 
 .combat-forecast__weapons {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
   font-size: 0.75rem;
   color: var(--fg-dim);
+}
+
+/* A weapon's icon and name; the defender's sits against the right edge. */
+.combat-forecast__weapon {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.combat-forecast__weapon:last-child {
+  flex-direction: row-reverse;
+}
+
+.combat-forecast__weapon .item-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.combat-forecast__weapon-label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .combat-forecast__rows {
   padding: 4px 10px 6px;
   background: linear-gradient(
     90deg,
-    var(--left) 0 calc(50% - 1.5rem),
-    transparent calc(50% - 1.5rem) calc(50% + 1.5rem),
-    var(--right) calc(50% + 1.5rem)
+    var(--left) 0 calc(50% - 2rem),
+    transparent calc(50% - 2rem) calc(50% + 2rem),
+    var(--right) calc(50% + 2rem)
   );
 }
 
@@ -746,16 +853,21 @@ kbd {
 
 .combat-forecast__row {
   display: grid;
-  grid-template-columns: 1fr 3rem 1fr;
-  align-items: baseline;
+  grid-template-columns: 1fr 4rem 1fr;
+  align-items: center;
   gap: 0;
   padding: 0;
 }
 
+/* "♥ HP": the stat's icon, then its caps label. */
 .combat-forecast__label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   font-size: 0.75rem;
+  text-transform: uppercase;
   color: var(--fg-dim);
-  text-align: center;
 }
 
 .combat-forecast__value {
@@ -781,11 +893,55 @@ kbd {
   color: var(--yellow);
 }
 
+/* ---- Item and stat icons ---------------------------------------------- */
+
+/* Item icons are one 32x32 tile at full size; windows that need a smaller
+   one set its width and height. An item with no icon keeps the spot. */
+.item-icon {
+  flex: none;
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}
+
+/* StatIcon's 8x8 bitmaps at two screen pixels per art pixel. */
+.stat-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+/* The icons' colors: blade, light, dark, gold, red and white. */
+.stat-icon__b {
+  fill: var(--blue);
+}
+
+.stat-icon__l {
+  fill: var(--fg-bright);
+}
+
+.stat-icon__d {
+  fill: var(--fg-dim);
+}
+
+.stat-icon__g {
+  fill: var(--yellow);
+}
+
+.stat-icon__r {
+  fill: var(--red);
+}
+
+.stat-icon__w {
+  fill: #fff;
+}
+
 /* ---- Experience and level ups ----------------------------------------- */
 
 /* The XP bar sits at the bottom center of the map; ExperienceBar sets the
-   fill's start, end, and duration as custom properties. Experience is
-   magenta throughout. */
+   fill's start, end, and duration as custom properties. The bar is the
+   blue EXP bar of the unit panel. */
 .experience-bar {
   position: absolute;
   left: 50%;
@@ -810,19 +966,21 @@ kbd {
 }
 
 .experience-bar__level {
+  text-transform: uppercase;
   color: var(--fg-dim);
 }
 
 .experience-bar__gain {
   margin-left: auto;
   font-weight: 700;
-  color: var(--magenta);
+  color: var(--blue);
 }
 
 .experience-bar__track {
   display: block;
-  height: 6px;
-  background: var(--bg-light);
+  height: calc(4 * var(--px));
+  background: #3a3040;
+  box-shadow: 0 0 0 var(--px) var(--fg-bright);
   overflow: hidden;
 }
 
@@ -830,7 +988,7 @@ kbd {
   display: block;
   height: 100%;
   width: var(--xp-to);
-  background: var(--magenta);
+  background: var(--exp);
   animation: experience-fill var(--xp-duration) ease-out;
 }
 
@@ -851,41 +1009,74 @@ kbd {
 }
 
 .level-up {
-  min-width: 16rem;
+  width: 18rem;
+  box-sizing: border-box;
   padding: 10px 16px 12px;
   border-color: var(--magenta);
   animation: level-up-pop 150ms ease-out;
 }
 
 .level-up__title {
-  margin: 0;
+  margin: 0 0 6px;
   font-family: var(--display);
   font-size: 1.125rem;
   font-weight: 700;
   line-height: 1.3;
+  text-transform: uppercase;
   color: var(--magenta);
 }
 
+/* The portrait in its frame, the name and new level beside it. */
+.level-up__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.level-up__portrait {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  background: var(--bg-light);
+  border: var(--border);
+  border-radius: var(--radius-sm);
+  image-rendering: pixelated;
+}
+
 .level-up__name {
-  margin: 0 0 8px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+}
+
+.level-up__unit-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-weight: 700;
   color: var(--blue);
 }
 
 .level-up__level {
-  margin-left: 6px;
-  font-weight: 400;
-  color: var(--fg-dim);
+  font-weight: 700;
+  color: var(--fg-bright);
 }
 
+/* Two columns of "STR 5 +1", as on the GBA. The gain keeps its width on
+   every row, risen or not, so the numbers line up. */
 .level-up__stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2px 16px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2px 20px;
   margin: 0;
   padding-top: 6px;
   border-top: var(--rule);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -898,6 +1089,7 @@ kbd {
 
 .level-up__stat dt {
   align-self: center;
+  text-transform: uppercase;
 }
 
 .level-up__stat dd {
@@ -913,7 +1105,10 @@ kbd {
 }
 
 .level-up__gain {
+  display: inline-block;
+  min-width: 2ch;
   margin-left: 4px;
+  font-weight: 700;
   color: var(--green);
 }
 
@@ -947,17 +1142,95 @@ kbd {
   color: var(--cyan);
 }
 
-/* ---- Weapon menu ------------------------------------------------------ */
+/* ---- Item and weapon menus ------------------------------------------- */
 
-/* The highlighted weapon's numbers, under the list. */
+/* The item menu: icon, name, then the count against the right edge. */
+.item-menu__item {
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.item-menu__item .item-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.item-menu__label {
+  flex: 1;
+}
+
+/* The weapon menu, as on the GBA's item window: the list on the left,
+   the highlighted weapon's numbers in a column on the right. */
+.weapon-menu {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.weapon-menu__list {
+  min-width: 11rem;
+}
+
+/* A row is the icon beside the name over its uses. Every row keeps the
+   uses line (hidden unless selected), so the selection moving never
+   changes the list's height. */
+.weapon-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.weapon-menu__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.weapon-menu__label {
+  white-space: nowrap;
+}
+
+.weapon-menu__uses {
+  align-self: flex-end;
+  font-size: 0.6875rem;
+  white-space: nowrap;
+  visibility: hidden;
+  color: var(--fg-dim);
+}
+
+.action-menu__item--selected .weapon-menu__uses {
+  visibility: visible;
+}
+
+/* Item and weapon rows select on the GBA's blue bar, in light text. */
+.weapon-menu__item.action-menu__item--selected,
+.item-menu__item.action-menu__item--selected {
+  color: var(--bar-fg);
+  background: var(--bar);
+}
+
+.action-menu__item--selected .weapon-menu__uses,
+.item-menu__item.action-menu__item--selected .skill-menu__cost {
+  color: var(--bar-fg);
+}
+
+.weapon-menu__side {
+  flex: none;
+  width: 5.5rem;
+  padding-left: 10px;
+  border-left: var(--rule);
+  font-size: 0.8125rem;
+}
+
+.weapon-menu__icons {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
 .weapon-menu__stats {
-  display: grid;
-  grid-template-columns: repeat(3, auto);
-  gap: 0 12px;
-  margin: 6px 0 0;
-  padding: 4px 2px 0;
-  border-top: var(--rule);
-  font-size: 0.75rem;
+  margin: 0;
 }
 
 .weapon-menu__stat {
@@ -966,18 +1239,22 @@ kbd {
   gap: 6px;
 }
 
-.weapon-menu__stat--wide {
-  grid-column: span 3;
-}
-
 .weapon-menu__stat dt {
+  text-transform: uppercase;
   color: var(--fg-dim);
 }
 
 .weapon-menu__stat dd {
   margin: 0;
+  font-weight: 700;
   color: var(--fg-bright);
-  text-transform: capitalize;
+}
+
+.weapon-menu__type {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--fg-dim);
 }
 
 /* ---- Deployment phase ------------------------------------------------- */
@@ -1129,59 +1406,58 @@ kbd {
 
 /* ---- Turns --------------------------------------------------------- */
 
-/* Bar modules: the turn count, then the phase in its side's color. */
+/* Two small banners in the header: the phase in its side's banner frame,
+   then "TURN n" on parchment. Their frames are drawn at half the windows'
+   scale, so they fit the header's height. */
 .turn-indicator {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.turn-indicator__turn {
-  padding: 3px 9px;
-  color: var(--fg-dim);
-  background: var(--bg);
-}
-
-.turn-indicator__phase {
-  padding: 3px 9px;
+.page-header .turn-indicator__phase,
+.page-header .turn-indicator__turn {
+  padding: 0 4px;
+  line-height: 1.3;
   font-weight: 700;
-  color: var(--desktop);
-  background: var(--blue);
+  border-width: calc(4 * var(--px));
+  border-image-width: calc(4 * var(--px));
 }
 
-.turn-indicator--enemy .turn-indicator__phase {
-  background: var(--red);
+/* Bright cyan caps on the blue banner (pale on the red one), as on the
+   GBA. */
+.turn-indicator__phase,
+.phase-banner {
+  color: #7fe8ff;
 }
 
-/* A full-width strip in the phase's side color, between two lines of it. */
+.frame--banner-red.turn-indicator__phase,
+.phase-banner--enemy {
+  color: #ffd8b8;
+}
+
+/* The phase announcement: a big banner in the middle of the map, in its
+   side's color. */
 .phase-banner {
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 50%;
   top: 50%;
-  transform: translateY(-50%);
-  padding: 14px 0;
+  transform: translate(-50%, -50%);
+  padding: 4px 20px;
+  white-space: nowrap;
   text-align: center;
-  font-family: var(--display);
+  text-transform: uppercase;
   font-size: 2rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   line-height: 1.2;
-  color: var(--band);
-  background: rgb(19 20 28 / 88%);
-  border-block: 2px solid var(--band);
+  text-shadow: var(--px) var(--px) 0 rgb(0 0 0 / 45%);
   animation-name: phase-banner-sweep;
   animation-timing-function: ease-in-out;
   animation-fill-mode: forwards;
-}
-
-.phase-banner--player {
-  --band: var(--blue);
-}
-
-.phase-banner--enemy {
-  --band: var(--red);
 }
 
 /* Wipes in from the left, holds, and wipes out to the right. */
@@ -1219,8 +1495,10 @@ kbd {
   margin: 0;
   font-family: var(--display);
   font-size: 1.75rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--fg-bright);
 }
 
@@ -1257,15 +1535,22 @@ kbd {
   color: var(--fg);
 }
 
-/* Each entry sits on its own dark chip, so it stays readable when the
-   hint floats over the map's bright terrain. */
+/* Each entry sits on its own dark wood chip with light text, so it stays
+   readable on parchment and when the hint floats over the map's bright
+   terrain; its key cap is a parchment plate. */
 .key-hint__entry {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
   padding: 2px 8px 2px 2px;
-  background: rgb(19 20 28 / 88%);
+  color: #f0d9a8;
+  background: #3a2416;
   border-radius: var(--radius-sm);
+}
+
+.key-hint__entry kbd {
+  color: #2a170a;
+  background: #f0d9a8;
 }
 
 /* ---- Objective screen ---------------------------------------------- */
@@ -1359,6 +1644,7 @@ kbd {
   align-items: center;
   justify-content: center;
   background: var(--bg-light);
+  border: var(--border);
 }
 
 .dialog-box__portrait-art {
@@ -1377,19 +1663,6 @@ kbd {
 
 /* The speaker's name is the window's title, cut into its top border on
    their side. */
-.dialog-box__speaker {
-  position: absolute;
-  top: -0.75em;
-  left: 10px;
-  margin: 0;
-  padding: 0 6px;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  line-height: 1.4;
-  color: var(--accent);
-  background: var(--bg);
-}
-
 .dialog-box--right .dialog-box__speaker {
   left: auto;
   right: 10px;
@@ -1399,7 +1672,7 @@ kbd {
   position: relative;
   margin: 0;
   padding-right: 16px;
-  font-size: 0.9375rem;
+  font-size: 1.0625rem;
   line-height: 1.6;
   min-height: 3.2em;
   color: var(--fg-bright);
@@ -1693,6 +1966,11 @@ kbd {
   box-sizing: border-box;
   background: var(--desktop);
   color: var(--fg-bright);
+  /* The plain variant for the config editor, a dev tool of dense forms:
+     body text and fields in a readable system sans, headings keep the
+     pixel face. */
+  --sans: system-ui, sans-serif;
+  font-family: var(--sans);
 }
 
 .configs-page__header {
@@ -2629,6 +2907,7 @@ textarea.draft-input {
 
 .reward-card__kind {
   font-size: 0.75rem;
+  text-transform: uppercase;
   color: var(--fg-dim);
 }
 
@@ -2930,21 +3209,24 @@ textarea.draft-input {
 
 /* ---- Camp menu and merchant ----------------------------------------- */
 
-/* The warband's gold, cut into a window's border like its title: in the
-   camp menu's bottom border and the merchant's top-right one, so it
+/* The warband's gold, a name plate on a window's frame like its title:
+   on the camp menu's bottom edge and the merchant's top-right one, so it
    taking more digits never moves anything inside. */
 .camp-menu__gold,
 .merchant-screen__gold {
   position: absolute;
   right: 10px;
   margin: 0;
-  padding: 0 6px;
+  padding: 0 8px;
   font-size: 0.8125rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  line-height: 1.4;
+  line-height: 1.5;
+  text-transform: uppercase;
   color: var(--yellow);
   background: var(--bg);
+  border: var(--border);
+  box-shadow: inset 0 0 0 var(--px) var(--bg-light);
 }
 
 .camp-menu {
@@ -2952,11 +3234,13 @@ textarea.draft-input {
 }
 
 .camp-menu__gold {
-  bottom: -0.75em;
+  bottom: 0;
+  transform: translateY(80%);
 }
 
 .merchant-screen__gold {
-  top: -0.75em;
+  top: 0;
+  transform: translateY(-80%);
 }
 
 .merchant-screen__scroll {

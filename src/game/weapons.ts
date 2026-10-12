@@ -56,9 +56,13 @@ export interface EquippedWeapon {
 }
 
 export interface WeaponAction extends MenuAction {
+  // The weapon's id (the menu entry's id also carries its slot).
+  itemId: string;
   index: number;
   type: WeaponType;
   uses: number | null;
+  // The uses it started with, null for one that never breaks.
+  maxUses: number | null;
   might: number;
   hit: number;
   crit: number;
@@ -396,8 +400,8 @@ export function formatWeaponRange(weapon: Pick<Weapon, 'minRange' | 'maxRange'>)
 }
 
 // Entries for the weapon menu shown after choosing Attack: every weapon
-// the unit can wield (equipped first), with its uses left (null for one
-// that never breaks) and its numbers. One is disabled when hasTarget(weapon)
+// the unit can wield (equipped first), with its uses left and the uses
+// it started with (both null for one that never breaks) and its numbers. One is disabled when hasTarget(weapon)
 // says nothing is in its range from where the unit stands.
 export function getWeaponActions(
   inventory: Inventory,
@@ -408,10 +412,12 @@ export function getWeaponActions(
     getWieldableWeapons(inventory, weaponTypes).map(({ weapon, index, uses }) =>
       Object.freeze({
         id: `${weapon.id}@${index}`,
+        itemId: weapon.id,
         label: weapon.label,
         index,
         type: weapon.type,
         uses,
+        maxUses: weapon.uses,
         might: weapon.might,
         hit: weapon.hit,
         crit: weapon.crit,

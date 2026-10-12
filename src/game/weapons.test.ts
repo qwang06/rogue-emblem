@@ -235,10 +235,12 @@ describe('getWeaponActions', () => {
     expect(actions.map((a) => a.label)).toEqual(['Iron Spear', 'Iron Bow', 'Fists']);
     expect(actions[1]).toEqual({
       id: 'iron-bow@3',
+      itemId: 'iron-bow',
       label: 'Iron Bow',
       index: 3,
       type: 'physical',
       uses: 5,
+      maxUses: IRON_BOW.uses,
       might: 2,
       hit: 80,
       crit: 0,
