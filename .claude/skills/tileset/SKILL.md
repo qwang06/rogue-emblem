@@ -40,7 +40,7 @@ One 32x32 PNG per item, named by item id: 16px art doubled (every art pixel is a
 Drawn pixel by pixel by `scripts/draw-ui-art.js` (run it from the repo root after changing a color or shape there; it rewrites every file), at 1x and shown at `--px` (2 CSS px) per art pixel with `image-rendering: pixelated`:
 
 - `frame-parchment.png`, `frame-banner.png`, `frame-banner-red.png`: 24x24 9-slices for CSS `border-image` (`8 fill`). Each edge is 8 bands, outside in: dark outline, brown (gold on the banners), light brown, brown, outline, a light bevel, then two rows of the fill, which act as built-in padding. Every corner has a 6x6 beveled gold plate (light top-left, dark bottom-right, mirrored per corner) and a 2px gold spur running from it along the edge's third band. Parchment fill is `#f0d9a8`, banner blue `#2a4fa8`, banner red `#a82a2a`.
-- `hand-pointer.png`: 14x10, a white gauntlet pointing right (index finger along rows 1–3, three folded knuckles under it, a blue-grey cuff on the left), outlined `#2a170a`. The fingertip is at x 13, y 2.
+- `hand-pointer.png`: 10x7, a white gauntlet pointing right (index finger along rows 1–3, folded knuckles under it, a blue-grey cuff on the left), outlined `#2a170a`. The fingertip is at x 9, y 2.
 
 ## Gate: gates.png
 

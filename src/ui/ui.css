@@ -53,11 +53,11 @@
   --radius-sm: 0;
   /* Lifts windows that float over the map off it: a hard pixel drop. */
   --lift: var(--px) var(--px) 0 rgb(0 0 0 / 35%);
-  /* The selection cue: a white gauntlet (14x10 art pixels), drawn hanging
+  /* The selection cue: a white gauntlet (10x7 art pixels), drawn hanging
      off the left of the row it points at. */
   --pointer: url('../assets/ui/hand-pointer.png');
-  --pointer-w: calc(14 * var(--px));
-  --pointer-h: calc(10 * var(--px));
+  --pointer-w: calc(10 * var(--px));
+  --pointer-h: calc(7 * var(--px));
 }
 
 /* Windows set the parchment tokens again, so one opened from the header
@@ -666,7 +666,7 @@ kbd {
 .action-menu__item--selected::before {
   content: '';
   position: absolute;
-  left: -8px;
+  left: -2px;
   top: 50%;
   width: var(--pointer-w);
   height: var(--pointer-h);
@@ -1549,7 +1549,7 @@ kbd {
 .title-menu__item--selected::before {
   content: '';
   position: absolute;
-  left: 0;
+  left: 6px;
   top: 50%;
   width: var(--pointer-w);
   height: var(--pointer-h);
@@ -2618,7 +2618,7 @@ textarea.draft-input {
 .reward-card--selected::before {
   content: '';
   position: absolute;
-  left: -6px;
+  left: 0;
   top: 32px;
   width: var(--pointer-w);
   height: var(--pointer-h);
@@ -2710,7 +2710,7 @@ textarea.draft-input {
 .reward-button--selected::before {
   content: '';
   position: absolute;
-  left: -4px;
+  left: 2px;
   top: 50%;
   width: var(--pointer-w);
   height: var(--pointer-h);
