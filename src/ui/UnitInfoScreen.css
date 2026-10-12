@@ -27,7 +27,7 @@
   --well: var(--red-bg);
 }
 
-@media (width < 46rem) {
+@media (width < 72rem) {
   .unit-info {
     grid-template-columns: minmax(0, 15rem);
   }
