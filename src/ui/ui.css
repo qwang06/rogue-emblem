@@ -1436,13 +1436,19 @@ kbd {
 
 /* ---- Title screen ---------------------------------------------------- */
 
-/* Sizes scale with the window (clamp on vw/vh) so the logo and menu fit
+/* A painted landscape at dusk behind a gold-and-blue logo, with the menu
+   on a parchment card under it, all inside a dark frame with gold corners.
+
+   Sizes scale with the window (clamp on vw/vh) so the logo and menu fit
    from phones to desktops. When the window is still too short (a
    landscape phone, a long submenu) the screen scrolls instead of
    clipping: the auto margins center the header and menu in the free space
    and pin the hint below them, and collapse to nothing once there's no
    space left. */
 .title-screen {
+  --frame-dark: #24170e;
+  --gold: #e8b84a;
+  --gold-dark: #a8701e;
   position: fixed;
   inset: 0;
   z-index: 10;
@@ -1450,13 +1456,77 @@ kbd {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(20px, 5vh, 48px);
-  padding: clamp(12px, 3vh, 24px) 16px;
+  gap: clamp(16px, 4vh, 40px);
+  padding: clamp(18px, 4vh, 36px) 24px clamp(16px, 3vh, 28px);
   box-sizing: border-box;
   overflow-y: auto;
-  background: var(--desktop);
+  background:
+    linear-gradient(rgb(26 18 48 / 30%), transparent 30%, transparent 65%, rgb(12 10 24 / 55%)),
+    #3a2c52 url('../assets/title/background.webp') 30% center / cover no-repeat;
   color: var(--fg-bright);
   user-select: none;
+}
+
+/* A tall window crops the sides; keep the castle on screen. */
+@media (max-aspect-ratio: 3 / 4) {
+  .title-screen {
+    background-position:
+      center,
+      16% center;
+  }
+}
+
+/* The screen's frame: a dark wooden border with a gold inner line and an
+   ornament on each corner. Fixed, so it stays put while a tall menu
+   scrolls, and the pointer passes through it. */
+.title-corners.title-screen__frame {
+  position: fixed;
+  z-index: 1;
+  --corner-size: clamp(27px, 4vw, 39px);
+  --corner-offset: -6px;
+  border: 6px solid var(--frame-dark);
+  box-shadow:
+    inset 0 0 0 2px var(--gold-dark),
+    inset 0 0 0 4px var(--frame-dark),
+    inset 0 0 18px rgb(0 0 0 / 45%);
+}
+
+/* Four corner ornaments over a box's border: one drawing, flipped. */
+.title-corners {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.title-corners__piece {
+  position: absolute;
+  width: var(--corner-size);
+  height: var(--corner-size);
+  background: url('../assets/title/corner.svg') center / 100% 100% no-repeat;
+  image-rendering: pixelated;
+}
+
+.title-corners__piece--tl {
+  top: var(--corner-offset);
+  left: var(--corner-offset);
+}
+
+.title-corners__piece--tr {
+  top: var(--corner-offset);
+  right: var(--corner-offset);
+  transform: scaleX(-1);
+}
+
+.title-corners__piece--bl {
+  bottom: var(--corner-offset);
+  left: var(--corner-offset);
+  transform: scaleY(-1);
+}
+
+.title-corners__piece--br {
+  right: var(--corner-offset);
+  bottom: var(--corner-offset);
+  transform: scale(-1);
 }
 
 .title-screen__header {
@@ -1468,45 +1538,117 @@ kbd {
   text-align: center;
 }
 
-/* The wordmark: carved capitals with a cold blue glow, like a name cut
-   into a standard. The rules either side are the banner's crossbar. */
-.title-screen__title {
-  display: flex;
-  align-items: center;
-  gap: clamp(10px, 2vw, 22px);
+/* The logo: ROGUE in gold over a big blue EMBLEM, carved capitals with a
+   gold rim and a dark outline, and a sword standing behind both. Each
+   line is its word stacked three times (outline, rim, fill), since a
+   gradient fill and an outline can't share one text layer. The layers
+   are positioned so they paint in order: the outline's filter would
+   otherwise lift it over the other two. */
+.title-logo {
+  position: relative;
+  display: grid;
+  justify-items: center;
   margin: 0;
-  font-family: var(--display);
-  font-size: clamp(2rem, min(8vw, 11vh), 5.25rem);
-  font-weight: 700;
-  line-height: 1.05;
-  letter-spacing: 0.05em;
-  color: var(--fg-bright);
-  text-shadow: 0 0 28px rgb(122 162 247 / 45%);
+  padding: 0.3em 0 0.34em;
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: clamp(2.75rem, min(13vw, 15vh), 10rem);
+  font-weight: 900;
+  line-height: 0.95;
+  text-transform: uppercase;
 }
 
-.title-screen__title::before,
-.title-screen__title::after {
-  content: '';
-  flex: none;
-  width: clamp(16px, 5vw, 64px);
-  height: 2px;
-  background: var(--accent);
+.title-logo__sword {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 100%;
+  aspect-ratio: 15 / 83;
+  transform: translateX(-50%);
+  background: url('../assets/title/sword.svg') center / 100% 100% no-repeat;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 0 rgb(0 0 0 / 30%));
 }
 
-/* The menu is the launcher: the focused window, title in its border. */
+.title-logo__line {
+  position: relative;
+  display: grid;
+}
+
+.title-logo__line > span {
+  position: relative;
+  grid-area: 1 / 1;
+}
+
+.title-logo__rogue {
+  font-size: 0.42em;
+  letter-spacing: 0.14em;
+  /* The letter spacing trails the last letter; this centers the word. */
+  margin-right: -0.14em;
+}
+
+.title-logo__emblem {
+  letter-spacing: 0.02em;
+}
+
+.title-logo__outline {
+  color: var(--frame-dark);
+  -webkit-text-stroke: 0.12em var(--frame-dark);
+  filter: drop-shadow(0 0.05em 0 rgb(0 0 0 / 40%));
+}
+
+.title-logo__rim {
+  color: var(--gold);
+  -webkit-text-stroke: 0.06em var(--gold);
+}
+
+.title-logo__rogue .title-logo__rim {
+  color: #6b3f12;
+  -webkit-text-stroke-color: #6b3f12;
+}
+
+.title-logo__fill {
+  color: transparent;
+  background: linear-gradient(#cde6ff 8%, #7fb0ec 38%, #3566b8 62%, #1f417f 92%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.title-logo__rogue .title-logo__fill {
+  background: linear-gradient(#fff3bf 10%, #f2c75c 48%, #b9802a 90%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* The menu: a parchment <Frame>, drawn a size up from the in-game
+   windows (a bigger art pixel), so it holds its own against the logo. */
 .title-menu {
+  --px: 3px;
+  /* Set again so the pointer takes the bigger pixel too. */
+  --pointer-w: calc(10 * var(--px));
+  --pointer-h: calc(7 * var(--px));
+
   position: relative;
   flex: none;
   width: max-content;
-  min-width: min(18rem, 100%);
+  min-width: min(17rem, 100%);
   max-width: min(28rem, 100%);
-  padding: 8px 6px 6px;
+  padding: clamp(2px, 1vh, 8px) 10px clamp(2px, 1vh, 8px) 16px;
   box-sizing: border-box;
-  border-color: var(--accent);
+  filter: drop-shadow(0 6px 0 rgb(0 0 0 / 25%)) drop-shadow(0 10px 18px rgb(0 0 0 / 35%));
 }
 
-.title-menu:has(.title-menu__heading) {
-  padding-top: 12px;
+.title-menu .title-menu__heading {
+  position: static;
+  margin: 0 0 6px;
+  padding: 0 0 6px;
+  border-bottom: var(--rule);
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--muted);
+  background: none;
 }
 
 .title-menu__list {
@@ -1519,13 +1661,15 @@ kbd {
   position: relative;
   display: block;
   width: 100%;
-  padding: clamp(3px, 0.7vh, 5px) 16px clamp(3px, 0.7vh, 5px) 30px;
+  padding: clamp(1px, 0.4vh, 4px) 14px clamp(1px, 0.4vh, 4px) 12px;
   border: 0;
-  border-radius: var(--radius-sm);
   background: none;
   font: inherit;
-  font-size: 0.9375rem;
-  line-height: 1.4;
+  font-size: clamp(1.25rem, 3.7vh, 1.8rem);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--fg);
   text-align: left;
   overflow-wrap: anywhere;
@@ -1537,8 +1681,8 @@ kbd {
 }
 
 .title-menu__item:focus-visible {
-  outline: 1px solid var(--accent);
-  outline-offset: -1px;
+  outline: var(--px) solid var(--muted);
+  outline-offset: calc(-1 * var(--px));
 }
 
 .title-menu__item--selected {
@@ -1546,16 +1690,19 @@ kbd {
   background: var(--selection);
 }
 
+/* The gauntlet pointing at the selected entry hangs off the card's left
+   edge, over its frame, so it takes no room. */
 .title-menu__item--selected::before {
   content: '';
   position: absolute;
-  left: 6px;
+  left: calc(-1 * var(--pointer-w) + 8px);
   top: 50%;
   width: var(--pointer-w);
   height: var(--pointer-h);
   transform: translateY(-50%);
   background: var(--pointer) center / 100% 100% no-repeat;
   image-rendering: pixelated;
+  filter: drop-shadow(0 var(--px) 0 rgb(0 0 0 / 30%));
   animation: pointer-bob 0.8s steps(1) infinite;
 }
 
@@ -1668,9 +1815,41 @@ kbd {
   color: var(--fg);
 }
 
-/* In the flow (not absolutely placed) so it can never sit on the menu. */
+/* In the flow (not absolutely placed) so it can never sit on the menu:
+   glowing lilac caps between two diamonds, like a "press start". */
 .title-screen__hint {
+  position: relative;
+  z-index: 2;
   margin: auto 0 0;
+  align-items: center;
+  gap: 4px 18px;
+  font-size: clamp(0.85rem, 2.2vh, 1.3rem);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #d9ccff;
+  text-shadow:
+    0 2px 0 #1b1230,
+    0 0 10px rgb(150 120 255 / 45%);
+}
+
+.title-screen__hint::before,
+.title-screen__hint::after {
+  content: '◆';
+  color: #a689ff;
+  font-size: 0.7em;
+}
+
+.title-screen__hint .key-hint__entry {
+  align-items: center;
+  padding: 0;
+  background: none;
+}
+
+.title-screen__hint kbd {
+  font-size: 0.85em;
+  color: #f2d68a;
+  text-shadow: none;
+  background: rgb(27 18 48 / 75%);
 }
 
 /* Touch screens have no keyboard to hint at. */
