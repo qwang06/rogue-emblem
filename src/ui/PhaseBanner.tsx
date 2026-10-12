@@ -1,3 +1,4 @@
+import { Frame } from './Frame.tsx';
 import { useGameStore } from './useGameStore.ts';
 
 // The "Player Phase" / "Enemy Phase" announcement at the start of each
@@ -8,13 +9,15 @@ export function PhaseBanner() {
   if (!banner) return null;
 
   return (
-    <div
+    <Frame
+      as="div"
       key={banner.id}
+      variant={banner.team === 'enemy' ? 'banner-red' : 'banner'}
       className={`phase-banner phase-banner--${banner.team}`}
       style={{ animationDuration: `${banner.durationMs}ms` }}
       role="status"
     >
       <span className="phase-banner__label">{banner.label}</span>
-    </div>
+    </Frame>
   );
 }

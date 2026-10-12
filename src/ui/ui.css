@@ -393,7 +393,7 @@ a.header-button {
 .hud .unit-panel {
   position: absolute;
   top: 12px;
-  width: 15rem;
+  width: 18rem;
   max-height: calc(100% - 24px);
   overflow: hidden;
   box-sizing: border-box;
@@ -507,9 +507,12 @@ a.header-button {
   color: var(--blue);
 }
 
+/* A dark trough in a dark brown outline, as the GBA's bars are. The
+   outline is a shadow, so it takes no room. */
 .meter__track {
-  height: 6px;
-  background: var(--bg-light);
+  height: calc(4 * var(--px));
+  background: #3a3040;
+  box-shadow: 0 0 0 var(--px) var(--fg-bright);
   overflow: hidden;
 }
 
@@ -520,7 +523,7 @@ a.header-button {
 }
 
 .meter--hp .meter__fill {
-  background: var(--green);
+  background: var(--hp);
 }
 
 .meter--mp .meter__fill {
@@ -528,7 +531,7 @@ a.header-button {
 }
 
 .meter--exp .meter__fill {
-  background: var(--blue);
+  background: var(--exp);
 }
 
 .meter__value {
@@ -599,7 +602,7 @@ a.header-button {
 }
 
 .unit-panel__item--equipped .unit-panel__item-label {
-  color: var(--accent);
+  color: var(--blue);
 }
 
 /* The item an enemy drops, under its own rule. */
@@ -953,8 +956,9 @@ kbd {
 
 .experience-bar__track {
   display: block;
-  height: 6px;
-  background: var(--bg-light);
+  height: calc(4 * var(--px));
+  background: #3a3040;
+  box-shadow: 0 0 0 var(--px) var(--fg-bright);
   overflow: hidden;
 }
 
@@ -962,7 +966,7 @@ kbd {
   display: block;
   height: 100%;
   width: var(--xp-to);
-  background: var(--blue);
+  background: var(--exp);
   animation: experience-fill var(--xp-duration) ease-out;
 }
 
@@ -1177,6 +1181,18 @@ kbd {
   visibility: visible;
 }
 
+/* Item and weapon rows select on the GBA's blue bar, in light text. */
+.weapon-menu__item.action-menu__item--selected,
+.item-menu__item.action-menu__item--selected {
+  color: var(--bar-fg);
+  background: var(--bar);
+}
+
+.action-menu__item--selected .weapon-menu__uses,
+.item-menu__item.action-menu__item--selected .skill-menu__cost {
+  color: var(--bar-fg);
+}
+
 .weapon-menu__side {
   flex: none;
   width: 5.5rem;
@@ -1368,80 +1384,55 @@ kbd {
 
 /* ---- Turns --------------------------------------------------------- */
 
-/* The GBA's phase banner colors: a deep blue (or red, for the enemy)
-   fill in a gold frame, with bright caps on it. */
-.turn-indicator,
-.phase-banner {
-  --banner-fill: #1d3f94;
-  --banner-text: #7fe8ff;
-  --banner-trim: #d9a441;
-  --banner-edge: #4a2a10;
-}
-
-.turn-indicator--enemy,
-.phase-banner--enemy {
-  --banner-fill: #8c1f2a;
-  --banner-text: #ffd0b0;
-}
-
-/* Two small banners in the header: the phase in its side's color, then
-   "TURN n" on a dark plate in the same gold frame. */
+/* Two small banners in the header: the phase in its side's banner frame,
+   then "TURN n" on parchment. Their frames are drawn at half the windows'
+   scale, so they fit the header's height. */
 .turn-indicator {
   display: flex;
   align-items: center;
   gap: 6px;
   white-space: nowrap;
-  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-.turn-indicator__phase,
-.turn-indicator__turn {
-  padding: 2px 9px;
+.page-header .turn-indicator__phase,
+.page-header .turn-indicator__turn {
+  padding: 0 4px;
   line-height: 1.3;
-  border: 2px solid var(--banner-trim);
-  border-radius: var(--radius-sm);
-  box-shadow:
-    0 0 0 1px var(--banner-edge),
-    inset 0 0 0 1px rgb(0 0 0 / 35%);
+  font-weight: 700;
+  border-width: calc(4 * var(--px));
+  border-image-width: calc(4 * var(--px));
 }
 
-.turn-indicator__phase {
-  color: var(--banner-text);
-  background: var(--banner-fill);
+/* Bright cyan caps on the blue banner (pale on the red one), as on the
+   GBA. */
+.turn-indicator__phase,
+.phase-banner {
+  color: #7fe8ff;
 }
 
-.turn-indicator__turn {
-  color: var(--fg-bright);
-  background: #2a3146;
+.frame--banner-red.turn-indicator__phase,
+.phase-banner--enemy {
+  color: #ffd8b8;
 }
 
-/* The phase announcement: a gold-framed banner in the middle of the map,
-   in its side's color, with the phase in big bright caps. */
+/* The phase announcement: a big banner in the middle of the map, in its
+   side's color. */
 .phase-banner {
   position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  padding: 10px 28px;
+  padding: 4px 20px;
   white-space: nowrap;
   text-align: center;
   text-transform: uppercase;
-  font-family: var(--display);
   font-size: 2rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   line-height: 1.2;
-  color: var(--banner-text);
-  text-shadow: 2px 2px 0 rgb(0 0 0 / 45%);
-  background: var(--banner-fill);
-  border: 4px solid var(--banner-trim);
-  border-radius: var(--radius);
-  box-shadow:
-    0 0 0 2px var(--banner-edge),
-    inset 0 0 0 2px rgb(0 0 0 / 35%),
-    var(--lift);
+  text-shadow: var(--px) var(--px) 0 rgb(0 0 0 / 45%);
   animation-name: phase-banner-sweep;
   animation-timing-function: ease-in-out;
   animation-fill-mode: forwards;
