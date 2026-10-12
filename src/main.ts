@@ -18,7 +18,7 @@ const game = new Phaser.Game({
   scale: {
     mode: Phaser.Scale.RESIZE,
   },
-  backgroundColor: '#1a1b26',
+  backgroundColor: '#1f140c',
   pixelArt: true,
   scene: [],
 });
