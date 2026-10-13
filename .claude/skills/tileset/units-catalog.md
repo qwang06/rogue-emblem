@@ -20,10 +20,7 @@ facing). Thick dark outline. Made with PixelLab's `create_character_pro_flash`
 at 32x32, low top-down (version 5, styled on version 4), then cut to one
 shared 16-color palette across the four facings (median-cut max-coverage, no
 dithering; that keeps the grey blade). The prompts and source
-PNGs are in the project's `art/warrior/` folder. PixelLab gave one still frame per
-facing, so both sheets reuse it: Idle holds it still on all four frames, Move bobs the body up 1px on frames 1 and 3 (no stepping feet yet). Same layout as the pack (128x128,
-rows down/left/right/up, RGBA). Footprint: x 1–30, y 1–30; feet on y 30
-(y 29 on the bobbed move frames), a row lower than the pack's.
+PNGs are in the project's `art/warrior/` folder. Frame 0 of every row is the still. The rest are PixelLab v3 animations (`animate_character`) with the end frame pinned to the still so they loop: Idle is frames 0–3 of a 4-frame breathing idle, Move is frames 0, 2, 4, 6 of an 8-frame in-place walk. All frames are snapped to the same palette. Same layout as the pack (128x128, rows down/left/right/up, RGBA). Footprint: x 1–30, y 1–30; feet on y 30 in every frame, a row lower than the pack's.
 
 ## Monsters (generated, not from the pack)
 
