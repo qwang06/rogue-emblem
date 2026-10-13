@@ -161,13 +161,11 @@ import {
   TREE_SPRITES,
   UNIT_ANIMATIONS,
   UNIT_SHEET,
-  getItemSprite,
   getUnitSprite,
   unitSheetKey,
 } from '../game/tileset.ts';
 import { POTION_COLORS, playHitFlash, playLunge, playPotionGlow, playStoneThrow } from './effects.ts';
 import { addTreeShadow, addUnitShadow } from './unitShadow.ts';
-import { addLootMarker } from './lootMarker.ts';
 import type { Menu } from '../game/actionMenu.ts';
 import type { Dialog, DialogLine } from '../game/dialog.ts';
 import type { DialogScripts } from '../game/dialogScript.ts';
@@ -2382,8 +2380,6 @@ export class GridScene extends Phaser.Scene {
       .setData('facing', UNIT_SHEET.defaultFacing)
       .play(this.unitAnimation(art, 'idle', UNIT_SHEET.defaultFacing));
     addUnitShadow(this, sprite);
-    const lootIcon = unit.loot && getItemSprite(unit.loot.id);
-    if (lootIcon) addLootMarker(this, sprite, lootIcon);
     this.unitSprites.set(unitId, sprite);
   }
 
