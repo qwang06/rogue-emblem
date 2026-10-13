@@ -20,10 +20,9 @@ at 32x32, low top-down (version 4, styled on an earlier all-brown version),
 then cut to one shared 16-color palette across the four facings (median-cut
 max-coverage, no dithering; that keeps the grey blade). The prompts and source
 PNGs are in the project's `art/warrior/` folder. PixelLab gave one still frame per
-facing, so both sheets reuse it: Idle bobs the body up 1px on frames 2–3, Move
-on frames 1 and 3 (no stepping feet yet). Same layout as the pack (128x128,
+facing, so both sheets reuse it: Idle holds it still on all four frames, Move bobs the body up 1px on frames 1 and 3 (no stepping feet yet). Same layout as the pack (128x128,
 rows down/left/right/up, RGBA). Footprint: x 1–30, y 1–30; feet on y 30
-(y 29 on bobbed frames), a row lower than the pack's.
+(y 29 on the bobbed move frames), a row lower than the pack's.
 
 ## Monsters (generated, not from the pack)
 
