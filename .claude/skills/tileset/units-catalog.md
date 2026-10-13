@@ -11,14 +11,15 @@ in `src/assets/sprites.ts` when a class needs art.
 `Warrior_01` is the warrior class's art (`UNIT_SPRITES.warrior`, also
 `DEFAULT_UNIT_SPRITE`). It replaced `Villager_01`, which stays in the folder
 with the rest of the pack but is no longer loaded. Unlike everything else
-here it is **true 32px art, not 16px doubled**: a common fighter in a cream
-linen tunic with dark brown leather straps crossing over it (the X shows on
-the back; the sword held across the chest hides most of it from the front), a
-wide leather belt, tan trousers, dark leather boots and light brown messy
-hair, thick dark outline. Made with PixelLab's `create_character_pro_flash`
-at 32x32, low top-down (version 4, styled on an earlier all-brown version),
-then cut to one shared 16-color palette across the four facings (median-cut
-max-coverage, no dithering; that keeps the grey blade). The prompts and source
+here it is **true 32px art, not 16px doubled**: a mercenary-looking fighter
+with dark spiky hair and a deep red headband whose tails trail behind (the
+most readable feature from every side), a cream tunic with dark leather
+straps and a left pauldron (faint at this size), belt, tan trousers, dark
+boots, and an iron sword held low at the side (a short stub in the left
+facing). Thick dark outline. Made with PixelLab's `create_character_pro_flash`
+at 32x32, low top-down (version 5, styled on version 4), then cut to one
+shared 16-color palette across the four facings (median-cut max-coverage, no
+dithering; that keeps the grey blade). The prompts and source
 PNGs are in the project's `art/warrior/` folder. PixelLab gave one still frame per
 facing, so both sheets reuse it: Idle holds it still on all four frames, Move bobs the body up 1px on frames 1 and 3 (no stepping feet yet). Same layout as the pack (128x128,
 rows down/left/right/up, RGBA). Footprint: x 1–30, y 1–30; feet on y 30
