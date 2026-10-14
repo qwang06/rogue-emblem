@@ -126,7 +126,7 @@ describe('createStageLevel', () => {
     const region = {
       ...FIRST,
       enemies: [
-        { count: 2, minDistance: 12 },
+        { count: 2, minDistance: 6 },
         { count: 2, minDistance: 3, maxDistance: 5 },
       ],
     };
@@ -134,7 +134,7 @@ describe('createStageLevel', () => {
       const { grid, deploymentZone } = createStageLevel(seed, region);
       const distances = getWalkingDistances(grid, deploymentZone);
       const steps = (unitId: string) => distances.get(`${findUnit(grid, unitId)!.x},${findUnit(grid, unitId)!.y}`)!;
-      for (const unitId of ['enemy-1', 'enemy-2']) expect(steps(unitId)).toBeGreaterThanOrEqual(12);
+      for (const unitId of ['enemy-1', 'enemy-2']) expect(steps(unitId)).toBeGreaterThanOrEqual(6);
       for (const unitId of ['enemy-3', 'enemy-4']) {
         expect(steps(unitId)).toBeGreaterThanOrEqual(3);
         expect(steps(unitId)).toBeLessThanOrEqual(5);

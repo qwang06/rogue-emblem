@@ -253,7 +253,7 @@ describe('parseRegionSettings', () => {
 describe('formatRegionSettings', () => {
   it('keeps [min, max] pairs on one line', () => {
     const text = formatRegionSettings(REGION_SETTINGS);
-    expect(text).toContain('"meadowSize": [5, 9]');
+    expect(text).toContain('"meadowSize": [2, 4]');
     expect(text.endsWith('\n')).toBe(true);
   });
 });

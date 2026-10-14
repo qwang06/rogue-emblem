@@ -19,6 +19,13 @@ describe('REGION_SETTINGS', () => {
     for (const region of REGION_CONFIGS) expect(region.description).toBeTruthy();
   });
 
+  // Small maps keep a run fast: the enemy is a turn or two away.
+  it('uses 8x8 maps', () => {
+    for (const region of REGION_CONFIGS) {
+      expect([region.terrain.width, region.terrain.height]).toEqual([8, 8]);
+    }
+  });
+
   it('starts on the Meadowlands', () => {
     expect(REGION_CONFIGS[0].name).toBe('Meadowlands');
   });
