@@ -26,6 +26,7 @@
       "name": "Lakeside",
       "description": "Lake country: lakes that funnel units onto the path. A single goblin waits at the far end.",
       "terrain": {
+        "generator": "planned",
         "width": 8,
         "height": 8,
         "lakes": 2,
@@ -46,6 +47,7 @@
       "name": "Deep Woods",
       "description": "Thick woods and a twisting path: lots of cover, slow going.",
       "terrain": {
+        "generator": "planned",
         "width": 8,
         "height": 8,
         "lakes": 0,
@@ -69,6 +71,7 @@
       "name": "Highlands",
       "description": "Mountain passes: outcrops of impassable rock that squeeze the fight onto the path.",
       "terrain": {
+        "generator": "planned",
         "width": 8,
         "height": 8,
         "lakes": 0,
@@ -92,6 +95,7 @@
       "name": "Fortress",
       "description": "A fortified borderland: a castle on the road and a garrison of skeletons and goblins.",
       "terrain": {
+        "generator": "planned",
         "width": 8,
         "height": 8,
         "lakes": 1,
