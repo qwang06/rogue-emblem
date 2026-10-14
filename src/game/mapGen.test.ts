@@ -3,7 +3,9 @@ import { createGrid, getCell, setTerrain, type Point } from './grid.ts';
 import {
   carvePath,
   FIELD_BUILDINGS,
+  fillTerrain,
   generateTerrain,
+  getBuildingFootprint,
   getReachable,
   getRingCells,
   growPatch,
@@ -16,6 +18,7 @@ import {
 } from './mapGen.ts';
 import { createSeededRng } from './rng.ts';
 import { parseTerrainMap } from './terrainMap.ts';
+import { checkMap } from './mapCheck.ts';
 
 const SEEDS = Array.from({ length: 50 }, (_, i) => i * 7919 + 1);
 
@@ -182,9 +185,68 @@ describe('placeBuildings', () => {
     }
   });
 
+  it("never puts a building or its art on a tile another building's footprint covers", () => {
+    const grid = createGrid(8, 8, 'grass');
+    // A castle at (4, 4): its own tile, its top and its flag.
+    const covered = new Set(['4,4', '4,3', '4,2']);
+    for (const seed of SEEDS) {
+      const buildings = placeBuildings(grid, 8, createSeededRng(seed), new Set(), covered);
+      const footprints = buildings.flatMap(getBuildingFootprint).map(key);
+      expect(footprints.filter((k) => covered.has(k))).toEqual([]);
+      expect(new Set(footprints).size).toBe(footprints.length);
+    }
+  });
+
   it('places none when asked for none or when there is no room', () => {
     expect(placeBuildings(createGrid(5, 5, 'grass'), 0, createSeededRng(1), new Set())).toEqual([]);
     expect(placeBuildings(createGrid(5, 2, 'grass'), 3, createSeededRng(1), new Set())).toEqual([]);
+  });
+});
+
+describe('getBuildingFootprint', () => {
+  it("is a building's tile and the rows its art reaches north of it", () => {
+    expect(getBuildingFootprint({ x: 2, y: 5, building: 'house' })).toEqual([
+      { x: 2, y: 5 },
+      { x: 2, y: 4 },
+    ]);
+    expect(getBuildingFootprint({ x: 2, y: 5, building: 'tower' })).toEqual([
+      { x: 2, y: 5 },
+      { x: 2, y: 4 },
+      { x: 2, y: 3 },
+    ]);
+  });
+});
+
+describe('fillTerrain', () => {
+  it('keeps impassable terrain a tile clear of the tiles it is told to', () => {
+    const options: MapGenOptions = {
+      width: 8,
+      height: 8,
+      lakes: 6,
+      lakeSize: [4, 8],
+      mountains: 6,
+      mountainSize: [4, 8],
+    };
+    const route = [6, 5, 4, 3, 2, 1].map((y) => ({ x: 1, y }));
+    for (const seed of SEEDS) {
+      const rng = createSeededRng(seed);
+      const { grid } = fillTerrain(options, rng, carvePath(8, 8, rng, 0.35, 5), route);
+      for (const { x, y } of route) {
+        for (const dx of [-1, 0, 1]) {
+          const terrain = getCell(grid, x + dx, y)?.terrain;
+          expect(['water', 'mountain', 'wall']).not.toContain(terrain);
+        }
+      }
+    }
+  });
+
+  it("keeps every building clear of the others' art, with castles and many buildings", () => {
+    const options: MapGenOptions = { width: 8, height: 8, castle: true, buildings: 6 };
+    for (const seed of Array.from({ length: 300 }, (_, i) => i * 31 + 7)) {
+      const { grid, path, buildings } = generateTerrain(options, createSeededRng(seed));
+      const problems = checkMap({ grid, buildings, deploymentZone: [path[0]], enemyTiles: [] });
+      expect(problems).toEqual([]);
+    }
   });
 });
 

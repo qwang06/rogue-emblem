@@ -35,6 +35,7 @@ const PATCHES = [
 ] as const;
 
 const PALETTES = Object.keys(BUILDING_PALETTES);
+const GENERATORS = ['classic', 'planned'];
 const ENEMY_CLASSES = UNIT_CLASSES.map((c) => c.id);
 const [MIN_SIZE, MAX_SIZE] = REGION_LIMITS.mapSize;
 
@@ -153,6 +154,14 @@ export function RegionEditor({
             placeholder={String(MAP_GEN_DEFAULTS.turnChance)}
           />
           <CheckboxField form={form} path={at('terrain', 'castle')} label="Castle" fallback={MAP_GEN_DEFAULTS.castle} />
+          <SelectField form={form} path={at('terrain', 'generator')} label="Generator" options={GENERATORS} />
+          <NumberField
+            form={form}
+            path={at('terrain', 'routes')}
+            label="Routes"
+            hint="1–5, planned only"
+            placeholder={String(MAP_GEN_DEFAULTS.routes)}
+          />
         </div>
       </fieldset>
 
