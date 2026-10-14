@@ -6,10 +6,14 @@
 //                     third for each side route, left and right of it
 //   2. carveRoute   — walks a winding route from the deployment zone to
 //                     each anchor
-//   3. fillTerrain  — lays the dirt path and the rest of the map as the
+//   3. getZones     — marks where the fight happens (mapZones.ts)
+//   4. fillTerrain  — lays the dirt path and the rest of the map as the
 //                     classic generator does, keeping impassable terrain
 //                     clear of every route, so the player always has more
-//                     than one way to reach the enemy
+//                     than one way to reach the enemy, but starting each
+//                     patch in the zone it's for: forests by turns in the
+//                     midfield and near each side's start, water and
+//                     mountains out on the flanks
 // Pure: the same options and seed always give the same map.
 
 import type { Rng } from './combatStats.ts';
@@ -23,6 +27,7 @@ import {
   type GeneratedTerrain,
   type MapGenOptions,
 } from './mapGen.ts';
+import { getZones, pickZonedStart } from './mapZones.ts';
 import { randomInt, randomItem } from './rng.ts';
 
 export interface BattlePlan {
@@ -112,7 +117,12 @@ export function generatePlannedTerrain(options: MapGenOptions, rng: Rng): Planne
   const sideRoutes = plan.anchors.map((anchor) =>
     carveRoute(width, height, anchor.x < middle.x ? west : east, anchor, rng, turnChance),
   );
-  return { ...fillTerrain(options, rng, path, sideRoutes.flat()), plan, routes: sideRoutes };
+  const enemySide = [...plan.anchors, path[path.length - 1]];
+  const zones = getZones(width, height, plan.deploymentZone, enemySide, [...path, ...sideRoutes.flat()]);
+  const terrain = fillTerrain(options, rng, path, sideRoutes.flat(), (kind, index, starts, r) =>
+    pickZonedStart(zones, kind, index, starts, r),
+  );
+  return { ...terrain, plan, routes: sideRoutes };
 }
 
 // The map from whichever generator `options.generator` names (classic

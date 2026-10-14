@@ -22,7 +22,12 @@ describe('getMapPreview', () => {
   });
 
   it('marks buildings and the deployment zone', () => {
-    for (const { x, y } of level.buildings ?? []) expect(at(x, y).marker).toBe('building');
+    // A unit standing on a building shows instead (see 'marks each enemy').
+    const free = (level.buildings ?? []).filter(
+      ({ x, y }) => !level.grid.cells.find((c) => c.x === x && c.y === y)!.unitId,
+    );
+    expect(free.length).toBeGreaterThan(0);
+    for (const { x, y } of free) expect(at(x, y).marker).toBe('building');
     for (const { x, y } of level.deploymentZone) expect(at(x, y).marker).toBe('deploy');
   });
 

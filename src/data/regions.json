@@ -5,6 +5,7 @@
       "name": "Meadowlands",
       "description": "Open fields: the run's first, quick fight. A lone slime stands three steps from the start, close enough to strike on turn one.",
       "terrain": {
+        "generator": "planned",
         "width": 8,
         "height": 8,
         "lakes": 1,
