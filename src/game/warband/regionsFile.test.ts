@@ -38,6 +38,8 @@ describe('parseRegionSettings', () => {
       ruins: 1,
       buildings: 2,
       turnChance: 0.5,
+      generator: 'planned',
+      routes: 2,
     };
     const settings = parseRegionSettings(file([region({ terrain, objective: { kind: 'rout' } })]));
     expect(settings.regions[0].terrain).toEqual(terrain);
@@ -144,6 +146,16 @@ describe('parseRegionSettings', () => {
       'a range that is not a pair',
       file([region({ terrain: { width: 12, height: 10, lakeSize: [3] } })]),
       /\[min, max\] pair/,
+    ],
+    [
+      'an unknown generator',
+      file([region({ terrain: { width: 12, height: 10, generator: 'maze' } })]),
+      /generator must be one of classic, planned/,
+    ],
+    [
+      'too many routes',
+      file([region({ terrain: { width: 12, height: 10, routes: 6 } })]),
+      /routes must be a whole number from 1 to 5/,
     ],
     [
       'a non-boolean castle',

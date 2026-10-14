@@ -13,7 +13,8 @@ import { getBuildingSprites, getFeatureSprites } from '../mapArt.ts';
 import { pickEnemyTiles } from '../enemySpawns.ts';
 import type { Rng } from '../combatStats.ts';
 import { assignLoot } from '../loot.ts';
-import { generateTerrain, type GeneratedTerrain } from '../mapGen.ts';
+import type { GeneratedTerrain } from '../mapGen.ts';
+import { generateMap } from '../mapPlan.ts';
 import { checkMap } from '../mapCheck.ts';
 import { getMapMetrics, scoreMap, type MapMetrics } from '../mapScore.ts';
 import { DEFAULT_OBJECTIVE } from '../objectives.ts';
@@ -74,7 +75,7 @@ export interface StageLayout {
 // it, and the enemies' tiles from region.enemies.
 export function layOutStage(seed: number, region: RegionConfig): StageLayout {
   const rng = createSeededRng(seed);
-  const terrain = generateTerrain(region.terrain, rng);
+  const terrain = generateMap(region.terrain, rng);
   const start = terrain.path[0];
   const deploymentZone = [-1, 0, 1].map((dx) => ({ x: start.x + dx, y: start.y }));
   const enemyTiles = pickEnemyTiles(terrain.grid, region.enemies, deploymentZone, rng);

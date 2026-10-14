@@ -45,6 +45,7 @@ export const REGION_LIMITS = Object.freeze({
   mapSize: [6, 48],
   patchCount: [0, 50],
   patchSize: [1, 200],
+  routes: [1, 5],
   enemyCount: [1, 30],
   enemyGroups: [1, 10],
   enemyDistance: [1, 100],
@@ -57,7 +58,17 @@ const CHECK_SEEDS = [1, 2, 3];
 
 const PATCH_COUNTS = ['lakes', 'mountains', 'forests', 'meadows', 'ruins', 'buildings'] as const;
 const PATCH_SIZES = ['lakeSize', 'mountainSize', 'forestSize', 'meadowSize'] as const;
-const TERRAIN_KEYS = ['width', 'height', ...PATCH_COUNTS, ...PATCH_SIZES, 'castle', 'turnChance'];
+const TERRAIN_KEYS = [
+  'width',
+  'height',
+  ...PATCH_COUNTS,
+  ...PATCH_SIZES,
+  'castle',
+  'turnChance',
+  'generator',
+  'routes',
+];
+const GENERATORS = ['classic', 'planned'];
 const REGION_KEYS = ['name', 'description', 'terrain', 'enemies', 'enemyCount', 'treeChance', 'palette', 'objective'];
 
 type Json = Record<string, unknown>;
@@ -113,6 +124,13 @@ function parseTerrain(value: unknown, path: string): MapGenOptions {
     terrain.castle = json.castle;
   }
   if (json.turnChance !== undefined) terrain.turnChance = chance(json.turnChance, `${path}.turnChance`);
+  if (json.generator !== undefined) {
+    if (typeof json.generator !== 'string' || !GENERATORS.includes(json.generator)) {
+      fail(`${path}.generator`, `must be one of ${GENERATORS.join(', ')}`);
+    }
+    terrain.generator = json.generator;
+  }
+  if (json.routes !== undefined) terrain.routes = wholeNumber(json.routes, `${path}.routes`, REGION_LIMITS.routes);
   // In the file's order, so saving it back doesn't shuffle its settings.
   const ordered = Object.keys(json).map((key) => [key, terrain[key]]);
   return Object.freeze(Object.fromEntries(ordered)) as unknown as MapGenOptions;

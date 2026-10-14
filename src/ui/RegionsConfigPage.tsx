@@ -392,7 +392,9 @@ function RegionsFormat() {
           optional: patch counts (<code>lakes</code>, <code>mountains</code>, <code>forests</code>, <code>meadows</code>
           , <code>ruins</code>, <code>buildings</code>), patch sizes as <code>[min, max]</code> tiles (
           <code>lakeSize</code>, <code>mountainSize</code>, <code>forestSize</code>, <code>meadowSize</code>),{' '}
-          <code>castle</code> (true/false), and <code>turnChance</code> (0–1, how much the path winds).
+          <code>castle</code> (true/false), <code>turnChance</code> (0–1, how much the path winds),{' '}
+          <code>generator</code> (<code>"classic"</code>, the default, or <code>"planned"</code>, which also carves side
+          routes to the enemy) and <code>routes</code> (1–5, how many routes the planned generator lays).
         </li>
         <li>
           <code>enemies</code>: {REGION_LIMITS.enemyGroups[0]} to {REGION_LIMITS.enemyGroups[1]} groups, up to{' '}

@@ -101,6 +101,30 @@ const HELP: Record<string, FieldHelp> = {
       </p>
     ),
   },
+  generator: {
+    title: 'Generator',
+    body: (
+      <>
+        <p>
+          How the map is built. <b>classic</b> (the default) lays one dirt path north from your start and grows lakes,
+          mountains, forests and meadows anywhere off it.
+        </p>
+        <p>
+          <b>planned</b> starts you anywhere along the south edge and also carves side routes toward the north third,
+          keeping water, mountains and walls off them, so there&apos;s more than one way to reach the enemy.
+        </p>
+      </>
+    ),
+  },
+  routes: {
+    title: 'Routes',
+    body: (
+      <p>
+        For the planned generator: how many routes lead north from your start (1–5), the dirt path included. More routes
+        means more ways around obstacles. Blank uses the default shown.
+      </p>
+    ),
+  },
   castle: {
     title: 'Castle',
     body: <p>Whether a castle stands beside the north end of the path.</p>,

@@ -21,12 +21,20 @@ import { createGrid, getCell, getNeighbors, setTerrain, type Grid, type Point } 
 import { getMoveCost } from './movement.ts';
 import { randomInt, randomItem, shuffle } from './rng.ts';
 import { DEFAULT_TERRAIN_LEGEND } from './terrainMap.ts';
+import { BUILDING_ART } from './tileset.ts';
 
 type Range = readonly [number, number];
 
 export interface MapGenOptions {
   width: number;
   height: number;
+  // 'classic' (the default) lays one path and grows patches anywhere off
+  // it; 'planned' (mapPlan.ts) also carves side routes toward where
+  // the enemy stands and keeps them clear too.
+  generator?: 'classic' | 'planned';
+  // For the planned generator: how many routes lead north, the path
+  // included.
+  routes?: number;
   // How many patches of each terrain to try to grow (some may not fit),
   // and their size range in tiles.
   lakes?: number;
@@ -79,14 +87,20 @@ function isGrass(grid: Grid, { x, y }: Point): boolean {
   return getCell(grid, x, y)?.terrain === 'grass';
 }
 
-// A one-tile-wide path from the middle of the bottom row to the top row.
-// Each row it may jog 1–2 tiles sideways before stepping north, but never
-// in two rows running: back-to-back jogs could put four path tiles in a
-// 2x2 square, and the dirt autotile shows grass holes in anything wider than
-// one tile.
-export function carvePath(width: number, height: number, rng: Rng, turnChance = 0.35): Point[] {
+// A one-tile-wide path from column `startX` of the bottom row (the middle
+// when unset) to the top row. Each row it may jog 1–2 tiles sideways
+// before stepping north, but never in two rows running: back-to-back jogs
+// could put four path tiles in a 2x2 square, and the dirt autotile shows
+// grass holes in anything wider than one tile.
+export function carvePath(
+  width: number,
+  height: number,
+  rng: Rng,
+  turnChance = 0.35,
+  startX = Math.floor(width / 2),
+): Point[] {
   const path: Point[] = [];
-  let x = Math.floor(width / 2);
+  let x = startX;
   let jogged = false;
   for (let y = height - 1; y >= 0; y--) {
     path.push({ x, y });
@@ -217,17 +231,41 @@ export function placeRuin(
   return null;
 }
 
+// The tiles a building and its art cover: its own, then, going north, a
+// tall building's top and the row a flag would go in (whether or not its
+// palette has flags).
+export function getBuildingFootprint({ x, y, building }: BuildingPlacement): Point[] {
+  const height = BUILDING_ART[building].tall ? 2 : 1;
+  return Array.from({ length: height + 1 }, (_, dy) => ({ x, y: y - dy }));
+}
+
 // Up to `count` buildings (from FIELD_BUILDINGS) on random grass tiles out
 // of `blocked`, at least two rows from the north edge so a tall building's
 // top (and any flag) stays on the map, and never next to each other.
-export function placeBuildings(grid: Grid, count: number, rng: Rng, blocked: ReadonlySet<string>): BuildingPlacement[] {
+// `covered` is every tile an existing building or its art is on (see
+// getBuildingFootprint); no new building's footprint overlaps it, or
+// another new one's.
+export function placeBuildings(
+  grid: Grid,
+  count: number,
+  rng: Rng,
+  blocked: ReadonlySet<string>,
+  covered: ReadonlySet<string> = new Set(),
+): BuildingPlacement[] {
   const taken = new Set(blocked);
+  const art = new Set(covered);
   const buildings: BuildingPlacement[] = [];
   for (const cell of shuffle(rng, grid.cells)) {
     if (buildings.length >= count) break;
     if (cell.y < 2 || cell.terrain !== 'grass' || taken.has(key(cell))) continue;
-    buildings.push({ x: cell.x, y: cell.y, building: randomItem(rng, FIELD_BUILDINGS) });
+    // Which building it is only matters if it might not fit, so draw it
+    // first and check its footprint.
+    const building: BuildingPlacement = { x: cell.x, y: cell.y, building: randomItem(rng, FIELD_BUILDINGS) };
+    const footprint = getBuildingFootprint(building);
+    if (footprint.some((p) => art.has(key(p)))) continue;
+    buildings.push(building);
     withMargin([cell]).forEach((k) => taken.add(k));
+    footprint.forEach((p) => art.add(key(p)));
   }
   return buildings;
 }
@@ -264,10 +302,12 @@ export const MAP_GEN_DEFAULTS = Object.freeze({
   ruins: 1,
   buildings: 2,
   turnChance: 0.35,
+  generator: 'classic',
+  routes: 3,
 }) satisfies Required<Omit<MapGenOptions, 'width' | 'height'>>;
 
 // `options` without its unset keys, so spreading it keeps the defaults.
-function withoutUndefined(options: MapGenOptions): MapGenOptions {
+export function withoutUndefined(options: MapGenOptions): MapGenOptions {
   return Object.fromEntries(Object.entries(options).filter(([, value]) => value !== undefined)) as MapGenOptions;
 }
 
@@ -277,6 +317,21 @@ function withoutUndefined(options: MapGenOptions): MapGenOptions {
 // the path; forests and meadows may run right up to it. Every building
 // and the ruin keep a tile of open grass around them.
 export function generateTerrain(options: MapGenOptions, rng: Rng): GeneratedTerrain {
+  const { width, height, turnChance } = { ...MAP_GEN_DEFAULTS, ...withoutUndefined(options) };
+  if (width < 3 || height < 3) throw new Error('A generated map needs to be at least 3x3');
+  return fillTerrain(options, rng, carvePath(width, height, rng, turnChance));
+}
+
+// Everything generateTerrain does after carving the path: lays `path` as
+// dirt, then the castle, ruins, buildings and patches, keeping impassable
+// terrain a tile clear of the path and of every tile in `keepClear` too
+// (e.g. other routes that must stay walkable).
+export function fillTerrain(
+  options: MapGenOptions,
+  rng: Rng,
+  path: readonly Point[],
+  keepClear: readonly Point[] = [],
+): GeneratedTerrain {
   const {
     width,
     height,
@@ -291,12 +346,9 @@ export function generateTerrain(options: MapGenOptions, rng: Rng): GeneratedTerr
     castle,
     ruins,
     buildings: buildingCount,
-    turnChance,
   } = { ...MAP_GEN_DEFAULTS, ...withoutUndefined(options) };
-  if (width < 3 || height < 3) throw new Error('A generated map needs to be at least 3x3');
 
   let grid = createGrid(width, height, 'grass');
-  const path = carvePath(width, height, rng, turnChance);
   grid = path.reduce((g, p) => setTerrain(g, p.x, p.y, 'dirt'), grid);
 
   // Tiles each layer keeps out of: `edges` (top row, bottom two rows) for
@@ -307,7 +359,7 @@ export function generateTerrain(options: MapGenOptions, rng: Rng): GeneratedTerr
     for (const y of [0, height - 2, height - 1]) edges.add(key({ x, y }));
   }
   const structures = new Set<string>();
-  const nearPath = withMargin(path);
+  const nearPath = withMargin([...path, ...keepClear]);
   const union = (...sets: ReadonlySet<string>[]) => new Set(sets.flatMap((s) => [...s]));
 
   const buildings: BuildingPlacement[] = [];
@@ -315,6 +367,7 @@ export function generateTerrain(options: MapGenOptions, rng: Rng): GeneratedTerr
     buildings.push(building);
     withMargin([building]).forEach((k) => structures.add(k));
   };
+  const covered = () => new Set(buildings.flatMap(getBuildingFootprint).map(key));
 
   if (castle) {
     const placed = placeCastle(grid, path, rng, edges);
@@ -327,7 +380,7 @@ export function generateTerrain(options: MapGenOptions, rng: Rng): GeneratedTerr
     withMargin(ruin.tiles).forEach((k) => structures.add(k));
     buildings.push(ruin.building);
   }
-  placeBuildings(grid, buildingCount, rng, union(edges, structures)).forEach(addBuilding);
+  placeBuildings(grid, buildingCount, rng, union(edges, structures), covered()).forEach(addBuilding);
 
   const impassableBlocked = union(edges, nearPath, structures);
   const openBlocked = union(edges, structures);
@@ -348,7 +401,7 @@ export function generateTerrain(options: MapGenOptions, rng: Rng): GeneratedTerr
     }
   }
 
-  return { grid, path, buildings };
+  return { grid, path: [...path], buildings };
 }
 
 // The grid as text rows, one character per tile, using the inverse of a
