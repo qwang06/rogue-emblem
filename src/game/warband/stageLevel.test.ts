@@ -84,16 +84,29 @@ describe('getCandidateSeeds', () => {
 });
 
 describe('pickStageLayout', () => {
-  it('keeps the best-scoring candidate, the earliest on a tie', () => {
+  it('keeps the best-scoring candidate that keeps every rule, the earliest on a tie', () => {
     for (const region of REGION_CONFIGS) {
       for (const seed of SEEDS.slice(0, 10)) {
-        const scores = getCandidateSeeds(seed).map((s) => layOutStage(s, region).score);
+        const layouts = getCandidateSeeds(seed).map((s) => layOutStage(s, region));
+        const valid = layouts.filter((l) => l.problems.length === 0);
         const picked = pickStageLayout(seed, region);
-        const best = Math.min(...scores);
+        const best = Math.min(...valid.map((l) => l.score));
+        expect(picked.problems).toEqual([]);
         expect(picked.score).toBe(best);
-        expect(picked.seed).toBe(getCandidateSeeds(seed)[scores.indexOf(best)]);
+        expect(picked.seed).toBe(valid.find((l) => l.score === best)!.seed);
       }
     }
+  });
+
+  it('never keeps a map that breaks a rule when another candidate keeps them all', () => {
+    for (const region of REGION_CONFIGS) {
+      for (const seed of SEEDS) expect(pickStageLayout(seed, region).problems).toEqual([]);
+    }
+  });
+
+  it('keeps a lone candidate whatever rules it breaks', () => {
+    const picked = pickStageLayout(1234, FIRST, 1);
+    expect(picked).toMatchObject({ seed: 1234, problems: layOutStage(1234, FIRST).problems });
   });
 
   it('lays out only the seed itself with one candidate', () => {
@@ -105,7 +118,9 @@ describe('pickStageLayout', () => {
   it('never picks a worse map than the seed alone would give', () => {
     for (const region of REGION_CONFIGS) {
       for (const seed of SEEDS) {
-        expect(pickStageLayout(seed, region).score).toBeLessThanOrEqual(layOutStage(seed, region).score);
+        const own = layOutStage(seed, region);
+        if (own.problems.length > 0) continue;
+        expect(pickStageLayout(seed, region).score).toBeLessThanOrEqual(own.score);
       }
     }
   });

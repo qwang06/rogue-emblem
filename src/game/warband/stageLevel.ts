@@ -4,7 +4,8 @@
 // (src/game/enemySpawns.ts). The stage's region (regions.ts) sets the map's
 // size and makeup; everything else comes from one seed, so a seed and a
 // region are enough to rebuild the same battle. A seed lays out several
-// candidate maps and keeps the one mapScore.ts grades best.
+// candidate maps and keeps the one mapScore.ts grades best of those that
+// keep mapCheck.ts's rules.
 
 import { PLAYER_ROSTER, type DemoLevel, type TreePlacement } from '../demoLevel.ts';
 import { setUnit, type Point } from '../grid.ts';
@@ -13,6 +14,7 @@ import { pickEnemyTiles } from '../enemySpawns.ts';
 import type { Rng } from '../combatStats.ts';
 import { assignLoot } from '../loot.ts';
 import { generateTerrain, type GeneratedTerrain } from '../mapGen.ts';
+import { checkMap } from '../mapCheck.ts';
 import { getMapMetrics, scoreMap, type MapMetrics } from '../mapScore.ts';
 import { DEFAULT_OBJECTIVE } from '../objectives.ts';
 import { createSeededRng } from '../rng.ts';
@@ -52,9 +54,9 @@ export function getCandidateSeeds(seed: number, count = MAP_CANDIDATES): number[
   return [seed, ...Array.from({ length: count - 1 }, () => Math.floor(rng() * 2 ** 32))];
 }
 
-// One candidate map: the terrain, where each side starts, its grade (see
-// mapScore.ts), and the Rng it was laid out with, ready for the rest of
-// the level to be built from.
+// One candidate map: the terrain, where each side starts, the rules it
+// breaks (see mapCheck.ts), its grade (see mapScore.ts), and the Rng it was
+// laid out with, ready for the rest of the level to be built from.
 export interface StageLayout {
   seed: number;
   rng: Rng;
@@ -62,6 +64,7 @@ export interface StageLayout {
   deploymentZone: Point[];
   // One list of tiles per enemy group in region.enemies.
   enemyTiles: Point[][];
+  problems: string[];
   metrics: MapMetrics;
   score: number;
 }
@@ -75,18 +78,33 @@ export function layOutStage(seed: number, region: RegionConfig): StageLayout {
   const start = terrain.path[0];
   const deploymentZone = [-1, 0, 1].map((dx) => ({ x: start.x + dx, y: start.y }));
   const enemyTiles = pickEnemyTiles(terrain.grid, region.enemies, deploymentZone, rng);
+  const problems = checkMap({
+    grid: terrain.grid,
+    buildings: terrain.buildings,
+    deploymentZone,
+    enemyTiles: enemyTiles.flat(),
+  });
   const metrics = getMapMetrics(terrain.grid, deploymentZone, enemyTiles.flat());
-  return { seed, rng, terrain, deploymentZone, enemyTiles, metrics, score: scoreMap(metrics) };
+  return { seed, rng, terrain, deploymentZone, enemyTiles, problems, metrics, score: scoreMap(metrics) };
 }
 
-// The best-scoring of `candidates` layouts from `seed` (the earliest on a
-// tie, so a map that already meets every target is kept as is).
+// Whether `a` is a better candidate than `b`: one that keeps every rule
+// beats one that doesn't, then the lower score wins.
+function isBetter(a: StageLayout, b: StageLayout): boolean {
+  const aOk = a.problems.length === 0;
+  const bOk = b.problems.length === 0;
+  return aOk !== bOk ? aOk : a.score < b.score;
+}
+
+// The best of `candidates` layouts from `seed`: the best-scoring one that
+// keeps every rule (the earliest on a tie, so a map that already meets
+// every target is kept as is), or the best-scoring one if none does.
 export function pickStageLayout(seed: number, region: RegionConfig, candidates = MAP_CANDIDATES): StageLayout {
   let best: StageLayout | null = null;
   for (const candidate of getCandidateSeeds(seed, candidates)) {
     const layout = layOutStage(candidate, region);
-    if (!best || layout.score < best.score) best = layout;
-    if (best.score === 0) break;
+    if (!best || isBetter(layout, best)) best = layout;
+    if (best.problems.length === 0 && best.score === 0) break;
   }
   return best!;
 }
