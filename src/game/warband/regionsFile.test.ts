@@ -44,6 +44,12 @@ describe('parseRegionSettings', () => {
     expect(settings.regions[0].objective).toEqual({ kind: 'rout' });
   });
 
+  it('reads each objective kind, and a survive objective’s turns', () => {
+    for (const objective of [{ kind: 'seize' }, { kind: 'boss' }, { kind: 'survive' }, { kind: 'survive', turns: 6 }]) {
+      expect(parseRegionSettings(file([region({ objective })])).regions[0].objective).toEqual(objective);
+    }
+  });
+
   it('trims the name', () => {
     expect(parseRegionSettings(file([region({ name: '  Glade ' })])).regions[0].name).toBe('Glade');
   });
@@ -238,7 +244,21 @@ describe('parseRegionSettings', () => {
       /^regions\[0\]\.enemies ask for 6 enemies, but only 5 fit on a sample map because the groups compete for the same spots\./,
     ],
     ['a tree chance over 1', file([region({ treeChance: 2 })]), /treeChance must be a number from 0 to 1/],
-    ['an unknown objective', file([region({ objective: { kind: 'escape' } })]), /objective\.kind must be "rout"/],
+    [
+      'an unknown objective',
+      file([region({ objective: { kind: 'escape' } })]),
+      /objective\.kind must be one of "rout"/,
+    ],
+    [
+      'turns on a non-survive objective',
+      file([region({ objective: { kind: 'seize', turns: 3 } })]),
+      /objective\.turns is only for a survive/,
+    ],
+    [
+      'too many survive turns',
+      file([region({ objective: { kind: 'survive', turns: 31 } })]),
+      /objective\.turns must be a whole number from 1 to 30/,
+    ],
   ])('rejects %s', (_, text, message) => {
     expect(() => parseRegionSettings(text)).toThrow(message);
   });

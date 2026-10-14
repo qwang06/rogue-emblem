@@ -74,5 +74,6 @@ Warband Mode's regions. A run fights stage after stage; every `stagesPerRegion` 
 
 - **treeChance**: 0–1, how likely each free grass tile is to get a tree.
 - **palette**: the building and wall colors, one of the names in `BUILDING_PALETTES` (`src/game/tileset.ts`), e.g. `a-stone`, `b-blue`.
+- **objective** (optional): what every stage in the region is won by, as `{ "kind": "rout" }` (defeat all enemies), `"seize"` (end a unit's move on a marked castle, fort or far tile), `"boss"` (defeat the farthest enemy, made a stronger chief who holds its ground) or `"survive"` with an optional `"turns"` (1–30, 4 when unset). Unset, the first stage is a rout and each later one draws a kind at random.
 
 A setting the game doesn't know (a typo like `"lake"`) is an error, not ignored. The config editor's **Regions** page (`#/configs/regions`) edits this file as a form. Under `npm run dev` its Save writes this file (checked first, and laid out so an unchanged save changes nothing); in a built game Save keeps the regions in your browser instead. The page also takes this file as an upload, to try changes in your browser without touching the repo. Files from before Warband Mode, Dungeon Mode's `{ "floorsPerConfig": 1, "floors": [...] }`, still load, and saving one writes it in the shape above.

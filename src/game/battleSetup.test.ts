@@ -84,6 +84,17 @@ describe('createBattleLevel', () => {
     expect(terrainToRows(stage3.grid)).toEqual(terrainToRows(expected.grid));
   });
 
+  it('gives Warband stages the objective pickStageObjective draws, placed on the map', () => {
+    expect(createBattleLevel({ mode: 'warband', seed: 3, stage: 1 }).objective).toEqual({ kind: 'rout' });
+    const special = {
+      ...CUSTOM_CONTENT,
+      regions: { stagesPerRegion: 1, regions: [{ ...REGION_CONFIGS[0], objective: { kind: 'boss' } as const }] },
+    };
+    const level = createBattleLevel({ mode: 'warband', seed: 3, stage: 1 }, special);
+    expect(level.objective?.kind).toBe('boss');
+    if (level.objective?.kind === 'boss') expect(level.units.get(level.objective.unitId)!.holdsPosition).toBe(true);
+  });
+
   it('gives one enemy loot in each of the first three Warband stages and none after', () => {
     const carriers = (stage: number) =>
       [...createBattleLevel({ mode: 'warband', seed: 5, stage }).units.values()].filter((unit) => unit.loot).length;

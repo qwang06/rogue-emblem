@@ -51,7 +51,7 @@ const key = ({ x, y }: Point) => `${x},${y}`;
 // - buildings: the generator's, drawn in region.palette
 // - decorations: green ginkgos scattered (region.treeChance) on the grass no
 //   other art covers
-// - objective: region.objective, else a rout (defeat all enemies)
+// - objective: a rout; battleSetup.ts places the stage's own (stageObjective.ts)
 // - loot: `lootCount` of the enemies (as many as there are, if fewer) each
 //   carry an item to drop (see assignLoot), picked after everything else so
 //   the map is the same whatever the count
@@ -112,6 +112,6 @@ export function createStageLevel(
     structures: [],
     buildings,
     palette: region.palette,
-    objective: region.objective ?? DEFAULT_OBJECTIVE,
+    objective: DEFAULT_OBJECTIVE,
   };
 }

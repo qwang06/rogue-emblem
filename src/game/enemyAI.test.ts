@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { planRushAction, type AttackScorer } from './enemyAI.ts';
+import { getPhaseMovement, planRushAction, type AttackScorer } from './enemyAI.ts';
 import { createGrid, setTerrain, setUnit, type Grid, type Point } from './grid.ts';
 import { FIRE, IRON_BOW, IRON_SPEAR } from './weapons.ts';
 
@@ -223,5 +223,13 @@ describe('planRushAction', () => {
     const { path, target } = planRushAction(grid, { x: 5, y: 0 }, soldier, isHostile, options);
     expect(last(path)).toEqual({ x: 3, y: 0 });
     expect(target!.unitId).toBe('p1');
+  });
+});
+
+describe('getPhaseMovement', () => {
+  it('is the unit’s movement, or 0 when it holds its position', () => {
+    expect(getPhaseMovement({ movement: 5 })).toBe(5);
+    expect(getPhaseMovement({ movement: 5, holdsPosition: false })).toBe(5);
+    expect(getPhaseMovement({ movement: 5, holdsPosition: true })).toBe(0);
   });
 });
