@@ -186,7 +186,7 @@ import type { RosterMenuEntry } from '../bridge/gameStore.ts';
 
 // The canvas is sized by the page (see main.ts); maps are zoomed to fit it,
 // up to MAX_ZOOM, and centered.
-const MAX_ZOOM = 2;
+const MAX_ZOOM = 3;
 const MOVE_RANGE_COLOR = 0x3b82f6;
 const MOVE_RANGE_ALPHA = 0.45;
 const ATTACK_RANGE_COLOR = 0xef4444;
