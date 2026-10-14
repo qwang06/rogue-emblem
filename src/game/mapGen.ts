@@ -325,12 +325,17 @@ export function generateTerrain(options: MapGenOptions, rng: Rng): GeneratedTerr
 // Everything generateTerrain does after carving the path: lays `path` as
 // dirt, then the castle, ruins, buildings and patches, keeping impassable
 // terrain a tile clear of the path and of every tile in `keepClear` too
-// (e.g. other routes that must stay walkable).
+// (e.g. other routes that must stay walkable). `pickStart` chooses where
+// patch number `index` of `terrain` starts growing, out of the grass tiles
+// it may start on (non-empty); a random one when unset.
+export type PatchStartPicker = (terrain: string, index: number, starts: readonly Point[], rng: Rng) => Point;
+
 export function fillTerrain(
   options: MapGenOptions,
   rng: Rng,
   path: readonly Point[],
   keepClear: readonly Point[] = [],
+  pickStart: PatchStartPicker = (_terrain, _index, starts, r) => randomItem(r, starts),
 ): GeneratedTerrain {
   const {
     width,
@@ -397,7 +402,7 @@ export function fillTerrain(
     for (let i = 0; i < count; i++) {
       const starts = grid.cells.filter((c) => c.terrain === 'grass' && !blocked.has(key(c)));
       if (starts.length === 0) break;
-      grid = growPatch(grid, randomItem(rng, starts), randomInt(rng, min, max), rng, blocked, terrain);
+      grid = growPatch(grid, pickStart(terrain, i, starts, rng), randomInt(rng, min, max), rng, blocked, terrain);
     }
   }
 
