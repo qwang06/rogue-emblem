@@ -8,7 +8,7 @@
 
 import type { EnemyGroup } from '../enemySpawns.ts';
 import type { MapGenOptions } from '../mapGen.ts';
-import type { Objective } from '../objectives.ts';
+import type { ObjectiveSpec } from '../objectives.ts';
 import type { BuildingPaletteName } from '../tileset.ts';
 
 export interface RegionConfig {
@@ -25,9 +25,9 @@ export interface RegionConfig {
   treeChance: number;
   // The building and wall colors.
   palette: BuildingPaletteName;
-  // What wins the battle, for a special map; a rout (defeat all enemies)
-  // if unset.
-  objective?: Objective;
+  // The objective every stage in the region plays (placed on each map by
+  // stageObjective.ts); if unset, each stage draws its own.
+  objective?: ObjectiveSpec;
 }
 
 // Everything Warband Mode reads per stage: the regions in order and how

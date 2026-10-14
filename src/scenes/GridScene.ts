@@ -99,7 +99,7 @@ import { randomSeed } from '../game/rng.ts';
 import { getStructureTiles } from '../game/structures.ts';
 import { getConsumables, getItemActions } from '../game/items.ts';
 import { getWeaponActions, getWeaponReach, type Weapon, type WeaponAction } from '../game/weapons.ts';
-import { planRushAction } from '../game/enemyAI.ts';
+import { getPhaseMovement, planRushAction } from '../game/enemyAI.ts';
 import { createAttackScorer } from '../game/aiScoring.ts';
 import {
   canDeployUnit,
@@ -126,7 +126,14 @@ import {
 import { getTeamUnitIds, isAllyOf, isHostileTo } from '../game/teams.ts';
 import { advanceDialog, createDialog, DIALOG_CHARS_PER_SECOND, getCurrentLine } from '../game/dialog.ts';
 import { getTriggeredDialog, turnTrigger } from '../game/dialogScript.ts';
-import { DEFAULT_OBJECTIVE, describeObjective, type Objective } from '../game/objectives.ts';
+import {
+  DEFAULT_OBJECTIVE,
+  describeObjective,
+  getObjectiveOutcome,
+  getObjectiveStatus,
+  type BattleSnapshot,
+  type Objective,
+} from '../game/objectives.ts';
 import { getPathFacings } from '../game/facing.ts';
 import { createKeyRepeat, updateKeyRepeat } from '../game/keyRepeat.ts';
 import { getArrowPieces } from '../game/moveArrow.ts';
@@ -136,16 +143,7 @@ import { canMoveAlongPath, extendMovePath, getMovementRange } from '../game/move
 import { pickAttackPlan } from '../game/attackMove.ts';
 import { getDangerZone } from '../game/dangerZone.ts';
 import { PAUSE_ACTIONS } from '../game/pauseMenu.ts';
-import {
-  createTurnState,
-  getBattleOutcome,
-  isDone,
-  isPhaseOver,
-  markDone,
-  markMoved,
-  nextPhase,
-  unmarkMoved,
-} from '../game/turns.ts';
+import { createTurnState, isDone, isPhaseOver, markDone, markMoved, nextPhase, unmarkMoved } from '../game/turns.ts';
 import {
   ARROW_TILES,
   BUILDING_ART,
@@ -202,6 +200,11 @@ const DANGER_ZONE_COLOR = 0x9f1239;
 const DANGER_ZONE_ALPHA = 0.35;
 const DEPLOYMENT_ZONE_COLOR = 0xfacc15;
 const DEPLOYMENT_ZONE_ALPHA = 0.4;
+// A seize objective's tile: a gold outline over a faint fill that pulses,
+// over the buildings' ground art but under the range highlights.
+const SEIZE_TILE_COLOR = 0xfbbf24;
+const SEIZE_TILE_ALPHA = 0.3;
+const SEIZE_TILE_PULSE_MS = 700;
 // Deployment menu entries, by index, for re-opening it on a given one.
 const PLACE_UNITS_INDEX = 0;
 const START_INDEX = 1;
@@ -378,6 +381,7 @@ export class GridScene extends Phaser.Scene {
     ]);
     this.renderDecorations(level.decorations ?? []);
     this.renderStructures(level.structures ?? []);
+    this.renderObjectiveTile();
     this.renderUnits(this.grid);
     this.createCursor();
 
@@ -1366,9 +1370,14 @@ export class GridScene extends Phaser.Scene {
   // hands input to the player or runs the enemies.
   startPhase(turnState: TurnState) {
     this.turnState = turnState;
+    // A new turn can decide the battle on its own (a survive objective).
+    if (this.checkOutcome()) return;
     this.hideEnemyReach();
     for (const sprite of this.unitSprites.values()) sprite.clearTint();
-    gameStore.setState({ turn: toTurnView(turnState) });
+    gameStore.setState({
+      turn: toTurnView(turnState),
+      objectiveStatus: getObjectiveStatus(this.objective, turnState.turn),
+    });
 
     this.inputLocked = true;
     this.showPhaseBanner(turnState, () => {
@@ -1428,11 +1437,26 @@ export class GridScene extends Phaser.Scene {
     return getTeamUnitIds(this.units, team);
   }
 
-  // Ends the battle if one side has been wiped out, publishing the result
-  // for React; confirm then returns to the title. Returns whether it ended.
-  // The level's [victory] or [defeat] conversation plays before the result.
+  // What the objective is checked against: every unit still in play, where
+  // it stands, and the turn.
+  battleSnapshot(): BattleSnapshot {
+    return {
+      turn: this.turnState?.turn ?? 1,
+      units: [...this.units].map(([unitId, unit]) => ({
+        unitId,
+        team: unit.team,
+        alive: unit.isAlive(),
+        position: findUnit(this.grid, unitId),
+      })),
+    };
+  }
+
+  // Ends the battle once its objective is won or lost (see
+  // getObjectiveOutcome), publishing the result for React; confirm then
+  // returns to the title. Returns whether it ended. The level's [victory]
+  // or [defeat] conversation plays before the result.
   checkOutcome() {
-    const outcome = getBattleOutcome(this.units.values());
+    const outcome = getObjectiveOutcome(this.objective, this.battleSnapshot());
     if (!outcome) return false;
     this.battleOutcome = outcome;
     this.inputLocked = false;
@@ -1504,7 +1528,7 @@ export class GridScene extends Phaser.Scene {
     const { path, target } = planRushAction(
       this.grid,
       from,
-      unit,
+      { movement: getPhaseMovement(unit), weapon: unit.weapon },
       this.isHostileTo(unit),
       this.movementOptions(unit),
       scoreTarget,
@@ -1555,7 +1579,7 @@ export class GridScene extends Phaser.Scene {
   // Draws where `unit` standing at `from` can move (blue) and what it could
   // attack from there (red). Returns the move range and the highlights.
   drawUnitReach(unit: Unit, from: Point) {
-    const moveRange = getMovementRange(this.grid, from, unit.movement, this.movementOptions(unit));
+    const moveRange = getMovementRange(this.grid, from, getPhaseMovement(unit), this.movementOptions(unit));
     const tiles = this.drawTileHighlights(moveRange, MOVE_RANGE_COLOR, MOVE_RANGE_ALPHA);
     const reach = getWeaponReach(unit.wieldableWeapons.map(({ weapon }) => weapon));
     if (reach) {
@@ -1710,7 +1734,7 @@ export class GridScene extends Phaser.Scene {
       const origin = findUnit(this.grid, unitId);
       if (!origin) return [];
       const ranges = unit.wieldableWeapons.map(({ weapon }) => weapon);
-      return [{ origin, movement: unit.movement, ranges, options: this.movementOptions(unit) }];
+      return [{ origin, movement: getPhaseMovement(unit), ranges, options: this.movementOptions(unit) }];
     });
     this.dangerZoneTiles = this.drawTileHighlights(
       getDangerZone(this.grid, sources),
@@ -2395,6 +2419,24 @@ export class GridScene extends Phaser.Scene {
       addTreeShadow(this, pos.x, pos.y);
       this.addTileSprite(pos.x, pos.y, TREE_SPRITES[tree]).setDepth(0.4);
     }
+  }
+
+  // Marks a seize objective's tile on the map so the player can find it.
+  renderObjectiveTile() {
+    if (this.objective.kind !== 'seize') return;
+    const { x, y } = gridToWorld(this.objective.tile.x, this.objective.tile.y, TILE_SIZE);
+    const marker = this.add
+      .rectangle(x, y, TILE_SIZE, TILE_SIZE, SEIZE_TILE_COLOR, SEIZE_TILE_ALPHA)
+      .setOrigin(0, 0)
+      .setStrokeStyle(2, SEIZE_TILE_COLOR)
+      .setDepth(0.42);
+    this.tweens.add({
+      targets: marker,
+      alpha: { from: 1, to: 0.4 },
+      duration: SEIZE_TILE_PULSE_MS,
+      yoyo: true,
+      repeat: -1,
+    });
   }
 
   // Multi-tile structures ({ x, y, structure } from the level, by top-left

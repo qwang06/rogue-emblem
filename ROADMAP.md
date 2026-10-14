@@ -150,7 +150,7 @@ _Decided:_ classes are named after the unit art in `src/assets/units/` (see the 
 - Pure `getBattleOutcome(state, objective)` generalizes the existing rout check. Loss conditions: Lord dies, or all units die.
 - Objective shown in the HUD; Seize as a new action on the target tile.
 - **Tests:** each objective's win/loss, Lord death overrides everything, turn-limit boundaries.
-- _Progress:_ `src/game/objectives.ts` has the `Objective` type with `rout` only (the default for every level; a Warband region can set its own), and the Objective screen shows it after the opening dialog. The other objective kinds, `getBattleOutcome(state, objective)`, Lord death and the in-battle HUD readout are still to do.
+- _Progress:_ `src/game/objectives.ts` has `rout`, `seize`, `boss` and `survive`, decided by `getObjectiveOutcome(objective, snapshot)`; the Objective screen shows the goal after the opening dialog and the header shows a short readout ("Survive 2/4"). Seize is won by any player unit ending its action on the tile, not a Seize command, since there's no Lord yet. Still to do: `defend`, the Lord and its death, and objectives for Story Mode levels.
 
 ### [ ] 3.4 Permadeath and difficulty modes
 
@@ -322,6 +322,7 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 - Stages pick an objective: rout, **boss** (the region finale), **seize** a castle or fort tile, **survive** N turns, or **escape** (every deployed unit reaches the north edge; the generator already carves a south-to-north path).
 - Completes 3.3's `getBattleOutcome(state, objective)` and the HUD readout.
 - **Tests:** each objective's win and loss, turn-limit boundaries, escape with units still on the map.
+- _Progress:_ `src/game/warband/stageObjective.ts`: stage 1 is a rout and every later stage draws rout, seize, boss or survive (4 turns) from its seed, unless its region sets `objective`. Seize marks a castle or fort, else the walkable tile farthest from deployment; boss promotes the farthest enemy to a "<Class> Chief" two levels up that holds its ground. Every kind is also won by a rout. _Deferred:_ escape, bosses as region finales (regions last one stage each for now), and shaping maps per objective (the map-generation work).
 
 ### [ ] W.9 Map events
 

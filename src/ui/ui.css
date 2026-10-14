@@ -1453,8 +1453,14 @@ kbd {
   letter-spacing: 0.04em;
 }
 
+/* The survive count ticks up each turn without changing the banner's width. */
+.turn-indicator__objective {
+  font-variant-numeric: tabular-nums;
+}
+
 .page-header .turn-indicator__phase,
-.page-header .turn-indicator__turn {
+.page-header .turn-indicator__turn,
+.page-header .turn-indicator__objective {
   padding: 0 4px;
   line-height: 1.3;
   font-weight: 700;
