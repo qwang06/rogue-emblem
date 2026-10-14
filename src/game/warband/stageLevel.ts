@@ -3,14 +3,17 @@
 // path and enemies placed by the region's enemy groups
 // (src/game/enemySpawns.ts). The stage's region (regions.ts) sets the map's
 // size and makeup; everything else comes from one seed, so a seed and a
-// region are enough to rebuild the same battle.
+// region are enough to rebuild the same battle. A seed lays out several
+// candidate maps and keeps the one mapScore.ts grades best.
 
 import { PLAYER_ROSTER, type DemoLevel, type TreePlacement } from '../demoLevel.ts';
 import { setUnit, type Point } from '../grid.ts';
 import { getBuildingSprites, getFeatureSprites } from '../mapArt.ts';
 import { pickEnemyTiles } from '../enemySpawns.ts';
+import type { Rng } from '../combatStats.ts';
 import { assignLoot } from '../loot.ts';
-import { generateTerrain } from '../mapGen.ts';
+import { generateTerrain, type GeneratedTerrain } from '../mapGen.ts';
+import { getMapMetrics, scoreMap, type MapMetrics } from '../mapScore.ts';
 import { DEFAULT_OBJECTIVE } from '../objectives.ts';
 import { createSeededRng } from '../rng.ts';
 import type { Unit } from '../Unit.ts';
@@ -39,8 +42,58 @@ export const DEFAULT_ENEMY_CLASS = 'soldier';
 
 const key = ({ x, y }: Point) => `${x},${y}`;
 
+// How many candidate maps a stage's seed lays out to keep the best of.
+export const MAP_CANDIDATES = 30;
+
+// The seeds a stage's candidates are laid out from: `seed` itself first,
+// then `count - 1` more drawn from it.
+export function getCandidateSeeds(seed: number, count = MAP_CANDIDATES): number[] {
+  const rng = createSeededRng(seed);
+  return [seed, ...Array.from({ length: count - 1 }, () => Math.floor(rng() * 2 ** 32))];
+}
+
+// One candidate map: the terrain, where each side starts, its grade (see
+// mapScore.ts), and the Rng it was laid out with, ready for the rest of
+// the level to be built from.
+export interface StageLayout {
+  seed: number;
+  rng: Rng;
+  terrain: GeneratedTerrain;
+  deploymentZone: Point[];
+  // One list of tiles per enemy group in region.enemies.
+  enemyTiles: Point[][];
+  metrics: MapMetrics;
+  score: number;
+}
+
+// The candidate laid out from `seed`: the terrain from region.terrain, the
+// deployment zone on the path's south end and the tiles either side of
+// it, and the enemies' tiles from region.enemies.
+export function layOutStage(seed: number, region: RegionConfig): StageLayout {
+  const rng = createSeededRng(seed);
+  const terrain = generateTerrain(region.terrain, rng);
+  const start = terrain.path[0];
+  const deploymentZone = [-1, 0, 1].map((dx) => ({ x: start.x + dx, y: start.y }));
+  const enemyTiles = pickEnemyTiles(terrain.grid, region.enemies, deploymentZone, rng);
+  const metrics = getMapMetrics(terrain.grid, deploymentZone, enemyTiles.flat());
+  return { seed, rng, terrain, deploymentZone, enemyTiles, metrics, score: scoreMap(metrics) };
+}
+
+// The best-scoring of `candidates` layouts from `seed` (the earliest on a
+// tie, so a map that already meets every target is kept as is).
+export function pickStageLayout(seed: number, region: RegionConfig, candidates = MAP_CANDIDATES): StageLayout {
+  let best: StageLayout | null = null;
+  for (const candidate of getCandidateSeeds(seed, candidates)) {
+    const layout = layOutStage(candidate, region);
+    if (!best || layout.score < best.score) best = layout;
+    if (best.score === 0) break;
+  }
+  return best!;
+}
+
 // Returns a level shaped like createDemoLevel's, generated from `seed` with
-// `region`'s terrain options:
+// `region`'s terrain options, on the best of the seed's candidate maps (see
+// pickStageLayout):
 // - deploymentZone: the path's south end and the tiles either side of it
 // - roster: `roster`'s units (a run's warband), else createStartingWarband's,
 //   deploying up to `maxDeployed`
@@ -62,15 +115,12 @@ export function createStageLevel(
   maxDeployed = WARBAND_MAX_DEPLOYED,
   lootCount = 0,
 ): DemoLevel {
-  const rng = createSeededRng(seed);
-  const generated = generateTerrain(region.terrain, rng);
-  const { path, buildings } = generated;
-  let { grid } = generated;
+  const layout = pickStageLayout(seed, region);
+  const { rng, deploymentZone } = layout;
+  const { buildings } = layout.terrain;
+  let { grid } = layout.terrain;
 
-  const start = path[0];
-  const deploymentZone = [-1, 0, 1].map((dx) => ({ x: start.x + dx, y: start.y }));
-
-  const enemyTiles = pickEnemyTiles(grid, region.enemies, deploymentZone, rng).flatMap((tiles, g) =>
+  const enemyTiles = layout.enemyTiles.flatMap((tiles, g) =>
     tiles.map((tile) => ({ ...tile, group: region.enemies[g] })),
   );
 
