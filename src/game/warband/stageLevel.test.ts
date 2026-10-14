@@ -5,6 +5,10 @@ import {
   createStageLevel,
   DEFAULT_ENEMY_CLASS,
   createStartingWarband,
+  getCandidateSeeds,
+  layOutStage,
+  MAP_CANDIDATES,
+  pickStageLayout,
   WARBAND_LEADER_NAME,
   WARBAND_MAX_DEPLOYED,
 } from './stageLevel.ts';
@@ -64,7 +68,72 @@ describe('createStartingWarband', () => {
   });
 });
 
+describe('getCandidateSeeds', () => {
+  it('starts with the seed itself and gives as many seeds as asked', () => {
+    const seeds = getCandidateSeeds(1234);
+    expect(seeds).toHaveLength(MAP_CANDIDATES);
+    expect(seeds[0]).toBe(1234);
+    expect(getCandidateSeeds(1234, 1)).toEqual([1234]);
+  });
+
+  it('is the same for the same seed, and differs between seeds', () => {
+    expect(getCandidateSeeds(1234)).toEqual(getCandidateSeeds(1234));
+    expect(getCandidateSeeds(1234).slice(1)).not.toEqual(getCandidateSeeds(1235).slice(1));
+    expect(new Set(getCandidateSeeds(1234)).size).toBe(MAP_CANDIDATES);
+  });
+});
+
+describe('pickStageLayout', () => {
+  it('keeps the best-scoring candidate, the earliest on a tie', () => {
+    for (const region of REGION_CONFIGS) {
+      for (const seed of SEEDS.slice(0, 10)) {
+        const scores = getCandidateSeeds(seed).map((s) => layOutStage(s, region).score);
+        const picked = pickStageLayout(seed, region);
+        const best = Math.min(...scores);
+        expect(picked.score).toBe(best);
+        expect(picked.seed).toBe(getCandidateSeeds(seed)[scores.indexOf(best)]);
+      }
+    }
+  });
+
+  it('lays out only the seed itself with one candidate', () => {
+    const picked = pickStageLayout(1234, FIRST, 1);
+    expect(picked.seed).toBe(1234);
+    expect(terrainToRows(picked.terrain.grid)).toEqual(terrainToRows(layOutStage(1234, FIRST).terrain.grid));
+  });
+
+  it('never picks a worse map than the seed alone would give', () => {
+    for (const region of REGION_CONFIGS) {
+      for (const seed of SEEDS) {
+        expect(pickStageLayout(seed, region).score).toBeLessThanOrEqual(layOutStage(seed, region).score);
+      }
+    }
+  });
+});
+
 describe('createStageLevel', () => {
+  it('builds the map pickStageLayout picks, with enemies on its tiles', () => {
+    for (const region of REGION_CONFIGS) {
+      const layout = pickStageLayout(1234, region);
+      const level = createStageLevel(1234, region);
+      expect(terrainToRows(level.grid)).toEqual(terrainToRows(layout.terrain.grid));
+      expect(level.deploymentZone).toEqual(layout.deploymentZone);
+      layout.enemyTiles.flat().forEach((tile, i) => expect(findUnit(level.grid, `enemy-${i + 1}`)).toEqual(tile));
+    }
+  });
+
+  it('lets every built-in region fight within the first turn or two', () => {
+    // Most units move 5 and strike 1 tile away, so an enemy 11 or fewer
+    // steps out can be struck by turn 2.
+    for (const region of REGION_CONFIGS) {
+      for (const seed of SEEDS) {
+        const { metrics } = pickStageLayout(seed, region);
+        expect(metrics.nearestEnemy).not.toBeNull();
+        expect(metrics.nearestEnemy!).toBeLessThanOrEqual(11);
+      }
+    }
+  });
+
   it('rebuilds the same battle from the same seed', () => {
     const a = createStageLevel(1234, FIRST);
     const b = createStageLevel(1234, FIRST);
