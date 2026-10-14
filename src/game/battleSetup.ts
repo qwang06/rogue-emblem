@@ -10,6 +10,7 @@ import { REGION_SETTINGS } from '../data/regions.ts';
 import { getRegionStages, getStageRegion, type RegionSettings } from './warband/regions.ts';
 import { getStageSeed, restoreRoster, type RunState } from './warband/run.ts';
 import { createStageLevel } from './warband/stageLevel.ts';
+import { pickStageObjective, placeObjective } from './warband/stageObjective.ts';
 import { getStageLootCount } from './loot.ts';
 import { createDemoLevel, type DemoLevel } from './demoLevel.ts';
 import { createTrainingLevel, type Level } from './trainingLevel.ts';
@@ -63,7 +64,8 @@ function getStoryChapter(chapter: number, chapters: readonly StoryChapter[]): St
 // Builds the level a setup describes from `content` (its dialog, and a
 // Warband Mode stage's region). A stage of a run fields the run's roster
 // and deploy cap; one without a run (a region preview) the starting
-// warband. Either way the stage's enemies carry its loot (getStageLootCount).
+// warband. Either way the stage's enemies carry its loot (getStageLootCount),
+// and it plays the objective pickStageObjective gives it.
 export function createBattleLevel(
   setup: BattleSetup,
   content: GameContent = DEFAULT_CONTENT,
@@ -74,22 +76,15 @@ export function createBattleLevel(
       return getStoryChapter(setup.chapter, chapters).createLevel(content);
     case 'training':
       return createTrainingLevel(setup.unitClass, content.dialogs.training);
-    case 'warband':
-      return setup.run
-        ? createStageLevel(
-            setup.seed,
-            getStageRegion(setup.stage, content.regions),
-            restoreRoster(setup.run),
-            setup.run.deployCap,
-            getStageLootCount(setup.stage),
-          )
-        : createStageLevel(
-            setup.seed,
-            getStageRegion(setup.stage, content.regions),
-            undefined,
-            undefined,
-            getStageLootCount(setup.stage),
-          );
+    case 'warband': {
+      const region = getStageRegion(setup.stage, content.regions);
+      const lootCount = getStageLootCount(setup.stage);
+      const level = setup.run
+        ? createStageLevel(setup.seed, region, restoreRoster(setup.run), setup.run.deployCap, lootCount)
+        : createStageLevel(setup.seed, region, undefined, undefined, lootCount);
+      const objective = placeObjective(pickStageObjective(setup.stage, region, setup.seed), level);
+      return { ...level, objective };
+    }
   }
 }
 

@@ -281,12 +281,9 @@ describe('createStageLevel', () => {
 });
 
 describe('stage objectives', () => {
-  it('is a rout unless the region sets its own objective', () => {
-    for (const region of REGION_CONFIGS) {
-      expect(createStageLevel(1, region).objective).toEqual(region.objective ?? ROUT);
-    }
-    const special = { ...REGION_CONFIGS[0], objective: { kind: 'rout' } as const };
-    expect(createStageLevel(1, special).objective).toBe(special.objective);
+  it('is a rout until battleSetup places the stage’s own (stageObjective.ts)', () => {
+    const special = { ...REGION_CONFIGS[0], objective: { kind: 'seize' } as const };
+    expect(createStageLevel(1, special).objective).toBe(ROUT);
   });
 });
 

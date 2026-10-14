@@ -30,6 +30,7 @@
 import { countEnemies, getGroupRoom, NORTH_THIRD, type EnemyGroup, type SpawnArea } from '../enemySpawns.ts';
 import type { Grid, Point } from '../grid.ts';
 import type { MapGenOptions } from '../mapGen.ts';
+import { OBJECTIVE_KINDS, type ObjectiveSpec } from '../objectives.ts';
 import { BUILDING_PALETTES, type BuildingPaletteName } from '../tileset.ts';
 import type { RegionConfig, RegionSettings } from './regions.ts';
 import { createStageLevel } from './stageLevel.ts';
@@ -48,6 +49,7 @@ export const REGION_LIMITS = Object.freeze({
   enemyGroups: [1, 10],
   enemyDistance: [1, 100],
   enemyHealth: [1, 99],
+  surviveTurns: [1, 30],
 } as const);
 
 // Seeds each region is test-generated with.
@@ -218,12 +220,24 @@ function parseRegion(value: unknown, path: string): RegionConfig {
     treeChance: chance(json.treeChance, `${path}.treeChance`),
     palette: json.palette as BuildingPaletteName,
   };
-  if (json.objective !== undefined) {
-    const objective = object(json.objective, `${path}.objective`, ['kind']);
-    if (objective.kind !== 'rout') fail(`${path}.objective.kind`, 'must be "rout"');
-    region.objective = Object.freeze({ kind: 'rout' });
-  }
+  if (json.objective !== undefined) region.objective = parseObjective(json.objective, `${path}.objective`);
   return Object.freeze(region);
+}
+
+// A region's objective: { kind } with one of OBJECTIVE_KINDS, plus an
+// optional `turns` for survive.
+function parseObjective(value: unknown, path: string): ObjectiveSpec {
+  const json = object(value, path, ['kind', 'turns']);
+  const kind = json.kind;
+  if (typeof kind !== 'string' || !(OBJECTIVE_KINDS as readonly string[]).includes(kind)) {
+    fail(`${path}.kind`, `must be one of ${OBJECTIVE_KINDS.map((k) => `"${k}"`).join(', ')}`);
+  }
+  if (kind !== 'survive') {
+    if (json.turns !== undefined) fail(`${path}.turns`, 'is only for a survive objective');
+    return Object.freeze({ kind: kind as 'rout' | 'seize' | 'boss' });
+  }
+  if (json.turns === undefined) return Object.freeze({ kind });
+  return Object.freeze({ kind, turns: wholeNumber(json.turns, `${path}.turns`, REGION_LIMITS.surviveTurns) });
 }
 
 // Why a region's enemies didn't all fit on a sample map, aimed at the

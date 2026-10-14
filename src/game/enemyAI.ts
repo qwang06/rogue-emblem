@@ -32,6 +32,13 @@ export interface RushPlan {
 // is better (createAttackScorer in aiScoring.ts builds one).
 export type AttackScorer = (from: Point, target: TargetTile) => number;
 
+// How far `unit` moves on its phase: its movement, or nowhere if it holds
+// its position (a boss), in which case it only strikes what it can reach
+// from where it stands.
+export function getPhaseMovement(unit: { movement: number; holdsPosition?: boolean }): number {
+  return unit.holdsPosition ? 0 : unit.movement;
+}
+
 // Movement budget for "anywhere on the map". Finite on purpose: impassable
 // terrain costs Infinity, and Infinity + 1 > Infinity is false.
 const UNLIMITED_MOVEMENT = Number.MAX_SAFE_INTEGER;

@@ -116,6 +116,10 @@ export class Unit {
   // An item this unit drops when it's defeated (see loot.ts), carried apart
   // from its inventory so it never fights with it.
   loot: Item | null = null;
+  // Whether this unit stands its ground on the enemy phase: it strikes
+  // anyone in reach of its tile but never moves (a boss, see
+  // warband/stageObjective.ts).
+  holdsPosition = false;
 
   constructor({
     name,
