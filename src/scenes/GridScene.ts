@@ -133,6 +133,7 @@ import { getArrowPieces } from '../game/moveArrow.ts';
 import { getQuarterFrameMap, getTileFrame, type Autotile } from '../game/autotile.ts';
 import { getBuildingSprites, getFeatureSprites, getWallAutotile, type MapSprite } from '../game/mapArt.ts';
 import { canMoveAlongPath, extendMovePath, getMovementRange } from '../game/movement.ts';
+import { pickAttackPlan } from '../game/attackMove.ts';
 import { getDangerZone } from '../game/dangerZone.ts';
 import { PAUSE_ACTIONS } from '../game/pauseMenu.ts';
 import {
@@ -180,7 +181,7 @@ import type { PopupKind } from '../bridge/views.ts';
 import type { Skill } from '../game/skills.ts';
 import type { BattleOutcome, Team, TurnState } from '../game/turns.ts';
 import type { Unit } from '../game/Unit.ts';
-import type { ItemAction } from '../game/items.ts';
+import type { Inventory, ItemAction } from '../game/items.ts';
 import type { SkillAction } from '../game/skills.ts';
 import type { RosterMenuEntry } from '../bridge/gameStore.ts';
 
@@ -296,6 +297,7 @@ export class GridScene extends Phaser.Scene {
   rangeMode: RangeMode | null = null;
   activeSkill: Skill | null = null;
   activeStaff: CarriedStaff | null = null;
+  attackMoveItems: Inventory | null = null;
   rangeTiles: Phaser.GameObjects.Rectangle[] | null = null;
   dangerZoneVisible = false;
   dangerZoneTiles: Phaser.GameObjects.Rectangle[] = [];
@@ -412,6 +414,7 @@ export class GridScene extends Phaser.Scene {
     this.rangeMode = null; // 'move' | 'attack' | 'skill' | 'heal' while choosing a destination or target
     this.activeSkill = null; // the skill being aimed while rangeMode is 'skill'
     this.activeStaff = null; // the staff being aimed while rangeMode is 'heal'
+    this.attackMoveItems = null; // the active unit's items before an attack straight from its move, to undo its equip
     this.rangeTiles = null; // highlight rectangles for the current range
     this.dangerZoneVisible = false; // whether every enemy's reach is shaded (toggled with D or the header button)
     this.dangerZoneTiles = []; // highlight rectangles for the danger zone
@@ -585,6 +588,16 @@ export class GridScene extends Phaser.Scene {
         this.hideRange();
         this.setCursor(this.activeUnit!.x, this.activeUnit!.y);
         this.activeUnit = null;
+        return;
+      }
+      if (cancel && this.rangeMode === 'attack' && this.attackMoveItems) {
+        // An attack picked straight from the move range backs out all the
+        // way to choosing where to move, with the unit's weapons as they were.
+        this.activeUnit!.unit.items = this.attackMoveItems;
+        this.attackMoveItems = null;
+        this.hideRange();
+        this.undoMove();
+        this.showMoveRange();
         return;
       }
       if (cancel && this.rangeMode === 'attack') {
@@ -1554,12 +1567,35 @@ export class GridScene extends Phaser.Scene {
 
   // Follows the cursor with the planned route (extendMovePath keeps the
   // way the player traced it where it can) and redraws the arrow along it.
+  // Over a hostile unit it can strike from somewhere in its range, the
+  // route runs to the tile it would attack from instead (getMoveAttackPlan).
   updateMovePath() {
     const { unit } = this.activeUnit!;
-    const path = extendMovePath(this.grid, this.movePath!, this.cursor, unit.movement, this.movementOptions(unit));
+    const to = this.getMoveAttackPlan()?.tile ?? this.cursor;
+    const path = extendMovePath(this.grid, this.movePath!, to, unit.movement, this.movementOptions(unit));
     if (path === this.movePath) return;
     this.movePath = path;
     this.drawMoveArrow(path);
+  }
+
+  // While choosing where to move, the hostile unit under the cursor if the
+  // active unit can strike it after moving, with the tile to strike from
+  // and the weapon to use (pickAttackPlan in src/game/attackMove.ts; the
+  // equipped weapon is tried first), or null.
+  getMoveAttackPlan() {
+    const { unit } = this.activeUnit!;
+    const unitId = getCell(this.grid, this.cursor.x, this.cursor.y)?.unitId;
+    if (!unitId || !this.isHostileTo(unit)(unitId)) return null;
+    const weapons = unit.wieldableWeapons;
+    const plan = pickAttackPlan(
+      this.moveRange!,
+      this.movePath!,
+      this.cursor,
+      weapons.map(({ weapon }) => weapon),
+    );
+    if (!plan) return null;
+    const target: TargetTile = { x: this.cursor.x, y: this.cursor.y, unitId };
+    return { tile: plan.tile, weapon: weapons[plan.weaponIndex], target };
   }
 
   // Draws the arrow pieces from src/game/moveArrow.ts above the range
@@ -1703,11 +1739,14 @@ export class GridScene extends Phaser.Scene {
   // Moves the active unit to the tile under the cursor, if that tile is in
   // its range. It walks the planned route the arrow shows, tile by tile;
   // confirming the unit's own tile keeps it there. Either way the action
-  // menu opens next.
+  // menu opens next. Confirming a hostile unit it can strike after moving
+  // instead walks to the tile it attacks from and goes straight to aiming
+  // at it, so the combat forecast is the only step left.
   tryMoveActiveUnit() {
     const { unitId, x, y } = this.activeUnit!;
     const from = { x, y };
-    const to = { x: this.cursor.x, y: this.cursor.y };
+    const attack = this.getMoveAttackPlan();
+    const to = attack ? { x: attack.tile.x, y: attack.tile.y } : { x: this.cursor.x, y: this.cursor.y };
     const path = this.movePath!;
     if (!canMoveAlongPath(this.moveRange!, path, to)) return;
 
@@ -1719,10 +1758,25 @@ export class GridScene extends Phaser.Scene {
       // Remember where it came from so cancelling the menu can undo the move.
       this.activeUnit = { ...this.activeUnit!, x: to.x, y: to.y, origin: from };
       this.inputLocked = false;
+      if (attack) {
+        this.aimAttackFromMove(attack.weapon.index, attack.target);
+        return;
+      }
       this.setCursor(to.x, to.y);
       // Straight on to the rest of the unit's action, with Move now used up.
       this.openActionMenu();
     });
+  }
+
+  // After moving to attack `target`: equips the weapon in inventory slot
+  // `weaponIndex` and aims it at the target, remembering the inventory so
+  // cancelling can put both the weapon and the unit back.
+  aimAttackFromMove(weaponIndex: number, target: Point) {
+    const { unit } = this.activeUnit!;
+    this.attackMoveItems = unit.items;
+    unit.equip(weaponIndex);
+    this.showAttackRange();
+    this.setCursor(target.x, target.y);
   }
 
   // Puts the active unit back where it stood before its move this phase
@@ -1745,6 +1799,7 @@ export class GridScene extends Phaser.Scene {
 
     this.hideRange();
     this.activeUnit = null;
+    this.attackMoveItems = null;
     this.resolveAttack(unitId, target, () => this.finishPlayerAction(unitId));
   }
 
