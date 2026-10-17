@@ -169,6 +169,13 @@ export class Unit {
     this.tomeProgress = Object.freeze({ ...tomeProgress });
   }
 
+  // A copy of this unit, of the same class, that can change without
+  // changing this one. Stats are plain numbers and its inventory and tome
+  // progress are replaced rather than edited, so a shallow copy is enough.
+  clone(): this {
+    return Object.assign(Object.create(Object.getPrototypeOf(this)), this);
+  }
+
   isAlive(): boolean {
     return this.health > 0;
   }
