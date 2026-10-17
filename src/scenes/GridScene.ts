@@ -36,19 +36,16 @@ import {
   type StageClearView,
 } from '../bridge/views.ts';
 import { createActionMenu, getSelectedAction, getUnitActions, moveSelection, selectIndex } from '../game/actionMenu.ts';
-import { getCombatAward, getCombatOutcome, type ExperienceAward } from '../game/experience.ts';
 import {
   findUsableStaff,
-  getHealAmount,
   getHealTargets,
   getStaves,
-  HEAL_EXPERIENCE,
   isWounded,
   type CarriedStaff,
   type Staff,
 } from '../game/healing.ts';
-import { calculateSkillDamage, findLearnedSkill, getLearnedSkills, getSkillActions } from '../game/skills.ts';
-import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange, resolveCombat } from '../game/combat.ts';
+import { findLearnedSkill, getLearnedSkills, getSkillActions } from '../game/skills.ts';
+import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange } from '../game/combat.ts';
 import { getFitZoom } from '../game/camera.ts';
 import { createCursor, moveCursor } from '../game/cursor.ts';
 import {
@@ -59,8 +56,7 @@ import {
   runStage,
   type GameContent,
 } from '../game/battleSetup.ts';
-import { finishStage, type ItemSnapshot, type PendingReward, type RunState } from '../game/warband/run.ts';
-import { claimLoot, getLootQuantity } from '../game/loot.ts';
+import { finishStage, type PendingReward, type RunState } from '../game/warband/run.ts';
 import {
   addGold,
   applyExperienceReward,
@@ -99,41 +95,21 @@ import { randomSeed } from '../game/rng.ts';
 import { getStructureTiles } from '../game/structures.ts';
 import { getConsumables, getItemActions } from '../game/items.ts';
 import { getWeaponActions, getWeaponReach, type Weapon, type WeaponAction } from '../game/weapons.ts';
-import { getPhaseMovement, planRushAction } from '../game/enemyAI.ts';
-import { createAttackScorer } from '../game/aiScoring.ts';
+import { getPhaseMovement } from '../game/enemyAI.ts';
 import {
   canDeployUnit,
   canPlaceUnit,
   canStartBattle,
   getDeploymentActions,
-  getDeploymentLimit,
   getFirstOpenTile,
   isDeploymentComplete,
   isPlaced,
-  placeUnit,
 } from '../game/deployment.ts';
-import {
-  findTileAt,
-  findUnit,
-  getCell,
-  getDistance,
-  gridToWorld,
-  isSameTile,
-  moveUnit,
-  setUnit,
-  worldToTile,
-} from '../game/grid.ts';
+import { findTileAt, findUnit, getCell, getDistance, gridToWorld, isSameTile, worldToTile } from '../game/grid.ts';
 import { getTeamUnitIds, isAllyOf, isHostileTo } from '../game/teams.ts';
 import { advanceDialog, createDialog, DIALOG_CHARS_PER_SECOND, getCurrentLine } from '../game/dialog.ts';
 import { getTriggeredDialog, turnTrigger } from '../game/dialogScript.ts';
-import {
-  DEFAULT_OBJECTIVE,
-  describeObjective,
-  getObjectiveOutcome,
-  getObjectiveStatus,
-  type BattleSnapshot,
-  type Objective,
-} from '../game/objectives.ts';
+import { describeObjective, getObjectiveStatus, type Objective } from '../game/objectives.ts';
 import { getPathFacings } from '../game/facing.ts';
 import { createKeyRepeat, updateKeyRepeat } from '../game/keyRepeat.ts';
 import { getArrowPieces } from '../game/moveArrow.ts';
@@ -142,8 +118,19 @@ import { getBuildingSprites, getFeatureSprites, getWallAutotile, type MapSprite 
 import { canMoveAlongPath, extendMovePath, getMovementRange } from '../game/movement.ts';
 import { pickAttackPlan } from '../game/attackMove.ts';
 import { getDangerZone } from '../game/dangerZone.ts';
-import { PAUSE_ACTIONS } from '../game/pauseMenu.ts';
-import { createTurnState, isDone, isPhaseOver, markDone, markMoved, nextPhase, unmarkMoved } from '../game/turns.ts';
+import { getPauseActions } from '../game/pauseMenu.ts';
+import { planNextTurn } from '../game/battle/ai.ts';
+import { findEvent, type BattleCommand, type BattleEvent, type BattleEventOf } from '../game/battle/commands.ts';
+import {
+  createHistory,
+  dispatch,
+  getCurrentState,
+  rewindTo,
+  undoLastAction,
+  type BattleHistory,
+} from '../game/battle/history.ts';
+import { createBattleState, getDeployedUnits, type BattleState as Battle } from '../game/battle/state.ts';
+import { isDone } from '../game/turns.ts';
 import {
   ARROW_TILES,
   BUILDING_ART,
@@ -171,7 +158,7 @@ import type { DialogScripts } from '../game/dialogScript.ts';
 import type { Grid, Point } from '../game/grid.ts';
 import type { Direction, KeyRepeatState, Step } from '../game/keyRepeat.ts';
 import type { MovementOptions, RangeTile } from '../game/movement.ts';
-import type { CombatSide, Strike, TargetTile } from '../game/combat.ts';
+import type { TargetTile } from '../game/combat.ts';
 import type { StructurePlacement, TreePlacement } from '../game/demoLevel.ts';
 import type { Facing } from '../game/facing.ts';
 import type { UnitAnimation } from '../game/tileset.ts';
@@ -179,7 +166,7 @@ import type { PopupKind } from '../bridge/views.ts';
 import type { Skill } from '../game/skills.ts';
 import type { BattleOutcome, Team, TurnState } from '../game/turns.ts';
 import type { Unit } from '../game/Unit.ts';
-import type { Inventory, ItemAction } from '../game/items.ts';
+import type { ItemAction, RestoreStat } from '../game/items.ts';
 import type { SkillAction } from '../game/skills.ts';
 import type { RosterMenuEntry } from '../bridge/gameStore.ts';
 
@@ -234,11 +221,16 @@ type ActionKey = 'confirm' | 'confirmAlt' | 'cancel' | 'cancelAlt' | 'dangerZone
 type RangeMode = 'move' | 'attack' | 'skill' | 'heal';
 
 // The unit whose menu or range is open, where it stands, and (after a move)
-// where it came from.
-interface ActiveUnit extends Point {
+// where it came from and how many commands the battle had before it.
+interface ActiveUnitState extends Point {
   unitId: string;
-  unit: Unit;
   origin?: Point;
+  movedAt?: number;
+}
+
+// The same, with the unit as the battle now has it.
+interface ActiveUnit extends ActiveUnitState {
+  unit: Unit;
 }
 
 // Pointer input queued for the next update: tile hovers and clicks from
@@ -246,20 +238,16 @@ interface ActiveUnit extends Point {
 type PointerInput = Command | ({ type: 'hover-tile' | 'click-tile' } & Point);
 
 export class GridScene extends Phaser.Scene {
-  // Battle state, all (re)set in create().
-  grid!: Grid;
-  units!: Map<string, Unit>;
-  roster!: string[];
-  // The roster units placed when the battle started, kept after they fall
-  // (units drops them), so a Warband run can write the battle back.
-  deployedUnits!: Map<string, Unit>;
-  // Loot sent to the convoy because its finder's bag was full (see
-  // dropLoot), handed to a Warband run when the battle ends.
-  convoyLoot: ItemSnapshot[] = [];
-  deploymentZone!: Point[];
-  deploymentLimit!: number;
+  // The battle: where it started and every command since (see
+  // src/game/battle/), (re)set in create().
+  history!: BattleHistory;
+  // The battle as the map shows it. It trails the battle while a command's
+  // events play out, so units fall and lose health as the animations get
+  // there (with `shownStats` for the health and mana mid-exchange), and
+  // catches up once they're done (syncShown).
+  shown!: Battle;
+  shownStats = new Map<string, { health?: number; mana?: number }>();
   dialogs!: DialogScripts;
-  objective!: Objective;
   setup!: BattleSetup;
   // The game content this battle was built from (built-in data plus any uploads).
   content!: GameContent;
@@ -296,11 +284,11 @@ export class GridScene extends Phaser.Scene {
   pauseMenu: Menu | null = null;
   placingUnitId: string | null = null;
   zoneTiles: Phaser.GameObjects.Rectangle[] | null = null;
-  activeUnit: ActiveUnit | null = null;
+  activeUnitState: ActiveUnitState | null = null;
   rangeMode: RangeMode | null = null;
   activeSkill: Skill | null = null;
   activeStaff: CarriedStaff | null = null;
-  attackMoveItems: Inventory | null = null;
+  attackFromMove = false;
   rangeTiles: Phaser.GameObjects.Rectangle[] | null = null;
   dangerZoneVisible = false;
   dangerZoneTiles: Phaser.GameObjects.Rectangle[] = [];
@@ -310,10 +298,10 @@ export class GridScene extends Phaser.Scene {
   movePath: readonly Point[] | null = null;
   arrowSprites: Sprite[] = [];
   inputLocked = false;
-  turnState: TurnState | null = null;
   battleOutcome: BattleOutcome | null = null;
   nextBannerId = 1;
   hoveredUnit: Unit | null = null;
+  hoveredUnitId: string | null = null;
   nextPopupId = 1;
   nextProgressId = 1;
   dialog: Dialog | null = null;
@@ -330,6 +318,71 @@ export class GridScene extends Phaser.Scene {
 
   constructor() {
     super('Grid');
+  }
+
+  // The battle as it stands, ahead of the map while events play out.
+  get battle(): Battle {
+    return getCurrentState(this.history);
+  }
+
+  // The map's view of the battle (see `shown`).
+  get grid(): Grid {
+    return this.shown.grid;
+  }
+
+  get units(): ReadonlyMap<string, Unit> {
+    return this.shown.units;
+  }
+
+  get roster(): readonly string[] {
+    return this.shown.roster;
+  }
+
+  get deploymentZone(): readonly Point[] {
+    return this.shown.deploymentZone;
+  }
+
+  get deploymentLimit(): number {
+    return this.shown.deploymentLimit;
+  }
+
+  get objective(): Objective {
+    return this.shown.objective;
+  }
+
+  get turnState(): TurnState | null {
+    return this.shown.turnState;
+  }
+
+  // The active unit as the battle now has it: commands replace units
+  // rather than change them, so it's looked up afresh each time.
+  get activeUnit(): ActiveUnit | null {
+    const state = this.activeUnitState;
+    return state && { ...state, unit: this.units.get(state.unitId)! };
+  }
+
+  set activeUnit(active: ActiveUnitState | null) {
+    this.activeUnitState = active && {
+      unitId: active.unitId,
+      x: active.x,
+      y: active.y,
+      origin: active.origin,
+      movedAt: active.movedAt,
+    };
+  }
+
+  // Gives the battle a command and records it, returning what happened.
+  // The map doesn't show it until syncShown.
+  dispatch(command: BattleCommand): readonly BattleEvent[] {
+    const { history, events } = dispatch(this.history, command);
+    this.history = history;
+    return events;
+  }
+
+  // Catches the map's view up with the battle.
+  syncShown() {
+    this.shown = this.battle;
+    this.shownStats.clear();
   }
 
   preload() {
@@ -362,16 +415,12 @@ export class GridScene extends Phaser.Scene {
     // Configs uploaded in the config editor replace the built-in ones.
     this.content = getActiveContent();
     const level = createBattleLevel(setup, this.content);
-    this.grid = level.grid;
-    this.units = level.units; // unitId -> Unit, player roster and enemies alike
-    this.roster = level.roster; // player unitIds that can be deployed
-    this.deployedUnits = new Map(); // filled in when the battle starts
-    this.convoyLoot = [];
-    this.deploymentZone = level.deploymentZone;
-    // How many roster units can be placed: the level's max, capped by roster and zone size.
-    this.deploymentLimit = getDeploymentLimit(level.roster, level.deploymentZone, level.maxDeployed);
+    // The grid, every unit (player roster and enemies alike), the deployment
+    // zone and limit, and the objective, with the battle's rolls seeded fresh.
+    this.history = createHistory(createBattleState(level, randomSeed()));
+    this.shown = this.battle;
+    this.shownStats = new Map();
     this.dialogs = level.dialogs; // the level's conversations by trigger (src/game/dialogScript.ts)
-    this.objective = level.objective ?? DEFAULT_OBJECTIVE; // what wins the battle (src/game/objectives.ts)
 
     const palette = BUILDING_PALETTES[level.palette ?? DEFAULT_BUILDING_PALETTE];
     this.renderTerrain(this.grid, { ...TERRAIN_AUTOTILES, wall: getWallAutotile(palette) });
@@ -414,11 +463,11 @@ export class GridScene extends Phaser.Scene {
     this.pauseMenu = null; // End Turn / Main Menu / Settings, opened with cancel on the bare map
     this.placingUnitId = null; // unit being placed while choosing its tile
     this.zoneTiles = null; // highlight rectangles for the deployment zone
-    this.activeUnit = null; // { unitId, unit, x, y } the menu / range belongs to
+    this.activeUnit = null; // { unitId, x, y } the menu / range belongs to (unit looked up)
     this.rangeMode = null; // 'move' | 'attack' | 'skill' | 'heal' while choosing a destination or target
     this.activeSkill = null; // the skill being aimed while rangeMode is 'skill'
     this.activeStaff = null; // the staff being aimed while rangeMode is 'heal'
-    this.attackMoveItems = null; // the active unit's items before an attack straight from its move, to undo its equip
+    this.attackFromMove = false; // aiming an attack picked straight from the move range
     this.rangeTiles = null; // highlight rectangles for the current range
     this.dangerZoneVisible = false; // whether every enemy's reach is shaded (toggled with D or the header button)
     this.dangerZoneTiles = []; // highlight rectangles for the danger zone
@@ -428,10 +477,10 @@ export class GridScene extends Phaser.Scene {
     this.movePath = null; // planned route [{ x, y }] from the active unit to the cursor
     this.arrowSprites = []; // arrow pieces drawn along movePath
     this.inputLocked = false; // input is ignored while a move, hit, banner, or the enemy phase plays out
-    this.turnState = null; // from src/game/turns.ts once the battle starts
     this.battleOutcome = null; // 'victory' | 'defeat' once the battle is decided
     this.nextBannerId = 1;
     this.hoveredUnit = null;
+    this.hoveredUnitId = null;
     this.nextPopupId = 1;
     this.nextProgressId = 1; // changes per XP bar / level-up panel so React restarts their animations
     this.dialog = null; // from src/game/dialog.ts while a conversation is showing
@@ -594,11 +643,10 @@ export class GridScene extends Phaser.Scene {
         this.activeUnit = null;
         return;
       }
-      if (cancel && this.rangeMode === 'attack' && this.attackMoveItems) {
+      if (cancel && this.rangeMode === 'attack' && this.attackFromMove) {
         // An attack picked straight from the move range backs out all the
-        // way to choosing where to move, with the unit's weapons as they were.
-        this.activeUnit!.unit.items = this.attackMoveItems;
-        this.attackMoveItems = null;
+        // way to choosing where to move, taking its equip back with the move.
+        this.attackFromMove = false;
         this.hideRange();
         this.undoMove();
         this.showMoveRange();
@@ -631,7 +679,7 @@ export class GridScene extends Phaser.Scene {
       this.hideEnemyReach();
       // Selecting a unit goes straight to choosing where it moves; the
       // action menu opens once it has (confirming its own tile stays put).
-      this.activeUnit = { unitId, unit: this.hoveredUnit, x: this.cursor.x, y: this.cursor.y };
+      this.activeUnit = { unitId, x: this.cursor.x, y: this.cursor.y };
       this.showMoveRange();
       return;
     } else if (confirm && this.hoveredUnit) {
@@ -642,7 +690,8 @@ export class GridScene extends Phaser.Scene {
       return;
     } else if (cancel) {
       // Nothing to back out of on the bare map, so cancel opens the pause menu.
-      this.publishMenu('pauseMenu', createActionMenu(PAUSE_ACTIONS));
+      const canUndo = undoLastAction(this.history) !== null;
+      this.publishMenu('pauseMenu', createActionMenu(getPauseActions({ canUndo })));
       return;
     }
 
@@ -693,7 +742,7 @@ export class GridScene extends Phaser.Scene {
       } else if (action?.id === 'wait') {
         const { unitId } = this.activeUnit!;
         this.activeUnit = null;
-        this.finishPlayerAction(unitId);
+        this.finishPlayerAction(this.dispatch({ type: 'wait', unitId }));
       }
       return;
     }
@@ -776,8 +825,9 @@ export class GridScene extends Phaser.Scene {
       const action = getSelectedAction(this.weaponMenu!);
       if (!action || action.disabled) return;
       this.publishMenu('weaponMenu', null);
-      const { unit, x, y } = this.activeUnit!;
-      unit.equip(action.index);
+      const { unitId, x, y } = this.activeUnit!;
+      this.dispatch({ type: 'equip', unitId, index: action.index });
+      this.syncShown();
       this.setCursor(x, y);
       this.showAttackRange();
       return;
@@ -875,8 +925,9 @@ export class GridScene extends Phaser.Scene {
   }
 
   // While the pause menu is open it owns input: cancel closes it, End Turn
-  // hands over to the enemy phase, Main Menu leaves the battle for the
-  // title screen. Settings isn't built yet.
+  // hands over to the enemy phase, Undo takes the last player action back,
+  // Main Menu leaves the battle for the title screen. Settings isn't built
+  // yet.
   updatePauseMenu(dy: number, confirm: boolean, cancel: boolean) {
     if (cancel) {
       this.publishMenu('pauseMenu', null);
@@ -885,7 +936,9 @@ export class GridScene extends Phaser.Scene {
 
     if (confirm) {
       const action = getSelectedAction(this.pauseMenu!);
+      if (action?.disabled) return;
       if (action?.id === 'end-turn') this.endPlayerPhase();
+      else if (action?.id === 'undo') this.undoLastPlayerAction();
       else if (action?.id === 'main-menu') this.exitToTitle();
       else console.info(`Pause action selected: ${action?.id}`);
       return;
@@ -1322,7 +1375,8 @@ export class GridScene extends Phaser.Scene {
     const { x, y } = this.cursor;
     if (!canPlaceUnit(this.grid, this.deploymentZone, unitId, x, y)) return;
 
-    this.grid = placeUnit(this.grid, this.deploymentZone, unitId, x, y);
+    this.dispatch({ type: 'place', unitId, to: { x, y } });
+    this.syncShown();
     this.refreshDangerZone();
     const sprite = this.unitSprites.get(unitId);
     if (sprite) {
@@ -1349,13 +1403,9 @@ export class GridScene extends Phaser.Scene {
     this.phase = 'battle';
     gameStore.setState({ phase: 'battle', deploymentStep: null, deploymentLimit: null });
 
-    for (const unitId of this.roster) {
-      if (isPlaced(this.grid, unitId)) this.deployedUnits.set(unitId, this.units.get(unitId)!);
-      else this.units.delete(unitId);
-    }
-
+    const events = this.dispatch({ type: 'start-battle' });
     this.setCursorVisible(true);
-    this.startPhase(createTurnState());
+    this.continueBattle(events, () => {});
   }
 
   // ---- Turns ------------------------------------------------------------
@@ -1366,12 +1416,31 @@ export class GridScene extends Phaser.Scene {
   // with the plan from src/game/enemyAI.ts. After every action the battle
   // checks for victory or defeat.
 
-  // Announces the phase with a banner (input locked meanwhile), then either
-  // hands input to the player or runs the enemies.
-  startPhase(turnState: TurnState) {
-    this.turnState = turnState;
-    // A new turn can decide the battle on its own (a survive objective).
-    if (this.checkOutcome()) return;
+  // After a command's events have played out: shows the battle as it now
+  // stands, then the result if the command decided the battle, the next
+  // phase if it began one, or else `otherwise` (input back to the player,
+  // or the next enemy).
+  continueBattle(events: readonly BattleEvent[], otherwise: () => void) {
+    this.syncShown();
+    this.refreshDoneTints();
+    this.refreshDangerZone();
+    this.updateHoveredUnit();
+    const { outcome } = this.battle;
+    if (outcome) {
+      this.showOutcome(outcome);
+      return;
+    }
+    if (findEvent(events, 'phase-started')) {
+      this.startPhase();
+      return;
+    }
+    otherwise();
+  }
+
+  // Announces the phase the battle is in with a banner (input locked
+  // meanwhile), then either hands input to the player or runs the enemies.
+  startPhase() {
+    const turnState = this.turnState!;
     this.hideEnemyReach();
     for (const sprite of this.unitSprites.values()) sprite.clearTint();
     gameStore.setState({
@@ -1407,57 +1476,61 @@ export class GridScene extends Phaser.Scene {
     });
   }
 
-  // Marks a unit done for the phase and greys out its sprite.
-  finishUnit(unitId: string) {
-    this.turnState = markDone(this.turnState!, unitId);
-    this.unitSprites.get(unitId)?.setTint(DONE_TINT);
-    this.refreshDangerZone();
+  // Greys out the units that are done for the phase, and only them.
+  refreshDoneTints() {
+    const { turnState } = this;
+    for (const [unitId, sprite] of this.unitSprites) {
+      if (turnState && isDone(turnState, unitId)) sprite.setTint(DONE_TINT);
+      else sprite.clearTint();
+    }
   }
 
-  // Called once a player unit's action has fully played out: finishes the
-  // unit, then ends the battle or the phase if that action decided it.
-  finishPlayerAction(unitId: string) {
-    this.finishUnit(unitId);
+  // Called once a player unit's action (its command's `events`) has fully
+  // played out: ends the battle or the phase if that action decided it,
+  // else hands input back.
+  finishPlayerAction(events: readonly BattleEvent[]) {
     this.inputLocked = false;
-    this.updateHoveredUnit();
-    if (this.checkOutcome()) return;
-    if (isPhaseOver(this.turnState!, this.teamUnitIds('player'))) {
-      this.startPhase(nextPhase(this.turnState!));
-    }
+    this.continueBattle(events, () => {});
   }
 
   // Ends the player phase early from the pause menu: any units that haven't
   // acted simply forfeit their action, and the enemy phase begins.
   endPlayerPhase() {
     this.publishMenu('pauseMenu', null);
-    this.startPhase(nextPhase(this.turnState!));
+    this.continueBattle(this.dispatch({ type: 'end-phase' }), () => {});
+  }
+
+  // Takes the last player action back (undoLastAction in
+  // src/game/battle/history.ts), along with the enemy phase if one
+  // followed it, and redraws the map as it was then.
+  undoLastPlayerAction() {
+    const rewound = undoLastAction(this.history);
+    if (!rewound) return;
+    this.publishMenu('pauseMenu', null);
+    this.history = rewound;
+    this.syncShown();
+    this.hideEnemyReach();
+    for (const sprite of this.unitSprites.values()) sprite.destroy();
+    this.renderUnits(this.grid);
+    this.refreshDoneTints();
+    this.refreshDangerZone();
+    const turnState = this.turnState!;
+    gameStore.setState({
+      turn: toTurnView(turnState),
+      objectiveStatus: getObjectiveStatus(this.objective, turnState.turn),
+    });
+    this.updateHoveredUnit();
   }
 
   teamUnitIds(team: Team): string[] {
     return getTeamUnitIds(this.units, team);
   }
 
-  // What the objective is checked against: every unit still in play, where
-  // it stands, and the turn.
-  battleSnapshot(): BattleSnapshot {
-    return {
-      turn: this.turnState?.turn ?? 1,
-      units: [...this.units].map(([unitId, unit]) => ({
-        unitId,
-        team: unit.team,
-        alive: unit.isAlive(),
-        position: findUnit(this.grid, unitId),
-      })),
-    };
-  }
-
-  // Ends the battle once its objective is won or lost (see
-  // getObjectiveOutcome), publishing the result for React; confirm then
-  // returns to the title. Returns whether it ended. The level's [victory]
-  // or [defeat] conversation plays before the result.
-  checkOutcome() {
-    const outcome = getObjectiveOutcome(this.objective, this.battleSnapshot());
-    if (!outcome) return false;
+  // Ends the battle once its objective is won or lost (the battle's
+  // outcome, see getObjectiveOutcome), publishing the result for React;
+  // confirm then returns to the title. The level's [victory] or [defeat]
+  // conversation plays before the result.
+  showOutcome(outcome: BattleOutcome) {
     this.battleOutcome = outcome;
     this.inputLocked = false;
     this.setCursorVisible(false);
@@ -1469,7 +1542,11 @@ export class GridScene extends Phaser.Scene {
       // stage, or forgets the run once the warband has fallen. A win pays
       // the clear's gold and rolls the rewards the reward screen offers.
       const before = this.setup.run;
-      const finished = finishStage(before, { units: this.deployedUnits, convoy: this.convoyLoot }, outcome);
+      const finished = finishStage(
+        before,
+        { units: getDeployedUnits(this.battle), convoy: this.battle.convoyLoot },
+        outcome,
+      );
       let run = finished.run;
       if (finished.over) {
         clearSavedRun();
@@ -1500,52 +1577,29 @@ export class GridScene extends Phaser.Scene {
     this.playTriggeredDialog(outcome, () =>
       gameStore.setState({ battleOutcome: outcome, nextBattle, runOver, stageClear }),
     );
-    return true;
   }
 
-  // Each enemy (in registry order) plans and carries out its action, one
-  // after another, then the player phase begins.
+  // Each enemy (in registry order) plans its action (src/game/battle/ai.ts)
+  // and carries it out, one after another, until the last one hands the
+  // phase back to the player.
   runEnemyPhase() {
-    const queue = this.teamUnitIds('enemy');
-    const next = () => {
-      if (this.checkOutcome()) return;
-      const unitId = queue.shift();
-      if (!unitId) {
-        this.startPhase(nextPhase(this.turnState!));
-        return;
-      }
-      this.takeEnemyAction(unitId, () => this.time.delayedCall(ENEMY_ACTION_DELAY_MS, next));
-    };
-    next();
+    const [move, act] = planNextTurn(this.battle);
+    if (move && act) this.takeEnemyAction(move, act);
   }
 
   // Puts the cursor on the enemy, walks it along its planned route, and
-  // attacks the planned target from the end of it.
-  takeEnemyAction(unitId: string, onDone: () => void) {
-    const unit = this.units.get(unitId)!;
-    const from = findUnit(this.grid, unitId)!;
-    const scoreTarget = createAttackScorer(unit, (id) => this.units.get(id)!);
-    const { path, target } = planRushAction(
-      this.grid,
-      from,
-      { movement: getPhaseMovement(unit), weapon: unit.weapon },
-      this.isHostileTo(unit),
-      this.movementOptions(unit),
-      scoreTarget,
-    );
-    const to = path[path.length - 1];
-    const finish = () => {
-      this.finishUnit(unitId);
-      onDone();
-    };
-
-    this.setCursor(from.x, from.y);
+  // carries out its act (an attack, or waiting) from the end of it.
+  takeEnemyAction(move: BattleCommand, act: BattleCommand) {
+    const moved = findEvent(this.dispatch(move), 'moved')!;
+    this.setCursor(moved.from.x, moved.from.y);
     this.time.delayedCall(ENEMY_FOCUS_DELAY_MS, () => {
-      this.walkSprite(this.unitSprites.get(unitId)!, path, () => {
-        this.grid = moveUnit(this.grid, from, to);
-        this.setCursor(to.x, to.y);
-        if (target) this.resolveAttack(unitId, target, finish);
-        else finish();
+      this.walkSprite(this.unitSprites.get(moved.unitId)!, moved.path, () => {
+        this.syncShown();
+        this.setCursor(moved.to.x, moved.to.y);
+        const events = this.dispatch(act);
+        this.playEvents(events, () =>
+          this.time.delayedCall(ENEMY_ACTION_DELAY_MS, () => this.continueBattle(events, () => this.runEnemyPhase())),
+        );
       });
     });
   }
@@ -1776,11 +1830,13 @@ export class GridScene extends Phaser.Scene {
 
     this.hideRange();
     this.inputLocked = true;
+    // Remember where it came from, and the battle before the move, so
+    // cancelling the menu can undo it.
+    const movedAt = this.history.entries.length;
+    this.dispatch({ type: 'move', unitId, to, path });
     this.walkSprite(this.unitSprites.get(unitId)!, path, () => {
-      this.grid = moveUnit(this.grid, from, to);
-      this.turnState = markMoved(this.turnState!, unitId);
-      // Remember where it came from so cancelling the menu can undo the move.
-      this.activeUnit = { ...this.activeUnit!, x: to.x, y: to.y, origin: from };
+      this.syncShown();
+      this.activeUnit = { ...this.activeUnit!, x: to.x, y: to.y, origin: from, movedAt };
       this.inputLocked = false;
       if (attack) {
         this.aimAttackFromMove(attack.weapon.index, attack.target);
@@ -1793,25 +1849,27 @@ export class GridScene extends Phaser.Scene {
   }
 
   // After moving to attack `target`: equips the weapon in inventory slot
-  // `weaponIndex` and aims it at the target, remembering the inventory so
-  // cancelling can put both the weapon and the unit back.
+  // `weaponIndex` and aims it at the target. Cancelling takes the equip
+  // back along with the move (see undoMove).
   aimAttackFromMove(weaponIndex: number, target: Point) {
-    const { unit } = this.activeUnit!;
-    this.attackMoveItems = unit.items;
-    unit.equip(weaponIndex);
+    const { unitId } = this.activeUnit!;
+    this.attackFromMove = true;
+    this.dispatch({ type: 'equip', unitId, index: weaponIndex });
+    this.syncShown();
     this.showAttackRange();
     this.setCursor(target.x, target.y);
   }
 
   // Puts the active unit back where it stood before its move this phase
-  // and gives it the move back.
+  // and gives it the move back: the battle goes back to before the move
+  // (and anything since, such as an equip).
   undoMove() {
-    const { unitId, unit, x, y, origin } = this.activeUnit!;
-    this.grid = moveUnit(this.grid, { x, y }, origin!);
-    this.turnState = unmarkMoved(this.turnState!, unitId);
+    const { unitId, origin, movedAt } = this.activeUnit!;
+    this.history = rewindTo(this.history, movedAt!);
+    this.syncShown();
     const pos = gridToWorld(origin!.x, origin!.y, TILE_SIZE);
     this.unitSprites.get(unitId)!.setPosition(pos.x, pos.y);
-    this.activeUnit = { unitId, unit, x: origin!.x, y: origin!.y };
+    this.activeUnit = { unitId, x: origin!.x, y: origin!.y };
     this.setCursor(origin!.x, origin!.y);
   }
 
@@ -1823,102 +1881,121 @@ export class GridScene extends Phaser.Scene {
 
     this.hideRange();
     this.activeUnit = null;
-    this.attackMoveItems = null;
-    this.resolveAttack(unitId, target, () => this.finishPlayerAction(unitId));
+    this.attackFromMove = false;
+    this.playPlayerAction({ type: 'attack', unitId, target: { x: target.x, y: target.y } });
   }
 
-  // One unit attacks another ({ x, y, unitId } target), for either side.
-  // The exchange — the attack, the defender's counter if the attacker is
-  // in its range, and a follow-up strike for whoever doubles, each rolled
-  // to hit and crit — comes from resolveCombat in src/game/combat.ts and is
-  // played strike by strike: each strike spends a use of the striker's
-  // weapon ("Broke!" pops up over it if that wears it out), and each hit's
-  // damage is applied right away so
-  // the HUD shows the new health while the struck sprite flashes and a
-  // damage number pops over it (a crit also shakes the camera); a miss just
-  // shows "Miss" for a moment. A unit brought to 0 health is removed once
-  // its flash finishes, which ends the exchange. Then the player unit in
-  // the fight, if it survived, gains XP (see showExperienceGain). Input
-  // stays locked until onDone.
-  resolveAttack(attackerId: string, target: TargetTile, onDone: () => void) {
-    const attacker = this.units.get(attackerId)!;
-    const defender = this.units.get(target.unitId)!;
-    const attackerTile = findUnit(this.grid, attackerId)!;
-    const distance = getDistance(attackerTile, target);
-    const { strikes } = resolveCombat(attacker, defender, { distance });
-    const sides = {
-      attacker: { unit: attacker, tile: { ...attackerTile, unitId: attackerId } },
-      defender: { unit: defender, tile: target },
-    };
-
+  // Gives the battle a player unit's act (attack, skill, heal or item),
+  // plays what happened with input locked, then moves the battle on.
+  playPlayerAction(command: BattleCommand) {
+    const events = this.dispatch(command);
     this.inputLocked = true;
-    const playStrike = (index: number) => {
-      const strike = strikes[index];
-      if (!strike) {
-        this.updateHoveredUnit();
-        this.awardCombatExperience(sides, strikes, onDone);
-        return;
-      }
-      // Every strike wears the striker's weapon, hit or miss, and one
-      // made with a tome can teach its spell (see tomes.ts).
-      const striker = sides[strike.by];
-      const { broke, learned, leftover } = striker.unit.spendWeaponUse();
-      const strikerSprite = this.unitSprites.get(striker.tile.unitId)!;
-      if (learned) {
-        if (leftover && striker.unit.team === 'player') {
-          this.convoyLoot.push({ itemId: leftover.item.id, quantity: leftover.quantity });
-        }
-        this.showDamagePopup(strikerSprite, 0, 'learned', learned.label);
-      } else if (broke) {
-        this.showDamagePopup(strikerSprite, 0, 'broke');
-      }
-      const struck = sides[strike.target];
-      const sprite = this.unitSprites.get(struck.tile.unitId)!;
-      if (!strike.hit) {
-        this.showDamagePopup(sprite, 0, 'miss');
-        this.time.delayedCall(MISS_PAUSE_MS, () => playStrike(index + 1));
-        return;
-      }
-      struck.unit.takeDamage(strike.damage);
-      this.publishHoveredUnit();
-      this.showDamagePopup(sprite, strike.damage, strike.crit ? 'crit' : 'damage');
-      if (strike.crit) this.cameras.main.shake(CRIT_SHAKE_MS, CRIT_SHAKE_INTENSITY);
-      playHitFlash(this, sprite, () => {
-        if (!struck.unit.isAlive()) {
-          this.dropLoot(struck.unit, striker.unit, striker.tile.unitId);
-          this.removeUnit(struck.tile);
-        }
-        playStrike(index + 1);
-      });
+    this.playEvents(events, () => this.finishPlayerAction(events));
+  }
+
+  // Plays a command's events (src/game/battle/commands.ts) in order, each
+  // with its animation, while the map still shows the battle from before
+  // it, then calls onDone; continueBattle then shows the battle after it.
+  playEvents(events: readonly BattleEvent[], onDone: () => void) {
+    const play = (index: number) => {
+      const event = events[index];
+      if (event) this.playEvent(event, () => play(index + 1));
+      else onDone();
     };
-    playStrike(0);
+    play(0);
   }
 
-  // After an exchange from resolveAttack, gives the player unit in it (only
-  // player units gain XP) the XP its outcome earned (src/game/
-  // experience.ts), unless it died; then onDone.
-  awardCombatExperience(sides: Record<CombatSide, { unit: Unit }>, strikes: readonly Strike[], onDone: () => void) {
-    const side = (['attacker', 'defender'] as const).find((s) => sides[s].unit.team === 'player');
-    const unit = side && sides[side].unit;
-    if (!unit?.isAlive()) {
-      onDone();
-      return;
+  playEvent(event: BattleEvent, next: () => void) {
+    switch (event.type) {
+      case 'strike':
+        this.playStrike(event, next);
+        return;
+      case 'skill':
+        this.playSkill(event, next);
+        return;
+      case 'healed':
+        this.playRecovery(event.targetId, 'health', event.amount, next);
+        return;
+      case 'item-used':
+        this.playRecovery(event.unitId, event.item.stat, event.amount, next);
+        return;
+      case 'loot':
+        this.showDamagePopup(
+          this.unitSprites.get(event.unitId)!,
+          0,
+          event.stored ? 'stored' : 'loot',
+          event.item.label,
+        );
+        next();
+        return;
+      case 'defeated':
+        this.removeUnitSprite(event.unitId);
+        next();
+        return;
+      case 'experience':
+        this.showExperienceGain(event, next);
+        return;
+      default:
+        next();
     }
-    const opponent = sides[side === 'attacker' ? 'defender' : 'attacker'].unit;
-    this.showExperienceGain(unit, getCombatAward(unit, opponent, getCombatOutcome(strikes, side!)), onDone);
   }
 
-  // Gives the unit the award's XP (Unit.gainExperience rolls any level
-  // ups) and shows it: React's XP bar fills for EXPERIENCE_BAR_MS, then one
-  // level-up panel per level gained holds for LEVEL_UP_MS each. Calls
-  // onDone straight away when there's no XP to give.
-  showExperienceGain(unit: Unit, { amount, scaled }: ExperienceAward, onDone: () => void) {
-    if (amount <= 0) {
-      onDone();
+  // One strike of an exchange: it wears the striker's weapon ("Broke!"
+  // pops up over it if that wears it out, or the spell's name if a tome
+  // strike taught it); a hit shows the struck unit's new health on the HUD
+  // while its sprite flashes and a damage number pops over it (a crit also
+  // shakes the camera); a miss just shows "Miss" for a moment.
+  playStrike(strike: BattleEventOf<'strike'>, next: () => void) {
+    const strikerSprite = this.unitSprites.get(strike.strikerId)!;
+    if (strike.learned) this.showDamagePopup(strikerSprite, 0, 'learned', strike.learned.label);
+    else if (strike.broke) this.showDamagePopup(strikerSprite, 0, 'broke');
+    const sprite = this.unitSprites.get(strike.targetId)!;
+    if (!strike.hit) {
+      this.showDamagePopup(sprite, 0, 'miss');
+      this.time.delayedCall(MISS_PAUSE_MS, next);
       return;
     }
-    const from = { level: unit.level, experience: unit.experience };
-    const result = unit.gainExperience(amount, Math.random, scaled);
+    this.showStats(strike.targetId, { health: strike.health });
+    this.showDamagePopup(sprite, strike.damage, strike.crit ? 'crit' : 'damage');
+    if (strike.crit) this.cameras.main.shake(CRIT_SHAKE_MS, CRIT_SHAKE_INTENSITY);
+    playHitFlash(this, sprite, next);
+  }
+
+  // A skill's animation (see playSkillAnimation); the HUD shows the mana
+  // spent and the damage dealt once it lands.
+  playSkill({ unitId, targetId, skill, damage, health }: BattleEventOf<'skill'>, next: () => void) {
+    const userSprite = this.unitSprites.get(unitId)!;
+    const targetSprite = this.unitSprites.get(targetId)!;
+    const mana = this.units.get(unitId)!.mana - skill.manaCost;
+    const onImpact = () => {
+      this.showStats(unitId, { mana });
+      this.showStats(targetId, { health });
+      this.showDamagePopup(targetSprite, damage);
+    };
+    this.playSkillAnimation(skill.animation, userSprite, targetSprite, onImpact, next);
+  }
+
+  // A heal or a potion: the unit glows in the stat's color from
+  // POTION_COLORS while a "+N HP" / "+N MP" popup rises over it.
+  playRecovery(unitId: string, stat: RestoreStat, amount: number, next: () => void) {
+    const sprite = this.unitSprites.get(unitId)!;
+    this.showStats(unitId, { [stat]: this.units.get(unitId)![stat] + amount });
+    const center = { x: sprite.x + TILE_SIZE / 2, y: sprite.y + TILE_SIZE / 2 };
+    this.showDamagePopup(sprite, amount, stat);
+    playPotionGlow(this, sprite, center, POTION_COLORS[stat], next);
+  }
+
+  // Shows a unit's health or mana as an event leaves it, ahead of the
+  // battle catching up (see `shownStats`).
+  showStats(unitId: string, stats: { health?: number; mana?: number }) {
+    this.shownStats.set(unitId, { ...this.shownStats.get(unitId), ...stats });
+    this.publishHoveredUnit();
+  }
+
+  // Shows XP a unit gained: React's XP bar fills for EXPERIENCE_BAR_MS,
+  // then one level-up panel per level gained holds for LEVEL_UP_MS each.
+  showExperienceGain({ unitId, from, result }: BattleEventOf<'experience'>, onDone: () => void) {
+    const unit = this.battle.units.get(unitId)!;
     const experienceGain = toExperienceGainView({
       id: this.nextProgressId++,
       name: unit.name,
@@ -1932,10 +2009,7 @@ export class GridScene extends Phaser.Scene {
       gameStore.setState({ experienceGain: null });
       this.showLevelUps(
         result.levelUps.map((levelUp) => ({ name: unit.name, unitClass: unit.unitClass, levelUp })),
-        () => {
-          this.publishHoveredUnit();
-          onDone();
-        },
+        onDone,
       );
     });
   }
@@ -1958,10 +2032,7 @@ export class GridScene extends Phaser.Scene {
   }
 
   // Uses the aimed skill on the unit under the cursor, if it's a hostile
-  // unit in the skill's range. Mana is spent and damage from
-  // src/game/skills.ts applied right away; then the skill's animation plays
-  // (see playSkillAnimation) and a unit brought to 0 health is removed once
-  // it finishes.
+  // unit in the skill's range.
   tryUseSkill() {
     const { unit, unitId, x, y } = this.activeUnit!;
     const skill = this.activeSkill!;
@@ -1969,61 +2040,24 @@ export class GridScene extends Phaser.Scene {
     const target = findTileAt(targets, this.cursor);
     if (!target) return;
 
-    const defender = this.units.get(target.unitId)!;
-    const damage = calculateSkillDamage(skill!, unit, defender);
-    unit.spendMana(skill.manaCost);
-    defender.takeDamage(damage);
-
     this.hideRange();
-    this.inputLocked = true;
-    const userSprite = this.unitSprites.get(unitId)!;
-    const defenderSprite = this.unitSprites.get(target.unitId)!;
-
-    // The HUD only shows the new health once the skill lands.
-    const onImpact = () => {
-      this.publishHoveredUnit();
-      this.showDamagePopup(defenderSprite, damage);
-    };
-    this.playSkillAnimation(skill.animation, userSprite, defenderSprite, onImpact, () => {
-      if (!defender.isAlive()) {
-        this.dropLoot(defender, unit, unitId);
-        this.removeUnit(target);
-      }
-      this.activeUnit = null;
-      // A skill earns XP like a single strike that always lands.
-      const strikes: Strike[] = [
-        { by: 'attacker', target: 'defender', damage, hit: true, crit: false, lethal: !defender.isAlive() },
-      ];
-      const award = getCombatAward(unit, defender, getCombatOutcome(strikes, 'attacker'));
-      this.showExperienceGain(unit, award, () => this.finishPlayerAction(unitId));
-    });
+    this.activeUnit = null;
+    this.playPlayerAction({ type: 'skill', unitId, skillId: skill.id, target: { x: target.x, y: target.y } });
   }
 
   // Heals the wounded ally under the cursor with the staff being aimed, if
   // it's one: the ally regains the staff's power plus the healer's magic
-  // (capped at its missing health) and glows like a health potion, the
-  // staff spends a use, and the healer earns HEAL_EXPERIENCE.
+  // (capped at its missing health), the staff spends a use, and the healer
+  // earns HEAL_EXPERIENCE.
   tryHeal() {
-    const { unit, unitId } = this.activeUnit!;
+    const { unitId } = this.activeUnit!;
     const { staff, index } = this.activeStaff!;
     const target = findTileAt(this.getHealTargetsFor(staff), this.cursor);
     if (!target) return;
 
-    const patient = this.units.get(target.unitId)!;
-    const amount = getHealAmount(unit, staff, patient);
-    patient.heal(amount);
-    unit.spendStaffUse(index);
-
     this.hideRange();
-    this.inputLocked = true;
-    this.publishHoveredUnit();
-    const sprite = this.unitSprites.get(target.unitId)!;
-    const center = { x: sprite.x + TILE_SIZE / 2, y: sprite.y + TILE_SIZE / 2 };
-    this.showDamagePopup(sprite, amount, 'health');
-    playPotionGlow(this, sprite, center, POTION_COLORS.health, () => {
-      this.activeUnit = null;
-      this.showExperienceGain(unit, { amount: HEAL_EXPERIENCE, scaled: true }, () => this.finishPlayerAction(unitId));
-    });
+    this.activeUnit = null;
+    this.playPlayerAction({ type: 'heal', unitId, staffIndex: index, target: { x: target.x, y: target.y } });
   }
 
   // Plays a skill's `animation` from the user's sprite onto the target's,
@@ -2075,23 +2109,12 @@ export class GridScene extends Phaser.Scene {
     );
   }
 
-  // The active unit uses one of its items on itself. The effect (from
-  // Unit.useItem and src/game/items.ts) applies right away; the unit glows
-  // in the potion's color while a "+N HP" / "+N MP" popup rises over it,
-  // and using an item ends its action.
+  // The active unit uses one of its items on itself (Unit.useItem and
+  // src/game/items.ts); using an item ends its action.
   useItem(itemId: string) {
-    const { unit, unitId } = this.activeUnit!;
-    const { item, amount } = unit.useItem(itemId);
-    this.publishHoveredUnit();
-
-    this.inputLocked = true;
-    const sprite = this.unitSprites.get(unitId)!;
-    const center = { x: sprite.x + TILE_SIZE / 2, y: sprite.y + TILE_SIZE / 2 };
-    this.showDamagePopup(sprite, amount, item.stat);
-    playPotionGlow(this, sprite, center, POTION_COLORS[item.stat], () => {
-      this.activeUnit = null;
-      this.finishPlayerAction(unitId);
-    });
+    const { unitId } = this.activeUnit!;
+    this.activeUnit = null;
+    this.playPlayerAction({ type: 'item', unitId, itemId });
   }
 
   // Publishes a number rising from the top center of a sprite for the
@@ -2122,28 +2145,11 @@ export class GridScene extends Phaser.Scene {
     });
   }
 
-  // When a player unit (the killer, by unitId) defeats a unit carrying
-  // loot, the item goes into the killer's inventory, or to the convoy when
-  // it has no room (see claimLoot), and a popup over the killer names it.
-  dropLoot(dead: Unit, killer: Unit, killerId: string) {
-    const loot = dead.loot;
-    if (!loot || killer.team !== 'player') return;
-    dead.loot = null;
-    const { inventory, stored } = claimLoot(killer.items, loot);
-    killer.items = inventory;
-    if (stored) this.convoyLoot.push({ itemId: loot.id, quantity: getLootQuantity(loot) });
-    this.publishHoveredUnit();
-    this.showDamagePopup(this.unitSprites.get(killerId)!, 0, stored ? 'stored' : 'loot', loot.label);
-  }
-
-  // Takes a defeated unit off the board: grid cell, registry, and sprite.
-  removeUnit({ x, y, unitId }: TargetTile) {
+  // Takes a defeated unit's sprite off the board.
+  removeUnitSprite(unitId: string) {
     if (unitId === this.inspectedEnemyId) this.hideEnemyReach();
-    this.grid = setUnit(this.grid, x, y, null);
-    this.units.delete(unitId);
     this.unitSprites.get(unitId)!.destroy();
     this.unitSprites.delete(unitId);
-    this.refreshDangerZone();
   }
 
   // Walks a sprite through each tile of path (path[0] is where it already
@@ -2309,6 +2315,7 @@ export class GridScene extends Phaser.Scene {
     if (unit === this.hoveredUnit) return;
 
     this.hoveredUnit = unit;
+    this.hoveredUnitId = unit ? cell!.unitId : null;
     this.publishHoveredUnit();
   }
 
@@ -2316,8 +2323,10 @@ export class GridScene extends Phaser.Scene {
   // unit's stats change without the cursor moving (e.g. it takes damage) —
   // plus where its tile shows, so the unit panel can stay clear of it.
   publishHoveredUnit() {
+    const view = toUnitView(this.hoveredUnit);
+    const stats = this.hoveredUnitId ? this.shownStats.get(this.hoveredUnitId) : undefined;
     gameStore.setState({
-      hoveredUnit: toUnitView(this.hoveredUnit),
+      hoveredUnit: view && stats ? Object.freeze({ ...view, ...stats }) : view,
       hoveredAnchor: this.hoveredUnit ? this.getTileAnchor(this.cursor) : null,
     });
   }
@@ -2472,7 +2481,6 @@ export class GridScene extends Phaser.Scene {
     const art = getUnitSprite(unit.unitClass);
     const sprite = this.addTileSprite(x, y, unitSheetKey(art, 'idle'))
       .setDepth(0.75)
-      .setData('unit', unit)
       .setData('art', art)
       .setData('facing', UNIT_SHEET.defaultFacing)
       .play(this.unitAnimation(art, 'idle', UNIT_SHEET.defaultFacing));

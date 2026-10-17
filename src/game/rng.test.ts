@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createSeededRng, randomInt, randomItem, shuffle } from './rng.ts';
+import { createResumableRng, createSeededRng, randomInt, randomItem, shuffle } from './rng.ts';
 
 describe('createSeededRng', () => {
   it('gives the same sequence for the same seed', () => {
@@ -21,6 +21,22 @@ describe('createSeededRng', () => {
       expect(n).toBeGreaterThanOrEqual(0);
       expect(n).toBeLessThan(1);
     }
+  });
+});
+
+describe('createResumableRng', () => {
+  it('rolls the same numbers as createSeededRng', () => {
+    const plain = createSeededRng(7);
+    const { rng } = createResumableRng(7);
+    for (let i = 0; i < 10; i++) expect(rng()).toBe(plain());
+  });
+
+  it('picks the sequence up from its state', () => {
+    const first = createResumableRng(99);
+    first.rng();
+    first.rng();
+    const resumed = createResumableRng(first.state());
+    for (let i = 0; i < 10; i++) expect(resumed.rng()).toBe(first.rng());
   });
 });
 

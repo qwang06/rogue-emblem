@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GrowthTable } from './experience.ts';
 import { HEALTH_POTION, MANA_POTION, WOODEN_ARMOR, WOODEN_SHIELD, type InventoryEntry } from './items.ts';
 import { Unit } from './Unit.ts';
+import { Warrior } from './Warrior.ts';
 import { FIRE, FIRE_SPELL, FISTS, IRON_BOW, IRON_SPEAR, weaponEntry, type WeaponType } from './weapons.ts';
 
 function makeUnit(overrides = {}) {
@@ -183,6 +184,20 @@ describe('Unit', () => {
     const unit = makeUnit();
     unit.takeDamage(10);
     expect(unit.isAlive()).toBe(false);
+  });
+
+  describe('clone', () => {
+    it('copies the unit, class and all, without tying the two together', () => {
+      const warrior = new Warrior({ team: 'player' });
+      const copy = warrior.clone();
+      expect(copy).toBeInstanceOf(Warrior);
+      expect(copy).not.toBe(warrior);
+      copy.useItem(copy.items.find((entry) => entry.item.kind === 'consumable')!.item.id);
+      copy.takeDamage(3);
+      expect(copy.health).toBe(warrior.maxHealth - 3);
+      expect(warrior.health).toBe(warrior.maxHealth);
+      expect(copy.items).not.toEqual(warrior.items);
+    });
   });
 
   describe('takeDamage', () => {
