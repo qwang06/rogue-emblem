@@ -7,7 +7,10 @@
 // itself is worth: how much the enemy could hit it there next phase and
 // how much closer it is to the objective. The best-scoring unit acts first.
 // It plans from the forecast, never from the dice. Every weight is a named
-// constant to tune. Pure: reads a state and returns commands.
+// constant to tune. Its few best plans then go to a lookahead
+// (lookahead.ts), which plays each out through the enemy phase with
+// sampled dice and keeps the one that turns out best. Pure: reads a state
+// and returns commands.
 
 import { getCombatForecast, getAttackRange, getAttackTargets, type ForecastSide } from '../combat.ts';
 import { CRIT_MULTIPLIER } from '../combatStats.ts';
@@ -20,6 +23,7 @@ import { getTeamUnitIds } from '../teams.ts';
 import { isDone } from '../turns.ts';
 import type { Unit } from '../Unit.ts';
 import { getMovementOptions, hostileTo, type BattleCommand } from './commands.ts';
+import { LOOKAHEAD, pickByLookahead, type LookaheadOptions } from './lookahead.ts';
 import type { BattleState } from './state.ts';
 
 export const PLAYER_AI_WEIGHTS = Object.freeze({
@@ -35,7 +39,7 @@ export const PLAYER_AI_WEIGHTS = Object.freeze({
   lethalDanger: 30,
   // Per point of health healed (doubled for an ally under half health).
   heal: 1.2,
-  // Per point of health a potion restores, only under half health.
+  // Per point of health a potion restores, only at half health or under.
   potion: 1,
   // Per movement point closer to the goal (the seize tile, the boss, or
   // the nearest enemy).
@@ -57,25 +61,60 @@ export const COHESION_CAP = 2;
 
 const FAR = Number.MAX_SAFE_INTEGER;
 
-interface Plan {
+// One unit's planned action: its move and act, how the heuristic scores
+// it, and the parts of that score the lookahead keeps or checks.
+export interface PlayerPlan {
   commands: BattleCommand[];
   score: number;
+  // What the end tile is worth apart from danger: the seize bonus,
+  // progress toward the goal and cohesion.
+  position: number;
+  // Expected damage the enemy could deal the unit there next phase.
+  danger: number;
+  // Whether the act strikes or heals someone (not a wait or a potion).
+  engages: boolean;
 }
 
-// The player's next unit's action: of the units yet to act, the one whose
-// best plan scores highest, with that plan. Empty when the battle isn't
-// being fought or every unit has acted.
-export function planPlayerTurn(state: BattleState, weights: PlayerAIWeights = PLAYER_AI_WEIGHTS): BattleCommand[] {
+export interface PlayerAIOptions {
+  weights?: PlayerAIWeights;
+  // How the best plans are played out before one is picked; false picks
+  // the heuristic's best outright.
+  lookahead?: LookaheadOptions | false;
+}
+
+// The player's next unit's action: the heuristic's best plans across the
+// units yet to act, played out by the lookahead, which picks one. Empty
+// when the battle isn't being fought or every unit has acted.
+export function planPlayerTurn(state: BattleState, options: PlayerAIOptions = {}): BattleCommand[] {
+  const { weights = PLAYER_AI_WEIGHTS, lookahead = LOOKAHEAD } = options;
+  const plans = getPlayerPlans(state, weights);
+  if (plans.length === 0) return [];
+  if (!lookahead || !isContested(plans.slice(0, lookahead.candidates))) return plans[0].commands;
+  const rest = (next: BattleState) => getPlayerPlans(next, weights)[0]?.commands ?? [];
+  return pickByLookahead(state, plans.slice(0, lookahead.candidates), lookahead, rest).commands;
+}
+
+// Every unit's best plan for each different act it could take (attacking
+// each foe in reach, healing each ally, a potion, waiting), over the units
+// yet to act, best first.
+export function getPlayerPlans(state: BattleState, weights: PlayerAIWeights = PLAYER_AI_WEIGHTS): PlayerPlan[] {
   const { turnState } = state;
   if (state.stage !== 'battle' || state.outcome || !turnState || turnState.team !== 'player') return [];
   const context = createContext(state, weights);
-  let best: Plan | null = null;
+  const plans: PlayerPlan[] = [];
   for (const unitId of getTeamUnitIds(state.units, 'player')) {
     if (isDone(turnState, unitId)) continue;
-    const plan = planUnit(state, context, unitId);
-    if (plan && (!best || plan.score > best.score)) best = plan;
+    plans.push(...planUnit(state, context, unitId));
   }
-  return best?.commands ?? [];
+  // Stable, so ties keep unit order.
+  return plans.sort((a, b) => b.score - a.score);
+}
+
+// Whether the dice could change which plan is best: one of them fights,
+// or ends where the enemy can reach. If none does, the heuristic's best
+// stands.
+function isContested(plans: readonly PlayerPlan[]): boolean {
+  return plans.length > 1 && plans.some((plan) => plan.engages || plan.danger > 0);
 }
 
 // Deployment for the player: the healthiest roster units (by share of
@@ -181,43 +220,50 @@ function getDistanceMap(grid: Grid, goals: readonly Point[]): Map<string, number
   return costs;
 }
 
-// The best plan for one unit: the best action from the best tile.
-function planUnit(state: BattleState, context: Context, unitId: string): Plan | null {
+// One unit's plans: for each different act, the best tile to take it
+// from.
+function planUnit(state: BattleState, context: Context, unitId: string): PlayerPlan[] {
   const unit = state.units.get(unitId);
   const from = findUnit(state.grid, unitId);
-  if (!unit || !from) return null;
+  if (!unit || !from) return [];
   const options = getMovementOptions(state.units, unit);
   const tiles = getMovementRange(state.grid, from, unit.movement, options);
   const here = context.goal.get(key(from));
-  let best: (Plan & { tile: RangeTile }) | null = null;
+  const best = new Map<string, Omit<PlayerPlan, 'commands'> & { act: Action; tile: RangeTile }>();
   for (const tile of tiles) {
     const actions = getActions(state, context, unitId, unit, tile);
+    const position = scorePosition(context, unitId, tile, here);
     for (const action of actions) {
-      const score = action.score + scoreTile(context, unitId, unit, tile, here, action.removes);
-      if (!best || score > best.score || (score === best.score && tile.cost < best.tile.cost)) {
-        best = { commands: action.commands, score, tile };
+      const danger = getDanger(context, unit, tile, action.removes);
+      const score = action.score + position - dangerPenalty(context.weights, unit, danger);
+      const actKey = JSON.stringify(action.commands[0]);
+      const current = best.get(actKey);
+      if (!current || score > current.score || (score === current.score && tile.cost < current.tile.cost)) {
+        best.set(actKey, { act: action, tile, score, position, danger, engages: action.engages });
       }
     }
   }
-  if (!best) return null;
-  const path = getMovePath(state.grid, from, best.tile, unit.movement, options) ?? [from];
-  const to = { x: best.tile.x, y: best.tile.y };
-  const move: BattleCommand = { type: 'move', unitId, to, path: path.map(({ x, y }) => ({ x, y })) };
-  return { commands: [move, ...best.commands], score: best.score };
+  return [...best.values()].map(({ act, tile, ...plan }) => {
+    const path = getMovePath(state.grid, from, tile, unit.movement, options) ?? [from];
+    const to = { x: tile.x, y: tile.y };
+    const move: BattleCommand = { type: 'move', unitId, to, path: path.map(({ x, y }) => ({ x, y })) };
+    return { ...plan, commands: [move, ...act.commands] };
+  });
 }
 
 interface Action {
   commands: BattleCommand[];
   score: number;
+  engages: boolean;
   // An enemy this action likely kills, so it no longer threatens the tile.
   removes?: string;
 }
 
 // What the unit could do from `tile`: attack each foe in reach, heal each
-// wounded ally in a staff's reach, drink a potion when under half health,
+// wounded ally in a staff's reach, drink a potion at half health or under,
 // or wait.
 function getActions(state: BattleState, context: Context, unitId: string, unit: Unit, tile: Point): Action[] {
-  const actions: Action[] = [{ commands: [{ type: 'wait', unitId }], score: 0 }];
+  const actions: Action[] = [{ commands: [{ type: 'wait', unitId }], score: 0, engages: false }];
   const weapon = unit.weapon;
   if (weapon) {
     for (const target of getAttackTargets(
@@ -239,6 +285,7 @@ function getActions(state: BattleState, context: Context, unitId: string, unit: 
       actions.push({
         commands: [{ type: 'attack', unitId, target: { x: target.x, y: target.y } }],
         score,
+        engages: true,
         removes: lethal && hit >= 0.7 ? target.unitId : undefined,
       });
     }
@@ -255,33 +302,26 @@ function getActions(state: BattleState, context: Context, unitId: string, unit: 
       actions.push({
         commands: [{ type: 'heal', unitId, staffIndex: index, target: { x: target.x, y: target.y } }],
         score: context.weights.heal * amount * urgent,
+        engages: true,
       });
     }
   }
-  if (unit.health < unit.maxHealth / 2) {
+  if (unit.health <= unit.maxHealth / 2) {
     for (const { item } of getConsumables(unit.items)) {
       if (!canUseItem(unit, item) || item.stat !== 'health') continue;
       actions.push({
         commands: [{ type: 'item', unitId, itemId: item.id }],
         score: context.weights.potion * getItemRecovery(unit, item),
+        engages: false,
       });
     }
   }
   return actions;
 }
 
-// What standing on `tile` is worth: the seize bonus, progress toward the
-// goal, and minus the danger the enemy could put on it next phase (not
-// counting an enemy the action likely kills), plus a little for staying
-// near allies.
-function scoreTile(
-  context: Context,
-  unitId: string,
-  unit: Unit,
-  tile: Point,
-  here: number | undefined,
-  removes?: string,
-): number {
+// What standing on `tile` is worth, danger aside: the seize bonus,
+// progress toward the goal, and a little for staying near allies.
+function scorePosition(context: Context, unitId: string, tile: Point, here: number | undefined): number {
   const W = context.weights;
   let score = 0;
   const near = [...context.allies].filter(([id, at]) => id !== unitId && getDistance(at, tile) <= COHESION_RANGE);
@@ -289,15 +329,23 @@ function scoreTile(
   if (context.seize && tile.x === context.seize.x && tile.y === context.seize.y) score += W.seize;
   const there = context.goal.get(key(tile));
   if (here !== undefined && there !== undefined) score += W.approach * (here - there);
+  return score;
+}
+
+// The damage the enemy could put on `unit` at `tile` next phase, not
+// counting an enemy the action likely kills.
+function getDanger(context: Context, unit: Unit, tile: Point, removes?: string): number {
   let danger = 0;
   for (const { unitId, unit: enemy, threatened } of context.enemies) {
     if (unitId === removes || !threatened.has(key(tile)) || !enemy.weapon) continue;
     const { attacker } = getCombatForecast(enemy, unit, { distance: enemy.weapon.minRange });
     danger += expectedDamage(attacker);
   }
-  score -= W.danger * Math.min(danger, unit.health);
-  if (danger >= unit.health) score -= W.lethalDanger;
-  return score;
+  return danger;
+}
+
+function dangerPenalty(W: PlayerAIWeights, unit: Unit, danger: number): number {
+  return W.danger * Math.min(danger, unit.health) + (danger >= unit.health ? W.lethalDanger : 0);
 }
 
 // Whether a unit belongs at the front: it strikes from adjacent tiles.
