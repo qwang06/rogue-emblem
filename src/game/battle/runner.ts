@@ -25,8 +25,9 @@ export interface RunOptions {
   // The teams the AI plays (deployment included, for the player). The
   // script's commands play the rest. Default: the enemy.
   auto?: readonly Team[];
-  // Stop once this turn is over without a result, so two sides that never
-  // reach each other can't run forever.
+  // Stop once this turn is over without a result. Objectives already lose
+  // a battle past TURN_LIMIT (objectives.ts); this is a backstop for one
+  // that doesn't, e.g. a long survive.
   maxTurns?: number;
   // Teams played by a planner of their own instead of ai.ts or the script:
   // given the state with that team to move (deployment, for the player), it

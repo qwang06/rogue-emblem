@@ -4,7 +4,9 @@ import {
   describeObjective,
   getObjectiveOutcome,
   getObjectiveStatus,
+  isPastTurnLimit,
   ROUT,
+  TURN_LIMIT,
   type BattleSnapshot,
   type Objective,
 } from './objectives.ts';
@@ -40,10 +42,11 @@ describe('objectives', () => {
     expect(ROUT).toEqual({ kind: 'rout' });
   });
 
-  it('describes each kind, every one lost when all your units fall', () => {
-    expect(describeObjective(ROUT)).toEqual({ goal: 'Defeat all enemies', defeat: 'All your units fall' });
-    expect(describeObjective(SEIZE)).toEqual({ goal: 'Seize the marked tile', defeat: 'All your units fall' });
-    expect(describeObjective(BOSS)).toEqual({ goal: 'Defeat Goblin Chief', defeat: 'All your units fall' });
+  it('describes each kind, every one lost when all your units fall, all but survive at the turn limit', () => {
+    const defeat = 'All your units fall, or turn 40 ends';
+    expect(describeObjective(ROUT)).toEqual({ goal: 'Defeat all enemies', defeat });
+    expect(describeObjective(SEIZE)).toEqual({ goal: 'Seize the marked tile', defeat });
+    expect(describeObjective(BOSS)).toEqual({ goal: 'Defeat Goblin Chief', defeat });
     expect(describeObjective(SURVIVE)).toEqual({ goal: 'Survive 4 turns', defeat: 'All your units fall' });
     expect(describeObjective({ kind: 'survive', turns: 1 }).goal).toBe('Survive 1 turn');
   });
@@ -55,10 +58,11 @@ describe('objectives', () => {
 });
 
 describe('getObjectiveStatus', () => {
-  it('names the kind in a word', () => {
-    expect(getObjectiveStatus(ROUT, 3)).toBe('Rout');
-    expect(getObjectiveStatus(SEIZE, 3)).toBe('Seize');
-    expect(getObjectiveStatus(BOSS, 3)).toBe('Boss');
+  it('names the kind in a word and counts the turn out of the turn limit', () => {
+    expect(getObjectiveStatus(ROUT, 3)).toBe('Rout 3/40');
+    expect(getObjectiveStatus(SEIZE, 3)).toBe('Seize 3/40');
+    expect(getObjectiveStatus(BOSS, 40)).toBe('Boss 40/40');
+    expect(getObjectiveStatus(ROUT, 41)).toBe('Rout 40/40');
   });
 
   it('counts a survive objective’s turns, never past the last', () => {
@@ -124,6 +128,27 @@ describe('getObjectiveOutcome', () => {
     expect(getObjectiveOutcome(SURVIVE, battle(4))).toBeNull();
     expect(getObjectiveOutcome(SURVIVE, battle(5))).toBe('victory');
     expect(getObjectiveOutcome({ kind: 'survive', turns: 1 }, battle(2))).toBe('victory');
-    expect(getObjectiveOutcome(ROUT, battle(99))).toBeNull();
+  });
+
+  it('is a defeat for every kind but survive once the turn passes the turn limit undecided', () => {
+    expect(TURN_LIMIT).toBe(40);
+    for (const objective of [ROUT, SEIZE, BOSS]) {
+      expect(getObjectiveOutcome(objective, battle(TURN_LIMIT))).toBeNull();
+      expect(getObjectiveOutcome(objective, battle(TURN_LIMIT + 1))).toBe('defeat');
+    }
+    expect(getObjectiveOutcome({ kind: 'survive', turns: 50 }, battle(TURN_LIMIT + 1))).toBeNull();
+  });
+
+  it('lets a win decided on the last turn stand over the turn limit', () => {
+    const routed: BattleSnapshot = { turn: TURN_LIMIT + 1, units: [unit('hero', 'player')] };
+    expect(getObjectiveOutcome(ROUT, routed)).toBe('victory');
+  });
+});
+
+describe('isPastTurnLimit', () => {
+  it('is true past TURN_LIMIT for every kind but survive', () => {
+    expect(isPastTurnLimit(ROUT, TURN_LIMIT)).toBe(false);
+    expect(isPastTurnLimit(ROUT, TURN_LIMIT + 1)).toBe(true);
+    expect(isPastTurnLimit(SURVIVE, 99)).toBe(false);
   });
 });

@@ -11,7 +11,6 @@ const { values } = parseArgs({
   options: {
     runs: { type: 'string', default: '20' },
     stages: { type: 'string', default: '25' },
-    turns: { type: 'string', default: '40' },
     policy: { type: 'string', default: 'default' },
     class: { type: 'string', multiple: true },
     // Writes the worst run's script here, to replay it (replayRun).
@@ -37,7 +36,6 @@ const started = performance.now();
 const starts = sim.getSimStarts(Number(values.runs), values.class);
 const { byClass, worst } = sim.simulate(starts, policy, {
   maxStages: Number(values.stages),
-  maxTurns: Number(values.turns),
 });
 console.log(`${values.policy} policy, ${starts.length} runs, up to ${values.stages} stages`);
 console.log(sim.formatSummary(byClass));

@@ -11,7 +11,7 @@ import type { BattleCommand } from '../battle/commands.ts';
 import { getCommands, replay } from '../battle/history.ts';
 import { runBattle, type BattlePlanner } from '../battle/runner.ts';
 import { createBattleState, getDeployedUnits, type BattleState } from '../battle/state.ts';
-import type { ObjectiveKind } from '../objectives.ts';
+import { isPastTurnLimit, type ObjectiveKind } from '../objectives.ts';
 import type { BattleOutcome } from '../turns.ts';
 import { canRest } from './camp.ts';
 import { createRun } from './run.ts';
@@ -49,8 +49,12 @@ export interface RunPolicy {
 export interface StageRecord {
   stage: number;
   objective: ObjectiveKind;
-  // Null when it ran past the turn limit undecided (a stall, lost).
+  // Null when the battle stopped undecided (a replayed script that ran
+  // out), which counts as lost.
   outcome: BattleOutcome | null;
+  // Lost by running out of turns (the objective's TURN_LIMIT) rather than
+  // by the warband falling: a stall.
+  stalled: boolean;
   turns: number;
   losses: number;
 }
@@ -69,14 +73,11 @@ export interface AutoRunOptions {
   // Stop once this many stages have been fought, so a run that never falls
   // ends. Default 30.
   maxStages?: number;
-  // A battle still undecided once this turn is over counts as lost.
-  // Default 40.
-  maxTurns?: number;
   // The most commands a camp may take before it must march. Default 100.
   maxCampCommands?: number;
 }
 
-const DEFAULTS = { maxStages: 30, maxTurns: 40, maxCampCommands: 100 };
+const DEFAULTS = { maxStages: 30, maxCampCommands: 100 };
 
 // The policy that plays like the enemy: the battle AI for the player too,
 // the first recruit offered (else a rest, else the first offer), and a
@@ -105,7 +106,7 @@ export function startRun(start: RunStart): RunSession {
 // Plays a run from `start` with `policy` until the warband falls or
 // maxStages stages have been fought.
 export function playRun(start: RunStart, policy: RunPolicy, options: AutoRunOptions = {}): AutoRunResult {
-  const { content = DEFAULT_CONTENT, maxStages, maxTurns, maxCampCommands } = { ...DEFAULTS, ...options };
+  const { content = DEFAULT_CONTENT, maxStages, maxCampCommands } = { ...DEFAULTS, ...options };
   const steps: RunStep[] = [];
   const stages: StageRecord[] = [];
   let session = startRun(start);
@@ -122,7 +123,7 @@ export function playRun(start: RunStart, policy: RunPolicy, options: AutoRunOpti
         const setup = runStage(session.run);
         const { history, state } = runBattle(
           { setup, seed: getBattleDiceSeed(setup)!, commands: [] },
-          { content, maxTurns, planners: { player: policy.battle } },
+          { content, planners: { player: policy.battle } },
         );
         steps.push({ type: 'battle', commands: getCommands(history) });
         const result = finishStageBattle(session, state);
@@ -177,6 +178,7 @@ export function replayRun(
 // The run after a stage's battle ended in `state`; undecided counts as lost.
 function finishStageBattle(session: RunSession, state: BattleState): { session: RunSession; record: StageRecord } {
   const before = session.run;
+  const turns = state.turnState?.turn ?? 0;
   const next = finishBattle(
     session,
     { units: getDeployedUnits(state), convoy: state.convoyLoot },
@@ -188,7 +190,8 @@ function finishStageBattle(session: RunSession, state: BattleState): { session: 
       stage: before.stage,
       objective: state.objective.kind,
       outcome: state.outcome,
-      turns: state.turnState?.turn ?? 0,
+      stalled: state.outcome === 'defeat' && isPastTurnLimit(state.objective, turns),
+      turns,
       losses: next.run.fallen.length - before.fallen.length,
     },
   };

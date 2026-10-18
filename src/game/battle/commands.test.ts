@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createBattleLevel, FIRST_STORY_CHAPTER } from '../battleSetup.ts';
 import { HEAL_STAFF, staffEntry } from '../healing.ts';
 import { HEALTH_POTION } from '../items.ts';
+import { TURN_LIMIT } from '../objectives.ts';
 import { IRON_SPEAR, weaponEntry, FISTS } from '../weapons.ts';
 import { applyCommand, BattleCommandError, type BattleCommand, type BattleEvent } from './commands.ts';
 import { createBattleState, getDeployedUnits, type BattleState } from './state.ts';
@@ -261,6 +262,16 @@ describe('phases', () => {
     const { state, events } = run(start, { type: 'end-phase' }, { type: 'end-phase' });
     expect(state.outcome).toBe('victory');
     expect(events[events.length - 1]).toEqual({ type: 'outcome', outcome: 'victory' });
+  });
+
+  it('loses a rout still undecided once the turn limit is over', () => {
+    const passTurn: BattleCommand[] = [{ type: 'end-phase' }, { type: 'end-phase' }];
+    const { state: lastTurn } = run(duel(), ...Array.from({ length: TURN_LIMIT - 1 }, () => passTurn).flat());
+    expect(lastTurn.turnState).toMatchObject({ turn: TURN_LIMIT, team: 'player' });
+    expect(lastTurn.outcome).toBeNull();
+    const { state, events } = run(lastTurn, ...passTurn);
+    expect(state.outcome).toBe('defeat');
+    expect(events[events.length - 1]).toEqual({ type: 'outcome', outcome: 'defeat' });
   });
 
   it('keeps fallen roster units among the deployed', () => {

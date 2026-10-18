@@ -24,7 +24,13 @@ describe('playRun', () => {
   });
 
   it('wins the first stage, a quick fight for the lone starting unit', () => {
-    expect(played.stages[0]).toMatchObject({ stage: 1, objective: 'rout', outcome: 'victory', losses: 0 });
+    expect(played.stages[0]).toMatchObject({
+      stage: 1,
+      objective: 'rout',
+      outcome: 'victory',
+      stalled: false,
+      losses: 0,
+    });
   });
 
   it('writes down a battle per stage and the commands between them', () => {

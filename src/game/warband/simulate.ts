@@ -14,7 +14,7 @@ export interface SimSummary {
   survived: number;
   // How many runs fell on each stage, by stage number.
   fallenAt: Readonly<Record<number, number>>;
-  // Battles that ran past the turn limit undecided.
+  // Battles lost on the turn limit (TURN_LIMIT) rather than by falling.
   stalls: number;
   // Units lost across every run.
   losses: number;
@@ -85,7 +85,7 @@ function addRun(summary: SimSummary, result: AutoRunResult): SimSummary {
     cleared: [...summary.cleared, clearedOf(result)],
     survived: summary.survived + (result.end === 'max-stages' ? 1 : 0),
     fallenAt,
-    stalls: summary.stalls + result.stages.filter((record) => record.outcome === null).length,
+    stalls: summary.stalls + result.stages.filter((record) => record.stalled).length,
     losses: summary.losses + result.stages.reduce((sum, record) => sum + record.losses, 0),
   };
 }
