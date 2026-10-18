@@ -7,7 +7,9 @@
 // - boss: defeat one named enemy
 // - survive: hold out until `turns` turns have passed
 // Every kind is lost when all the player's units fall, and won when every
-// enemy falls (there's nothing left to seize from or survive). Levels hold
+// enemy falls (there's nothing left to seize from or survive). Every kind
+// but survive is also lost once TURN_LIMIT turns pass undecided, so a
+// battle that stalls (two sides that never reach each other) still ends. Levels hold
 // the objective resolved to its tile or unit; a Warband region only names
 // the kind (ObjectiveSpec, resolved by warband/stageObjective.ts).
 
@@ -31,6 +33,10 @@ export type ObjectiveSpec = { kind: 'rout' | 'seize' | 'boss' } | { kind: 'survi
 // How many turns a survive objective lasts when it doesn't say.
 export const SURVIVE_TURNS = 4;
 
+// The turns a rout, seize or boss battle has to be won in: still undecided
+// once this turn is over, it's lost.
+export const TURN_LIMIT = 40;
+
 // Defeat every enemy; lose if every player unit falls.
 export const ROUT: Objective = Object.freeze({ kind: 'rout' });
 
@@ -48,7 +54,8 @@ const turnsText = (turns: number) => `${turns} turn${turns === 1 ? '' : 's'}`;
 
 // The objective as the words the Objective screen shows.
 export function describeObjective(objective: Objective): ObjectiveText {
-  const defeat = 'All your units fall';
+  const defeat =
+    objective.kind === 'survive' ? 'All your units fall' : `All your units fall, or turn ${TURN_LIMIT} ends`;
   switch (objective.kind) {
     case 'rout':
       return Object.freeze({ goal: 'Defeat all enemies', defeat });
@@ -61,20 +68,20 @@ export function describeObjective(objective: Objective): ObjectiveText {
   }
 }
 
-// The header's short readout of the objective on turn `turn`, e.g. "Seize"
-// or "Survive 2/4" (the turn being played out of the turns to survive).
+// The header's short readout of the objective on turn `turn`: its kind and
+// the turn being played out of the turns it has, e.g. "Seize 3/40" (out of
+// TURN_LIMIT) or "Survive 2/4" (out of the turns to survive).
 export function getObjectiveStatus(objective: Objective, turn: number): string {
-  switch (objective.kind) {
-    case 'rout':
-      return 'Rout';
-    case 'seize':
-      return 'Seize';
-    case 'boss':
-      return 'Boss';
-    case 'survive':
-      return `Survive ${Math.min(turn, objective.turns)}/${objective.turns}`;
-  }
+  const limit = objective.kind === 'survive' ? objective.turns : TURN_LIMIT;
+  return `${OBJECTIVE_NAMES[objective.kind]} ${Math.min(turn, limit)}/${limit}`;
 }
+
+const OBJECTIVE_NAMES: Record<ObjectiveKind, string> = {
+  rout: 'Rout',
+  seize: 'Seize',
+  boss: 'Boss',
+  survive: 'Survive',
+};
 
 // What deciding a battle looks at: every unit (alive or not, with the tile
 // it stands on, null if it's off the map) and the turn being played.
@@ -88,10 +95,23 @@ export interface BattleSnapshot {
 // (every enemy down) wins any objective, and each kind adds its own win:
 // a living player unit on the seize tile, the boss down (or gone), or the
 // turn count passing the survive turns (checked as each turn starts).
+// Any other kind still undecided once the turn count passes TURN_LIMIT is
+// a defeat.
 export function getObjectiveOutcome(objective: Objective, state: BattleSnapshot): BattleOutcome | null {
   const units = state.units.map((u) => ({ team: u.team, isAlive: () => u.alive }));
-  const outcome = getBattleOutcome(units);
+  const outcome = getBattleOutcome(units) ?? getObjectiveWin(objective, state);
   if (outcome) return outcome;
+  return isPastTurnLimit(objective, state.turn) ? 'defeat' : null;
+}
+
+// Whether the battle is on a turn past its TURN_LIMIT; never for survive,
+// which ends on its own turn count.
+export function isPastTurnLimit(objective: Objective, turn: number): boolean {
+  return objective.kind !== 'survive' && turn > TURN_LIMIT;
+}
+
+// The win `objective` adds on top of a rout, or null.
+function getObjectiveWin(objective: Objective, state: BattleSnapshot): BattleOutcome | null {
   switch (objective.kind) {
     case 'rout':
       return null;
