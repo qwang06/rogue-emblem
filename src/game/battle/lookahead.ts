@@ -45,8 +45,8 @@ export interface LookaheadOptions {
 }
 
 export const LOOKAHEAD: LookaheadOptions = Object.freeze({
-  candidates: 6,
-  samples: 4,
+  candidates: 4,
+  samples: 3,
   patience: 20,
   weights: LOOKAHEAD_WEIGHTS,
 });
