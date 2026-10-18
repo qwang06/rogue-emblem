@@ -37,6 +37,11 @@ export const TERRAIN_MOVE_COSTS: TerrainCosts = Object.freeze({
   // Until movement types (fliers) exist, nothing crosses mountains.
   mountain: Infinity,
   meadow: 1,
+  // A bridge crosses water at a walk; a ford wades it, slowly.
+  bridge: 1,
+  ford: 2,
+  // A gateway through a wall.
+  gate: 1,
 });
 
 export function getMoveCost(terrain: Terrain, terrainCosts: TerrainCosts = TERRAIN_MOVE_COSTS): number {

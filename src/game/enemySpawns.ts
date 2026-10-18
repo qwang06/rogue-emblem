@@ -109,6 +109,52 @@ export function pickEnemyTiles(
   });
 }
 
+// Enemy tiles for a map whose plan says where the enemy stands (see
+// mapArchetypes.ts): one list per group, like pickEnemyTiles, but the
+// groups' areas give way to `zones`. Enemies are dealt into the zones in
+// turn, across groups (the first enemy to zones[0], the next to zones[1],
+// ...), each on a random open tile of its zone that its group's distances
+// allow; when its zone has none, any zone's; when no zone has one, any
+// allowed tile at least two steps from the deployment zone. A group comes
+// up short only when no tile is left at all. With no zones it's
+// pickEnemyTiles.
+export function pickZonedEnemyTiles(
+  grid: Grid,
+  groups: readonly EnemyGroup[],
+  deploymentZone: readonly Point[],
+  zones: readonly (readonly Point[])[],
+  rng: Rng,
+): Point[][] {
+  if (zones.length === 0) return pickEnemyTiles(grid, groups, deploymentZone, rng);
+  const distances = getWalkingDistances(grid, deploymentZone);
+  const taken = new Set(deploymentZone.map(key));
+  const zoneKeys = zones.map((zone) => new Set(zone.map(key)));
+  let dealt = 0;
+  return groups.map(({ count, minDistance = 0, maxDistance = Infinity }) => {
+    const allowed = shuffle(
+      rng,
+      grid.cells.filter((c) => {
+        const distance = distances.get(key(c));
+        return distance !== undefined && distance >= minDistance && distance <= maxDistance;
+      }),
+    ).map(({ x, y }) => ({ x, y }));
+    const tiles: Point[] = [];
+    for (let i = 0; i < count; i++) {
+      const open = allowed.filter((p) => !taken.has(key(p)));
+      const zone = zoneKeys[dealt % zoneKeys.length];
+      const tile =
+        open.find((p) => zone.has(key(p))) ??
+        open.find((p) => zoneKeys.some((z) => z.has(key(p)))) ??
+        open.find((p) => distances.get(key(p))! >= 2);
+      if (!tile) break;
+      tiles.push(tile);
+      taken.add(key(tile));
+      dealt++;
+    }
+    return tiles;
+  });
+}
+
 // How much room `group` has on its own (ignoring other groups), to explain
 // a group that can't be placed:
 // - inArea: walkable tiles in its area the deployment zone can reach

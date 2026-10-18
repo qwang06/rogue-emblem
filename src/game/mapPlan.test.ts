@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { getCell, type Point } from './grid.ts';
 import { checkMap } from './mapCheck.ts';
 import { generateTerrain, getReachable, terrainToRows } from './mapGen.ts';
-import { carveRoute, generateMap, generatePlannedTerrain, planBattle } from './mapPlan.ts';
+import { MAP_ARCHETYPES } from './mapArchetypes.ts';
+import { pickZonedEnemyTiles } from './enemySpawns.ts';
+import { carveRoute, generateArchetypeTerrain, generateMap, generatePlannedTerrain, planBattle } from './mapPlan.ts';
 import { getMoveCost } from './movement.ts';
 import { createSeededRng } from './rng.ts';
 
@@ -153,6 +155,82 @@ describe('generateMap', () => {
     expect(rows({ width: 8, height: 8, generator: 'classic' })).toEqual(rows({ width: 8, height: 8 }));
     expect(rows({ width: 8, height: 8, generator: 'planned' })).toEqual(
       terrainToRows(generatePlannedTerrain({ width: 8, height: 8 }, createSeededRng(3)).grid),
+    );
+  });
+});
+
+describe('generateArchetypeTerrain', () => {
+  const options = {
+    width: 8,
+    height: 8,
+    generator: 'planned' as const,
+    lakes: 1,
+    lakeSize: [2, 3] as const,
+    mountains: 1,
+    mountainSize: [2, 3] as const,
+    forests: 2,
+    forestSize: [2, 3] as const,
+    meadows: 1,
+    meadowSize: [2, 3] as const,
+    buildings: 1,
+  };
+
+  it.each(MAP_ARCHETYPES.filter((a) => a !== 'advance'))(
+    'lays out a %s map that keeps every map rule, with enemies where the plan puts them',
+    (archetype) => {
+      for (const seed of SEEDS.slice(0, 40)) {
+        const rng = createSeededRng(seed);
+        const map = generateArchetypeTerrain(options, archetype as Exclude<typeof archetype, 'advance'>, rng);
+        const enemyTiles = pickZonedEnemyTiles(map.grid, [{ count: 4 }], map.deploymentZone!, map.enemyZones!, rng);
+        const problems = checkMap({
+          grid: map.grid,
+          buildings: map.buildings,
+          deploymentZone: map.deploymentZone!,
+          enemyTiles: enemyTiles.flat(),
+        });
+        expect(problems, `${archetype} seed ${seed}`).toEqual([]);
+        expect(enemyTiles[0]).toHaveLength(4);
+        for (const p of map.deploymentZone!) expect(getCell(map.grid, p.x, p.y)!.unitId).toBeNull();
+        if (map.seizeTile)
+          expect(Number.isFinite(getMoveCost(getCell(map.grid, map.seizeTile.x, map.seizeTile.y)!.terrain))).toBe(true);
+      }
+    },
+  );
+
+  it('adds no castle or ruins of its own, and turns off patches the plan stands in for', () => {
+    for (const seed of SEEDS.slice(0, 20)) {
+      const gauntlet = generateArchetypeTerrain(
+        { ...options, mountains: 4, castle: true, ruins: 2 },
+        'gauntlet',
+        createSeededRng(seed),
+      );
+      expect(gauntlet.buildings.some((b) => b.building === 'castle')).toBe(false);
+      // Only the ridges' mountains: two rows of them.
+      expect(new Set(gauntlet.grid.cells.filter((c) => c.terrain === 'mountain').map((c) => c.y))).toEqual(
+        new Set([2, 5]),
+      );
+      const islands = generateArchetypeTerrain({ ...options, lakes: 4 }, 'islands', createSeededRng(seed));
+      const water = islands.grid.cells.filter((c) => c.terrain === 'water');
+      expect(water.every((c) => c.y <= 5)).toBe(true);
+    }
+  });
+
+  it('rejects a map smaller than 6x6', () => {
+    expect(() => generateArchetypeTerrain({ width: 5, height: 8 }, 'ambush', createSeededRng(1))).toThrow(/6x6/);
+  });
+});
+
+describe('generateMap with an archetype', () => {
+  it('lays out any archetype but advance from its plan, whatever the generator', () => {
+    const map = generateMap({ width: 8, height: 8, archetype: 'fortress' }, createSeededRng(3));
+    expect(map.grid.cells.some((c) => c.terrain === 'gate')).toBe(true);
+    expect(map.deploymentZone).toHaveLength(3);
+  });
+
+  it('builds advance as the generator would', () => {
+    const options = { width: 8, height: 8, generator: 'planned' as const };
+    expect(generateMap({ ...options, archetype: 'advance' }, createSeededRng(4))).toEqual(
+      generateMap(options, createSeededRng(4)),
     );
   });
 });

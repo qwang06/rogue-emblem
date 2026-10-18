@@ -1,5 +1,5 @@
-// Picks the one-tile overlays drawn over the terrain: forests, mountains
-// and buildings. Pure: given the grid (or building list) and the art tables
+// Picks the one-tile overlays drawn over the terrain: forests, mountains,
+// buildings and crossings (bridges, fords, gates). Pure: given the grid (or building list) and the art tables
 // from tileset.ts, it says which sheet tile goes on which cell and at which
 // layer; GridScene only draws them.
 //
@@ -14,13 +14,23 @@
 import type { Autotile, SheetTile } from './autotile.ts';
 import type { BuildingPlacement } from './buildings.ts';
 import { getCell, type Grid, type Point } from './grid.ts';
-import type { BUILDING_ART, BuildingPalette, FOREST_ART, MOUNTAIN_ART } from './tileset.ts';
+import type {
+  BRIDGE_ART,
+  BUILDING_ART,
+  BuildingPalette,
+  FOREST_ART,
+  GATE_ART,
+  MAP_PROPS_SHEET,
+  MOUNTAIN_ART,
+} from './tileset.ts';
 
 export type MapSpriteLayer = 'ground' | 'cap' | 'roof';
 
 export interface MapSprite extends Point {
   tile: SheetTile;
   layer: MapSpriteLayer;
+  // The sheet `tile` is on, when it isn't the terrain sheet.
+  sheet?: { key: string; columns: number };
 }
 
 // A stable pseudo-random pick for cell (x, y) out of `count` variants, so
@@ -91,8 +101,36 @@ export function getBuildingSprites(
 
 // The rampart wall autotile in a palette's color (see autotile.ts): its
 // notched 3x3 starts one column into the group, and the all-corners-notched
-// tile is that 3x3's middle. Only 1-wide walls draw clean.
+// tile is that 3x3's middle. Only 1-wide walls draw clean. The wall runs on
+// through gates, whose own art covers it (see getCrossingSprites).
 export function getWallAutotile(palette: BuildingPalette): Autotile {
   const [c, r] = palette.wall;
-  return { block: [c + 1, r], inner: [c + 2, r + 1] };
+  return { block: [c + 1, r], inner: [c + 2, r + 1], joins: ['gate'] };
+}
+
+// Overlays for crossings: a bridge on each bridge cell (running north–south
+// when water or a ford lies west or east of it, else west–east), stepping stones on
+// each ford cell, and a gateway on each gate cell (its posts under units,
+// its lintel over them, in the map's palette). Props come off `propsSheet`.
+export function getCrossingSprites(
+  grid: Grid,
+  bridgeArt: typeof BRIDGE_ART,
+  gateArt: (typeof GATE_ART)[keyof typeof GATE_ART],
+  fordTile: SheetTile,
+  propsSheet: typeof MAP_PROPS_SHEET,
+): MapSprite[] {
+  const sprites: MapSprite[] = [];
+  const isWater = (x: number, y: number) => ['water', 'ford'].includes(getCell(grid, x, y)?.terrain ?? '');
+  for (const { x, y, terrain } of grid.cells) {
+    if (terrain === 'bridge') {
+      const tile = isWater(x - 1, y) || isWater(x + 1, y) ? bridgeArt.vertical : bridgeArt.horizontal;
+      sprites.push({ x, y, tile, layer: 'ground' });
+    } else if (terrain === 'ford') {
+      sprites.push({ x, y, tile: fordTile, layer: 'ground', sheet: propsSheet });
+    } else if (terrain === 'gate') {
+      sprites.push({ x, y, tile: gateArt.posts, layer: 'ground', sheet: propsSheet });
+      sprites.push({ x, y, tile: gateArt.lintel, layer: 'roof', sheet: propsSheet });
+    }
+  }
+  return sprites;
 }

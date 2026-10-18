@@ -42,19 +42,24 @@ export const TERRAIN_BASE_TILE: SheetTile = [0, 0];
 // with an inside corner in each of its four corners. `animation` steps
 // through `frames` copies of the set laid out `columnStride` tiles apart.
 export const TERRAIN_AUTOTILES: Record<string, Autotile> = {
+  // Water runs on under bridges and fords, which draw over it (see
+  // getCrossingSprites in src/game/mapArt.ts).
   water: {
     block: [4, 8],
     inner: [2, 9],
     animation: { frames: 6, columnStride: 7, frameMs: 180 },
+    joins: ['bridge', 'ford'],
   },
   // The sand-patch set, used as a dirt path. It has no plain 3x3, only the
   // notched one, so `block` is the notched 3x3: its outer corners and edges
   // are clean, but its middle has a notch in every corner, so a dirt patch
   // two or more tiles wide shows small grass holes where its 'full' quarters
-  // meet. One-tile-wide paths only use the clean pieces.
+  // meet. One-tile-wide paths only use the clean pieces. It runs on under a
+  // gate, whose art leaves its floor's south edge open to it.
   dirt: {
     block: [1, 3],
     inner: [2, 4],
+    joins: ['gate'],
   },
   // Dark grass: the one patch set with a plain 3x3, so it's clean at any
   // size. A meadow is walkable like grass.
@@ -157,6 +162,37 @@ export type BuildingPaletteName = keyof typeof BUILDING_PALETTES;
 
 // The palette for a level that doesn't pick one.
 export const DEFAULT_BUILDING_PALETTE: BuildingPaletteName = 'a-stone';
+
+// Bridges on the terrain sheet, over water: `vertical` runs north–south
+// (rails on its west and east sides), `horizontal` west–east.
+export const BRIDGE_ART: { vertical: SheetTile; horizontal: SheetTile } = {
+  vertical: [11, 2],
+  horizontal: [11, 1],
+};
+
+// Map props the terrain sheet doesn't have, drawn to match it by
+// .claude/skills/tileset/scripts/draw-map-props.js: a gateway per palette
+// and ford stepping stones. A 32px sheet like the terrain one.
+export const MAP_PROPS_SHEET = { key: 'map-props', columns: 11 };
+
+// Each palette's gateway on MAP_PROPS_SHEET: `posts` (a short post either
+// side of the opening, carrying on the wall's line) under units, `lintel`
+// (the beam across the top) over them.
+export const GATE_ART: Record<BuildingPaletteName, { posts: SheetTile; lintel: SheetTile }> = {
+  'a-stone': { posts: [0, 0], lintel: [0, 1] },
+  'a-orange': { posts: [1, 0], lintel: [1, 1] },
+  'a-teal': { posts: [2, 0], lintel: [2, 1] },
+  'a-pink': { posts: [3, 0], lintel: [3, 1] },
+  'a-brown': { posts: [4, 0], lintel: [4, 1] },
+  'b-white': { posts: [5, 0], lintel: [5, 1] },
+  'b-red': { posts: [6, 0], lintel: [6, 1] },
+  'b-blue': { posts: [7, 0], lintel: [7, 1] },
+  'b-green': { posts: [8, 0], lintel: [8, 1] },
+  'b-orange': { posts: [9, 0], lintel: [9, 1] },
+};
+
+// Ford stepping stones on MAP_PROPS_SHEET, over a ford's water.
+export const FORD_ART: SheetTile = [10, 0];
 
 // Unit art keyed by unit class, so every unit of a class looks alike
 // whichever side it's on. Each names a set of sheets, one per animation in

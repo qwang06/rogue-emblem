@@ -2901,6 +2901,21 @@ textarea.draft-input {
   background: #4b4d5c;
 }
 
+.map-preview__cell--bridge {
+  background: #a3a7c2;
+}
+
+.map-preview__cell--ford {
+  background: #6f9ccf;
+}
+
+.map-preview__cell--gate {
+  background: #b08a55;
+  box-shadow:
+    inset 4px 0 #4b4d5c,
+    inset -4px 0 #4b4d5c;
+}
+
 .map-preview__cell--enemy::after,
 .map-preview__cell--player::after,
 .map-preview__cell--building::after,

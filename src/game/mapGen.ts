@@ -22,6 +22,7 @@ import { getMoveCost } from './movement.ts';
 import { randomInt, randomItem, shuffle } from './rng.ts';
 import { DEFAULT_TERRAIN_LEGEND } from './terrainMap.ts';
 import { BUILDING_ART } from './tileset.ts';
+import type { MapArchetype } from './mapArchetypes.ts';
 
 type Range = readonly [number, number];
 
@@ -35,6 +36,10 @@ export interface MapGenOptions {
   // For the planned generator: how many routes lead north, the path
   // included.
   routes?: number;
+  // The map's layout: where each side starts and how the routes run (see
+  // mapArchetypes.ts). 'advance' (the default) is whatever `generator`
+  // builds; any other archetype is laid out from its own plan.
+  archetype?: MapArchetype;
   // How many patches of each terrain to try to grow (some may not fit),
   // and their size range in tiles.
   lakes?: number;
@@ -60,6 +65,14 @@ export interface GeneratedTerrain {
   path: Point[];
   // Buildings on the map, each on a grass tile.
   buildings: BuildingPlacement[];
+  // Set by a map archetype other than 'advance' (mapArchetypes.ts), which
+  // plans where each side starts: the player's deployment tiles, the areas
+  // the enemies are dealt into (one list per area), and the tile a seize
+  // objective should mark. Unset, the player deploys on the path's south
+  // end and enemies stand where their region's groups say.
+  deploymentZone?: Point[];
+  enemyZones?: Point[][];
+  seizeTile?: Point;
 }
 
 // What the lone buildings are picked from: everything but the castle, the
@@ -121,7 +134,7 @@ export function carvePath(
 
 // Every tile within one step (including diagonals) of any of `tiles`, plus
 // the tiles themselves, as keys.
-function withMargin(tiles: readonly Point[]): Set<string> {
+export function withMargin(tiles: readonly Point[]): Set<string> {
   const keys = new Set<string>();
   for (const { x, y } of tiles) {
     for (let dy = -1; dy <= 1; dy++) {
@@ -304,6 +317,7 @@ export const MAP_GEN_DEFAULTS = Object.freeze({
   turnChance: 0.35,
   generator: 'classic',
   routes: 3,
+  archetype: 'advance',
 }) satisfies Required<Omit<MapGenOptions, 'width' | 'height'>>;
 
 // `options` without its unset keys, so spreading it keeps the defaults.
@@ -330,12 +344,23 @@ export function generateTerrain(options: MapGenOptions, rng: Rng): GeneratedTerr
 // it may start on (non-empty); a random one when unset.
 export type PatchStartPicker = (terrain: string, index: number, starts: readonly Point[], rng: Rng) => Point;
 
+// What a map archetype lays down before the fill (see mapArchetypes.ts):
+// `grid`, the terrain to fill around (grass where it's open; all grass when
+// unset), `reserved`, tiles nothing is placed on (the top row and bottom two
+// rows when unset), and `buildings` already standing.
+export interface FillFrame {
+  grid?: Grid;
+  reserved?: readonly Point[];
+  buildings?: readonly BuildingPlacement[];
+}
+
 export function fillTerrain(
   options: MapGenOptions,
   rng: Rng,
   path: readonly Point[],
   keepClear: readonly Point[] = [],
   pickStart: PatchStartPicker = (_terrain, _index, starts, r) => randomItem(r, starts),
+  frame: FillFrame = {},
 ): GeneratedTerrain {
   const {
     width,
@@ -353,15 +378,19 @@ export function fillTerrain(
     buildings: buildingCount,
   } = { ...MAP_GEN_DEFAULTS, ...withoutUndefined(options) };
 
-  let grid = createGrid(width, height, 'grass');
+  let grid = frame.grid ?? createGrid(width, height, 'grass');
   grid = path.reduce((g, p) => setTerrain(g, p.x, p.y, 'dirt'), grid);
 
-  // Tiles each layer keeps out of: `edges` (top row, bottom two rows) for
-  // everything, plus the path's margin for anything impassable, plus every
-  // structure's margin once it's placed.
+  // Tiles each layer keeps out of: `edges` (the frame's reserved tiles, or
+  // the top row and bottom two rows) for everything, plus the path's margin
+  // for anything impassable, plus every structure's margin once it's placed.
   const edges = new Set<string>();
-  for (let x = 0; x < width; x++) {
-    for (const y of [0, height - 2, height - 1]) edges.add(key({ x, y }));
+  if (frame.reserved) {
+    frame.reserved.forEach((p) => edges.add(key(p)));
+  } else {
+    for (let x = 0; x < width; x++) {
+      for (const y of [0, height - 2, height - 1]) edges.add(key({ x, y }));
+    }
   }
   const structures = new Set<string>();
   const nearPath = withMargin([...path, ...keepClear]);
@@ -373,6 +402,7 @@ export function fillTerrain(
     withMargin([building]).forEach((k) => structures.add(k));
   };
   const covered = () => new Set(buildings.flatMap(getBuildingFootprint).map(key));
+  frame.buildings?.forEach(addBuilding);
 
   if (castle) {
     const placed = placeCastle(grid, path, rng, edges);

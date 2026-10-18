@@ -59,6 +59,17 @@ describe('placeObjective', () => {
     expect(objective).toEqual({ kind: 'seize', tile: { x: 0, y: 0 } });
   });
 
+  it('seizes the tile the map was planned around, when the deployment can walk to it', () => {
+    const level = {
+      ...smallLevel(MAP),
+      buildings: [{ x: 3, y: 1, building: 'fort' as const }],
+      seizeTile: { x: 1, y: 1 },
+    };
+    expect(placeObjective({ kind: 'seize' }, level)).toEqual({ kind: 'seize', tile: { x: 1, y: 1 } });
+    const cutOff = { ...smallLevel(['...~', '...~', '..~.', '~~.~', '....']), seizeTile: { x: 3, y: 2 } };
+    expect(placeObjective({ kind: 'seize' }, cutOff)).not.toEqual({ kind: 'seize', tile: { x: 3, y: 2 } });
+  });
+
   it('seizes a castle or fort the deployment can walk to', () => {
     const level = { ...smallLevel(MAP), buildings: [{ x: 3, y: 1, building: 'fort' as const }] };
     expect(placeObjective({ kind: 'seize' }, level)).toEqual({ kind: 'seize', tile: { x: 3, y: 1 } });

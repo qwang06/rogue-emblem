@@ -5,6 +5,7 @@
 // placeholders) apply.
 
 import { useMemo } from 'react';
+import { MAP_ARCHETYPES } from '../game/mapArchetypes.ts';
 import { MAP_GEN_DEFAULTS } from '../game/mapGen.ts';
 import { BUILDING_PALETTES } from '../game/tileset.ts';
 import type { RegionConfig } from '../game/warband/regions.ts';
@@ -162,6 +163,7 @@ export function RegionEditor({
             hint="1–5, planned only"
             placeholder={String(MAP_GEN_DEFAULTS.routes)}
           />
+          <SelectField form={form} path={at('terrain', 'archetype')} label="Map type" options={MAP_ARCHETYPES} />
         </div>
       </fieldset>
 

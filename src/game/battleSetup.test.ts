@@ -22,7 +22,14 @@ import {
   getStageSeed,
   restoreRoster,
 } from './warband/run.ts';
-import { createStageLevel, createStartingWarband, WARBAND_MAX_DEPLOYED } from './warband/stageLevel.ts';
+import {
+  createStageLevel,
+  createStartingWarband,
+  pickStageArchetype,
+  WARBAND_MAX_DEPLOYED,
+  withArchetype,
+} from './warband/stageLevel.ts';
+import { pickStageObjective } from './warband/stageObjective.ts';
 import { Archer } from './Archer.ts';
 import { createDemoLevel, PLAYER_ROSTER } from './demoLevel.ts';
 import { parseCharacters, parseDialogScript } from './dialogScript.ts';
@@ -205,10 +212,13 @@ describe('regionPreview', () => {
     expect(regionPreview(2, 9, settings)).toEqual({ mode: 'warband', seed: 9, stage: 5 });
   });
 
-  it('builds the same map as the region itself on that seed', () => {
+  it('builds the same map as the region itself on that seed, as the map type its stage picks', () => {
     const setup = regionPreview(1, 31, settings)!;
     const level = createBattleLevel(setup, { ...DEFAULT_CONTENT, regions: settings });
-    expect(terrainToRows(level.grid)).toEqual(terrainToRows(createStageLevel(31, settings.regions[1]).grid));
+    const region = settings.regions[1];
+    const objective = pickStageObjective(3, region, 31).kind;
+    const stageRegion = withArchetype(region, pickStageArchetype(3, region, 31, objective));
+    expect(terrainToRows(level.grid)).toEqual(terrainToRows(createStageLevel(31, stageRegion).grid));
   });
 
   it('is null for a region that does not exist', () => {

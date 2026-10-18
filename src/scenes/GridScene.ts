@@ -118,7 +118,13 @@ import { getPathFacings } from '../game/facing.ts';
 import { createKeyRepeat, updateKeyRepeat } from '../game/keyRepeat.ts';
 import { getArrowPieces } from '../game/moveArrow.ts';
 import { getQuarterFrameMap, getTileFrame, type Autotile } from '../game/autotile.ts';
-import { getBuildingSprites, getFeatureSprites, getWallAutotile, type MapSprite } from '../game/mapArt.ts';
+import {
+  getBuildingSprites,
+  getCrossingSprites,
+  getFeatureSprites,
+  getWallAutotile,
+  type MapSprite,
+} from '../game/mapArt.ts';
 import { canMoveAlongPath, extendMovePath, getMovementRange } from '../game/movement.ts';
 import { pickAttackPlan } from '../game/attackMove.ts';
 import { getDangerZone } from '../game/dangerZone.ts';
@@ -137,11 +143,15 @@ import { createBattleState, getDeployedUnits, type BattleState as Battle } from 
 import { isDone } from '../game/turns.ts';
 import {
   ARROW_TILES,
+  BRIDGE_ART,
   BUILDING_ART,
   BUILDING_PALETTES,
   CURSOR_ANIMATION,
   DEFAULT_BUILDING_PALETTE,
+  FORD_ART,
   FOREST_ART,
+  GATE_ART,
+  MAP_PROPS_SHEET,
   MOUNTAIN_ART,
   STRUCTURE_SPRITES,
   TERRAIN_AUTOTILES,
@@ -431,9 +441,11 @@ export class GridScene extends Phaser.Scene {
     this.shownStats = new Map();
     this.dialogs = level.dialogs; // the level's conversations by trigger (src/game/dialogScript.ts)
 
-    const palette = BUILDING_PALETTES[level.palette ?? DEFAULT_BUILDING_PALETTE];
+    const paletteName = level.palette ?? DEFAULT_BUILDING_PALETTE;
+    const palette = BUILDING_PALETTES[paletteName];
     this.renderTerrain(this.grid, { ...TERRAIN_AUTOTILES, wall: getWallAutotile(palette) });
     this.renderMapSprites([
+      ...getCrossingSprites(this.grid, BRIDGE_ART, GATE_ART[paletteName], FORD_ART, MAP_PROPS_SHEET),
       ...getFeatureSprites(this.grid, FOREST_ART, MOUNTAIN_ART),
       ...getBuildingSprites(level.buildings ?? [], palette, BUILDING_ART),
     ]);
@@ -2523,16 +2535,16 @@ export class GridScene extends Phaser.Scene {
     }
   }
 
-  // One-tile overlays from the terrain sheet (forests, mountains, buildings;
-  // see src/game/mapArt.ts): ground art and caps under units, at the trees'
-  // depth (caps just above, so a peak covers the forest it pokes into), and
-  // roofs over units like the gate's.
+  // One-tile overlays from the terrain sheet, or the props sheet (forests,
+  // mountains, buildings, crossings; see src/game/mapArt.ts): ground art
+  // and caps under units, at the trees' depth (caps just above, so a peak
+  // covers the forest it pokes into), and roofs over units like the gate's.
   renderMapSprites(sprites: readonly MapSprite[]) {
     const depths = { ground: 0.4, cap: 0.45, roof: 0.8 };
-    for (const { x, y, tile, layer } of sprites) {
+    for (const { x, y, tile, layer, sheet = TERRAIN_SHEET } of sprites) {
       const pos = gridToWorld(x, y, TILE_SIZE);
       this.add
-        .image(pos.x, pos.y, TERRAIN_SHEET.key, getTileFrame(tile, TERRAIN_SHEET.columns))
+        .image(pos.x, pos.y, sheet.key, getTileFrame(tile, sheet.columns))
         .setOrigin(0, 0)
         .setDepth(depths[layer]);
     }

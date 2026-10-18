@@ -8,7 +8,10 @@ import {
   getCandidateSeeds,
   layOutStage,
   MAP_CANDIDATES,
+  OBJECTIVE_ARCHETYPES,
+  pickStageArchetype,
   pickStageLayout,
+  withArchetype,
   WARBAND_LEADER_NAME,
   WARBAND_MAX_DEPLOYED,
 } from './stageLevel.ts';
@@ -21,7 +24,7 @@ import { findUnit, getCell, setUnit } from '../grid.ts';
 import { getMovementRange } from '../movement.ts';
 import { getBuildingSprites, getFeatureSprites } from '../mapArt.ts';
 import { getReachable, terrainToRows } from '../mapGen.ts';
-import { ROUT } from '../objectives.ts';
+import { OBJECTIVE_KINDS, ROUT } from '../objectives.ts';
 import { getCombatAward, getCombatExperience } from '../experience.ts';
 import { BUILDING_ART, BUILDING_PALETTES, FOREST_ART, MOUNTAIN_ART } from '../tileset.ts';
 
@@ -386,4 +389,47 @@ describe('stage 1', () => {
       expect(getWalkingDistances(grid, deploymentZone).get(`${enemy.x},${enemy.y}`)).toBeGreaterThanOrEqual(3);
     }
   });
+});
+
+describe('map archetypes on stages', () => {
+  const region = REGION_CONFIGS[4];
+
+  it('lays out stage 1 as advance, and later stages as a type that suits their objective', () => {
+    expect(pickStageArchetype(1, region, 7, 'seize')).toBe('advance');
+    for (const objective of OBJECTIVE_KINDS) {
+      const picked = new Set(Array.from({ length: 60 }, (_, seed) => pickStageArchetype(2, region, seed, objective)));
+      expect([...picked].sort()).toEqual([...OBJECTIVE_ARCHETYPES[objective]].sort());
+    }
+  });
+
+  it('keeps a region’s own map type on every stage', () => {
+    const fixed = withArchetype(region, 'islands');
+    expect(fixed.terrain.archetype).toBe('islands');
+    expect(fixed.terrain.width).toBe(region.terrain.width);
+    expect(pickStageArchetype(1, fixed, 7, 'rout')).toBe('islands');
+    expect(pickStageArchetype(5, fixed, 7, 'boss')).toBe('islands');
+  });
+
+  it('every archetype appears for some objective', () => {
+    const all = new Set(Object.values(OBJECTIVE_ARCHETYPES).flat());
+    expect(all.size).toBe(6);
+  });
+
+  it.each(['crossroads', 'ambush', 'gauntlet', 'islands', 'fortress'] as const)(
+    'builds a %s stage that keeps every rule, deploying and placing enemies where the plan says',
+    (archetype) => {
+      for (const seed of [1, 2, 3, 4, 5]) {
+        const stageRegion = withArchetype(region, archetype);
+        const layout = pickStageLayout(seed, stageRegion);
+        expect(layout.problems, `${archetype} seed ${seed}`).toEqual([]);
+        expect(layout.deploymentZone).toEqual(layout.terrain.deploymentZone);
+        expect(layout.enemyTiles.flat()).toHaveLength(countEnemies(region.enemies));
+        const zones = new Set(layout.terrain.enemyZones!.flat().map(({ x, y }) => `${x},${y}`));
+        expect(layout.enemyTiles.flat().every(({ x, y }) => zones.has(`${x},${y}`))).toBe(true);
+        const level = createStageLevel(seed, stageRegion);
+        expect(level.deploymentZone).toEqual(layout.deploymentZone);
+        expect(level.seizeTile).toEqual(layout.terrain.seizeTile);
+      }
+    },
+  );
 });

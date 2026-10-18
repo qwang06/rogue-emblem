@@ -10,15 +10,16 @@
 import { PLAYER_ROSTER, type DemoLevel, type TreePlacement } from '../demoLevel.ts';
 import { setUnit, type Point } from '../grid.ts';
 import { getBuildingSprites, getFeatureSprites } from '../mapArt.ts';
-import { pickEnemyTiles } from '../enemySpawns.ts';
+import { pickZonedEnemyTiles } from '../enemySpawns.ts';
 import type { Rng } from '../combatStats.ts';
 import { assignLoot } from '../loot.ts';
 import type { GeneratedTerrain } from '../mapGen.ts';
 import { generateMap } from '../mapPlan.ts';
 import { checkMap } from '../mapCheck.ts';
 import { getMapMetrics, scoreMap, type MapMetrics } from '../mapScore.ts';
-import { DEFAULT_OBJECTIVE } from '../objectives.ts';
-import { createSeededRng } from '../rng.ts';
+import type { MapArchetype } from '../mapArchetypes.ts';
+import { DEFAULT_OBJECTIVE, type ObjectiveKind } from '../objectives.ts';
+import { createSeededRng, randomItem } from '../rng.ts';
 import type { Unit } from '../Unit.ts';
 import { createUnitOfClass, UNIT_CLASSES } from '../unitClasses.ts';
 import { BUILDING_ART, BUILDING_PALETTES, FOREST_ART, MOUNTAIN_ART } from '../tileset.ts';
@@ -71,14 +72,16 @@ export interface StageLayout {
 }
 
 // The candidate laid out from `seed`: the terrain from region.terrain, the
-// deployment zone on the path's south end and the tiles either side of
-// it, and the enemies' tiles from region.enemies.
+// deployment zone where the map's archetype puts it (on the path's south
+// end and the tiles either side of it for 'advance'), and the enemies'
+// tiles from region.enemies, dealt into the archetype's enemy zones when it
+// has them.
 export function layOutStage(seed: number, region: RegionConfig): StageLayout {
   const rng = createSeededRng(seed);
   const terrain = generateMap(region.terrain, rng);
   const start = terrain.path[0];
-  const deploymentZone = [-1, 0, 1].map((dx) => ({ x: start.x + dx, y: start.y }));
-  const enemyTiles = pickEnemyTiles(terrain.grid, region.enemies, deploymentZone, rng);
+  const deploymentZone = terrain.deploymentZone ?? [-1, 0, 1].map((dx) => ({ x: start.x + dx, y: start.y }));
+  const enemyTiles = pickZonedEnemyTiles(terrain.grid, region.enemies, deploymentZone, terrain.enemyZones ?? [], rng);
   const problems = checkMap({
     grid: terrain.grid,
     buildings: terrain.buildings,
@@ -124,6 +127,7 @@ export function pickStageLayout(seed: number, region: RegionConfig, candidates =
 // - decorations: green ginkgos scattered (region.treeChance) on the grass no
 //   other art covers
 // - objective: a rout; battleSetup.ts places the stage's own (stageObjective.ts)
+// - seizeTile: the tile the map's archetype planned for a seize, if any
 // - loot: `lootCount` of the enemies (as many as there are, if fewer) each
 //   carry an item to drop (see assignLoot), picked after everything else so
 //   the map is the same whatever the count
@@ -182,5 +186,40 @@ export function createStageLevel(
     buildings,
     palette: region.palette,
     objective: DEFAULT_OBJECTIVE,
+    ...(layout.terrain.seizeTile ? { seizeTile: { ...layout.terrain.seizeTile } } : {}),
   };
+}
+
+// Which archetypes suit each objective (see mapArchetypes.ts): a seize
+// wants a tile worth fighting over, a boss a stronghold, a survive enemies
+// closing in from more than one side.
+export const OBJECTIVE_ARCHETYPES: Readonly<Record<ObjectiveKind, readonly MapArchetype[]>> = Object.freeze({
+  rout: Object.freeze(['advance', 'ambush', 'gauntlet', 'islands'] as const),
+  seize: Object.freeze(['crossroads', 'islands', 'fortress'] as const),
+  boss: Object.freeze(['fortress', 'advance', 'gauntlet'] as const),
+  survive: Object.freeze(['ambush', 'crossroads'] as const),
+});
+
+// Mixed into the stage seed so the archetype's draw doesn't follow the
+// objective's or the map's.
+const ARCHETYPE_SEED_SALT = 0x3a9e7c;
+
+// The archetype stage `stage` (1 is the first) of `region` is laid out
+// as, for an `objective` stage, seeded by the stage's `seed`: the region's
+// own if it sets one, 'advance' on stage 1, else one of
+// OBJECTIVE_ARCHETYPES[objective].
+export function pickStageArchetype(
+  stage: number,
+  region: RegionConfig,
+  seed: number,
+  objective: ObjectiveKind,
+): MapArchetype {
+  if (region.terrain.archetype) return region.terrain.archetype;
+  if (stage <= 1) return 'advance';
+  return randomItem(createSeededRng(seed ^ ARCHETYPE_SEED_SALT), OBJECTIVE_ARCHETYPES[objective]);
+}
+
+// `region` with its maps laid out as `archetype`.
+export function withArchetype(region: RegionConfig, archetype: MapArchetype): RegionConfig {
+  return { ...region, terrain: { ...region.terrain, archetype } };
 }

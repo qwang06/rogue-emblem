@@ -29,6 +29,7 @@
 
 import { countEnemies, getGroupRoom, NORTH_THIRD, type EnemyGroup, type SpawnArea } from '../enemySpawns.ts';
 import type { Grid, Point } from '../grid.ts';
+import { MAP_ARCHETYPES } from '../mapArchetypes.ts';
 import type { MapGenOptions } from '../mapGen.ts';
 import { OBJECTIVE_KINDS, type ObjectiveSpec } from '../objectives.ts';
 import { BUILDING_PALETTES, type BuildingPaletteName } from '../tileset.ts';
@@ -67,6 +68,7 @@ const TERRAIN_KEYS = [
   'turnChance',
   'generator',
   'routes',
+  'archetype',
 ];
 const GENERATORS = ['classic', 'planned'];
 const REGION_KEYS = ['name', 'description', 'terrain', 'enemies', 'enemyCount', 'treeChance', 'palette', 'objective'];
@@ -131,6 +133,12 @@ function parseTerrain(value: unknown, path: string): MapGenOptions {
     terrain.generator = json.generator;
   }
   if (json.routes !== undefined) terrain.routes = wholeNumber(json.routes, `${path}.routes`, REGION_LIMITS.routes);
+  if (json.archetype !== undefined) {
+    if (typeof json.archetype !== 'string' || !(MAP_ARCHETYPES as readonly string[]).includes(json.archetype)) {
+      fail(`${path}.archetype`, `must be one of ${MAP_ARCHETYPES.join(', ')}`);
+    }
+    terrain.archetype = json.archetype;
+  }
   // In the file's order, so saving it back doesn't shuffle its settings.
   const ordered = Object.keys(json).map((key) => [key, terrain[key]]);
   return Object.freeze(Object.fromEntries(ordered)) as unknown as MapGenOptions;

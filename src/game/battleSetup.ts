@@ -9,7 +9,7 @@ import type { DialogFiles } from './dialogScript.ts';
 import { REGION_SETTINGS } from '../data/regions.ts';
 import { getRegionStages, getStageRegion, type RegionSettings } from './warband/regions.ts';
 import { getBattleSeed, getStageSeed, restoreRoster, type RunState } from './warband/run.ts';
-import { createStageLevel } from './warband/stageLevel.ts';
+import { createStageLevel, pickStageArchetype, withArchetype } from './warband/stageLevel.ts';
 import { pickStageObjective, placeObjective } from './warband/stageObjective.ts';
 import { getStageLootCount } from './loot.ts';
 import { createDemoLevel, type DemoLevel } from './demoLevel.ts';
@@ -72,7 +72,8 @@ function getStoryChapter(chapter: number, chapters: readonly StoryChapter[]): St
 // Warband Mode stage's region). A stage of a run fields the run's roster
 // and deploy cap; one without a run (a region preview) the starting
 // warband. Either way the stage's enemies carry its loot (getStageLootCount),
-// and it plays the objective pickStageObjective gives it.
+// it plays the objective pickStageObjective gives it, and its map is laid
+// out as the archetype pickStageArchetype picks for that objective.
 export function createBattleLevel(
   setup: BattleSetup,
   content: GameContent = DEFAULT_CONTENT,
@@ -84,12 +85,14 @@ export function createBattleLevel(
     case 'training':
       return createTrainingLevel(setup.unitClass, content.dialogs.training);
     case 'warband': {
-      const region = getStageRegion(setup.stage, content.regions);
+      const baseRegion = getStageRegion(setup.stage, content.regions);
+      const spec = pickStageObjective(setup.stage, baseRegion, setup.seed);
+      const region = withArchetype(baseRegion, pickStageArchetype(setup.stage, baseRegion, setup.seed, spec.kind));
       const lootCount = getStageLootCount(setup.stage);
       const level = setup.run
         ? createStageLevel(setup.seed, region, restoreRoster(setup.run), setup.run.deployCap, lootCount)
         : createStageLevel(setup.seed, region, undefined, undefined, lootCount);
-      const objective = placeObjective(pickStageObjective(setup.stage, region, setup.seed), level);
+      const objective = placeObjective(spec, level);
       return { ...level, objective };
     }
   }

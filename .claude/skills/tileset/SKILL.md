@@ -79,13 +79,17 @@ To judge an autotile set as the game will draw it, `autotile-preview.ts` runs a 
 node .claude/skills/tileset/scripts/autotile-preview.ts --block 1,33 --inner 2,34 --over 5,34=G <scratchpad>/walls.png "......./.##G##./.#...#./.#####./......."
 ```
 
-To judge the procedural map generator's output, `map-preview.ts` renders `generateTerrain` maps for some seeds side by side, drawn the way GridScene draws them (terrain, walls, forests, mountains and buildings in one palette; no units or ginkgos):
+To judge the procedural map generator's output, `map-preview.ts` renders `generateMap` maps for some seeds side by side, drawn the way GridScene draws them (terrain, walls, crossings, forests, mountains and buildings in one palette; no ginkgos). `--archetype <type>` picks a map type (`mapArchetypes.ts`), `--terrain '<json>'` sets other terrain options, and `--units N` stands N warriors on the deployment zone (tinted) and N skeletons on enemy spots:
 
 ```sh
 node .claude/skills/tileset/scripts/map-preview.ts --scale 1 --palette a-stone <scratchpad>/maps.png 1 2 3
 ```
 
 `scripts/rescale-png.js --from N --to M [--crop WxH] in.png out.png` changes the scale of upscaled pixel art (it checks every NxN block is one color). `dump-png.js` exports `decode` and `encode` (rows of RGBA pixels to and from PNG) for other scripts.
+
+## Map props: map-props.png
+
+`src/assets/map-props.png` (352x64, `MAP_PROPS_SHEET`, 11 columns) holds the crossings the overworld sheet lacks, drawn by `scripts/draw-map-props.js` (run it from the repo root; it rewrites the file) as 16px art doubled, in colors sampled off the sheet. `[i, 0]` and `[i, 1]` are the gateway for building palette `i` (`GATE_ART`, in the script's `GATE_PALETTES` order: a-stone, a-orange, a-teal, a-pink, a-brown, b-white, b-red, b-blue, b-green, b-orange): row 0 is the posts (two 5px piers in the rampart's colors, the arch's dark underside, a sand floor so the dirt road runs through, drawn under units) and row 1 the crenellated lintel (drawn over units). `[10, 0]` (`FORD_ART`) is a ford's two staggered stepping stones in the rocks tile's colors with a pale wake, kept to the tile's middle rows so they clear both banks. The water autotile `joins` bridges and fords and the dirt and wall autotiles join gates, so the terrain runs on under them. Bridges use the sheet's own tiles (`BRIDGE_ART`).
 
 ## How the code uses the art
 

@@ -6,6 +6,7 @@ import {
   isInArea,
   NORTH_THIRD,
   pickEnemyTiles,
+  pickZonedEnemyTiles,
   type EnemyGroup,
 } from './enemySpawns.ts';
 import { createGrid, setTerrain, type Grid, type Point } from './grid.ts';
@@ -194,5 +195,56 @@ describe('countEnemies', () => {
   it('adds up every group', () => {
     expect(countEnemies([{ count: 2 }, { count: 3, minDistance: 4 }])).toBe(5);
     expect(countEnemies([])).toBe(0);
+  });
+});
+
+describe('pickZonedEnemyTiles', () => {
+  const open = createGrid(8, 8, 'grass');
+  const deploy = [3, 4, 5].map((x) => ({ x, y: 7 }));
+  const west = Array.from({ length: 4 }, (_, y) => ({ x: 0, y }));
+  const east = Array.from({ length: 4 }, (_, y) => ({ x: 7, y }));
+  const keyOf = ({ x, y }: Point) => `${x},${y}`;
+
+  it('deals enemies into the zones in turn, across groups, ignoring the groups’ areas', () => {
+    const tiles = pickZonedEnemyTiles(
+      open,
+      [
+        { count: 3, area: { y: [0.9, 1] } },
+        { count: 2, area: { y: [0.9, 1] } },
+      ],
+      deploy,
+      [west, east],
+      createSeededRng(4),
+    );
+    const zone = (p: Point) => (p.x === 0 ? 'west' : p.x === 7 ? 'east' : 'none');
+    expect(tiles.map((group) => group.map(zone))).toEqual([
+      ['west', 'east', 'west'],
+      ['east', 'west'],
+    ]);
+    expect(new Set(tiles.flat().map(keyOf)).size).toBe(5);
+  });
+
+  it('keeps to each group’s distances, spilling into another zone and then anywhere two steps out', () => {
+    const near = pickZonedEnemyTiles(open, [{ count: 3, maxDistance: 9 }], deploy, [west], createSeededRng(2));
+    const distances = getWalkingDistances(open, deploy);
+    expect(near[0]).toHaveLength(3);
+    for (const p of near[0]) expect(distances.get(keyOf(p))).toBeLessThanOrEqual(9);
+    const many = pickZonedEnemyTiles(
+      open,
+      [{ count: 6 }],
+      deploy,
+      [west.slice(0, 1), east.slice(0, 1)],
+      createSeededRng(2),
+    );
+    expect(many[0]).toHaveLength(6);
+    expect(many[0].slice(0, 2).map(keyOf).sort()).toEqual(['0,0', '7,0']);
+    for (const p of many[0].slice(2)) expect(distances.get(keyOf(p))).toBeGreaterThanOrEqual(2);
+  });
+
+  it('is pickEnemyTiles when there are no zones', () => {
+    const groups: EnemyGroup[] = [{ count: 2, area: NORTH_THIRD }];
+    expect(pickZonedEnemyTiles(open, groups, deploy, [], createSeededRng(9))).toEqual(
+      pickEnemyTiles(open, groups, deploy, createSeededRng(9)),
+    );
   });
 });

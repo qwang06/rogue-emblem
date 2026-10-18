@@ -392,3 +392,54 @@ describe('terrainToRows', () => {
     expect(getCell(createGrid(1, 1), 0, 0)!.terrain).toBeNull();
   });
 });
+
+describe('fillTerrain with a frame', () => {
+  it('fills around the frame’s terrain and buildings, keeping off its reserved tiles', () => {
+    const base = setTerrain(setTerrain(createGrid(8, 8, 'grass'), 0, 0, 'wall'), 1, 0, 'bridge');
+    const reserved = [
+      { x: 4, y: 4 },
+      { x: 5, y: 4 },
+    ];
+    const fort = { x: 6, y: 2, building: 'fort' as const };
+    const options: MapGenOptions = {
+      width: 8,
+      height: 8,
+      forests: 8,
+      forestSize: [6, 10],
+      castle: false,
+      buildings: 3,
+    };
+    for (const seed of SEEDS) {
+      const rng = createSeededRng(seed);
+      const { grid, buildings } = fillTerrain(options, rng, [{ x: 2, y: 7 }], [], undefined, {
+        grid: base,
+        reserved,
+        buildings: [fort],
+      });
+      expect(getCell(grid, 0, 0)!.terrain).toBe('wall');
+      expect(getCell(grid, 1, 0)!.terrain).toBe('bridge');
+      for (const { x, y } of reserved) expect(getCell(grid, x, y)!.terrain).toBe('grass');
+      expect(buildings[0]).toEqual(fort);
+      expect(buildings.slice(1).some((b) => reserved.some((r) => r.x === b.x && r.y === b.y))).toBe(false);
+    }
+  });
+
+  it('may fill the top row and bottom rows when the frame reserves others', () => {
+    const options: MapGenOptions = {
+      width: 6,
+      height: 6,
+      ruins: 0,
+      lakes: 0,
+      mountains: 0,
+      forests: 12,
+      forestSize: [10, 10],
+      castle: false,
+      buildings: 0,
+    };
+    const reachesEdge = SEEDS.some((seed) => {
+      const { grid } = fillTerrain(options, createSeededRng(seed), [], [], undefined, { reserved: [] });
+      return grid.cells.some((c) => c.terrain === 'forest' && (c.y === 0 || c.y === 5));
+    });
+    expect(reachesEdge).toBe(true);
+  });
+});

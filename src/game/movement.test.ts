@@ -396,3 +396,11 @@ describe('canMoveAlongPath', () => {
     expect(canMoveAlongPath(moveRange, pastAlly, { x: 3, y: 1 })).toBe(true);
   });
 });
+
+describe('crossing terrain', () => {
+  it('crosses a bridge or a gate at a walk and wades a ford slowly', () => {
+    expect(getMoveCost('bridge')).toBe(1);
+    expect(getMoveCost('gate')).toBe(1);
+    expect(getMoveCost('ford')).toBe(2);
+  });
+});

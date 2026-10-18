@@ -48,6 +48,7 @@ export interface ObjectiveLevel {
   units: ReadonlyMap<string, Unit>;
   deploymentZone: readonly Point[];
   buildings?: readonly BuildingPlacement[];
+  seizeTile?: Point;
 }
 
 const key = ({ x, y }: Point) => `${x},${y}`;
@@ -55,8 +56,9 @@ const key = ({ x, y }: Point) => `${x},${y}`;
 const isWalkable = (grid: Grid, p: Point) => Number.isFinite(getMoveCost(getCell(grid, p.x, p.y)?.terrain ?? null));
 
 // `spec` placed on `level`, as the Objective the battle checks:
-// - seize: a castle or fort the deployment zone can walk to, else the
-//   walkable tile farthest from the zone (northmost, then westmost, on a tie)
+// - seize: the level's seizeTile if the deployment zone can walk to it,
+//   else a castle or fort it can walk to, else the walkable tile farthest
+//   from the zone (northmost, then westmost, on a tie)
 // - boss: the enemy farthest from the zone (first in the registry on a
 //   tie), made into the boss (makeBoss)
 // - survive: SURVIVE_TURNS unless the spec says
@@ -91,6 +93,7 @@ export function placeObjective(spec: ObjectiveSpec, level: ObjectiveLevel): Obje
 }
 
 function pickSeizeTile(level: ObjectiveLevel, fromZone: (p: Point) => number): Point | null {
+  if (level.seizeTile && fromZone(level.seizeTile) > 0) return { ...level.seizeTile };
   const building = (level.buildings ?? []).find(
     (b) => SEIZE_BUILDINGS.includes(b.building) && isWalkable(level.grid, b) && fromZone(b) > 0,
   );

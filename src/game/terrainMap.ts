@@ -14,6 +14,9 @@ export const DEFAULT_TERRAIN_LEGEND: TerrainLegend = Object.freeze({
   '^': 'mountain',
   T: 'forest',
   '"': 'meadow',
+  '=': 'bridge',
+  _: 'ford',
+  '+': 'gate',
 });
 
 // Throws if the rows are empty, ragged, or use a character the legend

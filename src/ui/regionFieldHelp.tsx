@@ -125,6 +125,35 @@ const HELP: Record<string, FieldHelp> = {
       </p>
     ),
   },
+  archetype: {
+    title: 'Map type',
+    body: (
+      <>
+        <p>
+          Where each side starts and how the map is laid out. <b>advance</b> is the plain map: you start on the south
+          edge and the enemy waits in the north. The others are planned around their own idea:
+        </p>
+        <ul>
+          <li>
+            <b>crossroads</b>: roads cross mid-map, with the enemy on the west and east flanks.
+          </li>
+          <li>
+            <b>ambush</b>: you start in the middle and the enemy comes from two or three edges.
+          </li>
+          <li>
+            <b>gauntlet</b>: you start in a corner and a road switchbacks north between mountain ridges.
+          </li>
+          <li>
+            <b>islands</b>: a river splits the map, crossed only by bridges and fords.
+          </li>
+          <li>
+            <b>fortress</b>: the enemy holds a walled fort with one or two gates.
+          </li>
+        </ul>
+        <p>Blank lets each stage after the first pick one that suits its objective.</p>
+      </>
+    ),
+  },
   castle: {
     title: 'Castle',
     body: <p>Whether a castle stands beside the north end of the path.</p>,

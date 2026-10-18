@@ -7,6 +7,7 @@ import acolyte02Move from './units/Acolyte_02_Move.png';
 import archer02Idle from './units/Archer_02_Idle.png';
 import archer02Move from './units/Archer_02_Move.png';
 import gates from './gates.png';
+import mapProps from './map-props.png';
 import goblin01Idle from './units/Goblin_01_Idle.png';
 import goblin01Move from './units/Goblin_01_Move.png';
 import goldGinkgoTree from './gold_ginkgo_tree.png';
@@ -39,6 +40,7 @@ export const SPRITE_URLS: Readonly<Record<string, string>> = {
   Goblin_01_Move: goblin01Move,
   gold_ginkgo_tree: goldGinkgoTree,
   ginkgo_tree_green: ginkgoTreeGreen,
+  'map-props': mapProps,
   Skeleton_01_Idle: skeleton01Idle,
   Skeleton_01_Move: skeleton01Move,
   Slime_01_Idle: slime01Idle,

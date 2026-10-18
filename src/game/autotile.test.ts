@@ -180,3 +180,25 @@ describe('getQuarterFrameMap', () => {
     expect(second).toEqual(first.map((row) => row.map((frame) => frame + 8)));
   });
 });
+
+describe('joined terrains', () => {
+  const grid = parseTerrainMap(['~=~', '...'], { '~': 'water', '=': 'bridge', '.': 'grass' });
+
+  it('draws a joined terrain as the set’s own, so it runs on under it', () => {
+    expect(getQuarterShapes(grid, 1, 0, 'water')).toBeNull();
+    expect(getQuarterShapes(grid, 1, 0, 'water', ['bridge'])).toEqual({
+      'top-left': 'full',
+      'top-right': 'full',
+      'bottom-left': 'horizontal',
+      'bottom-right': 'horizontal',
+    });
+    expect(getQuarterShapes(grid, 0, 0, 'water', ['bridge'])!['top-right']).toBe('full');
+  });
+
+  it('takes its joins from the autotile', () => {
+    const water = TERRAIN_AUTOTILES.water;
+    expect(water.joins).toEqual(['bridge', 'ford']);
+    expect(getQuarterFrames(grid, 1, 0, 'water', water, TERRAIN_SHEET.columns)).not.toBeNull();
+    expect(TERRAIN_AUTOTILES.dirt.joins).toEqual(['gate']);
+  });
+});

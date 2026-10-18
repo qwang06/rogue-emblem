@@ -17,7 +17,8 @@
 // Pure: the same options and seed always give the same map.
 
 import type { Rng } from './combatStats.ts';
-import type { Point } from './grid.ts';
+import { createGrid, setTerrain, type Point } from './grid.ts';
+import { planArchetype, type MapArchetype } from './mapArchetypes.ts';
 import {
   carvePath,
   fillTerrain,
@@ -125,8 +126,45 @@ export function generatePlannedTerrain(options: MapGenOptions, rng: Rng): Planne
   return { ...terrain, plan, routes: sideRoutes };
 }
 
-// The map from whichever generator `options.generator` names (classic
-// when unset).
+// Builds a map from an archetype's plan (mapArchetypes.ts): lays the plan's
+// terrain and buildings, then fills the rest as the planned generator does
+// (patches started in their zones, impassable terrain kept off the road and
+// routes, nothing on the plan's reserved tiles). The plan stands up its own
+// buildings and decides where the fight is, so the fill adds no castle and
+// no walled ruins, and it can turn off patches its own terrain stands in for. The map carries the plan's deployment zone, enemy zones
+// and seize tile.
+export function generateArchetypeTerrain(
+  options: MapGenOptions,
+  archetype: Exclude<MapArchetype, 'advance'>,
+  rng: Rng,
+): GeneratedTerrain {
+  const { width, height } = options;
+  if (width < 6 || height < 6) throw new Error(`A ${archetype} map needs to be at least 6x6`);
+  const plan = planArchetype(archetype, width, height, rng);
+  const grid = plan.terrain.reduce((g, p) => setTerrain(g, p.x, p.y, p.terrain), createGrid(width, height, 'grass'));
+  const routes = plan.routes.flat();
+  const zones = getZones(width, height, plan.deploymentZone, plan.enemyZones.flat(), [...plan.path, ...routes]);
+  const terrain = fillTerrain(
+    { ...options, ...plan.fill, castle: false, ruins: 0 },
+    rng,
+    plan.path,
+    routes,
+    (kind, index, starts, r) => pickZonedStart(zones, kind, index, starts, r),
+    { grid, reserved: plan.reserved, buildings: plan.buildings },
+  );
+  return {
+    ...terrain,
+    deploymentZone: plan.deploymentZone,
+    enemyZones: plan.enemyZones,
+    ...(plan.seizeTile ? { seizeTile: plan.seizeTile } : {}),
+  };
+}
+
+// The map from `options.archetype`'s plan when it names one other than
+// 'advance', else from whichever generator `options.generator` names
+// (classic when unset).
 export function generateMap(options: MapGenOptions, rng: Rng): GeneratedTerrain {
+  const { archetype } = options;
+  if (archetype && archetype !== 'advance') return generateArchetypeTerrain(options, archetype, rng);
   return options.generator === 'planned' ? generatePlannedTerrain(options, rng) : generateTerrain(options, rng);
 }

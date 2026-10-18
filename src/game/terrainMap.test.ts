@@ -63,3 +63,10 @@ describe('parseTerrainMap', () => {
     expect(() => parseTerrainMap(['.'], Object.create({ '.': 'grass' }))).toThrow();
   });
 });
+
+describe('crossing characters', () => {
+  it('reads = as a bridge, _ as a ford and + as a gate', () => {
+    const grid = parseTerrainMap(['=_+']);
+    expect([0, 1, 2].map((x) => getCell(grid, x, 0)!.terrain)).toEqual(['bridge', 'ford', 'gate']);
+  });
+});

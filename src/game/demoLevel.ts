@@ -29,6 +29,9 @@ export interface DemoLevel extends Level {
   // They default to none and DEFAULT_BUILDING_PALETTE (tileset.ts).
   buildings?: BuildingPlacement[];
   palette?: BuildingPaletteName;
+  // The tile a seize objective should mark, when the map was planned
+  // around one (see mapArchetypes.ts).
+  seizeTile?: Point;
 }
 
 // Level 1: a dirt path runs north up the middle of a grass field to a

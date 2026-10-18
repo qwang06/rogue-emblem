@@ -1,10 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { BUILDING_KINDS, type BuildingPlacement } from './buildings.ts';
-import { getBuildingSprites, getFeatureSprites, getWallAutotile, pickVariant, type MapSprite } from './mapArt.ts';
+import {
+  getBuildingSprites,
+  getCrossingSprites,
+  getFeatureSprites,
+  getWallAutotile,
+  pickVariant,
+  type MapSprite,
+} from './mapArt.ts';
 import { parseTerrainMap } from './terrainMap.ts';
 import {
+  BRIDGE_ART,
   BUILDING_ART,
   BUILDING_PALETTES,
+  FORD_ART,
+  GATE_ART,
+  MAP_PROPS_SHEET,
   DEFAULT_BUILDING_PALETTE,
   FOREST_ART,
   MOUNTAIN_ART,
@@ -162,8 +173,50 @@ describe('building palettes', () => {
 });
 
 describe('getWallAutotile', () => {
-  it('takes the notched 3x3 of the palette’s rampart group', () => {
-    expect(getWallAutotile(BUILDING_PALETTES['a-stone'])).toEqual({ block: [1, 33], inner: [2, 34] });
-    expect(getWallAutotile(BUILDING_PALETTES['b-red'])).toEqual({ block: [19, 41], inner: [20, 42] });
+  it('takes the notched 3x3 of the palette’s rampart group, running on through gates', () => {
+    expect(getWallAutotile(BUILDING_PALETTES['a-stone'])).toEqual({ block: [1, 33], inner: [2, 34], joins: ['gate'] });
+    expect(getWallAutotile(BUILDING_PALETTES['b-red'])).toEqual({ block: [19, 41], inner: [20, 42], joins: ['gate'] });
+  });
+});
+
+describe('getCrossingSprites', () => {
+  const sprites = (rows: string[], palette: BuildingPaletteName = 'a-stone') =>
+    getCrossingSprites(parseTerrainMap(rows), BRIDGE_ART, GATE_ART[palette], FORD_ART, MAP_PROPS_SHEET);
+
+  it('runs a bridge north–south across a river running west–east, and west–east across a channel', () => {
+    expect(sprites(['~=~', '~=~'])).toEqual([
+      { x: 1, y: 0, tile: BRIDGE_ART.vertical, layer: 'ground' },
+      { x: 1, y: 1, tile: BRIDGE_ART.vertical, layer: 'ground' },
+    ]);
+    expect(sprites(['.~.', '.=.', '.~.'])).toEqual([{ x: 1, y: 1, tile: BRIDGE_ART.horizontal, layer: 'ground' }]);
+    // Bridge beside bridge (a two-wide channel's) isn't water either side.
+    expect(sprites(['.~~.', '.==.']).map((s) => s.tile)).toEqual([BRIDGE_ART.horizontal, BRIDGE_ART.horizontal]);
+  });
+
+  it('lays stepping stones on a ford, off the props sheet', () => {
+    expect(sprites(['~_~'])).toEqual([{ x: 1, y: 0, tile: FORD_ART, layer: 'ground', sheet: MAP_PROPS_SHEET }]);
+  });
+
+  it('draws a gate’s posts under units and its lintel over them, in the palette’s colors', () => {
+    expect(sprites(['.#+#.'], 'b-red')).toEqual([
+      { x: 2, y: 0, tile: GATE_ART['b-red'].posts, layer: 'ground', sheet: MAP_PROPS_SHEET },
+      { x: 2, y: 0, tile: GATE_ART['b-red'].lintel, layer: 'roof', sheet: MAP_PROPS_SHEET },
+    ]);
+  });
+
+  it('draws nothing on a map without crossings', () => {
+    expect(sprites(['.~#', 'T^,'])).toEqual([]);
+  });
+});
+
+describe('GATE_ART', () => {
+  it('has a gateway for every palette, each its own column of the props sheet', () => {
+    const columns = Object.keys(BUILDING_PALETTES).map((name) => GATE_ART[name as BuildingPaletteName].posts[0]);
+    expect(new Set(columns).size).toBe(columns.length);
+    for (const { posts, lintel } of Object.values(GATE_ART)) {
+      expect(lintel).toEqual([posts[0], 1]);
+      expect(posts[0]).toBeLessThan(MAP_PROPS_SHEET.columns);
+    }
+    expect(FORD_ART[0]).toBeLessThan(MAP_PROPS_SHEET.columns);
   });
 });

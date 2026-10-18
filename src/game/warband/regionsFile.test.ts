@@ -40,6 +40,7 @@ describe('parseRegionSettings', () => {
       turnChance: 0.5,
       generator: 'planned',
       routes: 2,
+      archetype: 'islands',
     };
     const settings = parseRegionSettings(file([region({ terrain, objective: { kind: 'rout' } })]));
     expect(settings.regions[0].terrain).toEqual(terrain);
@@ -151,6 +152,11 @@ describe('parseRegionSettings', () => {
       'an unknown generator',
       file([region({ terrain: { width: 12, height: 10, generator: 'maze' } })]),
       /generator must be one of classic, planned/,
+    ],
+    [
+      'an unknown map type',
+      file([region({ terrain: { width: 12, height: 10, archetype: 'maze' } })]),
+      /archetype must be one of advance, crossroads, ambush, gauntlet, islands, fortress/,
     ],
     [
       'too many routes',

@@ -30,6 +30,9 @@ export interface Autotile {
   block: SheetTile;
   inner: SheetTile;
   animation?: { frames: number; columnStride: number; frameMs: number };
+  // Other terrains drawn as this one, so it runs on under them: water under
+  // a bridge or a ford, which draw their own art on top.
+  joins?: readonly string[];
 }
 
 // Quarters in row-major order, each with the direction of its row
@@ -43,27 +46,29 @@ export const QUARTERS: readonly { name: QuarterName; dx: number; dy: number }[] 
 
 const clamp = (value: number, max: number) => Math.min(Math.max(value, 0), max);
 
-// Whether the cell (x, y) is `terrain`. Cells off the map take the nearest
-// cell on it, so terrain reads as continuing past the edge instead of
-// drawing a border there.
-function holds(grid: Grid, x: number, y: number, terrain: Terrain): boolean {
-  return getCell(grid, clamp(x, grid.width - 1), clamp(y, grid.height - 1))!.terrain === terrain;
+// Whether the cell (x, y) is `terrain` or one of the terrains in `joins`.
+// Cells off the map take the nearest cell on it, so terrain reads as
+// continuing past the edge instead of drawing a border there.
+function holds(grid: Grid, x: number, y: number, terrain: Terrain, joins: readonly string[]): boolean {
+  const here = getCell(grid, clamp(x, grid.width - 1), clamp(y, grid.height - 1))!.terrain;
+  return here === terrain || (here !== null && joins.includes(here));
 }
 
 // The shape of each quarter of cell (x, y), keyed by quarter name, or null
-// if the cell isn't `terrain`.
+// if the cell isn't `terrain` (or one of `joins`, drawn as it).
 export function getQuarterShapes(
   grid: Grid,
   x: number,
   y: number,
   terrain: Terrain,
+  joins: readonly string[] = [],
 ): Record<QuarterName, QuarterShape> | null {
-  if (!holds(grid, x, y, terrain)) return null;
+  if (!holds(grid, x, y, terrain, joins)) return null;
   const shapes = {} as Record<QuarterName, QuarterShape>;
   for (const { name, dx, dy } of QUARTERS) {
-    const row = holds(grid, x + dx, y, terrain);
-    const column = holds(grid, x, y + dy, terrain);
-    const diagonal = holds(grid, x + dx, y + dy, terrain);
+    const row = holds(grid, x + dx, y, terrain, joins);
+    const column = holds(grid, x, y + dy, terrain, joins);
+    const diagonal = holds(grid, x + dx, y + dy, terrain, joins);
     if (!row && !column) shapes[name] = 'outer';
     else if (!column) shapes[name] = 'horizontal';
     else if (!row) shapes[name] = 'vertical';
@@ -88,7 +93,7 @@ export function getShapeTile(autotile: Autotile, shape: QuarterShape, quarter: Q
 // Frame numbers for the four quarters of cell (x, y), in QUARTERS order, on
 // the terrain sheet cut into half-size tiles (so it's `sheetColumns * 2`
 // frames wide). `animationFrame` picks which copy of an animated set to
-// use. Null if the cell isn't `terrain`.
+// use. Null if the cell isn't `terrain` (or one it joins).
 export function getQuarterFrames(
   grid: Grid,
   x: number,
@@ -98,7 +103,7 @@ export function getQuarterFrames(
   sheetColumns: number,
   animationFrame = 0,
 ): number[] | null {
-  const shapes = getQuarterShapes(grid, x, y, terrain);
+  const shapes = getQuarterShapes(grid, x, y, terrain, autotile.joins);
   if (!shapes) return null;
   const shift = animationFrame * (autotile.animation?.columnStride ?? 0);
   return QUARTERS.map(({ name, dx, dy }) => {
