@@ -4,3 +4,28 @@
   background: var(--blue-bg);
   border-color: var(--blue);
 }
+
+.auto-play-controls {
+  display: flex;
+  flex: none;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.auto-speed-button {
+  width: 1.25rem;
+  padding-inline: 0;
+  text-align: center;
+}
+
+.auto-speed-button:disabled {
+  color: var(--fg-dim);
+  opacity: 0.55;
+  cursor: default;
+}
+
+.auto-speed-value {
+  width: 1.7rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}

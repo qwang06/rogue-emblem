@@ -1,0 +1,50 @@
+.auto-command-queue {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 2;
+  box-sizing: border-box;
+  width: min(13rem, calc(100% - 16px));
+  min-height: 4.6rem;
+  padding: 5px 8px;
+  color: var(--fg);
+  background: var(--bg);
+  border: var(--border);
+  box-shadow: var(--lift);
+  font-size: 0.7rem;
+  line-height: 1.25;
+  pointer-events: none;
+}
+
+.auto-command-queue h2 {
+  margin: 0 0 3px;
+  color: var(--fg-bright);
+  font-size: 0.75rem;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.auto-command-queue ol {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.auto-command-queue li {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.auto-command-queue__empty {
+  list-style: none;
+  margin-left: -1.25rem;
+  color: var(--fg-dim);
+}
+
+@media (max-width: 36rem) {
+  .auto-command-queue {
+    right: 4px;
+    bottom: 4px;
+    width: min(11rem, calc(100% - 8px));
+  }
+}

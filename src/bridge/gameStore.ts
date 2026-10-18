@@ -7,6 +7,7 @@ import type { BattleOutcome } from '../game/turns.ts';
 import type { MerchantScreenView } from './merchantView.ts';
 import type { RosterScreenView } from './rosterView.ts';
 import { createStore } from './store.ts';
+import type { AutoSpeed } from '../game/autoSpeed.ts';
 import type {
   CombatForecastView,
   DamagePopupView,
@@ -34,6 +35,7 @@ export type { BattleSetup };
 export type RosterMenuEntry = RosterEntryView & MenuAction;
 
 export interface BattleState {
+  autoCommandQueue: readonly string[];
   mapLoadProgress: number;
   mapReady: boolean;
   phase: BattlePhase | null;
@@ -75,11 +77,13 @@ export interface GameState extends BattleState {
   screen: Screen;
   battleSetup: BattleSetup | null;
   autoPlay: boolean;
+  autoSpeed: AutoSpeed;
 }
 
 // State that only exists while the map is running. The map scene resets
 // these when a battle starts and when it's left, so nothing carries over.
 export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
+  autoCommandQueue: [], // upcoming AI battle commands, shown while Auto is on
   mapLoadProgress: 0, // 0–1, how much of the map's art has loaded (the loading screen's bar)
   mapReady: false, // true once the map scene has loaded and built the map, lifting the loading screen
   phase: null, // 'deployment' (placing units) | 'battle' while the map runs, else null
@@ -131,5 +135,6 @@ export const gameStore = createStore<GameState>({
   // Whether the player's side plays itself (the map's auto play): its
   // battles, reward picks and camp. Kept from battle to battle.
   autoPlay: false,
+  autoSpeed: 1,
   ...BATTLE_STATE_DEFAULTS,
 });

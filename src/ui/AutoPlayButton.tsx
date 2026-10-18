@@ -9,17 +9,43 @@ import './AutoPlayButton.css';
 export function AutoPlayButton() {
   const shown = useGameStore((state) => state.mapReady && state.screen === 'battle');
   const on = useGameStore((state) => state.autoPlay);
+  const speed = useGameStore((state) => state.autoSpeed);
   if (!shown) return null;
 
   return (
-    <button
-      type="button"
-      className="header-button auto-play-button"
-      aria-pressed={on}
-      title="Let the AI play your side (A)"
-      onClick={() => gameCommands.send({ type: 'toggle-auto-play' })}
-    >
-      Auto
-    </button>
+    <div className="auto-play-controls" aria-label="Auto play controls">
+      <button
+        type="button"
+        className="header-button auto-play-button"
+        aria-pressed={on}
+        title="Let the AI play your side (A)"
+        onClick={() => gameCommands.send({ type: 'toggle-auto-play' })}
+      >
+        Auto
+      </button>
+      <button
+        type="button"
+        className="header-button auto-speed-button"
+        aria-label="Decrease auto speed"
+        title="Decrease auto speed"
+        disabled={speed === 1}
+        onClick={() => gameCommands.send({ type: 'change-auto-speed', direction: -1 })}
+      >
+        −
+      </button>
+      <output className="auto-speed-value" aria-label={`Auto speed ${speed} times`}>
+        {speed}×
+      </output>
+      <button
+        type="button"
+        className="header-button auto-speed-button"
+        aria-label="Increase auto speed"
+        title="Increase auto speed"
+        disabled={speed === 8}
+        onClick={() => gameCommands.send({ type: 'change-auto-speed', direction: 1 })}
+      >
+        +
+      </button>
+    </div>
   );
 }

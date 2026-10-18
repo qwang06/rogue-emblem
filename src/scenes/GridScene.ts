@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { SPRITE_URLS } from '../assets/sprites.ts';
 import terrainSheetUrl from '../assets/overworld.png';
 import { gameCommands, type Command, type MenuField } from '../bridge/commands.ts';
+import { changeAutoSpeed } from '../game/autoSpeed.ts';
 import { getActiveContent } from '../data/customContent.ts';
 import {
   BATTLE_STATE_DEFAULTS,
@@ -310,6 +311,7 @@ export class GridScene extends Phaser.Scene {
   dangerZoneVisible = false;
   dangerZoneTiles: Phaser.GameObjects.Rectangle[] = [];
   autoElapsed = 0;
+  pendingAutoCommands: BattleCommand[] = [];
   inspectedEnemyId: string | null = null;
   inspectedTiles: Phaser.GameObjects.Rectangle[] = [];
   moveRange: RangeTile[] | null = null;
@@ -394,7 +396,43 @@ export class GridScene extends Phaser.Scene {
   dispatch(command: BattleCommand): readonly BattleEvent[] {
     const { history, events } = dispatch(this.history, command);
     this.history = history;
+    if (this.pendingAutoCommands[0] === command) {
+      this.pendingAutoCommands.shift();
+      this.publishAutoCommandQueue();
+    }
     return events;
+  }
+
+  queueAutoCommands(commands: readonly BattleCommand[]) {
+    this.pendingAutoCommands = [...commands];
+    this.publishAutoCommandQueue();
+  }
+
+  publishAutoCommandQueue() {
+    gameStore.setState({
+      autoCommandQueue: this.pendingAutoCommands.map((command) => {
+        const actor = 'unitId' in command ? (this.battle.units.get(command.unitId)?.name ?? command.unitId) : null;
+        switch (command.type) {
+          case 'place':
+          case 'move':
+            return `${actor}: ${command.type === 'place' ? 'Place' : 'Move'} to ${command.to.x + 1}, ${command.to.y + 1}`;
+          case 'attack':
+          case 'skill':
+          case 'heal':
+            return `${actor}: ${command.type === 'skill' ? command.skillId : command.type} at ${command.target.x + 1}, ${command.target.y + 1}`;
+          case 'equip':
+            return `${actor}: Equip slot ${command.index + 1}`;
+          case 'item':
+            return `${actor}: Use ${command.itemId}`;
+          case 'wait':
+            return `${actor}: Wait`;
+          case 'start-battle':
+            return 'Start battle';
+          case 'end-phase':
+            return 'End phase';
+        }
+      }),
+    });
   }
 
   // Catches the map's view up with the battle.
@@ -494,6 +532,7 @@ export class GridScene extends Phaser.Scene {
     this.dangerZoneVisible = false; // whether every enemy's reach is shaded (toggled with D or the header button)
     this.dangerZoneTiles = []; // highlight rectangles for the danger zone
     this.autoElapsed = 0; // ms since auto play's last step (see updateAutoPlay)
+    this.pendingAutoCommands = [];
     this.inspectedEnemyId = null; // an enemy picked on the bare map to show just its reach
     this.inspectedTiles = []; // highlight rectangles for that enemy's reach
     this.moveRange = null; // [{ x, y, cost }] the active unit can end its move on
@@ -516,6 +555,7 @@ export class GridScene extends Phaser.Scene {
     this.unitInfoUnit = null; // set while the unit info screen is up
     this.previewUnitId = null;
     this.preview = gameStore.getState().screen === 'preview';
+    this.applyAutoSpeed();
     if (this.preview) {
       this.startPreview();
       gameStore.setState({ mapLoadProgress: 1, mapReady: true });
@@ -1461,8 +1501,28 @@ export class GridScene extends Phaser.Scene {
   // before the next step.
 
   toggleAutoPlay() {
-    gameStore.setState({ autoPlay: !gameStore.getState().autoPlay });
+    const autoPlay = !gameStore.getState().autoPlay;
+    gameStore.setState({ autoPlay });
+    if (!autoPlay) this.queueAutoCommands([]);
+    this.applyAutoSpeed();
     this.autoElapsed = 0;
+  }
+
+  changeAutoSpeed(direction: -1 | 1) {
+    gameStore.setState((state) => ({ autoSpeed: changeAutoSpeed(state.autoSpeed, direction) }));
+    this.applyAutoSpeed();
+  }
+
+  applyAutoSpeed() {
+    const { autoPlay, autoSpeed } = gameStore.getState();
+    const speed = autoPlay && !this.preview ? autoSpeed : 1;
+    this.time.timeScale = speed;
+    this.tweens.timeScale = speed;
+  }
+
+  playbackDuration(durationMs: number) {
+    const { autoPlay, autoSpeed } = gameStore.getState();
+    return durationMs / (autoPlay && !this.preview ? autoSpeed : 1);
   }
 
   // Takes auto play's next step once one is due. True when auto play owns
@@ -1473,7 +1533,7 @@ export class GridScene extends Phaser.Scene {
     if (!gameStore.getState().autoPlay || this.preview) return false;
     const step = this.getAutoStep();
     if (!step) return false;
-    this.autoElapsed += delta;
+    this.autoElapsed += delta * gameStore.getState().autoSpeed;
     if (this.autoElapsed < AUTO_STEP_MS) return true;
     this.autoElapsed = 0;
     step();
@@ -1492,7 +1552,10 @@ export class GridScene extends Phaser.Scene {
     if (this.battleOutcome) return () => (this.rewardOffer ? this.openRewardMenu() : this.leaveBattle());
     if (this.phase === 'deployment') return () => this.autoDeploy();
     const choosing = this.activeUnit || this.actionMenu || this.weaponMenu || this.skillMenu || this.itemMenu;
-    if (this.turnState?.team === 'player' && !choosing) return () => this.autoPlayerAction();
+    if (this.turnState?.team === 'player' && !choosing) {
+      if (this.pendingAutoCommands.length === 0) this.queueAutoCommands(planPlayerTurn(this.battle));
+      return () => this.autoPlayerAction();
+    }
     return null;
   }
 
@@ -1508,7 +1571,7 @@ export class GridScene extends Phaser.Scene {
   // One player unit's action, played out like an enemy's; input stays
   // locked until it has, and the next step comes after AUTO_STEP_MS.
   autoPlayerAction() {
-    const [move, act] = planPlayerTurn(this.battle);
+    const [move, act] = this.pendingAutoCommands;
     if (!move || !act) return;
     this.hideEnemyReach();
     this.hideRange();
@@ -1602,7 +1665,7 @@ export class GridScene extends Phaser.Scene {
     const banner = toPhaseBannerView({
       id: this.nextBannerId++,
       turnState,
-      durationMs: PHASE_BANNER_DURATION_MS,
+      durationMs: this.playbackDuration(PHASE_BANNER_DURATION_MS),
     });
     gameStore.setState({ phaseBanner: banner });
     this.time.delayedCall(PHASE_BANNER_DURATION_MS, () => {
@@ -1711,7 +1774,10 @@ export class GridScene extends Phaser.Scene {
   // phase back to the player.
   runEnemyPhase() {
     const [move, act] = planNextTurn(this.battle);
-    if (move && act) this.takeEnemyAction(move, act);
+    if (move && act) {
+      if (gameStore.getState().autoPlay) this.queueAutoCommands([move, act]);
+      this.takeEnemyAction(move, act);
+    }
   }
 
   // Puts the cursor on the unit, walks it along its planned route, and
@@ -2130,7 +2196,7 @@ export class GridScene extends Phaser.Scene {
       name: unit.name,
       from,
       result,
-      durationMs: EXPERIENCE_BAR_MS,
+      durationMs: this.playbackDuration(EXPERIENCE_BAR_MS),
     });
     gameStore.setState({ experienceGain });
 
@@ -2153,7 +2219,11 @@ export class GridScene extends Phaser.Scene {
         onDone();
         return;
       }
-      const view = toLevelUpView({ id: this.nextProgressId++, ...entry, durationMs: LEVEL_UP_MS });
+      const view = toLevelUpView({
+        id: this.nextProgressId++,
+        ...entry,
+        durationMs: this.playbackDuration(LEVEL_UP_MS),
+      });
       gameStore.setState({ levelUp: view });
       this.time.delayedCall(LEVEL_UP_MS, () => showLevelUp(index + 1));
     };
@@ -2263,7 +2333,7 @@ export class GridScene extends Phaser.Scene {
       label,
       x,
       y,
-      durationMs: DAMAGE_POPUP_DURATION_MS,
+      durationMs: this.playbackDuration(DAMAGE_POPUP_DURATION_MS),
     });
 
     gameStore.setState((state) => ({ damagePopups: [...state.damagePopups, popup] }));
@@ -2357,6 +2427,9 @@ export class GridScene extends Phaser.Scene {
     }
     if (queue.some((command) => command.type === 'toggle-danger-zone')) this.toggleDangerZone();
     if (queue.some((command) => command.type === 'toggle-auto-play')) this.toggleAutoPlay();
+    for (const command of queue) {
+      if (command.type === 'change-auto-speed') this.changeAutoSpeed(command.direction);
+    }
     if (this.inputLocked) return result;
 
     for (const command of queue) {
