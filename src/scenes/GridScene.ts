@@ -52,28 +52,32 @@ import {
   createBattleLevel,
   describeBattle,
   FIRST_STORY_CHAPTER,
+  getBattleDiceSeed,
   getNextBattle,
   runStage,
   type GameContent,
 } from '../game/battleSetup.ts';
-import { finishStage, type PendingReward, type RunState } from '../game/warband/run.ts';
+import type { PendingReward, RunState } from '../game/warband/run.ts';
 import {
-  addGold,
-  applyExperienceReward,
-  applyReward,
   getRerollCost,
   getSkipGold,
   getStageClearGold,
-  rerollRewards,
-  rollStageRewards,
-  skipRewards,
   getPendingRewardOffer,
-  markRewardPending,
   type Reward,
   type RewardLevelUp,
 } from '../game/warband/rewards.ts';
+import {
+  applyRunCommand,
+  finishBattle,
+  getRewardOffers,
+  RunCommandError,
+  type RunCommand,
+  type RunCommandResult,
+} from '../game/warband/runCommands.ts';
 import { clearSavedRun, saveRun } from '../data/runSave.ts';
-import { getCampActions, restAtCamp } from '../game/warband/camp.ts';
+import { pickReward, planCamp } from '../game/warband/runPolicy.ts';
+import { planPlayerDeployment, planPlayerTurn } from '../game/battle/playerAI.ts';
+import { getCampActions } from '../game/warband/camp.ts';
 import {
   confirmMerchant,
   moveMerchantCursor,
@@ -209,6 +213,9 @@ const PHASE_BANNER_DURATION_MS = 1200;
 // Pauses in the enemy phase: on each enemy before it moves, and between enemies.
 const ENEMY_FOCUS_DELAY_MS = 250;
 const ENEMY_ACTION_DELAY_MS = 300;
+// How long auto play waits between its steps (a unit's action, a menu
+// pick, moving past a screen), so it can be followed.
+const AUTO_STEP_MS = 450;
 // How long a player unit's XP bar shows after combat (the React HUD fills it).
 const EXPERIENCE_BAR_MS = 1100;
 // How long each level-up panel holds the screen.
@@ -217,7 +224,7 @@ const LEVEL_UP_MS = 2400;
 const DONE_TINT = 0x808080;
 
 type Sprite = Phaser.GameObjects.Sprite;
-type ActionKey = 'confirm' | 'confirmAlt' | 'cancel' | 'cancelAlt' | 'dangerZone';
+type ActionKey = 'confirm' | 'confirmAlt' | 'cancel' | 'cancelAlt' | 'dangerZone' | 'autoPlay';
 type RangeMode = 'move' | 'attack' | 'skill' | 'heal';
 
 // The unit whose menu or range is open, where it stands, and (after a move)
@@ -292,6 +299,7 @@ export class GridScene extends Phaser.Scene {
   rangeTiles: Phaser.GameObjects.Rectangle[] | null = null;
   dangerZoneVisible = false;
   dangerZoneTiles: Phaser.GameObjects.Rectangle[] = [];
+  autoElapsed = 0;
   inspectedEnemyId: string | null = null;
   inspectedTiles: Phaser.GameObjects.Rectangle[] = [];
   moveRange: RangeTile[] | null = null;
@@ -416,8 +424,9 @@ export class GridScene extends Phaser.Scene {
     this.content = getActiveContent();
     const level = createBattleLevel(setup, this.content);
     // The grid, every unit (player roster and enemies alike), the deployment
-    // zone and limit, and the objective, with the battle's rolls seeded fresh.
-    this.history = createHistory(createBattleState(level, randomSeed()));
+    // zone and limit, and the objective, with the battle's rolls seeded from
+    // the run for a Warband stage, else fresh.
+    this.history = createHistory(createBattleState(level, getBattleDiceSeed(setup) ?? randomSeed()));
     this.shown = this.battle;
     this.shownStats = new Map();
     this.dialogs = level.dialogs; // the level's conversations by trigger (src/game/dialogScript.ts)
@@ -449,6 +458,7 @@ export class GridScene extends Phaser.Scene {
       cancel: Phaser.Input.Keyboard.KeyCodes.ESC,
       cancelAlt: Phaser.Input.Keyboard.KeyCodes.X,
       dangerZone: Phaser.Input.Keyboard.KeyCodes.D,
+      autoPlay: Phaser.Input.Keyboard.KeyCodes.A,
     }) as Record<ActionKey, Phaser.Input.Keyboard.Key>;
     this.createPointerInput();
     this.infoKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.I); // opens the unit info screen
@@ -471,6 +481,7 @@ export class GridScene extends Phaser.Scene {
     this.rangeTiles = null; // highlight rectangles for the current range
     this.dangerZoneVisible = false; // whether every enemy's reach is shaded (toggled with D or the header button)
     this.dangerZoneTiles = []; // highlight rectangles for the danger zone
+    this.autoElapsed = 0; // ms since auto play's last step (see updateAutoPlay)
     this.inspectedEnemyId = null; // an enemy picked on the bare map to show just its reach
     this.inspectedTiles = []; // highlight rectangles for that enemy's reach
     this.moveRange = null; // [{ x, y, cost }] the active unit can end its move on
@@ -544,8 +555,10 @@ export class GridScene extends Phaser.Scene {
     const info = JustDown(this.infoKey);
     // Only shading, so it toggles even while the enemy phase plays out.
     if (JustDown(this.actionKeys.dangerZone)) this.toggleDangerZone();
+    if (JustDown(this.actionKeys.autoPlay)) this.toggleAutoPlay();
 
     if (this.inputLocked) return;
+    if (this.updateAutoPlay(delta)) return;
 
     if (this.preview) {
       if (this.updateUnitInfo(info, confirm, cancel)) return;
@@ -980,22 +993,27 @@ export class GridScene extends Phaser.Scene {
       const offer = this.rewardOffer!;
       const action = this.rewardMenu!.actions[this.rewardMenu!.selectedIndex];
       if (action.disabled) return;
+      const session = { run: offer.run, phase: 'reward' as const };
       if (action.kind === 'reroll') {
-        const rerolled = rerollRewards(offer.run, offer.stage, offer.rerolls);
+        const rerolled = tryRunCommand(session, { type: 'reroll-rewards' });
         if (!rerolled) return;
-        saveRun(rerolled.run);
-        this.rewardOffer = { ...offer, run: rerolled.run, rewards: rerolled.rewards, rerolls: offer.rerolls + 1 };
+        const { run } = rerolled.session;
+        saveRun(run);
+        this.rewardOffer = { ...offer, run, rewards: getRewardOffers(rerolled.session), rerolls: offer.rerolls + 1 };
         const stageClear = gameStore.getState().stageClear;
-        if (stageClear) gameStore.setState({ stageClear: { ...stageClear, totalGold: rerolled.run.gold } });
+        if (stageClear) gameStore.setState({ stageClear: { ...stageClear, totalGold: run.gold } });
         this.openRewardMenu(this.rewardMenu!.selectedIndex);
         return;
       }
-      const reward = action.kind === 'skip' ? null : offer.rewards[this.rewardMenu!.selectedIndex];
+      const command: RunCommand =
+        action.kind === 'skip'
+          ? { type: 'skip-reward' }
+          : { type: 'pick-reward', index: this.rewardMenu!.selectedIndex };
+      const result = tryRunCommand(session, command);
+      if (!result) return;
+      const after = result.session.run;
       // Experience shows each level up it gives before moving on.
-      const { run: after, levelUps } =
-        reward?.kind === 'experience'
-          ? applyExperienceReward(offer.run, reward)
-          : { run: reward ? applyReward(offer.run, reward) : skipRewards(offer.run, offer.stage), levelUps: [] };
+      const levelUps = result.events.flatMap((event) => (event.type === 'level-ups' ? event.levelUps : []));
       saveRun(after);
       this.rewardOffer = null;
       this.inputLocked = true;
@@ -1040,14 +1058,22 @@ export class GridScene extends Phaser.Scene {
       } else if (action.id === 'merchant') {
         this.publishMerchantScreen(openMerchantScreen(this.campRun!));
       } else if (action.id === 'rest') {
-        this.setCampRun(restAtCamp(this.campRun!));
+        const rested = tryRunCommand({ run: this.campRun!, phase: 'camp' }, { type: 'rest' });
+        if (rested) this.setCampRun(rested.session.run);
       } else if (action.id === 'march') {
-        this.nextBattle = runStage(this.campRun!);
-        this.leaveBattle();
+        this.marchOn();
       }
       return;
     }
     if (dy !== 0) this.publishMenu('campMenu', moveSelection(this.campMenu!, dy));
+  }
+
+  // Next Stage: leaves camp for the run's next stage.
+  marchOn() {
+    const marched = tryRunCommand({ run: this.campRun!, phase: 'camp' }, { type: 'march' });
+    if (!marched) return;
+    this.nextBattle = runStage(marched.session.run);
+    this.leaveBattle();
   }
 
   updateRosterScreen(dx: number, dy: number, confirm: boolean, cancel: boolean) {
@@ -1375,6 +1401,17 @@ export class GridScene extends Phaser.Scene {
     const { x, y } = this.cursor;
     if (!canPlaceUnit(this.grid, this.deploymentZone, unitId, x, y)) return;
 
+    this.placeUnit(unitId, { x, y });
+    this.placingUnitId = null;
+    this.setCursorVisible(false);
+    // Only jump to Start once every slot is filled; until then, stay on
+    // Place Units so the next unit is one confirm away.
+    const complete = isDeploymentComplete(this.grid, this.roster, this.deploymentLimit);
+    this.openDeploymentMenu(complete ? START_INDEX : PLACE_UNITS_INDEX);
+  }
+
+  // Puts a roster unit on a zone tile, and its sprite with it.
+  placeUnit(unitId: string, { x, y }: Point) {
     this.dispatch({ type: 'place', unitId, to: { x, y } });
     this.syncShown();
     this.refreshDangerZone();
@@ -1385,13 +1422,6 @@ export class GridScene extends Phaser.Scene {
     } else {
       this.addUnitSprite(unitId, x, y);
     }
-
-    this.placingUnitId = null;
-    this.setCursorVisible(false);
-    // Only jump to Start once every slot is filled; until then, stay on
-    // Place Units so the next unit is one confirm away.
-    const complete = isDeploymentComplete(this.grid, this.roster, this.deploymentLimit);
-    this.openDeploymentMenu(complete ? START_INDEX : PLACE_UNITS_INDEX);
   }
 
   // Ends deployment: clears the zone, drops roster units left off the map
@@ -1406,6 +1436,99 @@ export class GridScene extends Phaser.Scene {
     const events = this.dispatch({ type: 'start-battle' });
     this.setCursorVisible(true);
     this.continueBattle(events, () => {});
+  }
+
+  // ---- Auto play --------------------------------------------------------
+  // With Auto on (the header button or A), the battle and the run play
+  // themselves on screen: the player battle AI (src/game/battle/playerAI.ts)
+  // deploys and takes the player's turns, the run policy
+  // (src/game/warband/runPolicy.ts) picks rewards and spends the camp
+  // through the same run commands the menus give, dialogs are skipped and
+  // screens move on, one step every AUTO_STEP_MS. It stays on from battle
+  // to battle (it lives in the store); turning it off hands control back
+  // before the next step.
+
+  toggleAutoPlay() {
+    gameStore.setState({ autoPlay: !gameStore.getState().autoPlay });
+    this.autoElapsed = 0;
+  }
+
+  // Takes auto play's next step once one is due. True when auto play owns
+  // this frame's input; false when it's off or has nothing to do here (the
+  // pause menu or unit info is open, or the player is midway through a
+  // unit's action), leaving input to the player.
+  updateAutoPlay(delta: number): boolean {
+    if (!gameStore.getState().autoPlay || this.preview) return false;
+    const step = this.getAutoStep();
+    if (!step) return false;
+    this.autoElapsed += delta;
+    if (this.autoElapsed < AUTO_STEP_MS) return true;
+    this.autoElapsed = 0;
+    step();
+    return true;
+  }
+
+  // What auto play does next where the scene stands, or null for nothing.
+  getAutoStep(): (() => void) | null {
+    if (this.pauseMenu || this.unitInfoUnit) return null;
+    if (this.dialog) return () => this.updateDialog(false, true);
+    if (this.onObjectiveDone) return () => this.hideObjective();
+    if (this.rosterScreen) return () => this.publishRosterScreen(null);
+    if (this.merchantScreen) return () => this.publishMerchantScreen(null);
+    if (this.campMenu) return () => this.autoCamp();
+    if (this.rewardMenu) return () => this.autoReward();
+    if (this.battleOutcome) return () => (this.rewardOffer ? this.openRewardMenu() : this.leaveBattle());
+    if (this.phase === 'deployment') return () => this.autoDeploy();
+    const choosing = this.activeUnit || this.actionMenu || this.weaponMenu || this.skillMenu || this.itemMenu;
+    if (this.turnState?.team === 'player' && !choosing) return () => this.autoPlayerAction();
+    return null;
+  }
+
+  autoDeploy() {
+    this.publishMenu('rosterMenu', null);
+    this.placingUnitId = null;
+    for (const command of planPlayerDeployment(this.battle)) {
+      if (command.type === 'place') this.placeUnit(command.unitId, command.to);
+      else this.startBattle();
+    }
+  }
+
+  // One player unit's action, played out like an enemy's; input stays
+  // locked until it has, and the next step comes after AUTO_STEP_MS.
+  autoPlayerAction() {
+    const [move, act] = planPlayerTurn(this.battle);
+    if (!move || !act) return;
+    this.hideEnemyReach();
+    this.hideRange();
+    this.inputLocked = true;
+    this.takeEnemyAction(move, act, () => {
+      this.inputLocked = false;
+    });
+  }
+
+  autoReward() {
+    const offer = this.rewardOffer!;
+    const command = pickReward({ run: offer.run, phase: 'reward' });
+    // The menu lists the offers, then Skip, then Reroll.
+    const index =
+      command.type === 'pick-reward'
+        ? command.index
+        : command.type === 'skip-reward'
+          ? offer.rewards.length
+          : offer.rewards.length + 1;
+    this.publishMenu('rewardMenu', selectIndex(this.rewardMenu!, index));
+    this.updateRewardMenu(0, true);
+  }
+
+  autoCamp() {
+    const command = planCamp({ run: this.campRun!, phase: 'camp' });
+    if (command.type === 'march') {
+      this.marchOn();
+      return;
+    }
+    const applied = tryRunCommand({ run: this.campRun!, phase: 'camp' }, command);
+    if (applied) this.setCampRun(applied.session.run);
+    else this.marchOn();
   }
 
   // ---- Turns ------------------------------------------------------------
@@ -1542,34 +1665,26 @@ export class GridScene extends Phaser.Scene {
       // stage, or forgets the run once the warband has fallen. A win pays
       // the clear's gold and rolls the rewards the reward screen offers.
       const before = this.setup.run;
-      const finished = finishStage(
-        before,
+      const finished = finishBattle(
+        { run: before, phase: 'battle' },
         { units: getDeployedUnits(this.battle), convoy: this.battle.convoyLoot },
         outcome,
       );
-      let run = finished.run;
-      if (finished.over) {
+      const { run } = finished;
+      if (finished.phase === 'over') {
         clearSavedRun();
         runOver = toRunOverView(run);
       } else {
         const clear = getStageClearGold(before.stage, run.fallen.length - before.fallen.length);
-        run = addGold(run, clear.gold);
         stageClear = toStageClearView(before.stage, clear, run.gold);
-        const rewards = rollStageRewards(run, before.stage);
         // The run is saved owing the pick, so a reload reopens the reward
         // screen (resumeRewardPick) instead of skipping it.
-        if (rewards.length > 0) {
-          run = markRewardPending(run, {
-            stage: before.stage,
-            rerolls: 0,
-            clearGold: clear.gold,
-            flawless: clear.flawless,
-          });
-          this.rewardOffer = { run, stage: before.stage, rewards, rerolls: 0 };
+        if (finished.phase === 'reward') {
+          this.rewardOffer = { run, stage: before.stage, rewards: getRewardOffers(finished), rerolls: 0 };
         }
         saveRun(run);
       }
-      this.nextBattle = finished.over ? null : runStage(run);
+      this.nextBattle = finished.phase === 'over' ? null : runStage(run);
     } else {
       this.nextBattle = outcome === 'victory' ? getNextBattle(this.setup, randomSeed()) : null;
     }
@@ -1587,9 +1702,11 @@ export class GridScene extends Phaser.Scene {
     if (move && act) this.takeEnemyAction(move, act);
   }
 
-  // Puts the cursor on the enemy, walks it along its planned route, and
-  // carries out its act (an attack, or waiting) from the end of it.
-  takeEnemyAction(move: BattleCommand, act: BattleCommand) {
+  // Puts the cursor on the unit, walks it along its planned route, and
+  // carries out its act (an attack, or waiting) from the end of it, then
+  // `next` (by default the next enemy) unless that decided the battle or
+  // ended the phase.
+  takeEnemyAction(move: BattleCommand, act: BattleCommand, next: () => void = () => this.runEnemyPhase()) {
     const moved = findEvent(this.dispatch(move), 'moved')!;
     this.setCursor(moved.from.x, moved.from.y);
     this.time.delayedCall(ENEMY_FOCUS_DELAY_MS, () => {
@@ -1598,7 +1715,7 @@ export class GridScene extends Phaser.Scene {
         this.setCursor(moved.to.x, moved.to.y);
         const events = this.dispatch(act);
         this.playEvents(events, () =>
-          this.time.delayedCall(ENEMY_ACTION_DELAY_MS, () => this.continueBattle(events, () => this.runEnemyPhase())),
+          this.time.delayedCall(ENEMY_ACTION_DELAY_MS, () => this.continueBattle(events, next)),
         );
       });
     });
@@ -2227,6 +2344,7 @@ export class GridScene extends Phaser.Scene {
       return result;
     }
     if (queue.some((command) => command.type === 'toggle-danger-zone')) this.toggleDangerZone();
+    if (queue.some((command) => command.type === 'toggle-auto-play')) this.toggleAutoPlay();
     if (this.inputLocked) return result;
 
     for (const command of queue) {
@@ -2506,5 +2624,16 @@ export class GridScene extends Phaser.Scene {
       });
     }
     return animKey;
+  }
+}
+
+// Applies a run command the screen offered, or null when the run refuses
+// it (e.g. a reroll the warband can't afford), leaving everything as it was.
+function tryRunCommand(session: Parameters<typeof applyRunCommand>[0], command: RunCommand): RunCommandResult | null {
+  try {
+    return applyRunCommand(session, command);
+  } catch (error) {
+    if (error instanceof RunCommandError) return null;
+    throw error;
   }
 }

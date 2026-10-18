@@ -50,6 +50,32 @@ describe('runBattle', () => {
     expect(state.outcome !== null || state.turnState!.turn > 50).toBe(true);
   });
 
+  it('lets a planner play a side, deployment included', () => {
+    const planned: string[] = [];
+    const { state, history } = runBattle(
+      { setup: training, seed: 3, commands: [] },
+      {
+        planners: {
+          player: (current) => {
+            planned.push(current.stage);
+            return current.stage === 'deployment' ? [{ type: 'start-battle' }] : [{ type: 'wait', unitId: TRAINEE_ID }];
+          },
+        },
+        maxTurns: 2,
+      },
+    );
+    expect(planned[0]).toBe('deployment');
+    expect(planned.slice(1).every((stage) => stage === 'battle')).toBe(true);
+    expect(getCommands(history).filter((command) => command.type === 'wait').length).toBeGreaterThan(0);
+    expect(state.outcome !== null || state.turnState!.turn > 2).toBe(true);
+  });
+
+  it('refuses a planner that gives nothing', () => {
+    expect(() => runBattle({ setup: training, seed: 3, commands: [] }, { planners: { player: () => [] } })).toThrow(
+      /planner/,
+    );
+  });
+
   it('stops after the turn limit', () => {
     const { state } = runBattle(
       { setup: training, seed: 1, commands: [{ type: 'start-battle' }, { type: 'end-phase' }, { type: 'end-phase' }] },

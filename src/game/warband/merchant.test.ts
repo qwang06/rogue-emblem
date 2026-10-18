@@ -5,6 +5,7 @@ import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
 import {
   FISTS,
+  IRON_BOW,
   IRON_SPEAR,
   NATURAL_WEAPON_IDS,
   WOODEN_AXE,
@@ -32,13 +33,15 @@ function campRun(gold: number, convoy: ItemSnapshot[] = []): RunState {
 }
 
 describe('MERCHANT_STOCK', () => {
-  it('sells the wooden set', () => {
+  it('sells the wooden set, a bow and a Heal staff', () => {
     expect(MERCHANT_STOCK).toEqual([
       WOODEN_SWORD.id,
       WOODEN_SPEAR.id,
       WOODEN_AXE.id,
       WOODEN_SHIELD.id,
       WOODEN_ARMOR.id,
+      IRON_BOW.id,
+      HEAL_STAFF.id,
     ]);
   });
 

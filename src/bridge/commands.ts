@@ -16,6 +16,7 @@ import type { RosterTarget } from '../game/warband/rosterScreen.ts';
 //   { type: 'cancel' }                   — same as pressing Esc/X
 //   { type: 'main-menu' }                — leave the battle for the title screen, whatever is going on
 //   { type: 'toggle-danger-zone' }       — show or hide every enemy's reach, same as pressing D
+//   { type: 'toggle-auto-play' }         — turn auto play on or off, same as pressing A
 
 // Store fields holding a menu React can point at.
 export type MenuField =
@@ -39,7 +40,8 @@ export type Command =
   | { type: 'confirm' }
   | { type: 'cancel' }
   | { type: 'main-menu' }
-  | { type: 'toggle-danger-zone' };
+  | { type: 'toggle-danger-zone' }
+  | { type: 'toggle-auto-play' };
 
 export type CommandHandler<C> = (command: C) => void;
 

@@ -240,6 +240,14 @@ export function getStageSeed(runSeed: number, stage: number): number {
   return Math.floor(rng() * 2 ** 32);
 }
 
+// The seed the dice of `stage`'s battle roll from, for a run started with
+// `runSeed`: fixed per pair (and apart from the map's, getStageSeed), so a
+// whole run replays from its seed, and a stage fought again rolls the same.
+export function getBattleSeed(runSeed: number, stage: number): number {
+  const rng = createSeededRng((runSeed ^ Math.imul(stage + 0x2545, 0xc2b2ae35)) >>> 0);
+  return Math.floor(rng() * 2 ** 32);
+}
+
 // The run as JSON, for saving.
 export function serializeRun(run: RunState): string {
   return JSON.stringify(run);

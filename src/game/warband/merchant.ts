@@ -25,13 +25,16 @@ import {
 import { isMovable, isStackable, lookUpItem } from './convoy.ts';
 import { RUN_ITEMS, type ItemSnapshot, type RunState } from './run.ts';
 
-// What the merchant sells, by item id: the wooden set.
+// What the merchant sells, by item id: the wooden set, plus a bow and a
+// Heal staff, so an archer or a healer whose own wears out can replace it.
 export const MERCHANT_STOCK: readonly string[] = Object.freeze([
   WOODEN_SWORD.id,
   WOODEN_SPEAR.id,
   WOODEN_AXE.id,
   WOODEN_SHIELD.id,
   WOODEN_ARMOR.id,
+  IRON_BOW.id,
+  HEAL_STAFF.id,
 ]);
 
 // The full price of a fresh item, in gold, by item id. Gold per stage

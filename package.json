@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run --changed main",
     "test:all": "vitest run",
+    "sim": "node scripts/sim.ts",
     "typecheck": "tsc",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

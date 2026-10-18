@@ -5,6 +5,7 @@ import {
   regionPreview,
   describeBattle,
   FIRST_STORY_CHAPTER,
+  getBattleDiceSeed,
   getNextBattle,
   runStage,
   STORY_CHAPTERS,
@@ -13,7 +14,14 @@ import {
 } from './battleSetup.ts';
 import { REGION_CONFIGS, REGION_SETTINGS } from '../data/regions.ts';
 import { getStageRegion } from './warband/regions.ts';
-import { advanceStage, applyBattleResult, createRun, getStageSeed, restoreRoster } from './warband/run.ts';
+import {
+  advanceStage,
+  applyBattleResult,
+  createRun,
+  getBattleSeed,
+  getStageSeed,
+  restoreRoster,
+} from './warband/run.ts';
 import { createStageLevel, createStartingWarband, WARBAND_MAX_DEPLOYED } from './warband/stageLevel.ts';
 import { Archer } from './Archer.ts';
 import { createDemoLevel, PLAYER_ROSTER } from './demoLevel.ts';
@@ -157,6 +165,19 @@ describe('runStage', () => {
 
   it('has no next battle of its own', () => {
     expect(() => getNextBattle(runStage(run), 0)).toThrow(/finishStage/);
+  });
+
+  it("rolls its dice from the run's seed", () => {
+    expect(getBattleDiceSeed(runStage(run))).toBe(getBattleSeed(42, 1));
+    expect(getBattleDiceSeed(runStage(advanceStage(run)))).toBe(getBattleSeed(42, 2));
+  });
+});
+
+describe('getBattleDiceSeed', () => {
+  it('leaves battles outside a run to roll fresh', () => {
+    expect(getBattleDiceSeed(FIRST_STORY_CHAPTER)).toBeNull();
+    expect(getBattleDiceSeed({ mode: 'training', unitClass: 'warrior' })).toBeNull();
+    expect(getBattleDiceSeed({ mode: 'warband', seed: 3, stage: 1 })).toBeNull();
   });
 });
 

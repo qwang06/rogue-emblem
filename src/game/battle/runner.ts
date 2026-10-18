@@ -28,7 +28,14 @@ export interface RunOptions {
   // Stop once this turn is over without a result, so two sides that never
   // reach each other can't run forever.
   maxTurns?: number;
+  // Teams played by a planner of their own instead of ai.ts or the script:
+  // given the state with that team to move (deployment, for the player), it
+  // returns the next commands to give, at least one.
+  planners?: Partial<Record<Team, BattlePlanner>>;
 }
+
+// Plans a side's next commands: its deployment, or one unit's action.
+export type BattlePlanner = (state: BattleState) => BattleCommand[];
 
 export interface RunResult {
   history: BattleHistory;
@@ -51,7 +58,7 @@ export function createBattle(setup: BattleSetup, seed: number, content: GameCont
 // battle is decided, the script runs out while a scripted side has the
 // move, or the turn limit passes.
 export function runBattle(script: BattleScript, options: RunOptions = {}): RunResult {
-  const { content = DEFAULT_CONTENT, auto = ['enemy'], maxTurns = DEFAULT_MAX_TURNS } = options;
+  const { content = DEFAULT_CONTENT, auto = ['enemy'], maxTurns = DEFAULT_MAX_TURNS, planners = {} } = options;
   let history = createHistory(createBattle(script.setup, script.seed, content));
   let next = 0;
   const result = (error: RunResult['error'] = null): RunResult => ({ history, state: getCurrentState(history), error });
@@ -59,7 +66,7 @@ export function runBattle(script: BattleScript, options: RunOptions = {}): RunRe
   for (;;) {
     const state = getCurrentState(history);
     if (state.outcome || (state.turnState?.turn ?? 0) > maxTurns) return result();
-    const planned = getAutoCommands(state, auto);
+    const planned = getAutoCommands(state, auto, planners);
     if (planned.length > 0) {
       for (const command of planned) history = dispatch(history, command).history;
       continue;
@@ -76,11 +83,22 @@ export function runBattle(script: BattleScript, options: RunOptions = {}): RunRe
   }
 }
 
-// What the AI does next for whichever of `auto`'s teams has the move:
+// What the side to move does next when a planner or the AI plays it:
 // deployment for the player, else the next unit's action. Empty when it's
 // a scripted side's move.
-function getAutoCommands(state: BattleState, auto: readonly Team[]): BattleCommand[] {
-  if (state.stage === 'deployment') return auto.includes('player') ? planDeployment(state) : [];
-  const team = state.turnState?.team;
-  return team && auto.includes(team) ? planNextTurn(state) : [];
+function getAutoCommands(
+  state: BattleState,
+  auto: readonly Team[],
+  planners: Partial<Record<Team, BattlePlanner>>,
+): BattleCommand[] {
+  const team = state.stage === 'deployment' ? 'player' : state.turnState?.team;
+  if (!team) return [];
+  const planner = planners[team];
+  if (planner) {
+    const commands = planner(state);
+    if (commands.length === 0) throw new Error(`The ${team} planner gave no command`);
+    return commands;
+  }
+  if (!auto.includes(team)) return [];
+  return state.stage === 'deployment' ? planDeployment(state) : planNextTurn(state);
 }
