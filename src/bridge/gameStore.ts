@@ -74,6 +74,7 @@ export interface BattleState {
 export interface GameState extends BattleState {
   screen: Screen;
   battleSetup: BattleSetup | null;
+  autoPlay: boolean;
 }
 
 // State that only exists while the map is running. The map scene resets
@@ -127,5 +128,8 @@ export const gameStore = createStore<GameState>({
   // next one (getNextBattle) swaps it in; main.ts restarts the map whenever
   // it changes.
   battleSetup: null,
+  // Whether the player's side plays itself (the map's auto play): its
+  // battles, reward picks and camp. Kept from battle to battle.
+  autoPlay: false,
   ...BATTLE_STATE_DEFAULTS,
 });

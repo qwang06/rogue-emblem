@@ -8,7 +8,7 @@ import { DIALOGS } from '../data/dialogs.ts';
 import type { DialogFiles } from './dialogScript.ts';
 import { REGION_SETTINGS } from '../data/regions.ts';
 import { getRegionStages, getStageRegion, type RegionSettings } from './warband/regions.ts';
-import { getStageSeed, restoreRoster, type RunState } from './warband/run.ts';
+import { getBattleSeed, getStageSeed, restoreRoster, type RunState } from './warband/run.ts';
 import { createStageLevel } from './warband/stageLevel.ts';
 import { pickStageObjective, placeObjective } from './warband/stageObjective.ts';
 import { getStageLootCount } from './loot.ts';
@@ -53,6 +53,13 @@ export const FIRST_STORY_CHAPTER: BattleSetup = Object.freeze({ mode: 'story', c
 // getStageSeed gives it, fought by the run's roster.
 export function runStage(run: RunState): BattleSetup {
   return { mode: 'warband', seed: getStageSeed(run.seed, run.stage), stage: run.stage, run };
+}
+
+// The seed a battle's dice roll from when it's fixed: a stage of a run
+// rolls from the run's seed (getBattleSeed), so the run replays from it.
+// Null for any other battle, which rolls fresh each time.
+export function getBattleDiceSeed(setup: BattleSetup): number | null {
+  return setup.mode === 'warband' && setup.run ? getBattleSeed(setup.run.seed, setup.stage) : null;
 }
 
 function getStoryChapter(chapter: number, chapters: readonly StoryChapter[]): StoryChapter {

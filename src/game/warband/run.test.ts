@@ -12,6 +12,7 @@ import {
   applyBattleResult,
   createRun,
   finishStage,
+  getBattleSeed,
   getStageSeed,
   isRunOver,
   parseRun,
@@ -284,6 +285,15 @@ describe('advanceStage', () => {
     expect(advanceStage(run).stage).toBe(2);
     expect(advanceStage(advanceStage(run)).stage).toBe(3);
     expect(run.stage).toBe(1);
+  });
+});
+
+describe('getBattleSeed', () => {
+  it('is fixed per run seed and stage, and differs between stages, runs and the map seed', () => {
+    expect(getBattleSeed(42, 3)).toBe(getBattleSeed(42, 3));
+    expect(new Set([1, 2, 3, 4, 5].map((stage) => getBattleSeed(42, stage))).size).toBe(5);
+    expect(getBattleSeed(42, 1)).not.toBe(getBattleSeed(43, 1));
+    expect(getBattleSeed(42, 1)).not.toBe(getStageSeed(42, 1));
   });
 });
 

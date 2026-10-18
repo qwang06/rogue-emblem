@@ -1,0 +1,6 @@
+/* Pressed while auto play is on: lit in the player's blue. */
+.auto-play-button[aria-pressed='true'] {
+  color: var(--blue);
+  background: var(--blue-bg);
+  border-color: var(--blue);
+}
