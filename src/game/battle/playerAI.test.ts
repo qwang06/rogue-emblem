@@ -4,7 +4,7 @@ import { HEAL_STAFF, staffEntry } from '../healing.ts';
 import { HEALTH_POTION } from '../items.ts';
 import { IRON_BOW, weaponEntry } from '../weapons.ts';
 import { applyCommand, type BattleCommand } from './commands.ts';
-import { planPlayerDeployment, planPlayerTurn } from './playerAI.ts';
+import { getPlayerPlans, planPlayerDeployment, planPlayerTurn } from './playerAI.ts';
 import { createBattleState } from './state.ts';
 import { createTestBattle, makeTestUnit } from './testLevel.ts';
 
@@ -31,7 +31,9 @@ describe('planPlayerTurn', () => {
       },
       { width: 3, height: 3 },
     );
-    expect(act(planPlayerTurn(state))).toMatchObject({ type: 'attack', target: { x: 1, y: 2 } });
+    // The heuristic alone: the lookahead sees the weak foe throw itself on
+    // the hero's counter next phase anyway, and may strike the tough one.
+    expect(act(planPlayerTurn(state, { lookahead: false }))).toMatchObject({ type: 'attack', target: { x: 1, y: 2 } });
   });
 
   it('stops short of a foe it cannot reach rather than walk into its reach', () => {
@@ -98,6 +100,62 @@ describe('planPlayerTurn', () => {
       },
     );
     expect(planPlayerTurn(state)).toEqual([]);
+  });
+});
+
+describe('planPlayerTurn with lookahead', () => {
+  it('passes on an attack whose counter and the enemy phase would finish the unit', () => {
+    // The foe holds its ground: 6 damage can't fell it, and its counter
+    // plus its own strike take the hero's 12 health.
+    const foe = makeTestUnit({ team: 'enemy' });
+    foe.holdsPosition = true;
+    const state = createTestBattle(
+      {
+        hero: { unit: makeTestUnit({ team: 'player', health: 12 }), at: { x: 2, y: 0 } },
+        foe: { unit: foe, at: { x: 4, y: 0 } },
+      },
+      { width: 6 },
+    );
+    expect(act(planPlayerTurn(state, { lookahead: false })).type).toBe('attack');
+    expect(act(planPlayerTurn(state))).toEqual({ type: 'wait', unitId: 'hero' });
+  });
+
+  it('goes in when the rest of the phase finishes the job', () => {
+    // Neither can fell the 12-health foe alone; together they can.
+    const foe = makeTestUnit({ team: 'enemy', health: 12 });
+    foe.holdsPosition = true;
+    const state = createTestBattle(
+      {
+        hero: { unit: makeTestUnit({ team: 'player', health: 12 }), at: { x: 2, y: 0 } },
+        ally: { unit: makeTestUnit({ team: 'player', health: 12 }), at: { x: 4, y: 1 } },
+        foe: { unit: foe, at: { x: 4, y: 0 } },
+      },
+      { width: 6, height: 2 },
+    );
+    expect(act(planPlayerTurn(state))).toMatchObject({ type: 'attack', target: { x: 4, y: 0 } });
+  });
+});
+
+describe('getPlayerPlans', () => {
+  it("lists each unit's best plan per act, best first", () => {
+    const state = createTestBattle(
+      {
+        hero: { unit: makeTestUnit({ team: 'player' }), at: { x: 1, y: 1 } },
+        tough: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 1, y: 0 } },
+        weak: { unit: makeTestUnit({ team: 'enemy', health: 4 }), at: { x: 1, y: 2 } },
+      },
+      { width: 3, height: 3 },
+    );
+    const plans = getPlayerPlans(state);
+    expect(plans.map((plan) => act(plan.commands))).toEqual([
+      { type: 'attack', unitId: 'hero', target: { x: 1, y: 2 } },
+      { type: 'attack', unitId: 'hero', target: { x: 1, y: 0 } },
+      { type: 'wait', unitId: 'hero' },
+    ]);
+    expect(plans.map((plan) => plan.engages)).toEqual([true, true, false]);
+    for (let index = 1; index < plans.length; index++) {
+      expect(plans[index].score).toBeLessThanOrEqual(plans[index - 1].score);
+    }
   });
 });
 
