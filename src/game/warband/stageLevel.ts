@@ -26,7 +26,7 @@ import { BUILDING_ART, BUILDING_PALETTES, FOREST_ART, MOUNTAIN_ART } from '../ti
 import type { RegionConfig } from './regions.ts';
 import { DEFAULT_STARTING_CLASS } from './startingClasses.ts';
 
-export const WARBAND_MAX_DEPLOYED = 3;
+export const WARBAND_MAX_DEPLOYED = 5;
 
 // The name of the unit a run starts with: the demo roster's first.
 export const WARBAND_LEADER_NAME = Object.values(PLAYER_ROSTER)[0];
@@ -80,7 +80,20 @@ export function layOutStage(seed: number, region: RegionConfig): StageLayout {
   const rng = createSeededRng(seed);
   const terrain = generateMap(region.terrain, rng);
   const start = terrain.path[0];
-  const deploymentZone = terrain.deploymentZone ?? [-1, 0, 1].map((dx) => ({ x: start.x + dx, y: start.y }));
+  const baseZone = terrain.deploymentZone ?? [-1, 0, 1].map((dx) => ({ x: start.x + dx, y: start.y }));
+  const deploymentZone = [...baseZone];
+  const occupied = new Set(baseZone.map(({ x, y }) => `${x},${y}`));
+  const candidates = terrain.grid.cells
+    .filter(
+      ({ x, y, terrain: kind, unitId }) =>
+        !occupied.has(`${x},${y}`) && !unitId && kind !== 'water' && kind !== 'mountain' && kind !== 'wall',
+    )
+    .sort((a, b) => {
+      const distance = (tile: Point) =>
+        Math.min(...baseZone.map((start) => Math.abs(tile.x - start.x) + Math.abs(tile.y - start.y)));
+      return distance(a) - distance(b) || b.y - a.y || a.x - b.x;
+    });
+  deploymentZone.push(...candidates.slice(0, WARBAND_MAX_DEPLOYED - baseZone.length).map(({ x, y }) => ({ x, y })));
   const enemyTiles = pickZonedEnemyTiles(terrain.grid, region.enemies, deploymentZone, terrain.enemyZones ?? [], rng);
   const problems = checkMap({
     grid: terrain.grid,

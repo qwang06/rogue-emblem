@@ -7,6 +7,7 @@ import { Unit } from '../Unit.ts';
 import { createUnitOfClass, UNIT_CLASSES } from '../unitClasses.ts';
 import { MAX_LEVEL } from '../experience.ts';
 import { Warrior } from '../Warrior.ts';
+import { FIRE, IRON_AXE, IRON_BOW, IRON_SPEAR } from '../weapons.ts';
 import { createRun, parseRun, serializeRun, type RunState, type UnitSnapshot } from './run.ts';
 import {
   addGold,
@@ -100,10 +101,10 @@ describe('rollRewards', () => {
     expect(rollRewards(fullRun(), 2, createSeededRng(5))).toEqual(rollRewards(fullRun(), 2, createSeededRng(5)));
   });
 
-  it('always offers a recruit first while the roster is smaller than the deploy cap', () => {
+  it('never mixes recruitment into rewards', () => {
     const lone = runOf(['alden', new Warrior({ name: 'Alden', team: 'player' })]);
     for (let seed = 0; seed < 30; seed++) {
-      expect(rollRewards(lone, 2, createSeededRng(seed))[0].kind).toBe('recruit');
+      expect(kinds(rollRewards(lone, 2, createSeededRng(seed)))).not.toContain('recruit');
     }
   });
 
@@ -127,14 +128,28 @@ describe('rollRewards', () => {
   });
 
   it('offers fewer when the pools run dry', () => {
-    const run = fullRun();
-    const items = Array.from({ length: MAX_INVENTORY_SLOTS }, (_, i) => ({
-      itemId: i ? 'iron-spear' : 'fists',
-      quantity: 1,
-    }));
-    const roster = Array.from({ length: MAX_ROSTER_SIZE }, (_, i) => ({ ...run.roster[0], id: `u${i}`, items }));
-    const rewards = rollRewards(withRoster(run, roster), 2, createSeededRng(1));
+    const rewards = rollRewards(withRoster(fullRun(), []), 2, createSeededRng(1), 10);
     expect(kinds(rewards).sort()).toEqual(['gold', 'training']);
+  });
+
+  it('only offers useful weapons, drills and lessons', () => {
+    const run = fullRun();
+    const offers = Array.from({ length: 100 }, (_, seed) => rollRewards(run, 2, createSeededRng(seed))).flat();
+    expect(kinds(offers)).toContain('arms');
+    expect(kinds(offers)).toContain('drill');
+    expect(kinds(offers)).toContain('lesson');
+    for (const reward of offers) {
+      if (reward.kind === 'arms') expect([IRON_SPEAR.id, IRON_AXE.id, IRON_BOW.id]).toContain(reward.itemId);
+      if (reward.kind === 'drill') expect(run.roster.some((unit) => unit.id === reward.unitId)).toBe(true);
+      if (reward.kind === 'lesson') expect(run.roster.some((unit) => unit.id === reward.unitId)).toBe(true);
+    }
+    const maxed = withRoster(
+      run,
+      run.roster.map((unit) => ({ ...unit, level: MAX_LEVEL })),
+    );
+    expect(
+      Array.from({ length: 40 }, (_, seed) => rollRewards(maxed, 2, createSeededRng(seed))).flat(),
+    ).not.toContainEqual(expect.objectContaining({ kind: 'lesson' }));
   });
 
   it('offers nothing when asked for none', () => {
@@ -270,6 +285,38 @@ describe('applyReward', () => {
     expect(applyReward(fullRun(), { kind: 'gold', amount: 40 }).gold).toBe(40);
   });
 
+  it('puts a fresh weapon in the convoy and leaves the original run alone', () => {
+    const run = fullRun();
+    const after = applyReward(run, { kind: 'arms', itemId: FIRE.id, label: FIRE.label, uses: FIRE.uses! });
+    expect(after.convoy).toEqual([{ itemId: FIRE.id, quantity: FIRE.uses }]);
+    expect(run.convoy).toEqual([]);
+  });
+
+  it('drills only the named ally and respects its stat cap', () => {
+    const run = fullRun();
+    const [soldier, archer] = run.roster;
+    const reward = { kind: 'drill', unitId: soldier.id, name: soldier.name, stat: 'strength' } as const;
+    const after = applyReward(run, reward);
+    expect(after.roster[0].strength).toBe(soldier.strength + 1);
+    expect(after.roster[1]).toEqual(archer);
+    const capped = withRoster(run, [
+      { ...soldier, strength: new Soldier({ team: 'player' }).caps.strength! },
+      ...run.roster.slice(1),
+    ]);
+    expect(applyReward(capped, reward).roster[0]).toEqual(capped.roster[0]);
+  });
+
+  it('levels only the lesson recipient, with repeatable growths', () => {
+    const run = fullRun();
+    const reward = { kind: 'lesson', unitId: run.roster[0].id, name: run.roster[0].name, seed: 12 } as const;
+    const after = applyReward(run, reward);
+    expect(after.roster[0]).toMatchObject({ level: 2, experience: 0 });
+    expect(after.roster.slice(1)).toEqual(run.roster.slice(1));
+    expect(applyReward(run, reward)).toEqual(after);
+    const maxed = withRoster(run, [{ ...run.roster[0], level: MAX_LEVEL }, ...run.roster.slice(1)]);
+    expect(applyReward(maxed, reward).roster[0]).toEqual(maxed.roster[0]);
+  });
+
   it('leaves the stage, convoy and fallen alone', () => {
     const run = fullRun();
     const after = applyReward(run, { kind: 'rest' });
@@ -300,44 +347,27 @@ describe('describeReward', () => {
     ).toContain('Health Potion');
     expect(describeReward({ kind: 'training', maxHealth: 2 }).description).toContain('+2 max HP');
     expect(describeReward({ kind: 'gold', amount: 40 }).label).toBe('40 Gold');
+    expect(describeReward({ kind: 'arms', itemId: FIRE.id, label: FIRE.label, uses: 30 }).description).toContain(
+      'Fire Tome',
+    );
+    expect(describeReward({ kind: 'drill', unitId: 'a', name: 'Alden', stat: 'speed' }).description).toContain('Alden');
+    expect(describeReward({ kind: 'lesson', unitId: 'a', name: 'Alden', seed: 1 }).description).toContain('Alden');
   });
 });
 
 describe('stage 1 rewards', () => {
   const lone = () => runOf(['alden', new Warrior({ name: 'Alden', team: 'player' })]);
-  const recruits = (rewards: readonly Reward[]) =>
-    rewards.map((reward) => (reward.kind === 'recruit' ? reward.unit : null));
-
-  it('offers experience first, then recruits of the starting classes the warband lacks, in order', () => {
+  it('offers experience first and no recruits', () => {
     for (let seed = 0; seed < 20; seed++) {
       const rewards = rollRewards(lone(), 1, createSeededRng(seed));
       expect(rewards).toHaveLength(REWARD_CHOICES);
-      expect(kinds(rewards)).toEqual(['experience', 'recruit', 'recruit']);
-      expect(recruits(rewards).map((unit) => unit?.classId)).toEqual([undefined, 'soldier', 'archer']);
+      expect(rewards[0].kind).toBe('experience');
+      expect(kinds(rewards)).not.toContain('recruit');
     }
-  });
-
-  it('offers a class the warband has only once every other starting class is offered', () => {
-    const soldier = runOf(['alden', new Soldier({ name: 'Alden', team: 'player' })]);
-    const rewards = rollRewards(soldier, 1, createSeededRng(3), 4);
-    expect(recruits(rewards).map((unit) => unit?.classId)).toEqual([undefined, 'warrior', 'archer', 'soldier']);
-  });
-
-  it('names each recruit differently, and none after the warband', () => {
-    for (let seed = 0; seed < 20; seed++) {
-      const names = recruits(rollRewards(lone(), 1, createSeededRng(seed))).map((unit) => unit?.name);
-      expect(new Set(names).size).toBe(names.length);
-      expect(names).not.toContain('Alden');
-    }
-  });
-
-  it('brings the recruits in at level 1 beside a level 1 warband', () => {
-    for (const unit of recruits(rollRewards(lone(), 1, createSeededRng(4))).filter(Boolean))
-      expect(unit?.level).toBe(1);
   });
 
   it('still respects the count', () => {
-    expect(kinds(rollRewards(lone(), 1, createSeededRng(4), 2))).toEqual(['experience', 'recruit']);
+    expect(kinds(rollRewards(lone(), 1, createSeededRng(4), 2))[0]).toBe('experience');
     expect(kinds(rollRewards(lone(), 1, createSeededRng(4), 1))).toEqual(['experience']);
     expect(rollRewards(lone(), 1, createSeededRng(4), 0)).toEqual([]);
   });
@@ -349,11 +379,6 @@ describe('stage 1 rewards', () => {
       Array.from({ length: MAX_ROSTER_SIZE }, (_, i) => ({ ...run.roster[0], id: `u${i}` })),
     );
     expect(kinds(rollRewards(full, 1, createSeededRng(4)))).not.toContain('recruit');
-  });
-
-  it("describes a starting-class recruit with the class's pitch", () => {
-    const [, soldier] = recruits(rollRewards(lone(), 1, createSeededRng(4)));
-    expect(describeReward({ kind: 'recruit', unit: soldier! }).description).toContain(STARTING_CLASSES[1].description);
   });
 });
 

@@ -16,7 +16,7 @@ import type { Unit } from '../Unit.ts';
 import { WEAPONS } from '../weapons.ts';
 
 // How many units deploy to a stage at the start of a run.
-export const STARTING_DEPLOY_CAP = 3;
+export const STARTING_DEPLOY_CAP = 5;
 
 // Every item a saved inventory can name, by id.
 export const RUN_ITEMS: readonly Item[] = Object.freeze([
@@ -80,6 +80,9 @@ export interface RunState {
   // on the reward screen reopens there (see rewards.ts) rather than
   // skipping the pick.
   pendingReward?: PendingReward;
+  // Cleared stage awaiting a separate recruitment choice.
+  pendingRecruitment?: number;
+  pendingGuest?: UnitSnapshot;
 }
 
 // A reward pick still owed after a won stage: the stage cleared, how many
@@ -268,7 +271,19 @@ export function parseRun(
     return null;
   }
   if (!isRecord(data)) return null;
-  const { seed, stage, roster, convoy, gold, relics, deployCap, fallen, pendingReward } = data;
+  const {
+    seed,
+    stage,
+    roster,
+    convoy,
+    gold,
+    relics,
+    deployCap,
+    fallen,
+    pendingReward,
+    pendingRecruitment,
+    pendingGuest,
+  } = data;
   const itemIds = new Set(items.map((item) => item.id));
   const classIds = new Set(classes.map((unitClass) => unitClass.id));
   const isItems = (value: unknown): value is ItemSnapshot[] =>
@@ -287,7 +302,10 @@ export function parseRun(
     !isWholeNumber(deployCap) ||
     deployCap < 1 ||
     !isUnits(fallen) ||
-    (pendingReward !== undefined && !isPendingReward(pendingReward))
+    (pendingReward !== undefined && !isPendingReward(pendingReward)) ||
+    (pendingRecruitment !== undefined && (!isWholeNumber(pendingRecruitment) || pendingRecruitment < 1)) ||
+    (pendingGuest !== undefined && !isUnitSnapshot(pendingGuest, classIds, isItems)) ||
+    (pendingGuest === undefined) !== (pendingRecruitment === undefined)
   ) {
     return null;
   }
@@ -302,6 +320,8 @@ export function parseRun(
     deployCap,
     fallen,
     ...(pendingReward !== undefined && { pendingReward }),
+    ...(pendingRecruitment !== undefined && { pendingRecruitment }),
+    ...(pendingGuest !== undefined && { pendingGuest }),
   });
 }
 
@@ -379,5 +399,6 @@ function freezeRun(run: RunState): RunState {
     relics: Object.freeze([...run.relics]),
     fallen: Object.freeze(run.fallen.map(freezeSnapshot)),
     ...(run.pendingReward && { pendingReward: Object.freeze({ ...run.pendingReward }) }),
+    ...(run.pendingGuest && { pendingGuest: freezeSnapshot(run.pendingGuest) }),
   });
 }

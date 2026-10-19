@@ -10,12 +10,19 @@ import { planDeployment, planNextTurn } from '../battle/ai.ts';
 import type { BattleCommand } from '../battle/commands.ts';
 import { getCommands, replay } from '../battle/history.ts';
 import { runBattle, type BattlePlanner } from '../battle/runner.ts';
-import { createBattleState, getDeployedUnits, type BattleState } from '../battle/state.ts';
+import { createBattleState, getRunBattleUnits, type BattleState } from '../battle/state.ts';
 import { isPastTurnLimit, type ObjectiveKind } from '../objectives.ts';
 import type { BattleOutcome } from '../turns.ts';
 import { canRest } from './camp.ts';
 import { createRun } from './run.ts';
-import { applyRunCommand, finishBattle, getRewardOffers, type RunCommand, type RunSession } from './runCommands.ts';
+import {
+  applyRunCommand,
+  finishBattle,
+  getRecruitOffers,
+  getRewardOffers,
+  type RunCommand,
+  type RunSession,
+} from './runCommands.ts';
 import { createStartingWarband } from './stageLevel.ts';
 
 // How a run starts: its seed, and the class and name of its first unit.
@@ -135,6 +142,9 @@ export function playRun(start: RunStart, policy: RunPolicy, options: AutoRunOpti
       case 'reward':
         give(policy.reward(session));
         break;
+      case 'recruit':
+        give({ type: 'pick-recruit', index: getRecruitOffers(session).length > 0 ? 0 : -1 });
+        break;
       case 'camp':
         give(campCommands++ < maxCampCommands ? policy.camp(session) : { type: 'march' });
         break;
@@ -181,7 +191,7 @@ function finishStageBattle(session: RunSession, state: BattleState): { session: 
   const turns = state.turnState?.turn ?? 0;
   const next = finishBattle(
     session,
-    { units: getDeployedUnits(state), convoy: state.convoyLoot },
+    { units: getRunBattleUnits(state), convoy: state.convoyLoot },
     state.outcome ?? 'defeat',
   );
   return {

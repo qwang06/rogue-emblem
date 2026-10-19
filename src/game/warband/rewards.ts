@@ -1,18 +1,22 @@
 // Warband Mode's stage rewards: what a run earns for clearing a stage. Every
 // win pays gold (more for a flawless one, with nobody lost), then the
 // player picks one of a few offered rewards, like Slay the Spire's card
-// pick: a recruit, a rest, supplies, training, experience or a purse of
-// gold. Offers
-// are rolled from an Rng (seeded from the run, so a stage always offers the
-// same picks) and each one is applied to the run as a pure function. A
-// recruit is rolled in full when it's offered, so the screen can show its
-// stats before it's picked.
+// pick: recovery, gear, focused growth or gold. Offers are rolled
+// from an Rng (seeded from the run, so a stage always offers the
+// same picks) and each one is applied to the run as a pure function.
 
 import { HEALTH_POTION, MAX_INVENTORY_SLOTS } from '../items.ts';
-import { getExperienceToNextLevel, rollLevelUp, type LevelUpResult } from '../experience.ts';
+import {
+  getExperienceToNextLevel,
+  MAX_LEVEL,
+  rollLevelUp,
+  type LevelUpResult,
+  type PlainGrowthStat,
+} from '../experience.ts';
 import type { Rng } from '../combatStats.ts';
 import { createSeededRng, randomInt, randomItem, shuffle } from '../rng.ts';
 import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
+import { FIRE, IRON_AXE, IRON_BOW, IRON_SPEAR, canWield, type Weapon } from '../weapons.ts';
 import { WARBAND_NAMES } from './names.ts';
 import { STARTING_CLASSES } from './startingClasses.ts';
 import {
@@ -32,8 +36,10 @@ export const FLAWLESS_BONUS_GOLD = 10;
 
 // How many rewards a stage offers to pick from.
 export const REWARD_CHOICES = 3;
+export const ARMS_CACHE_WEAPONS: readonly Weapon[] = Object.freeze([IRON_SPEAR, IRON_AXE, IRON_BOW, FIRE]);
+export const DRILL_STATS: readonly PlainGrowthStat[] = Object.freeze(['strength', 'magic', 'skill', 'speed']);
 
-// The most units a warband can hold; recruits stop being offered at it.
+// The most units a warband can hold.
 export const MAX_ROSTER_SIZE = 8;
 
 // The classes a recruit can be: every class but the warrior, which is
@@ -59,7 +65,8 @@ export const SKIP_GOLD_PER_STAGE = 5;
 export const REROLL_COST = 10;
 export const REROLL_COST_STEP = 10;
 
-export type RewardKind = 'recruit' | 'rest' | 'supplies' | 'training' | 'experience' | 'gold';
+export type RewardKind =
+  'recruit' | 'rest' | 'supplies' | 'training' | 'experience' | 'gold' | 'arms' | 'drill' | 'lesson';
 
 export type Reward =
   // A new unit joins the roster.
@@ -73,6 +80,10 @@ export type Reward =
   // Every unit gains exactly the XP to its next level; `seed` rolls the
   // level ups' stat gains, so picking it always gives the same ones.
   | { kind: 'experience'; seed: number }
+  // A fresh weapon in the convoy, or one capped stat / level for a named ally.
+  | { kind: 'arms'; itemId: string; label: string; uses: number }
+  | { kind: 'drill'; unitId: string; name: string; stat: PlainGrowthStat }
+  | { kind: 'lesson'; unitId: string; name: string; seed: number }
   // Gold for the warband.
   | { kind: 'gold'; amount: number };
 
@@ -158,16 +169,10 @@ export function getPendingRewardOffer(run: RunState): (PendingReward & { rewards
 // The rewards offered after clearing `stage`, for `run` as it stands (the
 // battle written back). Up to `count` of different kinds, in a random
 // order, from the kinds that would do something:
-// - recruit, while the roster is under MAX_ROSTER_SIZE; always offered (and
-//   first) while the roster is smaller than the deploy cap, so a lone
-//   starting unit is never left without a chance at company
 // - rest, when anyone is missing HP or mana
 // - supplies, when anyone has room for a Health Potion
 // - training and gold, always
-// Stage 1 is different: it offers experience, so the lone unit a run starts
-// with can take its first level, and the rest are recruits of starting
-// classes (see rollFirstStageRecruits), so it can pick its first companion
-// instead.
+// Stage 1 includes experience so the lone starter can take its first level.
 export function rollRewards(
   run: RunState,
   stage: number,
@@ -175,43 +180,15 @@ export function rollRewards(
   count: number = REWARD_CHOICES,
   classes: readonly UnitClass[] = UNIT_CLASSES,
 ): readonly Reward[] {
-  if (stage === 1 && run.roster.length < MAX_ROSTER_SIZE) {
-    if (count <= 0) return Object.freeze([]);
-    const experience = Object.freeze<Reward>(createReward('experience', run, stage, rng, classes));
-    return Object.freeze([experience, ...rollFirstStageRecruits(run, stage, rng, count - 1, classes)]);
-  }
-  const needsRecruit = run.roster.length < run.deployCap && run.roster.length < MAX_ROSTER_SIZE;
   const kinds: RewardKind[] = [];
-  if (run.roster.length < MAX_ROSTER_SIZE && !needsRecruit) kinds.push('recruit');
   if (run.roster.some((unit) => unit.health < unit.maxHealth || unit.mana < unit.maxMana)) kinds.push('rest');
   if (run.roster.some((unit) => canTakeItem(unit, HEALTH_POTION.id))) kinds.push('supplies');
+  if (eligibleWeapons(run, classes).length > 0) kinds.push('arms');
+  if (eligibleDrills(run, classes).length > 0) kinds.push('drill');
+  if (run.roster.some((unit) => unit.level < MAX_LEVEL)) kinds.push('lesson');
   kinds.push('training', 'gold');
-  const picked = [...(needsRecruit ? ['recruit' as const] : []), ...shuffle(rng, kinds)].slice(0, Math.max(0, count));
+  const picked = [...(stage === 1 ? ['experience' as const] : []), ...shuffle(rng, kinds)].slice(0, Math.max(0, count));
   return Object.freeze(picked.map((kind) => Object.freeze(createReward(kind, run, stage, rng, classes))));
-}
-
-// Stage 1's recruits: one of each STARTING_CLASSES class, in that order
-// but with classes nobody in the roster has first, each with a different
-// name, up to `count`.
-export function rollFirstStageRecruits(
-  run: RunState,
-  stage: number,
-  rng: Rng,
-  count: number = REWARD_CHOICES,
-  classes: readonly UnitClass[] = UNIT_CLASSES,
-): readonly Reward[] {
-  const takenNames: string[] = [];
-  const inRoster = new Set(run.roster.map((unit) => unit.classId));
-  const ordered = [
-    ...STARTING_CLASSES.filter(({ id }) => !inRoster.has(id)),
-    ...STARTING_CLASSES.filter(({ id }) => inRoster.has(id)),
-  ];
-  const rewards = ordered.slice(0, Math.max(0, count)).map(({ id }) => {
-    const unit = rollRecruit(run, stage, rng, classes, { classId: id, takenNames });
-    takenNames.push(unit.name);
-    return Object.freeze<Reward>({ kind: 'recruit', unit });
-  });
-  return Object.freeze(rewards);
 }
 
 function createReward(kind: RewardKind, run: RunState, stage: number, rng: Rng, classes: readonly UnitClass[]): Reward {
@@ -226,9 +203,41 @@ function createReward(kind: RewardKind, run: RunState, stage: number, rng: Rng, 
       return { kind, maxHealth: TRAINING_MAX_HEALTH };
     case 'experience':
       return { kind, seed: Math.floor(rng() * 2 ** 32) };
+    case 'arms': {
+      const weapon = randomItem(rng, eligibleWeapons(run, classes));
+      return { kind, itemId: weapon.id, label: weapon.label, uses: weapon.uses! };
+    }
+    case 'drill': {
+      const { unit, stat } = randomItem(rng, eligibleDrills(run, classes));
+      return { kind, unitId: unit.id, name: unit.name, stat };
+    }
+    case 'lesson': {
+      const unit = randomItem(
+        rng,
+        run.roster.filter((candidate) => candidate.level < MAX_LEVEL),
+      );
+      return { kind, unitId: unit.id, name: unit.name, seed: Math.floor(rng() * 2 ** 32) };
+    }
     case 'gold':
       return { kind, amount: PURSE_GOLD + PURSE_GOLD_PER_STAGE * stage };
   }
+}
+
+function eligibleWeapons(run: RunState, classes: readonly UnitClass[]): Weapon[] {
+  return ARMS_CACHE_WEAPONS.filter((weapon) =>
+    run.roster.some((snapshot) => canWield(restoreUnit(snapshot, classes).weaponTypes, weapon)),
+  );
+}
+
+function eligibleDrills(run: RunState, classes: readonly UnitClass[]): { unit: UnitSnapshot; stat: PlainGrowthStat }[] {
+  return run.roster.flatMap((unit) => {
+    const restored = restoreUnit(unit, classes);
+    return DRILL_STATS.filter(
+      (stat) =>
+        (stat !== 'magic' || restored.weaponTypes.includes('magical')) &&
+        unit[stat] < (restored.caps[stat] ?? Infinity),
+    ).map((stat) => ({ unit, stat }));
+  });
 }
 
 // A recruit for `run`: a `classId` unit (a random RECRUIT_CLASS_IDS class
@@ -284,9 +293,43 @@ function applyRewardEffect(run: RunState, reward: Reward, classes: readonly Unit
       });
     case 'experience':
       return applyExperienceReward(run, reward, classes).run;
+    case 'arms':
+      return freeze({ ...run, convoy: [...run.convoy, { itemId: reward.itemId, quantity: reward.uses }] });
+    case 'drill': {
+      const target = eligibleDrills(run, classes).some(
+        ({ unit, stat }) => unit.id === reward.unitId && stat === reward.stat,
+      );
+      return target
+        ? mapRoster(run, (unit) =>
+            unit.id === reward.unitId ? { ...unit, [reward.stat]: unit[reward.stat] + 1 } : unit,
+          )
+        : run;
+    }
+    case 'lesson':
+      return applyLessonReward(run, reward, classes).run;
     case 'gold':
       return addGold(run, reward.amount);
   }
+}
+
+export function applyLessonReward(
+  run: RunState,
+  reward: Extract<Reward, { kind: 'lesson' }>,
+  classes: readonly UnitClass[] = UNIT_CLASSES,
+): { run: RunState; levelUps: readonly RewardLevelUp[] } {
+  const snapshot = run.roster.find((unit) => unit.id === reward.unitId);
+  if (!snapshot || snapshot.level >= MAX_LEVEL) return { run: clearPendingReward(run), levelUps: [] };
+  const unit = restoreUnit(snapshot, classes);
+  const result = unit.gainExperience(
+    getExperienceToNextLevel(unit.level, unit.experience),
+    createSeededRng(reward.seed),
+    false,
+  );
+  const roster = run.roster.map((entry) => (entry.id === snapshot.id ? snapshotUnit(entry.id, unit) : entry));
+  return {
+    run: clearPendingReward(freeze({ ...run, roster })),
+    levelUps: result.levelUps.map((levelUp) => ({ name: unit.name, unitClass: unit.unitClass, levelUp })),
+  };
 }
 
 // A unit's level up from an experience reward, for showing it.
@@ -345,6 +388,12 @@ export function describeReward(
       return { label: 'Training', description: `Every unit gains +${reward.maxHealth} max HP.` };
     case 'experience':
       return { label: 'Experience', description: 'Every unit gains enough XP to reach its next level.' };
+    case 'arms':
+      return { label: 'Arms Cache', description: `A fresh ${reward.label} goes to the convoy (${reward.uses} uses).` };
+    case 'drill':
+      return { label: 'Field Drill', description: `${reward.name} gains +1 ${reward.stat.toUpperCase()}.` };
+    case 'lesson':
+      return { label: "Veteran's Lesson", description: `${reward.name} gains enough XP to reach the next level.` };
     case 'gold':
       return { label: `${reward.amount} Gold`, description: 'A purse of coin, for the camp to come.' };
   }

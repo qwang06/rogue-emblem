@@ -20,6 +20,7 @@ import { buyItem, canBuy, canSell, MERCHANT_STOCK, sellItem } from './merchant.t
 import {
   addGold,
   applyExperienceReward,
+  applyLessonReward,
   applyReward,
   getPendingRewardOffer,
   getStageClearGold,
@@ -30,11 +31,13 @@ import {
   type RewardLevelUp,
   type Reward,
 } from './rewards.ts';
-import { finishStage, type BattleResult, type RunState } from './run.ts';
+import { finishStage, snapshotUnit, type BattleResult, type RunState } from './run.ts';
+import { GUEST_UNIT_ID, rollGuest, settleGuest } from './recruitment.ts';
+import { MAX_ROSTER_SIZE } from './rewards.ts';
 
 // Where a run stands: fighting its stage's battle, picking the reward a won
 // stage owes, at camp, or over (the warband fell).
-export type RunPhase = 'battle' | 'reward' | 'camp' | 'over';
+export type RunPhase = 'battle' | 'recruit' | 'reward' | 'camp' | 'over';
 
 export interface RunSession {
   readonly run: RunState;
@@ -42,6 +45,8 @@ export interface RunSession {
 }
 
 export type RunCommand =
+  | { type: 'pick-recruit'; index: number }
+  | { type: 'decline-recruit' }
   // Takes offer `index` of the reward pick.
   | { type: 'pick-reward'; index: number }
   // Skips the reward pick for gold (see getSkipGold).
@@ -89,11 +94,12 @@ export class RunCommandError extends Error {
 // The commands camp accepts; the reward pick accepts the rest but march.
 const CAMP_COMMANDS: ReadonlySet<RunCommandType> = new Set(['rest', 'buy', 'sell', 'give', 'store', 'equip', 'march']);
 const REWARD_COMMANDS: ReadonlySet<RunCommandType> = new Set(['pick-reward', 'skip-reward', 'reroll-rewards']);
+const RECRUIT_COMMANDS: ReadonlySet<RunCommandType> = new Set(['pick-recruit', 'decline-recruit']);
 
 // A session for `run` as it was saved: on its reward pick if it owes one,
 // else about to fight its stage.
 export function resumeRunSession(run: RunState): RunSession {
-  return freeze({ run, phase: getPendingRewardOffer(run) ? 'reward' : 'battle' });
+  return freeze({ run, phase: run.pendingRecruitment ? 'recruit' : getPendingRewardOffer(run) ? 'reward' : 'battle' });
 }
 
 // The session after its stage's battle ends with `outcome`: the battle
@@ -107,14 +113,33 @@ export function finishBattle(session: RunSession, result: BattleResult, outcome:
   if (finished.over) return freeze({ run: finished.run, phase: 'over' });
   const clear = getStageClearGold(before.stage, finished.run.fallen.length - before.fallen.length);
   const paid = addGold(finished.run, clear.gold);
-  if (rollStageRewards(paid, before.stage).length === 0) return freeze({ run: paid, phase: 'camp' });
+  const guest = result.units.get(GUEST_UNIT_ID);
+  const candidate = guest?.isAlive() && paid.roster.length < MAX_ROSTER_SIZE ? rollGuest(before) : null;
+  const pending =
+    candidate && guest
+      ? {
+          pendingRecruitment: before.stage,
+          pendingGuest: Object.freeze({ ...snapshotUnit(candidate.id, guest), name: candidate.name }),
+        }
+      : {};
+  if (rollStageRewards(paid, before.stage).length === 0) {
+    const run = Object.freeze({ ...paid, ...pending });
+    return freeze({ run, phase: candidate ? 'recruit' : 'camp' });
+  }
   const run = markRewardPending(paid, {
     stage: before.stage,
     rerolls: 0,
     clearGold: clear.gold,
     flawless: clear.flawless,
   });
-  return freeze({ run, phase: 'reward' });
+  const owing = Object.freeze({ ...run, ...pending });
+  return freeze({ run: owing, phase: candidate ? 'recruit' : 'reward' });
+}
+
+export function getRecruitOffers(session: RunSession): readonly Reward[] {
+  return session.phase === 'recruit' && session.run.pendingGuest
+    ? [{ kind: 'recruit', unit: session.run.pendingGuest }]
+    : [];
 }
 
 // The reward offers the session's pick shows, or none when it isn't on one.
@@ -131,17 +156,29 @@ export function applyRunCommand(session: RunSession, command: RunCommand): RunCo
   };
   if (session.phase === 'camp' && !CAMP_COMMANDS.has(command.type)) fail(`${command.type} isn't done at camp`);
   if (session.phase === 'reward' && !REWARD_COMMANDS.has(command.type)) fail(`${command.type} isn't a reward pick`);
+  if (session.phase === 'recruit' && !RECRUIT_COMMANDS.has(command.type)) fail(`${command.type} isn't a recruit pick`);
   if (session.phase === 'battle' || session.phase === 'over')
     fail(`${command.type} isn't done during ${session.phase}`);
   const { run } = session;
   const camp = (next: RunState): RunCommandResult => ({ session: freeze({ run: next, phase: 'camp' }), events: [] });
 
   switch (command.type) {
+    case 'pick-recruit': {
+      const offer = getRecruitOffers(session)[command.index];
+      if (!offer || offer.kind !== 'recruit') return fail(`No recruit offer ${command.index}`);
+      const next = settleGuest(run, true);
+      return { session: freeze({ run: next, phase: next.pendingReward ? 'reward' : 'camp' }), events: [] };
+    }
+    case 'decline-recruit': {
+      const next = settleGuest(run, false);
+      return { session: freeze({ run: next, phase: next.pendingReward ? 'reward' : 'camp' }), events: [] };
+    }
     case 'pick-reward': {
       const reward = getRewardOffers(session)[command.index];
       if (!reward) return fail(`No reward offer ${command.index}`);
-      if (reward.kind !== 'experience') return camp(applyReward(run, reward));
-      const { run: next, levelUps } = applyExperienceReward(run, reward);
+      if (reward.kind !== 'experience' && reward.kind !== 'lesson') return camp(applyReward(run, reward));
+      const { run: next, levelUps } =
+        reward.kind === 'experience' ? applyExperienceReward(run, reward) : applyLessonReward(run, reward);
       return { session: freeze({ run: next, phase: 'camp' }), events: [{ type: 'level-ups', levelUps }] };
     }
     case 'skip-reward':
@@ -187,6 +224,11 @@ export function applyRunCommand(session: RunSession, command: RunCommand): RunCo
 // convoy entry, each give, store and equip that's allowed, and march.
 export function getLegalRunCommands(session: RunSession, stock: readonly string[] = MERCHANT_STOCK): RunCommand[] {
   const commands: RunCommand[] = [];
+  if (session.phase === 'recruit') {
+    getRecruitOffers(session).forEach((_, index) => commands.push({ type: 'pick-recruit', index }));
+    commands.push({ type: 'decline-recruit' });
+    return commands;
+  }
   if (session.phase === 'reward') {
     getRewardOffers(session).forEach((_, index) => commands.push({ type: 'pick-reward', index }));
     commands.push({ type: 'skip-reward' });

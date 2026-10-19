@@ -73,6 +73,12 @@ describe('getObjectiveStatus', () => {
 });
 
 describe('getObjectiveOutcome', () => {
+  it('does not let a guest keep the warband alive or seize a tile', () => {
+    const guest = { ...unit('guest-recruit', 'player', { x: 3, y: 0 }), guest: true };
+    const lost = { turn: 1, units: [unit('hero', 'player', null, false), guest, unit('foe', 'enemy')] };
+    expect(getObjectiveOutcome(ROUT, lost)).toBe('defeat');
+    expect(getObjectiveOutcome(SEIZE, battle(1, guest))).toBeNull();
+  });
   it('is undecided while both sides stand and the objective is unmet', () => {
     for (const objective of [ROUT, SEIZE, BOSS, SURVIVE]) {
       expect(getObjectiveOutcome(objective, battle())).toBeNull();

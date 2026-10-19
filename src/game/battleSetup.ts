@@ -8,7 +8,10 @@ import { DIALOGS } from '../data/dialogs.ts';
 import type { DialogFiles } from './dialogScript.ts';
 import { REGION_SETTINGS } from '../data/regions.ts';
 import { getRegionStages, getStageRegion, type RegionSettings } from './warband/regions.ts';
-import { getBattleSeed, getStageSeed, restoreRoster, type RunState } from './warband/run.ts';
+import { getBattleSeed, getStageSeed, restoreRoster, restoreUnit, type RunState } from './warband/run.ts';
+import { GUEST_UNIT_ID, rollGuest } from './warband/recruitment.ts';
+import { setUnit } from './grid.ts';
+import { getMoveCost } from './movement.ts';
 import { createStageLevel, pickStageArchetype, withArchetype } from './warband/stageLevel.ts';
 import { pickStageObjective, placeObjective } from './warband/stageObjective.ts';
 import { getStageLootCount } from './loot.ts';
@@ -89,9 +92,30 @@ export function createBattleLevel(
       const spec = pickStageObjective(setup.stage, baseRegion, setup.seed);
       const region = withArchetype(baseRegion, pickStageArchetype(setup.stage, baseRegion, setup.seed, spec.kind));
       const lootCount = getStageLootCount(setup.stage);
-      const level = setup.run
+      let level = setup.run
         ? createStageLevel(setup.seed, region, restoreRoster(setup.run), setup.run.deployCap, lootCount)
         : createStageLevel(setup.seed, region, undefined, undefined, lootCount);
+      const guest = setup.run && rollGuest(setup.run);
+      if (guest) {
+        const zone = new Set(level.deploymentZone.map(({ x, y }) => `${x},${y}`));
+        const front = Math.max(...level.deploymentZone.map(({ y }) => y));
+        const tile = level.grid.cells
+          .filter((cell) => !cell.unitId && !zone.has(`${cell.x},${cell.y}`) && getMoveCost(cell.terrain) < Infinity)
+          .sort((a, b) => {
+            const distance = (cell: typeof a) =>
+              Math.min(...level.deploymentZone.map(({ x, y }) => Math.abs(cell.x - x) + Math.abs(cell.y - y)));
+            return distance(a) - distance(b) || Math.abs(front - a.y) - Math.abs(front - b.y) || a.x - b.x;
+          })[0];
+        if (tile) {
+          const unit = restoreUnit(guest);
+          unit.name = `${guest.name} (Guest)`;
+          level = {
+            ...level,
+            grid: setUnit(level.grid, tile.x, tile.y, GUEST_UNIT_ID),
+            units: new Map([...level.units, [GUEST_UNIT_ID, unit]]),
+          };
+        }
+      }
       const objective = placeObjective(spec, level);
       return { ...level, objective };
     }

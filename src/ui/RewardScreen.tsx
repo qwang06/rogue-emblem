@@ -10,16 +10,23 @@ import { menuItemPointerProps } from './menuPointer.ts';
 export function RewardScreen() {
   const menu = useGameStore((state) => state.rewardMenu);
   const stageClear = useGameStore((state) => state.stageClear);
+  const recruitmentStage = useGameStore((state) => state.recruitmentStage);
   if (!menu) return null;
   const entries = menu.actions.map((action, index) => ({ action, index, selected: index === menu.selectedIndex }));
-  const cards = entries.filter(({ action }) => action.kind !== 'skip' && action.kind !== 'reroll');
-  const buttons = entries.filter(({ action }) => action.kind === 'skip' || action.kind === 'reroll');
+  const cards = entries.filter(
+    ({ action }) => action.kind !== 'skip' && action.kind !== 'reroll' && action.kind !== 'decline',
+  );
+  const buttons = entries.filter(
+    ({ action }) => action.kind === 'skip' || action.kind === 'reroll' || action.kind === 'decline',
+  );
 
   return (
     <div className="pause-overlay">
-      <section className="reward-screen" aria-label="Choose a reward">
+      <section className="reward-screen" aria-label={recruitmentStage ? 'Choose a recruit' : 'Choose a reward'}>
         <header className="panel reward-screen__header">
-          <h2 className="reward-screen__title">Spoils of Battle</h2>
+          <h2 className="reward-screen__title">
+            {recruitmentStage ? `Guest Survived Stage ${recruitmentStage}` : 'Spoils of Battle'}
+          </h2>
           {stageClear && (
             <p className="reward-screen__gold">
               Stage {stageClear.stage} cleared: <span className="reward-screen__coin">+{stageClear.gold} gold</span>
@@ -74,7 +81,7 @@ export function RewardScreen() {
           className="reward-screen__hint"
           entries={[
             ['←→', 'Choose'],
-            ['Enter', 'Take reward'],
+            ['Enter', recruitmentStage ? 'Recruit' : 'Take reward'],
           ]}
         />
       </section>

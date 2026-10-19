@@ -253,7 +253,7 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 ### [x] W.1b Warband menu and starting class
 
 - Choosing Warband Mode always opens a menu: Continue Run (Stage N), disabled when nothing is saved, and New Run. There's still a single save slot.
-- New Run picks the base class the warband starts as: Warrior, Soldier or Archer (`src/game/warband/startingClasses.ts`), each with a one-line pitch. The starting warband is a single unit of that class, under a generated name (`src/game/warband/names.ts`) the player can reroll or type over; recruits come with W.3's rewards.
+- New Run picks the base class the warband starts as: Warrior, Soldier or Archer (`src/game/warband/startingClasses.ts`), each with a one-line pitch. The starting warband is a single unit of that class, under a generated name (`src/game/warband/names.ts`) the player can reroll or type over; the first guest candidate appears in stage 2.
 - Stage 1 (Meadowlands) is a quick first win for that lone unit: one soldier, wounded to 4 HP (an enemy group's `health`), exactly three steps from the deployment zone, so every starting class can reach and strike it on turn 1.
 - The Warrior (it replaced the Villager, with PixelLab art in a plain tunic) is the late bloomer: a soldier's stat line with a point less strength and only a wooden sword, so it's the weakest start, with the highest growth total and caps of any class and a 150% XP rate (`scaleExperience` in `experience.ts`, a `Unit.experienceRate`), so it outgrows the others later in a run.
 - **Tests:** the menu entries with and without a save, starting classes, a warband per class, XP scaling, the warrior's growths and caps against the soldier's and archer's.
@@ -269,21 +269,21 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 ### [ ] W.3 Gold and reward picks
 
 - Gold for kills and clearing a stage, with bonuses (no losses, a fast clear).
-- After a win, pick **1 of 3** rewards: a recruit, a weapon or item, a relic (once W.5 lands) or gold. Pure `rollRewards(stage, rng, pools)`.
+- After a win, pick **1 of 3** rewards: a weapon or item, a relic (once W.5 lands) or gold. Recruitment visits are separate. Pure `rollRewards(stage, rng, pools)`.
 - A React reward screen between the battle result and the next stage.
 - **Tests:** gold amounts, reward rolls with a stubbed RNG, no duplicate offers, pools that run dry.
-- _Progress:_ `src/game/warband/rewards.ts` and the React `RewardScreen`. Every win pays gold (10 + 5 per stage, +10 flawless) and then offers 3 of: Recruit (a random non-warrior class at the warband's average level; always offered while the warband is smaller than its deploy cap), Rest (full heal), Supplies (a Health Potion each), Training (+2 max HP each) and a gold purse. Stage 1's offers are instead a recruit of each starting class, so the lone starting unit picks its first companion. Offers are seeded from the run, so a stage always offers the same picks. _Still to do:_ gold for kills and a fast-clear bonus, weapon rewards, relics (W.5). Skip (+10 gold, +5 per stage) and Reroll (10 gold, +10 per reroll that stage) are in. The run is saved owing the pick (`pendingReward`), so reloading on the reward screen reopens it with the same offers.
+- _Progress:_ `src/game/warband/rewards.ts` and the React `RewardScreen`. Every win pays gold (10 + 5 per stage, +10 flawless) and then offers 3 of: Rest (full heal), Supplies (a Health Potion each), Training (+2 max HP each), Arms Cache (a fresh compatible weapon in the convoy), Field Drill (+1 capped STR/MAG/SKL/SPD for a named ally), Veteran's Lesson (one named ally levels up) and a gold purse. Stage 1 includes Experience among the ordinary rewards. Stage 2 always starts with a non-controllable guest ally; if the guest survives the battle, the player can recruit or decline. Later guest stages occur once in each seeded three-stage group. Offers, including each named recipient, are seeded from the run, so a stage always offers the same picks. _Still to do:_ gold for kills and a fast-clear bonus, relics (W.5). Skip (+10 gold, +5 per stage) and Reroll (10 gold, +10 per reroll that stage) are in. The run is saved owing the pick (`pendingReward`), so reloading on the reward screen reopens it with the same offers.
 - _Loot drops:_ one enemy in each of stages 1–3 carries a wooden-set item, shown by its icon on the map and on the unit panel, and drops it to whoever kills it (or to the convoy if their bag is full; `src/game/loot.ts`). `STAGE_LOOT_DROPS` sets how many drop per stage; later stages drop nothing until they're tuned.
 
 ### [ ] W.4 Camp: merchant, hire, rest
 
 - **Merchant:** buy and sell weapons and items, and buy promotion seals (W.7). Pure stock rolls and prices.
-- **Bigger deploy cap** for gold (3 → 4 → 5 → 6 units), TFT's "level up". This is what drives the trait game in W.6.
+- **Bigger deploy cap** for gold (currently five units; a later cap increase can extend it), TFT's "level up". This is what drives the trait game in W.6.
 - **Hire:** 2–3 mercenaries for sale, reroll for gold, like TFT's shop. A roster cap (e.g. 8) forces dismissals.
 - **Rest:** a free partial heal, or a full heal for gold.
 - **Interest:** +1 gold per 10 banked at each camp, capped, so saving is a strategy.
 - **Tests:** buy and sell prices, can't overspend, deploy cap steps, rerolls, roster cap, interest math and cap, rest healing clamps to max HP.
-- _Progress:_ the camp menu (Manage Roster / Merchant / Rest / Next Stage, `src/game/warband/camp.ts`) shows once a won stage's reward is taken, with the warband's gold. Manage Roster opens the roster screen: pick a unit, equip a weapon, store its items in the convoy or give it items from the convoy (`src/game/warband/convoy.ts`, `rosterScreen.ts`). Merchant (`merchant.ts`, `merchantScreen.ts`) sells the wooden set into the convoy and buys anything in the convoy at half price, scaled by uses left. Rest heals everyone to full for 15 gold. Still to do: rolled stock and promotion seals, the deploy cap, hiring, the free partial rest, interest, and trading between units.
+- _Progress:_ the camp menu (Manage Roster / Merchant / Rest / Next Stage, `src/game/warband/camp.ts`) shows once a won stage's reward is taken, with the warband's gold. Manage Roster opens the roster screen: pick a unit, equip a weapon, store its items in the convoy or give it items from the convoy (`src/game/warband/convoy.ts`, `rosterScreen.ts`). Merchant (`merchant.ts`, `merchantScreen.ts`) sells the wooden set into the convoy and buys anything in the convoy at half price, scaled by uses left. Rest heals everyone to full for 15 gold. Still to do: rolled stock and promotion seals, purchasable deploy cap upgrades, hiring, the free partial rest, interest, and trading between units.
 
 ### [ ] W.5 Modifier pipeline and relics
 

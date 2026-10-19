@@ -16,6 +16,7 @@ export function BattleResult() {
   const nextBattle = useGameStore((state) => state.nextBattle);
   const runOver = useGameStore((state) => state.runOver);
   const stageClear = useGameStore((state) => state.stageClear);
+  const recruitmentStage = useGameStore((state) => state.recruitmentStage);
   // The reward screen, then the camp, take over from the result.
   const pastResult = useGameStore(
     (state) => state.rewardMenu !== null || state.campMenu !== null || state.rosterScreen !== null,
@@ -43,7 +44,16 @@ export function BattleResult() {
         <KeyHint
           className="battle-result__hint"
           entries={[
-            ['Enter', stageClear ? 'Choose a reward' : nextBattle ? `Continue to ${nextBattle}` : 'Return to title'],
+            [
+              'Enter',
+              recruitmentStage
+                ? 'Meet recruits'
+                : stageClear
+                  ? 'Choose a reward'
+                  : nextBattle
+                    ? `Continue to ${nextBattle}`
+                    : 'Return to title',
+            ],
           ]}
         />
       </section>

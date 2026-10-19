@@ -24,7 +24,7 @@
     },
     {
       "name": "Lakeside",
-      "description": "Lake country: lakes that funnel units onto the path. A single goblin waits at the far end.",
+      "description": "Lake country: lakes funnel the warband toward two goblins guarding the far end.",
       "terrain": {
         "generator": "planned",
         "width": 8,
@@ -39,7 +39,10 @@
         "ruins": 0,
         "buildings": 1
       },
-      "enemies": [{ "count": 1, "unitClass": "goblin", "area": { "y": [0, 0.34] } }],
+      "enemies": [
+        { "count": 1, "unitClass": "goblin", "area": { "y": [0, 0.34] } },
+        { "count": 1, "unitClass": "goblin", "health": 5, "area": { "y": [0, 0.34] } }
+      ],
       "treeChance": 0.04,
       "palette": "b-blue"
     },

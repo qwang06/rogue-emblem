@@ -29,4 +29,11 @@ describe('REGION_SETTINGS', () => {
   it('starts on the Meadowlands', () => {
     expect(REGION_CONFIGS[0].name).toBe('Meadowlands');
   });
+
+  it('follows the first recruit choice with two goblins, one wounded', () => {
+    expect(REGION_CONFIGS[1].enemies).toMatchObject([
+      { count: 1, unitClass: 'goblin' },
+      { count: 1, unitClass: 'goblin', health: 5 },
+    ]);
+  });
 });

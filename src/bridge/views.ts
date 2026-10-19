@@ -212,7 +212,7 @@ export interface ObjectiveView extends ObjectiveText {
 // carries its stat line, so it can be judged before it's picked.
 export interface RewardAction extends MenuAction {
   // A reward's kind, or 'skip' / 'reroll' for the buttons under the cards.
-  kind: RewardKind | 'skip' | 'reroll';
+  kind: RewardKind | 'skip' | 'reroll' | 'decline';
   description: string;
   stats: readonly { label: string; value: number }[] | null;
 }

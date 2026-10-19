@@ -11,6 +11,7 @@ import type { Level } from '../trainingLevel.ts';
 import type { BattleOutcome, TurnState } from '../turns.ts';
 import type { Unit } from '../Unit.ts';
 import type { ItemSnapshot } from '../warband/run.ts';
+import { GUEST_UNIT_ID } from '../warband/recruitment.ts';
 
 export type BattleStage = 'deployment' | 'battle';
 
@@ -79,6 +80,14 @@ export function getDeployedUnits(state: BattleState): Map<string, Unit> {
   return deployed;
 }
 
+// The run's fighters plus its non-roster guest, including a guest that fell.
+export function getRunBattleUnits(state: BattleState): Map<string, Unit> {
+  const units = getDeployedUnits(state);
+  const guest = state.units.get(GUEST_UNIT_ID) ?? state.fallen.get(GUEST_UNIT_ID);
+  if (guest) units.set(GUEST_UNIT_ID, guest);
+  return units;
+}
+
 // What the objective is checked against: every unit still in play, where
 // it stands, and the turn.
 export function getBattleSnapshot(state: BattleState): BattleSnapshot {
@@ -88,6 +97,7 @@ export function getBattleSnapshot(state: BattleState): BattleSnapshot {
       unitId,
       team: unit.team,
       alive: unit.isAlive(),
+      ...(unitId === GUEST_UNIT_ID ? { guest: true } : {}),
       position: findUnit(state.grid, unitId),
     })),
   };

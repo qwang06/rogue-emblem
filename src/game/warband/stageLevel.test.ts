@@ -182,12 +182,14 @@ describe('createStageLevel', () => {
     for (const unitId of level.roster) expect(findUnit(level.grid, unitId)).toBeNull();
   });
 
-  it('deploys on three walkable tiles along the bottom row', () => {
+  it('provides five walkable deployment tiles, with the original three along the bottom row', () => {
     for (const { level } of BATTLES) {
       const { grid, deploymentZone } = level;
-      expect(deploymentZone).toHaveLength(3);
-      for (const { x, y } of deploymentZone) {
+      expect(deploymentZone).toHaveLength(5);
+      for (const { x, y } of deploymentZone.slice(0, 3)) {
         expect(y).toBe(grid.height - 1);
+      }
+      for (const { x, y } of deploymentZone) {
         expect(['grass', 'dirt']).toContain(getCell(grid, x, y)!.terrain);
       }
     }
@@ -311,9 +313,9 @@ describe('the stage ramp', () => {
       Array.from({ length: group.count }, () => group.unitClass ?? DEFAULT_ENEMY_CLASS),
     );
 
-  it('goes from one slime, to one goblin, then mixes in more monsters', () => {
+  it('goes from one slime, to two goblins, then mixes in more monsters', () => {
     expect(enemyClasses(1)).toEqual(['slime']);
-    expect(enemyClasses(2)).toEqual(['goblin']);
+    expect(enemyClasses(2)).toEqual(['goblin', 'goblin']);
     expect(enemyClasses(3)).toEqual(['slime', 'slime', 'goblin']);
     expect(enemyClasses(4)).toEqual(['goblin', 'goblin', 'skeleton']);
     expect(enemyClasses(5)).toEqual(['skeleton', 'skeleton', 'goblin', 'goblin']);
@@ -345,7 +347,7 @@ describe('stage 1', () => {
         const unit = level.units.get(unitId)!;
         const { minRange, maxRange } = unit.weapon!;
         const enemy = findUnit(level.grid, 'enemy-1')!;
-        for (const tile of level.deploymentZone) {
+        for (const tile of level.deploymentZone.slice(0, 3)) {
           const grid = setUnit(level.grid, tile.x, tile.y, unitId);
           const inReach = getMovementRange(grid, tile, unit.movement).some((stop) =>
             getAttackRange(grid, stop, maxRange, minRange).some(({ x, y }) => x === enemy.x && y === enemy.y),
@@ -422,7 +424,8 @@ describe('map archetypes on stages', () => {
         const stageRegion = withArchetype(region, archetype);
         const layout = pickStageLayout(seed, stageRegion);
         expect(layout.problems, `${archetype} seed ${seed}`).toEqual([]);
-        expect(layout.deploymentZone).toEqual(layout.terrain.deploymentZone);
+        expect(layout.deploymentZone.slice(0, 3)).toEqual(layout.terrain.deploymentZone);
+        expect(layout.deploymentZone).toHaveLength(5);
         expect(layout.enemyTiles.flat()).toHaveLength(countEnemies(region.enemies));
         const zones = new Set(layout.terrain.enemyZones!.flat().map(({ x, y }) => `${x},${y}`));
         expect(layout.enemyTiles.flat().every(({ x, y }) => zones.has(`${x},${y}`))).toBe(true);

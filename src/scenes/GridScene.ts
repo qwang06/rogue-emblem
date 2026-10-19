@@ -22,6 +22,7 @@ import {
   toLevelUpView,
   toObjectiveView,
   toRewardMenuActions,
+  toRewardAction,
   toRunOverView,
   toStageClearView,
   toPhaseBannerView,
@@ -71,6 +72,7 @@ import {
   applyRunCommand,
   finishBattle,
   getRewardOffers,
+  getRecruitOffers,
   RunCommandError,
   type RunCommand,
   type RunCommandResult,
@@ -130,7 +132,7 @@ import { canMoveAlongPath, extendMovePath, getMovementRange } from '../game/move
 import { pickAttackPlan } from '../game/attackMove.ts';
 import { getDangerZone } from '../game/dangerZone.ts';
 import { getPauseActions } from '../game/pauseMenu.ts';
-import { planNextTurn } from '../game/battle/ai.ts';
+import { planNextTurn, planUnitTurn } from '../game/battle/ai.ts';
 import { findEvent, type BattleCommand, type BattleEvent, type BattleEventOf } from '../game/battle/commands.ts';
 import {
   createHistory,
@@ -140,7 +142,8 @@ import {
   undoLastAction,
   type BattleHistory,
 } from '../game/battle/history.ts';
-import { createBattleState, getDeployedUnits, type BattleState as Battle } from '../game/battle/state.ts';
+import { createBattleState, getRunBattleUnits, type BattleState as Battle } from '../game/battle/state.ts';
+import { GUEST_UNIT_ID } from '../game/warband/recruitment.ts';
 import { isDone } from '../game/turns.ts';
 import {
   ARROW_TILES,
@@ -293,6 +296,7 @@ export class GridScene extends Phaser.Scene {
   // After a won Warband stage: the run as it stands (the battle written
   // back, the clear's gold paid) and the rewards it offers to pick from.
   rewardOffer: { run: RunState; stage: number; rewards: readonly Reward[]; rerolls: number } | null = null;
+  recruitOffer: { run: RunState; stage: number; recruits: readonly Reward[] } | null = null;
   // After the reward is taken: the run as it then stands, while the camp
   // menu (Manage Roster / Next Stage) or the roster screen is up.
   campRun: RunState | null = null;
@@ -463,6 +467,7 @@ export class GridScene extends Phaser.Scene {
     this.setup = setup;
     this.nextBattle = null; // the BattleSetup a victory leads to, once won
     this.rewardOffer = null; // the run and its reward picks after a won Warband stage
+    this.recruitOffer = null;
     this.rewardMenu = null; // the reward screen's menu while it's up
     this.campRun = null; // the run between a won Warband stage's reward and the next stage
     this.campMenu = null; // the camp's menu (getCampActions) while it's up
@@ -566,6 +571,11 @@ export class GridScene extends Phaser.Scene {
     // from there starts that stage afresh.
     const savedRun = setup.mode === 'warband' ? setup.run : undefined;
     const pendingReward = savedRun ? getPendingRewardOffer(savedRun) : null;
+    if (savedRun?.pendingRecruitment) {
+      this.resumeRecruitment(savedRun);
+      gameStore.setState({ mapLoadProgress: 1, mapReady: true });
+      return;
+    }
     if (savedRun && pendingReward) {
       this.resumeRewardPick(savedRun, pendingReward);
       gameStore.setState({ mapLoadProgress: 1, mapReady: true });
@@ -653,7 +663,8 @@ export class GridScene extends Phaser.Scene {
 
     if (this.battleOutcome) {
       if (confirm) {
-        if (this.rewardOffer) this.openRewardMenu();
+        if (this.recruitOffer) this.openRecruitMenu();
+        else if (this.rewardOffer) this.openRewardMenu();
         else this.leaveBattle();
       }
       return;
@@ -737,7 +748,7 @@ export class GridScene extends Phaser.Scene {
         this.openActionMenu();
         return;
       }
-    } else if (confirm && this.hoveredUnit?.team === 'player') {
+    } else if (confirm && this.hoveredUnit?.team === 'player' && this.hoveredUnitId !== GUEST_UNIT_ID) {
       // Units that are done for the phase can't be picked again.
       const unitId = getCell(this.grid, this.cursor.x, this.cursor.y)!.unitId!;
       if (isDone(this.turnState!, unitId)) return;
@@ -1030,6 +1041,44 @@ export class GridScene extends Phaser.Scene {
     this.openRewardMenu();
   }
 
+  resumeRecruitment(run: RunState) {
+    this.setCursorVisible(false);
+    const stage = run.pendingRecruitment!;
+    const session = { run, phase: 'recruit' as const };
+    this.recruitOffer = { run, stage, recruits: getRecruitOffers(session) };
+    const pending = run.pendingReward;
+    if (pending) {
+      this.rewardOffer = {
+        run,
+        stage: pending.stage,
+        rewards: getPendingRewardOffer(run)!.rewards,
+        rerolls: pending.rerolls,
+      };
+      gameStore.setState({
+        stageClear: toStageClearView(stage, { gold: pending.clearGold, flawless: pending.flawless }, run.gold),
+      });
+    }
+    this.openRecruitMenu();
+  }
+
+  openRecruitMenu() {
+    const { stage, recruits } = this.recruitOffer!;
+    gameStore.setState({ recruitmentStage: stage });
+    this.publishMenu(
+      'rewardMenu',
+      createActionMenu([
+        ...recruits.map(toRewardAction),
+        {
+          id: 'decline',
+          kind: 'decline',
+          label: 'Decline',
+          description: 'Continue without recruiting the guest.',
+          stats: null,
+        },
+      ]),
+    );
+  }
+
   openRewardMenu(selectedIndex = 0) {
     const { run, stage, rewards, rerolls } = this.rewardOffer!;
     const actions = toRewardMenuActions(rewards, {
@@ -1041,6 +1090,34 @@ export class GridScene extends Phaser.Scene {
   }
 
   updateRewardMenu(delta: number, confirm: boolean) {
+    if (this.recruitOffer) {
+      if (confirm) {
+        const { run } = this.recruitOffer;
+        const index = this.rewardMenu!.selectedIndex;
+        const command: RunCommand =
+          this.rewardMenu!.actions[index].kind === 'decline'
+            ? { type: 'decline-recruit' }
+            : { type: 'pick-recruit', index };
+        const result = tryRunCommand({ run, phase: 'recruit' }, command);
+        if (!result) return;
+        saveRun(result.session.run);
+        this.recruitOffer = null;
+        gameStore.setState({ recruitmentStage: null });
+        if (result.session.phase === 'reward') {
+          const pending = result.session.run.pendingReward!;
+          this.rewardOffer = {
+            run: result.session.run,
+            stage: pending.stage,
+            rewards: getRewardOffers(result.session),
+            rerolls: pending.rerolls,
+          };
+          this.openRewardMenu();
+        } else this.openCamp(result.session.run);
+        return;
+      }
+      if (delta !== 0) this.publishMenu('rewardMenu', moveSelection(this.rewardMenu!, delta));
+      return;
+    }
     if (confirm) {
       const offer = this.rewardOffer!;
       const action = this.rewardMenu!.actions[this.rewardMenu!.selectedIndex];
@@ -1549,7 +1626,9 @@ export class GridScene extends Phaser.Scene {
     if (this.merchantScreen) return () => this.publishMerchantScreen(null);
     if (this.campMenu) return () => this.autoCamp();
     if (this.rewardMenu) return () => this.autoReward();
-    if (this.battleOutcome) return () => (this.rewardOffer ? this.openRewardMenu() : this.leaveBattle());
+    if (this.battleOutcome)
+      return () =>
+        this.recruitOffer ? this.openRecruitMenu() : this.rewardOffer ? this.openRewardMenu() : this.leaveBattle();
     if (this.phase === 'deployment') return () => this.autoDeploy();
     const choosing = this.activeUnit || this.actionMenu || this.weaponMenu || this.skillMenu || this.itemMenu;
     if (this.turnState?.team === 'player' && !choosing) {
@@ -1582,6 +1661,11 @@ export class GridScene extends Phaser.Scene {
   }
 
   autoReward() {
+    if (this.recruitOffer) {
+      this.publishMenu('rewardMenu', selectIndex(this.rewardMenu!, 0));
+      this.updateRewardMenu(0, true);
+      return;
+    }
     const offer = this.rewardOffer!;
     const command = pickReward({ run: offer.run, phase: 'reward' });
     // The menu lists the offers, then Skip, then Reroll.
@@ -1652,13 +1736,26 @@ export class GridScene extends Phaser.Scene {
         this.runEnemyPhase();
         return;
       }
-      // Hand the cursor back to the player on their first unit, after the
-      // turn's conversation if the level has one.
-      const first = findUnit(this.grid, this.teamUnitIds('player')[0]);
-      if (first) this.setCursor(first.x, first.y);
-      this.inputLocked = false;
-      this.playTriggeredDialog(turnTrigger(turnState.turn), () => {});
+      this.playTriggeredDialog(turnTrigger(turnState.turn), () => this.runGuestTurn());
     });
+  }
+
+  runGuestTurn() {
+    const guest = this.units.get(GUEST_UNIT_ID);
+    if (guest?.isAlive() && this.turnState?.team === 'player' && !isDone(this.turnState, GUEST_UNIT_ID)) {
+      const [move, act] = planUnitTurn(this.battle, GUEST_UNIT_ID);
+      if (move && act) {
+        this.takeEnemyAction(move, act, () => this.handPlayerControl());
+        return;
+      }
+    }
+    this.handPlayerControl();
+  }
+
+  handPlayerControl() {
+    const first = findUnit(this.grid, this.roster[0]);
+    if (first) this.setCursor(first.x, first.y);
+    this.inputLocked = false;
   }
 
   showPhaseBanner(turnState: TurnState, onDone: () => void) {
@@ -1742,7 +1839,7 @@ export class GridScene extends Phaser.Scene {
       const before = this.setup.run;
       const finished = finishBattle(
         { run: before, phase: 'battle' },
-        { units: getDeployedUnits(this.battle), convoy: this.battle.convoyLoot },
+        { units: getRunBattleUnits(this.battle), convoy: this.battle.convoyLoot },
         outcome,
       );
       const { run } = finished;
@@ -1756,6 +1853,10 @@ export class GridScene extends Phaser.Scene {
         // screen (resumeRewardPick) instead of skipping it.
         if (finished.phase === 'reward') {
           this.rewardOffer = { run, stage: before.stage, rewards: getRewardOffers(finished), rerolls: 0 };
+        }
+        if (finished.phase === 'recruit') {
+          this.recruitOffer = { run, stage: before.stage, recruits: getRecruitOffers(finished) };
+          gameStore.setState({ recruitmentStage: before.stage });
         }
         saveRun(run);
       }

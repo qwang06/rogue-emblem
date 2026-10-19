@@ -104,6 +104,21 @@ describe('the reward pick', () => {
     expect(after.run.roster.every((unit) => unit.level === 2)).toBe(true);
   });
 
+  it("shows a veteran's lesson level up and settles its reward", () => {
+    const first = won(newRun());
+    const session = Array.from({ length: 40 }, (_, rerolls) => ({
+      ...first,
+      run: { ...first.run, pendingReward: { ...first.run.pendingReward!, rerolls } },
+    })).find((candidate) => getRewardOffers(candidate).some((reward) => reward.kind === 'lesson'))!;
+    const index = getRewardOffers(session).findIndex((reward) => reward.kind === 'lesson');
+    const lesson = getRewardOffers(session)[index];
+    if (lesson.kind !== 'lesson') throw new Error('Expected a lesson');
+    const { session: after, events } = applyRunCommand(session, { type: 'pick-reward', index });
+    expect(events).toEqual([{ type: 'level-ups', levelUps: [expect.objectContaining({ name: lesson.name })] }]);
+    expect(after.run.roster.find((unit) => unit.id === lesson.unitId)?.level).toBe(2);
+    expect(after.run.pendingReward).toBeUndefined();
+  });
+
   it('skips for gold', () => {
     const session = won(newRun());
     const after = apply(session, { type: 'skip-reward' });
