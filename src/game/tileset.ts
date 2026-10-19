@@ -207,6 +207,9 @@ export const UNIT_SPRITES: Record<string, string> = {
   slime: 'Slime_01',
   goblin: 'Goblin_01',
   skeleton: 'Skeleton_01',
+  bat: 'Bat_01',
+  wolf: 'Wolf_01',
+  orc: 'Orc_01',
 };
 
 // Art for a unit whose class has none of its own (or no class).

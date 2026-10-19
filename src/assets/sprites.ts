@@ -6,8 +6,12 @@ import acolyte02Idle from './units/Acolyte_02_Idle.png';
 import acolyte02Move from './units/Acolyte_02_Move.png';
 import archer02Idle from './units/Archer_02_Idle.png';
 import archer02Move from './units/Archer_02_Move.png';
+import bat01Idle from './units/Bat_01_Idle.png';
+import bat01Move from './units/Bat_01_Move.png';
 import gates from './gates.png';
 import mapProps from './map-props.png';
+import orc01Idle from './units/Orc_01_Idle.png';
+import orc01Move from './units/Orc_01_Move.png';
 import goblin01Idle from './units/Goblin_01_Idle.png';
 import goblin01Move from './units/Goblin_01_Move.png';
 import goldGinkgoTree from './gold_ginkgo_tree.png';
@@ -24,6 +28,8 @@ import vanguard04Idle from './units/Vanguard_04_Idle.png';
 import vanguard04Move from './units/Vanguard_04_Move.png';
 import warrior01Idle from './units/Warrior_01_Idle.png';
 import warrior01Move from './units/Warrior_01_Move.png';
+import wolf01Idle from './units/Wolf_01_Idle.png';
+import wolf01Move from './units/Wolf_01_Move.png';
 import woodenArmor from './items/wooden-armor.png';
 import woodenAxe from './items/wooden-axe.png';
 import woodenShield from './items/wooden-shield.png';
@@ -35,12 +41,16 @@ export const SPRITE_URLS: Readonly<Record<string, string>> = {
   Acolyte_02_Move: acolyte02Move,
   Archer_02_Idle: archer02Idle,
   Archer_02_Move: archer02Move,
+  Bat_01_Idle: bat01Idle,
+  Bat_01_Move: bat01Move,
   gates,
   Goblin_01_Idle: goblin01Idle,
   Goblin_01_Move: goblin01Move,
   gold_ginkgo_tree: goldGinkgoTree,
   ginkgo_tree_green: ginkgoTreeGreen,
   'map-props': mapProps,
+  Orc_01_Idle: orc01Idle,
+  Orc_01_Move: orc01Move,
   Skeleton_01_Idle: skeleton01Idle,
   Skeleton_01_Move: skeleton01Move,
   Slime_01_Idle: slime01Idle,
@@ -53,6 +63,8 @@ export const SPRITE_URLS: Readonly<Record<string, string>> = {
   Vanguard_04_Move: vanguard04Move,
   Warrior_01_Idle: warrior01Idle,
   Warrior_01_Move: warrior01Move,
+  Wolf_01_Idle: wolf01Idle,
+  Wolf_01_Move: wolf01Move,
   'wooden-armor': woodenArmor,
   'wooden-axe': woodenAxe,
   'wooden-shield': woodenShield,

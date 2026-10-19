@@ -22,30 +22,38 @@ shared 16-color palette across the four facings (median-cut max-coverage, no
 dithering; that keeps the grey blade). The prompts and source
 PNGs are in the project's `art/warrior/` folder. Frame 0 of every row is the still. The rest are PixelLab v3 animations (`animate_character`) with the end frame pinned to the still so they loop: Idle is frames 0–3 of a 4-frame breathing idle, Move is frames 0, 2, 4, 6 of an 8-frame in-place walk. All frames are snapped to the same palette. Same layout as the pack (128x128, rows down/left/right/up, RGBA). Footprint: x 1–30, y 1–30; feet on y 30 in every frame, a row lower than the pack's.
 
-## Monsters (generated, not from the pack)
+## Monsters (not from the pack)
 
-`Slime_01`, `Goblin_01` and `Skeleton_01` are starter enemy monsters made with
-PixelLab (Pro Flash at 16x16, styled on the villager) and assembled by
-`scripts/build-unit-sheet.js`. They're in `SPRITE_URLS` and `UNIT_SPRITES`
-(the `slime`, `goblin` and `skeleton` classes).
-Same layout and scale as the pack (128x128, rows down/left/right/up, 4
-frames), RGBA instead of color-keyed, colors snapped to the pack's palette,
-no baked shadow, feet on y 28–29 in every facing.
+Six enemy monsters, the art of the monster classes (`UNIT_SPRITES.slime` and
+so on, all in `SPRITE_URLS`). Same layout and scale as the pack (128x128, rows
+down/left/right/up, 4 frames, 16px art doubled), RGBA instead of color-keyed,
+colors from the pack's palette, no baked shadow, lowest pixels on y 28–29
+(the bat hovers above that).
 
-| Art           | What it shows                                                                                            | Footprint (down, frame 0) |
-| ------------- | -------------------------------------------------------------------------------------------------------- | ------------------------- |
-| `Slime_01`    | Green jelly blob with two eyes, a mouth and a top-left highlight. Side views have a small pointed tail.  | x 4–27, y 6–29            |
-| `Goblin_01`   | Green goblin with wide pointed ears, orange eyes, a brown tunic and a club in its right hand.            | x 2–29, y 4–29            |
-| `Skeleton_01` | White skeleton: a big round skull with black eye sockets over a small ribcage and thin limbs. No weapon. | x 6–25, y 2–29            |
-
-Only the four facing stills were generated. The frames are made by the
-script: idle sinks the body 1px onto the feet for frames 2–3, and move hops
-1px up on frames 1 and 3 (no stepping feet). To redo one, save PixelLab's
-four rotation images as `<name>_{south,west,east,north}.png` and run
+`Slime_01` and `Goblin_01` were made with PixelLab (Pro Flash at 16x16,
+styled on the villager) and assembled by `scripts/build-unit-sheet.js`. Only
+the four facing stills were generated; idle sinks the body 1px onto the feet
+for frames 2–3, and move hops 1px up on frames 1 and 3. To redo one, save
+PixelLab's four rotation images as `<name>_{south,west,east,north}.png` and run
 `node .claude/skills/tileset/scripts/build-unit-sheet.js <dir> <Name>`.
 PixelLab's 16px output comes on a 32px canvas with pure black outlines and
-dozens of near-duplicate tones, which the script crops and remaps. Standard
-`create_character` at size 16 gave an 18px-tall stick figure that doesn't fit.
+dozens of near-duplicate tones, which the script crops and remaps.
+
+`Skeleton_01`, `Bat_01`, `Wolf_01` and `Orc_01` are drawn pixel by pixel in
+`scripts/draw-monsters.js`: each facing is a 16x16 grid of palette keys, with
+the animation frames derived from it (step frames swap the leg rows, the bat's
+flap swaps whole poses). Run `node .claude/skills/tileset/scripts/draw-monsters.js`
+from the repo root after editing a grid; it rewrites their sheets. East is the
+west grids mirrored. Each went through up to three review passes against the pack's units.
+
+| Art           | What it shows                                                                                                                                                                                       | Animation                                                      |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `Slime_01`    | Green jelly blob with two eyes, a mouth and a top-left highlight. Side views have a small pointed tail.                                                                                             | idle squash, move hop                                          |
+| `Goblin_01`   | Green goblin with wide pointed ears, orange eyes, a brown tunic and a club in its right hand.                                                                                                       | idle squash, move hop                                          |
+| `Skeleton_01` | Bone-white skeleton: big skull with red eye glints and a row of teeth, ribs over a spine and pelvis, thin legs, a rusty sword (orange hilt, rust flecks) held up, in front when walking left/right. | idle squash; move steps each foot in turn                      |
+| `Bat_01`      | Purple cave bat, wings spread: pointed ears, yellow eyes, open mouth with two fangs, lit leading wing edges and scalloped trailing edges. Hovers, lowest pixel y ~26.                               | idle and move flap mid, up, mid, down (lifted 1px on the down) |
+| `Wolf_01`     | Grey wolf: side view a full-length quadruped with an upright tail; front view a wedge head with a long pale muzzle and black nose; back view a dark saddle and bushy dark-tipped tail.              | idle squash; move trots (legs alternate)                       |
+| `Orc_01`      | Hulking dark-green orc: heavy brow over red eyes, white tusks, leather vest with shoulder straps and a gold buckle, plum trousers, a big iron axe in its right hand.                                | idle squash; move steps each foot in turn                      |
 
 ## Files and layout
 

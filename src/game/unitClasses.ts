@@ -1,19 +1,22 @@
 // The unit classes the game knows how to build, in menu order. Each entry
 // names the class and builds a fresh Unit of it, so menus that offer a
 // choice of class (e.g. Training) don't need to know the subclasses. The
-// monsters (slime, goblin, skeleton) come last: they're enemies only, never
+// monsters (slime, goblin, skeleton, bat, wolf, orc) come last: they're enemies only, never
 // recruits, starting picks or Training choices (see PLAYABLE_CLASSES).
 
 import { Acolyte } from './Acolyte.ts';
 import { Archer } from './Archer.ts';
+import { Bat } from './Bat.ts';
 import { Goblin } from './Goblin.ts';
 import { Guard } from './Guard.ts';
+import { Orc } from './Orc.ts';
 import { Skeleton } from './Skeleton.ts';
 import { Slime } from './Slime.ts';
 import { Soldier } from './Soldier.ts';
 import type { ClassUnitOptions, Unit } from './Unit.ts';
 import { Vanguard } from './Vanguard.ts';
 import { Warrior } from './Warrior.ts';
+import { Wolf } from './Wolf.ts';
 
 export interface UnitClass {
   id: string;
@@ -38,6 +41,9 @@ export const UNIT_CLASSES: readonly UnitClass[] = Object.freeze([
     create: (options) => new Skeleton(options),
     monster: true,
   }),
+  Object.freeze<UnitClass>({ id: 'bat', label: 'Bat', create: (options) => new Bat(options), monster: true }),
+  Object.freeze<UnitClass>({ id: 'wolf', label: 'Wolf', create: (options) => new Wolf(options), monster: true }),
+  Object.freeze<UnitClass>({ id: 'orc', label: 'Orc', create: (options) => new Orc(options), monster: true }),
 ]);
 
 // The classes the player can field: every class but the monsters. Drop the

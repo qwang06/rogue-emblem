@@ -4,7 +4,7 @@ import { createUnitOfClass, PLAYABLE_CLASSES, UNIT_CLASSES } from './unitClasses
 import type { ClassUnitOptions, Unit } from './Unit.ts';
 
 describe('UNIT_CLASSES', () => {
-  it('lists the six player classes, then the slime, the goblin and the skeleton', () => {
+  it('lists the six player classes, then the six monsters', () => {
     expect(UNIT_CLASSES.map((c) => c.id)).toEqual([
       'warrior',
       'soldier',
@@ -15,6 +15,9 @@ describe('UNIT_CLASSES', () => {
       'slime',
       'goblin',
       'skeleton',
+      'bat',
+      'wolf',
+      'orc',
     ]);
     expect(UNIT_CLASSES.map((c) => c.label)).toEqual([
       'Warrior',
@@ -26,6 +29,9 @@ describe('UNIT_CLASSES', () => {
       'Slime',
       'Goblin',
       'Skeleton',
+      'Bat',
+      'Wolf',
+      'Orc',
     ]);
   });
 
@@ -46,8 +52,15 @@ describe('PLAYABLE_CLASSES', () => {
     expect(PLAYABLE_CLASSES.map((c) => c.id)).toEqual(['warrior', 'soldier', 'archer', 'vanguard', 'guard', 'acolyte']);
   });
 
-  it('marks exactly the slime, the goblin and the skeleton as monsters', () => {
-    expect(UNIT_CLASSES.filter((c) => c.monster).map((c) => c.id)).toEqual(['slime', 'goblin', 'skeleton']);
+  it('marks exactly the six monsters as monsters', () => {
+    expect(UNIT_CLASSES.filter((c) => c.monster).map((c) => c.id)).toEqual([
+      'slime',
+      'goblin',
+      'skeleton',
+      'bat',
+      'wolf',
+      'orc',
+    ]);
   });
 
   it('is frozen', () => {

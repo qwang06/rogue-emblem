@@ -246,6 +246,48 @@ export const BONE_CLAWS = weapon({
   uses: null,
 });
 
+// The bat's fangs: weak, but it rarely misses.
+export const FANGS = weapon({
+  id: 'fangs',
+  label: 'Fangs',
+  type: 'physical',
+  might: 1,
+  hit: 85,
+  crit: 0,
+  weight: 0,
+  minRange: 1,
+  maxRange: 1,
+  uses: null,
+});
+
+// The wolf's bite, the one natural weapon that can crit.
+export const BITE = weapon({
+  id: 'bite',
+  label: 'Bite',
+  type: 'physical',
+  might: 2,
+  hit: 75,
+  crit: 5,
+  weight: 1,
+  minRange: 1,
+  maxRange: 1,
+  uses: null,
+});
+
+// The orc's axe: heavy and wild, but it never breaks.
+export const GREAT_AXE = weapon({
+  id: 'great-axe',
+  label: 'Great Axe',
+  type: 'physical',
+  might: 3,
+  hit: 65,
+  crit: 0,
+  weight: 4,
+  minRange: 1,
+  maxRange: 1,
+  uses: null,
+});
+
 // The wooden set: basic practice arms, lighter and weaker than iron and
 // quicker to break (their icons are ITEM_SPRITES in tileset.ts). The sword
 // is the accurate one.
@@ -302,6 +344,9 @@ export const WEAPONS: readonly Weapon[] = Object.freeze([
   TACKLE,
   CLUB,
   BONE_CLAWS,
+  FANGS,
+  BITE,
+  GREAT_AXE,
   WOODEN_SWORD,
   WOODEN_SPEAR,
   WOODEN_AXE,
@@ -314,6 +359,9 @@ export const NATURAL_WEAPON_IDS: ReadonlySet<string> = new Set([
   TACKLE.id,
   CLUB.id,
   BONE_CLAWS.id,
+  FANGS.id,
+  BITE.id,
+  GREAT_AXE.id,
   FIRE_SPELL.id,
 ]);
 
