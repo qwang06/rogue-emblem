@@ -2068,6 +2068,7 @@ kbd {
 .name-field__input.draft-input {
   font-size: 0.9375rem;
   padding: 3px 8px;
+  color: var(--bar-fg);
 }
 
 .name-field__button {

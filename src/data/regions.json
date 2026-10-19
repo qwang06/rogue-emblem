@@ -41,7 +41,7 @@
       },
       "enemies": [
         { "count": 1, "unitClass": "goblin", "area": { "y": [0, 0.34] } },
-        { "count": 1, "unitClass": "goblin", "health": 5, "area": { "y": [0, 0.34] } }
+        { "count": 1, "unitClass": "goblin", "area": { "y": [0, 0.34] }, "health": 5 }
       ],
       "treeChance": 0.04,
       "palette": "b-blue"

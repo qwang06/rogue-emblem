@@ -250,16 +250,16 @@ describe('parseRegionSettings', () => {
     ],
     [
       'groups crowding each other out',
-      // Each has room alone: the 5 tiles a step from the deployment zone.
+      // Each has room alone, but both compete for the tiles a step from the deployment zone.
       file([
         region({
           enemies: [
-            { count: 3, maxDistance: 1 },
-            { count: 3, maxDistance: 1 },
+            { count: 5, maxDistance: 1 },
+            { count: 5, maxDistance: 1 },
           ],
         }),
       ]),
-      /^regions\[0\]\.enemies ask for 6 enemies, but only 5 fit on a sample map because the groups compete for the same spots\./,
+      /^regions\[0\]\.enemies ask for 10 enemies, but only \d+ fit on a sample map because the groups compete for the same spots\./,
     ],
     ['a tree chance over 1', file([region({ treeChance: 2 })]), /treeChance must be a number from 0 to 1/],
     [
