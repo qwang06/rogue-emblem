@@ -8,12 +8,23 @@ import type { RestoreStat } from '../game/items.ts';
 type Sprite = Phaser.GameObjects.Sprite;
 type Done = () => void;
 
+// The sprite data key for a sprite's resting tint (e.g. a guest's green),
+// which effects go back to instead of no tint at all.
+export const RESTING_TINT = 'restingTint';
+
+// Puts a sprite back to its resting tint, or none if it has none.
+export function restoreTint(sprite: Sprite): void {
+  const tint = sprite.getData(RESTING_TINT) as number | undefined;
+  if (tint === undefined) sprite.clearTint();
+  else sprite.setTint(tint);
+}
+
 const HIT_FLASH_COLOR = 0xffffff;
 const HIT_FLASH_TOGGLES = 6; // on/off pairs → 3 white flashes
 const HIT_FLASH_INTERVAL_MS = 70;
 
 // Flashes a sprite solid white a few times (the classic "took a hit"
-// blink), then restores its normal colors and calls onDone.
+// blink), then restores its resting colors and calls onDone.
 export function playHitFlash(scene: Phaser.Scene, sprite: Sprite, onDone?: Done): void {
   let toggles = 0;
   scene.time.addEvent({
@@ -22,7 +33,7 @@ export function playHitFlash(scene: Phaser.Scene, sprite: Sprite, onDone?: Done)
     callback: () => {
       toggles += 1;
       if (toggles % 2 === 1) sprite.setTintFill(HIT_FLASH_COLOR);
-      else sprite.clearTint();
+      else restoreTint(sprite);
       if (toggles === HIT_FLASH_TOGGLES) onDone?.();
     },
   });
@@ -118,7 +129,7 @@ export function playPotionGlow(scene: Phaser.Scene, sprite: Sprite, center: Poin
     callback: () => {
       toggles += 1;
       if (toggles % 2 === 1) sprite.setTint(color);
-      else sprite.clearTint();
+      else restoreTint(sprite);
       if (toggles === POTION_PULSE_TOGGLES) onDone?.();
     },
   });

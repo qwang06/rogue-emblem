@@ -9,6 +9,7 @@
 // same luck. Pure: reads a state and returns one of the candidates.
 
 import { TURN_LIMIT } from '../objectives.ts';
+import { areAllied } from '../teams.ts';
 import { planNextTurn } from './ai.ts';
 import { applyCommand, type BattleCommand } from './commands.ts';
 import type { BattleState } from './state.ts';
@@ -94,7 +95,7 @@ export function pickByLookahead<C extends LookaheadCandidate>(
 }
 
 // The battle after `commands`, the rest of the player phase played by
-// `playerPhase` (forfeited, by default) and the enemy phase by its AI, its dice seeded by `seed`: where it
+// `playerPhase` (forfeited, by default) and the enemy and guest phases by their AI, its dice seeded by `seed`: where it
 // stands when the player is next to move (or once decided).
 export function playOut(
   state: BattleState,
@@ -134,7 +135,7 @@ export function scorePlayOut(
     const now = after.units.get(unitId);
     const health = now?.isAlive() ? now.health : 0;
     const lost = unit.health - health;
-    if (unit.team === 'player') {
+    if (areAllied(unit.team, 'player')) {
       score -= weights.damageTaken * lost;
       if (health === 0) score -= weights.fallen;
     } else {

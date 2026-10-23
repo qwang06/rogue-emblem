@@ -39,7 +39,7 @@
   --fg: #3a2414;
   --fg-dim: #8a6a48;
   /* Palette colors, each with one job: blue is the player's side, red the
-     enemy's, green health, cyan mana, yellow gold and gains, magenta
+     enemy's, green health and the guests (allies the AI plays), cyan mana, yellow gold and gains, magenta
      experience and level ups. Dark enough to read on parchment. */
   --blue: #2f5fc8;
   --red: #c0342a;
@@ -50,6 +50,7 @@
   --orange: #c8601c;
   --red-bg: rgb(192 52 42 / 14%);
   --blue-bg: rgb(47 95 200 / 12%);
+  --green-bg: rgb(46 154 58 / 14%);
   /* The game's bars, as in the reference: green HP, blue EXP. */
   --hp: #48c048;
   --exp: #3c9ce0;
@@ -101,7 +102,8 @@
 .title-screen,
 .configs-page,
 .frame--banner,
-.frame--banner-red {
+.frame--banner-red,
+.frame--banner-green {
   --fg-bright: #fff3d6;
   --fg: #f0d9a8;
   --fg-dim: #b0946c;
@@ -389,6 +391,10 @@ a.header-button {
   border-image-source: url('../assets/ui/frame-banner-red.png');
 }
 
+.frame--banner-green {
+  border-image-source: url('../assets/ui/frame-banner-green.png');
+}
+
 .hud .panel,
 .hud .frame {
   box-shadow: var(--lift);
@@ -449,6 +455,11 @@ a.header-button {
 .unit-panel--enemy {
   background: linear-gradient(var(--red-bg), var(--red-bg)), var(--bg);
   border-color: var(--red);
+}
+
+.unit-panel--guest {
+  background: linear-gradient(var(--green-bg), var(--green-bg)), var(--bg);
+  border-color: var(--green);
 }
 
 /* Phones: a narrower card, so it covers less of the map. */
@@ -527,6 +538,10 @@ a.header-button {
 
 .unit-panel--enemy .unit-panel__name {
   color: var(--red);
+}
+
+.unit-panel--guest .unit-panel__name {
+  color: var(--green);
 }
 
 /* Gauges as in the system monitor: a flat bar on a dim trough. */
@@ -1533,6 +1548,11 @@ kbd {
   color: #ffd8b8;
 }
 
+.frame--banner-green.turn-indicator__phase,
+.phase-banner--guest {
+  color: #d8ffc0;
+}
+
 /* The phase announcement: a big banner in the middle of the map, in its
    side's color. */
 .phase-banner {
@@ -2532,6 +2552,10 @@ kbd {
 
 .dialog-lines__speaker--enemy {
   color: var(--red);
+}
+
+.dialog-lines__speaker--guest {
+  color: var(--green);
 }
 
 .dialog-files__actions {

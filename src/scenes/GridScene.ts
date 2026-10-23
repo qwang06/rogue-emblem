@@ -113,7 +113,7 @@ import {
   isPlaced,
 } from '../game/deployment.ts';
 import { findTileAt, findUnit, getCell, getDistance, gridToWorld, isSameTile, worldToTile } from '../game/grid.ts';
-import { getTeamUnitIds, isAllyOf, isHostileTo } from '../game/teams.ts';
+import { areAllied, getTeamUnitIds, isAllyOf, isHostileTo } from '../game/teams.ts';
 import { advanceDialog, createDialog, DIALOG_CHARS_PER_SECOND, getCurrentLine } from '../game/dialog.ts';
 import { getTriggeredDialog, turnTrigger } from '../game/dialogScript.ts';
 import { describeObjective, getObjectiveStatus, type Objective } from '../game/objectives.ts';
@@ -132,7 +132,7 @@ import { canMoveAlongPath, extendMovePath, getMovementRange } from '../game/move
 import { pickAttackPlan } from '../game/attackMove.ts';
 import { getDangerZone } from '../game/dangerZone.ts';
 import { getPauseActions } from '../game/pauseMenu.ts';
-import { planNextTurn, planUnitTurn } from '../game/battle/ai.ts';
+import { planNextTurn } from '../game/battle/ai.ts';
 import { findEvent, type BattleCommand, type BattleEvent, type BattleEventOf } from '../game/battle/commands.ts';
 import {
   createHistory,
@@ -143,7 +143,6 @@ import {
   type BattleHistory,
 } from '../game/battle/history.ts';
 import { createBattleState, getRunBattleUnits, type BattleState as Battle } from '../game/battle/state.ts';
-import { GUEST_UNIT_ID } from '../game/warband/recruitment.ts';
 import { isDone } from '../game/turns.ts';
 import {
   ARROW_TILES,
@@ -168,7 +167,15 @@ import {
   getUnitSprite,
   unitSheetKey,
 } from '../game/tileset.ts';
-import { POTION_COLORS, playHitFlash, playLunge, playPotionGlow, playStoneThrow } from './effects.ts';
+import {
+  POTION_COLORS,
+  playHitFlash,
+  playLunge,
+  playPotionGlow,
+  playStoneThrow,
+  restoreTint,
+  RESTING_TINT,
+} from './effects.ts';
 import { addTreeShadow, addUnitShadow } from './unitShadow.ts';
 import type { Menu } from '../game/actionMenu.ts';
 import type { Dialog, DialogLine } from '../game/dialog.ts';
@@ -236,6 +243,9 @@ const EXPERIENCE_BAR_MS = 1100;
 const LEVEL_UP_MS = 2400;
 // Tint for units that are done for the phase.
 const DONE_TINT = 0x808080;
+// Each team's resting tint on the map, if it has one: guests, the allies
+// the AI plays, are washed green.
+const TEAM_TINTS: Partial<Record<Team, number>> = { guest: 0x8cf08c };
 
 type Sprite = Phaser.GameObjects.Sprite;
 type ActionKey = 'confirm' | 'confirmAlt' | 'cancel' | 'cancelAlt' | 'dangerZone' | 'autoPlay';
@@ -748,7 +758,7 @@ export class GridScene extends Phaser.Scene {
         this.openActionMenu();
         return;
       }
-    } else if (confirm && this.hoveredUnit?.team === 'player' && this.hoveredUnitId !== GUEST_UNIT_ID) {
+    } else if (confirm && this.hoveredUnit?.team === 'player') {
       // Units that are done for the phase can't be picked again.
       const unitId = getCell(this.grid, this.cursor.x, this.cursor.y)!.unitId!;
       if (isDone(this.turnState!, unitId)) return;
@@ -850,7 +860,7 @@ export class GridScene extends Phaser.Scene {
     const { unit, unitId, x, y } = this.activeUnit!;
     const canHeal = (otherId: string) => {
       const other = this.units.get(otherId);
-      return otherId !== unitId && other?.team === unit.team && isWounded(other);
+      return otherId !== unitId && other !== undefined && areAllied(other.team, unit.team) && isWounded(other);
     };
     return getHealTargets(this.grid, { x, y }, staff, canHeal);
   }
@@ -1691,10 +1701,11 @@ export class GridScene extends Phaser.Scene {
   }
 
   // ---- Turns ------------------------------------------------------------
-  // The battle alternates a player phase and an enemy phase (rules in
-  // src/game/turns.ts). In the player phase each unit may move, then act
-  // (attack, skill, or wait); acting finishes it and greys it out. Once all
-  // are finished the enemy phase runs on its own, each enemy acting in turn
+  // The battle cycles a player phase, an enemy phase and, while any guest
+  // is on the map, a guest phase (rules in src/game/turns.ts). In the
+  // player phase each unit may move, then act (attack, skill, or wait);
+  // acting finishes it and greys it out. Once all are finished the enemy
+  // phase, then the guest phase, runs on its own, each unit acting in turn
   // with the plan from src/game/enemyAI.ts. After every action the battle
   // checks for victory or defeat.
 
@@ -1720,11 +1731,12 @@ export class GridScene extends Phaser.Scene {
   }
 
   // Announces the phase the battle is in with a banner (input locked
-  // meanwhile), then either hands input to the player or runs the enemies.
+  // meanwhile), then either hands input to the player or runs the AI's
+  // units (the enemies, or the guests).
   startPhase() {
     const turnState = this.turnState!;
     this.hideEnemyReach();
-    for (const sprite of this.unitSprites.values()) sprite.clearTint();
+    for (const sprite of this.unitSprites.values()) restoreTint(sprite);
     gameStore.setState({
       turn: toTurnView(turnState),
       objectiveStatus: getObjectiveStatus(this.objective, turnState.turn),
@@ -1732,24 +1744,12 @@ export class GridScene extends Phaser.Scene {
 
     this.inputLocked = true;
     this.showPhaseBanner(turnState, () => {
-      if (turnState.team === 'enemy') {
+      if (turnState.team !== 'player') {
         this.runEnemyPhase();
         return;
       }
-      this.playTriggeredDialog(turnTrigger(turnState.turn), () => this.runGuestTurn());
+      this.playTriggeredDialog(turnTrigger(turnState.turn), () => this.handPlayerControl());
     });
-  }
-
-  runGuestTurn() {
-    const guest = this.units.get(GUEST_UNIT_ID);
-    if (guest?.isAlive() && this.turnState?.team === 'player' && !isDone(this.turnState, GUEST_UNIT_ID)) {
-      const [move, act] = planUnitTurn(this.battle, GUEST_UNIT_ID);
-      if (move && act) {
-        this.takeEnemyAction(move, act, () => this.handPlayerControl());
-        return;
-      }
-    }
-    this.handPlayerControl();
   }
 
   handPlayerControl() {
@@ -1776,7 +1776,7 @@ export class GridScene extends Phaser.Scene {
     const { turnState } = this;
     for (const [unitId, sprite] of this.unitSprites) {
       if (turnState && isDone(turnState, unitId)) sprite.setTint(DONE_TINT);
-      else sprite.clearTint();
+      else restoreTint(sprite);
     }
   }
 
@@ -1879,9 +1879,9 @@ export class GridScene extends Phaser.Scene {
     });
   }
 
-  // Each enemy (in registry order) plans its action (src/game/battle/ai.ts)
-  // and carries it out, one after another, until the last one hands the
-  // phase back to the player.
+  // Each unit of the phase's AI-played team, the enemy or the guests (in
+  // registry order), plans its action (src/game/battle/ai.ts) and carries
+  // it out, one after another, until the last one ends the phase.
   runEnemyPhase() {
     const [move, act] = planNextTurn(this.battle);
     if (move && act) {
@@ -2796,7 +2796,9 @@ export class GridScene extends Phaser.Scene {
       .setDepth(0.75)
       .setData('art', art)
       .setData('facing', UNIT_SHEET.defaultFacing)
+      .setData(RESTING_TINT, TEAM_TINTS[unit.team])
       .play(this.unitAnimation(art, 'idle', UNIT_SHEET.defaultFacing));
+    restoreTint(sprite);
     addUnitShadow(this, sprite);
     this.unitSprites.set(unitId, sprite);
   }

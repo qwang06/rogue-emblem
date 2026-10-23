@@ -97,7 +97,6 @@ export function getBattleSnapshot(state: BattleState): BattleSnapshot {
       unitId,
       team: unit.team,
       alive: unit.isAlive(),
-      ...(unitId === GUEST_UNIT_ID ? { guest: true } : {}),
       position: findUnit(state.grid, unitId),
     })),
   };

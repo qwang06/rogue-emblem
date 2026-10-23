@@ -86,7 +86,7 @@ const OBJECTIVE_NAMES: Record<ObjectiveKind, string> = {
 // What deciding a battle looks at: every unit (alive or not, with the tile
 // it stands on, null if it's off the map) and the turn being played.
 export interface BattleSnapshot {
-  units: readonly { unitId: string; team: Team; alive: boolean; position: Point | null; guest?: boolean }[];
+  units: readonly { unitId: string; team: Team; alive: boolean; position: Point | null }[];
   turn: number;
 }
 
@@ -98,7 +98,7 @@ export interface BattleSnapshot {
 // Any other kind still undecided once the turn count passes TURN_LIMIT is
 // a defeat.
 export function getObjectiveOutcome(objective: Objective, state: BattleSnapshot): BattleOutcome | null {
-  const units = state.units.map((u) => ({ team: u.team, isAlive: () => u.alive && !u.guest }));
+  const units = state.units.map((u) => ({ team: u.team, isAlive: () => u.alive }));
   const outcome = getBattleOutcome(units) ?? getObjectiveWin(objective, state);
   if (outcome) return outcome;
   return isPastTurnLimit(objective, state.turn) ? 'defeat' : null;
@@ -117,7 +117,7 @@ function getObjectiveWin(objective: Objective, state: BattleSnapshot): BattleOut
       return null;
     case 'seize': {
       const seized = state.units.some(
-        (u) => u.team === 'player' && !u.guest && u.alive && u.position && isSameTile(u.position, objective.tile),
+        (u) => u.team === 'player' && u.alive && u.position && isSameTile(u.position, objective.tile),
       );
       return seized ? 'victory' : null;
     }

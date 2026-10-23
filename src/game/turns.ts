@@ -1,10 +1,14 @@
-// Pure turn rules. A battle alternates phases: the player moves all their
-// units, then the enemy moves all of theirs, and that pair makes one turn.
+// Pure turn rules. A battle cycles through phases: the player moves all
+// their units, then the enemy moves all of theirs, then (when any are on
+// the map) the guests, allies the AI plays, move theirs; that cycle makes
+// one turn.
 // Within a phase each unit may move once and then act once (attack, use a
 // skill, or wait); acting ends its part in the phase. No Phaser, no
 // rendering, no hidden state — every function returns a new frozen state.
 
-export type Team = 'player' | 'enemy';
+// 'guest' units fight on the player's side (see areAllied in teams.ts) but
+// nobody controls them: they act on their own phase, after the enemy's.
+export type Team = 'player' | 'enemy' | 'guest';
 
 export interface TurnState {
   turn: number;
@@ -15,7 +19,7 @@ export interface TurnState {
 
 export type BattleOutcome = 'victory' | 'defeat';
 
-export const PHASE_ORDER: readonly Team[] = Object.freeze(['player', 'enemy']);
+export const PHASE_ORDER: readonly Team[] = Object.freeze(['player', 'enemy', 'guest']);
 
 // Turn state: { turn, team, moved, done } where team is whose phase it is,
 // and moved / done list the unitIds that have moved or finished this phase.
@@ -60,16 +64,25 @@ export function isPhaseOver(state: TurnState, unitIds: readonly string[]): boole
   return unitIds.every((unitId) => isDone(state, unitId));
 }
 
-// The next phase with a clean slate: player → enemy in the same turn,
-// enemy → player in the next.
-export function nextPhase(state: TurnState): TurnState {
-  const index = PHASE_ORDER.indexOf(state.team);
-  const wraps = index === PHASE_ORDER.length - 1;
-  return createTurnState(wraps ? state.turn + 1 : state.turn, PHASE_ORDER[wraps ? 0 : index + 1]);
+// The next phase with a clean slate: player → enemy → guest in the same
+// turn, then player in the next. The guest phase is skipped unless
+// `hasGuests` (any guest is still in play); the player and enemy phases
+// always come.
+export function nextPhase(state: TurnState, hasGuests = false): TurnState {
+  let { turn } = state;
+  let index = PHASE_ORDER.indexOf(state.team);
+  do {
+    index += 1;
+    if (index === PHASE_ORDER.length) {
+      index = 0;
+      turn += 1;
+    }
+  } while (PHASE_ORDER[index] === 'guest' && !hasGuests);
+  return createTurnState(turn, PHASE_ORDER[index]);
 }
 
 // 'victory' once no enemy is alive, 'defeat' once no player unit is, else
-// null. Defeat wins a tie — losing your last unit is never a victory.
+// null; guests count for neither. Defeat wins a tie — losing your last unit is never a victory.
 export function getBattleOutcome(units: Iterable<{ team: Team; isAlive(): boolean }>): BattleOutcome | null {
   const all = [...units];
   const alive = (team: Team) => all.some((unit) => unit.team === team && unit.isAlive());

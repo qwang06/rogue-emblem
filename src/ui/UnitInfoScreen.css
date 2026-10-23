@@ -27,6 +27,11 @@
   --well: var(--red-bg);
 }
 
+.unit-info--guest {
+  border-color: var(--green);
+  --well: var(--green-bg);
+}
+
 @media (width < 72rem) {
   .unit-info {
     grid-template-columns: minmax(0, 15rem);

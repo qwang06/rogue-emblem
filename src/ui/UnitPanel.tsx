@@ -1,4 +1,5 @@
 import { getUnitSprite } from '../game/tileset.ts';
+import type { Team } from '../game/turns.ts';
 import { ItemIcon } from './ItemIcon.tsx';
 import { pickCornerAwayFromTile } from './menuPlacement.ts';
 import { UnitSprite } from './UnitSprite.tsx';
@@ -16,10 +17,13 @@ const STATS = [
   ['RNG', 'range'],
 ] as const;
 
+// What the card calls a unit of each team, for screen readers.
+const TEAM_NOUNS: Readonly<Record<Team, string>> = { player: 'Ally', enemy: 'Enemy', guest: 'Guest' };
+
 // Compact card for the unit under the cursor, docked in a top corner of the
 // map, laid out like a GBA status window: a framed portrait (the map
 // sprite, enlarged, until units have portraits) beside NAME / CLASS / LV
-// lines, then labelled HP, MP and (for player units below the level cap)
+// lines, then labelled HP, MP and (for player units and guests below the level cap)
 // EXP bars, a plain grid of stats (RNG is its equipped weapon's), and its
 // items (up to six, see MAX_INVENTORY_SLOTS) one per row with their icons
 // — potions with their count, weapons with their uses left (∞ if they
@@ -39,11 +43,11 @@ export function UnitPanel() {
   if (!unit || forecastOpen || infoOpen) return null;
 
   const corner = pickCornerAwayFromTile(anchor);
-  const showExperience = unit.team === 'player' && unit.experienceToLevel !== null;
+  const showExperience = unit.team !== 'enemy' && unit.experienceToLevel !== null;
   return (
     <section
       className={`panel unit-panel unit-panel--${unit.team} unit-panel--${corner}`}
-      aria-label={`${unit.team === 'enemy' ? 'Enemy' : 'Ally'} ${unit.name}'s stats`}
+      aria-label={`${TEAM_NOUNS[unit.team]} ${unit.name}'s stats`}
     >
       <div className="unit-panel__header">
         <span className="unit-panel__portrait">

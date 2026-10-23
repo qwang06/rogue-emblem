@@ -35,8 +35,8 @@ describe('runBattle', () => {
 
   it('plays a whole battle by itself, the same way every time for a seed', () => {
     const script = { setup: FIRST_STORY_CHAPTER, seed: 11, commands: [] };
-    const first = runBattle(script, { auto: ['player', 'enemy'] });
-    const again = runBattle(script, { auto: ['player', 'enemy'] });
+    const first = runBattle(script, { auto: ['player', 'enemy', 'guest'] });
+    const again = runBattle(script, { auto: ['player', 'enemy', 'guest'] });
     expect(first.state.outcome).not.toBeNull();
     expect(getCommands(again.history)).toEqual(getCommands(first.history));
   });
@@ -44,7 +44,7 @@ describe('runBattle', () => {
   it('plays a Warband stage by itself', () => {
     const { state } = runBattle(
       { setup: { mode: 'warband', seed: 5, stage: 1 }, seed: 5, commands: [] },
-      { auto: ['player', 'enemy'] },
+      { auto: ['player', 'enemy', 'guest'] },
     );
     expect(state.stage).toBe('battle');
     expect(state.outcome !== null || state.turnState!.turn > 50).toBe(true);

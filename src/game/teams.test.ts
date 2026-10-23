@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getTeamUnitIds, isAllyOf, isHostileTo } from './teams.ts';
+import { areAllied, getTeamUnitIds, isAllyOf, isHostileTo } from './teams.ts';
 import type { Team } from './turns.ts';
 
 const units = new Map<string, { team: Team }>([
@@ -7,7 +7,22 @@ const units = new Map<string, { team: Team }>([
   ['e1', { team: 'enemy' }],
   ['p2', { team: 'player' }],
   ['e2', { team: 'enemy' }],
+  ['g1', { team: 'guest' }],
 ]);
+
+describe('areAllied', () => {
+  it('allies a team with itself, and the player with the guests', () => {
+    expect(areAllied('player', 'player')).toBe(true);
+    expect(areAllied('enemy', 'enemy')).toBe(true);
+    expect(areAllied('player', 'guest')).toBe(true);
+    expect(areAllied('guest', 'player')).toBe(true);
+  });
+
+  it('allies the enemy with nobody else', () => {
+    expect(areAllied('enemy', 'player')).toBe(false);
+    expect(areAllied('guest', 'enemy')).toBe(false);
+  });
+});
 
 describe('getTeamUnitIds', () => {
   it("lists a team's units in registry order", () => {
@@ -27,7 +42,13 @@ describe('isAllyOf', () => {
     expect(isAllyOf(units, 'player', 'p1')).toBe(true);
   });
 
+  it('lets the player and the guests through each other', () => {
+    expect(isAllyOf(units, 'player', 'g1')).toBe(true);
+    expect(isAllyOf(units, 'guest', 'p1')).toBe(true);
+  });
+
   it('is false for the other team', () => {
+    expect(isAllyOf(units, 'guest', 'e1')).toBe(false);
     expect(isAllyOf(units, 'player', 'e1')).toBe(false);
     expect(isAllyOf(units, 'enemy', 'p1')).toBe(false);
   });
@@ -43,6 +64,12 @@ describe('isHostileTo', () => {
     expect(isHostileTo(units, 'enemy', 'p2')).toBe(true);
   });
 
+  it('makes guests and the enemy hostile to each other, but not guests and the player', () => {
+    expect(isHostileTo(units, 'guest', 'e1')).toBe(true);
+    expect(isHostileTo(units, 'enemy', 'g1')).toBe(true);
+    expect(isHostileTo(units, 'player', 'g1')).toBe(false);
+  });
+
   it('is false for allies and the unit itself', () => {
     expect(isHostileTo(units, 'player', 'p2')).toBe(false);
     expect(isHostileTo(units, 'enemy', 'e1')).toBe(false);
@@ -53,7 +80,7 @@ describe('isHostileTo', () => {
   });
 
   it('is never true for both allies and hostiles at once', () => {
-    for (const team of ['player', 'enemy'] as const) {
+    for (const team of ['player', 'enemy', 'guest'] as const) {
       for (const unitId of [...units.keys(), 'gone']) {
         expect(isAllyOf(units, team, unitId) && isHostileTo(units, team, unitId)).toBe(false);
       }

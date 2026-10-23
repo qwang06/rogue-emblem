@@ -19,7 +19,7 @@ import { getMovePath, getMovementRange, canMoveAlongPath, type MovementOptions }
 import { getObjectiveOutcome } from '../objectives.ts';
 import { createResumableRng } from '../rng.ts';
 import { calculateSkillDamage, canUseSkill, findLearnedSkill, type Skill } from '../skills.ts';
-import { getTeamUnitIds, isAllyOf, isHostileTo } from '../teams.ts';
+import { areAllied, getTeamUnitIds, isAllyOf, isHostileTo } from '../teams.ts';
 import {
   createTurnState,
   hasMoved,
@@ -160,7 +160,7 @@ export function applyCommand(state: BattleState, command: BattleCommand): Comman
       break;
     case 'end-phase':
       requireBattle(draft);
-      startPhase(draft, nextPhase(draft.turnState!));
+      startPhase(draft, getNextPhase(draft));
       break;
     default:
       draft.fail(`unknown command ${JSON.stringify(command)}`);
@@ -355,7 +355,7 @@ function resolveAttack(draft: Draft, attackerId: string, target: TargetTile, fro
     const struckId = ids[strike.target];
     const striker = draft.edit(strikerId);
     const { broke, learned, leftover } = striker.spendWeaponUse();
-    if (learned && leftover && striker.team === 'player') {
+    if (learned && leftover && areAllied(striker.team, 'player')) {
       draft.convoyLoot.push({ itemId: leftover.item.id, quantity: leftover.quantity });
     }
     const struck = draft.edit(struckId);
@@ -380,10 +380,11 @@ function resolveAttack(draft: Draft, attackerId: string, target: TargetTile, fro
   awardCombatExperience(draft, ids, strikes);
 }
 
-// Only player units earn XP, and only if they lived through the fight.
+// Only the player's side (its units and guests) earns XP, and only if it
+// lived through the fight.
 function awardCombatExperience(draft: Draft, ids: { attacker: string; defender: string }, strikes: readonly Strike[]) {
   const unitOf = (unitId: string) => draft.units.get(unitId) ?? draft.fallen.get(unitId)!;
-  const side = (['attacker', 'defender'] as const).find((s) => unitOf(ids[s]).team === 'player');
+  const side = (['attacker', 'defender'] as const).find((s) => areAllied(unitOf(ids[s]).team, 'player'));
   if (!side || !draft.units.has(ids[side])) return;
   const unit = unitOf(ids[side]);
   const opponent = unitOf(ids[side === 'attacker' ? 'defender' : 'attacker']);
@@ -431,7 +432,7 @@ function heal(draft: Draft, unitId: string, staffIndex: number, target: Point) {
   const from = draft.tileOf(unitId);
   const canHeal = (otherId: string) => {
     const other = draft.units.get(otherId);
-    return otherId !== unitId && other?.team === healer.team && isWounded(other);
+    return otherId !== unitId && other !== undefined && areAllied(other.team, healer.team) && isWounded(other);
   };
   const targets = getHealTargets(draft.grid, from, staff, canHeal);
   const tile = findTileAt(targets, target) ?? draft.fail(`no wounded ally in reach on (${target.x}, ${target.y})`);
@@ -455,11 +456,12 @@ function useItem(draft: Draft, unitId: string, itemId: string) {
   finishAction(draft, unitId);
 }
 
-// A defeated unit's loot goes to the player unit that felled it, or to the
-// convoy when its bag is full (see claimLoot). Enemies take no loot.
+// A defeated unit's loot goes to the player unit (or guest) that felled
+// it, or to the convoy when its bag is full (see claimLoot). Enemies take
+// no loot.
 function dropLoot(draft: Draft, deadId: string, killerId: string) {
   const loot = draft.unit(deadId).loot;
-  if (!loot || draft.unit(killerId).team !== 'player') return;
+  if (!loot || !areAllied(draft.unit(killerId).team, 'player')) return;
   draft.edit(deadId).loot = null;
   const killer = draft.edit(killerId);
   const { inventory, stored } = claimLoot(killer.items, loot);
@@ -484,7 +486,13 @@ function finishAction(draft: Draft, unitId: string) {
   draft.events.push({ type: 'unit-done', unitId });
   if (checkOutcome(draft)) return;
   const turnState = draft.turnState;
-  if (isPhaseOver(turnState, getTeamUnitIds(draft.units, turnState.team))) startPhase(draft, nextPhase(turnState));
+  if (isPhaseOver(turnState, getTeamUnitIds(draft.units, turnState.team))) startPhase(draft, getNextPhase(draft));
+}
+
+// The phase after the current one, with a guest phase only while a guest
+// is in play.
+function getNextPhase(draft: Draft): TurnState {
+  return nextPhase(draft.turnState!, getTeamUnitIds(draft.units, 'guest').length > 0);
 }
 
 // A new phase can decide the battle on its own (a survive objective).
