@@ -26,11 +26,13 @@ export function ScrollList({
   }, []);
 
   // Scrolls the list itself rather than calling scrollIntoView, which would
-  // also scroll the screen around it.
+  // also scroll the screen around it. Only when the cursor moves, so other
+  // renders (the arrows changing) don't undo the mouse wheel; and not to a
+  // row the mouse picked by hovering it, so the wheel can scroll it away.
   useLayoutEffect(() => {
     const list = listRef.current;
     const row = list?.children[selectedIndex];
-    if (list && row instanceof HTMLElement) {
+    if (list && row instanceof HTMLElement && !row.matches(':hover')) {
       list.scrollTop = scrollTopToReveal(
         row.offsetTop,
         row.offsetTop + row.offsetHeight,
@@ -38,8 +40,11 @@ export function ScrollList({
         list.clientHeight,
       );
     }
-    updateCues();
-  });
+  }, [selectedIndex]);
+
+  // After every render: the scroll or the rows (an item sold) may have
+  // changed.
+  useLayoutEffect(updateCues);
 
   // The window's height changes with the stage (rows are sized in rem).
   useLayoutEffect(() => {
