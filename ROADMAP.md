@@ -265,6 +265,7 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 - Regions gain a stage-based enemy level curve and a boss stage that closes the region.
 - **Elite** enemies: a few random modifiers (e.g. Armored +3 DEF, Swift +4 SPD, Vampiric), named on the unit panel. Ship as plain stat bumps here; move them onto the W.5 modifiers once those exist.
 - **Tests:** levels per stage, boss placement, config validation of the new fields.
+- _Progress:_ an `EnemyGroup` sets its enemies' `level` (grown on average growths, `growToLevel` in `stageLevel.ts`) and can name a `boss` (its first enemy, holding its ground and targeted by a boss objective). The Regions page edits both. The built-in regions are now a ten-stage run (`finalStage` 10) whose enemies rise from level 1 to 5 and add a monster or two per stage (wolves, bats, orcs, then human brigands), ending on the Warlord's Hold: a boss stage against the level-7 Orc Warlord, and beating it wins the run ("The Warband Prevailed"). With the default policy the run simulator wins about 60% of runs (warrior 92%, archer 54%, soldier 42%). Still to do: elites, and more regions past stage 10.
 
 ### [ ] W.3 Gold and reward picks
 

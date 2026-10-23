@@ -62,6 +62,15 @@ const HELP: Record<string, FieldHelp> = {
       </p>
     ),
   },
+  finalStage: {
+    title: 'Final stage',
+    body: (
+      <p>
+        The stage that ends a Warband Mode run in victory: win it and the warband has won the run. Blank: no final
+        stage, so a run goes on until the warband falls.
+      </p>
+    ),
+  },
   name: {
     title: 'Name',
     body: <p>Shown to the player on the Objective and Victory screens, e.g. &ldquo;Stage 2: Lakeside&rdquo;.</p>,
@@ -276,6 +285,24 @@ const HELP: Record<string, FieldHelp> = {
       <p>
         The HP these enemies start the battle with, e.g. low for a first stage the player should win. It never goes past
         their max HP. Blank: full health.
+      </p>
+    ),
+  },
+  level: {
+    title: 'Level',
+    body: (
+      <p>
+        The level these enemies are, from 1 to 20. They grow from level 1 on their class&apos;s average growths, so the
+        same class at the same level always has the same stats. Blank: level 1.
+      </p>
+    ),
+  },
+  boss: {
+    title: 'Boss',
+    body: (
+      <p>
+        A name, e.g. Orc Warlord, makes the group&apos;s first enemy a boss by that name: it holds its ground, and a
+        boss objective targets it instead of a promoted &ldquo;Chief&rdquo;. Blank: no boss.
       </p>
     ),
   },

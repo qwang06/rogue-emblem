@@ -6,6 +6,7 @@ import {
   DEFAULT_ENEMY_CLASS,
   createStartingWarband,
   getCandidateSeeds,
+  growToLevel,
   layOutStage,
   MAP_CANDIDATES,
   OBJECTIVE_ARCHETYPES,
@@ -18,6 +19,7 @@ import {
 import { getStageRegion } from './regions.ts';
 import { LOOT_ITEMS } from '../loot.ts';
 import { STARTING_CLASSES } from './startingClasses.ts';
+import { createUnitOfClass } from '../unitClasses.ts';
 import { calculateDamage, getAttackRange } from '../combat.ts';
 import { countEnemies, getWalkingDistances, isInArea } from '../enemySpawns.ts';
 import { findUnit, getCell, setUnit } from '../grid.ts';
@@ -68,6 +70,27 @@ describe('createStartingWarband', () => {
 
   it('rejects an unknown class', () => {
     expect(() => createStartingWarband('dragon')).toThrow(/dragon/);
+  });
+});
+
+describe('growToLevel', () => {
+  it('levels a unit up on its average growths, the same every time', () => {
+    const grow = () => {
+      const unit = createUnitOfClass('soldier', { team: 'enemy' });
+      growToLevel(unit, 9);
+      return unit;
+    };
+    const unit = grow();
+    // Soldier: 10 HP 70%, 4 STR 45%, 2 DEF 30% → +5, +3, +2 over 8 level ups.
+    expect([unit.level, unit.maxHealth, unit.strength, unit.defense]).toEqual([9, 15, 7, 4]);
+    expect(grow()).toEqual(unit);
+  });
+
+  it('does nothing at or above the level', () => {
+    const unit = createUnitOfClass('soldier', { team: 'enemy' });
+    growToLevel(unit, 1);
+    growToLevel(unit, 0);
+    expect([unit.level, unit.maxHealth]).toEqual([1, 10]);
   });
 });
 
@@ -247,6 +270,36 @@ describe('createStageLevel', () => {
     expect(['enemy-1', 'enemy-2'].map((unitId) => level.units.get(unitId)!.levelUpOnKill)).toEqual([true, false]);
   });
 
+  it('fields a group’s enemies at its level, on average growths', () => {
+    const level = createStageLevel(7, {
+      ...FIRST,
+      enemies: [
+        { count: 1, unitClass: 'orc', level: 5 },
+        { count: 1, unitClass: 'orc' },
+      ],
+    });
+    const [grown, plain] = ['enemy-1', 'enemy-2'].map((unitId) => level.units.get(unitId)!);
+    expect([grown.level, plain.level]).toEqual([5, 1]);
+    // Orc: 14 HP at 80%, 5 STR at 55% → +3.2 and +2.2 over 4 level ups.
+    expect([grown.maxHealth, grown.health, grown.strength]).toEqual([17, 17, 7]);
+    expect([plain.maxHealth, plain.strength]).toEqual([14, 5]);
+  });
+
+  it('makes the first enemy of a group that names a boss into that boss', () => {
+    const level = createStageLevel(7, {
+      ...FIRST,
+      enemies: [
+        { count: 1, unitClass: 'goblin' },
+        { count: 2, unitClass: 'orc', boss: 'Orc Warlord' },
+      ],
+    });
+    expect(level.bossUnitId).toBe('enemy-2');
+    const units = ['enemy-1', 'enemy-2', 'enemy-3'].map((unitId) => level.units.get(unitId)!);
+    expect(units.map((unit) => unit.name)).toEqual(['Enemy Goblin', 'Orc Warlord', 'Enemy Orc']);
+    expect(units.map((unit) => unit.holdsPosition)).toEqual([false, true, false]);
+    expect(createStageLevel(7, FIRST).bossUnitId).toBeUndefined();
+  });
+
   it('gives `lootCount` enemies an item to drop, keeping the map the same', () => {
     const region = { ...FIRST, enemies: [{ count: 3 }] };
     const plain = createStageLevel(11, region);
@@ -313,12 +366,37 @@ describe('the stage ramp', () => {
       Array.from({ length: group.count }, () => group.unitClass ?? DEFAULT_ENEMY_CLASS),
     );
 
+  const enemyLevels = (stage: number) =>
+    getStageRegion(stage, REGION_SETTINGS).enemies.flatMap((group) =>
+      Array.from({ length: group.count }, () => group.level ?? 1),
+    );
+
   it('goes from one slime, to two goblins, then mixes in more monsters', () => {
     expect(enemyClasses(1)).toEqual(['slime']);
     expect(enemyClasses(2)).toEqual(['goblin', 'goblin']);
-    expect(enemyClasses(3)).toEqual(['slime', 'slime', 'goblin']);
+    expect(enemyClasses(3)).toEqual(['slime', 'slime', 'wolf']);
     expect(enemyClasses(4)).toEqual(['goblin', 'goblin', 'skeleton']);
-    expect(enemyClasses(5)).toEqual(['skeleton', 'skeleton', 'goblin', 'goblin']);
+    expect(enemyClasses(5)).toEqual(['skeleton', 'skeleton', 'bat', 'bat']);
+  });
+
+  it('brings in the brigands on stage 8 and the orcs on stage 9', () => {
+    expect(enemyClasses(8)).toEqual(['soldier', 'archer', 'vanguard', 'goblin', 'goblin']);
+    expect(enemyClasses(9)).toContain('orc');
+    expect([1, 2, 3, 4, 5, 6, 7, 8].some((stage) => enemyClasses(stage).includes('orc'))).toBe(false);
+  });
+
+  it('never fields weaker enemies than the stage before', () => {
+    const top = (stage: number) => Math.max(...enemyLevels(stage));
+    for (let stage = 2; stage <= REGION_SETTINGS.finalStage!; stage++) {
+      expect(top(stage)).toBeGreaterThanOrEqual(top(stage - 1));
+    }
+  });
+
+  it('ends the run on stage 10, a boss fight against the Orc Warlord', () => {
+    expect(REGION_SETTINGS.finalStage).toBe(10);
+    const finale = getStageRegion(10, REGION_SETTINGS);
+    expect(finale.objective).toEqual({ kind: 'boss' });
+    expect(finale.enemies.filter((group) => group.boss).map((group) => group.boss)).toEqual(['Orc Warlord']);
   });
 
   it('never fields fewer enemies than the stage before', () => {

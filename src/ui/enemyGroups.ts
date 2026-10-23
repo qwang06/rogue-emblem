@@ -16,15 +16,18 @@ function distance({ minDistance: min, maxDistance: max }: EnemyGroup): string | 
   return null;
 }
 
-// The group's count and class, then whichever of its limits and its health are set.
+// The group's count and class, then whichever of its limits, level, health
+// and boss are set.
 export function describeEnemyGroup(group: EnemyGroup): string {
   const parts = [
     group.unitClass ? `${group.count} ${group.unitClass}` : String(group.count),
     span('columns', group.area?.x),
     span('rows', group.area?.y),
     distance(group),
+    group.level !== undefined ? `level ${group.level}` : null,
     group.health !== undefined ? `${group.health} HP` : null,
     group.levelUpOnKill ? 'level up on kill' : null,
+    group.boss ? `boss: ${group.boss}` : null,
   ];
   return parts.filter((part) => part !== null).join(' · ');
 }

@@ -32,6 +32,9 @@ export interface DemoLevel extends Level {
   // The tile a seize objective should mark, when the map was planned
   // around one (see mapArchetypes.ts).
   seizeTile?: Point;
+  // The enemy a boss objective should name its target, when a region's
+  // enemy group sets one (see EnemyGroup.boss in enemySpawns.ts).
+  bossUnitId?: string;
 }
 
 // Level 1: a dirt path runs north up the middle of a grass field to a

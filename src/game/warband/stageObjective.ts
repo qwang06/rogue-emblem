@@ -49,6 +49,7 @@ export interface ObjectiveLevel {
   deploymentZone: readonly Point[];
   buildings?: readonly BuildingPlacement[];
   seizeTile?: Point;
+  bossUnitId?: string;
 }
 
 const key = ({ x, y }: Point) => `${x},${y}`;
@@ -59,8 +60,9 @@ const isWalkable = (grid: Grid, p: Point) => Number.isFinite(getMoveCost(getCell
 // - seize: the level's seizeTile if the deployment zone can walk to it,
 //   else a castle or fort it can walk to, else the walkable tile farthest
 //   from the zone (northmost, then westmost, on a tie)
-// - boss: the enemy farthest from the zone (first in the registry on a
-//   tie), made into the boss (makeBoss)
+// - boss: the level's named boss (bossUnitId) while it's on the map, as
+//   it is; else the enemy farthest from the zone (first in the registry
+//   on a tie), made into the boss (makeBoss)
 // - survive: SURVIVE_TURNS unless the spec says
 // Falls back to a rout when there's nowhere to seize or no enemy to make the
 // boss. Note a boss is changed in place in level.units.
@@ -77,6 +79,10 @@ export function placeObjective(spec: ObjectiveSpec, level: ObjectiveLevel): Obje
       return tile ? Object.freeze({ kind: 'seize', tile: Object.freeze(tile) }) : ROUT;
     }
     case 'boss': {
+      const named = level.bossUnitId ? level.units.get(level.bossUnitId) : undefined;
+      if (named && level.bossUnitId && findUnit(level.grid, level.bossUnitId)) {
+        return Object.freeze({ kind: 'boss', unitId: level.bossUnitId, name: named.name });
+      }
       let best: { unitId: string; distance: number } | null = null;
       for (const [unitId, unit] of level.units) {
         const at = unit.team === 'enemy' ? findUnit(level.grid, unitId) : null;

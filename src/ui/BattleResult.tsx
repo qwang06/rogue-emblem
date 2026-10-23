@@ -7,8 +7,8 @@ const TITLES = { victory: 'Victory', defeat: 'Defeat' };
 // Shown over the map once the battle is won or lost. GridScene handles the
 // input: confirm (or a click) moves on to `nextBattle` after a victory that
 // leads to one, else returns to the title screen. When the battle ended a
-// Warband Mode run, it says so, with the stage it ended on and the units
-// lost along the way. A won stage of a run shows the gold it paid, and
+// Warband Mode run, fallen or won, it says so, with the stage it ended on
+// and the units lost along the way. A won stage of a run shows the gold it paid, and
 // confirm opens the reward screen (RewardScreen) instead, and the camp
 // (CampMenu) after that.
 export function BattleResult() {
@@ -30,10 +30,13 @@ export function BattleResult() {
         role="alert"
         onClick={() => gameCommands.send({ type: 'confirm' })}
       >
-        <h2 className="battle-result__title">{runOver ? 'The Warband Fell' : TITLES[outcome]}</h2>
+        <h2 className="battle-result__title">
+          {runOver ? (runOver.won ? 'The Warband Prevailed' : 'The Warband Fell') : TITLES[outcome]}
+        </h2>
         {runOver && (
           <p className="battle-result__detail">
-            Fell on stage {runOver.stage}.{runOver.fallen.length > 0 && ` Lost ${runOver.fallen.join(', ')}.`}
+            {runOver.won ? `Won the run on stage ${runOver.stage}.` : `Fell on stage ${runOver.stage}.`}
+            {runOver.fallen.length > 0 && ` Lost ${runOver.fallen.join(', ')}.`}
           </p>
         )}
         {stageClear && (

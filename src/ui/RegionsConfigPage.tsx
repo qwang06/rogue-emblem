@@ -244,6 +244,7 @@ export function RegionsConfigPage() {
           </p>
           <div className="regions-summary__fields">
             <NumberField form={form} path={['stagesPerRegion']} label="Stages per region" />
+            <NumberField form={form} path={['finalStage']} label="Final stage" placeholder="none" />
           </div>
           <div className="dialog-files__actions">
             <button
@@ -363,6 +364,7 @@ function RegionsFormat() {
       <summary>File format</summary>
       <pre>{`{
   "stagesPerRegion": 1,
+  "finalStage": 10,
   "regions": [
     {
       "name": "Meadowlands",
@@ -388,6 +390,10 @@ function RegionsFormat() {
           <code>stagesPerRegion</code>: how many stages of a run each region lasts; the last region repeats forever.
         </li>
         <li>
+          <code>finalStage</code> (optional, {REGION_LIMITS.finalStage[0]} to {REGION_LIMITS.finalStage[1]}): winning
+          this stage wins the run. Without it a run goes on until the warband falls.
+        </li>
+        <li>
           <code>terrain.width</code> / <code>height</code>: {minSize} to {maxSize} tiles. Every other terrain setting is
           optional: patch counts (<code>lakes</code>, <code>mountains</code>, <code>forests</code>, <code>meadows</code>
           , <code>ruins</code>, <code>buildings</code>), patch sizes as <code>[min, max]</code> tiles (
@@ -406,9 +412,11 @@ function RegionsFormat() {
           where they stand: <code>area</code>, a box as <code>[from, to]</code> fractions of the map&apos;s columns (
           <code>x</code>) and rows (<code>y</code>), 0 being the west or north edge; and <code>minDistance</code> /{' '}
           <code>maxDistance</code>, how many steps a unit walks from the deployment zone to reach them (
-          {REGION_LIMITS.enemyDistance[0]} to {REGION_LIMITS.enemyDistance[1]}). Optional <code>health</code> starts
-          them wounded, and <code>levelUpOnKill</code> (true/false) makes killing one give the killer exactly a level
-          up. A file whose limits leave too little room for its enemies is turned away.
+          {REGION_LIMITS.enemyDistance[0]} to {REGION_LIMITS.enemyDistance[1]}). Optional <code>level</code> (
+          {REGION_LIMITS.enemyLevel[0]} to {REGION_LIMITS.enemyLevel[1]}) fields them above level 1, <code>health</code>{' '}
+          starts them wounded, <code>levelUpOnKill</code> (true/false) makes killing one give the killer exactly a level
+          up, and <code>boss</code> names the group&apos;s first enemy as a boss that holds its ground and is a boss
+          objective&apos;s target. A file whose limits leave too little room for its enemies is turned away.
         </li>
         <li>
           <code>treeChance</code>: 0–1.

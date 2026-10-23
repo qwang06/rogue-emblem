@@ -1834,18 +1834,20 @@ export class GridScene extends Phaser.Scene {
     let stageClear: StageClearView | null = null;
     if (this.setup.mode === 'warband' && this.setup.run) {
       // A run writes the battle back to its roster and saves the next
-      // stage, or forgets the run once the warband has fallen. A win pays
+      // stage, or forgets the run once the warband has fallen or won it. A win pays
       // the clear's gold and rolls the rewards the reward screen offers.
       const before = this.setup.run;
       const finished = finishBattle(
         { run: before, phase: 'battle' },
         { units: getRunBattleUnits(this.battle), convoy: this.battle.convoyLoot },
         outcome,
+        this.content.regions.finalStage,
       );
       const { run } = finished;
-      if (finished.phase === 'over') {
+      const ended = finished.phase === 'over' || finished.phase === 'won';
+      if (ended) {
         clearSavedRun();
-        runOver = toRunOverView(run);
+        runOver = toRunOverView(run, finished.phase === 'won');
       } else {
         const clear = getStageClearGold(before.stage, run.fallen.length - before.fallen.length);
         stageClear = toStageClearView(before.stage, clear, run.gold);
@@ -1860,7 +1862,7 @@ export class GridScene extends Phaser.Scene {
         }
         saveRun(run);
       }
-      this.nextBattle = finished.phase === 'over' ? null : runStage(run);
+      this.nextBattle = ended ? null : runStage(run);
     } else {
       this.nextBattle = outcome === 'victory' ? getNextBattle(this.setup, randomSeed()) : null;
     }

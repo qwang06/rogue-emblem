@@ -591,7 +591,7 @@ describe('toRunOverView', () => {
     units.get('warrior-2')!.takeDamage(99);
     units.get('warrior-1')!.takeDamage(99);
     const view = toRunOverView({ ...applyBattleResult(run, { units }), stage: 4 });
-    expect(view).toEqual({ stage: 4, fallen: ['Alden', 'Bryn'] });
+    expect(view).toEqual({ stage: 4, won: false, fallen: ['Alden', 'Bryn'] });
     expect(Object.isFrozen(view)).toBe(true);
     expect(Object.isFrozen(view.fallen)).toBe(true);
   });

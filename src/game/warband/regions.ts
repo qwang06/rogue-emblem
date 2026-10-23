@@ -36,6 +36,9 @@ export interface RegionConfig {
 export interface RegionSettings {
   stagesPerRegion: number;
   regions: readonly RegionConfig[];
+  // The stage whose win wins the run; a run never ends in victory when
+  // unset.
+  finalStage?: number;
 }
 
 // The region for stage `stage` from `settings` (see getRegionConfig).

@@ -22,6 +22,13 @@ describe('parseRegionSettings', () => {
     expect(Object.isFrozen(settings.regions[0])).toBe(true);
   });
 
+  it('reads an optional final stage, and writes it back out', () => {
+    expect(parseRegionSettings(file([region()])).finalStage).toBeUndefined();
+    const settings = parseRegionSettings(JSON.stringify({ stagesPerRegion: 1, finalStage: 10, regions: [region()] }));
+    expect(settings.finalStage).toBe(10);
+    expect(parseRegionSettings(formatRegionSettings(settings))).toEqual(settings);
+  });
+
   it('reads every optional terrain setting and the objective', () => {
     const terrain = {
       width: 16,
@@ -57,12 +64,13 @@ describe('parseRegionSettings', () => {
     expect(parseRegionSettings(file([region({ name: '  Glade ' })])).regions[0].name).toBe('Glade');
   });
 
-  it('reads enemy groups with classes, areas, distances, health and levelUpOnKill', () => {
+  it('reads enemy groups with classes, areas, distances, levels, health, levelUpOnKill and bosses', () => {
     const enemies = [
       { count: 2, area: { x: [0, 0.5], y: [0, 0.4] }, minDistance: 6 },
       { count: 1, maxDistance: 8, levelUpOnKill: false },
       { count: 1, unitClass: 'warrior', minDistance: 3, maxDistance: 3, health: 4, levelUpOnKill: true },
       { count: 1, unitClass: 'archer' },
+      { count: 2, unitClass: 'orc', level: 6, boss: 'Orc Warlord' },
     ];
     expect(parseRegionSettings(file([region({ enemies })])).regions[0].enemies).toEqual(enemies);
   });
@@ -128,6 +136,11 @@ describe('parseRegionSettings', () => {
       /settings\.extra/,
     ],
     ['no regions', file([]), /regions must be a list of 1 to 50 regions/],
+    [
+      'a final stage of 0',
+      JSON.stringify({ stagesPerRegion: 1, finalStage: 0, regions: [region()] }),
+      /finalStage must be a whole number from 1 to 500/,
+    ],
     ['a fractional stagesPerRegion', file([region()], 1.5), /stagesPerRegion must be a whole number from 1 to 100/],
     ['a missing name', file([region({ name: '' })]), /regions\[0\]\.name must be text/],
     ['an unknown palette', file([region({ palette: 'neon' })]), /regions\[0\]\.palette must be one of a-stone/],
@@ -202,6 +215,16 @@ describe('parseRegionSettings', () => {
       'an unknown enemy class',
       file([region({ enemies: [{ count: 1, unitClass: 'dragon' }] })]),
       /enemies\[0\]\.unitClass must be one of warrior, soldier, archer/,
+    ],
+    [
+      'an enemy level of 21',
+      file([region({ enemies: [{ count: 1, level: 21 }] })]),
+      /enemies\[0\]\.level must be a whole number from 1 to 20/,
+    ],
+    [
+      'a blank boss name',
+      file([region({ enemies: [{ count: 1, boss: '  ' }] })]),
+      /enemies\[0\]\.boss must be text of 1 to 40 characters/,
     ],
     [
       'a levelUpOnKill that is not true or false',
