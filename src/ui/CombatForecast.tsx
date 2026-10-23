@@ -6,7 +6,8 @@ import { usePanelBesideAnchor } from './useMenuBesideUnit.ts';
 import { useGameStore } from './useGameStore.ts';
 
 // The combat forecast shown while aiming an attack at a unit: each side's
-// weapon (with its icon), HP, damage per hit (with ×2 when it strikes twice), hit and crit
+// weapon (with its icon), HP with a bar marking how much of it the exchange
+// would take if every strike lands, damage per hit (with ×2 when it strikes twice), hit and crit
 // chances, attacker on the left and defender on the right. A defender that
 // can't counter shows "–". GridScene publishes the numbers (from
 // getCombatForecast) and where the two units stand; this opens beside
@@ -35,7 +36,11 @@ export function CombatForecast() {
         </div>
       </div>
       <div className="combat-forecast__rows">
-        <Row icon="health" label="HP" attacker={attacker.health} defender={defender.health} />
+        <Row icon="health" label="HP" attacker={<Health side={attacker} />} defender={<Health side={defender} />} />
+        <div className="combat-forecast__bars">
+          <HealthBar side={attacker} />
+          <HealthBar side={defender} />
+        </div>
         <Row icon="attack" label="Dmg" attacker={<Damage side={attacker} />} defender={<Damage side={defender} />} />
         <Row icon="hit" label="Hit" attacker={attacker.hit} defender={defender.hit} />
         <Row icon="crit" label="Crt" attacker={attacker.crit} defender={defender.crit} />
@@ -85,5 +90,39 @@ function Damage({ side }: { side: ForecastSideView }) {
       {side.damage}
       {side.strikes > 1 && <span className="combat-forecast__double">×{side.strikes}</span>}
     </>
+  );
+}
+
+// Current HP, then what it drops to if every strike lands. The drop is
+// always laid out (hidden when nothing is lost) so the panel keeps its size
+// from one target to the next.
+function Health({ side }: { side: ForecastSideView }) {
+  const loses = side.healthAfter < side.health;
+  return (
+    <>
+      {side.health}
+      <span
+        className={`combat-forecast__after${side.healthAfter === 0 ? ' combat-forecast__after--lethal' : ''}`}
+        style={loses ? undefined : { visibility: 'hidden' }}
+        aria-hidden={!loses}
+      >
+        <span className="combat-forecast__arrow">▸</span>
+        {side.healthAfter}
+      </span>
+    </>
+  );
+}
+
+// The side's health bar: what it keeps, then the part the exchange would
+// take (blinking), then the trough of what it had already lost.
+function HealthBar({ side }: { side: ForecastSideView }) {
+  const max = Math.max(1, side.maxHealth);
+  const kept = (side.healthAfter / max) * 100;
+  const lost = ((side.health - side.healthAfter) / max) * 100;
+  return (
+    <span className="combat-forecast__bar" role="presentation">
+      <span className="combat-forecast__bar-kept" style={{ width: `${kept}%` }} />
+      <span className="combat-forecast__bar-lost" style={{ width: `${lost}%` }} />
+    </span>
   );
 }

@@ -486,8 +486,15 @@ describe('toCombatForecastView', () => {
     const defender = new Unit({ name: 'Bandit', health: 10, strength: 4, defense: 2, movement: 5, team: 'enemy' });
     const view = toCombatForecastView({ forecast, attacker, defender, anchor });
     expect(view).toEqual({
-      attacker: { name: 'Soldier', team: 'player', weapon: 'Iron Spear', weaponId: 'iron-spear', ...forecast.attacker },
-      defender: { name: 'Bandit', team: 'enemy', weapon: null, weaponId: null, ...forecast.defender },
+      attacker: {
+        name: 'Soldier',
+        team: 'player',
+        weapon: 'Iron Spear',
+        weaponId: 'iron-spear',
+        ...forecast.attacker,
+        healthAfter: 10,
+      },
+      defender: { name: 'Bandit', team: 'enemy', weapon: null, weaponId: null, ...forecast.defender, healthAfter: 0 },
       anchor,
     });
     expect(Object.isFrozen(view)).toBe(true);
