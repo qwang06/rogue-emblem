@@ -21,7 +21,7 @@ import { createResumableRng } from '../rng.ts';
 import { calculateSkillDamage, canUseSkill, findLearnedSkill, type Skill } from '../skills.ts';
 import { areAllied, getTeamUnitIds, isAllyOf, isHostileTo } from '../teams.ts';
 import {
-  createTurnState,
+  getFirstPhase,
   hasMoved,
   isDone,
   isPhaseOver,
@@ -279,7 +279,7 @@ function startBattle(draft: Draft) {
   draft.deployed = Object.freeze(deployed);
   draft.stage = 'battle';
   draft.events.push({ type: 'battle-started', benched: Object.freeze(benched) });
-  startPhase(draft, createTurnState());
+  startPhase(draft, getFirstPhase(1, hasGuests(draft)));
 }
 
 function requireBattle(draft: Draft) {
@@ -495,7 +495,11 @@ function finishAction(draft: Draft, unitId: string) {
 // The phase after the current one, with a guest phase only while a guest
 // is in play.
 function getNextPhase(draft: Draft): TurnState {
-  return nextPhase(draft.turnState!, getTeamUnitIds(draft.units, 'guest').length > 0);
+  return nextPhase(draft.turnState!, hasGuests(draft));
+}
+
+function hasGuests(draft: Draft): boolean {
+  return getTeamUnitIds(draft.units, 'guest').length > 0;
 }
 
 // A new phase can decide the battle on its own (a survive objective).

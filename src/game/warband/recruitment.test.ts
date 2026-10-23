@@ -43,15 +43,13 @@ describe('guest recruitment', () => {
     let state = createBattleState(level, 1);
     for (const command of planDeployment(state)) state = applyCommand(state, command).state;
     expect(state.deployed).not.toContain(GUEST_UNIT_ID);
-    for (const team of ['enemy', 'guest']) {
-      state = applyCommand(state, { type: 'end-phase' }).state;
-      expect(state.turnState?.team).toBe(team);
-    }
+    // The guest goes first.
+    expect(state.turnState).toMatchObject({ turn: 1, team: 'guest' });
     const actions = planUnitTurn(state, GUEST_UNIT_ID);
     expect(actions.map((action) => action.type)).toEqual(['move', expect.stringMatching(/attack|wait/)]);
     for (const command of actions) state = applyCommand(state, command).state;
-    // The guest's action ends the guest phase, and the next turn begins.
-    expect(state.turnState).toMatchObject({ turn: 2, team: 'player', done: [] });
+    // The guest's action ends the guest phase, and the player's begins.
+    expect(state.turnState).toMatchObject({ turn: 1, team: 'player', done: [] });
     expect(getRunBattleUnits(state).has(GUEST_UNIT_ID)).toBe(true);
   });
 

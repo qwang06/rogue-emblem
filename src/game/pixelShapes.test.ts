@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getEllipseSpans } from './pixelShapes.ts';
+import { getEllipseSpans, getOutlineMask } from './pixelShapes.ts';
 
 describe('getEllipseSpans', () => {
   it('has one span per row, top to bottom', () => {
@@ -29,5 +29,60 @@ describe('getEllipseSpans', () => {
   it('is a full row for a 1-pixel-tall ellipse and empty for zero size', () => {
     expect(getEllipseSpans(8, 1)).toEqual([{ y: 0, x: 0, width: 8 }]);
     expect(getEllipseSpans(8, 0)).toEqual([]);
+  });
+});
+
+// Rows of '#' (opaque) and '.' (transparent) as an alpha array.
+function image(rows: string[]) {
+  return {
+    alpha: rows
+      .join('')
+      .split('')
+      .map((c) => (c === '#' ? 255 : 0)),
+    width: rows[0].length,
+    height: rows.length,
+  };
+}
+
+function maskRows(mask: Uint8Array, width: number): string[] {
+  const rows: string[] = [];
+  for (let i = 0; i < mask.length; i += width)
+    rows.push([...mask.slice(i, i + width)].map((v) => (v ? 'o' : '.')).join(''));
+  return rows;
+}
+
+describe('getOutlineMask', () => {
+  it('rings a pixel with its four neighbors at width 1, leaving the pixel itself out', () => {
+    const { alpha, width, height } = image(['.....', '.....', '..#..', '.....', '.....']);
+    expect(maskRows(getOutlineMask(alpha, width, height, 5, 1), width)).toEqual([
+      '.....',
+      '..o..',
+      '.o.o.',
+      '..o..',
+      '.....',
+    ]);
+  });
+
+  it('reaches as many steps as its width, as a diamond', () => {
+    const { alpha, width, height } = image(['.....', '.....', '..#..', '.....', '.....']);
+    expect(maskRows(getOutlineMask(alpha, width, height, 5, 2), width)).toEqual([
+      '..o..',
+      '.ooo.',
+      'oo.oo',
+      '.ooo.',
+      '..o..',
+    ]);
+  });
+
+  it('never spills into the next frame', () => {
+    const { alpha, width, height } = image(['...#....']);
+    expect(maskRows(getOutlineMask(alpha, width, height, 4, 1), width)).toEqual(['..o.....']);
+  });
+
+  it('is empty for a fully transparent image, and for width 0', () => {
+    const blank = image(['....', '....']);
+    expect([...getOutlineMask(blank.alpha, 4, 2, 4, 1)].every((v) => v === 0)).toBe(true);
+    const dot = image(['.#..']);
+    expect([...getOutlineMask(dot.alpha, 4, 1, 4, 0)].every((v) => v === 0)).toBe(true);
   });
 });

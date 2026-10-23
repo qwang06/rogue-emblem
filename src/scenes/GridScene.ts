@@ -172,20 +172,14 @@ import {
   TILE_SIZE,
   TREE_SPRITES,
   UNIT_ANIMATIONS,
+  UNIT_OUTLINE,
   UNIT_SHEET,
   getUnitSprite,
   unitSheetKey,
 } from '../game/tileset.ts';
-import {
-  POTION_COLORS,
-  playHitFlash,
-  playLunge,
-  playPotionGlow,
-  playStoneThrow,
-  restoreTint,
-  RESTING_TINT,
-} from './effects.ts';
+import { POTION_COLORS, playHitFlash, playLunge, playPotionGlow, playStoneThrow } from './effects.ts';
 import { addTreeShadow, addUnitShadow } from './unitShadow.ts';
+import { addUnitOutline } from './unitOutline.ts';
 import type { Menu } from '../game/actionMenu.ts';
 import type { Dialog, DialogLine } from '../game/dialog.ts';
 import type { DialogScripts } from '../game/dialogScript.ts';
@@ -254,9 +248,6 @@ const LEVEL_UP_MS = 2400;
 const REWARD_PICK_GRACE_MS = 500;
 // Tint for units that are done for the phase.
 const DONE_TINT = 0x808080;
-// Each team's resting tint on the map, if it has one: guests, the allies
-// the AI plays, are washed green.
-const TEAM_TINTS: Partial<Record<Team, number>> = { guest: 0x8cf08c };
 
 type Sprite = Phaser.GameObjects.Sprite;
 type ActionKey = 'confirm' | 'confirmAlt' | 'cancel' | 'cancelAlt' | 'dangerZone' | 'autoPlay';
@@ -1751,13 +1742,13 @@ export class GridScene extends Phaser.Scene {
   }
 
   // ---- Turns ------------------------------------------------------------
-  // The battle cycles a player phase, an enemy phase and, while any guest
-  // is on the map, a guest phase (rules in src/game/turns.ts). In the
-  // player phase each unit may move, then act (attack, skill, or wait);
-  // acting finishes it and greys it out. Once all are finished the enemy
-  // phase, then the guest phase, runs on its own, each unit acting in turn
-  // with the plan from src/game/enemyAI.ts. After every action the battle
-  // checks for victory or defeat.
+  // Each turn opens with a guest phase while any guest is on the map, then
+  // a player phase, then an enemy phase (rules in src/game/turns.ts). The
+  // guest and enemy phases run on their own, each unit acting in turn with
+  // the plan from src/game/enemyAI.ts. In the player phase each unit may
+  // move, then act (attack, skill, or wait); acting finishes it and greys
+  // it out, and once all are finished the enemy phase begins. After every
+  // action the battle checks for victory or defeat.
 
   // After a command's events have played out: shows the battle as it now
   // stands, then the result if the command decided the battle, the next
@@ -1786,7 +1777,7 @@ export class GridScene extends Phaser.Scene {
   startPhase() {
     const turnState = this.turnState!;
     this.hideEnemyReach();
-    for (const sprite of this.unitSprites.values()) restoreTint(sprite);
+    for (const sprite of this.unitSprites.values()) sprite.clearTint();
     gameStore.setState({
       turn: toTurnView(turnState),
       objectiveStatus: getObjectiveStatus(this.objective, turnState.turn),
@@ -1826,7 +1817,7 @@ export class GridScene extends Phaser.Scene {
     const { turnState } = this;
     for (const [unitId, sprite] of this.unitSprites) {
       if (turnState && isDone(turnState, unitId)) sprite.setTint(DONE_TINT);
-      else restoreTint(sprite);
+      else sprite.clearTint();
     }
   }
 
@@ -2875,9 +2866,8 @@ export class GridScene extends Phaser.Scene {
       .setDepth(0.75)
       .setData('art', art)
       .setData('facing', UNIT_SHEET.defaultFacing)
-      .setData(RESTING_TINT, TEAM_TINTS[unit.team])
       .play(this.unitAnimation(art, 'idle', UNIT_SHEET.defaultFacing));
-    restoreTint(sprite);
+    addUnitOutline(this, sprite, UNIT_OUTLINE.colors[unit.team]);
     addUnitShadow(this, sprite);
     this.unitSprites.set(unitId, sprite);
   }
