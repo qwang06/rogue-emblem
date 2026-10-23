@@ -35,10 +35,9 @@ export const REWARD_SCORES = Object.freeze({
   // A recruit otherwise, plus a bonus for a class the roster lacks.
   recruit: 30,
   newClassBonus: 10,
-  experience: 50,
   arms: 32,
   drill: 35,
-  lesson: 38,
+  lesson: 50,
   // Rest scores this times the share of HP the roster is missing.
   restPerMissing: 100,
   training: 15,
@@ -64,8 +63,6 @@ export function scoreReward(run: RunState, reward: Reward): number {
     }
     case 'rest':
       return REWARD_SCORES.restPerMissing * getMissingHealthShare(run.roster);
-    case 'experience':
-      return REWARD_SCORES.experience;
     case 'arms':
       return REWARD_SCORES.arms;
     case 'drill':

@@ -70,7 +70,7 @@ import {
 } from '../game/warband/rewards.ts';
 import {
   applyRunCommand,
-  finishBattle,
+  finishBattleWithEvents,
   getRewardOffers,
   getRecruitOffers,
   RunCommandError,
@@ -1141,7 +1141,7 @@ export class GridScene extends Phaser.Scene {
       const result = tryRunCommand(session, command);
       if (!result) return;
       const after = result.session.run;
-      // Experience shows each level up it gives before moving on.
+      // A Veteran's Lesson shows each level up it gives before moving on.
       const levelUps = result.events.flatMap((event) => (event.type === 'level-ups' ? event.levelUps : []));
       saveRun(after);
       this.rewardOffer = null;
@@ -1832,17 +1832,20 @@ export class GridScene extends Phaser.Scene {
     // Completing the objective moves on to the next chapter or stage.
     let runOver: RunOverView | null = null;
     let stageClear: StageClearView | null = null;
+    // A stage clear's guaranteed level ups, shown before its result.
+    let levelUps: readonly RewardLevelUp[] = [];
     if (this.setup.mode === 'warband' && this.setup.run) {
       // A run writes the battle back to its roster and saves the next
       // stage, or forgets the run once the warband has fallen or won it. A win pays
       // the clear's gold and rolls the rewards the reward screen offers.
       const before = this.setup.run;
-      const finished = finishBattle(
+      const { session: finished, events } = finishBattleWithEvents(
         { run: before, phase: 'battle' },
         { units: getRunBattleUnits(this.battle), convoy: this.battle.convoyLoot },
         outcome,
         this.content.regions.finalStage,
       );
+      levelUps = events.flatMap((event) => (event.type === 'level-ups' ? event.levelUps : []));
       const { run } = finished;
       const ended = finished.phase === 'over' || finished.phase === 'won';
       if (ended) {
@@ -1867,9 +1870,13 @@ export class GridScene extends Phaser.Scene {
       this.nextBattle = outcome === 'victory' ? getNextBattle(this.setup, randomSeed()) : null;
     }
     const nextBattle = this.nextBattle && describeBattle(this.nextBattle, this.content);
-    this.playTriggeredDialog(outcome, () =>
-      gameStore.setState({ battleOutcome: outcome, nextBattle, runOver, stageClear }),
-    );
+    this.playTriggeredDialog(outcome, () => {
+      this.inputLocked = levelUps.length > 0;
+      this.showLevelUps(levelUps, () => {
+        this.inputLocked = false;
+        gameStore.setState({ battleOutcome: outcome, nextBattle, runOver, stageClear });
+      });
+    });
   }
 
   // Each enemy (in registry order) plans its action (src/game/battle/ai.ts)
