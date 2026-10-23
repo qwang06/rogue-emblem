@@ -132,6 +132,7 @@ export function readNumberText(text: string): DraftValue {
 // What the form calls each setting, for readable errors.
 const SETTING_LABELS: Readonly<Record<string, string>> = Object.freeze({
   stagesPerRegion: 'Stages per region',
+  finalStage: 'Final stage',
   floorsPerConfig: 'Floors per config',
   name: 'Name',
   description: 'Description',
@@ -179,7 +180,7 @@ const PAIR_ENDS: Readonly<Record<string, readonly [string, string]>> = Object.fr
 // A parser error's path (its first word, e.g. regions[0].terrain.lakes)
 // and the rest. An old file's errors name its own keys (floorsPerConfig,
 // floors; see regionsFile.ts).
-const ERROR_PATH = /^((?:settings|stagesPerRegion|regions|floorsPerConfig|floors)(?:[.[]\S*)?) (.*)$/s;
+const ERROR_PATH = /^((?:settings|stagesPerRegion|finalStage|regions|floorsPerConfig|floors)(?:[.[]\S*)?) (.*)$/s;
 
 // The lists of regions, and the areas in an enemy group, under their new
 // and old names.

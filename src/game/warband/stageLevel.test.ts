@@ -366,12 +366,37 @@ describe('the stage ramp', () => {
       Array.from({ length: group.count }, () => group.unitClass ?? DEFAULT_ENEMY_CLASS),
     );
 
+  const enemyLevels = (stage: number) =>
+    getStageRegion(stage, REGION_SETTINGS).enemies.flatMap((group) =>
+      Array.from({ length: group.count }, () => group.level ?? 1),
+    );
+
   it('goes from one slime, to two goblins, then mixes in more monsters', () => {
     expect(enemyClasses(1)).toEqual(['slime']);
     expect(enemyClasses(2)).toEqual(['goblin', 'goblin']);
-    expect(enemyClasses(3)).toEqual(['slime', 'slime', 'goblin']);
+    expect(enemyClasses(3)).toEqual(['slime', 'slime', 'wolf']);
     expect(enemyClasses(4)).toEqual(['goblin', 'goblin', 'skeleton']);
-    expect(enemyClasses(5)).toEqual(['skeleton', 'skeleton', 'goblin', 'goblin']);
+    expect(enemyClasses(5)).toEqual(['skeleton', 'skeleton', 'bat', 'bat']);
+  });
+
+  it('brings in the brigands on stage 8 and the orcs on stage 9', () => {
+    expect(enemyClasses(8)).toEqual(['soldier', 'archer', 'vanguard', 'goblin', 'goblin']);
+    expect(enemyClasses(9)).toContain('orc');
+    expect([1, 2, 3, 4, 5, 6, 7, 8].some((stage) => enemyClasses(stage).includes('orc'))).toBe(false);
+  });
+
+  it('never fields weaker enemies than the stage before', () => {
+    const top = (stage: number) => Math.max(...enemyLevels(stage));
+    for (let stage = 2; stage <= REGION_SETTINGS.finalStage!; stage++) {
+      expect(top(stage)).toBeGreaterThanOrEqual(top(stage - 1));
+    }
+  });
+
+  it('ends the run on stage 10, a boss fight against the Orc Warlord', () => {
+    expect(REGION_SETTINGS.finalStage).toBe(10);
+    const finale = getStageRegion(10, REGION_SETTINGS);
+    expect(finale.objective).toEqual({ kind: 'boss' });
+    expect(finale.enemies.filter((group) => group.boss).map((group) => group.boss)).toEqual(['Orc Warlord']);
   });
 
   it('never fields fewer enemies than the stage before', () => {

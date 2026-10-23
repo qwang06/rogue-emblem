@@ -22,6 +22,13 @@ describe('parseRegionSettings', () => {
     expect(Object.isFrozen(settings.regions[0])).toBe(true);
   });
 
+  it('reads an optional final stage, and writes it back out', () => {
+    expect(parseRegionSettings(file([region()])).finalStage).toBeUndefined();
+    const settings = parseRegionSettings(JSON.stringify({ stagesPerRegion: 1, finalStage: 10, regions: [region()] }));
+    expect(settings.finalStage).toBe(10);
+    expect(parseRegionSettings(formatRegionSettings(settings))).toEqual(settings);
+  });
+
   it('reads every optional terrain setting and the objective', () => {
     const terrain = {
       width: 16,
@@ -129,6 +136,11 @@ describe('parseRegionSettings', () => {
       /settings\.extra/,
     ],
     ['no regions', file([]), /regions must be a list of 1 to 50 regions/],
+    [
+      'a final stage of 0',
+      JSON.stringify({ stagesPerRegion: 1, finalStage: 0, regions: [region()] }),
+      /finalStage must be a whole number from 1 to 500/,
+    ],
     ['a fractional stagesPerRegion', file([region()], 1.5), /stagesPerRegion must be a whole number from 1 to 100/],
     ['a missing name', file([region({ name: '' })]), /regions\[0\]\.name must be text/],
     ['an unknown palette', file([region({ palette: 'neon' })]), /regions\[0\]\.palette must be one of a-stone/],

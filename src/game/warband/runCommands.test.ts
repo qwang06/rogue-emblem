@@ -70,6 +70,14 @@ describe('finishBattle', () => {
     expect(session.run.pendingReward).toMatchObject({ flawless: false, clearGold: getStageClearGold(2, 1).gold });
   });
 
+  it('wins the run on a win on the final stage, owing nothing', () => {
+    const run = newRun();
+    const session = finishBattle(resumeRunSession(run), { units: restoreRoster(run) }, 'victory', 2);
+    expect(session.phase).toBe('won');
+    expect(session.run.pendingReward).toBeUndefined();
+    expect(() => applyRunCommand(session, { type: 'march' })).toThrow(/won/);
+  });
+
   it('ends the run on a defeat', () => {
     const run = newRun();
     expect(finishBattle(resumeRunSession(run), { units: restoreRoster(run) }, 'defeat').phase).toBe('over');

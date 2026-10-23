@@ -271,6 +271,17 @@ describe('finishStage', () => {
     expect(last.fallen.map((unit) => unit.id)).toEqual(['alden']);
   });
 
+  it('wins the run on a victory on the final stage, staying on it', () => {
+    const run = advanceStage(startingRun());
+    const units = restoreRoster(run);
+    units.get('bryn')!.takeDamage(99);
+    const { run: last, over, won } = finishStage(run, { units }, 'victory', 2);
+    expect([over, won, last.stage]).toEqual([true, true, 2]);
+    expect(last.fallen.map((unit) => unit.id)).toEqual(['bryn']);
+    expect(finishStage(run, { units }, 'victory', 3)).toMatchObject({ over: false, won: false });
+    expect(finishStage(run, { units }, 'defeat', 2)).toMatchObject({ over: true, won: false });
+  });
+
   it('ends the run when a victory leaves nobody on the roster', () => {
     const run = createRun(1, new Map([['alden', new Soldier({ team: 'player' })]]));
     const units = restoreRoster(run);

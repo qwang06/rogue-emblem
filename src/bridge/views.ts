@@ -231,8 +231,10 @@ export interface StageClearView {
 
 // What the result screen says when a Warband Mode run ends.
 export interface RunOverView {
-  // The stage the warband fell on.
+  // The stage the warband fell on, or the final stage it won the run on.
   stage: number;
+  // Whether the warband won the run.
+  won: boolean;
   // Every unit lost over the run, battle by battle.
   fallen: readonly string[];
 }
@@ -621,9 +623,9 @@ export function toObjectiveView(battle: string, text: ObjectiveText): ObjectiveV
 }
 
 // Snapshot for the result screen of a run that has ended
-// (src/game/warband/run.ts).
-export function toRunOverView(run: Pick<RunState, 'stage' | 'fallen'>): RunOverView {
-  return Object.freeze({ stage: run.stage, fallen: Object.freeze(run.fallen.map((unit) => unit.name)) });
+// (src/game/warband/run.ts), fallen or `won`.
+export function toRunOverView(run: Pick<RunState, 'stage' | 'fallen'>, won = false): RunOverView {
+  return Object.freeze({ stage: run.stage, won, fallen: Object.freeze(run.fallen.map((unit) => unit.name)) });
 }
 
 // A reward as an entry of the reward screen's menu (see

@@ -37,7 +37,7 @@ import { MAX_ROSTER_SIZE } from './rewards.ts';
 
 // Where a run stands: fighting its stage's battle, picking the reward a won
 // stage owes, at camp, or over (the warband fell).
-export type RunPhase = 'battle' | 'recruit' | 'reward' | 'camp' | 'over';
+export type RunPhase = 'battle' | 'recruit' | 'reward' | 'camp' | 'over' | 'won';
 
 export interface RunSession {
   readonly run: RunState;
@@ -104,13 +104,19 @@ export function resumeRunSession(run: RunState): RunSession {
 
 // The session after its stage's battle ends with `outcome`: the battle
 // written back (finishStage). A defeat, or a win that leaves nobody, ends
-// the run; a win pays the clear's gold and owes the reward pick, or goes
-// straight to camp when there's nothing to offer.
-export function finishBattle(session: RunSession, result: BattleResult, outcome: BattleOutcome): RunSession {
+// the run; a win on `finalStage` wins it ('won'); any other win pays the
+// clear's gold and owes the reward pick, or goes straight to camp when
+// there's nothing to offer.
+export function finishBattle(
+  session: RunSession,
+  result: BattleResult,
+  outcome: BattleOutcome,
+  finalStage?: number,
+): RunSession {
   if (session.phase !== 'battle') throw new Error(`No battle to finish while the run is at ${session.phase}`);
   const before = session.run;
-  const finished = finishStage(before, result, outcome);
-  if (finished.over) return freeze({ run: finished.run, phase: 'over' });
+  const finished = finishStage(before, result, outcome, finalStage);
+  if (finished.over) return freeze({ run: finished.run, phase: finished.won ? 'won' : 'over' });
   const clear = getStageClearGold(before.stage, finished.run.fallen.length - before.fallen.length);
   const paid = addGold(finished.run, clear.gold);
   const guest = result.units.get(GUEST_UNIT_ID);
@@ -157,7 +163,7 @@ export function applyRunCommand(session: RunSession, command: RunCommand): RunCo
   if (session.phase === 'camp' && !CAMP_COMMANDS.has(command.type)) fail(`${command.type} isn't done at camp`);
   if (session.phase === 'reward' && !REWARD_COMMANDS.has(command.type)) fail(`${command.type} isn't a reward pick`);
   if (session.phase === 'recruit' && !RECRUIT_COMMANDS.has(command.type)) fail(`${command.type} isn't a recruit pick`);
-  if (session.phase === 'battle' || session.phase === 'over')
+  if (session.phase === 'battle' || session.phase === 'over' || session.phase === 'won')
     fail(`${command.type} isn't done during ${session.phase}`);
   const { run } = session;
   const camp = (next: RunState): RunCommandResult => ({ session: freeze({ run: next, phase: 'camp' }), events: [] });

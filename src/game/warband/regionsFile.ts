@@ -3,6 +3,7 @@
 //
 //   {
 //     "stagesPerRegion": 1,
+//     "finalStage": 10,
 //     "regions": [
 //       {
 //         "name": "Meadowlands",
@@ -25,7 +26,8 @@
 // Files from before Warband Mode still read: Dungeon Mode's
 // { "floorsPerConfig", "floors" } (errors then name those keys), an enemy
 // group's "region" for its area, and "enemyCount": n as n enemies in the
-// north third.
+// north third. "finalStage" is optional: winning that stage wins the run,
+// and without it a run goes on until the warband falls.
 
 import { countEnemies, getGroupRoom, NORTH_THIRD, type EnemyGroup, type SpawnArea } from '../enemySpawns.ts';
 import type { Grid, Point } from '../grid.ts';
@@ -40,6 +42,7 @@ import { UNIT_CLASSES } from '../unitClasses.ts';
 // The bounds each number must fall in.
 export const REGION_LIMITS = Object.freeze({
   stagesPerRegion: [1, 100],
+  finalStage: [1, 500],
   regions: [1, 50],
   nameLength: [1, 40],
   descriptionLength: [0, 300],
@@ -352,8 +355,10 @@ export function parseRegionSettings(text: string, { checkMaps = true } = {}): Re
   }
   // An old file is read in its own terms, so its errors name its keys.
   const keys = SHAPES[isOldShape(json) ? 1 : 0];
-  const root = object(json, 'settings', [keys.perRegion, keys.list]);
+  const root = object(json, 'settings', [keys.perRegion, 'finalStage', keys.list]);
   const stagesPerRegion = wholeNumber(root[keys.perRegion], keys.perRegion, REGION_LIMITS.stagesPerRegion);
+  const finalStage =
+    root.finalStage === undefined ? undefined : wholeNumber(root.finalStage, 'finalStage', REGION_LIMITS.finalStage);
   const [minRegions, maxRegions] = REGION_LIMITS.regions;
   const list = root[keys.list];
   if (!Array.isArray(list) || list.length < minRegions || list.length > maxRegions) {
@@ -376,14 +381,18 @@ export function parseRegionSettings(text: string, { checkMaps = true } = {}): Re
     }
   });
 
-  return Object.freeze({ stagesPerRegion, regions: Object.freeze(regions) });
+  return Object.freeze({
+    stagesPerRegion,
+    ...(finalStage !== undefined ? { finalStage } : {}),
+    regions: Object.freeze(regions),
+  });
 }
 
 // The settings as a regions file, readable and ready to edit (see
 // formatRegionsJson).
 export function formatRegionSettings(settings: RegionSettings): string {
-  const { stagesPerRegion, regions } = settings;
-  return formatRegionsJson({ stagesPerRegion, regions });
+  const { stagesPerRegion, finalStage, regions } = settings;
+  return formatRegionsJson({ stagesPerRegion, ...(finalStage !== undefined ? { finalStage } : {}), regions });
 }
 
 // Lines the formatter keeps within, as the repo's Prettier config does.

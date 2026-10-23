@@ -23,6 +23,7 @@ describe('simulate', () => {
     expect(summary.cleared.every((won) => won >= 1 && won <= 2)).toBe(true);
     const fell = Object.values(summary.fallenAt).reduce((sum, count) => sum + count, 0);
     expect(fell + summary.survived).toBe(2);
+    expect(summary.won).toBeLessThanOrEqual(summary.survived);
   });
 
   it('keeps the run that won the fewest stages', () => {

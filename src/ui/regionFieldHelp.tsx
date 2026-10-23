@@ -62,6 +62,15 @@ const HELP: Record<string, FieldHelp> = {
       </p>
     ),
   },
+  finalStage: {
+    title: 'Final stage',
+    body: (
+      <p>
+        The stage that ends a Warband Mode run in victory: win it and the warband has won the run. Blank: no final
+        stage, so a run goes on until the warband falls.
+      </p>
+    ),
+  },
   name: {
     title: 'Name',
     body: <p>Shown to the player on the Objective and Victory screens, e.g. &ldquo;Stage 2: Lakeside&rdquo;.</p>,

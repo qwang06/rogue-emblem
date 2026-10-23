@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_CONTENT } from '../battleSetup.ts';
 import { BASELINE_POLICY, playRun, replayRun, startRun, type RunPolicy, type RunStart } from './autoRun.ts';
 
 const START: RunStart = { seed: 11, classId: 'soldier', name: 'Alden' };
@@ -41,6 +42,14 @@ describe('playRun', () => {
 
   it('plays the same run every time for a start', () => {
     expect(playRun(START, BASELINE_POLICY, { maxStages: 3 }).script).toEqual(played.script);
+  });
+
+  it('stops when the run is won on the final stage', () => {
+    const content = { ...DEFAULT_CONTENT, regions: { ...DEFAULT_CONTENT.regions, finalStage: 1 } };
+    const won = playRun(START, BASELINE_POLICY, { maxStages: 3, content });
+    expect(won.end).toBe('won');
+    expect(won.session.phase).toBe('won');
+    expect(won.stages.map((record) => record.stage)).toEqual([1]);
   });
 
   it('marches on from a camp that never would', () => {

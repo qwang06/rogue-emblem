@@ -66,7 +66,7 @@ export interface StageRecord {
   losses: number;
 }
 
-export type RunEnd = 'fallen' | 'max-stages';
+export type RunEnd = 'fallen' | 'max-stages' | 'won';
 
 export interface AutoRunResult {
   script: RunScript;
@@ -110,8 +110,8 @@ export function startRun(start: RunStart): RunSession {
   });
 }
 
-// Plays a run from `start` with `policy` until the warband falls or
-// maxStages stages have been fought.
+// Plays a run from `start` with `policy` until the warband falls, wins the
+// run (content.regions.finalStage) or maxStages stages have been fought.
 export function playRun(start: RunStart, policy: RunPolicy, options: AutoRunOptions = {}): AutoRunResult {
   const { content = DEFAULT_CONTENT, maxStages, maxCampCommands } = { ...DEFAULTS, ...options };
   const steps: RunStep[] = [];
@@ -133,7 +133,7 @@ export function playRun(start: RunStart, policy: RunPolicy, options: AutoRunOpti
           { content, planners: { player: policy.battle } },
         );
         steps.push({ type: 'battle', commands: getCommands(history) });
-        const result = finishStageBattle(session, state);
+        const result = finishStageBattle(session, state, content.regions.finalStage);
         stages.push(result.record);
         session = result.session;
         campCommands = 0;
@@ -150,6 +150,8 @@ export function playRun(start: RunStart, policy: RunPolicy, options: AutoRunOpti
         break;
       case 'over':
         return done('fallen');
+      case 'won':
+        return done('won');
     }
   }
 
@@ -178,7 +180,7 @@ export function replayRun(
     const initial = createBattleState(createBattleLevel(setup, content), getBattleDiceSeed(setup)!);
     const history = replay(initial, step.commands);
     const state = history.entries.at(-1)?.state ?? initial;
-    const result = finishStageBattle(session, state);
+    const result = finishStageBattle(session, state, content.regions.finalStage);
     stages.push(result.record);
     session = result.session;
   }
@@ -186,13 +188,18 @@ export function replayRun(
 }
 
 // The run after a stage's battle ended in `state`; undecided counts as lost.
-function finishStageBattle(session: RunSession, state: BattleState): { session: RunSession; record: StageRecord } {
+function finishStageBattle(
+  session: RunSession,
+  state: BattleState,
+  finalStage?: number,
+): { session: RunSession; record: StageRecord } {
   const before = session.run;
   const turns = state.turnState?.turn ?? 0;
   const next = finishBattle(
     session,
     { units: getRunBattleUnits(state), convoy: state.convoyLoot },
     state.outcome ?? 'defeat',
+    finalStage,
   );
   return {
     session: next,

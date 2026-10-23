@@ -10,7 +10,9 @@ export interface SimSummary {
   runs: number;
   // Stages won per run, as a list (index = run).
   cleared: readonly number[];
-  // Runs that were still going at the stage limit.
+  // Runs that won (beat the final stage).
+  won: number;
+  // Runs that won or were still going at the stage limit.
   survived: number;
   // How many runs fell on each stage, by stage number.
   fallenAt: Readonly<Record<number, number>>;
@@ -44,7 +46,8 @@ export function simulate(
 }
 
 // A plain-text table of `byClass`: runs, average and median stages won,
-// how many lasted to the limit, stalls, losses and the stages runs fell on.
+// how many won the run and how many won or lasted to the limit, stalls,
+// losses and the stages runs fell on.
 export function formatSummary(byClass: Record<string, SimSummary>): string {
   const rows = Object.entries(byClass).map(([classId, s]) => {
     const sorted = [...s.cleared].sort((a, b) => a - b);
@@ -53,9 +56,19 @@ export function formatSummary(byClass: Record<string, SimSummary>): string {
     const fell = Object.entries(s.fallenAt)
       .map(([stage, count]) => `${stage}×${count}`)
       .join(' ');
-    return [classId, s.runs, average.toFixed(1), median, s.survived, s.stalls, s.losses, fell || '-'];
+    return [classId, s.runs, average.toFixed(1), median, s.won, s.survived, s.stalls, s.losses, fell || '-'];
   });
-  const header = ['class', 'runs', 'avg won', 'median', 'survived', 'stalls', 'losses', 'fell on stage×runs'];
+  const header = [
+    'class',
+    'runs',
+    'avg won',
+    'median',
+    'won run',
+    'survived',
+    'stalls',
+    'losses',
+    'fell on stage×runs',
+  ];
   const table = [header, ...rows].map((row) => row.map(String));
   const widths = header.map((_, column) => Math.max(...table.map((row) => row[column].length)));
   return table
@@ -69,7 +82,7 @@ export function formatSummary(byClass: Record<string, SimSummary>): string {
 }
 
 function emptySummary(): SimSummary {
-  return { runs: 0, cleared: [], survived: 0, fallenAt: {}, stalls: 0, losses: 0 };
+  return { runs: 0, cleared: [], won: 0, survived: 0, fallenAt: {}, stalls: 0, losses: 0 };
 }
 
 function clearedOf(result: AutoRunResult): number {
@@ -83,7 +96,8 @@ function addRun(summary: SimSummary, result: AutoRunResult): SimSummary {
   return {
     runs: summary.runs + 1,
     cleared: [...summary.cleared, clearedOf(result)],
-    survived: summary.survived + (result.end === 'max-stages' ? 1 : 0),
+    won: summary.won + (result.end === 'won' ? 1 : 0),
+    survived: summary.survived + (result.end === 'fallen' ? 0 : 1),
     fallenAt,
     stalls: summary.stalls + result.stages.filter((record) => record.stalled).length,
     losses: summary.losses + result.stages.reduce((sum, record) => sum + record.losses, 0),

@@ -150,7 +150,8 @@ describe('objectives on generated stages', () => {
       const boss = level.units.get(objective.unitId)!;
       expect(boss.team).toBe('enemy');
       expect(findUnit(level.grid, objective.unitId)).not.toBeNull();
-      expect(boss.name).toMatch(/ Chief$/);
+      if (level.bossUnitId) expect([objective.unitId, boss.name]).toEqual([level.bossUnitId, 'Orc Warlord']);
+      else expect(boss.name).toMatch(/ Chief$/);
     }
   });
 });

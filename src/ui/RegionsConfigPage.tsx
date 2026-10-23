@@ -244,6 +244,7 @@ export function RegionsConfigPage() {
           </p>
           <div className="regions-summary__fields">
             <NumberField form={form} path={['stagesPerRegion']} label="Stages per region" />
+            <NumberField form={form} path={['finalStage']} label="Final stage" placeholder="none" />
           </div>
           <div className="dialog-files__actions">
             <button
@@ -363,6 +364,7 @@ function RegionsFormat() {
       <summary>File format</summary>
       <pre>{`{
   "stagesPerRegion": 1,
+  "finalStage": 10,
   "regions": [
     {
       "name": "Meadowlands",
@@ -386,6 +388,10 @@ function RegionsFormat() {
       <ul>
         <li>
           <code>stagesPerRegion</code>: how many stages of a run each region lasts; the last region repeats forever.
+        </li>
+        <li>
+          <code>finalStage</code> (optional, {REGION_LIMITS.finalStage[0]} to {REGION_LIMITS.finalStage[1]}): winning
+          this stage wins the run. Without it a run goes on until the warband falls.
         </li>
         <li>
           <code>terrain.width</code> / <code>height</code>: {minSize} to {maxSize} tiles. Every other terrain setting is

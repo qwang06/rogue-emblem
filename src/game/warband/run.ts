@@ -225,15 +225,18 @@ export function isRunOver(run: RunState): boolean {
 // The run after a stage's battle ends with `outcome`: the battle's result
 // written back (applyBattleResult), then on a victory the next stage. A
 // defeat ends the run, as does a victory that somehow leaves nobody on the
-// roster; `over` says so.
+// roster; `over` says so. A victory on `finalStage` (or later) wins the
+// run: it's over too, staying on that stage, and `won` says so.
 export function finishStage(
   run: RunState,
   result: BattleResult,
   outcome: BattleOutcome,
-): { run: RunState; over: boolean } {
+  finalStage?: number,
+): { run: RunState; over: boolean; won: boolean } {
   const after = applyBattleResult(run, result);
-  if (outcome === 'defeat' || isRunOver(after)) return { run: after, over: true };
-  return { run: advanceStage(after), over: false };
+  if (outcome === 'defeat' || isRunOver(after)) return { run: after, over: true, won: false };
+  if (finalStage !== undefined && run.stage >= finalStage) return { run: after, over: true, won: true };
+  return { run: advanceStage(after), over: false, won: false };
 }
 
 // The map seed for `stage` of a run started with `runSeed`: always the same
