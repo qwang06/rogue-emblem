@@ -10,6 +10,7 @@ import { advanceStage, createRun, restoreRoster, type RunState } from './run.ts'
 import {
   applyRunCommand,
   finishBattle,
+  finishBattleWithEvents,
   getLegalRunCommands,
   getRewardOffers,
   resumeRunSession,
@@ -64,6 +65,35 @@ describe('finishBattle', () => {
     expect(session.run.roster.find((unit) => unit.id === 'alden')!.health).toBe(run.roster[0].maxHealth - 3);
   });
 
+  it('levels every survivor of stage 1 to level 2, and reports the level ups', () => {
+    const run = newRun(1);
+    const units = restoreRoster(run);
+    units.get('alden')!.takeDamage(3);
+    const { session, events } = finishBattleWithEvents(resumeRunSession(run), { units }, 'victory');
+    expect(session.run.roster.map((unit) => [unit.id, unit.level, unit.experience])).toEqual([
+      ['alden', 2, 0],
+      ['cato', 2, 0],
+    ]);
+    expect(events).toEqual([
+      {
+        type: 'level-ups',
+        levelUps: [expect.objectContaining({ name: 'Alden' }), expect.objectContaining({ name: 'Cato' })],
+      },
+    ]);
+    expect(finishBattle(resumeRunSession(run), { units: restoreRoster(run) }, 'victory').run.roster).toEqual(
+      finishBattleWithEvents(resumeRunSession(run), { units: restoreRoster(run) }, 'victory').session.run.roster,
+    );
+  });
+
+  it('levels nobody after a later stage, or after a loss', () => {
+    const run = newRun();
+    expect(finishBattleWithEvents(resumeRunSession(run), { units: restoreRoster(run) }, 'victory').events).toEqual([]);
+    const first = newRun(1);
+    const lost = finishBattleWithEvents(resumeRunSession(first), { units: restoreRoster(first) }, 'defeat');
+    expect(lost.events).toEqual([]);
+    expect(lost.session.run.roster.every((unit) => unit.level === 1)).toBe(true);
+  });
+
   it('pays less for a stage that cost a unit', () => {
     const session = won(newRun(), 99);
     expect(session.run.fallen.map((unit) => unit.id)).toEqual(['alden']);
@@ -103,27 +133,21 @@ describe('the reward pick', () => {
     expect(after.run.pendingReward).toBeUndefined();
   });
 
-  it("shows an experience reward's level ups", () => {
-    // Stage 1 always offers experience first.
-    const session = won(newRun(1));
-    expect(getRewardOffers(session)[0].kind).toBe('experience');
-    const { session: after, events } = applyRunCommand(session, { type: 'pick-reward', index: 0 });
-    expect(events).toEqual([{ type: 'level-ups', levelUps: expect.any(Array) }]);
-    expect(after.run.roster.every((unit) => unit.level === 2)).toBe(true);
-  });
-
-  it("shows a veteran's lesson level up and settles its reward", () => {
+  it("shows a veteran's lesson's level up for every unit and settles its reward", () => {
     const first = won(newRun());
     const session = Array.from({ length: 40 }, (_, rerolls) => ({
       ...first,
       run: { ...first.run, pendingReward: { ...first.run.pendingReward!, rerolls } },
     })).find((candidate) => getRewardOffers(candidate).some((reward) => reward.kind === 'lesson'))!;
     const index = getRewardOffers(session).findIndex((reward) => reward.kind === 'lesson');
-    const lesson = getRewardOffers(session)[index];
-    if (lesson.kind !== 'lesson') throw new Error('Expected a lesson');
     const { session: after, events } = applyRunCommand(session, { type: 'pick-reward', index });
-    expect(events).toEqual([{ type: 'level-ups', levelUps: [expect.objectContaining({ name: lesson.name })] }]);
-    expect(after.run.roster.find((unit) => unit.id === lesson.unitId)?.level).toBe(2);
+    expect(events).toEqual([
+      {
+        type: 'level-ups',
+        levelUps: [expect.objectContaining({ name: 'Alden' }), expect.objectContaining({ name: 'Cato' })],
+      },
+    ]);
+    expect(after.run.roster.map((unit) => unit.level)).toEqual([2, 2]);
     expect(after.run.pendingReward).toBeUndefined();
   });
 

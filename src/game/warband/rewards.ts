@@ -65,8 +65,7 @@ export const SKIP_GOLD_PER_STAGE = 5;
 export const REROLL_COST = 10;
 export const REROLL_COST_STEP = 10;
 
-export type RewardKind =
-  'recruit' | 'rest' | 'supplies' | 'training' | 'experience' | 'gold' | 'arms' | 'drill' | 'lesson';
+export type RewardKind = 'recruit' | 'rest' | 'supplies' | 'training' | 'gold' | 'arms' | 'drill' | 'lesson';
 
 export type Reward =
   // A new unit joins the roster.
@@ -77,13 +76,12 @@ export type Reward =
   | { kind: 'supplies'; itemId: string; label: string }
   // Every unit gains max HP (and as much current HP).
   | { kind: 'training'; maxHealth: number }
-  // Every unit gains exactly the XP to its next level; `seed` rolls the
-  // level ups' stat gains, so picking it always gives the same ones.
-  | { kind: 'experience'; seed: number }
-  // A fresh weapon in the convoy, or one capped stat / level for a named ally.
+  // A fresh weapon in the convoy, or one capped stat for a named ally.
   | { kind: 'arms'; itemId: string; label: string; uses: number }
   | { kind: 'drill'; unitId: string; name: string; stat: PlainGrowthStat }
-  | { kind: 'lesson'; unitId: string; name: string; seed: number }
+  // Every unit gains exactly the XP to its next level; `seed` rolls the
+  // level ups' stat gains, so picking it always gives the same ones.
+  | { kind: 'lesson'; seed: number }
   // Gold for the warband.
   | { kind: 'gold'; amount: number };
 
@@ -169,10 +167,10 @@ export function getPendingRewardOffer(run: RunState): (PendingReward & { rewards
 // The rewards offered after clearing `stage`, for `run` as it stands (the
 // battle written back). Up to `count` of different kinds, in a random
 // order, from the kinds that would do something:
-// - rest, when anyone is missing HP or mana
+// - rest, when anyone is missing HP or mana (never after stage 1, whose
+//   quick fight leaves the warband near full)
 // - supplies, when anyone has room for a Health Potion
 // - training and gold, always
-// Stage 1 includes experience so the lone starter can take its first level.
 export function rollRewards(
   run: RunState,
   stage: number,
@@ -181,13 +179,15 @@ export function rollRewards(
   classes: readonly UnitClass[] = UNIT_CLASSES,
 ): readonly Reward[] {
   const kinds: RewardKind[] = [];
-  if (run.roster.some((unit) => unit.health < unit.maxHealth || unit.mana < unit.maxMana)) kinds.push('rest');
+  if (stage !== 1 && run.roster.some((unit) => unit.health < unit.maxHealth || unit.mana < unit.maxMana)) {
+    kinds.push('rest');
+  }
   if (run.roster.some((unit) => canTakeItem(unit, HEALTH_POTION.id))) kinds.push('supplies');
   if (eligibleWeapons(run, classes).length > 0) kinds.push('arms');
   if (eligibleDrills(run, classes).length > 0) kinds.push('drill');
   if (run.roster.some((unit) => unit.level < MAX_LEVEL)) kinds.push('lesson');
   kinds.push('training', 'gold');
-  const picked = [...(stage === 1 ? ['experience' as const] : []), ...shuffle(rng, kinds)].slice(0, Math.max(0, count));
+  const picked = shuffle(rng, kinds).slice(0, Math.max(0, count));
   return Object.freeze(picked.map((kind) => Object.freeze(createReward(kind, run, stage, rng, classes))));
 }
 
@@ -201,8 +201,6 @@ function createReward(kind: RewardKind, run: RunState, stage: number, rng: Rng, 
       return { kind, itemId: HEALTH_POTION.id, label: HEALTH_POTION.label };
     case 'training':
       return { kind, maxHealth: TRAINING_MAX_HEALTH };
-    case 'experience':
-      return { kind, seed: Math.floor(rng() * 2 ** 32) };
     case 'arms': {
       const weapon = randomItem(rng, eligibleWeapons(run, classes));
       return { kind, itemId: weapon.id, label: weapon.label, uses: weapon.uses! };
@@ -211,13 +209,8 @@ function createReward(kind: RewardKind, run: RunState, stage: number, rng: Rng, 
       const { unit, stat } = randomItem(rng, eligibleDrills(run, classes));
       return { kind, unitId: unit.id, name: unit.name, stat };
     }
-    case 'lesson': {
-      const unit = randomItem(
-        rng,
-        run.roster.filter((candidate) => candidate.level < MAX_LEVEL),
-      );
-      return { kind, unitId: unit.id, name: unit.name, seed: Math.floor(rng() * 2 ** 32) };
-    }
+    case 'lesson':
+      return { kind, seed: Math.floor(rng() * 2 ** 32) };
     case 'gold':
       return { kind, amount: PURSE_GOLD + PURSE_GOLD_PER_STAGE * stage };
   }
@@ -291,8 +284,6 @@ function applyRewardEffect(run: RunState, reward: Reward, classes: readonly Unit
         const gain = Math.max(0, Math.min(reward.maxHealth, cap - unit.maxHealth));
         return { ...unit, maxHealth: unit.maxHealth + gain, health: unit.health + gain };
       });
-    case 'experience':
-      return applyExperienceReward(run, reward, classes).run;
     case 'arms':
       return freeze({ ...run, convoy: [...run.convoy, { itemId: reward.itemId, quantity: reward.uses }] });
     case 'drill': {
@@ -312,40 +303,20 @@ function applyRewardEffect(run: RunState, reward: Reward, classes: readonly Unit
   }
 }
 
-export function applyLessonReward(
-  run: RunState,
-  reward: Extract<Reward, { kind: 'lesson' }>,
-  classes: readonly UnitClass[] = UNIT_CLASSES,
-): { run: RunState; levelUps: readonly RewardLevelUp[] } {
-  const snapshot = run.roster.find((unit) => unit.id === reward.unitId);
-  if (!snapshot || snapshot.level >= MAX_LEVEL) return { run: clearPendingReward(run), levelUps: [] };
-  const unit = restoreUnit(snapshot, classes);
-  const result = unit.gainExperience(
-    getExperienceToNextLevel(unit.level, unit.experience),
-    createSeededRng(reward.seed),
-    false,
-  );
-  const roster = run.roster.map((entry) => (entry.id === snapshot.id ? snapshotUnit(entry.id, unit) : entry));
-  return {
-    run: clearPendingReward(freeze({ ...run, roster })),
-    levelUps: result.levelUps.map((levelUp) => ({ name: unit.name, unitClass: unit.unitClass, levelUp })),
-  };
-}
-
-// A unit's level up from an experience reward, for showing it.
+// A unit's level up from a lesson reward or a stage clear, for showing it.
 export interface RewardLevelUp {
   name: string;
   unitClass: string | null;
   levelUp: LevelUpResult;
 }
 
-// The run after an experience reward (with no reward pick owed): every unit given exactly the XP to
+// The run after a lesson reward (with no reward pick owed): every unit given exactly the XP to
 // its next level (unscaled, so each lands on it with 0 XP; nothing for a
 // unit at the max level), its stat gains rolled from the reward's seed. Also
 // returns each level up, in roster order, so it can be shown.
-export function applyExperienceReward(
+export function applyLessonReward(
   run: RunState,
-  reward: Extract<Reward, { kind: 'experience' }>,
+  reward: Extract<Reward, { kind: 'lesson' }>,
   classes: readonly UnitClass[] = UNIT_CLASSES,
 ): { run: RunState; levelUps: readonly RewardLevelUp[] } {
   const rng = createSeededRng(reward.seed);
@@ -386,14 +357,12 @@ export function describeReward(
       return { label: 'Supplies', description: `Every unit with room gets a ${reward.label}.` };
     case 'training':
       return { label: 'Training', description: `Every unit gains +${reward.maxHealth} max HP.` };
-    case 'experience':
-      return { label: 'Experience', description: 'Every unit gains enough XP to reach its next level.' };
     case 'arms':
       return { label: 'Arms Cache', description: `A fresh ${reward.label} goes to the convoy (${reward.uses} uses).` };
     case 'drill':
       return { label: 'Field Drill', description: `${reward.name} gains +1 ${reward.stat.toUpperCase()}.` };
     case 'lesson':
-      return { label: "Veteran's Lesson", description: `${reward.name} gains enough XP to reach the next level.` };
+      return { label: "Veteran's Lesson", description: 'Every unit gains enough XP to reach its next level.' };
     case 'gold':
       return { label: `${reward.amount} Gold`, description: 'A purse of coin, for the camp to come.' };
   }

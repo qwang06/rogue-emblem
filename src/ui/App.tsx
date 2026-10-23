@@ -111,7 +111,7 @@ export function App() {
               <CampMenu />
               <RosterScreen />
               <MerchantScreen />
-              {/* Over the reward screen too, for an Experience reward's level ups. */}
+              {/* Over the reward screen too, for a Veteran's Lesson's level ups, and over a cleared stage for its guaranteed ones. */}
               <LevelUpPanel />
             </div>
           </div>

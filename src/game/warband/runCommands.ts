@@ -19,7 +19,6 @@ import {
 import { buyItem, canBuy, canSell, MERCHANT_STOCK, sellItem } from './merchant.ts';
 import {
   addGold,
-  applyExperienceReward,
   applyLessonReward,
   applyReward,
   getPendingRewardOffer,
@@ -34,6 +33,7 @@ import {
 import { finishStage, snapshotUnit, type BattleResult, type RunState } from './run.ts';
 import { GUEST_UNIT_ID, rollGuest, settleGuest } from './recruitment.ts';
 import { MAX_ROSTER_SIZE } from './rewards.ts';
+import { applyStageClearExperience } from './stageClearExperience.ts';
 
 // Where a run stands: fighting its stage's battle, picking the reward a won
 // stage owes, at camp, or over (the warband fell).
@@ -72,7 +72,7 @@ export type RunCommandType = RunCommand['type'];
 
 // What a command did that a screen may want to show beyond the new run.
 export type RunEvent =
-  // An experience reward's level ups, in roster order.
+  // A lesson reward's or a stage clear's level ups, in roster order.
   { type: 'level-ups'; levelUps: readonly RewardLevelUp[] };
 
 export interface RunCommandResult {
@@ -102,23 +102,38 @@ export function resumeRunSession(run: RunState): RunSession {
   return freeze({ run, phase: run.pendingRecruitment ? 'recruit' : getPendingRewardOffer(run) ? 'reward' : 'battle' });
 }
 
-// The session after its stage's battle ends with `outcome`: the battle
-// written back (finishStage). A defeat, or a win that leaves nobody, ends
-// the run; a win on `finalStage` wins it ('won'); any other win pays the
-// clear's gold and owes the reward pick, or goes straight to camp when
-// there's nothing to offer.
+// The session after its stage's battle ends with `outcome` (see
+// finishBattleWithEvents).
 export function finishBattle(
   session: RunSession,
   result: BattleResult,
   outcome: BattleOutcome,
   finalStage?: number,
 ): RunSession {
+  return finishBattleWithEvents(session, result, outcome, finalStage).session;
+}
+
+// The session after its stage's battle ends with `outcome`: the battle
+// written back (finishStage). A defeat, or a win that leaves nobody, ends
+// the run; a win on `finalStage` wins it ('won'); any other win levels up
+// the units below the level the stage guarantees (applyStageClearExperience,
+// reported as a `level-ups` event), pays the clear's gold and owes the
+// reward pick, or goes straight to camp when there's nothing to offer.
+export function finishBattleWithEvents(
+  session: RunSession,
+  result: BattleResult,
+  outcome: BattleOutcome,
+  finalStage?: number,
+): RunCommandResult {
   if (session.phase !== 'battle') throw new Error(`No battle to finish while the run is at ${session.phase}`);
   const before = session.run;
   const finished = finishStage(before, result, outcome, finalStage);
-  if (finished.over) return freeze({ run: finished.run, phase: finished.won ? 'won' : 'over' });
+  if (finished.over)
+    return { session: freeze({ run: finished.run, phase: finished.won ? 'won' : 'over' }), events: [] };
+  const leveled = applyStageClearExperience(finished.run, before.stage);
+  const events: RunEvent[] = leveled.levelUps.length > 0 ? [{ type: 'level-ups', levelUps: leveled.levelUps }] : [];
   const clear = getStageClearGold(before.stage, finished.run.fallen.length - before.fallen.length);
-  const paid = addGold(finished.run, clear.gold);
+  const paid = addGold(leveled.run, clear.gold);
   const guest = result.units.get(GUEST_UNIT_ID);
   const candidate = guest?.isAlive() && paid.roster.length < MAX_ROSTER_SIZE ? rollGuest(before) : null;
   const pending =
@@ -130,7 +145,7 @@ export function finishBattle(
       : {};
   if (rollStageRewards(paid, before.stage).length === 0) {
     const run = Object.freeze({ ...paid, ...pending });
-    return freeze({ run, phase: candidate ? 'recruit' : 'camp' });
+    return { session: freeze({ run, phase: candidate ? 'recruit' : 'camp' }), events };
   }
   const run = markRewardPending(paid, {
     stage: before.stage,
@@ -139,7 +154,7 @@ export function finishBattle(
     flawless: clear.flawless,
   });
   const owing = Object.freeze({ ...run, ...pending });
-  return freeze({ run: owing, phase: candidate ? 'recruit' : 'reward' });
+  return { session: freeze({ run: owing, phase: candidate ? 'recruit' : 'reward' }), events };
 }
 
 export function getRecruitOffers(session: RunSession): readonly Reward[] {
@@ -182,9 +197,8 @@ export function applyRunCommand(session: RunSession, command: RunCommand): RunCo
     case 'pick-reward': {
       const reward = getRewardOffers(session)[command.index];
       if (!reward) return fail(`No reward offer ${command.index}`);
-      if (reward.kind !== 'experience' && reward.kind !== 'lesson') return camp(applyReward(run, reward));
-      const { run: next, levelUps } =
-        reward.kind === 'experience' ? applyExperienceReward(run, reward) : applyLessonReward(run, reward);
+      if (reward.kind !== 'lesson') return camp(applyReward(run, reward));
+      const { run: next, levelUps } = applyLessonReward(run, reward);
       return { session: freeze({ run: next, phase: 'camp' }), events: [{ type: 'level-ups', levelUps }] };
     }
     case 'skip-reward':
