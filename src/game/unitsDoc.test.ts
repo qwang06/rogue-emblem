@@ -146,6 +146,7 @@ describe('UNITS.md', () => {
       Archer: createUnitOfClass('archer', { team: 'player' }),
       Vanguard: createUnitOfClass('vanguard', { team: 'player' }),
       Guard: createUnitOfClass('guard', { team: 'player' }),
+      Acolyte: createUnitOfClass('acolyte', { team: 'player' }),
     };
     const text = section('Matchups at level 1');
     const attacks = tableWithHeader(text, 'Attacker');
@@ -156,6 +157,7 @@ describe('UNITS.md', () => {
       'Vanguard',
       'Guard',
       'Soldier',
+      'Acolyte',
     ]);
     for (const [attackerName, targetName, weapon, damage, hit, crit, strikes] of attacks) {
       const attacker = units[attackerName];

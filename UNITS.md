@@ -22,7 +22,7 @@ Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.m
 
 ## Weapons
 
-One starter weapon per armed unit in the unit catalog. Fists, the Wooden Sword, the Iron Spear, the Iron Bow and the Iron Axe are carried by a class; the monsters fight with Tackle, Club, Bone Claws, Fangs, Bite and Great Axe, which never break; the Powder Keg and Ballista wait for their classes (milestone 2.3); the rest of the wooden set is basic gear no class starts with; and the Fire Tome drops as loot for an Acolyte to learn Fire from.
+One starter weapon per armed unit in the unit catalog. Fists, the Wooden Sword, the Iron Spear, the Iron Bow and the Iron Axe are carried by a class; the monsters fight with Tackle, Club, Bone Claws, Fangs, Bite and Great Axe, which never break; the Powder Keg and Ballista wait for their classes (milestone 2.3); the rest of the wooden set is basic gear no class starts with; the Acolyte knows Light from the start; and the Fire Tome drops as loot for an Acolyte to learn Fire from.
 
 | Weapon       | Type     | Mt  | Hit | Crit | Wt  | Rng | Uses | For (catalog art)               |
 | ------------ | -------- | --- | --- | ---- | --- | --- | ---- | ------------------------------- |
@@ -32,6 +32,7 @@ One starter weapon per armed unit in the unit catalog. Fists, the Wooden Sword, 
 | Iron Bow     | physical | 2   | 80  | 0    | 2   | 2   | 40   | Archer                          |
 | Fire Tome    | magical  | 2   | 85  | 0    | 1   | 1–2 | 30   | Elemental, Vanguard (staff)     |
 | Fire         | magical  | 2   | 85  | 0    | 1   | 1–2 | ∞    | Learned from the Fire Tome      |
+| Light        | magical  | 0   | 90  | 0    | 0   | 1–2 | ∞    | Acolyte (known from the start)  |
 | Powder Keg   | siege    | 5   | 70  | 0    | 6   | 1–2 | 5    | Sapper                          |
 | Ballista     | siege    | 6   | 70  | 0    | 8   | 2–3 | 10   | Siege                           |
 | Tackle       | physical | 0   | 75  | 0    | 0   | 1   | ∞    | Slime                           |
@@ -188,7 +189,7 @@ Carries an Iron Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
 ## Acolyte
 
-The healer and the warband's magic user: it starts with no weapon, so it can't attack or counter until it finds a tome (see Tomes above), and instead mends a wounded ally next to it with its Heal staff. At level 1 a heal restores 5 HP (the staff's 2 power + 3 MAG). Frail, but its RES and LCK make it hard to hurt with magic or crit.
+The healer and the warband's magic user: it mends a wounded ally next to it with its Heal staff, and fights with Light, a weak spell it knows from the start that strikes from one or two tiles away and never runs out. At level 1 a heal restores 5 HP (the staff's 2 power + 3 MAG) and Light hits a soldier for 3. A tome it finds (see Tomes above) teaches it a stronger spell. Frail, but its RES and LCK make it hard to hurt with magic or crit.
 
 | Stat | Base | Growth | Cap |
 | ---- | ---- | ------ | --- |
@@ -205,7 +206,7 @@ The healer and the warband's magic user: it starts with no weapon, so it can't a
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| magical      | –               | 100%    |
+| magical      | Light           | 100%    |
 
 | Staff | Power | Rng | Uses | Heals at level 1 |
 | ----- | ----- | --- | ---- | ---------------- |
@@ -214,7 +215,7 @@ The healer and the warband's magic user: it starts with no weapon, so it can't a
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |
 
-It learns no skills yet. Carries a Heal staff, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
+It learns no skills yet. Knows Light, and carries a Heal staff, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
 ## Slime
 
@@ -384,6 +385,7 @@ Warrior and Soldier differ by a point of strength and their weapons: the wooden 
 | Vanguard | Soldier | Iron Axe     | 6      | 61% | 0%   | 1       |
 | Guard    | Soldier | Iron Spear   | 3      | 78% | 0%   | 1       |
 | Soldier  | Guard   | Iron Spear   | 0      | 84% | 0%   | 1       |
+| Acolyte  | Soldier | Light        | 3      | 88% | 0%   | 1       |
 
 Every class learns its skill at level 2, its first level up; the skill rows use level-1 stats.
 
