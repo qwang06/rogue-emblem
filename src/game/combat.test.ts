@@ -6,6 +6,7 @@ import {
   getAttackRange,
   getAttackTargets,
   getCombatForecast,
+  getForecastHealthAfter,
   getThreatRange,
   isInStrikeRange,
   resolveCombat,
@@ -609,5 +610,73 @@ describe('getCombatForecast', () => {
     getCombatForecast(attacker, defender, { distance: 1 });
     expect(attacker).toEqual(unit());
     expect(defender).toEqual(unit());
+  });
+});
+
+describe('getForecastHealthAfter', () => {
+  // 20 HP, no crit chance, so every landed strike deals the forecast damage.
+  const unit = (stats: Partial<Combatant> = {}): Combatant => ({
+    health: 20,
+    maxHealth: 20,
+    strength: 5,
+    defense: 2,
+    skill: 0,
+    speed: 0,
+    luck: 0,
+    weapon: arms(),
+    ...stats,
+  });
+
+  // What resolveCombat leaves each side on when every strike lands.
+  function landed(attacker: Combatant, defender: Combatant, distance: number) {
+    const result = resolveCombat(attacker, defender, { distance, rng: alwaysHit });
+    return { attacker: result.attackerHealth, defender: result.defenderHealth };
+  }
+
+  it('takes one strike off each side in a plain exchange', () => {
+    const forecast = getCombatForecast(unit(), unit({ strength: 4 }), { distance: 1 });
+    expect(getForecastHealthAfter(forecast)).toEqual({ attacker: 18, defender: 17 });
+  });
+
+  it('counts both strikes of a side that doubles', () => {
+    const forecast = getCombatForecast(unit({ speed: 4 }), unit(), { distance: 1 });
+    expect(getForecastHealthAfter(forecast)).toEqual({ attacker: 17, defender: 14 });
+  });
+
+  it('leaves the attacker untouched when the defender cannot counter', () => {
+    const forecast = getCombatForecast(unit({ weapon: arms({ maxRange: 2 }) }), unit(), { distance: 2 });
+    expect(getForecastHealthAfter(forecast)).toEqual({ attacker: 20, defender: 17 });
+  });
+
+  it('stops at zero and skips the counter of a defender killed first', () => {
+    const forecast = getCombatForecast(unit({ strength: 30 }), unit({ health: 5 }), { distance: 1 });
+    expect(getForecastHealthAfter(forecast)).toEqual({ attacker: 20, defender: 0 });
+  });
+
+  it("skips the attacker's second strike when the counter kills it", () => {
+    const forecast = getCombatForecast(unit({ speed: 4, health: 3 }), unit({ strength: 9 }), { distance: 1 });
+    expect(forecast.attacker.strikes).toBe(2);
+    expect(getForecastHealthAfter(forecast)).toEqual({ attacker: 0, defender: 17 });
+  });
+
+  it('changes nothing when no strike does damage', () => {
+    const forecast = getCombatForecast(unit({ strength: 1 }), unit({ strength: 1 }), { distance: 1 });
+    expect(getForecastHealthAfter(forecast)).toEqual({ attacker: 20, defender: 20 });
+  });
+
+  it('matches what resolveCombat leaves when every strike lands', () => {
+    const cases: [Combatant, Combatant, number][] = [
+      [unit(), unit({ strength: 4 }), 1],
+      [unit({ speed: 9 }), unit(), 1], // attacker doubles
+      [unit(), unit({ speed: 9, strength: 7 }), 1], // defender doubles
+      [unit({ weapon: arms({ maxRange: 2 }), speed: 9 }), unit(), 2], // no counter, attacker doubles
+      [unit({ speed: 9, weaponUses: 1 }), unit(), 1], // weapon breaks after one strike
+      [unit({ strength: 12 }), unit({ health: 8 }), 1], // kill on the first strike
+      [unit({ speed: 9, health: 4 }), unit({ strength: 7 }), 1], // counter kills before the double
+    ];
+    for (const [attacker, defender, distance] of cases) {
+      const forecast = getCombatForecast(attacker, defender, { distance });
+      expect(getForecastHealthAfter(forecast)).toEqual(landed(attacker, defender, distance));
+    }
   });
 });

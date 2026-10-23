@@ -85,6 +85,31 @@ export interface ForecastSide {
   counters: boolean;
 }
 
+// The health each side is left on if every strike in a forecast lands
+// without a crit: the attacker strikes, then the defender, then whoever
+// doubles (getStrikeOrder's order, rebuilt from each side's strike count),
+// and the exchange stops at the first kill, as resolveCombat's does. The
+// forecast panel draws this as the part of each health bar the exchange
+// would take. Returns { attacker, defender }.
+export function getForecastHealthAfter(forecast: Record<CombatSide, ForecastSide>): Record<CombatSide, number> {
+  const health: Record<CombatSide, number> = {
+    attacker: forecast.attacker.health,
+    defender: forecast.defender.health,
+  };
+  const order: CombatSide[] = [];
+  const rounds = Math.max(forecast.attacker.strikes, forecast.defender.strikes);
+  for (let round = 1; round <= rounds; round++) {
+    if (forecast.attacker.strikes >= round) order.push('attacker');
+    if (forecast.defender.strikes >= round) order.push('defender');
+  }
+  for (const by of order) {
+    const target: CombatSide = by === 'attacker' ? 'defender' : 'attacker';
+    health[target] = Math.max(0, health[target] - (forecast[by].damage ?? 0));
+    if (health[target] === 0) break;
+  }
+  return health;
+}
+
 // Every in-bounds tile from minRange to maxRange steps away (orthogonal
 // distance, like movement), as [{ x, y }]. The attacker's own tile is never
 // included. Terrain and units don't block — attacks aren't paths.

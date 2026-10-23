@@ -915,6 +915,59 @@ kbd {
   text-align: right;
 }
 
+/* HP's drop if every strike lands: a small arrow, then the HP left, in red
+   when it's a kill. */
+.combat-forecast__after {
+  margin-left: 2px;
+  font-size: 0.8125rem;
+  color: var(--orange);
+}
+
+.combat-forecast__after--lethal {
+  color: var(--red);
+}
+
+.combat-forecast__arrow {
+  margin-right: 1px;
+  font-size: 0.625rem;
+  color: var(--fg-dim);
+}
+
+/* Both health bars, each under its fighter's HP, the gap between them
+   spanning the label column with a little room either side. */
+.combat-forecast__bars {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: calc(4rem + 12px);
+  margin: 1px 0 4px;
+}
+
+/* A GBA trough like .meter__track: green for the HP kept, then the HP
+   the exchange would take, blinking. */
+.combat-forecast__bar {
+  display: flex;
+  height: calc(4 * var(--px));
+  margin: var(--px);
+  background: #3a3040;
+  box-shadow: 0 0 0 var(--px) var(--fg-bright);
+  overflow: hidden;
+}
+
+.combat-forecast__bar-kept {
+  background: var(--hp);
+}
+
+.combat-forecast__bar-lost {
+  background: var(--red);
+  animation: combat-forecast-blink 900ms steps(1) infinite;
+}
+
+@keyframes combat-forecast-blink {
+  50% {
+    background: var(--bar-fg);
+  }
+}
+
 .combat-forecast__double {
   margin-left: 2px;
   font-size: 0.8125rem;
@@ -3019,6 +3072,7 @@ textarea.draft-input {
   }
 
   .experience-bar__fill,
+  .combat-forecast__bar-lost,
   .level-up,
   .objective,
   .unit-sprite--animated {

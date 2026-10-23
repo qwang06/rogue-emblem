@@ -3,7 +3,14 @@
 // like takeDamage() can't silently change what's on screen without a new
 // snapshot being published (and a re-render being triggered).
 
-import { DAMAGE_TYPES, getDamageType, type CombatSide, type DamageType, type ForecastSide } from '../game/combat.ts';
+import {
+  DAMAGE_TYPES,
+  getDamageType,
+  getForecastHealthAfter,
+  type CombatSide,
+  type DamageType,
+  type ForecastSide,
+} from '../game/combat.ts';
 import { getAttackSpeed, getAvoid, getCrit, getHit } from '../game/combatStats.ts';
 import type { Dialog, DialogSide } from '../game/dialog.ts';
 import {
@@ -136,6 +143,9 @@ export interface ForecastSideView extends ForecastSide {
   weapon: string | null;
   // The weapon's item id, for its icon.
   weaponId: string | null;
+  // The health it's left on if every strike lands without a crit
+  // (getForecastHealthAfter), which its health bar marks as the part lost.
+  healthAfter: number;
 }
 
 export interface CombatForecastView {
@@ -401,7 +411,8 @@ export function mergeTileAnchors(a: TileAnchorView, b: TileAnchorView): TileAnch
 // getCombatForecast (src/game/combat.ts): per side, the unit's name and
 // team, the name of the weapon it fights with (null for none), plus its
 // forecast numbers (damage / hit / crit are null for a defender that
-// can't counter, which the UI shows as "–"). `anchor` is a TileAnchorView
+// can't counter, which the UI shows as "–") and the health it's left on
+// if every strike lands (getForecastHealthAfter). `anchor` is a TileAnchorView
 // covering both units, which the panel opens beside.
 export function toCombatForecastView({
   forecast,
@@ -414,17 +425,19 @@ export function toCombatForecastView({
   defender: Pick<Unit, 'name' | 'team' | 'weapon'>;
   anchor: TileAnchorView;
 }): CombatForecastView {
-  const side = (unit: Pick<Unit, 'name' | 'team' | 'weapon'>, numbers: ForecastSide) =>
+  const healthAfter = getForecastHealthAfter(forecast);
+  const side = (unit: Pick<Unit, 'name' | 'team' | 'weapon'>, role: CombatSide) =>
     Object.freeze({
       name: unit.name,
       team: unit.team,
       weapon: unit.weapon?.label ?? null,
       weaponId: unit.weapon?.id ?? null,
-      ...numbers,
+      ...forecast[role],
+      healthAfter: healthAfter[role],
     });
   return Object.freeze({
-    attacker: side(attacker, forecast.attacker),
-    defender: side(defender, forecast.defender),
+    attacker: side(attacker, 'attacker'),
+    defender: side(defender, 'defender'),
     anchor,
   });
 }
