@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   canDeployUnit,
+  canDeployUnitAt,
+  canPickToDeploy,
   canPlaceUnit,
   canStartBattle,
   countPlaced,
@@ -11,6 +13,7 @@ import {
   isInZone,
   isPlaced,
   placeUnit,
+  replacesPlacedUnit,
 } from './deployment.ts';
 import { createGrid, findUnit, getCell, setUnit } from './grid.ts';
 
@@ -71,6 +74,12 @@ describe('canPlaceUnit', () => {
   it('rejects zone tiles outside the grid', () => {
     expect(canPlaceUnit(grid, [{ x: 9, y: 9 }], 'a', 9, 9)).toBe(false);
   });
+
+  it('allows a tile held by a swappable unit, but not by anyone else', () => {
+    const held = setUnit(setUnit(grid, 1, 0, 'b'), 2, 0, 'guest');
+    expect(canPlaceUnit(held, zone, 'a', 1, 0, ['a', 'b'])).toBe(true);
+    expect(canPlaceUnit(held, zone, 'a', 2, 0, ['a', 'b'])).toBe(false);
+  });
 });
 
 describe('placeUnit', () => {
@@ -97,6 +106,19 @@ describe('placeUnit', () => {
   it('throws on an invalid tile', () => {
     expect(() => placeUnit(grid, zone, 'a', 3, 3)).toThrow();
     expect(() => placeUnit(setUnit(grid, 0, 0, 'b'), zone, 'a', 0, 0)).toThrow();
+  });
+
+  it('swaps two placed units', () => {
+    const both = setUnit(setUnit(grid, 0, 0, 'a'), 2, 0, 'b');
+    const swapped = placeUnit(both, zone, 'a', 2, 0, ['a', 'b']);
+    expect(findUnit(swapped, 'a')).toEqual({ x: 2, y: 0 });
+    expect(findUnit(swapped, 'b')).toEqual({ x: 0, y: 0 });
+  });
+
+  it('benches the unit an unplaced one takes the place of', () => {
+    const placed = placeUnit(setUnit(grid, 1, 0, 'b'), zone, 'a', 1, 0, ['a', 'b']);
+    expect(findUnit(placed, 'a')).toEqual({ x: 1, y: 0 });
+    expect(findUnit(placed, 'b')).toBeNull();
   });
 });
 
@@ -187,6 +209,44 @@ describe('canDeployUnit', () => {
   it('always lets a placed unit move', () => {
     expect(canDeployUnit(setUnit(onePlaced, 1, 0, 'b'), roster, 2, 'a')).toBe(true);
     expect(canDeployUnit(onePlaced, roster, 1, 'a')).toBe(true);
+  });
+});
+
+describe('canPickToDeploy', () => {
+  const roster = ['a', 'b', 'c'];
+  const full = setUnit(setUnit(createGrid(4, 4), 0, 0, 'a'), 1, 0, 'b');
+
+  it('lets a benched unit be picked to swap in once every slot is taken', () => {
+    expect(canPickToDeploy(full, roster, 2, 'c')).toBe(true);
+  });
+
+  it('rejects everyone when no unit can be fielded', () => {
+    expect(canPickToDeploy(createGrid(4, 4), roster, 0, 'a')).toBe(false);
+  });
+});
+
+describe('replacesPlacedUnit / canDeployUnitAt', () => {
+  const roster = ['a', 'b', 'c'];
+  const full = setUnit(setUnit(setUnit(createGrid(4, 4), 0, 0, 'a'), 1, 0, 'b'), 2, 0, 'guest');
+
+  it('is true only for a tile another roster unit holds', () => {
+    expect(replacesPlacedUnit(full, roster, 'c', 0, 0)).toBe(true);
+    expect(replacesPlacedUnit(full, roster, 'a', 0, 0)).toBe(false);
+    expect(replacesPlacedUnit(full, roster, 'c', 2, 0)).toBe(false);
+    expect(replacesPlacedUnit(full, roster, 'c', 3, 0)).toBe(false);
+  });
+
+  it("lets a benched unit take a placed one's tile when every slot is taken, not an empty one", () => {
+    const zone4 = [...zone, { x: 3, y: 0 }];
+    expect(canDeployUnitAt(full, zone4, roster, 2, 'c', 1, 0)).toBe(true);
+    expect(canDeployUnitAt(full, zone4, roster, 2, 'c', 3, 0)).toBe(false);
+    expect(canDeployUnitAt(full, zone4, roster, 2, 'c', 2, 0)).toBe(false);
+  });
+
+  it('lets a placed unit move to an empty tile or swap with another', () => {
+    const zone4 = [...zone, { x: 3, y: 0 }];
+    expect(canDeployUnitAt(full, zone4, roster, 2, 'a', 3, 0)).toBe(true);
+    expect(canDeployUnitAt(full, zone4, roster, 2, 'a', 1, 0)).toBe(true);
   });
 });
 

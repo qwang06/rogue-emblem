@@ -3,7 +3,7 @@ import { WOODEN_ARMOR } from '../game/items.ts';
 import { Soldier } from '../game/Soldier.ts';
 import type { Unit } from '../game/Unit.ts';
 import { FISTS, WOODEN_SWORD } from '../game/weapons.ts';
-import { openMerchantScreen, pointMerchantCursor } from '../game/warband/merchantScreen.ts';
+import { confirmMerchant, openMerchantScreen, pointMerchantCursor } from '../game/warband/merchantScreen.ts';
 import { createRun, type ItemSnapshot, type RunState } from '../game/warband/run.ts';
 import { toMerchantScreenView } from './merchantView.ts';
 
@@ -51,5 +51,18 @@ describe('toMerchantScreenView', () => {
     expect(toMerchantScreenView(state).detail?.label).toBe('Wooden Sword');
     expect(toMerchantScreenView(pointMerchantCursor(state, 'convoy', 0)).detail?.label).toBe('Wooden Sword');
     expect(toMerchantScreenView({ ...state, column: 'convoy' }).detail).toBeNull();
+  });
+
+  it('has no recipients until a stock item is picked, then lists who it can be for', () => {
+    const state = openMerchantScreen(campRun(20));
+    expect(toMerchantScreenView(state).recipients).toBeNull();
+    const view = toMerchantScreenView(confirmMerchant(state));
+    expect(view.recipients).toEqual({
+      entries: [
+        { key: 'alden', label: 'Alden', note: 'Can use', disabled: false },
+        { key: '@convoy', label: 'Convoy', note: null, disabled: false },
+      ],
+      selectedIndex: 0,
+    });
   });
 });

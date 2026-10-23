@@ -3,11 +3,14 @@ import { useGameStore } from './useGameStore.ts';
 
 // Header status during the battle, as small GBA-style banners: whose
 // phase it is, in its side's color, the turn number (just the number on
-// phones), then the objective's short readout (e.g. "Survive 2/4").
+// phones), then the objective's short readout (e.g. "Survive 2/4"). Gone
+// once the battle is decided, so the result, reward and camp screens don't
+// show the phase it ended in.
 export function TurnIndicator() {
   const turn = useGameStore((state) => state.turn);
   const objectiveStatus = useGameStore((state) => state.objectiveStatus);
-  if (!turn) return null;
+  const decided = useGameStore((state) => state.battleOutcome !== null);
+  if (!turn || decided) return null;
 
   return (
     <div className={`turn-indicator turn-indicator--${turn.team}`}>

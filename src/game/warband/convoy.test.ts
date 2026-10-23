@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_INVENTORY_SLOTS } from '../items.ts';
+import { HEALTH_POTION, MAX_INVENTORY_SLOTS, WOODEN_ARMOR, WOODEN_SHIELD } from '../items.ts';
+import { HEAL_STAFF } from '../healing.ts';
+import { FIRE, FISTS, IRON_BOW, IRON_SPEAR, WOODEN_SPEAR, WOODEN_SWORD } from '../weapons.ts';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
 import { Warrior } from '../Warrior.ts';
 import {
+  canCarry,
   canEquipInRoster,
   canGiveFromConvoy,
   canStoreInConvoy,
@@ -12,7 +15,9 @@ import {
   getWornIndices,
   giveFromConvoy,
   isMovable,
+  getEquippedUses,
   isStackable,
+  isSuitedTo,
   lookUpItem,
   storeInConvoy,
 } from './convoy.ts';
@@ -238,5 +243,91 @@ describe('equipping armor', () => {
     expect(getWornIndices(run, 'cato')).toEqual([4]);
     expect(canStoreInConvoy(run, 'cato', 4)).toBe(true);
     expect(storeInConvoy(run, 'cato', 4).convoy).toEqual([{ itemId: 'wooden-armor', quantity: 1 }]);
+  });
+});
+
+// The run with Cato down to his fists.
+function bareHanded(run: RunState): RunState {
+  return {
+    ...run,
+    roster: run.roster.map((unit) =>
+      unit.id === 'cato' ? { ...unit, items: [{ itemId: FISTS.id, quantity: 1 }] } : unit,
+    ),
+  };
+}
+
+describe('canCarry', () => {
+  it('needs a free slot, unless a consumable stacks onto one the unit carries', () => {
+    const run = campRun();
+    expect(canCarry(run, 'alden', WOODEN_SWORD.id)).toBe(true);
+    const full = {
+      ...run,
+      roster: run.roster.map((unit) =>
+        unit.id === 'alden'
+          ? {
+              ...unit,
+              items: [
+                ...unit.items,
+                ...Array.from({ length: MAX_INVENTORY_SLOTS - unit.items.length }, () => ({
+                  itemId: IRON_SPEAR.id,
+                  quantity: 1,
+                })),
+              ],
+            }
+          : unit,
+      ),
+    };
+    expect(canCarry(full, 'alden', WOODEN_SWORD.id)).toBe(false);
+    expect(canCarry(full, 'alden', HEALTH_POTION.id)).toBe(true);
+    expect(canCarry(run, 'nobody', WOODEN_SWORD.id)).toBe(false);
+  });
+});
+
+describe('isSuitedTo', () => {
+  const run = campRun();
+
+  it('suits a weapon that strikes at the range of the one the unit fights with', () => {
+    expect(isSuitedTo(run, 'alden', WOODEN_SPEAR.id)).toBe(true);
+    expect(isSuitedTo(run, 'alden', WOODEN_SWORD.id)).toBe(true);
+    expect(isSuitedTo(run, 'alden', IRON_BOW.id)).toBe(false);
+  });
+
+  it('suits any weapon it wields to a unit fighting bare-handed', () => {
+    expect(isSuitedTo(bareHanded(run), 'cato', IRON_BOW.id)).toBe(true);
+  });
+
+  it("doesn't suit a natural weapon or a magical one to a physical fighter", () => {
+    expect(isSuitedTo(run, 'alden', FISTS.id)).toBe(false);
+    expect(isSuitedTo(run, 'alden', FIRE.id)).toBe(false);
+  });
+
+  it('suits armor to a unit with nothing in its slot', () => {
+    expect(isSuitedTo(run, 'alden', WOODEN_ARMOR.id)).toBe(true);
+    const armored = {
+      ...run,
+      roster: run.roster.map((unit) => ({ ...unit, items: [...unit.items, { itemId: WOODEN_ARMOR.id, quantity: 1 }] })),
+    };
+    expect(isSuitedTo(armored, 'alden', WOODEN_ARMOR.id)).toBe(false);
+    expect(isSuitedTo(run, 'alden', WOODEN_SHIELD.id)).toBe(true);
+  });
+
+  it('suits a staff only to a unit already healing with one, and consumables to nobody', () => {
+    expect(isSuitedTo(run, 'alden', HEAL_STAFF.id)).toBe(false);
+    const healer = {
+      ...run,
+      roster: run.roster.map((unit) => ({ ...unit, items: [...unit.items, { itemId: HEAL_STAFF.id, quantity: 3 }] })),
+    };
+    expect(isSuitedTo(healer, 'alden', HEAL_STAFF.id)).toBe(true);
+    expect(isSuitedTo(run, 'alden', HEALTH_POTION.id)).toBe(false);
+    expect(isSuitedTo(run, 'nobody', WOODEN_SPEAR.id)).toBe(false);
+  });
+});
+
+describe('getEquippedUses', () => {
+  it("is the uses left on the unit's weapon, 0 bare-handed or for nobody", () => {
+    const run = campRun();
+    expect(getEquippedUses(run, 'alden')).toBe(40);
+    expect(getEquippedUses(bareHanded(run), 'cato')).toBe(0);
+    expect(getEquippedUses(run, 'nobody')).toBe(0);
   });
 });

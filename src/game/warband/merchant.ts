@@ -1,7 +1,7 @@
 // Warband Mode's camp merchant: what it sells, what everything costs, and
 // buying into and selling out of the convoy (RunState.convoy). Bought
-// items arrive in the convoy, fresh, and the roster screen hands them to
-// units; selling takes from the convoy, so a unit's item is stored first.
+// items arrive in the convoy, fresh, or straight in a unit's inventory
+// (buyItemFor); selling takes from the convoy, so a unit's item is stored first.
 // A consumable is bought and sold one at a time (stacking in the convoy);
 // anything else as its whole entry. Selling pays half the price, and for
 // a weapon or staff that wears out, only for the uses it has left. A
@@ -22,7 +22,7 @@ import {
   WOODEN_SPEAR,
   WOODEN_SWORD,
 } from '../weapons.ts';
-import { isMovable, isStackable, lookUpItem } from './convoy.ts';
+import { canCarry, giveFromConvoy, isMovable, isStackable, lookUpItem } from './convoy.ts';
 import { RUN_ITEMS, type ItemSnapshot, type RunState } from './run.ts';
 
 // What the merchant sells, by item id: the wooden set, plus a bow and a
@@ -120,6 +120,38 @@ export function buyItem(
     ? run.convoy.map((entry) => (entry.itemId === itemId ? { ...entry, quantity: entry.quantity + 1 } : entry))
     : [...run.convoy, { itemId, quantity }];
   return freezeRun({ ...run, gold: run.gold - getItemPrice(item), convoy });
+}
+
+// Whether the warband can buy the stock item `itemId` for the unit
+// `unitId` (straight into its inventory), or for the convoy when `unitId`
+// is null: it can buy it (canBuy) and the unit has room for it.
+export function canBuyFor(
+  run: RunState,
+  itemId: string,
+  unitId: string | null,
+  stock: readonly string[] = MERCHANT_STOCK,
+  items: readonly Item[] = RUN_ITEMS,
+): boolean {
+  return canBuy(run, itemId, stock, items) && (unitId === null || canCarry(run, unitId, itemId, items));
+}
+
+// The run with the stock item `itemId` bought (buyItem) and handed to the
+// unit `unitId`, or left in the convoy when `unitId` is null. Throws when
+// it can't be (see canBuyFor).
+export function buyItemFor(
+  run: RunState,
+  itemId: string,
+  unitId: string | null,
+  stock: readonly string[] = MERCHANT_STOCK,
+  items: readonly Item[] = RUN_ITEMS,
+): RunState {
+  if (unitId !== null && !canCarry(run, unitId, itemId, items)) throw new Error(`${unitId} has no room for ${itemId}`);
+  const bought = buyItem(run, itemId, stock, items);
+  if (unitId === null) return bought;
+  // The bought one is its stack's entry, or the new last one.
+  const stacked = isStackable(lookUpItem(itemId, items));
+  const index = stacked ? bought.convoy.findIndex((entry) => entry.itemId === itemId) : bought.convoy.length - 1;
+  return giveFromConvoy(bought, unitId, index, items);
 }
 
 // Whether the convoy entry at `convoyIndex` can be sold: there's one and

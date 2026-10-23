@@ -412,6 +412,8 @@ a.header-button {
 .title-menu__heading,
 .header-popover__title,
 .objective__title,
+.deployment-menu__title,
+.merchant-screen__recipients-title,
 .reward-screen__title,
 .reward-team__title,
 .roster-screen__title,
@@ -750,6 +752,34 @@ kbd {
   right: auto;
   left: 50%;
   transform: translate(-50%, -50%);
+}
+
+/* The battle's objective, above the deployment menu's entries. */
+/* Sized to its text (not squeezed into the half of the map right of its
+   centered left edge), up to a width the objective wraps at. */
+.deployment-menu {
+  width: max-content;
+  max-width: min(18rem, calc(100% - 24px));
+  padding-top: 12px;
+}
+
+.deployment-menu__objective {
+  margin: 0 0 6px;
+  padding: 0 10px 6px;
+  border-bottom: var(--border);
+}
+
+.deployment-menu__goal {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--fg-bright);
+}
+
+.deployment-menu__defeat {
+  margin: 2px 0 0;
+  font-size: 0.75rem;
+  color: var(--fg-dim);
 }
 
 /* A unit's menus open beside it; useMenuBesideUnit sets left / top. */
@@ -3709,6 +3739,40 @@ textarea.draft-input {
   font-variant-numeric: tabular-nums;
   text-align: right;
   color: var(--yellow);
+}
+
+/* Who a bought item is for: a menu over the middle of the merchant
+   window, which dims behind it. */
+.merchant-screen__recipients-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 0.35);
+}
+
+.merchant-screen .merchant-screen__recipients {
+  position: relative;
+  inset: auto;
+  min-width: 16rem;
+  max-width: calc(100% - 24px);
+  padding-top: 12px;
+}
+
+.merchant-screen__recipient {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+/* Sized for its longest note, so a row never changes width with it. */
+.merchant-screen__recipient-note {
+  flex: none;
+  min-width: 7ch;
+  font-size: 0.75rem;
+  text-align: right;
+  color: var(--fg-dim);
 }
 
 /* ---- Scrolling lists ------------------------------------------------- */

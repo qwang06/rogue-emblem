@@ -195,6 +195,15 @@ describe('camp', () => {
     expect(() => apply(campWith(run), { type: 'buy', itemId: 'excalibur' })).toThrow(RunCommandError);
   });
 
+  it("buys straight into a unit's inventory when one is named", () => {
+    const run = { ...newRun(), gold: 100 };
+    const bought = apply(campWith(run), { type: 'buy', itemId: WOODEN_SWORD.id, unitId: 'alden' });
+    expect(bought.run.convoy).toEqual([]);
+    const alden = bought.run.roster.find((unit) => unit.id === 'alden')!;
+    expect(alden.items.at(-1)).toEqual({ itemId: WOODEN_SWORD.id, quantity: WOODEN_SWORD.uses });
+    expect(() => apply(campWith(run), { type: 'buy', itemId: WOODEN_SWORD.id, unitId: 'nobody' })).toThrow(/buy/);
+  });
+
   it('gives, equips and stores items', () => {
     const run = { ...newRun(), convoy: [{ itemId: WOODEN_SPEAR.id, quantity: 20 }] };
     const given = apply(campWith(run), { type: 'give', unitId: 'alden', convoyIndex: 0 });

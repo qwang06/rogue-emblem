@@ -1,7 +1,7 @@
 import { useGameStore } from './useGameStore.ts';
 
 const HINTS = {
-  menu: 'Place your units, then Start',
+  menu: 'Start, or Place Units to move or swap them',
   roster: 'Choose a unit, or Esc to go back',
   placing: 'Place on a highlighted tile, or Esc to go back',
 };

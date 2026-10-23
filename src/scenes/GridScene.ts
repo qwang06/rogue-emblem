@@ -38,7 +38,14 @@ import {
   type RunOverView,
   type StageClearView,
 } from '../bridge/views.ts';
-import { createActionMenu, getSelectedAction, getUnitActions, moveSelection, selectIndex } from '../game/actionMenu.ts';
+import {
+  createActionMenu,
+  getDefaultActionIndex,
+  getSelectedAction,
+  getUnitActions,
+  moveSelection,
+  selectIndex,
+} from '../game/actionMenu.ts';
 import {
   findUsableStaff,
   getHealTargets,
@@ -83,6 +90,7 @@ import { pickReward, planCamp } from '../game/warband/runPolicy.ts';
 import { planPlayerDeployment, planPlayerTurn } from '../game/battle/playerAI.ts';
 import { getCampActions } from '../game/warband/camp.ts';
 import {
+  cancelMerchant,
   confirmMerchant,
   moveMerchantCursor,
   openMerchantScreen,
@@ -105,8 +113,8 @@ import { getConsumables, getItemActions } from '../game/items.ts';
 import { getWeaponActions, getWeaponReach, type Weapon, type WeaponAction } from '../game/weapons.ts';
 import { getPhaseMovement } from '../game/enemyAI.ts';
 import {
-  canDeployUnit,
-  canPlaceUnit,
+  canDeployUnitAt,
+  canPickToDeploy,
   canStartBattle,
   getDeploymentActions,
   getFirstOpenTile,
@@ -242,6 +250,8 @@ const AUTO_STEP_MS = 450;
 const EXPERIENCE_BAR_MS = 1100;
 // How long each level-up panel holds the screen.
 const LEVEL_UP_MS = 2400;
+// How long the reward pick a won stage opens on ignores confirm.
+const REWARD_PICK_GRACE_MS = 500;
 // Tint for units that are done for the phase.
 const DONE_TINT = 0x808080;
 // Each team's resting tint on the map, if it has one: guests, the allies
@@ -335,6 +345,8 @@ export class GridScene extends Phaser.Scene {
   inputLocked = false;
   battleOutcome: BattleOutcome | null = null;
   nextBannerId = 1;
+  rewardPickOpensAt = 0;
+  skippableWait: { timer: Phaser.Time.TimerEvent; onDone: () => void } | null = null;
   hoveredUnit: Unit | null = null;
   hoveredUnitId: string | null = null;
   nextPopupId = 1;
@@ -557,6 +569,8 @@ export class GridScene extends Phaser.Scene {
     this.inputLocked = false; // input is ignored while a move, hit, banner, or the enemy phase plays out
     this.battleOutcome = null; // 'victory' | 'defeat' once the battle is decided
     this.nextBannerId = 1;
+    this.rewardPickOpensAt = 0; // scene time a won stage's reward pick starts taking confirm
+    this.skippableWait = null; // the banner, XP bar or level up confirm can cut short (waitSkippably), or null
     this.hoveredUnit = null;
     this.hoveredUnitId = null;
     this.nextPopupId = 1;
@@ -593,15 +607,14 @@ export class GridScene extends Phaser.Scene {
       return;
     }
     this.updateHoveredUnit();
-    // Levels with units to place open on deployment; others (e.g. training,
-    // where everyone starts on the map) go straight to the battle. Either
-    // waits for the level's opening dialog, if it has one, and then the
-    // Objective screen.
-    const begin = () => {
+    // Levels with units to place open on deployment, with the objective on
+    // its menu; others (e.g. training, where everyone starts on the map)
+    // show the Objective screen and go straight to the battle. Either waits
+    // for the level's opening dialog, if it has one.
+    this.playTriggeredDialog('opening', () => {
       if (this.deploymentZone.length > 0) this.startDeployment();
-      else this.startBattle();
-    };
-    this.playTriggeredDialog('opening', () => this.showObjective(begin));
+      else this.showObjective(() => this.startBattle());
+    });
     gameStore.setState({ mapLoadProgress: 1, mapReady: true });
   }
 
@@ -630,6 +643,8 @@ export class GridScene extends Phaser.Scene {
     if (JustDown(this.actionKeys.dangerZone)) this.toggleDangerZone();
     if (JustDown(this.actionKeys.autoPlay)) this.toggleAutoPlay();
 
+    // Confirm cuts a banner, XP bar or level up short, even mid-animation.
+    if (confirm && this.skipWait()) return;
     if (this.inputLocked) return;
     if (this.updateAutoPlay(delta)) return;
 
@@ -668,7 +683,7 @@ export class GridScene extends Phaser.Scene {
 
     if (this.rewardMenu) {
       // The cards sit side by side, so either arrow axis moves the pick.
-      this.updateRewardMenu(dx || dy, confirm);
+      this.updateRewardMenu(dx || dy, confirm && this.time.now >= this.rewardPickOpensAt);
       return;
     }
 
@@ -852,8 +867,13 @@ export class GridScene extends Phaser.Scene {
     const hasSkills = getLearnedSkills(unit.unitClass, unit.level).length > 0;
     const hasItems = getConsumables(unit.items).length > 0;
     const canHeal = getStaves(unit.items).length > 0 ? this.findHealingStaff() !== null : undefined;
+    const actions = getUnitActions({ hasSkills, hasItems, hasWeapons, canHeal });
+    const { x, y } = this.activeUnit!;
+    const hasTarget = unit.wieldableWeapons.some(
+      ({ weapon }) => this.getWeaponTargets(unit, { x, y }, weapon).length > 0,
+    );
     this.publishMenuAnchor();
-    this.setActionMenu(createActionMenu(getUnitActions({ hasSkills, hasItems, hasWeapons, canHeal })));
+    this.setActionMenu(selectIndex(createActionMenu(actions), getDefaultActionIndex(actions, { hasTarget })));
   }
 
   // The wounded allies the active unit's staff reaches from where it stands.
@@ -1183,12 +1203,14 @@ export class GridScene extends Phaser.Scene {
 
   // Keeps `run` as the camp's run, saving it when it changed, and
   // republishes the camp menu (Rest's state and the gold follow the run),
-  // keeping its highlight.
+  // keeping its highlight; it opens on Next Stage, so moving straight on
+  // is one confirm.
   setCampRun(run: RunState) {
     if (this.campRun && run !== this.campRun) saveRun(run);
     this.campRun = run;
-    const selected = this.campMenu?.selectedIndex ?? 0;
-    this.publishMenu('campMenu', selectIndex(createActionMenu(getCampActions(run)), selected));
+    const actions = getCampActions(run);
+    const selected = this.campMenu?.selectedIndex ?? actions.findIndex((action) => action.id === 'march');
+    this.publishMenu('campMenu', selectIndex(createActionMenu(actions), selected));
     gameStore.setState({ campGold: run.gold });
   }
 
@@ -1242,7 +1264,7 @@ export class GridScene extends Phaser.Scene {
   updateMerchantScreen(dx: number, dy: number, confirm: boolean, cancel: boolean) {
     const state = this.merchantScreen!;
     if (cancel) {
-      this.publishMerchantScreen(null);
+      this.publishMerchantScreen(cancelMerchant(state));
     } else if (confirm) {
       this.publishMerchantScreen(confirmMerchant(state));
     } else if (dx !== 0 || dy !== 0) {
@@ -1280,14 +1302,17 @@ export class GridScene extends Phaser.Scene {
   }
 
   // ---- Objective --------------------------------------------------------
-  // Before the battle (after the opening dialog) React shows what wins and
-  // loses it; confirm or cancel dismisses it and the level carries on.
+  // Before a battle without deployment (after the opening dialog) React
+  // shows what wins and loses it; confirm or cancel dismisses it and the
+  // level carries on. With deployment, the deployment menu shows it instead.
 
   showObjective(onDone: () => void) {
     this.onObjectiveDone = onDone;
-    gameStore.setState({
-      objective: toObjectiveView(describeBattle(this.setup, this.content), describeObjective(this.objective)),
-    });
+    gameStore.setState({ objective: this.getObjectiveView() });
+  }
+
+  getObjectiveView() {
+    return toObjectiveView(describeBattle(this.setup, this.content), describeObjective(this.objective));
   }
 
   hideObjective() {
@@ -1435,12 +1460,22 @@ export class GridScene extends Phaser.Scene {
 
   startDeployment() {
     this.phase = 'deployment';
-    gameStore.setState({ phase: 'deployment', deploymentLimit: this.deploymentLimit });
+    gameStore.setState({
+      phase: 'deployment',
+      deploymentLimit: this.deploymentLimit,
+      deploymentObjective: this.getObjectiveView(),
+    });
     this.zoneTiles = this.drawTileHighlights(this.deploymentZone, DEPLOYMENT_ZONE_COLOR, DEPLOYMENT_ZONE_ALPHA);
     // The cursor stays hidden while a deployment menu has input; it only
     // appears once there's a tile to choose.
     this.setCursorVisible(false);
-    this.openDeploymentMenu(PLACE_UNITS_INDEX);
+    // Everyone starts placed the way the player battle AI would place them
+    // (src/game/battle/playerAI.ts), so Start is one confirm away; Place
+    // Units still moves or swaps them.
+    for (const command of planPlayerDeployment(this.battle)) {
+      if (command.type === 'place') this.placeUnit(command.unitId, command.to);
+    }
+    this.openDeploymentMenu(canStartBattle(this.grid, this.roster) ? START_INDEX : PLACE_UNITS_INDEX);
   }
 
   setDeploymentStep(step: DeploymentStep | null) {
@@ -1502,7 +1537,7 @@ export class GridScene extends Phaser.Scene {
         unit,
         sprite: getUnitSprite(unit.unitClass),
         placed: isPlaced(this.grid, id),
-        disabled: !canDeployUnit(this.grid, this.roster, this.deploymentLimit, id),
+        disabled: !canPickToDeploy(this.grid, this.roster, this.deploymentLimit, id),
       });
     });
     this.publishMenu('rosterMenu', createActionMenu(entries));
@@ -1542,7 +1577,7 @@ export class GridScene extends Phaser.Scene {
   tryPlaceUnit() {
     const unitId = this.placingUnitId!;
     const { x, y } = this.cursor;
-    if (!canPlaceUnit(this.grid, this.deploymentZone, unitId, x, y)) return;
+    if (!canDeployUnitAt(this.grid, this.deploymentZone, this.roster, this.deploymentLimit, unitId, x, y)) return;
 
     this.placeUnit(unitId, { x, y });
     this.placingUnitId = null;
@@ -1553,17 +1588,24 @@ export class GridScene extends Phaser.Scene {
     this.openDeploymentMenu(complete ? START_INDEX : PLACE_UNITS_INDEX);
   }
 
-  // Puts a roster unit on a zone tile, and its sprite with it.
+  // Puts a roster unit on a zone tile, and the sprites with it: a roster
+  // unit it swapped with moves to where it stood, or off the map when it
+  // took that unit's place.
   placeUnit(unitId: string, { x, y }: Point) {
     this.dispatch({ type: 'place', unitId, to: { x, y } });
     this.syncShown();
     this.refreshDangerZone();
-    const sprite = this.unitSprites.get(unitId);
-    if (sprite) {
-      const pos = gridToWorld(x, y, TILE_SIZE);
-      sprite.setPosition(pos.x, pos.y);
-    } else {
-      this.addUnitSprite(unitId, x, y);
+    for (const id of this.roster) {
+      const at = findUnit(this.grid, id);
+      const sprite = this.unitSprites.get(id);
+      if (!at) {
+        if (sprite) this.removeUnitSprite(id);
+      } else if (sprite) {
+        const pos = gridToWorld(at.x, at.y, TILE_SIZE);
+        sprite.setPosition(pos.x, pos.y);
+      } else {
+        this.addUnitSprite(id, at.x, at.y);
+      }
     }
   }
 
@@ -1574,7 +1616,7 @@ export class GridScene extends Phaser.Scene {
     this.zoneTiles = null;
     this.publishMenu('deploymentMenu', null);
     this.phase = 'battle';
-    gameStore.setState({ phase: 'battle', deploymentStep: null, deploymentLimit: null });
+    gameStore.setState({ phase: 'battle', deploymentStep: null, deploymentLimit: null, deploymentObjective: null });
 
     const events = this.dispatch({ type: 'start-battle' });
     this.setCursorVisible(true);
@@ -1604,16 +1646,20 @@ export class GridScene extends Phaser.Scene {
     this.applyAutoSpeed();
   }
 
+  // The speed setting (the header's − and +) plays every animation, banner
+  // and pause faster, whether Auto is on or the player is playing.
   applyAutoSpeed() {
-    const { autoPlay, autoSpeed } = gameStore.getState();
-    const speed = autoPlay && !this.preview ? autoSpeed : 1;
+    const speed = this.getPlaybackSpeed();
     this.time.timeScale = speed;
     this.tweens.timeScale = speed;
   }
 
+  getPlaybackSpeed() {
+    return this.preview ? 1 : gameStore.getState().autoSpeed;
+  }
+
   playbackDuration(durationMs: number) {
-    const { autoPlay, autoSpeed } = gameStore.getState();
-    return durationMs / (autoPlay && !this.preview ? autoSpeed : 1);
+    return durationMs / this.getPlaybackSpeed();
   }
 
   // Takes auto play's next step once one is due. True when auto play owns
@@ -1769,7 +1815,7 @@ export class GridScene extends Phaser.Scene {
       durationMs: this.playbackDuration(PHASE_BANNER_DURATION_MS),
     });
     gameStore.setState({ phaseBanner: banner });
-    this.time.delayedCall(PHASE_BANNER_DURATION_MS, () => {
+    this.waitSkippably(PHASE_BANNER_DURATION_MS, () => {
       gameStore.setState({ phaseBanner: null });
       onDone();
     });
@@ -1879,6 +1925,13 @@ export class GridScene extends Phaser.Scene {
       this.showLevelUps(levelUps, () => {
         this.inputLocked = false;
         gameStore.setState({ battleOutcome: outcome, nextBattle, runOver, stageClear });
+        // A won stage goes straight on to its recruit or reward pick, which
+        // shows the clear's gold itself, rather than stopping on the result.
+        // Confirm waits a moment there, so one pressed to hurry the battle's
+        // end along doesn't take a reward unseen.
+        if (this.recruitOffer || this.rewardOffer) this.rewardPickOpensAt = this.time.now + REWARD_PICK_GRACE_MS;
+        if (this.recruitOffer) this.openRecruitMenu();
+        else if (this.rewardOffer) this.openRewardMenu();
       });
     });
   }
@@ -2301,6 +2354,28 @@ export class GridScene extends Phaser.Scene {
     this.publishHoveredUnit();
   }
 
+  // Waits `durationMs` (at the game speed) and then runs `onDone`, unless
+  // confirm cuts the wait short first (see skipWait): for what's only there
+  // to be read, like a banner, an XP bar or a level up.
+  waitSkippably(durationMs: number, onDone: () => void) {
+    const timer = this.time.delayedCall(durationMs, () => {
+      this.skippableWait = null;
+      onDone();
+    });
+    this.skippableWait = { timer, onDone };
+  }
+
+  // Ends the wait waitSkippably started now, if one is running. True when
+  // there was one.
+  skipWait(): boolean {
+    const wait = this.skippableWait;
+    if (!wait) return false;
+    this.skippableWait = null;
+    wait.timer.remove(false);
+    wait.onDone();
+    return true;
+  }
+
   // Shows XP a unit gained: React's XP bar fills for EXPERIENCE_BAR_MS,
   // then one level-up panel per level gained holds for LEVEL_UP_MS each.
   showExperienceGain({ unitId, from, result }: BattleEventOf<'experience'>, onDone: () => void) {
@@ -2314,7 +2389,7 @@ export class GridScene extends Phaser.Scene {
     });
     gameStore.setState({ experienceGain });
 
-    this.time.delayedCall(EXPERIENCE_BAR_MS, () => {
+    this.waitSkippably(EXPERIENCE_BAR_MS, () => {
       gameStore.setState({ experienceGain: null });
       this.showLevelUps(
         result.levelUps.map((levelUp) => ({ name: unit.name, unitClass: unit.unitClass, levelUp })),
@@ -2339,7 +2414,7 @@ export class GridScene extends Phaser.Scene {
         durationMs: this.playbackDuration(LEVEL_UP_MS),
       });
       gameStore.setState({ levelUp: view });
-      this.time.delayedCall(LEVEL_UP_MS, () => showLevelUp(index + 1));
+      this.waitSkippably(LEVEL_UP_MS, () => showLevelUp(index + 1));
     };
     showLevelUp(0);
   }

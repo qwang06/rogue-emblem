@@ -1,15 +1,15 @@
 import type { MouseEvent } from 'react';
 import { SPRITE_URLS } from '../assets/sprites.ts';
 import { gameCommands } from '../bridge/commands.ts';
-import type { MerchantItemView } from '../bridge/merchantView.ts';
-import type { MerchantColumn } from '../game/warband/merchantScreen.ts';
+import type { MerchantItemView, MerchantScreenView } from '../bridge/merchantView.ts';
+import type { MerchantColumn, MerchantTarget } from '../game/warband/merchantScreen.ts';
 import { KeyHint } from './KeyHint.tsx';
 import { ScrollList } from './ScrollList.tsx';
 import { useGameStore } from './useGameStore.ts';
 
 // Mouse handlers for an entry of the merchant screen: hovering moves the
 // cursor there and clicking buys or sells it, exactly as the keyboard would.
-function pointerProps(column: MerchantColumn, index: number) {
+function pointerProps(column: MerchantTarget, index: number) {
   return {
     onMouseEnter: () => gameCommands.send({ type: 'hover-merchant', column, index }),
     onClick: (event: MouseEvent) => {
@@ -62,9 +62,49 @@ function ItemRow({
   );
 }
 
+// Who a bought item is for, asked over the screen once a stock item is
+// picked: each unit (with whether it can use the item, or has no room),
+// then the convoy.
+function RecipientMenu({
+  recipients,
+  item,
+}: {
+  recipients: NonNullable<MerchantScreenView['recipients']>;
+  item: string;
+}) {
+  return (
+    <div className="merchant-screen__recipients-layer">
+      <nav className="panel action-menu merchant-screen__recipients" aria-label={`Buy ${item} for`}>
+        <h3 className="merchant-screen__recipients-title">Buy {item} for</h3>
+        <ul className="action-menu__list">
+          {recipients.entries.map((entry, index) => {
+            const selected = index === recipients.selectedIndex;
+            const classes = ['action-menu__item', 'merchant-screen__recipient'];
+            if (selected) classes.push('action-menu__item--selected');
+            if (entry.disabled) classes.push('action-menu__item--disabled');
+            return (
+              <li
+                key={entry.key}
+                className={classes.join(' ')}
+                aria-current={selected ? 'true' : undefined}
+                aria-disabled={entry.disabled ? 'true' : undefined}
+                {...pointerProps('recipients', index)}
+              >
+                <span className="merchant-screen__recipient-name">{entry.label}</span>
+                <span className="merchant-screen__recipient-note">{entry.note}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    </div>
+  );
+}
+
 // The camp's merchant (see src/game/warband/merchantScreen.ts): its stock
 // with prices beside the warband's convoy with what each item sells for.
-// Bought items go to the convoy; the roster screen hands them out. The
+// Buying asks who the item is for (RecipientMenu): a unit gets it
+// straight away, or it goes to the convoy for the roster screen. The
 // gold sits in the window's top border, so it changing never moves
 // anything. Both columns keep their size as items come and go, scrolling
 // to follow the cursor when they hold more than fits. GridScene
@@ -133,17 +173,20 @@ export function MerchantScreen() {
               </>
             ) : (
               <span className="roster-screen__detail-hint">
-                Bought items go to the convoy. Store a unit's items in the convoy to sell them.
+                Buy for a unit or the convoy. Store a unit's items in the convoy to sell them.
               </span>
             )}
           </p>
+          {view.recipients && (
+            <RecipientMenu recipients={view.recipients} item={view.stock[view.stockIndex]?.label ?? ''} />
+          )}
           <KeyHint
             className="roster-screen__hint"
             entries={[
               ['←→', 'Column'],
               ['↑↓', 'Choose'],
-              ['Enter', view.column === 'stock' ? 'Buy' : 'Sell'],
-              ['Esc', 'Done'],
+              ['Enter', view.recipients || view.column === 'stock' ? 'Buy' : 'Sell'],
+              ['Esc', view.recipients ? 'Back' : 'Done'],
             ]}
           />
         </section>

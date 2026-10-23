@@ -16,7 +16,7 @@ import {
   giveFromConvoy,
   storeInConvoy,
 } from './convoy.ts';
-import { buyItem, canBuy, canSell, MERCHANT_STOCK, sellItem } from './merchant.ts';
+import { buyItemFor, canBuy, canBuyFor, canSell, MERCHANT_STOCK, sellItem } from './merchant.ts';
 import {
   addGold,
   applyLessonReward,
@@ -55,8 +55,9 @@ export type RunCommand =
   | { type: 'reroll-rewards' }
   // Camp: every unit back to full HP and mana, for gold.
   | { type: 'rest' }
-  // Camp: buys a merchant item into the convoy.
-  | { type: 'buy'; itemId: string }
+  // Camp: buys a merchant item into the convoy, or straight into the
+  // inventory of the unit `unitId` when it's given.
+  | { type: 'buy'; itemId: string; unitId?: string }
   // Camp: sells the convoy entry at `convoyIndex`.
   | { type: 'sell'; convoyIndex: number }
   // Camp: hands the convoy entry at `convoyIndex` to a unit.
@@ -212,9 +213,11 @@ export function applyRunCommand(session: RunSession, command: RunCommand): RunCo
     case 'rest':
       if (!canRest(run)) return fail('Resting needs someone hurt and the gold for it');
       return camp(restAtCamp(run));
-    case 'buy':
-      if (!canBuy(run, command.itemId)) return fail(`Can't buy ${command.itemId}`);
-      return camp(buyItem(run, command.itemId));
+    case 'buy': {
+      const unitId = command.unitId ?? null;
+      if (!canBuyFor(run, command.itemId, unitId)) return fail(`Can't buy ${command.itemId}`);
+      return camp(buyItemFor(run, command.itemId, unitId));
+    }
     case 'sell':
       if (!canSell(run, command.convoyIndex)) return fail(`Can't sell convoy item ${command.convoyIndex}`);
       return camp(sellItem(run, command.convoyIndex));

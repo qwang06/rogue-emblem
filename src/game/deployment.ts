@@ -19,24 +19,57 @@ export function isInZone(zone: readonly Point[], x: number, y: number): boolean 
   return zone.some((tile) => tile.x === x && tile.y === y);
 }
 
-// A unit can go on a zone tile that's empty, or that it already stands on.
-export function canPlaceUnit(grid: Grid, zone: readonly Point[], unitId: string, x: number, y: number): boolean {
+// A unit can go on a zone tile that's empty, that it already stands on, or
+// that another of the `swappable` units (the roster) holds: placing it
+// there swaps the two (see placeUnit). Anyone else, such as a guest, keeps
+// their tile.
+export function canPlaceUnit(
+  grid: Grid,
+  zone: readonly Point[],
+  unitId: string,
+  x: number,
+  y: number,
+  swappable: readonly string[] = [],
+): boolean {
   if (!isInZone(zone, x, y)) return false;
   const cell = getCell(grid, x, y);
   if (!cell) return false;
-  return cell.unitId === null || cell.unitId === unitId;
+  return cell.unitId === null || cell.unitId === unitId || swappable.includes(cell.unitId);
 }
 
-// Puts unitId on (x, y), lifting it off wherever it was placed before.
+// Puts unitId on (x, y), lifting it off wherever it was placed before. A
+// `swappable` unit already on the tile moves to where unitId stood, or
+// off the map when unitId wasn't placed yet (it's benched in its place).
 // Throws if the tile isn't a valid spot — check canPlaceUnit first.
-export function placeUnit(grid: Grid, zone: readonly Point[], unitId: string, x: number, y: number): Grid {
-  if (!canPlaceUnit(grid, zone, unitId, x, y)) {
+export function placeUnit(
+  grid: Grid,
+  zone: readonly Point[],
+  unitId: string,
+  x: number,
+  y: number,
+  swappable: readonly string[] = [],
+): Grid {
+  if (!canPlaceUnit(grid, zone, unitId, x, y, swappable)) {
     throw new Error(`${unitId} can't be placed on (${x}, ${y})`);
   }
   const current = findUnit(grid, unitId);
   if (current?.x === x && current?.y === y) return grid;
-  const lifted = current ? setUnit(grid, current.x, current.y, null) : grid;
+  const occupant = getCell(grid, x, y)!.unitId;
+  const lifted = current ? setUnit(grid, current.x, current.y, occupant) : grid;
   return setUnit(lifted, x, y, unitId);
+}
+
+// Whether placing unitId on (x, y) would take a slot from the roster unit
+// standing there rather than need a free one.
+export function replacesPlacedUnit(
+  grid: Grid,
+  roster: readonly string[],
+  unitId: string,
+  x: number,
+  y: number,
+): boolean {
+  const occupant = getCell(grid, x, y)?.unitId;
+  return occupant != null && occupant !== unitId && roster.includes(occupant);
 }
 
 export function isPlaced(grid: Grid, unitId: string): boolean {
@@ -68,6 +101,31 @@ export function getDeploymentLimit(roster: readonly string[], zone: readonly Poi
 // move, a new one only while fewer than `limit` are placed.
 export function canDeployUnit(grid: Grid, roster: readonly string[], limit: number, unitId: string): boolean {
   return isPlaced(grid, unitId) || countPlaced(grid, roster) < limit;
+}
+
+// Whether unitId can be picked to place: it can be (re)placed (canDeployUnit),
+// or every slot is taken and it can go in a placed roster unit's place.
+export function canPickToDeploy(grid: Grid, roster: readonly string[], limit: number, unitId: string): boolean {
+  return canDeployUnit(grid, roster, limit, unitId) || countPlaced(grid, roster) > 0;
+}
+
+// Whether the roster unit unitId can be placed on (x, y) this deployment:
+// a zone tile it can stand on (canPlaceUnit, swapping with a roster unit
+// there), and either a slot for it or a roster unit there to take the
+// place of.
+export function canDeployUnitAt(
+  grid: Grid,
+  zone: readonly Point[],
+  roster: readonly string[],
+  limit: number,
+  unitId: string,
+  x: number,
+  y: number,
+): boolean {
+  return (
+    canPlaceUnit(grid, zone, unitId, x, y, roster) &&
+    (canDeployUnit(grid, roster, limit, unitId) || replacesPlacedUnit(grid, roster, unitId, x, y))
+  );
 }
 
 // Deployment is complete once every slot is filled (`limit` from

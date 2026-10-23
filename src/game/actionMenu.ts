@@ -81,3 +81,13 @@ export function selectIndex<M extends Menu<MenuAction>>(menu: M, index: number):
 export function getSelectedAction<A extends MenuAction>(menu: Menu<A>): A | null {
   return menu.actions[menu.selectedIndex] ?? null;
 }
+
+// The entry the unit action menu opens on: Attack when something hostile
+// is in reach of a weapon (`hasTarget`), else Heal when it's offered and
+// enabled, else Wait, so a unit that can't strike is one confirm from
+// finishing.
+export function getDefaultActionIndex(actions: readonly MenuAction[], { hasTarget }: { hasTarget: boolean }): number {
+  const usable = (id: string) => actions.findIndex((action) => action.id === id && !action.disabled);
+  const preferred = [hasTarget ? usable('attack') : -1, usable('heal'), usable('wait')].find((index) => index >= 0);
+  return preferred ?? 0;
+}

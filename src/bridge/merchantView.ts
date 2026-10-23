@@ -25,6 +25,16 @@ export interface MerchantItemView {
   disabled: boolean;
 }
 
+// An entry of the "who is it for" menu: a unit or the convoy. `note` says
+// why it's a good pick or can't be picked ("Can use", "No room"), or is
+// null.
+export interface MerchantRecipientView {
+  key: string;
+  label: string;
+  note: string | null;
+  disabled: boolean;
+}
+
 export interface MerchantScreenView {
   gold: number;
   column: MerchantColumn;
@@ -35,6 +45,9 @@ export interface MerchantScreenView {
   // The highlighted item: its name and what it does. Null over an empty
   // convoy.
   detail: { label: string; description: string } | null;
+  // Who the highlighted stock item is for, while that's being asked: the
+  // entries and the highlighted one. Null otherwise.
+  recipients: { entries: readonly MerchantRecipientView[]; selectedIndex: number } | null;
 }
 
 export function toMerchantScreenView(
@@ -83,5 +96,20 @@ export function toMerchantScreenView(
     stock: Object.freeze(stock),
     convoy: Object.freeze(convoy),
     detail: highlighted ? describeItem(lookUpItem(highlighted, items)) : null,
+    recipients: state.recipients
+      ? Object.freeze({
+          entries: Object.freeze(
+            state.recipients.actions.map((recipient) =>
+              Object.freeze<MerchantRecipientView>({
+                key: recipient.id,
+                label: recipient.label,
+                note: recipient.disabled ? 'No room' : recipient.suited ? 'Can use' : null,
+                disabled: recipient.disabled ?? false,
+              }),
+            ),
+          ),
+          selectedIndex: state.recipients.selectedIndex,
+        })
+      : null,
   });
 }
