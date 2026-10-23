@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { ACOLYTE_CAPS, ACOLYTE_GROWTHS, ACOLYTE_ITEMS, ACOLYTE_STATS, Acolyte } from './Acolyte.ts';
 import { getCombatForecast } from './combat.ts';
-import { getHealAmount, HEAL_STAFF } from './healing.ts';
+import { getHealAmount, HEAL_STAFF, staffEntry } from './healing.ts';
 import { HEALTH_POTION, MANA_POTION } from './items.ts';
 import { getLearnedSkills } from './skills.ts';
 import { Soldier } from './Soldier.ts';
 import { Unit } from './Unit.ts';
-import { FIRE, IRON_SPEAR, weaponEntry } from './weapons.ts';
+import { FIRE, IRON_SPEAR, LIGHT, NATURAL_WEAPON_IDS, weaponEntry } from './weapons.ts';
 
 describe('Acolyte', () => {
   it('is a Unit of the acolyte class', () => {
@@ -38,24 +38,42 @@ describe('Acolyte', () => {
     expect(acolyte.caps).toBe(ACOLYTE_CAPS);
   });
 
-  it('carries a Heal staff, a health potion and a mana potion', () => {
+  it('knows Light and carries a Heal staff, a health potion and a mana potion', () => {
     const acolyte = new Acolyte({ team: 'player' });
     expect(acolyte.items).toEqual(ACOLYTE_ITEMS);
-    expect(acolyte.items.map((entry) => entry.item)).toEqual([HEAL_STAFF, HEALTH_POTION, MANA_POTION]);
+    expect(acolyte.items.map((entry) => entry.item)).toEqual([LIGHT, HEAL_STAFF, HEALTH_POTION, MANA_POTION]);
   });
 
-  it('wields magical weapons only, and starts with none to attack with', () => {
-    expect(new Acolyte({ team: 'player' }).weapon).toBeNull();
+  it('wields magical weapons only, starting with Light', () => {
+    expect(new Acolyte({ team: 'player' }).weapon).toBe(LIGHT);
     const acolyte = new Acolyte({ team: 'player', items: [weaponEntry(IRON_SPEAR), weaponEntry(FIRE)] });
     expect(acolyte.weaponTypes).toEqual(['magical']);
     expect(acolyte.weapon).toBe(FIRE);
   });
 
-  it("can't counter", () => {
-    const forecast = getCombatForecast(new Soldier({ team: 'enemy' }), new Acolyte({ team: 'player' }), {
-      distance: 1,
-    });
-    expect(forecast.defender.counters).toBe(false);
+  it('casts Light from one or two tiles away, hitting a soldier for 3', () => {
+    for (const distance of [1, 2]) {
+      const forecast = getCombatForecast(new Acolyte({ team: 'player' }), new Soldier({ team: 'enemy' }), {
+        distance,
+      });
+      expect(forecast.attacker.damage).toBe(3);
+      expect(forecast.attacker.strikes).toBe(1);
+    }
+    expect([LIGHT.minRange, LIGHT.maxRange]).toEqual([1, 2]);
+  });
+
+  it('counters with Light, but not without a weapon', () => {
+    const attack = (acolyte: Acolyte, distance: number) =>
+      getCombatForecast(new Soldier({ team: 'enemy' }), acolyte, { distance }).defender.counters;
+    expect(attack(new Acolyte({ team: 'player' }), 1)).toBe(true);
+    expect(attack(new Acolyte({ team: 'player', items: [staffEntry(HEAL_STAFF)] }), 1)).toBe(false);
+  });
+
+  it('never wears Light out', () => {
+    const acolyte = new Acolyte({ team: 'player' });
+    for (let strike = 0; strike < 50; strike++) acolyte.spendWeaponUse();
+    expect(acolyte.weapon).toBe(LIGHT);
+    expect(NATURAL_WEAPON_IDS.has(LIGHT.id)).toBe(true);
   });
 
   it('heals 5 at level 1', () => {
@@ -74,9 +92,9 @@ describe('Acolyte', () => {
 
   it('spends a staff use per heal', () => {
     const acolyte = new Acolyte({ team: 'player' });
-    expect(acolyte.spendStaffUse(0)).toEqual({ staff: HEAL_STAFF, broke: false });
-    expect(acolyte.items[0].quantity).toBe(HEAL_STAFF.uses - 1);
-    expect(ACOLYTE_ITEMS[0].quantity).toBe(HEAL_STAFF.uses);
+    expect(acolyte.spendStaffUse(1)).toEqual({ staff: HEAL_STAFF, broke: false });
+    expect(acolyte.items[1].quantity).toBe(HEAL_STAFF.uses - 1);
+    expect(ACOLYTE_ITEMS[1].quantity).toBe(HEAL_STAFF.uses);
   });
 
   it('loses a staff on its last use', () => {

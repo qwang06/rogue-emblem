@@ -175,6 +175,22 @@ export const FIRE_SPELL = weapon({
   uses: null,
 });
 
+// The acolyte's own spell: a weak flash of holy light, near or one tile
+// further. It knows it from the start, so it never breaks and can't be
+// handed over; the Fire tome is the stronger spell to find.
+export const LIGHT = weapon({
+  id: 'light',
+  label: 'Light',
+  type: 'magical',
+  might: 0,
+  hit: 90,
+  crit: 0,
+  weight: 0,
+  minRange: 1,
+  maxRange: 2,
+  uses: null,
+});
+
 // The sapper's bomb: a heavy blast, near or thrown, with few to spare.
 export const POWDER_KEG = weapon({
   id: 'powder-keg',
@@ -339,6 +355,7 @@ export const WEAPONS: readonly Weapon[] = Object.freeze([
   IRON_BOW,
   FIRE,
   FIRE_SPELL,
+  LIGHT,
   POWDER_KEG,
   BALLISTA,
   TACKLE,
@@ -353,7 +370,7 @@ export const WEAPONS: readonly Weapon[] = Object.freeze([
 ]);
 
 // The weapons a body comes with rather than carries: fists, the monsters'
-// natural weapons and learned spells. They can't be handed over or stored.
+// natural weapons and spells (learned or known from the start). They can't be handed over or stored.
 export const NATURAL_WEAPON_IDS: ReadonlySet<string> = new Set([
   FISTS.id,
   TACKLE.id,
@@ -363,6 +380,7 @@ export const NATURAL_WEAPON_IDS: ReadonlySet<string> = new Set([
   BITE.id,
   GREAT_AXE.id,
   FIRE_SPELL.id,
+  LIGHT.id,
 ]);
 
 // A fresh inventory entry for weapon, with all its uses (1 for one that
