@@ -4,6 +4,7 @@ import { gameCommands } from '../bridge/commands.ts';
 import type { MerchantItemView } from '../bridge/merchantView.ts';
 import type { MerchantColumn } from '../game/warband/merchantScreen.ts';
 import { KeyHint } from './KeyHint.tsx';
+import { ScrollList } from './ScrollList.tsx';
 import { useGameStore } from './useGameStore.ts';
 
 // Mouse handlers for an entry of the merchant screen: hovering moves the
@@ -65,7 +66,8 @@ function ItemRow({
 // with prices beside the warband's convoy with what each item sells for.
 // Bought items go to the convoy; the roster screen hands them out. The
 // gold sits in the window's top border, so it changing never moves
-// anything. Both columns keep their size as items come and go. GridScene
+// anything. Both columns keep their size as items come and go, scrolling
+// to follow the cursor when they hold more than fits. GridScene
 // handles the input; the mouse is forwarded to it.
 export function MerchantScreen() {
   const view = useGameStore((state) => state.merchantScreen);
@@ -82,7 +84,10 @@ export function MerchantScreen() {
               className={`roster-screen__column${view.column === 'stock' ? ' roster-screen__column--focused' : ''}`}
             >
               <h3 className="roster-screen__heading">Buy</h3>
-              <ul className="action-menu__list roster-screen__list merchant-screen__list">
+              <ScrollList
+                className="action-menu__list roster-screen__list merchant-screen__list"
+                selectedIndex={view.stockIndex}
+              >
                 {view.stock.map((item, index) => (
                   <ItemRow
                     key={item.key}
@@ -94,14 +99,17 @@ export function MerchantScreen() {
                     disabledTitle="Not enough gold"
                   />
                 ))}
-              </ul>
+              </ScrollList>
             </section>
 
             <section
               className={`roster-screen__column${view.column === 'convoy' ? ' roster-screen__column--focused' : ''}`}
             >
               <h3 className="roster-screen__heading">Sell from convoy</h3>
-              <ul className="action-menu__list roster-screen__list merchant-screen__list roster-screen__list--convoy">
+              <ScrollList
+                className="action-menu__list roster-screen__list merchant-screen__list"
+                selectedIndex={view.convoyIndex}
+              >
                 {view.convoy.length === 0 && <li className="roster-screen__row roster-screen__row--empty">Empty</li>}
                 {view.convoy.map((item, index) => (
                   <ItemRow
@@ -114,7 +122,7 @@ export function MerchantScreen() {
                     disabledTitle="Can't be sold"
                   />
                 ))}
-              </ul>
+              </ScrollList>
             </section>
           </div>
 
