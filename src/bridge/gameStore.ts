@@ -20,6 +20,7 @@ import type {
   RewardAction,
   RunOverView,
   StageClearView,
+  TeamUnitView,
   TileAnchorView,
   TurnView,
   UnitDetailView,
@@ -67,6 +68,7 @@ export interface BattleState {
   runOver: RunOverView | null;
   stageClear: StageClearView | null;
   rewardMenu: Menu<RewardAction> | null;
+  rewardTeam: readonly TeamUnitView[] | null;
   recruitmentStage: number | null;
   campMenu: Menu | null;
   campGold: number | null;
@@ -116,6 +118,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   runOver: null, // RunOverView from toRunOverView() once a Warband Mode run has ended, or null
   stageClear: null, // StageClearView from toStageClearView() once a Warband Mode stage is won, or null
   rewardMenu: null, // frozen menu of RewardActions (toRewardAction) while the reward screen is up after a won stage, or null
+  rewardTeam: null, // TeamUnitViews from toTeamView() of the warband while the reward screen is up, or null
   recruitmentStage: null,
   campMenu: null, // frozen camp menu (getCampActions: Manage Roster / Merchant / Rest / Next Stage) once a won stage's reward is taken, or null
   campGold: null, // the warband's gold while at camp (shown on the camp menu), or null

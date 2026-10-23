@@ -34,6 +34,7 @@ import {
   PURSE_GOLD_PER_STAGE,
   RECRUIT_CLASS_IDS,
   REWARD_CHOICES,
+  previewRewardHealth,
   rollRecruit,
   rollRewards,
   STAGE_CLEAR_GOLD,
@@ -311,6 +312,32 @@ describe('applyReward', () => {
     expect(after.stage).toBe(run.stage);
     expect(after.fallen).toEqual(run.fallen);
     expect(after.convoy).toEqual(run.convoy);
+  });
+});
+
+describe('previewRewardHealth', () => {
+  it("is each unit's HP after resting or training, without changing the run", () => {
+    const run = fullRun();
+    const hurt = withRoster(run, [{ ...run.roster[0], health: 4 }, run.roster[1], run.roster[2]]);
+    expect(previewRewardHealth(hurt, { kind: 'rest' })).toEqual(
+      hurt.roster.map(({ maxHealth }) => ({ health: maxHealth, maxHealth })),
+    );
+    expect(previewRewardHealth(hurt, { kind: 'training', maxHealth: TRAINING_MAX_HEALTH })![0]).toEqual({
+      health: 4 + TRAINING_MAX_HEALTH,
+      maxHealth: run.roster[0].maxHealth + TRAINING_MAX_HEALTH,
+    });
+    expect(hurt.roster[0].health).toBe(4);
+  });
+
+  it("is null for rewards that don't restore HP, the lesson included", () => {
+    const run = fullRun();
+    expect(previewRewardHealth(run, { kind: 'gold', amount: 40 })).toBeNull();
+    expect(previewRewardHealth(run, { kind: 'lesson', seed: 1 })).toBeNull();
+    expect(previewRewardHealth(run, { kind: 'supplies', itemId: HEALTH_POTION.id, label: 'x' })).toBeNull();
+  });
+
+  it('is empty for an empty roster', () => {
+    expect(previewRewardHealth(withRoster(fullRun(), []), { kind: 'rest' })).toEqual([]);
   });
 });
 

@@ -407,6 +407,7 @@ a.header-button {
 .header-popover__title,
 .objective__title,
 .reward-screen__title,
+.reward-team__title,
 .roster-screen__title,
 .dialog-box__speaker {
   position: absolute;
@@ -3284,6 +3285,124 @@ textarea.draft-input {
 .reward-button[aria-disabled='true'] {
   color: var(--fg-dim);
   cursor: default;
+}
+
+/* The warband above the cards: two columns of units while they fit, else
+   one. Each unit is a name line and an HP line; the HP readout keeps room
+   for a heal's "▸ 20/20" whether or not one is shown, and its numbers are
+   a fixed width, so moving the pick never reflows a row. */
+.reward-team {
+  position: relative;
+  margin-top: 8px;
+  padding: 14px 14px 10px;
+  color: var(--fg);
+}
+
+.reward-team__units {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@container (max-width: 34rem) {
+  .reward-team__units {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.reward-team__unit {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 6px;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.reward-team__name {
+  grid-column: 1 / 3;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 700;
+  color: var(--fg-bright);
+}
+
+.reward-team__class {
+  font-weight: 400;
+  color: var(--fg-dim);
+}
+
+.reward-team__level {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.reward-team__exp {
+  display: inline-block;
+  min-width: 3.25rem;
+  color: var(--blue);
+}
+
+.reward-team__label {
+  font-weight: 700;
+  color: var(--green);
+}
+
+/* A GBA trough like .meter__track: green for the HP the unit has, then
+   the HP the selected reward would restore, blinking. */
+.reward-team__bar {
+  display: flex;
+  height: calc(4 * var(--px));
+  margin: var(--px);
+  background: #3a3040;
+  box-shadow: 0 0 0 var(--px) var(--fg-bright);
+  overflow: hidden;
+}
+
+.reward-team__bar-kept {
+  background: var(--hp);
+}
+
+.reward-team__bar-gained {
+  background: var(--bar-fg);
+  animation: reward-team-blink 900ms steps(1) infinite;
+}
+
+@keyframes reward-team-blink {
+  50% {
+    background: var(--hp);
+  }
+}
+
+.reward-team__hp {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.reward-team__hp-now,
+.reward-team__hp-after {
+  display: inline-block;
+  min-width: 2.75rem;
+  text-align: right;
+}
+
+.reward-team__hp-after {
+  min-width: 3.75rem;
+  color: var(--fg-dim);
+}
+
+.reward-team__hp-after--up {
+  color: var(--green);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reward-team__bar-gained {
+    animation: none;
+  }
 }
 
 /* ---- Roster screen (between Warband stages) ---------------------------- */
