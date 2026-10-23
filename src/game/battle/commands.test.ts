@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createBattleLevel, FIRST_STORY_CHAPTER } from '../battleSetup.ts';
+import { findUnit } from '../grid.ts';
 import { HEAL_STAFF, staffEntry } from '../healing.ts';
 import { HEALTH_POTION } from '../items.ts';
 import { TURN_LIMIT } from '../objectives.ts';
@@ -46,6 +47,30 @@ describe('deployment', () => {
     expect(state.deployed).toEqual([first, second]);
     expect(state.units.has(third)).toBe(false);
     expect(types(events)).toEqual(['placed', 'placed', 'battle-started', 'phase-started']);
+  });
+
+  it('swaps two placed units when one is placed on the other', () => {
+    const start = demo();
+    const [first, second] = start.roster;
+    const zone = start.deploymentZone;
+    const { state } = run(
+      start,
+      { type: 'place', unitId: first, to: zone[0] },
+      { type: 'place', unitId: second, to: zone[1] },
+      { type: 'place', unitId: first, to: zone[1] },
+    );
+    expect(findUnit(state.grid, first)).toEqual(zone[1]);
+    expect(findUnit(state.grid, second)).toEqual(zone[0]);
+  });
+
+  it("lets a benched unit take a placed one's tile once every slot is taken", () => {
+    const start = { ...demo(), deploymentLimit: 2 };
+    const zone = start.deploymentZone;
+    const [benched, ...fielded] = [start.roster[2], start.roster[0], start.roster[1]];
+    const full = run(start, ...fielded.map((unitId, i) => ({ type: 'place' as const, unitId, to: zone[i] }))).state;
+    const { state } = run(full, { type: 'place', unitId: benched, to: zone[0] });
+    expect(findUnit(state.grid, benched)).toEqual(zone[0]);
+    expect(findUnit(state.grid, fielded[0])).toBeNull();
   });
 
   it('refuses a tile outside the zone, and starting with nobody placed', () => {

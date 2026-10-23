@@ -15,7 +15,9 @@ import {
 } from '../weapons.ts';
 import {
   buyItem,
+  buyItemFor,
   canBuy,
+  canBuyFor,
   canSell,
   DEFAULT_PRICES,
   getItemPrice,
@@ -176,5 +178,49 @@ describe('sellItem', () => {
   it('sells for less than it buys for', () => {
     const bought = buyItem(campRun(20), WOODEN_SWORD.id);
     expect(sellItem(bought, 0).gold).toBe(10);
+  });
+});
+
+describe('buyItemFor', () => {
+  it("puts the bought item straight into the unit's inventory", () => {
+    const after = buyItemFor(campRun(25), WOODEN_SPEAR.id, 'alden');
+    expect(after.gold).toBe(5);
+    expect(after.convoy).toEqual([]);
+    expect(after.roster[0].items.at(-1)).toEqual({ itemId: WOODEN_SPEAR.id, quantity: 20 });
+  });
+
+  it('stacks a consumable onto the one the unit carries', () => {
+    const stock = [...MERCHANT_STOCK, HEALTH_POTION.id];
+    const run = campRun(10);
+    const before = run.roster[0].items.find((entry) => entry.itemId === HEALTH_POTION.id)!.quantity;
+    const after = buyItemFor(run, HEALTH_POTION.id, 'alden', stock);
+    expect(after.convoy).toEqual([]);
+    expect(after.roster[0].items.find((entry) => entry.itemId === HEALTH_POTION.id)!.quantity).toBe(before + 1);
+  });
+
+  it('takes a non-stacking item from a convoy that already holds one like it', () => {
+    const run = campRun(25, [{ itemId: WOODEN_SPEAR.id, quantity: 3 }]);
+    const after = buyItemFor(run, WOODEN_SPEAR.id, 'alden');
+    expect(after.convoy).toEqual([{ itemId: WOODEN_SPEAR.id, quantity: 3 }]);
+    expect(after.roster[0].items.at(-1)).toEqual({ itemId: WOODEN_SPEAR.id, quantity: 20 });
+  });
+
+  it('buys into the convoy for no unit', () => {
+    expect(buyItemFor(campRun(25), WOODEN_SPEAR.id, null).convoy).toEqual([{ itemId: WOODEN_SPEAR.id, quantity: 20 }]);
+  });
+
+  it("refuses a unit with no room, or gold the warband doesn't have", () => {
+    const run = campRun(100);
+    const full = {
+      ...run,
+      roster: run.roster.map((unit) => ({
+        ...unit,
+        items: Array.from({ length: 6 }, () => ({ itemId: IRON_SPEAR.id, quantity: 1 })),
+      })),
+    };
+    expect(canBuyFor(full, WOODEN_SPEAR.id, 'alden')).toBe(false);
+    expect(canBuyFor(full, WOODEN_SPEAR.id, null)).toBe(true);
+    expect(canBuyFor(campRun(19), WOODEN_SPEAR.id, 'alden')).toBe(false);
+    expect(() => buyItemFor(full, WOODEN_SPEAR.id, 'alden')).toThrow();
   });
 });

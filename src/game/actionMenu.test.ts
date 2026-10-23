@@ -4,6 +4,7 @@ import {
   UNIT_ACTIONS,
   createActionMenu,
   getSelectedAction,
+  getDefaultActionIndex,
   getUnitActions,
   moveSelection,
   selectIndex,
@@ -169,5 +170,34 @@ describe('getSelectedAction', () => {
 
   it('returns null for an empty menu', () => {
     expect(getSelectedAction(createActionMenu([]))).toBeNull();
+  });
+});
+
+describe('getDefaultActionIndex', () => {
+  const ids = (actions: readonly { id: string }[]) => actions.map((action) => action.id);
+
+  it('opens on Attack when something is in reach', () => {
+    const actions = getUnitActions({ hasSkills: true });
+    expect(ids(actions)[getDefaultActionIndex(actions, { hasTarget: true })]).toBe('attack');
+  });
+
+  it('opens on Wait when nothing is in reach', () => {
+    const actions = getUnitActions({ hasSkills: true });
+    expect(ids(actions)[getDefaultActionIndex(actions, { hasTarget: false })]).toBe('wait');
+  });
+
+  it('opens on Heal when a wounded ally is in reach and no enemy is', () => {
+    const actions = getUnitActions({ hasSkills: false, canHeal: true });
+    expect(ids(actions)[getDefaultActionIndex(actions, { hasTarget: false })]).toBe('heal');
+    expect(ids(actions)[getDefaultActionIndex(actions, { hasTarget: true })]).toBe('attack');
+  });
+
+  it('skips a disabled Heal and a disabled Attack', () => {
+    const actions = getUnitActions({ hasSkills: false, hasWeapons: false, canHeal: false });
+    expect(ids(actions)[getDefaultActionIndex(actions, { hasTarget: true })]).toBe('wait');
+  });
+
+  it('falls back to the first entry when there is no Wait', () => {
+    expect(getDefaultActionIndex([{ id: 'attack', label: 'Attack' }], { hasTarget: false })).toBe(0);
   });
 });

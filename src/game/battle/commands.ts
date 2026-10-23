@@ -8,7 +8,7 @@
 // seeded rolls. No Phaser.
 
 import { getAttackTargets, resolveCombat, type Strike, type TargetTile } from '../combat.ts';
-import { canDeployUnit, canPlaceUnit, canStartBattle, isPlaced, placeUnit } from '../deployment.ts';
+import { canDeployUnit, canDeployUnitAt, canStartBattle, isPlaced, placeUnit } from '../deployment.ts';
 import { getPhaseMovement } from '../enemyAI.ts';
 import { getCombatAward, getCombatOutcome, type ExperienceAward, type ExperienceGain } from '../experience.ts';
 import { findTileAt, findUnit, getDistance, moveUnit, setUnit, type Grid, type Point } from '../grid.ts';
@@ -256,11 +256,14 @@ function place(draft: Draft, unitId: string, to: Point) {
   const { roster, deploymentZone, deploymentLimit } = draft.base;
   if (draft.stage !== 'deployment') draft.fail('the battle has already started');
   if (!roster.includes(unitId)) draft.fail(`${unitId} isn't on the roster`);
-  if (!canDeployUnit(draft.grid, roster, deploymentLimit, unitId)) draft.fail('every slot is taken');
-  if (!canPlaceUnit(draft.grid, deploymentZone, unitId, to.x, to.y)) {
-    draft.fail(`${unitId} can't be placed on (${to.x}, ${to.y})`);
+  if (!canDeployUnitAt(draft.grid, deploymentZone, roster, deploymentLimit, unitId, to.x, to.y)) {
+    draft.fail(
+      canDeployUnit(draft.grid, roster, deploymentLimit, unitId)
+        ? `${unitId} can't be placed on (${to.x}, ${to.y})`
+        : 'every slot is taken',
+    );
   }
-  draft.grid = placeUnit(draft.grid, deploymentZone, unitId, to.x, to.y);
+  draft.grid = placeUnit(draft.grid, deploymentZone, unitId, to.x, to.y, roster);
   draft.events.push({ type: 'placed', unitId, to: { x: to.x, y: to.y } });
 }
 

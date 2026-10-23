@@ -47,12 +47,50 @@ export function canGiveFromConvoy(
   convoyIndex: number,
   items: readonly Item[] = RUN_ITEMS,
 ): boolean {
-  const unit = findUnit(run, unitId);
   const entry = run.convoy[convoyIndex];
-  if (!unit || !entry) return false;
-  const item = lookUpItem(entry.itemId, items);
+  return entry !== undefined && canCarry(run, unitId, entry.itemId, items);
+}
+
+// Whether the unit `unitId` has room for one more `itemId`: a consumable it
+// already carries stacks, anything else needs a free slot.
+export function canCarry(run: RunState, unitId: string, itemId: string, items: readonly Item[] = RUN_ITEMS): boolean {
+  const unit = findUnit(run, unitId);
+  if (!unit) return false;
+  const item = lookUpItem(itemId, items);
   const stacks = isStackable(item) && unit.items.some((held) => held.itemId === item.id);
   return stacks || unit.items.length < MAX_INVENTORY_SLOTS;
+}
+
+// Whether `itemId` is gear for the unit `unitId`, so it's one to hand a new
+// one to: a weapon its class wields that strikes at the same range as the
+// one it fights with (a bow for an archer, not a spear), or any it wields
+// when it has none; a staff when it already heals with one; or armor for a
+// slot it has nothing in (a shield only with a hand free for it).
+// Consumables suit nobody in particular.
+export function isSuitedTo(
+  run: RunState,
+  unitId: string,
+  itemId: string,
+  classes: readonly UnitClass[] = UNIT_CLASSES,
+  items: readonly Item[] = RUN_ITEMS,
+): boolean {
+  const unit = findUnit(run, unitId);
+  if (!unit) return false;
+  const item = lookUpItem(itemId, items);
+  const carried = unit.items.map((entry) => lookUpItem(entry.itemId, items));
+  if (isWeapon(item)) {
+    const types = weaponTypesOf(unit, classes, items);
+    if (!isMovable(item) || !types.includes(item.type)) return false;
+    const equipped = getEquippedWeapon(restoreInventory(unit.items, items), types);
+    if (!equipped || !isMovable(equipped.weapon)) return true;
+    return equipped.weapon.minRange === item.minRange && equipped.weapon.maxRange === item.maxRange;
+  }
+  if (item.kind === 'staff') return carried.some((held) => held.kind === 'staff');
+  if (isArmor(item)) {
+    if (carried.some((held) => isArmor(held) && held.slot === item.slot)) return false;
+    return item.slot !== 'shield' || hasHandFree(unit, classes, items);
+  }
+  return false;
 }
 
 // The run with the convoy entry at `convoyIndex` given to the unit
@@ -139,6 +177,22 @@ export function getWornIndices(
   return getWornArmor(restoreInventory(unit.items, items), weaponTypesOf(unit, classes, items)).map(
     ({ index }) => index,
   );
+}
+
+// How many uses the weapon the unit `unitId` fights with has left: null
+// for one that never breaks, or 0 when it carries none it can wield. The
+// unit with the fewest is the one most in need of a new weapon.
+export function getEquippedUses(
+  run: RunState,
+  unitId: string,
+  classes: readonly UnitClass[] = UNIT_CLASSES,
+  items: readonly Item[] = RUN_ITEMS,
+): number | null {
+  const unit = findUnit(run, unitId);
+  if (!unit) return 0;
+  const equipped = getEquippedWeapon(restoreInventory(unit.items, items), weaponTypesOf(unit, classes, items));
+  if (!equipped || !isMovable(equipped.weapon)) return 0;
+  return equipped.uses;
 }
 
 // Whether the unit `unitId` can equip its item at `itemIndex`: a weapon

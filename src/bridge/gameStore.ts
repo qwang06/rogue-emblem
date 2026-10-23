@@ -63,6 +63,7 @@ export interface BattleState {
   battleOutcome: BattleOutcome | null;
   dialog: DialogView | null;
   objective: ObjectiveView | null;
+  deploymentObjective: ObjectiveView | null;
   objectiveStatus: string | null;
   nextBattle: string | null;
   runOver: RunOverView | null;
@@ -113,6 +114,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   battleOutcome: null, // 'victory' | 'defeat' once the battle is decided, else null
   dialog: null, // DialogView from toDialogView() of the line being spoken, or null
   objective: null, // ObjectiveView from toObjectiveView() while the Objective screen is up, or null
+  deploymentObjective: null, // ObjectiveView from toObjectiveView() during deployment, which the deployment menu shows instead of the Objective screen, else null
   objectiveStatus: null, // getObjectiveStatus() of the battle's objective on the current turn (the header's readout) once the battle starts, else null
   nextBattle: null, // describeBattle() of the battle a victory leads to (shown on the result), or null
   runOver: null, // RunOverView from toRunOverView() once a Warband Mode run has ended, or null
@@ -140,6 +142,8 @@ export const gameStore = createStore<GameState>({
   // Whether the player's side plays itself (the map's auto play): its
   // battles, reward picks and camp. Kept from battle to battle.
   autoPlay: false,
+  // How fast the map plays its animations, banners and auto play (1x–8x),
+  // whether Auto is on or not. Kept from battle to battle.
   autoSpeed: 1,
   ...BATTLE_STATE_DEFAULTS,
 });
