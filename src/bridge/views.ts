@@ -592,7 +592,11 @@ export function toLevelUpView({
   });
 }
 
-const PHASE_LABELS: Readonly<Record<Team, string>> = Object.freeze({ player: 'Player Phase', enemy: 'Enemy Phase' });
+const PHASE_LABELS: Readonly<Record<Team, string>> = Object.freeze({
+  player: 'Player Phase',
+  enemy: 'Enemy Phase',
+  guest: 'Guest Phase',
+});
 
 // Snapshot of whose phase it is, from a turn state (src/game/turns.ts):
 // the turn number, the team, and the phase's display name.

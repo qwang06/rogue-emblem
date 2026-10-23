@@ -1,4 +1,4 @@
-import { Frame } from './Frame.tsx';
+import { Frame, TEAM_BANNERS } from './Frame.tsx';
 import { useGameStore } from './useGameStore.ts';
 
 // Header status during the battle, as small GBA-style banners: whose
@@ -11,7 +11,7 @@ export function TurnIndicator() {
 
   return (
     <div className={`turn-indicator turn-indicator--${turn.team}`}>
-      <Frame as="span" variant={turn.team === 'enemy' ? 'banner-red' : 'banner'} className="turn-indicator__phase">
+      <Frame as="span" variant={TEAM_BANNERS[turn.team]} className="turn-indicator__phase">
         {turn.label}
       </Frame>
       <Frame as="span" className="turn-indicator__turn">

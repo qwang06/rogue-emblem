@@ -19,7 +19,7 @@ import { getHealAmount, getHealTargets, getStaves, isWounded } from '../healing.
 import { canUseItem, getConsumables, getItemRecovery } from '../items.ts';
 import { getMoveCost, getMovementRange, getMovePath, type RangeTile } from '../movement.ts';
 import { getPhaseMovement } from '../enemyAI.ts';
-import { getTeamUnitIds } from '../teams.ts';
+import { areAllied, getTeamUnitIds } from '../teams.ts';
 import { isDone } from '../turns.ts';
 import type { Unit } from '../Unit.ts';
 import { getMovementOptions, hostileTo, type BattleCommand } from './commands.ts';
@@ -124,7 +124,7 @@ export function planPlayerDeployment(state: BattleState): BattleCommand[] {
   if (state.stage !== 'deployment') return [];
   const { grid, units } = state;
   const enemyTiles = [...units]
-    .filter(([, unit]) => unit.team !== 'player' && unit.isAlive())
+    .filter(([, unit]) => unit.team === 'enemy' && unit.isAlive())
     .map(([unitId]) => findUnit(grid, unitId))
     .filter((tile): tile is Point => tile !== null);
   const nearestEnemy = (tile: Point) => Math.min(FAR, ...enemyTiles.map((at) => getDistance(tile, at)));
@@ -169,7 +169,7 @@ function createContext(state: BattleState, weights: PlayerAIWeights): Context {
     if (tile) allies.set(unitId, tile);
   }
   const enemies = [...units]
-    .filter(([unitId, unit]) => unit.team !== 'player' && unit.isAlive() && findUnit(grid, unitId) !== null)
+    .filter(([unitId, unit]) => unit.team === 'enemy' && unit.isAlive() && findUnit(grid, unitId) !== null)
     .map(([unitId, unit]) => ({ unitId, unit, threatened: getThreatened(state, unitId, unit) }));
   const seize = objective.kind === 'seize' ? objective.tile : null;
   const bossId = objective.kind === 'boss' && units.has(objective.unitId) ? objective.unitId : null;
@@ -293,7 +293,7 @@ function getActions(state: BattleState, context: Context, unitId: string, unit: 
   for (const { staff, index } of getStaves(unit.items)) {
     const canHeal = (otherId: string) => {
       const other = state.units.get(otherId);
-      return otherId !== unitId && other?.team === unit.team && isWounded(other);
+      return otherId !== unitId && other !== undefined && areAllied(other.team, unit.team) && isWounded(other);
     };
     for (const target of getHealTargets(state.grid, tile, staff, canHeal)) {
       const patient = state.units.get(target.unitId)!;

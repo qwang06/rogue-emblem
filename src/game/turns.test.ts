@@ -140,6 +140,19 @@ describe('nextPhase', () => {
     expect(nextPhase(createTurnState(1, 'enemy'))).toEqual(createTurnState(2, 'player'));
   });
 
+  it('goes from the enemy phase to the guest phase of the same turn while guests are in play', () => {
+    expect(nextPhase(createTurnState(1, 'enemy'), true)).toEqual(createTurnState(1, 'guest'));
+  });
+
+  it('goes from the guest phase to the player phase of the next turn', () => {
+    expect(nextPhase(createTurnState(3, 'guest'), true)).toEqual(createTurnState(4, 'player'));
+    expect(nextPhase(createTurnState(3, 'guest'))).toEqual(createTurnState(4, 'player'));
+  });
+
+  it('never skips the enemy phase, guests or not', () => {
+    expect(nextPhase(createTurnState(1, 'player'), true)).toEqual(createTurnState(1, 'enemy'));
+  });
+
   it('starts the new phase with nobody moved or done', () => {
     const state = nextPhase(markDone(markMoved(createTurnState(), 'b'), 'a'));
     expect(state.moved).toEqual([]);
@@ -150,6 +163,11 @@ describe('nextPhase', () => {
 describe('getBattleOutcome', () => {
   it('is null while both sides have living units', () => {
     expect(getBattleOutcome([makeUnit('player'), makeUnit('enemy')])).toBeNull();
+  });
+
+  it('never counts a guest as a player unit or an enemy', () => {
+    expect(getBattleOutcome([makeUnit('guest'), makeUnit('enemy')])).toBe('defeat');
+    expect(getBattleOutcome([makeUnit('player'), makeUnit('guest')])).toBe('victory');
   });
 
   it('is victory once every enemy is defeated', () => {

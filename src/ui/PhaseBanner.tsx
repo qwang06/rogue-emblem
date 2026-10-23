@@ -1,7 +1,7 @@
-import { Frame } from './Frame.tsx';
+import { Frame, TEAM_BANNERS } from './Frame.tsx';
 import { useGameStore } from './useGameStore.ts';
 
-// The "Player Phase" / "Enemy Phase" announcement at the start of each
+// The "Player Phase" / "Enemy Phase" / "Guest Phase" announcement at the start of each
 // phase: a gold-framed banner in the side's color, mid-map. GridScene decides when it shows and for how long; this
 // draws it and plays the slide-in/out over that duration.
 export function PhaseBanner() {
@@ -12,7 +12,7 @@ export function PhaseBanner() {
     <Frame
       as="div"
       key={banner.id}
-      variant={banner.team === 'enemy' ? 'banner-red' : 'banner'}
+      variant={TEAM_BANNERS[banner.team]}
       className={`phase-banner phase-banner--${banner.team}`}
       style={{ animationDuration: `${banner.durationMs}ms` }}
       role="status"

@@ -46,7 +46,7 @@ function Identity({ unit }: { unit: UnitDetailView }) {
       <p className="unit-info__class">
         {unit.classLabel ?? 'No class'}, level {unit.level}
       </p>
-      {unit.team === 'player' && (
+      {unit.team !== 'enemy' && (
         <p className="unit-info__xp">
           {unit.maxLevel ? 'Max level' : `XP ${unit.experience}/${getExperienceForLevel(unit.level)}`}
         </p>

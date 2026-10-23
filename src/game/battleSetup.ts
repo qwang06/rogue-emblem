@@ -109,6 +109,7 @@ export function createBattleLevel(
         if (tile) {
           const unit = restoreUnit(guest);
           unit.name = `${guest.name} (Guest)`;
+          unit.team = 'guest';
           level = {
             ...level,
             grid: setUnit(level.grid, tile.x, tile.y, GUEST_UNIT_ID),

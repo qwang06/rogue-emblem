@@ -33,7 +33,11 @@ export type DialogScripts = Readonly<Record<string, readonly DialogLine[]>>;
 export type DialogFiles = Readonly<Record<string, DialogScripts>>;
 
 // Which side of the dialog box each team's speakers stand on by default.
-export const DEFAULT_SIDES: Readonly<Record<Team, DialogSide>> = Object.freeze({ player: 'left', enemy: 'right' });
+export const DEFAULT_SIDES: Readonly<Record<Team, DialogSide>> = Object.freeze({
+  player: 'left',
+  enemy: 'right',
+  guest: 'left',
+});
 
 // When a conversation can play: at the start of a level, before its
 // victory or defeat screen, or at the start of a turn ('turn 3').

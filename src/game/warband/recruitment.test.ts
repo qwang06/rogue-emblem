@@ -30,7 +30,7 @@ describe('guest recruitment', () => {
     const run = stageTwo();
     const level = createBattleLevel(runStage(run));
     const guest = level.units.get(GUEST_UNIT_ID)!;
-    expect(guest.team).toBe('player');
+    expect(guest.team).toBe('guest');
     expect(guest.name).toContain('(Guest)');
     expect(level.roster).not.toContain(GUEST_UNIT_ID);
     expect(findUnit(level.grid, GUEST_UNIT_ID)).not.toBeNull();
@@ -38,15 +38,20 @@ describe('guest recruitment', () => {
     expect(createBattleLevel(runStage(startingRun())).units.has(GUEST_UNIT_ID)).toBe(false);
   });
 
-  it('lets the guest act through the battle AI while keeping it outside deployment', () => {
+  it('lets the guest act through the battle AI on its own phase while keeping it outside deployment', () => {
     const level = createBattleLevel(runStage(stageTwo()));
     let state = createBattleState(level, 1);
     for (const command of planDeployment(state)) state = applyCommand(state, command).state;
     expect(state.deployed).not.toContain(GUEST_UNIT_ID);
+    for (const team of ['enemy', 'guest']) {
+      state = applyCommand(state, { type: 'end-phase' }).state;
+      expect(state.turnState?.team).toBe(team);
+    }
     const actions = planUnitTurn(state, GUEST_UNIT_ID);
     expect(actions.map((action) => action.type)).toEqual(['move', expect.stringMatching(/attack|wait/)]);
     for (const command of actions) state = applyCommand(state, command).state;
-    expect(state.turnState?.done).toContain(GUEST_UNIT_ID);
+    // The guest's action ends the guest phase, and the next turn begins.
+    expect(state.turnState).toMatchObject({ turn: 2, team: 'player', done: [] });
     expect(getRunBattleUnits(state).has(GUEST_UNIT_ID)).toBe(true);
   });
 

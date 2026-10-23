@@ -23,7 +23,7 @@ export interface RunOptions {
   // The authored data the level is built from.
   content?: GameContent;
   // The teams the AI plays (deployment included, for the player). The
-  // script's commands play the rest. Default: the enemy.
+  // script's commands play the rest. Default: the enemy and the guests.
   auto?: readonly Team[];
   // Stop once this turn is over without a result. Objectives already lose
   // a battle past TURN_LIMIT (objectives.ts); this is a backstop for one
@@ -59,7 +59,7 @@ export function createBattle(setup: BattleSetup, seed: number, content: GameCont
 // battle is decided, the script runs out while a scripted side has the
 // move, or the turn limit passes.
 export function runBattle(script: BattleScript, options: RunOptions = {}): RunResult {
-  const { content = DEFAULT_CONTENT, auto = ['enemy'], maxTurns = DEFAULT_MAX_TURNS, planners = {} } = options;
+  const { content = DEFAULT_CONTENT, auto = ['enemy', 'guest'], maxTurns = DEFAULT_MAX_TURNS, planners = {} } = options;
   let history = createHistory(createBattle(script.setup, script.seed, content));
   let next = 0;
   const result = (error: RunResult['error'] = null): RunResult => ({ history, state: getCurrentState(history), error });
