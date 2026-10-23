@@ -33,4 +33,10 @@ describe('describeEnemyGroup', () => {
   it('ends with a set health', () => {
     expect(describeEnemyGroup({ count: 1, minDistance: 3, maxDistance: 3, health: 4 })).toBe('1 · 3 steps · 4 HP');
   });
+
+  it('names the level before the health, and the boss last', () => {
+    expect(describeEnemyGroup({ count: 2, unitClass: 'orc', level: 6, health: 9, boss: 'Orc Warlord' })).toBe(
+      '2 orc · level 6 · 9 HP · boss: Orc Warlord',
+    );
+  });
 });

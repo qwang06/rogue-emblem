@@ -12,6 +12,7 @@ import {
   getCombatExperience,
   getExperienceToNextLevel,
   getCombatOutcome,
+  getAverageLevelUp,
   getGrowthStatValue,
   getHitExperience,
   getKillExperience,
@@ -235,6 +236,38 @@ describe('rollLevelUp', () => {
     const copy = { ...stats };
     rollLevelUp(copy, allGrowths(100), () => 0);
     expect(copy).toEqual(stats);
+  });
+});
+
+describe('getAverageLevelUp', () => {
+  const stats = { maxHealth: 10, maxMana: 5, strength: 4, defense: 2 };
+  const total = (growth: number, steps: number) =>
+    Array.from({ length: steps }, (_, i) => getAverageLevelUp(stats, { strength: growth }, i + 1).strength).reduce(
+      (sum, gain) => sum + gain,
+      0,
+    );
+
+  it('raises nothing at 0% growths', () => {
+    expect(getAverageLevelUp(stats, allGrowths(0), 1)).toEqual(noGains);
+  });
+
+  it('carries the fractions, so a 50% growth rises every second level', () => {
+    expect([1, 2, 3, 4].map((step) => getAverageLevelUp(stats, { strength: 50 }, step).strength)).toEqual([0, 1, 0, 1]);
+  });
+
+  it('adds up to floor(levels × growth / 100)', () => {
+    expect(total(45, 9)).toBe(4);
+    expect(total(85, 4)).toBe(3);
+    expect(total(100, 6)).toBe(6);
+    expect(total(150, 2)).toBe(3);
+  });
+
+  it('never raises a stat past its cap', () => {
+    expect(getAverageLevelUp(stats, { strength: 100, health: 100 }, 1, { strength: 4, health: 10 })).toEqual(noGains);
+  });
+
+  it('treats missing growths as 0%', () => {
+    expect(getAverageLevelUp(stats, { defense: 100 }, 3)).toEqual({ ...noGains, defense: 1 });
   });
 });
 

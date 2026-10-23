@@ -12,6 +12,7 @@ import { setUnit, type Point } from '../grid.ts';
 import { getBuildingSprites, getFeatureSprites } from '../mapArt.ts';
 import { pickZonedEnemyTiles } from '../enemySpawns.ts';
 import type { Rng } from '../combatStats.ts';
+import { getAverageLevelUp } from '../experience.ts';
 import { assignLoot } from '../loot.ts';
 import type { GeneratedTerrain } from '../mapGen.ts';
 import { generateMap } from '../mapPlan.ts';
@@ -39,6 +40,15 @@ export function createStartingWarband(
   name: string = WARBAND_LEADER_NAME,
 ): Map<string, Unit> {
   return new Map([[`${classId}-1`, createUnitOfClass(classId, { name, team: 'player' })]]);
+}
+
+// Levels `unit` up to `level` on its average growths (getAverageLevelUp),
+// one level up at a time, so its stats are the same for the same class and
+// level every time. Does nothing when it's already there.
+export function growToLevel(unit: Unit, level: number): void {
+  for (let step = unit.level; step < level; step = unit.level) {
+    unit.levelUp(getAverageLevelUp(unit, unit.growths, step, unit.caps));
+  }
 }
 
 // The class an enemy group's units are when it doesn't set one.
@@ -133,9 +143,12 @@ export function pickStageLayout(seed: number, region: RegionConfig, candidates =
 // - roster: `roster`'s units (a run's warband), else createStartingWarband's,
 //   deploying up to `maxDeployed`
 // - enemies: a unit of its group's class (a soldier when unset) on each tile pickEnemyTiles finds for region.enemies
-//   (fewer than asked when a group's limits leave too few tiles), starting
-//   on its group's health when it sets one, and levelling its killer up
-//   when the group sets levelUpOnKill
+//   (fewer than asked when a group's limits leave too few tiles), at its
+//   group's level (growToLevel), starting on its group's health when it
+//   sets one, and levelling its killer up when the group sets
+//   levelUpOnKill
+// - bossUnitId: the first enemy of the first group that names a boss,
+//   renamed to it and holding its ground
 // - buildings: the generator's, drawn in region.palette
 // - decorations: green ginkgos scattered (region.treeChance) on the grass no
 //   other art covers
@@ -161,13 +174,20 @@ export function createStageLevel(
   );
 
   const units = new Map(roster);
+  let bossUnitId: string | undefined;
   enemyTiles.forEach(({ x, y, group }, i) => {
     const unitId = `enemy-${i + 1}`;
     const classId = group.unitClass ?? DEFAULT_ENEMY_CLASS;
     const label = UNIT_CLASSES.find((c) => c.id === classId)?.label ?? classId;
     const enemy = createUnitOfClass(classId, { name: `Enemy ${label}`, team: 'enemy' });
+    growToLevel(enemy, group.level ?? 1);
     if (group.health !== undefined) enemy.health = Math.min(group.health, enemy.maxHealth);
     enemy.levelUpOnKill = group.levelUpOnKill ?? false;
+    if (group.boss && !bossUnitId) {
+      enemy.name = group.boss;
+      enemy.holdsPosition = true;
+      bossUnitId = unitId;
+    }
     units.set(unitId, enemy);
     grid = setUnit(grid, x, y, unitId);
   });
@@ -200,6 +220,7 @@ export function createStageLevel(
     palette: region.palette,
     objective: DEFAULT_OBJECTIVE,
     ...(layout.terrain.seizeTile ? { seizeTile: { ...layout.terrain.seizeTile } } : {}),
+    ...(bossUnitId ? { bossUnitId } : {}),
   };
 }
 

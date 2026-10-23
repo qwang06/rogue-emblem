@@ -216,6 +216,28 @@ export function rollLevelUp(stats: GrowthSource, growths: GrowthTable, rng: Rng,
   return gains;
 }
 
+// The stat gains for a unit's `step`-th level up (1 is the first) on its
+// average growths instead of rolls, for enemies fielded above level 1: a
+// growth of g% adds g/100 of a point per level with the fractions carried,
+// so after `step` level ups a stat has risen floor(step × g / 100) in all.
+// Same shape and caps as rollLevelUp, and always the same for the same
+// inputs.
+export function getAverageLevelUp(
+  stats: GrowthSource,
+  growths: GrowthTable,
+  step: number,
+  caps: GrowthTable = {},
+): StatGains {
+  const gains = {} as StatGains;
+  for (const stat of GROWTH_STATS) {
+    const growth = growths[stat] ?? 0;
+    const due = Math.floor((step * growth) / 100) - Math.floor(((step - 1) * growth) / 100);
+    const room = Math.max(0, (caps[stat] ?? Infinity) - getGrowthStatValue(stats, stat));
+    gains[stat] = Math.min(due, room);
+  }
+  return gains;
+}
+
 // Everything that happens when `unit` gains `amount` XP, scaled by its
 // experienceRate (scaleExperience) unless `scaled` is false; `amount` in
 // the result is what it actually earned: its new level and experience, and one entry per level gained, in order, as { level, gains,

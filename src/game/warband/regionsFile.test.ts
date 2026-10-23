@@ -57,12 +57,13 @@ describe('parseRegionSettings', () => {
     expect(parseRegionSettings(file([region({ name: '  Glade ' })])).regions[0].name).toBe('Glade');
   });
 
-  it('reads enemy groups with classes, areas, distances, health and levelUpOnKill', () => {
+  it('reads enemy groups with classes, areas, distances, levels, health, levelUpOnKill and bosses', () => {
     const enemies = [
       { count: 2, area: { x: [0, 0.5], y: [0, 0.4] }, minDistance: 6 },
       { count: 1, maxDistance: 8, levelUpOnKill: false },
       { count: 1, unitClass: 'warrior', minDistance: 3, maxDistance: 3, health: 4, levelUpOnKill: true },
       { count: 1, unitClass: 'archer' },
+      { count: 2, unitClass: 'orc', level: 6, boss: 'Orc Warlord' },
     ];
     expect(parseRegionSettings(file([region({ enemies })])).regions[0].enemies).toEqual(enemies);
   });
@@ -202,6 +203,16 @@ describe('parseRegionSettings', () => {
       'an unknown enemy class',
       file([region({ enemies: [{ count: 1, unitClass: 'dragon' }] })]),
       /enemies\[0\]\.unitClass must be one of warrior, soldier, archer/,
+    ],
+    [
+      'an enemy level of 21',
+      file([region({ enemies: [{ count: 1, level: 21 }] })]),
+      /enemies\[0\]\.level must be a whole number from 1 to 20/,
+    ],
+    [
+      'a blank boss name',
+      file([region({ enemies: [{ count: 1, boss: '  ' }] })]),
+      /enemies\[0\]\.boss must be text of 1 to 40 characters/,
     ],
     [
       'a levelUpOnKill that is not true or false',

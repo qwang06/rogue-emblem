@@ -254,6 +254,7 @@ export function RegionEditor({
                     label="Max distance"
                     placeholder="any"
                   />
+                  <NumberField form={form} path={at('enemies', g, 'level')} label="Level" placeholder="1" />
                   <NumberField form={form} path={at('enemies', g, 'health')} label="Health" placeholder="full" />
                   <CheckboxField
                     form={form}
@@ -261,6 +262,7 @@ export function RegionEditor({
                     label="Level up on kill"
                     fallback={false}
                   />
+                  <TextField form={form} path={at('enemies', g, 'boss')} label="Boss" />
                   <PairField
                     form={form}
                     path={at('enemies', g, 'area', 'x')}

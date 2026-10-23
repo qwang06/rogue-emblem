@@ -51,6 +51,7 @@ export const REGION_LIMITS = Object.freeze({
   enemyGroups: [1, 10],
   enemyDistance: [1, 100],
   enemyHealth: [1, 99],
+  enemyLevel: [1, 20],
   surviveTurns: [1, 30],
 } as const);
 
@@ -178,8 +179,10 @@ function parseEnemyGroup(value: unknown, path: string): EnemyGroup {
     'region',
     'minDistance',
     'maxDistance',
+    'level',
     'health',
     'levelUpOnKill',
+    'boss',
   ]);
   if (json.area !== undefined && json.region !== undefined) fail(path, 'must set area or region, not both');
   const group: { -readonly [K in keyof EnemyGroup]: EnemyGroup[K] } = {
@@ -199,10 +202,18 @@ function parseEnemyGroup(value: unknown, path: string): EnemyGroup {
   if (group.minDistance !== undefined && group.maxDistance !== undefined && group.minDistance > group.maxDistance) {
     fail(path, 'must have minDistance no larger than maxDistance');
   }
+  if (json.level !== undefined) group.level = wholeNumber(json.level, `${path}.level`, REGION_LIMITS.enemyLevel);
   if (json.health !== undefined) group.health = wholeNumber(json.health, `${path}.health`, REGION_LIMITS.enemyHealth);
   if (json.levelUpOnKill !== undefined) {
     if (typeof json.levelUpOnKill !== 'boolean') fail(`${path}.levelUpOnKill`, 'must be true or false');
     group.levelUpOnKill = json.levelUpOnKill;
+  }
+  if (json.boss !== undefined) {
+    const [minName, maxName] = REGION_LIMITS.nameLength;
+    if (typeof json.boss !== 'string' || json.boss.trim().length < minName || json.boss.trim().length > maxName) {
+      fail(`${path}.boss`, `must be text of ${minName} to ${maxName} characters`);
+    }
+    group.boss = json.boss.trim();
   }
   return Object.freeze(group);
 }

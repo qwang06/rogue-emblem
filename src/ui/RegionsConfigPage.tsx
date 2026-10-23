@@ -406,9 +406,11 @@ function RegionsFormat() {
           where they stand: <code>area</code>, a box as <code>[from, to]</code> fractions of the map&apos;s columns (
           <code>x</code>) and rows (<code>y</code>), 0 being the west or north edge; and <code>minDistance</code> /{' '}
           <code>maxDistance</code>, how many steps a unit walks from the deployment zone to reach them (
-          {REGION_LIMITS.enemyDistance[0]} to {REGION_LIMITS.enemyDistance[1]}). Optional <code>health</code> starts
-          them wounded, and <code>levelUpOnKill</code> (true/false) makes killing one give the killer exactly a level
-          up. A file whose limits leave too little room for its enemies is turned away.
+          {REGION_LIMITS.enemyDistance[0]} to {REGION_LIMITS.enemyDistance[1]}). Optional <code>level</code> (
+          {REGION_LIMITS.enemyLevel[0]} to {REGION_LIMITS.enemyLevel[1]}) fields them above level 1, <code>health</code>{' '}
+          starts them wounded, <code>levelUpOnKill</code> (true/false) makes killing one give the killer exactly a level
+          up, and <code>boss</code> names the group&apos;s first enemy as a boss that holds its ground and is a boss
+          objective&apos;s target. A file whose limits leave too little room for its enemies is turned away.
         </li>
         <li>
           <code>treeChance</code>: 0–1.

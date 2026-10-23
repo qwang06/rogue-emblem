@@ -4,8 +4,10 @@
 //   edge, 1 the east/south edge), so the same box fits any map size
 // - minDistance / maxDistance: how many steps a unit would walk from the
 //   nearest deployment tile, going around water, mountains and walls
-// A group can also start its enemies wounded (`health`), e.g. for an easy
-// first stage, and make killing one level the killer up (`levelUpOnKill`).
+// A group can also field its enemies above level 1 (`level`), start them
+// wounded (`health`), e.g. for an easy first stage, make killing one level
+// the killer up (`levelUpOnKill`), and make its first enemy a named boss
+// (`boss`).
 // Groups are placed in order, each on random tiles that pass all of its
 // limits and aren't already taken. Pure: the same inputs and Rng always
 // give the same tiles.
@@ -30,6 +32,9 @@ export interface EnemyGroup {
   // soldiers when unset.
   unitClass?: string;
   area?: SpawnArea;
+  // The level its enemies are, grown from level 1 on their class's average
+  // growths (see getAverageLevelUp in experience.ts); 1 when unset.
+  level?: number;
   minDistance?: number;
   maxDistance?: number;
   // The HP its enemies start the battle with (at most their max HP); full
@@ -38,6 +43,10 @@ export interface EnemyGroup {
   // Whether killing one of its enemies gives the killer exactly the XP it
   // needs for its next level (see getCombatAward in experience.ts).
   levelUpOnKill?: boolean;
+  // The name of the boss its first enemy becomes, e.g. "Orc Warlord": it
+  // holds its ground, and a boss objective targets it (see
+  // warband/stageObjective.ts). No boss when unset.
+  boss?: string;
 }
 
 // The north third of the map: where enemies stood before regions could

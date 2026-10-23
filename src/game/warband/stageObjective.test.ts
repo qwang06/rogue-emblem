@@ -93,6 +93,17 @@ describe('placeObjective', () => {
     expect(level.units.get('enemy-1')!.holdsPosition).toBe(false);
   });
 
+  it('targets the level’s named boss as it is, while it’s on the map', () => {
+    const level = smallLevel(MAP);
+    level.units.get('enemy-1')!.name = 'Orc Warlord';
+    const objective = placeObjective({ kind: 'boss' }, { ...level, bossUnitId: 'enemy-1' });
+    expect(objective).toEqual({ kind: 'boss', unitId: 'enemy-1', name: 'Orc Warlord' });
+    expect(level.units.get('enemy-1')!.level).toBe(1);
+    expect(placeObjective({ kind: 'boss' }, { ...smallLevel(MAP), bossUnitId: 'enemy-9' })).toMatchObject({
+      unitId: 'enemy-2',
+    });
+  });
+
   it('falls back to a rout when there is no enemy to make the boss', () => {
     expect(placeObjective({ kind: 'boss' }, { ...smallLevel(MAP), units: new Map() })).toBe(ROUT);
   });

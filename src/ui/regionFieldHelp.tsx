@@ -279,6 +279,24 @@ const HELP: Record<string, FieldHelp> = {
       </p>
     ),
   },
+  level: {
+    title: 'Level',
+    body: (
+      <p>
+        The level these enemies are, from 1 to 20. They grow from level 1 on their class&apos;s average growths, so the
+        same class at the same level always has the same stats. Blank: level 1.
+      </p>
+    ),
+  },
+  boss: {
+    title: 'Boss',
+    body: (
+      <p>
+        A name, e.g. Orc Warlord, makes the group&apos;s first enemy a boss by that name: it holds its ground, and a
+        boss objective targets it instead of a promoted &ldquo;Chief&rdquo;. Blank: no boss.
+      </p>
+    ),
+  },
   levelUpOnKill: {
     title: 'Level up on kill',
     body: (
