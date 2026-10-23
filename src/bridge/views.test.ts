@@ -10,6 +10,7 @@ import {
   toObjectiveView,
   toRewardAction,
   toRewardMenuActions,
+  toTeamView,
   toRunOverView,
   toStageClearView,
   toPhaseBannerView,
@@ -617,6 +618,7 @@ describe('toRewardAction', () => {
       kind: 'gold',
       description: 'A purse of coin, for the camp to come.',
       stats: null,
+      healthAfter: null,
     });
     expect(Object.isFrozen(action)).toBe(true);
   });
@@ -639,8 +641,10 @@ describe('toStageClearView', () => {
 });
 
 describe('toRewardMenuActions', () => {
+  const run = (gold: number) => ({ ...createRun(1, createStartingWarband()), gold });
+
   it('lists the cards, then Skip and Reroll with their gold', () => {
-    const actions = toRewardMenuActions([{ kind: 'rest' }], { skipGold: 15, rerollCost: 10, gold: 30 });
+    const actions = toRewardMenuActions([{ kind: 'rest' }], { skipGold: 15, rerollCost: 10, run: run(30) });
     expect(actions.map(({ id, label }) => [id, label])).toEqual([
       ['rest-0', 'Rest'],
       ['skip', 'Skip (+15 gold)'],
@@ -650,8 +654,45 @@ describe('toRewardMenuActions', () => {
   });
 
   it("disables Reroll when the warband can't afford it", () => {
-    const actions = toRewardMenuActions([], { skipGold: 15, rerollCost: 20, gold: 19 });
+    const actions = toRewardMenuActions([], { skipGold: 15, rerollCost: 20, run: run(19) });
     expect(actions.find(({ kind }) => kind === 'reroll')?.disabled).toBe(true);
     expect(actions.find(({ kind }) => kind === 'skip')?.disabled).toBeUndefined();
+  });
+
+  it("previews each unit's HP after a reward that heals, and nothing for one that doesn't", () => {
+    const base = run(0);
+    const hurt = { ...base, roster: base.roster.map((unit, i) => (i === 0 ? { ...unit, health: 3 } : unit)) };
+    const [rest, gold, skip] = toRewardMenuActions([{ kind: 'rest' }, { kind: 'gold', amount: 40 }], {
+      skipGold: 15,
+      rerollCost: 10,
+      run: hurt,
+    });
+    expect(rest.healthAfter).toEqual(hurt.roster.map(({ maxHealth }) => ({ health: maxHealth, maxHealth })));
+    expect(gold.healthAfter).toBeNull();
+    expect(skip.healthAfter).toBeNull();
+  });
+});
+
+describe('toTeamView', () => {
+  it("lists each unit's class, level, XP and HP in roster order, frozen", () => {
+    const run = createRun(1, createStartingWarband());
+    const roster = [
+      { ...run.roster[0], level: 3, experience: 40, health: 7 },
+      { ...run.roster[1], level: MAX_LEVEL },
+    ];
+    const view = toTeamView(roster);
+    expect(view.map(({ id }) => id)).toEqual([roster[0].id, roster[1].id]);
+    expect(view[0]).toMatchObject({
+      name: roster[0].name,
+      level: 3,
+      experience: 40,
+      experienceForLevel: 100,
+      health: 7,
+      maxHealth: roster[0].maxHealth,
+    });
+    expect(view[0].unitClass).not.toBe(roster[0].classId);
+    expect(view[1].experienceForLevel).toBeNull();
+    expect(Object.isFrozen(view)).toBe(true);
+    expect(Object.isFrozen(view[0])).toBe(true);
   });
 });

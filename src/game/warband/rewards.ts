@@ -303,6 +303,21 @@ function applyRewardEffect(run: RunState, reward: Reward, classes: readonly Unit
   }
 }
 
+// Each roster unit's HP and max HP (in roster order) after `reward`, for
+// previewing a heal on the reward screen; null for a reward that doesn't
+// restore HP. A Veteran's Lesson's max HP gains aren't previewed, so its
+// level ups stay a surprise.
+export function previewRewardHealth(
+  run: RunState,
+  reward: Reward,
+  classes: readonly UnitClass[] = UNIT_CLASSES,
+): readonly { health: number; maxHealth: number }[] | null {
+  if (reward.kind !== 'rest' && reward.kind !== 'training') return null;
+  return Object.freeze(
+    applyRewardEffect(run, reward, classes).roster.map(({ health, maxHealth }) => Object.freeze({ health, maxHealth })),
+  );
+}
+
 // A unit's level up from a lesson reward or a stage clear, for showing it.
 export interface RewardLevelUp {
   name: string;
