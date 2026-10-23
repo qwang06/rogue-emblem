@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createTurnState,
   getBattleOutcome,
+  getFirstPhase,
   hasMoved,
   isDone,
   isPhaseOver,
@@ -131,6 +132,16 @@ describe('isPhaseOver', () => {
   });
 });
 
+describe('getFirstPhase', () => {
+  it("opens a turn with the guests' phase while any guest is in play", () => {
+    expect(getFirstPhase(2, true)).toEqual(createTurnState(2, 'guest'));
+  });
+
+  it("opens a turn with the player's phase without guests", () => {
+    expect(getFirstPhase(2)).toEqual(createTurnState(2, 'player'));
+  });
+});
+
 describe('nextPhase', () => {
   it('goes from the player phase to the enemy phase of the same turn', () => {
     expect(nextPhase(createTurnState(1, 'player'))).toEqual(createTurnState(1, 'enemy'));
@@ -140,13 +151,13 @@ describe('nextPhase', () => {
     expect(nextPhase(createTurnState(1, 'enemy'))).toEqual(createTurnState(2, 'player'));
   });
 
-  it('goes from the enemy phase to the guest phase of the same turn while guests are in play', () => {
-    expect(nextPhase(createTurnState(1, 'enemy'), true)).toEqual(createTurnState(1, 'guest'));
+  it('goes from the enemy phase to the guest phase of the next turn while guests are in play', () => {
+    expect(nextPhase(createTurnState(1, 'enemy'), true)).toEqual(createTurnState(2, 'guest'));
   });
 
-  it('goes from the guest phase to the player phase of the next turn', () => {
-    expect(nextPhase(createTurnState(3, 'guest'), true)).toEqual(createTurnState(4, 'player'));
-    expect(nextPhase(createTurnState(3, 'guest'))).toEqual(createTurnState(4, 'player'));
+  it('goes from the guest phase to the player phase of the same turn', () => {
+    expect(nextPhase(createTurnState(3, 'guest'), true)).toEqual(createTurnState(3, 'player'));
+    expect(nextPhase(createTurnState(3, 'guest'))).toEqual(createTurnState(3, 'player'));
   });
 
   it('never skips the enemy phase, guests or not', () => {

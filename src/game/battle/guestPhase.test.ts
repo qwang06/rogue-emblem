@@ -36,17 +36,18 @@ function playPhase(state: BattleState) {
 }
 
 describe('the guest phase', () => {
-  it('comes after the enemy phase, and the next turn after it', () => {
+  it('opens the battle and every turn, before the player and the enemy', () => {
     let state = withGuest();
-    const phases: unknown[] = [];
+    const phases = [{ turn: state.turnState!.turn, team: state.turnState!.team }];
     for (let i = 0; i < 3; i++) {
       state = run(state, { type: 'end-phase' }).state;
       phases.push({ turn: state.turnState!.turn, team: state.turnState!.team });
     }
     expect(phases).toEqual([
-      { turn: 1, team: 'enemy' },
       { turn: 1, team: 'guest' },
-      { turn: 2, team: 'player' },
+      { turn: 1, team: 'player' },
+      { turn: 1, team: 'enemy' },
+      { turn: 2, team: 'guest' },
     ]);
   });
 
@@ -55,51 +56,51 @@ describe('the guest phase', () => {
       hero: { unit: makeTestUnit({ team: 'player' }), at: { x: 0, y: 0 } },
       foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 6, y: 0 } },
     });
+    expect(state.turnState).toMatchObject({ turn: 1, team: 'player' });
     const next = run(state, { type: 'end-phase' }, { type: 'end-phase' }).state;
     expect(next.turnState).toMatchObject({ turn: 2, team: 'player' });
   });
 
   it("never lets the player order a guest, or attack one, but lets the player's units walk through it", () => {
-    const state = withGuest({ foeAt: 6 });
+    const state = run(withGuest({ foeAt: 6 }), { type: 'end-phase' }).state;
     expect(() => applyCommand(state, { type: 'wait', unitId: 'guest' })).toThrow(/player phase/);
     const beside = run(state, { type: 'move', unitId: 'hero', to: { x: 1, y: 0 } }).state;
     expect(() => applyCommand(beside, { type: 'attack', unitId: 'hero', target: { x: 2, y: 0 } })).toThrow(/no foe/);
     const past = run(state, { type: 'move', unitId: 'hero', to: { x: 3, y: 0 } }).state;
-    expect(past.units.get('hero')).toBeDefined();
     expect(past.grid.cells.find((cell) => cell.unitId === 'hero')).toMatchObject({ x: 3 });
   });
 
   it('lets the enemy attack a guest', () => {
-    const enemyPhase = run(withGuest(), { type: 'end-phase' }).state;
+    const enemyPhase = run(withGuest(), { type: 'end-phase' }, { type: 'end-phase' }).state;
+    expect(enemyPhase.turnState!.team).toBe('enemy');
     const [, act] = planNextTurn(enemyPhase);
     expect(act).toEqual({ type: 'attack', unitId: 'foe', target: { x: 2, y: 0 } });
     const { state } = run(enemyPhase, ...planNextTurn(enemyPhase));
     expect(state.units.get('guest')!.health).toBeLessThan(20);
   });
 
-  it('plays the guests with the AI, attacking the enemy, then hands the next turn to the player', () => {
-    const guestPhase = run(withGuest(), { type: 'end-phase' }, { type: 'end-phase' }).state;
-    expect(guestPhase.turnState!.team).toBe('guest');
+  it('plays the guests with the AI, attacking the enemy, then hands the turn to the player', () => {
+    const guestPhase = withGuest();
     expect(planNextTurn(guestPhase)[1]).toEqual({ type: 'attack', unitId: 'guest', target: { x: 3, y: 0 } });
     const { state, events } = playPhase(guestPhase);
     expect(events.some((event) => event.type === 'strike' && event.strikerId === 'guest')).toBe(true);
-    expect(state.turnState).toMatchObject({ turn: 2, team: 'player' });
+    expect(state.turnState).toMatchObject({ turn: 1, team: 'player' });
   });
 
-  it('ends once the last guest falls, going on to the next turn without one', () => {
-    const enemyPhase = run(withGuest({ guestHealth: 1 }), { type: 'end-phase' }).state;
+  it('is left out of the next turn once the last guest falls', () => {
+    const enemyPhase = run(withGuest({ guestHealth: 1 }), { type: 'end-phase' }, { type: 'end-phase' }).state;
     const { state, events } = playPhase(enemyPhase);
     expect(events.some((event) => event.type === 'defeated' && event.unitId === 'guest')).toBe(true);
     expect(state.turnState).toMatchObject({ turn: 2, team: 'player' });
   });
 
   it("doesn't win or lose the battle for the player", () => {
-    const enemyPhase = createTestBattle({
+    const start = createTestBattle({
       hero: { unit: makeTestUnit({ team: 'player', health: 1 }), at: { x: 0, y: 0 } },
       foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 1, y: 0 } },
       guest: { unit: makeTestUnit({ team: 'guest' }), at: { x: 7, y: 0 } },
     });
-    const { state } = playPhase(run(enemyPhase, { type: 'end-phase' }).state);
+    const { state } = playPhase(run(start, { type: 'end-phase' }, { type: 'end-phase' }).state);
     expect(state.outcome).toBe('defeat');
   });
 });

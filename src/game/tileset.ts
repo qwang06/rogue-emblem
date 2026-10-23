@@ -11,6 +11,7 @@ import type { Autotile, SheetTile } from './autotile.ts';
 import type { BuildingKind } from './buildings.ts';
 import type { Facing } from './facing.ts';
 import type { ArrowPiece } from './moveArrow.ts';
+import type { Team } from './turns.ts';
 
 export type UnitAnimation = 'idle' | 'move';
 
@@ -294,6 +295,14 @@ export const UNIT_SHADOW: Shadow = {
   centerX: 16,
   centerY: 29,
   alpha: 0.35,
+};
+
+// The outline drawn around every unit on the map in its team's color, so
+// sides read at a glance without recoloring the sprite: `width` sheet
+// pixels thick, hugging the art's silhouette within each frame.
+export const UNIT_OUTLINE: { width: number; colors: Readonly<Record<Team, number>> } = {
+  width: 1,
+  colors: { player: 0x4a8cff, enemy: 0xff4a4a, guest: 0x4ad860 },
 };
 
 // The blob shadow drawn at the foot of every tree, in the same terms as
