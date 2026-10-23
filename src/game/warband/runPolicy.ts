@@ -7,7 +7,7 @@
 import { planPlayerDeployment, planPlayerTurn } from '../battle/playerAI.ts';
 import type { BattleState } from '../battle/state.ts';
 import { isStaff } from '../healing.ts';
-import type { Item } from '../items.ts';
+import { isArmor, type Item } from '../items.ts';
 import type { Unit } from '../Unit.ts';
 import { createUnitOfClass } from '../unitClasses.ts';
 import { canWield, isWeapon } from '../weapons.ts';
@@ -133,13 +133,28 @@ function armUnit(run: RunState, snapshot: UnitSnapshot, stock: readonly string[]
   const unit = restoreUnit(snapshot);
   const heals = isHealer(snapshot.classId);
   const fits = (item: Item) => (heals ? isStaff(item) : isWeapon(item) && canWield(unit.weaponTypes, item));
+  // A unit carrying a shield would rather equip a one-handed weapon, so it
+  // keeps the shield's defense (see canUseShield).
+  const shielded = unit.items.some((entry) => isArmor(entry.item) && entry.item.slot === 'shield');
   const carried = unit.items
-    .map((entry, index) => ({ index, uses: usesOf(entry.item, entry.quantity), fits: fits(entry.item) }))
+    .map((entry, index) => ({
+      index,
+      uses: usesOf(entry.item, entry.quantity),
+      fits: fits(entry.item),
+      freesHand: !shielded || !isWeapon(entry.item) || entry.item.hands === 1,
+    }))
     .filter((entry) => entry.fits);
   const held = carried.find((entry) => entry.index === getHeldIndex(unit, heals));
   if (held && held.uses > LOW_USES) return null;
+  // The one with the most uses, a one-handed one first among those that
+  // won't run out soon.
+  const rank = (entry: (typeof carried)[number]) => [
+    entry.uses > LOW_USES ? 1 : 0,
+    entry.freesHand ? 1 : 0,
+    entry.uses,
+  ];
   const best = carried.reduce<(typeof carried)[number] | null>(
-    (top, entry) => (!top || entry.uses > top.uses ? entry : top),
+    (top, entry) => (!top || compareRanks(rank(entry), rank(top)) > 0 ? entry : top),
     null,
   );
   if (best && best.uses > LOW_USES) {
@@ -164,6 +179,12 @@ function armUnit(run: RunState, snapshot: UnitSnapshot, stock: readonly string[]
         getItemPrice(lookUpItem(a)) - getItemPrice(lookUpItem(b)),
     );
   return buy ? { type: 'buy', itemId: buy } : null;
+}
+
+// Compares two ranks element by element: positive when `a` is higher.
+function compareRanks(a: readonly number[], b: readonly number[]): number {
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] - b[i];
+  return 0;
 }
 
 // Whether units of `classId` heal rather than fight: their class starts

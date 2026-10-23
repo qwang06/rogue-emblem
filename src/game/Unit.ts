@@ -25,6 +25,7 @@ import {
 } from './experience.ts';
 import { spendStaffUse, type Staff } from './healing.ts';
 import {
+  canUseShield,
   createInventory,
   findItem,
   getArmorDefense,
@@ -221,19 +222,26 @@ export class Unit {
     return getEquippedWeapon(this.items, this.weaponTypes);
   }
 
-  // The armor it wears (the first of each slot it carries), with slots.
+  // The armor it wears (the first of each slot it carries, a shield only
+  // with a hand free for it), with slots.
   get wornArmor(): { armor: Armor; index: number }[] {
-    return getWornArmor(this.items);
+    return getWornArmor(this.items, this.weaponTypes);
+  }
+
+  // Whether it has a hand free for a shield: its equipped weapon takes one
+  // hand and it carries no staff (see canUseShield).
+  get canUseShield(): boolean {
+    return canUseShield(this.items, this.weaponTypes);
   }
 
   // What its worn armor adds to its defense against physical hits.
   get armorDefense(): number {
-    return getArmorDefense(this.items);
+    return getArmorDefense(this.items, this.weaponTypes);
   }
 
   // What its worn armor weighs; it slows the unit along with its weapon.
   get armorWeight(): number {
-    return getArmorWeight(this.items);
+    return getArmorWeight(this.items, this.weaponTypes);
   }
 
   // Wears the armor in inventory slot `index` (moving it to the front).

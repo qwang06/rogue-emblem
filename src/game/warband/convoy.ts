@@ -9,7 +9,7 @@
 // its body and never moves. Everything here is pure: each function returns
 // a new frozen run and leaves its input alone.
 
-import { getWornArmor, isArmor, MAX_INVENTORY_SLOTS, wearArmor, type Item } from '../items.ts';
+import { canUseShield, getWornArmor, isArmor, MAX_INVENTORY_SLOTS, wearArmor, type Item } from '../items.ts';
 import { UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
 import { equipWeapon, getEquippedWeapon, isWeapon, NATURAL_WEAPON_IDS } from '../weapons.ts';
 import {
@@ -127,15 +127,24 @@ export function getEquippedIndex(
 }
 
 // The inventory slots of the armor the unit `unitId` wears (the first of
-// each slot it carries).
-export function getWornIndices(run: RunState, unitId: string, items: readonly Item[] = RUN_ITEMS): number[] {
+// each slot it carries, a shield only with a hand free for it).
+export function getWornIndices(
+  run: RunState,
+  unitId: string,
+  classes: readonly UnitClass[] = UNIT_CLASSES,
+  items: readonly Item[] = RUN_ITEMS,
+): number[] {
   const unit = findUnit(run, unitId);
-  return unit ? getWornArmor(restoreInventory(unit.items, items)).map(({ index }) => index) : [];
+  if (!unit) return [];
+  return getWornArmor(restoreInventory(unit.items, items), weaponTypesOf(unit, classes, items)).map(
+    ({ index }) => index,
+  );
 }
 
 // Whether the unit `unitId` can equip its item at `itemIndex`: a weapon
 // its class wields that isn't already the equipped one, or armor it isn't
-// already wearing (any class wears armor).
+// already wearing (any class wears armor, but a shield only with a hand
+// free for it: a one-handed weapon and no staff, see canUseShield).
 export function canEquipInRoster(
   run: RunState,
   unitId: string,
@@ -147,7 +156,10 @@ export function canEquipInRoster(
   const entry = unit?.items[itemIndex];
   if (!unit || !entry) return false;
   const item = lookUpItem(entry.itemId, items);
-  if (isArmor(item)) return !getWornIndices(run, unitId, items).includes(itemIndex);
+  if (isArmor(item)) {
+    if (item.slot === 'shield' && !hasHandFree(unit, classes, items)) return false;
+    return !getWornIndices(run, unitId, classes, items).includes(itemIndex);
+  }
   return (
     isWeapon(item) &&
     weaponTypesOf(unit, classes, items).includes(item.type) &&
@@ -179,6 +191,15 @@ export function equipInRoster(
       items: inventory.map(({ item, quantity }) => ({ itemId: item.id, quantity })),
     }),
   });
+}
+
+// Whether the unit has a hand free for a shield (see canUseShield).
+export function hasHandFree(
+  unit: UnitSnapshot,
+  classes: readonly UnitClass[] = UNIT_CLASSES,
+  items: readonly Item[] = RUN_ITEMS,
+): boolean {
+  return canUseShield(restoreInventory(unit.items, items), weaponTypesOf(unit, classes, items));
 }
 
 function weaponTypesOf(unit: UnitSnapshot, classes: readonly UnitClass[], items: readonly Item[]) {

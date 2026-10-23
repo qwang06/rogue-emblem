@@ -10,7 +10,7 @@
 
 import type { MenuAction } from './actionMenu.ts';
 import type { Staff } from './healing.ts';
-import type { Weapon } from './weapons.ts';
+import type { Weapon, WeaponType } from './weapons.ts';
 
 export type RestoreStat = 'health' | 'mana';
 
@@ -23,7 +23,8 @@ export interface Consumable {
 }
 
 // Armor: { kind: 'armor', id, label, slot, defense, weight }. `slot` is
-// where it's worn ('shield' on the arm, 'body' on the chest), `defense` what
+// where it's worn ('shield' on the arm, 'body' on the chest; a shield only
+// with a one-handed weapon, see canUseShield), `defense` what
 // it adds to the wearer's defense against physical hits and `weight` what
 // it weighs (it slows a wearer weaker than it, along with the weapon; see
 // getAttackSpeed in combatStats.ts). It's carried like any other item (a slot
@@ -102,24 +103,41 @@ export function isArmor(item: { kind: string }): item is Armor {
   return item.kind === 'armor';
 }
 
-// The armor a unit wears, as [{ armor, index }] in inventory order: the
-// first armor of each slot it carries.
-export function getWornArmor(inventory: Inventory): { armor: Armor; index: number }[] {
+// Whether a unit that masters `weaponTypes` has a hand free for a shield:
+// its equipped weapon (the first in its inventory it can wield, see
+// weapons.ts), if any, takes one hand, and it carries no staff, which
+// takes both. Bare-handed counts as one-handed.
+export function canUseShield(inventory: Inventory, weaponTypes: readonly WeaponType[]): boolean {
+  const equipped = inventory.find(({ item }) => item.kind === 'weapon' && weaponTypes.includes(item.type));
+  if (equipped && equipped.item.kind === 'weapon' && equipped.item.hands === 2) return false;
+  return !inventory.some(({ item }) => item.kind === 'staff' && item.hands === 2);
+}
+
+// The armor a unit that masters `weaponTypes` wears, as [{ armor, index }]
+// in inventory order: the first armor of each slot it carries, except a
+// shield when it has no hand free for one (canUseShield).
+export function getWornArmor(
+  inventory: Inventory,
+  weaponTypes: readonly WeaponType[],
+): { armor: Armor; index: number }[] {
+  const shield = canUseShield(inventory, weaponTypes);
   const worn: { armor: Armor; index: number }[] = [];
   inventory.forEach(({ item }, index) => {
-    if (isArmor(item) && !worn.some(({ armor }) => armor.slot === item.slot)) worn.push({ armor: item, index });
+    if (!isArmor(item) || (item.slot === 'shield' && !shield)) return;
+    if (!worn.some(({ armor }) => armor.slot === item.slot)) worn.push({ armor: item, index });
   });
   return worn;
 }
 
 // What the worn armor adds to defense, all slots together.
-export function getArmorDefense(inventory: Inventory): number {
-  return getWornArmor(inventory).reduce((total, { armor }) => total + armor.defense, 0);
+export function getArmorDefense(inventory: Inventory, weaponTypes: readonly WeaponType[]): number {
+  return getWornArmor(inventory, weaponTypes).reduce((total, { armor }) => total + armor.defense, 0);
 }
 
-// What the worn armor weighs, all slots together.
-export function getArmorWeight(inventory: Inventory): number {
-  return getWornArmor(inventory).reduce((total, { armor }) => total + armor.weight, 0);
+// What the worn armor weighs, all slots together. A shield it can't use
+// is carried, not worn, and weighs nothing here.
+export function getArmorWeight(inventory: Inventory, weaponTypes: readonly WeaponType[]): number {
+  return getWornArmor(inventory, weaponTypes).reduce((total, { armor }) => total + armor.weight, 0);
 }
 
 // Wears the armor at `index` by moving its entry to the front of the

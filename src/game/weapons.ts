@@ -19,8 +19,13 @@ import type { Inventory, InventoryEntry } from './items.ts';
 // weapons are the long-range engines and bombs only siege units wield.
 export type WeaponType = 'physical' | 'magical' | 'siege';
 
-// A weapon: { kind: 'weapon', id, label, type, might, hit, crit, weight,
-// minRange, maxRange, uses }. `might` adds to the wielder's attack power,
+// How many hands a weapon (or staff, see healing.ts) takes to hold. A unit
+// whose equipped weapon takes one hand has the other free for a shield;
+// one that takes two can't wear a shield (see canUseShield in items.ts).
+export type Hands = 1 | 2;
+
+// A weapon: { kind: 'weapon', id, label, type, hands, might, hit, crit,
+// weight, minRange, maxRange, uses }. `hands` is 1 or 2 (see Hands); `might` adds to the wielder's attack power,
 // `hit` and `crit` to its hit and crit rates, `weight` slows a wielder
 // weaker than it (see getAttackSpeed in combatStats.ts). `uses` is how
 // many strikes a fresh one has, or null for one that never breaks.
@@ -31,6 +36,7 @@ export interface Weapon {
   id: string;
   label: string;
   type: WeaponType;
+  hands: Hands;
   might: number;
   hit: number;
   crit: number;
@@ -94,6 +100,7 @@ export const FISTS = weapon({
   id: 'fists',
   label: 'Fists',
   type: 'physical',
+  hands: 1,
   might: 0,
   hit: 80,
   crit: 0,
@@ -108,6 +115,7 @@ export const IRON_SPEAR = weapon({
   id: 'iron-spear',
   label: 'Iron Spear',
   type: 'physical',
+  hands: 1,
   might: 1,
   hit: 80,
   crit: 0,
@@ -122,6 +130,7 @@ export const IRON_AXE = weapon({
   id: 'iron-axe',
   label: 'Iron Axe',
   type: 'physical',
+  hands: 1,
   might: 3,
   hit: 65,
   crit: 0,
@@ -132,10 +141,12 @@ export const IRON_AXE = weapon({
 });
 
 // The archer's bow: two tiles away only, so it can't strike adjacent foes.
+// It takes both hands, so an archer fights without a shield.
 export const IRON_BOW = weapon({
   id: 'iron-bow',
   label: 'Iron Bow',
   type: 'physical',
+  hands: 2,
   might: 2,
   hit: 80,
   crit: 0,
@@ -151,6 +162,7 @@ export const FIRE = weapon({
   id: 'fire',
   label: 'Fire Tome',
   type: 'magical',
+  hands: 1,
   might: 2,
   hit: 85,
   crit: 0,
@@ -166,6 +178,7 @@ export const FIRE_SPELL = weapon({
   id: 'fire-spell',
   label: 'Fire',
   type: 'magical',
+  hands: 1,
   might: 2,
   hit: 85,
   crit: 0,
@@ -182,6 +195,7 @@ export const LIGHT = weapon({
   id: 'light',
   label: 'Light',
   type: 'magical',
+  hands: 1,
   might: 0,
   hit: 90,
   crit: 0,
@@ -196,6 +210,7 @@ export const POWDER_KEG = weapon({
   id: 'powder-keg',
   label: 'Powder Keg',
   type: 'siege',
+  hands: 2,
   might: 5,
   hit: 70,
   crit: 0,
@@ -210,6 +225,7 @@ export const BALLISTA = weapon({
   id: 'ballista',
   label: 'Ballista',
   type: 'siege',
+  hands: 2,
   might: 6,
   hit: 70,
   crit: 0,
@@ -225,6 +241,7 @@ export const TACKLE = weapon({
   id: 'tackle',
   label: 'Tackle',
   type: 'physical',
+  hands: 1,
   might: 0,
   hit: 75,
   crit: 0,
@@ -239,6 +256,7 @@ export const CLUB = weapon({
   id: 'club',
   label: 'Club',
   type: 'physical',
+  hands: 1,
   might: 2,
   hit: 75,
   crit: 0,
@@ -253,6 +271,7 @@ export const BONE_CLAWS = weapon({
   id: 'bone-claws',
   label: 'Bone Claws',
   type: 'physical',
+  hands: 1,
   might: 2,
   hit: 80,
   crit: 0,
@@ -267,6 +286,7 @@ export const FANGS = weapon({
   id: 'fangs',
   label: 'Fangs',
   type: 'physical',
+  hands: 1,
   might: 1,
   hit: 85,
   crit: 0,
@@ -281,6 +301,7 @@ export const BITE = weapon({
   id: 'bite',
   label: 'Bite',
   type: 'physical',
+  hands: 1,
   might: 2,
   hit: 75,
   crit: 5,
@@ -290,11 +311,12 @@ export const BITE = weapon({
   uses: null,
 });
 
-// The orc's axe: heavy and wild, but it never breaks.
+// The orc's axe: heavy, wild and two-handed, but it never breaks.
 export const GREAT_AXE = weapon({
   id: 'great-axe',
   label: 'Great Axe',
   type: 'physical',
+  hands: 2,
   might: 3,
   hit: 65,
   crit: 0,
@@ -311,6 +333,7 @@ export const WOODEN_SWORD = weapon({
   id: 'wooden-sword',
   label: 'Wooden Sword',
   type: 'physical',
+  hands: 1,
   might: 1,
   hit: 90,
   crit: 0,
@@ -325,6 +348,7 @@ export const WOODEN_SPEAR = weapon({
   id: 'wooden-spear',
   label: 'Wooden Spear',
   type: 'physical',
+  hands: 1,
   might: 1,
   hit: 75,
   crit: 0,
@@ -339,6 +363,7 @@ export const WOODEN_AXE = weapon({
   id: 'wooden-axe',
   label: 'Wooden Axe',
   type: 'physical',
+  hands: 1,
   might: 2,
   hit: 60,
   crit: 0,

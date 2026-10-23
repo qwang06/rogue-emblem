@@ -17,12 +17,16 @@ import {
   getArmorWeight,
   getConsumables,
   getWornArmor,
+  canUseShield,
   wearArmor,
   getItemActions,
   getItemRecovery,
   removeItem,
 } from './items.ts';
-import { FISTS, IRON_SPEAR, weaponEntry } from './weapons.ts';
+import { HEAL_STAFF, staffEntry } from './healing.ts';
+import { FIRE, FISTS, GREAT_AXE, IRON_BOW, IRON_SPEAR, weaponEntry, type WeaponType } from './weapons.ts';
+
+const PHYSICAL: readonly WeaponType[] = ['physical'];
 
 const unitAt = ({ health = 10, maxHealth = 10, mana = 5, maxMana = 5 } = {}) => ({
   health,
@@ -85,28 +89,53 @@ describe('wearing armor', () => {
       entry(spare),
       entry(WOODEN_ARMOR),
     ]);
-    expect(getWornArmor(inventory)).toEqual([
+    expect(getWornArmor(inventory, PHYSICAL)).toEqual([
       { armor: WOODEN_SHIELD, index: 1 },
       { armor: WOODEN_ARMOR, index: 3 },
     ]);
-    expect(getArmorDefense(inventory)).toBe(2);
-    expect(getArmorWeight(inventory)).toBe(3);
+    expect(getArmorDefense(inventory, PHYSICAL)).toBe(2);
+    expect(getArmorWeight(inventory, PHYSICAL)).toBe(3);
   });
 
   it('adds nothing without armor', () => {
-    expect(getWornArmor(STARTING_ITEMS)).toEqual([]);
-    expect(getArmorDefense(createInventory())).toBe(0);
-    expect(getArmorWeight(createInventory())).toBe(0);
+    expect(getWornArmor(STARTING_ITEMS, PHYSICAL)).toEqual([]);
+    expect(getArmorDefense(createInventory(), PHYSICAL)).toBe(0);
+    expect(getArmorWeight(createInventory(), PHYSICAL)).toBe(0);
   });
 
   it('wears another by moving it to the front', () => {
     const inventory = createInventory([weaponEntry(IRON_SPEAR), entry(WOODEN_SHIELD), entry(spare)]);
     const after = wearArmor(inventory, 2);
     expect(after.map(({ item }) => item.id)).toEqual(['spare-shield', 'iron-spear', 'wooden-shield']);
-    expect(getArmorDefense(after)).toBe(3);
-    expect(getArmorWeight(after)).toBe(4);
+    expect(getArmorDefense(after, PHYSICAL)).toBe(3);
+    expect(getArmorWeight(after, PHYSICAL)).toBe(4);
     expect(Object.isFrozen(after)).toBe(true);
     expect(wearArmor(after, 0)).toBe(after);
+  });
+
+  it('wears a shield only with a hand free for it', () => {
+    const shield = entry(WOODEN_SHIELD);
+    const body = entry(WOODEN_ARMOR);
+    // A two-handed bow leaves no hand for the shield; the body armor stays.
+    const archer = createInventory([weaponEntry(IRON_BOW), shield, body]);
+    expect(canUseShield(archer, PHYSICAL)).toBe(false);
+    expect(getWornArmor(archer, PHYSICAL)).toEqual([{ armor: WOODEN_ARMOR, index: 2 }]);
+    expect(getArmorDefense(archer, PHYSICAL)).toBe(1);
+    expect(getArmorWeight(archer, PHYSICAL)).toBe(2);
+    expect(canUseShield(createInventory([weaponEntry(GREAT_AXE), shield]), PHYSICAL)).toBe(false);
+    // Only the equipped weapon counts: a bow carried behind a spear doesn't.
+    expect(canUseShield(createInventory([weaponEntry(IRON_SPEAR), weaponEntry(IRON_BOW), shield]), PHYSICAL)).toBe(
+      true,
+    );
+    // A two-handed weapon the unit can't wield isn't equipped either.
+    expect(canUseShield(createInventory([weaponEntry(IRON_BOW), weaponEntry(FIRE), shield]), ['magical'])).toBe(true);
+    // A staff takes both hands, whatever is equipped.
+    const healer = createInventory([weaponEntry(IRON_SPEAR), staffEntry(HEAL_STAFF), shield]);
+    expect(canUseShield(healer, PHYSICAL)).toBe(false);
+    expect(getWornArmor(healer, PHYSICAL)).toEqual([]);
+    // Bare-handed leaves a hand free.
+    expect(canUseShield(createInventory([shield]), PHYSICAL)).toBe(true);
+    expect(canUseShield(createInventory([weaponEntry(FISTS), shield]), PHYSICAL)).toBe(true);
   });
 
   it('throws where there is no armor', () => {

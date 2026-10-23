@@ -93,10 +93,14 @@ describe('armor and icons', () => {
 
 describe('describeItem', () => {
   it('describes weapons, staves and consumables', () => {
-    expect(describeItem(IRON_AXE).description).toBe('Physical weapon · Mt 3 · Hit 65 · Crt 0 · Wt 5 · Rng 1 · 40 uses');
+    expect(describeItem(IRON_AXE).description).toBe(
+      'Physical weapon · 1H · Mt 3 · Hit 65 · Crt 0 · Wt 5 · Rng 1 · 40 uses',
+    );
     expect(describeItem(FISTS).description).toMatch(/never breaks$/);
-    expect(describeItem(HEAL_STAFF).description).toMatch(/^Staff · Heals 2 \+ MAG/);
-    expect(describeItem(WOODEN_SHIELD).description).toBe('Shield · DEF +1 against physical hits · Wt 1');
+    expect(describeItem(HEAL_STAFF).description).toMatch(/^Staff · 2H · Heals 2 \+ MAG/);
+    expect(describeItem(WOODEN_SHIELD).description).toBe(
+      'Shield · DEF +1 against physical hits · Wt 1 · With a 1H weapon only',
+    );
     expect(describeItem(WOODEN_ARMOR).description).toMatch(/^Body armor · DEF \+1/);
     expect(describeItem(HEALTH_POTION)).toEqual({ label: 'Health Potion', description: 'Restores up to 5 HP.' });
   });
