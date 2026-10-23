@@ -11,6 +11,7 @@ import {
   getWeaponActions,
   getWeaponReach,
   getWieldableWeapons,
+  GREAT_AXE,
   IRON_AXE,
   IRON_BOW,
   IRON_SPEAR,
@@ -44,6 +45,14 @@ describe('the starter weapons', () => {
 
   it('give fists no might and no limit on uses', () => {
     expect(FISTS).toMatchObject({ type: 'physical', might: 0, hit: 80, weight: 0, uses: null });
+  });
+
+  it('take both hands for bows, the great axe and siege weapons, and one for the rest', () => {
+    const twoHanded = WEAPONS.filter((w) => w.hands === 2).map((w) => w.id);
+    expect(twoHanded).toEqual([IRON_BOW.id, POWDER_KEG.id, BALLISTA.id, GREAT_AXE.id]);
+    for (const weapon of [FISTS, IRON_SPEAR, IRON_AXE, FIRE, WOODEN_SWORD, WOODEN_SPEAR, WOODEN_AXE]) {
+      expect(weapon.hands, weapon.id).toBe(1);
+    }
   });
 
   it('keep bows and siege engines off adjacent tiles', () => {

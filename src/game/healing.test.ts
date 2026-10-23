@@ -19,7 +19,7 @@ const LONG_STAFF: Staff = Object.freeze({ ...HEAL_STAFF, id: 'long-staff', minRa
 
 describe('HEAL_STAFF', () => {
   it('heals an adjacent ally for 2 plus magic, 20 times', () => {
-    expect(HEAL_STAFF).toMatchObject({ kind: 'staff', power: 2, minRange: 1, maxRange: 1, uses: 20 });
+    expect(HEAL_STAFF).toMatchObject({ kind: 'staff', hands: 2, power: 2, minRange: 1, maxRange: 1, uses: 20 });
     expect(Object.isFrozen(HEAL_STAFF)).toBe(true);
   });
 

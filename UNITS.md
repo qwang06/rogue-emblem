@@ -11,6 +11,7 @@ Reference for every unit class: base stats, growth rates, caps, weapons and skil
 - **Crit chance** = (weapon `Crit` + `SKL / 2`) − target's `LCK`, clamped to 0–100%. A crit deals ×3 damage.
 - **Doubling:** a unit strikes twice in an exchange when its attack speed beats the opponent's by 4 or more.
 - **Counters:** the defender strikes back if the attacker is within its weapon's range (`Rng`). Bows and siege engines can't strike adjacent foes.
+- **Hands:** every weapon is one-handed (`1`) or two-handed (`2`); bows, the Great Axe, siege weapons and every staff take both hands. A unit wears a shield only while its equipped weapon is one-handed (bare hands count) and it carries no staff, so equipping a two-handed weapon takes its shield off until it equips a one-handed one again. Body armor is worn whatever the unit holds.
 - **Healing:** a unit carrying a staff gets a **Heal** action. It restores the staff's power + the healer's `MAG` to a wounded ally in the staff's range, capped at the ally's missing HP, spends one use of the staff (a staff with none left breaks), and earns the healer 10 XP. Staves aren't weapons: they can't attack or counter.
 - **Uses:** every strike, hit or miss, spends one use of the striker's weapon. A weapon with no uses left breaks and is gone, and a unit whose weapon breaks mid-exchange stops striking. Fists never break (`∞`).
 - **Tomes:** a tome is a magical weapon that teaches its spell. Each strike with it counts towards learning the spell (Fire Tome: 5); on the strike that reaches the count the spell takes the tome's slot and never breaks, and the tome keeps its remaining uses in the next free slot (or goes to the convoy when there's none) so another unit can learn from it. A unit that already knows the spell just uses the tome up. Progress is kept per unit, per tome, between stages.
@@ -24,28 +25,28 @@ Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.m
 
 One starter weapon per armed unit in the unit catalog. Fists, the Wooden Sword, the Iron Spear, the Iron Bow and the Iron Axe are carried by a class; the monsters fight with Tackle, Club, Bone Claws, Fangs, Bite and Great Axe, which never break; the Powder Keg and Ballista wait for their classes (milestone 2.3); the rest of the wooden set is basic gear no class starts with; the Acolyte knows Light from the start; and the Fire Tome drops as loot for an Acolyte to learn Fire from.
 
-| Weapon       | Type     | Mt  | Hit | Crit | Wt  | Rng | Uses | For (catalog art)               |
-| ------------ | -------- | --- | --- | ---- | --- | --- | ---- | ------------------------------- |
-| Fists        | physical | 0   | 80  | 0    | 0   | 1   | ∞    | Warrior (once its sword breaks) |
-| Iron Spear   | physical | 1   | 80  | 0    | 3   | 1   | 40   | Soldier                         |
-| Iron Axe     | physical | 3   | 65  | 0    | 5   | 1   | 40   | Vanguard (axe)                  |
-| Iron Bow     | physical | 2   | 80  | 0    | 2   | 2   | 40   | Archer                          |
-| Fire Tome    | magical  | 2   | 85  | 0    | 1   | 1–2 | 30   | Elemental, Vanguard (staff)     |
-| Fire         | magical  | 2   | 85  | 0    | 1   | 1–2 | ∞    | Learned from the Fire Tome      |
-| Light        | magical  | 0   | 90  | 0    | 0   | 1–2 | ∞    | Acolyte (known from the start)  |
-| Powder Keg   | siege    | 5   | 70  | 0    | 6   | 1–2 | 5    | Sapper                          |
-| Ballista     | siege    | 6   | 70  | 0    | 8   | 2–3 | 10   | Siege                           |
-| Tackle       | physical | 0   | 75  | 0    | 0   | 1   | ∞    | Slime                           |
-| Club         | physical | 2   | 75  | 0    | 2   | 1   | ∞    | Goblin                          |
-| Bone Claws   | physical | 2   | 80  | 0    | 1   | 1   | ∞    | Skeleton                        |
-| Fangs        | physical | 1   | 85  | 0    | 0   | 1   | ∞    | Bat                             |
-| Bite         | physical | 2   | 75  | 5    | 1   | 1   | ∞    | Wolf                            |
-| Great Axe    | physical | 3   | 65  | 0    | 4   | 1   | ∞    | Orc                             |
-| Wooden Sword | physical | 1   | 90  | 0    | 1   | 1   | 20   | Warrior                         |
-| Wooden Spear | physical | 1   | 75  | 0    | 2   | 1   | 20   | –                               |
-| Wooden Axe   | physical | 2   | 60  | 0    | 3   | 1   | 20   | –                               |
+| Weapon       | Type     | Hands | Mt  | Hit | Crit | Wt  | Rng | Uses | For (catalog art)               |
+| ------------ | -------- | ----- | --- | --- | ---- | --- | --- | ---- | ------------------------------- |
+| Fists        | physical | 1     | 0   | 80  | 0    | 0   | 1   | ∞    | Warrior (once its sword breaks) |
+| Iron Spear   | physical | 1     | 1   | 80  | 0    | 3   | 1   | 40   | Soldier                         |
+| Iron Axe     | physical | 1     | 3   | 65  | 0    | 5   | 1   | 40   | Vanguard (axe)                  |
+| Iron Bow     | physical | 2     | 2   | 80  | 0    | 2   | 2   | 40   | Archer                          |
+| Fire Tome    | magical  | 1     | 2   | 85  | 0    | 1   | 1–2 | 30   | Elemental, Vanguard (staff)     |
+| Fire         | magical  | 1     | 2   | 85  | 0    | 1   | 1–2 | ∞    | Learned from the Fire Tome      |
+| Light        | magical  | 1     | 0   | 90  | 0    | 0   | 1–2 | ∞    | Acolyte (known from the start)  |
+| Powder Keg   | siege    | 2     | 5   | 70  | 0    | 6   | 1–2 | 5    | Sapper                          |
+| Ballista     | siege    | 2     | 6   | 70  | 0    | 8   | 2–3 | 10   | Siege                           |
+| Tackle       | physical | 1     | 0   | 75  | 0    | 0   | 1   | ∞    | Slime                           |
+| Club         | physical | 1     | 2   | 75  | 0    | 2   | 1   | ∞    | Goblin                          |
+| Bone Claws   | physical | 1     | 2   | 80  | 0    | 1   | 1   | ∞    | Skeleton                        |
+| Fangs        | physical | 1     | 1   | 85  | 0    | 0   | 1   | ∞    | Bat                             |
+| Bite         | physical | 1     | 2   | 75  | 5    | 1   | 1   | ∞    | Wolf                            |
+| Great Axe    | physical | 2     | 3   | 65  | 0    | 4   | 1   | ∞    | Orc                             |
+| Wooden Sword | physical | 1     | 1   | 90  | 0    | 1   | 1   | 20   | Warrior                         |
+| Wooden Spear | physical | 1     | 1   | 75  | 0    | 2   | 1   | 20   | –                               |
+| Wooden Axe   | physical | 1     | 2   | 60  | 0    | 3   | 1   | 20   | –                               |
 
-The wooden set is the basic gear: lighter and weaker than iron, and it breaks after 20 strikes. Only the warrior starts with a piece of it, the sword. It comes with two pieces of armor. A unit wears the first shield and the first body armor it carries (equip another on the camp's roster screen), and each adds its DEF against physical hits. Its weight adds to the weapon's: a unit loses SPD (for avoid and doubling) by however much weapon and armor weight together exceed its STR:
+The wooden set is the basic gear: lighter and weaker than iron, and it breaks after 20 strikes. Only the warrior starts with a piece of it, the sword. It comes with two pieces of armor. A unit wears the first shield and the first body armor it carries (equip another on the camp's roster screen; a shield only with a hand free for it, see Hands above), and each adds its DEF against physical hits. Its weight adds to the weapon's: a unit loses SPD (for avoid and doubling) by however much weapon and armor weight together exceed its STR:
 
 | Armor         | Slot   | DEF | Wt  |
 | ------------- | ------ | --- | --- |

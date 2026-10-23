@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Acolyte } from '../Acolyte.ts';
 import { Archer } from '../Archer.ts';
 import { HEAL_STAFF } from '../healing.ts';
+import { WOODEN_SHIELD } from '../items.ts';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
 import { IRON_BOW, IRON_SPEAR, WOODEN_SPEAR } from '../weapons.ts';
@@ -98,6 +99,22 @@ describe('planCamp', () => {
     }));
     const commands = playCamp(run);
     expect(commands.map((command) => command.type)).toEqual(['buy', 'give', 'equip', 'march']);
+  });
+
+  it('swaps to a one-handed spare over a two-handed one to keep its shield', () => {
+    const run = withUnit(makeRun({ a: soldier() }, { gold: 100 }), 'a', (unit) => ({
+      ...unit,
+      items: [
+        { itemId: IRON_SPEAR.id, quantity: LOW_USES },
+        { itemId: IRON_BOW.id, quantity: 40 },
+        { itemId: WOODEN_SPEAR.id, quantity: LOW_USES + 1 },
+        { itemId: WOODEN_SHIELD.id, quantity: 1 },
+      ],
+    }));
+    expect(playCamp(run)[0]).toEqual({ type: 'equip', unitId: 'a', itemIndex: 2 });
+    // Without the shield, the spare with the most uses wins.
+    const unshielded = withUnit(run, 'a', (unit) => ({ ...unit, items: unit.items.slice(0, 3) }));
+    expect(playCamp(unshielded)[0]).toEqual({ type: 'equip', unitId: 'a', itemIndex: 1 });
   });
 
   it('takes a spare from the convoy before buying one', () => {

@@ -10,12 +10,15 @@ import { getAttackTargets, type TargetTile } from './combat.ts';
 import type { Grid, Point } from './grid.ts';
 import type { Inventory, InventoryEntry } from './items.ts';
 
-// A staff: { kind: 'staff', id, label, power, minRange, maxRange, uses }.
-// `power` adds to the healer's magic for the health it restores.
+// A staff: { kind: 'staff', id, label, hands, power, minRange, maxRange,
+// uses }. `power` adds to the healer's magic for the health it restores.
+// Every staff takes both hands, so a unit carrying one can't wear a shield
+// (see canUseShield in items.ts).
 export interface Staff {
   kind: 'staff';
   id: string;
   label: string;
+  hands: 2;
   power: number;
   minRange: number;
   maxRange: number;
@@ -48,6 +51,7 @@ export const HEAL_STAFF: Staff = Object.freeze({
   kind: 'staff',
   id: 'heal-staff',
   label: 'Heal',
+  hands: 2,
   power: 2,
   minRange: 1,
   maxRange: 1,

@@ -215,6 +215,24 @@ describe('equipping armor', () => {
     expect(getEquippedIndex(after, 'alden')).toBe(1);
   });
 
+  it('wears a shield only while the equipped weapon is one-handed', () => {
+    const run = giveFromConvoy({ ...armored(), convoy: [{ itemId: 'iron-bow', quantity: 20 }] }, 'alden', 0);
+    // Equipping the two-handed bow takes the shield off; the body armor stays.
+    const bow = equipInRoster(run, 'alden', 5);
+    expect(itemsOf(bow, 'alden')[0].itemId).toBe('iron-bow');
+    expect(getWornIndices(bow, 'alden')).toEqual([5]);
+    expect(canEquipInRoster(bow, 'alden', 4)).toBe(false);
+    // Back to the spear, and the shield is worn again.
+    const spear = equipInRoster(bow, 'alden', 1);
+    expect(getWornIndices(spear, 'alden')).toEqual([4, 5]);
+  });
+
+  it('wears no shield while carrying a staff', () => {
+    const run = giveFromConvoy({ ...armored(), convoy: [{ itemId: 'heal-staff', quantity: 20 }] }, 'alden', 0);
+    expect(getWornIndices(run, 'alden')).toEqual([4]);
+    expect(canEquipInRoster(run, 'alden', 3)).toBe(false);
+  });
+
   it('lets any class wear armor and store it', () => {
     const run = giveFromConvoy(campRun([{ itemId: 'wooden-armor', quantity: 1 }]), 'cato', 0);
     expect(getWornIndices(run, 'cato')).toEqual([4]);

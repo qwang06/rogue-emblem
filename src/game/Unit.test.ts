@@ -408,6 +408,20 @@ describe('Unit', () => {
       expect(() => unit.wear(1)).toThrow(/No armor/);
     });
 
+    it('takes its shield off while it fights two-handed', () => {
+      const unit = makeUnit({
+        weaponTypes: ['physical'],
+        items: [weaponEntry(IRON_SPEAR), weaponEntry(IRON_BOW), { item: WOODEN_SHIELD, quantity: 1 }],
+      });
+      expect(unit.canUseShield).toBe(true);
+      expect(unit.armorDefense).toBe(1);
+      unit.equip(1);
+      expect(unit.canUseShield).toBe(false);
+      expect(unit.wornArmor).toEqual([]);
+      expect(unit.armorDefense).toBe(0);
+      expect(unit.armorWeight).toBe(0);
+    });
+
     it('wears nothing without armor', () => {
       expect(makeUnit().armorDefense).toBe(0);
       expect(makeUnit().armorWeight).toBe(0);

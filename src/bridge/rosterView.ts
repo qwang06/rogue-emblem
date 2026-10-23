@@ -7,7 +7,7 @@ import type { Menu } from '../game/actionMenu.ts';
 import { MAX_INVENTORY_SLOTS, type Item } from '../game/items.ts';
 import { getItemSprite, getUnitSprite } from '../game/tileset.ts';
 import { UNIT_CLASSES, type UnitClass } from '../game/unitClasses.ts';
-import { formatWeaponRange } from '../game/weapons.ts';
+import { formatWeaponRange, type Hands } from '../game/weapons.ts';
 import { canGiveFromConvoy, getEquippedIndex, getWornIndices, lookUpItem } from '../game/warband/convoy.ts';
 import { RUN_ITEMS, type ItemSnapshot } from '../game/warband/run.ts';
 import {
@@ -67,7 +67,7 @@ export function toRosterScreenView(
 ): RosterScreenView {
   const unit = getPickedUnit(state);
   const equipped = unit ? getEquippedIndex(state.run, unit.id, classes, items) : null;
-  const worn = unit ? getWornIndices(state.run, unit.id, items) : [];
+  const worn = unit ? getWornIndices(state.run, unit.id, classes, items) : [];
   const toItem = (entry: ItemSnapshot, index: number, extra: Partial<RosterItemView>): RosterItemView => {
     const item = lookUpItem(entry.itemId, items);
     const uncounted = (item.kind === 'weapon' && item.uses === null) || item.kind === 'armor';
@@ -123,23 +123,31 @@ export function toRosterScreenView(
   });
 }
 
-// An item's name and a line on what it does: a weapon's numbers, armor's
-// defense, a staff's healing, a consumable's recovery.
+// An item's name and a line on what it does: a weapon's hands and numbers,
+// armor's defense, a staff's healing, a consumable's recovery.
 export function describeItem(item: Item): { label: string; description: string } {
   const describe = (description: string) => Object.freeze({ label: item.label, description });
   if (item.kind === 'weapon') {
     const kind = item.type[0].toUpperCase() + item.type.slice(1);
     const uses = item.uses === null ? 'never breaks' : `${item.uses} uses`;
     return describe(
-      `${kind} weapon · Mt ${item.might} · Hit ${item.hit} · Crt ${item.crit} · Wt ${item.weight} · Rng ${formatWeaponRange(item)} · ${uses}`,
+      `${kind} weapon · ${formatHands(item.hands)} · Mt ${item.might} · Hit ${item.hit} · Crt ${item.crit} · Wt ${item.weight} · Rng ${formatWeaponRange(item)} · ${uses}`,
     );
   }
   if (item.kind === 'staff') {
-    return describe(`Staff · Heals ${item.power} + MAG · Rng ${formatWeaponRange(item)} · ${item.uses} uses`);
+    return describe(
+      `Staff · ${formatHands(item.hands)} · Heals ${item.power} + MAG · Rng ${formatWeaponRange(item)} · ${item.uses} uses`,
+    );
   }
   if (item.kind === 'armor') {
-    const slot = item.slot === 'shield' ? 'Shield' : 'Body armor';
-    return describe(`${slot} · DEF +${item.defense} against physical hits · Wt ${item.weight}`);
+    const stats = `DEF +${item.defense} against physical hits · Wt ${item.weight}`;
+    if (item.slot === 'shield') return describe(`Shield · ${stats} · With a 1H weapon only`);
+    return describe(`Body armor · ${stats}`);
   }
   return describe(`Restores up to ${item.amount} ${item.stat === 'health' ? 'HP' : 'mana'}.`);
+}
+
+// "1H" or "2H": how many hands a weapon or staff takes.
+function formatHands(hands: Hands): string {
+  return `${hands}H`;
 }
