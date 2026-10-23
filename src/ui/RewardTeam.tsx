@@ -1,7 +1,9 @@
 import type { RewardAction, TeamUnitView } from '../bridge/views.ts';
 
-// The warband on the reward screen: each unit's level, XP and HP, so the
-// player can tell who's hurt before picking. While a reward that restores
+// The warband on the reward screen: each unit's level, XP and HP in a small
+// tile, four to a row (two on a phone) so a full warband of eight stays
+// short enough to keep the cards in view, and the player can tell who's
+// hurt before picking. The class is in the tile's tooltip. While a reward that restores
 // HP is selected, each row previews it as "12/20 ▸ 20/20", the HP it would
 // add blinking on the bar. The "▸ 20/20" is always laid out (hidden when
 // nothing is previewed), so moving the pick never reflows the rows.
@@ -25,19 +27,15 @@ function TeamRow({ unit, after }: { unit: TeamUnitView; after: { health: number;
   const gained = after && max > 0 ? (Math.max(0, after.health - unit.health) / max) * 100 : 0;
   const changed = after !== null && (after.health !== unit.health || after.maxHealth !== unit.maxHealth);
   return (
-    <li className="reward-team__unit">
-      <span className="reward-team__name">
-        {unit.name} <span className="reward-team__class">{unit.unitClass}</span>
-      </span>
-      <span className="reward-team__level">
-        Lv {unit.level}
-        <span className="reward-team__exp"> E {unit.experienceForLevel === null ? '--' : unit.experience}</span>
+    <li className="reward-team__unit" title={`${unit.name}, ${unit.unitClass}`}>
+      <span className="reward-team__head">
+        <span className="reward-team__name">{unit.name}</span>
+        <span className="reward-team__level">
+          Lv {unit.level}
+          <span className="reward-team__exp"> E {unit.experienceForLevel === null ? '--' : unit.experience}</span>
+        </span>
       </span>
       <span className="reward-team__label">HP</span>
-      <span className="reward-team__bar" aria-hidden="true">
-        <span className="reward-team__bar-kept" style={{ width: `${kept}%` }} />
-        <span className="reward-team__bar-gained" style={{ width: `${gained}%` }} />
-      </span>
       <span className="reward-team__hp">
         <span className="reward-team__hp-now">
           {unit.health}/{unit.maxHealth}
@@ -50,6 +48,10 @@ function TeamRow({ unit, after }: { unit: TeamUnitView; after: { health: number;
           {' ▸ '}
           {(after ?? unit).health}/{(after ?? unit).maxHealth}
         </span>
+      </span>
+      <span className="reward-team__bar" aria-hidden="true">
+        <span className="reward-team__bar-kept" style={{ width: `${kept}%` }} />
+        <span className="reward-team__bar-gained" style={{ width: `${gained}%` }} />
       </span>
     </li>
   );

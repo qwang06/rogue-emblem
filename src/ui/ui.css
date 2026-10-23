@@ -3287,10 +3287,11 @@ textarea.draft-input {
   cursor: default;
 }
 
-/* The warband above the cards: two columns of units while they fit, else
-   one. Each unit is a name line and an HP line; the HP readout keeps room
-   for a heal's "▸ 20/20" whether or not one is shown, and its numbers are
-   a fixed width, so moving the pick never reflows a row. */
+/* The warband above the cards: tiles of a name line, an HP line and a
+   bar, four to a row while they fit, else two, so eight units take two
+   rows (four on a phone). The HP readout keeps room for a heal's
+   "▸ 20/20" whether or not one is shown, and its numbers are a fixed
+   width, so moving the pick never reflows a tile. */
 .reward-team {
   position: relative;
   margin-top: 8px;
@@ -3300,8 +3301,8 @@ textarea.draft-input {
 
 .reward-team__units {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 24px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 20px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -3309,21 +3310,32 @@ textarea.draft-input {
 
 @container (max-width: 34rem) {
   .reward-team__units {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 14px;
   }
 }
 
 .reward-team__unit {
   display: grid;
-  grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   column-gap: 6px;
+  min-width: 0;
   font-size: 0.8125rem;
+  line-height: 1.35;
   font-variant-numeric: tabular-nums;
 }
 
+.reward-team__head {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+}
+
 .reward-team__name {
-  grid-column: 1 / 3;
+  min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -3331,19 +3343,12 @@ textarea.draft-input {
   color: var(--fg-bright);
 }
 
-.reward-team__class {
-  font-weight: 400;
-  color: var(--fg-dim);
-}
-
 .reward-team__level {
-  text-align: right;
+  flex-shrink: 0;
   white-space: nowrap;
 }
 
 .reward-team__exp {
-  display: inline-block;
-  min-width: 3.25rem;
   color: var(--blue);
 }
 
@@ -3355,6 +3360,7 @@ textarea.draft-input {
 /* A GBA trough like .meter__track: green for the HP the unit has, then
    the HP the selected reward would restore, blinking. */
 .reward-team__bar {
+  grid-column: 1 / -1;
   display: flex;
   height: calc(4 * var(--px));
   margin: var(--px);
