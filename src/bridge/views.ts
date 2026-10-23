@@ -23,8 +23,8 @@ import {
 import type { ObjectiveText } from '../game/objectives.ts';
 import type { Point } from '../game/grid.ts';
 import type { Team, TurnState } from '../game/turns.ts';
-import type { RunState } from '../game/warband/run.ts';
-import { describeReward, type Reward, type RewardKind } from '../game/warband/rewards.ts';
+import type { RunState, UnitSnapshot } from '../game/warband/run.ts';
+import { describeReward, previewRewardHealth, type Reward, type RewardKind } from '../game/warband/rewards.ts';
 import type { MenuAction } from '../game/actionMenu.ts';
 import { getLearnedSkills } from '../game/skills.ts';
 import type { Unit } from '../game/Unit.ts';
@@ -225,6 +225,24 @@ export interface RewardAction extends MenuAction {
   kind: RewardKind | 'skip' | 'reroll' | 'decline';
   description: string;
   stats: readonly { label: string; value: number }[] | null;
+  // Each roster unit's HP after taking it, in roster order, for a reward
+  // that restores HP (see previewRewardHealth), else null.
+  healthAfter: readonly { health: number; maxHealth: number }[] | null;
+}
+
+// A roster unit as the reward screen's team panel shows it, so the
+// player can see who's hurt before picking.
+export interface TeamUnitView {
+  id: string;
+  name: string;
+  unitClass: string;
+  level: number;
+  // XP toward the next level, and how much that level takes; null at
+  // MAX_LEVEL.
+  experience: number;
+  experienceForLevel: number | null;
+  health: number;
+  maxHealth: number;
 }
 
 // What a cleared Warband Mode stage paid, shown on the result and the
@@ -643,7 +661,8 @@ export function toRunOverView(run: Pick<RunState, 'stage' | 'fallen'>, won = fal
 
 // A reward as an entry of the reward screen's menu (see
 // src/game/warband/rewards.ts).
-export function toRewardAction(reward: Reward, index: number): RewardAction {
+// With `run`, a reward that restores HP carries each unit's HP after it.
+export function toRewardAction(reward: Reward, index: number, run: RunState | null = null): RewardAction {
   const { label, description } = describeReward(reward);
   const unit = reward.kind === 'recruit' ? reward.unit : null;
   const stats = unit
@@ -661,7 +680,8 @@ export function toRewardAction(reward: Reward, index: number): RewardAction {
         ).map(([stat, value]) => Object.freeze({ label: stat, value })),
       )
     : null;
-  return Object.freeze({ id: `${reward.kind}-${index}`, label, kind: reward.kind, description, stats });
+  const healthAfter = run && previewRewardHealth(run, reward);
+  return Object.freeze({ id: `${reward.kind}-${index}`, label, kind: reward.kind, description, stats, healthAfter });
 }
 
 // Snapshot of what a cleared stage paid (see getStageClearGold).
@@ -678,13 +698,39 @@ export function toStageClearView(
 // afford it).
 export function toRewardMenuActions(
   rewards: readonly Reward[],
-  { skipGold, rerollCost, gold }: { skipGold: number; rerollCost: number; gold: number },
+  { skipGold, rerollCost, run }: { skipGold: number; rerollCost: number; run: RunState },
 ): readonly RewardAction[] {
   const button = (kind: 'skip' | 'reroll', label: string, description: string, disabled: boolean): RewardAction =>
-    Object.freeze({ id: kind, label, kind, description, stats: null, ...(disabled ? { disabled } : {}) });
+    Object.freeze({
+      id: kind,
+      label,
+      kind,
+      description,
+      stats: null,
+      healthAfter: null,
+      ...(disabled ? { disabled } : {}),
+    });
   return Object.freeze([
-    ...rewards.map(toRewardAction),
+    ...rewards.map((reward, index) => toRewardAction(reward, index, run)),
     button('skip', `Skip (+${skipGold} gold)`, 'Take a little gold instead of a reward.', false),
-    button('reroll', `Reroll (${rerollCost} gold)`, 'Offer three new rewards.', gold < rerollCost),
+    button('reroll', `Reroll (${rerollCost} gold)`, 'Offer three new rewards.', run.gold < rerollCost),
   ]);
+}
+
+// The warband as the reward screen's team panel shows it, in roster order.
+export function toTeamView(roster: readonly UnitSnapshot[]): readonly TeamUnitView[] {
+  return Object.freeze(
+    roster.map((unit) =>
+      Object.freeze({
+        id: unit.id,
+        name: unit.name,
+        unitClass: UNIT_CLASSES.find((unitClass) => unitClass.id === unit.classId)?.label ?? unit.classId,
+        level: unit.level,
+        experience: unit.experience,
+        experienceForLevel: unit.level >= MAX_LEVEL ? null : getExperienceForLevel(unit.level),
+        health: unit.health,
+        maxHealth: unit.maxHealth,
+      }),
+    ),
+  );
 }

@@ -1,16 +1,19 @@
 import { useGameStore } from './useGameStore.ts';
 import { KeyHint } from './KeyHint.tsx';
 import { menuItemPointerProps } from './menuPointer.ts';
+import { RewardTeam } from './RewardTeam.tsx';
 
 // Shown after a won Warband Mode stage's result: what the clear paid, and
 // the rewards to pick one of, side by side like Slay the Spire's card
 // pick, with Skip and Reroll buttons under the cards. GridScene handles
 // the input (arrows move the pick through the cards and then the buttons,
-// confirm takes it); the mouse is forwarded to it.
+// confirm takes it); the mouse is forwarded to it. The warband's HP, level
+// and XP show above the cards, with a heal's effect previewed on them.
 export function RewardScreen() {
   const menu = useGameStore((state) => state.rewardMenu);
   const stageClear = useGameStore((state) => state.stageClear);
   const recruitmentStage = useGameStore((state) => state.recruitmentStage);
+  const team = useGameStore((state) => state.rewardTeam);
   if (!menu) return null;
   const entries = menu.actions.map((action, index) => ({ action, index, selected: index === menu.selectedIndex }));
   const cards = entries.filter(
@@ -35,6 +38,9 @@ export function RewardScreen() {
             </p>
           )}
         </header>
+        {team && team.length > 0 && (
+          <RewardTeam team={team} preview={menu.actions[menu.selectedIndex]?.healthAfter ?? null} />
+        )}
         <ul className="reward-screen__choices">
           {cards.map(({ action: reward, index, selected }) => {
             return (

@@ -23,6 +23,7 @@ import {
   toObjectiveView,
   toRewardMenuActions,
   toRewardAction,
+  toTeamView,
   toRunOverView,
   toStageClearView,
   toPhaseBannerView,
@@ -1062,18 +1063,19 @@ export class GridScene extends Phaser.Scene {
   }
 
   openRecruitMenu() {
-    const { stage, recruits } = this.recruitOffer!;
-    gameStore.setState({ recruitmentStage: stage });
+    const { run, stage, recruits } = this.recruitOffer!;
+    gameStore.setState({ recruitmentStage: stage, rewardTeam: toTeamView(run.roster) });
     this.publishMenu(
       'rewardMenu',
       createActionMenu([
-        ...recruits.map(toRewardAction),
+        ...recruits.map((recruit, index) => toRewardAction(recruit, index)),
         {
           id: 'decline',
           kind: 'decline',
           label: 'Decline',
           description: 'Continue without recruiting the guest.',
           stats: null,
+          healthAfter: null,
         },
       ]),
     );
@@ -1084,8 +1086,9 @@ export class GridScene extends Phaser.Scene {
     const actions = toRewardMenuActions(rewards, {
       skipGold: getSkipGold(stage),
       rerollCost: getRerollCost(rerolls),
-      gold: run.gold,
+      run,
     });
+    gameStore.setState({ rewardTeam: toTeamView(run.roster) });
     this.publishMenu('rewardMenu', selectIndex(createActionMenu(actions), selectedIndex));
   }
 
@@ -1164,6 +1167,7 @@ export class GridScene extends Phaser.Scene {
   openCamp(run: RunState) {
     this.inputLocked = false;
     this.publishMenu('rewardMenu', null);
+    gameStore.setState({ rewardTeam: null });
     this.setCampRun(run);
   }
 
