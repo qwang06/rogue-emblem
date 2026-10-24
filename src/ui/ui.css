@@ -286,8 +286,50 @@ a.header-button {
   color: var(--fg-bright);
 }
 
-.settings__empty {
-  margin: 0;
+.settings__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.settings__label {
+  color: var(--fg-dim);
+}
+
+/* Wide enough for "Off" and "On" alike, so toggling doesn't shift it. */
+.settings__toggle {
+  min-width: 3rem;
+  text-align: center;
+}
+
+.settings__stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.settings__step {
+  width: 1.25rem;
+  padding-inline: 0;
+  text-align: center;
+}
+
+.settings__step:disabled {
+  color: var(--fg-dim);
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Sized for "100%", so the number ticking doesn't move the buttons. */
+.settings__value {
+  width: 2.6rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.settings__value[data-muted='true'] {
   color: var(--fg-dim);
 }
 

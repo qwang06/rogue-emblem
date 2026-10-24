@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import type { MenuAction } from '../game/actionMenu.ts';
 import { gameStore } from '../bridge/gameStore.ts';
+import { changeVolume, cycleVolume, toggleMute, type AudioSettings } from '../audio/settings.ts';
 import { createActionMenu, getSelectedAction, moveSelection, selectIndex } from '../game/actionMenu.ts';
 import {
   describeRenown,
   getFirstEnabledIndex,
   getStartingClassActions,
   getWarbandActions,
-  SETTINGS_ACTIONS,
+  getSettingsActions,
   STARTING_CLASS_ACTIONS,
   TITLE_ACTIONS,
   type StartingClassAction,
@@ -47,8 +48,10 @@ const SUBMENUS = {
   },
   // Filled in from the new run (relicActions), which the class pick makes.
   relic: { heading: 'New Run — Choose a Relic', label: 'Choose a relic', actions: () => [] },
-  settings: { heading: 'Settings', label: 'Settings', actions: () => SETTINGS_ACTIONS },
+  settings: { heading: 'Settings', label: 'Settings', actions: () => getSettingsActions(gameStore.getState().audio) },
 } as const;
+
+const VOLUME_KEYS = [['←→', 'Volume']] as const;
 
 const NAME_KEYS = [
   ['R', 'New name'],
@@ -137,7 +140,9 @@ export function TitleScreen() {
   function runAction(action: MenuAction | null) {
     if (!action || action.disabled) return;
     if (view === 'settings') {
-      if (action.id === 'configs') window.location.hash = routeHash({ page: 'configs' });
+      if (action.id === 'sound') changeAudio(toggleMute);
+      else if (action.id === 'volume') changeAudio(cycleVolume);
+      else if (action.id === 'configs') window.location.hash = routeHash({ page: 'configs' });
     } else if (view === 'warband') {
       if (action.id === 'continue-run') {
         const saved = loadSavedRun();
@@ -161,6 +166,14 @@ export function TitleScreen() {
     }
   }
 
+  // Changes the sound settings (src/audio/index.ts plays and saves them)
+  // and relabels the settings menu to match, keeping its selection.
+  function changeAudio(update: (settings: AudioSettings) => AudioSettings) {
+    const audio = update(gameStore.getState().audio);
+    gameStore.setState({ audio });
+    setMenu((current) => selectIndex(createActionMenu(getSettingsActions(audio)), current.selectedIndex));
+  }
+
   // Saves `run` and starts its current stage.
   function playRun(run: RunState) {
     saveRun(run);
@@ -177,6 +190,13 @@ export function TitleScreen() {
       } else if (view === 'new-run' && (event.key === 'e' || event.key === 'E')) {
         event.preventDefault();
         setEditingName(true);
+      } else if (
+        view === 'settings' &&
+        getSelectedAction(menu)?.id === 'volume' &&
+        (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
+      ) {
+        event.preventDefault();
+        changeAudio((settings) => changeVolume(settings, event.key === 'ArrowLeft' ? -1 : 1));
       } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
         event.preventDefault();
         setMenu((current) => moveSelection(current, event.key === 'ArrowUp' ? -1 : 1));
@@ -273,9 +293,11 @@ export function TitleScreen() {
         entries={
           view === 'new-run'
             ? [...MENU_KEYS, ...NAME_KEYS, ['Esc', 'Back']]
-            : submenu
-              ? [...MENU_KEYS, ['Esc', 'Back']]
-              : MENU_KEYS
+            : view === 'settings'
+              ? [...MENU_KEYS, ...VOLUME_KEYS, ['Esc', 'Back']]
+              : submenu
+                ? [...MENU_KEYS, ['Esc', 'Back']]
+                : MENU_KEYS
         }
       />
     </div>
