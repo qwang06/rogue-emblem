@@ -177,7 +177,16 @@ import {
   getUnitSprite,
   unitSheetKey,
 } from '../game/tileset.ts';
-import { POTION_COLORS, playHitFlash, playLunge, playPotionGlow, playStoneThrow } from './effects.ts';
+import {
+  POTION_COLORS,
+  playDeathBurst,
+  playHitFlash,
+  playHitStop,
+  playLunge,
+  playPotionGlow,
+  playStoneThrow,
+} from './effects.ts';
+import { CRIT_SHAKE, getLungeDistance, getStrikeJuice, type Shake } from './hitJuice.ts';
 import { addTreeShadow, addUnitShadow } from './unitShadow.ts';
 import { addUnitOutline } from './unitOutline.ts';
 import type { Menu } from '../game/actionMenu.ts';
@@ -229,9 +238,6 @@ const MOVE_STEP_MS = 140;
 const DAMAGE_POPUP_DURATION_MS = 700;
 // How long a missed strike holds before the next one (about a hit flash).
 const MISS_PAUSE_MS = 420;
-// Camera shake on a crit.
-const CRIT_SHAKE_MS = 160;
-const CRIT_SHAKE_INTENSITY = 0.006;
 // How long the "Player Phase" / "Enemy Phase" banner holds the screen.
 const PHASE_BANNER_DURATION_MS = 1200;
 // Pauses in the enemy phase: on each enemy before it moves, and between enemies.
@@ -2282,8 +2288,7 @@ export class GridScene extends Phaser.Scene {
         next();
         return;
       case 'defeated':
-        this.removeUnitSprite(event.unitId);
-        next();
+        this.playDefeat(event.unitId, next);
         return;
       case 'experience':
         this.showExperienceGain(event, next);
@@ -2293,25 +2298,77 @@ export class GridScene extends Phaser.Scene {
     }
   }
 
-  // One strike of an exchange: it wears the striker's weapon ("Broke!"
-  // pops up over it if that wears it out, or the spell's name if a tome
-  // strike taught it); a hit shows the struck unit's new health on the HUD
-  // while its sprite flashes and a damage number pops over it (a crit also
-  // shakes the camera); a miss just shows "Miss" for a moment.
+  // One strike of an exchange: the striker lunges at its target (only
+  // leaning in from range) and the blow lands at the far end. It wears the
+  // striker's weapon ("Broke!" pops up over it if that wears it out, or the
+  // spell's name if a tome strike taught it); a hit shows the struck unit's
+  // new health on the HUD while a damage number pops over it, both units
+  // freeze for a beat (hit-stop, longer on a crit or a finishing blow, with
+  // a camera shake on those) and the struck sprite flashes; a miss just
+  // shows "Miss".
   playStrike(strike: BattleEventOf<'strike'>, next: () => void) {
     const strikerSprite = this.unitSprites.get(strike.strikerId)!;
-    if (strike.learned) this.showDamagePopup(strikerSprite, 0, 'learned', strike.learned.label);
-    else if (strike.broke) this.showDamagePopup(strikerSprite, 0, 'broke');
     const sprite = this.unitSprites.get(strike.targetId)!;
-    if (!strike.hit) {
-      this.showDamagePopup(sprite, 0, 'miss');
-      this.time.delayedCall(MISS_PAUSE_MS, next);
-      return;
-    }
-    this.showStats(strike.targetId, { health: strike.health });
-    this.showDamagePopup(sprite, strike.damage, strike.crit ? 'crit' : 'damage');
-    if (strike.crit) this.cameras.main.shake(CRIT_SHAKE_MS, CRIT_SHAKE_INTENSITY);
-    playHitFlash(this, sprite, next);
+    const reducedMotion = prefersReducedMotion();
+    const juice = getStrikeJuice({ hit: strike.hit, crit: strike.crit, lethal: strike.health <= 0 }, reducedMotion);
+    const tiles = Math.round(
+      Math.max(Math.abs(sprite.x - strikerSprite.x), Math.abs(sprite.y - strikerSprite.y)) / TILE_SIZE,
+    );
+
+    // Done once the target's flash (or the miss pause) and the striker's
+    // return have both ended — exactly once, since next moves the battle on.
+    let landed = false;
+    let returned = false;
+    let done = false;
+    const finish = () => {
+      if (done || !landed || !returned) return;
+      done = true;
+      next();
+    };
+    const land = () => {
+      landed = true;
+      finish();
+    };
+
+    const onImpact = () => {
+      if (strike.learned) this.showDamagePopup(strikerSprite, 0, 'learned', strike.learned.label);
+      else if (strike.broke) this.showDamagePopup(strikerSprite, 0, 'broke');
+      if (!strike.hit) {
+        this.showDamagePopup(sprite, 0, 'miss');
+        this.time.delayedCall(MISS_PAUSE_MS, land);
+        return;
+      }
+      this.showStats(strike.targetId, { health: strike.health });
+      this.showDamagePopup(sprite, strike.damage, strike.crit ? 'crit' : 'damage');
+      if (juice.shake) this.shakeCamera(juice.shake);
+      playHitStop(this, sprite, [strikerSprite], juice.hitStopMs, () => playHitFlash(this, sprite, land));
+    };
+    playLunge(this, strikerSprite, spriteCenter(sprite), {
+      distance: getLungeDistance(tiles, reducedMotion),
+      holdMs: juice.hitStopMs,
+      onImpact,
+      onDone: () => {
+        returned = true;
+        finish();
+      },
+    });
+  }
+
+  // Shakes the camera, for as long as the shake lasts at the game speed
+  // (the camera runs on real time, not the scene clock).
+  shakeCamera({ durationMs, intensity }: Shake) {
+    this.cameras.main.shake(this.playbackDuration(durationMs), intensity);
+  }
+
+  // A defeated unit bursts apart, then its sprite comes off the board. The
+  // store's defeat count plays its sound.
+  playDefeat(unitId: string, next: () => void) {
+    const sprite = this.unitSprites.get(unitId)!;
+    gameStore.setState((state) => ({ defeats: state.defeats + 1 }));
+    playDeathBurst(this, sprite, spriteCenter(sprite), prefersReducedMotion(), () => {
+      this.removeUnitSprite(unitId);
+      next();
+    });
   }
 
   // A skill's animation (see playSkillAnimation); the HUD shows the mana
@@ -2469,23 +2526,20 @@ export class GridScene extends Phaser.Scene {
       done = true;
       onDone();
     };
-    playLunge(
-      this,
-      userSprite,
-      center(targetSprite),
-      () => {
+    playLunge(this, userSprite, center(targetSprite), {
+      onImpact: () => {
         onImpact();
-        this.cameras.main.shake(CRIT_SHAKE_MS, CRIT_SHAKE_INTENSITY);
+        if (!prefersReducedMotion()) this.shakeCamera(CRIT_SHAKE);
         playHitFlash(this, targetSprite, () => {
           flashed = true;
           finish();
         });
       },
-      () => {
+      onDone: () => {
         returned = true;
         finish();
       },
-    );
+    });
   }
 
   // The active unit uses one of its items on itself (Unit.useItem and
@@ -2902,4 +2956,15 @@ function tryRunCommand(session: Parameters<typeof applyRunCommand>[0], command: 
     if (error instanceof RunCommandError) return null;
     throw error;
   }
+}
+
+// A unit sprite's center in world space (sprites are placed by their top left).
+function spriteCenter(sprite: Sprite): Point {
+  return { x: sprite.x + sprite.displayWidth / 2, y: sprite.y + sprite.displayHeight / 2 };
+}
+
+// Whether the player asked their system for less motion: the map then skips
+// camera shakes and particle bursts.
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
 }

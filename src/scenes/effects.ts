@@ -106,6 +106,7 @@ export function playPotionGlow(scene: Phaser.Scene, sprite: Sprite, center: Poin
       emitting: false,
     })
     .setDepth(EFFECT_DEPTH);
+  emitter.timeScale = scene.time.timeScale;
   // Two waves so the sparkles trail up rather than pop all at once.
   emitter.explode(POTION_PARTICLE_COUNT / 2);
   scene.time.delayedCall(POTION_PULSE_INTERVAL_MS * 2, () => emitter.explode(POTION_PARTICLE_COUNT / 2));
@@ -124,34 +125,128 @@ export function playPotionGlow(scene: Phaser.Scene, sprite: Sprite, center: Poin
   });
 }
 
-const LUNGE_DISTANCE = 12; // px the attacker steps toward its target
+const LUNGE_DISTANCE = 12; // px the attacker steps toward its target, by default
 const LUNGE_MS = 110; // each way
 
-// A melee lunge: the sprite darts toward a world point and back. onImpact
-// fires once at the far end (where the blow lands), onDone once it's back.
-// It's a single counter tween moving the sprite along the lunge, because a
-// property tween on both x and y fires onYoyo once per property.
-export function playLunge(scene: Phaser.Scene, sprite: Sprite, toward: Point, onImpact?: Done, onDone?: Done): void {
+export interface LungeOptions {
+  // px to dart toward the target (see getLungeDistance in hitJuice.ts).
+  distance?: number;
+  // How long to hold at the far end before coming back: the hit-stop.
+  holdMs?: number;
+  // Fires once at the far end, where the blow lands.
+  onImpact?: Done;
+  // Fires once the sprite is back where it started.
+  onDone?: Done;
+}
+
+// A lunge: the sprite darts toward a world point, holds there for `holdMs`
+// and darts back. Counter tweens move it along the lunge, because a
+// property tween on both x and y would fire its callbacks once per property.
+export function playLunge(
+  scene: Phaser.Scene,
+  sprite: Sprite,
+  toward: Point,
+  { distance = LUNGE_DISTANCE, holdMs = 0, onImpact, onDone }: LungeOptions = {},
+): void {
   const center = { x: sprite.x + sprite.displayWidth / 2, y: sprite.y + sprite.displayHeight / 2 };
   const dx = toward.x - center.x;
   const dy = toward.y - center.y;
   const length = Math.hypot(dx, dy) || 1;
   const home = { x: sprite.x, y: sprite.y };
-  const step = { x: (dx / length) * LUNGE_DISTANCE, y: (dy / length) * LUNGE_DISTANCE };
+  const step = { x: (dx / length) * distance, y: (dy / length) * distance };
+  const moveTo = (t: number) => sprite.setPosition(home.x + step.x * t, home.y + step.y * t);
+  const back = () =>
+    scene.tweens.addCounter({
+      from: 1,
+      to: 0,
+      duration: LUNGE_MS,
+      ease: 'Quad.easeOut',
+      onUpdate: (tween) => moveTo(tween.getValue() ?? 0),
+      onComplete: () => {
+        sprite.setPosition(home.x, home.y);
+        onDone?.();
+      },
+    });
   scene.tweens.addCounter({
     from: 0,
     to: 1,
     duration: LUNGE_MS,
     ease: 'Quad.easeIn',
-    yoyo: true,
-    onUpdate: (tween) => {
-      const t = tween.getValue() ?? 0;
-      sprite.setPosition(home.x + step.x * t, home.y + step.y * t);
-    },
-    onYoyo: () => onImpact?.(),
+    onUpdate: (tween) => moveTo(tween.getValue() ?? 0),
     onComplete: () => {
-      sprite.setPosition(home.x, home.y);
-      onDone?.();
+      onImpact?.();
+      if (holdMs > 0) scene.time.delayedCall(holdMs, back);
+      else back();
     },
+  });
+}
+
+// Hit-stop: freezes the sprites' animations for `durationMs` on the scene
+// clock (so it shortens with the game speed) with the struck sprite solid
+// white, then lets them go and calls onDone.
+export function playHitStop(
+  scene: Phaser.Scene,
+  struck: Sprite,
+  others: readonly Sprite[],
+  durationMs: number,
+  onDone?: Done,
+): void {
+  if (durationMs <= 0) {
+    onDone?.();
+    return;
+  }
+  const sprites = [struck, ...others];
+  for (const sprite of sprites) sprite.anims.pause();
+  struck.setTintFill(HIT_FLASH_COLOR);
+  scene.time.delayedCall(durationMs, () => {
+    struck.clearTint();
+    for (const sprite of sprites) if (sprite.active) sprite.anims.resume();
+    onDone?.();
+  });
+}
+
+const DEATH_COLORS = [0xffffff, 0xfca5a5, 0xdc2626];
+const DEATH_PARTICLE_COUNT = 18;
+const DEATH_LIFESPAN_MS = 520;
+const DEATH_FADE_MS = 360;
+
+// A defeated unit bursts apart: it flashes white and fades out while
+// sparks fly from its center (`center`, in world space). With reduced
+// motion it only fades. Calls onDone once it's gone (the caller removes
+// the sprite).
+export function playDeathBurst(
+  scene: Phaser.Scene,
+  sprite: Sprite,
+  center: Point,
+  reducedMotion: boolean,
+  onDone?: Done,
+): void {
+  sprite.anims.pause();
+  sprite.setTintFill(HIT_FLASH_COLOR);
+  if (!reducedMotion) {
+    ensureParticleTexture(scene);
+    const emitter = scene.add
+      .particles(center.x, center.y, PARTICLE_KEY, {
+        speed: { min: 40, max: 110 },
+        angle: { min: 0, max: 360 },
+        gravityY: 120,
+        lifespan: { min: DEATH_LIFESPAN_MS * 0.6, max: DEATH_LIFESPAN_MS },
+        scale: { start: 1.1, end: 0.2 },
+        alpha: { start: 1, end: 0 },
+        color: DEATH_COLORS,
+        blendMode: 'ADD',
+        emitting: false,
+      })
+      .setDepth(EFFECT_DEPTH);
+    emitter.timeScale = scene.time.timeScale;
+    emitter.explode(DEATH_PARTICLE_COUNT);
+    scene.time.delayedCall(DEATH_LIFESPAN_MS, () => emitter.destroy());
+  }
+  scene.tweens.add({
+    targets: sprite,
+    alpha: 0,
+    duration: DEATH_FADE_MS,
+    ease: 'Quad.easeIn',
+    onComplete: () => onDone?.(),
   });
 }

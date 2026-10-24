@@ -3,7 +3,7 @@ import { createActionMenu, getSelectedAction, moveSelection } from './actionMenu
 import {
   getFirstEnabledIndex,
   getWarbandActions,
-  SETTINGS_ACTIONS,
+  getSettingsActions,
   STARTING_CLASS_ACTIONS,
   TITLE_ACTIONS,
 } from './titleMenu.ts';
@@ -31,15 +31,26 @@ describe('TITLE_ACTIONS', () => {
   });
 });
 
-describe('SETTINGS_ACTIONS', () => {
-  it('offers the game configs', () => {
-    expect(SETTINGS_ACTIONS.map((a) => a.id)).toEqual(['configs']);
-    expect(SETTINGS_ACTIONS.map((a) => a.label)).toEqual(['Game Configs']);
+describe('getSettingsActions', () => {
+  it('offers sound, volume and the game configs', () => {
+    const actions = getSettingsActions({ muted: false, volume: 0.6 });
+    expect(actions.map((a) => a.id)).toEqual(['sound', 'volume', 'configs']);
+    expect(actions.map((a) => a.label)).toEqual(['Sound: On', 'Volume: 60%', 'Game Configs']);
+  });
+
+  it('shows sound off and the volume at its ends', () => {
+    expect(getSettingsActions({ muted: true, volume: 1 }).map((a) => a.label)).toEqual([
+      'Sound: Off',
+      'Volume: 100%',
+      'Game Configs',
+    ]);
+    expect(getSettingsActions({ muted: false, volume: 0 })[1].label).toBe('Volume: 0%');
   });
 
   it('is frozen', () => {
-    expect(Object.isFrozen(SETTINGS_ACTIONS)).toBe(true);
-    expect(SETTINGS_ACTIONS.every(Object.isFrozen)).toBe(true);
+    const actions = getSettingsActions({ muted: false, volume: 0.6 });
+    expect(Object.isFrozen(actions)).toBe(true);
+    expect(actions.every(Object.isFrozen)).toBe(true);
   });
 });
 

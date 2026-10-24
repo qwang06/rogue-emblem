@@ -8,6 +8,7 @@ import type { MerchantScreenView } from './merchantView.ts';
 import type { RosterScreenView } from './rosterView.ts';
 import { createStore } from './store.ts';
 import type { AutoSpeed } from '../game/autoSpeed.ts';
+import { DEFAULT_AUDIO_SETTINGS, type AudioSettings } from '../audio/settings.ts';
 import type {
   CombatForecastView,
   DamagePopupView,
@@ -58,6 +59,7 @@ export interface BattleState {
   experienceGain: ExperienceGainView | null;
   levelUp: LevelUpView | null;
   damagePopups: readonly DamagePopupView[];
+  defeats: number;
   turn: TurnView | null;
   phaseBanner: PhaseBannerView | null;
   battleOutcome: BattleOutcome | null;
@@ -82,6 +84,7 @@ export interface GameState extends BattleState {
   battleSetup: BattleSetup | null;
   autoPlay: boolean;
   autoSpeed: AutoSpeed;
+  audio: AudioSettings;
 }
 
 // State that only exists while the map is running. The map scene resets
@@ -109,6 +112,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   experienceGain: null, // ExperienceGainView from toExperienceGainView() while a unit's XP bar fills after combat, or null
   levelUp: null, // LevelUpView from toLevelUpView() while a level up is being shown, or null
   damagePopups: [], // DamagePopupViews (damage or recovery) from toDamagePopupView() currently on screen
+  defeats: 0, // how many units have fallen this battle (each one plays the defeat sound)
   turn: null, // TurnView from toTurnView() once the battle starts, else null
   phaseBanner: null, // PhaseBannerView from toPhaseBannerView() while a phase is being announced, or null
   battleOutcome: null, // 'victory' | 'defeat' once the battle is decided, else null
@@ -145,5 +149,8 @@ export const gameStore = createStore<GameState>({
   // How fast the map plays its animations, banners and auto play (1x–8x),
   // whether Auto is on or not. Kept from battle to battle.
   autoSpeed: 1,
+  // Sound effect volume and mute (src/audio/settings.ts), loaded from and
+  // saved to the browser by src/audio/index.ts.
+  audio: DEFAULT_AUDIO_SETTINGS,
   ...BATTLE_STATE_DEFAULTS,
 });
