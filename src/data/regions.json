@@ -21,7 +21,8 @@
       },
       "enemies": [{ "count": 1, "unitClass": "slime", "minDistance": 3, "maxDistance": 3 }],
       "treeChance": 0.05,
-      "palette": "a-stone"
+      "palette": "a-stone",
+      "biome": "meadow"
     },
     {
       "name": "Lakeside",
@@ -45,7 +46,8 @@
         { "count": 1, "unitClass": "goblin", "area": { "y": [0, 0.34] }, "health": 5 }
       ],
       "treeChance": 0.04,
-      "palette": "b-blue"
+      "palette": "b-blue",
+      "biome": "lake"
     },
     {
       "name": "Deep Woods",
@@ -69,7 +71,8 @@
         { "count": 1, "unitClass": "wolf", "area": { "y": [0, 0.34] } }
       ],
       "treeChance": 0.1,
-      "palette": "a-brown"
+      "palette": "a-brown",
+      "biome": "forest"
     },
     {
       "name": "Highlands",
@@ -93,7 +96,8 @@
         { "count": 1, "unitClass": "skeleton", "area": { "y": [0, 0.34] } }
       ],
       "treeChance": 0.03,
-      "palette": "b-white"
+      "palette": "b-white",
+      "biome": "hills"
     },
     {
       "name": "Barrow Hills",
@@ -116,7 +120,8 @@
         { "count": 2, "unitClass": "bat", "area": { "y": [0, 0.34] } }
       ],
       "treeChance": 0.03,
-      "palette": "a-stone"
+      "palette": "a-stone",
+      "biome": "meadow"
     },
     {
       "name": "Fens",
@@ -140,7 +145,8 @@
         { "count": 2, "unitClass": "bat", "area": { "y": [0, 0.34] }, "level": 3 }
       ],
       "treeChance": 0.05,
-      "palette": "b-green"
+      "palette": "b-green",
+      "biome": "lake"
     },
     {
       "name": "Fortress",
@@ -166,7 +172,8 @@
         { "count": 2, "unitClass": "goblin", "area": { "y": [0, 0.5] }, "level": 3 }
       ],
       "treeChance": 0.04,
-      "palette": "b-red"
+      "palette": "b-red",
+      "biome": "fort"
     },
     {
       "name": "Brigand Camp",
@@ -192,7 +199,8 @@
         { "count": 2, "unitClass": "goblin", "area": { "y": [0, 0.34] }, "level": 4 }
       ],
       "treeChance": 0.04,
-      "palette": "a-orange"
+      "palette": "a-orange",
+      "biome": "meadow"
     },
     {
       "name": "Orc Marches",
@@ -217,7 +225,8 @@
         { "count": 1, "unitClass": "goblin", "area": { "y": [0, 0.34] }, "level": 5 }
       ],
       "treeChance": 0.02,
-      "palette": "a-brown"
+      "palette": "a-brown",
+      "biome": "hills"
     },
     {
       "name": "Warlord's Hold",

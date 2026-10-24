@@ -15,6 +15,8 @@ import { getMoveCost } from './movement.ts';
 import { createStageLevel, pickStageArchetype, withArchetype } from './warband/stageLevel.ts';
 import { pickStageObjective, placeObjective } from './warband/stageObjective.ts';
 import { getStageLootCount } from './loot.ts';
+import { getRunSite, getSiteRegion } from './warband/travel.ts';
+import type { RegionConfig } from './warband/regions.ts';
 import { createDemoLevel, type DemoLevel } from './demoLevel.ts';
 import { createTrainingLevel, type Level } from './trainingLevel.ts';
 
@@ -88,7 +90,9 @@ export function createBattleLevel(
     case 'training':
       return createTrainingLevel(setup.unitClass, content.dialogs.training);
     case 'warband': {
-      const baseRegion = getStageRegion(setup.stage, content.regions);
+      const baseRegion =
+        (setup.run && getSiteRegion(setup.run, content.regions)) ?? getStageRegion(setup.stage, content.regions);
+      if (setup.run && isVisit(setup.run)) return createVisitLevel(setup, setup.run, baseRegion);
       const spec = pickStageObjective(setup.stage, baseRegion, setup.seed);
       const region = withArchetype(baseRegion, pickStageArchetype(setup.stage, baseRegion, setup.seed, spec.kind));
       const lootCount = getStageLootCount(setup.stage);
@@ -121,6 +125,27 @@ export function createBattleLevel(
       return { ...level, objective };
     }
   }
+}
+
+// Whether `run` is visiting a realm site with no battle: a town or a shrine.
+function isVisit(run: RunState): boolean {
+  const kind = getRunSite(run)?.kind;
+  return kind === 'town' || kind === 'shrine';
+}
+
+// The map shown while the warband visits a town or shrine: the site's
+// region with no enemies (a town grows a few more buildings), and the
+// roster off the map. The scene opens the camp or the blessing over it.
+function createVisitLevel(setup: { seed: number }, run: RunState, region: RegionConfig): BattleLevel {
+  const town = getRunSite(run)?.kind === 'town';
+  const peaceful: RegionConfig = {
+    ...region,
+    objective: undefined,
+    enemies: [],
+    terrain: { ...region.terrain, buildings: town ? 4 : 1 },
+  };
+  const level = createStageLevel(setup.seed, peaceful, restoreRoster(run), run.deployCap, 0);
+  return { ...level, objective: placeObjective({ kind: 'rout' }, level) };
 }
 
 // The battle after `setup` is won, or null when there's none and the
@@ -157,8 +182,11 @@ export function describeBattle(
       return `Chapter ${setup.chapter}: ${getStoryChapter(setup.chapter, chapters).name}`;
     case 'training':
       return 'Training';
-    case 'warband':
+    case 'warband': {
+      const at = setup.run && getRunSite(setup.run);
+      if (at) return at.kind === 'town' || at.kind === 'shrine' ? at.name : `Stage ${setup.stage}: ${at.name}`;
       return `Stage ${setup.stage}: ${getStageRegion(setup.stage, content.regions).name}`;
+    }
   }
 }
 

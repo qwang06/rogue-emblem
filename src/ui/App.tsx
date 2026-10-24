@@ -21,6 +21,7 @@ import { LevelUpPanel } from './LevelUpPanel.tsx';
 import { LoadingScreen } from './LoadingScreen.tsx';
 import { MainMenuButton } from './MainMenuButton.tsx';
 import { ObjectiveScreen } from './ObjectiveScreen.tsx';
+import { OverworldScreen } from './OverworldScreen.tsx';
 import { PageHeader } from './PageHeader.tsx';
 import { PauseMenu } from './PauseMenu.tsx';
 import { PhaseBanner } from './PhaseBanner.tsx';
@@ -126,6 +127,7 @@ export function App() {
         <>
           {screen === 'title' && <TitleScreen />}
           {screen === 'battle' && <LoadingScreen />}
+          {screen === 'overworld' && <OverworldScreen />}
         </>
       )}
     </div>

@@ -188,7 +188,7 @@ Decide between (or blend):
 
 Write a short design note in this file before building.
 
-- _Decided:_ the roguelike run is **Warband Mode** (Phase W below): a linear run of generated stages with a reward pick and a camp between battles, permadeath for the run, and meta-unlocks between runs. No branching node map for now. Hand-built chapters stay as Story Mode.
+- _Decided:_ the roguelike run is **Warband Mode** (Phase W below): a run of generated stages with a reward pick and a camp between battles, permadeath for the run, and meta-unlocks between runs. Hand-built chapters stay as Story Mode. _Since W.R_ the stages are sites on a realm the warband travels across, choosing its road (a branching map, Tactics Ogre style rather than Slay the Spire's).
 
 ### [ ] 4.4 Shops and gold
 
@@ -213,7 +213,7 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 ### Design note
 
 - **Terms:** a run is made of **stages** ("Stage 3: Highlands"); the per-stage configs (today's floor configs) are **regions**; between battles the warband makes **camp**; a lost run is "the warband fell".
-- **Run shape: linear.** Stage after stage, no branching node map. Every few stages a **region boss** closes the region and the run moves to the next region; beating the final region's boss **wins the run**, so runs can end in victory, not only in defeat.
+- **Run shape: a realm to cross.** _Changed from linear:_ each run generates a realm (a Tactics Ogre-style overworld, see W.R below) that the warband travels across from its camp in the west to the Warlord's Hold in the east, choosing at each stop between the two or three sites the roads lead to: battlefields, villages (a guest who may join), forts (stronger, double gold), towns (the merchant, free rest) and shrines (a free reward pick). A site's depth is its stage, so difficulty still rises stage by stage; beating the Hold **wins the run**, so runs can end in victory, not only in defeat.
 - **The loop:**
 
   ```
@@ -258,6 +258,15 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 - The Warrior (it replaced the Villager, with PixelLab art in a plain tunic) is the late bloomer: a soldier's stat line with a point less strength and only a wooden sword, so it's the weakest start, with the highest growth total and caps of any class and a 150% XP rate (`scaleExperience` in `experience.ts`, a `Unit.experienceRate`), so it outgrows the others later in a run.
 - **Tests:** the menu entries with and without a save, starting classes, a warband per class, XP scaling, the warrior's growths and caps against the soldier's and archer's.
 - _Deferred:_ mixed starting warbands (one pick plus fixed companions) and meta-unlocked starting classes (W.10). Promotion (W.7) could give the warrior a further payoff.
+
+### [x] W.R The realm: an overworld to travel
+
+- Each run generates a realm from its seed (`src/game/warband/realm/`): open country in the west rising to mountains around the Hold in the east, lakes, forests and meadows from smooth noise, one column of sites per stage joined by dirt roads (bridges over water) that never cross, and buildings at each site.
+- Sites by depth: two battles to open, villages at stage 2, then a weighted mix with a fight at every stop, forts from stage 4, a town at least every three stops and one before the Hold, the Hold last. A site plays a region meant for its stage or one before, preferring one whose biome matches the land around it (a battle by a lake plays Lakeside or the Fens), its enemies' levels raised to the stage when the region is an earlier one; forts play the Fortress a level up.
+- Villages replace the seeded recruitment stages: every village battle has a guest. The merchant is only in towns, where resting is free; camp after a battle keeps the roster and a paid rest. Shrines give a reward pick without gold, a "blessing".
+- The overworld screen (`OverworldScreen`) shows the realm, the road travelled and the choices with a card each (region, enemies, objective); the leader walks the chosen road. Auto play picks roads with `planTravel`, and the simulator travels too.
+- **Tests:** generator determinism, connectivity, non-crossing links, kinds rules, region windows and biomes, road carving, travel rules, the run commands, the saved route, the overworld view.
+- _Deferred:_ the camp after a field battle still has Rest for gold (could become town-only later). Map events on the overworld (wandering enemies, roadside encounters) and a "turn par" are for later. Region bosses (W.2) would sit naturally on forts and the Hold.
 
 ### [ ] W.2 Enemy scaling and region bosses
 

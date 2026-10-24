@@ -12,12 +12,14 @@ import type { Unit } from '../Unit.ts';
 import { createUnitOfClass } from '../unitClasses.ts';
 import { canWield, isWeapon } from '../weapons.ts';
 import type { RunPolicy } from './autoRun.ts';
-import { canRest } from './camp.ts';
+import { canRest, hasMerchant } from './camp.ts';
 import { canGiveFromConvoy, lookUpItem } from './convoy.ts';
 import { canBuy, getItemPrice, MERCHANT_STOCK } from './merchant.ts';
 import { MAX_ROSTER_SIZE, type Reward } from './rewards.ts';
 import { restoreUnit, type RunState, type UnitSnapshot } from './run.ts';
 import { getRewardOffers, type RunCommand, type RunSession } from './runCommands.ts';
+import type { Realm, Site } from './realm/realm.ts';
+import { getTravelChoices } from './travel.ts';
 
 // A weapon or staff with this many uses or fewer is about to break: the
 // unit wants a spare.
@@ -111,12 +113,77 @@ export function planCamp(session: RunSession, stock: readonly string[] = MERCHAN
   return { type: 'march' };
 }
 
+// How much the policy wants to travel to each kind of site (higher is
+// better); see scoreSite.
+export const SITE_SCORES = Object.freeze({
+  battle: 40,
+  // A village while the roster can't fill the deploy slots (a recruit),
+  // and otherwise.
+  villageNeeded: 70,
+  village: 42,
+  // A town when the warband needs arms or rest, and otherwise.
+  townNeeded: 65,
+  town: 10,
+  // A shrine, plus a bonus when the warband is hurt.
+  shrine: 38,
+  shrineHurtBonus: 20,
+  // A fort when the warband is healthy and at least FORT_ROSTER strong,
+  // and otherwise.
+  fortReady: 45,
+  fort: 5,
+  hold: 100,
+});
+// A fort wants at least this many units.
+export const FORT_ROSTER = 3;
+
+// How much the policy wants to travel to `site` with `run`.
+export function scoreSite(run: RunState, site: Site, stock: readonly string[] = MERCHANT_STOCK): number {
+  const deploying = getDeployingUnits(run);
+  const missing = getMissingHealthShare(deploying);
+  switch (site.kind) {
+    case 'battle':
+      return SITE_SCORES.battle;
+    case 'village':
+      return run.roster.length < Math.min(run.deployCap, MAX_ROSTER_SIZE)
+        ? SITE_SCORES.villageNeeded
+        : SITE_SCORES.village;
+    case 'town': {
+      // What a unit would buy if there were a merchant (and gold enough).
+      const shop: RunState = { ...run, route: undefined, gold: Infinity };
+      const needsArms = deploying.some((unit) => armUnit(shop, unit, stock)?.type === 'buy');
+      return needsArms || missing >= REST_MISSING_HEALTH ? SITE_SCORES.townNeeded : SITE_SCORES.town;
+    }
+    case 'shrine':
+      return SITE_SCORES.shrine + (missing >= REST_MISSING_HEALTH ? SITE_SCORES.shrineHurtBonus : 0);
+    case 'fort':
+      return run.roster.length >= FORT_ROSTER && missing < REST_MISSING_HEALTH / 2
+        ? SITE_SCORES.fortReady
+        : SITE_SCORES.fort;
+    case 'hold':
+      return SITE_SCORES.hold;
+    case 'home':
+      return 0;
+  }
+}
+
+// Where to travel: the best-scoring site the roads lead to (the
+// northernmost of equals).
+export function planTravel(session: RunSession, realm: Realm): RunCommand {
+  const choices = getTravelChoices(session.run, realm);
+  if (choices.length === 0) throw new Error('Nowhere to travel');
+  let best = choices[0];
+  for (const site of choices) if (scoreSite(session.run, site) > scoreSite(session.run, best)) best = site;
+  return { type: 'travel', siteId: best.id };
+}
+
 // The policy autoRun plays with by default: the player battle AI
-// (playerAI.ts) in battle, and pickReward and planCamp between battles.
+// (playerAI.ts) in battle, and pickReward, planCamp and planTravel between
+// battles.
 export const DEFAULT_POLICY: RunPolicy = Object.freeze({
   battle: (state: BattleState) => (state.stage === 'deployment' ? planPlayerDeployment(state) : planPlayerTurn(state)),
   reward: pickReward,
   camp: (session: RunSession) => planCamp(session),
+  travel: planTravel,
 });
 
 // The share of max HP `units` are missing between them, 0 to 1.
@@ -169,8 +236,8 @@ function armUnit(run: RunState, snapshot: UnitSnapshot, stock: readonly string[]
   );
   if (convoyIndex >= 0) return { type: 'give', unitId: snapshot.id, convoyIndex };
   // Only buy what the unit has room to take, or it would sit in the
-  // convoy and be bought again.
-  if (!canTakeOneMore(run, snapshot)) return null;
+  // convoy and be bought again; and only where there's a merchant.
+  if (!canTakeOneMore(run, snapshot) || !hasMerchant(run)) return null;
   const [buy] = stock
     .filter((itemId) => fits(lookUpItem(itemId)) && canBuy(run, itemId, stock))
     .sort(

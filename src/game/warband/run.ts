@@ -10,6 +10,7 @@ import { HEAL_STAFF } from '../healing.ts';
 import { ARMORS, HEALTH_POTION, MANA_POTION, type Inventory, type Item } from '../items.ts';
 import { createSeededRng } from '../rng.ts';
 import type { TomeProgress } from '../tomes.ts';
+import type { RunRoute, RunSite } from './travel.ts';
 import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
 import type { BattleOutcome } from '../turns.ts';
 import type { Unit } from '../Unit.ts';
@@ -83,6 +84,9 @@ export interface RunState {
   // Cleared stage awaiting a separate recruitment choice.
   pendingRecruitment?: number;
   pendingGuest?: UnitSnapshot;
+  // Where a run that travels a realm has been and is (see travel.ts);
+  // absent on a run that fights stage after stage.
+  route?: RunRoute;
 }
 
 // A reward pick still owed after a won stage: the stage cleared, how many
@@ -286,6 +290,7 @@ export function parseRun(
     pendingReward,
     pendingRecruitment,
     pendingGuest,
+    route,
   } = data;
   const itemIds = new Set(items.map((item) => item.id));
   const classIds = new Set(classes.map((unitClass) => unitClass.id));
@@ -308,7 +313,8 @@ export function parseRun(
     (pendingReward !== undefined && !isPendingReward(pendingReward)) ||
     (pendingRecruitment !== undefined && (!isWholeNumber(pendingRecruitment) || pendingRecruitment < 1)) ||
     (pendingGuest !== undefined && !isUnitSnapshot(pendingGuest, classIds, isItems)) ||
-    (pendingGuest === undefined) !== (pendingRecruitment === undefined)
+    (pendingGuest === undefined) !== (pendingRecruitment === undefined) ||
+    (route !== undefined && !isRunRoute(route))
   ) {
     return null;
   }
@@ -325,7 +331,33 @@ export function parseRun(
     ...(pendingReward !== undefined && { pendingReward }),
     ...(pendingRecruitment !== undefined && { pendingRecruitment }),
     ...(pendingGuest !== undefined && { pendingGuest }),
+    ...(route !== undefined && { route }),
   });
+}
+
+const SITE_KINDS = new Set(['home', 'battle', 'village', 'fort', 'town', 'shrine', 'hold']);
+
+function isRunRoute(value: unknown): value is RunRoute {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.visited) &&
+    value.visited.length > 0 &&
+    value.visited.every((id) => typeof id === 'string') &&
+    (value.at === undefined || isRunSite(value.at))
+  );
+}
+
+function isRunSite(value: unknown): value is RunSite {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.name === 'string' &&
+    typeof value.kind === 'string' &&
+    SITE_KINDS.has(value.kind) &&
+    isWholeNumber(value.depth) &&
+    isWholeNumber(value.region) &&
+    Number.isInteger(value.levelOffset)
+  );
 }
 
 function isPendingReward(value: unknown): value is PendingReward {
@@ -403,5 +435,11 @@ function freezeRun(run: RunState): RunState {
     fallen: Object.freeze(run.fallen.map(freezeSnapshot)),
     ...(run.pendingReward && { pendingReward: Object.freeze({ ...run.pendingReward }) }),
     ...(run.pendingGuest && { pendingGuest: freezeSnapshot(run.pendingGuest) }),
+    ...(run.route && {
+      route: Object.freeze({
+        visited: Object.freeze([...run.route.visited]),
+        ...(run.route.at && { at: Object.freeze({ ...run.route.at }) }),
+      }),
+    }),
   });
 }

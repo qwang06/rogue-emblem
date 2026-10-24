@@ -5,7 +5,7 @@ import { applyCommand } from '../battle/commands.ts';
 import { createBattleState, getRunBattleUnits } from '../battle/state.ts';
 import { findUnit } from '../grid.ts';
 import { Soldier } from '../Soldier.ts';
-import { GUEST_UNIT_ID, isRecruitmentStage, rollGuest } from './recruitment.ts';
+import { GUEST_UNIT_ID, hasGuest, isRecruitmentStage, rollGuest } from './recruitment.ts';
 import { advanceStage, createRun, parseRun, restoreRoster, restoreUnit, serializeRun } from './run.ts';
 import { applyRunCommand, finishBattle, getRecruitOffers, resumeRunSession } from './runCommands.ts';
 
@@ -84,5 +84,22 @@ describe('guest recruitment', () => {
     units.set(GUEST_UNIT_ID, dead);
     expect(finishBattle(resumeRunSession(run), { units }, 'victory').phase).toBe('reward');
     expect(finishBattle(resumeRunSession(run), { units: restoreRoster(run) }, 'defeat').phase).toBe('over');
+  });
+});
+
+describe('guests on the realm', () => {
+  const at = (kind: 'village' | 'battle') => ({
+    ...stageTwo(),
+    route: {
+      visited: ['0-0', '2-0'],
+      at: { id: '2-0', name: 'Elderfield', kind, depth: 2, region: 1, levelOffset: 0 },
+    },
+  });
+
+  it('fights beside the warband at a village, and nowhere else', () => {
+    expect(hasGuest(at('village'))).toBe(true);
+    expect(rollGuest(at('village'))).not.toBeNull();
+    expect(hasGuest(at('battle'))).toBe(false);
+    expect(rollGuest(at('battle'))).toBeNull();
   });
 });

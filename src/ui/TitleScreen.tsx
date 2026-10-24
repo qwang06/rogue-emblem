@@ -11,12 +11,14 @@ import {
   type StartingClassAction,
 } from '../game/titleMenu.ts';
 import { getTrainingActions } from '../game/trainingLevel.ts';
-import { FIRST_STORY_CHAPTER, runStage } from '../game/battleSetup.ts';
+import { FIRST_STORY_CHAPTER } from '../game/battleSetup.ts';
 import { createSeededRng, randomSeed } from '../game/rng.ts';
 import { generateName } from '../game/warband/names.ts';
 import { createRun, type RunState } from '../game/warband/run.ts';
 import { createStartingWarband } from '../game/warband/stageLevel.ts';
-import { loadSavedRun, saveRun } from '../data/runSave.ts';
+import { loadSavedRun } from '../data/runSave.ts';
+import { enterRun } from '../bridge/warbandFlow.ts';
+import { startRoute } from '../game/warband/travel.ts';
 import { getUnitSprite } from '../game/tileset.ts';
 import { routeHash } from './route.ts';
 import { UnitSprite } from './UnitSprite.tsx';
@@ -45,9 +47,10 @@ const NAME_KEYS = [
   ['E', 'Rename'],
 ] as const;
 
-// A fresh run with a starting warband of `classId` named `name`.
+// A fresh run with a starting warband of `classId` named `name`, at home
+// on its realm.
 function newRun(classId: string, name: string): RunState {
-  return createRun(randomSeed(), createStartingWarband(classId, name));
+  return startRoute(createRun(randomSeed(), createStartingWarband(classId, name)));
 }
 
 // A generated name for the unit a new run starts with, other than `current`.
@@ -127,10 +130,9 @@ export function TitleScreen() {
     }
   }
 
-  // Saves `run` and starts its current stage.
+  // Saves `run` and carries on with it: the overworld, or its stage.
   function playRun(run: RunState) {
-    saveRun(run);
-    gameStore.setState({ screen: 'battle', battleSetup: runStage(run) });
+    enterRun(run);
   }
 
   useEffect(() => {

@@ -71,7 +71,6 @@ import type { PendingReward, RunState } from '../game/warband/run.ts';
 import {
   getRerollCost,
   getSkipGold,
-  getStageClearGold,
   getPendingRewardOffer,
   type Reward,
   type RewardLevelUp,
@@ -86,6 +85,8 @@ import {
   type RunCommandResult,
 } from '../game/warband/runCommands.ts';
 import { clearSavedRun, saveRun } from '../data/runSave.ts';
+import { getClearGold, getRunSite, isInTown, isRealmRun } from '../game/warband/travel.ts';
+import { enterRun } from '../bridge/warbandFlow.ts';
 import { pickReward, planCamp } from '../game/warband/runPolicy.ts';
 import { planPlayerDeployment, planPlayerTurn } from '../game/battle/playerAI.ts';
 import { getCampActions } from '../game/warband/camp.ts';
@@ -313,6 +314,9 @@ export class GridScene extends Phaser.Scene {
   // menu (Manage Roster / Next Stage) or the roster screen is up.
   campRun: RunState | null = null;
   campMenu: Menu | null = null;
+  // A won realm stage with nothing to pick: the run, for confirm on the
+  // result to open its camp.
+  campAfterOutcome: RunState | null = null;
   rosterScreen: RosterScreenState | null = null;
   merchantScreen: MerchantScreenState | null = null;
   pauseMenu: Menu | null = null;
@@ -485,6 +489,7 @@ export class GridScene extends Phaser.Scene {
     this.rewardMenu = null; // the reward screen's menu while it's up
     this.campRun = null; // the run between a won Warband stage's reward and the next stage
     this.campMenu = null; // the camp's menu (getCampActions) while it's up
+    this.campAfterOutcome = null; // a won realm stage's run when its result leads straight to camp
     this.rosterScreen = null; // the roster screen's state while it's open
     this.merchantScreen = null; // the merchant screen's state while it's open
     // Configs uploaded in the config editor replace the built-in ones.
@@ -597,6 +602,14 @@ export class GridScene extends Phaser.Scene {
       gameStore.setState({ mapLoadProgress: 1, mapReady: true });
       return;
     }
+    // A run arriving in a town (see warband/travel.ts) opens its camp over
+    // the town, with the merchant and a free rest.
+    if (savedRun && isInTown(savedRun)) {
+      this.setCursorVisible(false);
+      this.openCamp(savedRun);
+      gameStore.setState({ mapLoadProgress: 1, mapReady: true });
+      return;
+    }
     this.updateHoveredUnit();
     // Levels with units to place open on deployment, with the objective on
     // its menu; others (e.g. training, where everyone starts on the map)
@@ -682,6 +695,7 @@ export class GridScene extends Phaser.Scene {
       if (confirm) {
         if (this.recruitOffer) this.openRecruitMenu();
         else if (this.rewardOffer) this.openRewardMenu();
+        else if (this.campAfterOutcome) this.openCamp(this.campAfterOutcome);
         else this.leaveBattle();
       }
       return;
@@ -1057,8 +1071,16 @@ export class GridScene extends Phaser.Scene {
   resumeRewardPick(run: RunState, pending: PendingReward & { rewards: readonly Reward[] }) {
     this.setCursorVisible(false);
     this.rewardOffer = { run, stage: pending.stage, rewards: pending.rewards, rerolls: pending.rerolls };
+    // A shrine's pick is its blessing, not a stage's spoils.
+    const at = getRunSite(run);
+    const blessing = at?.kind === 'shrine' && at.depth === pending.stage ? at.name : null;
     gameStore.setState({
-      stageClear: toStageClearView(pending.stage, { gold: pending.clearGold, flawless: pending.flawless }, run.gold),
+      stageClear: toStageClearView(
+        pending.stage,
+        { gold: pending.clearGold, flawless: pending.flawless },
+        run.gold,
+        blessing,
+      ),
     });
     this.openRewardMenu();
   }
@@ -1224,10 +1246,16 @@ export class GridScene extends Phaser.Scene {
     if (dy !== 0) this.publishMenu('campMenu', moveSelection(this.campMenu!, dy));
   }
 
-  // Next Stage: leaves camp for the run's next stage.
+  // Next Stage: leaves camp for the run's next stage; on the realm, Travel
+  // saves the run and opens the overworld to choose where to go.
   marchOn() {
     const marched = tryRunCommand({ run: this.campRun!, phase: 'camp' }, { type: 'march' });
     if (!marched) return;
+    if (marched.session.phase === 'travel') {
+      this.inputLocked = true;
+      enterRun(marched.session.run);
+      return;
+    }
     this.nextBattle = runStage(marched.session.run);
     this.leaveBattle();
   }
@@ -1893,7 +1921,7 @@ export class GridScene extends Phaser.Scene {
         clearSavedRun();
         runOver = toRunOverView(run, finished.phase === 'won');
       } else {
-        const clear = getStageClearGold(before.stage, run.fallen.length - before.fallen.length);
+        const clear = getClearGold(before, run.fallen.length - before.fallen.length);
         stageClear = toStageClearView(before.stage, clear, run.gold);
         // The run is saved owing the pick, so a reload reopens the reward
         // screen (resumeRewardPick) instead of skipping it.
@@ -1906,7 +1934,11 @@ export class GridScene extends Phaser.Scene {
         }
         saveRun(run);
       }
-      this.nextBattle = ended ? null : runStage(run);
+      // On the realm the next stage is wherever the warband travels, so
+      // there's no next battle to name; a win with nothing to pick goes to
+      // camp.
+      this.nextBattle = ended || isRealmRun(run) ? null : runStage(run);
+      if (!ended && finished.phase === 'camp' && isRealmRun(run)) this.campAfterOutcome = run;
     } else {
       this.nextBattle = outcome === 'victory' ? getNextBattle(this.setup, randomSeed()) : null;
     }

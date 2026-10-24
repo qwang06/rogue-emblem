@@ -635,8 +635,12 @@ describe('toRewardAction', () => {
 describe('toStageClearView', () => {
   it('carries the stage, the gold paid and the total, frozen', () => {
     const view = toStageClearView(3, { gold: 35, flawless: true }, 80);
-    expect(view).toEqual({ stage: 3, gold: 35, flawless: true, totalGold: 80 });
+    expect(view).toEqual({ stage: 3, gold: 35, flawless: true, totalGold: 80, blessing: null });
     expect(Object.isFrozen(view)).toBe(true);
+  });
+
+  it("names the shrine for a shrine's blessing", () => {
+    expect(toStageClearView(3, { gold: 0, flawless: false }, 80, 'Shrine of Ash').blessing).toBe('Shrine of Ash');
   });
 });
 

@@ -255,6 +255,9 @@ export interface StageClearView {
   flawless: boolean;
   // The warband's gold after the clear.
   totalGold: number;
+  // At a shrine (a realm site with no battle, see warband/travel.ts), its
+  // name: nothing was cleared, the pick is its blessing. Else null.
+  blessing: string | null;
 }
 
 // What the result screen says when a Warband Mode run ends.
@@ -693,8 +696,9 @@ export function toStageClearView(
   stage: number,
   clear: { gold: number; flawless: boolean },
   totalGold: number,
+  blessing: string | null = null,
 ): StageClearView {
-  return Object.freeze({ stage, gold: clear.gold, flawless: clear.flawless, totalGold });
+  return Object.freeze({ stage, gold: clear.gold, flawless: clear.flawless, totalGold, blessing });
 }
 
 // The reward screen's menu entries: a card per reward, then Skip (with the

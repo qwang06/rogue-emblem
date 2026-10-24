@@ -4,6 +4,7 @@ import type { Unit } from '../Unit.ts';
 import { Warrior } from '../Warrior.ts';
 import { canRest, getCampActions, needsRest, REST_COST, restAtCamp } from './camp.ts';
 import { createRun, type RunState } from './run.ts';
+import { HOME_SITE_ID, type RunSite } from './travel.ts';
 
 function campRun(gold: number, hurt = true): RunState {
   const run = createRun(
@@ -75,5 +76,38 @@ describe('restAtCamp', () => {
     restAtCamp(run);
     expect(run.gold).toBe(100);
     expect(run.roster[0].health).toBe(1);
+  });
+});
+
+describe('camp on the realm', () => {
+  const at = (kind: RunSite['kind']): RunSite => ({
+    id: '3-0',
+    name: 'Ashford',
+    kind,
+    depth: 3,
+    region: 2,
+    levelOffset: 0,
+  });
+  const onRealm = (run: RunState, kind: RunSite['kind']): RunState => ({
+    ...run,
+    route: { visited: [HOME_SITE_ID, '3-0'], at: at(kind) },
+  });
+
+  it('has the merchant only in a town, where rest is free', () => {
+    const town = onRealm(campRun(0), 'town');
+    expect(getCampActions(town).map((action) => [action.id, action.label])).toEqual([
+      ['roster', 'Manage Roster'],
+      ['merchant', 'Merchant'],
+      ['rest', 'Rest (free)'],
+      ['march', 'Travel'],
+    ]);
+    expect(canRest(town)).toBe(true);
+    expect(restAtCamp(town).gold).toBe(0);
+  });
+
+  it('has no merchant after a battle, and rest costs gold', () => {
+    const field = onRealm(campRun(100), 'battle');
+    expect(getCampActions(field).map((action) => action.id)).toEqual(['roster', 'rest', 'march']);
+    expect(restAtCamp(field).gold).toBe(100 - REST_COST);
   });
 });

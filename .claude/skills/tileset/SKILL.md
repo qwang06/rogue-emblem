@@ -85,6 +85,12 @@ To judge the procedural map generator's output, `map-preview.ts` renders `genera
 node .claude/skills/tileset/scripts/map-preview.ts --scale 1 --palette a-stone <scratchpad>/maps.png 1 2 3
 ```
 
+`realm-preview.ts` does the same for the Warband overworld (`generateRealm` in `src/game/warband/realm/`): it renders whole realms for some seeds the way the overworld screen paints them (`getRealmDrawList`), one under the other, and prints each realm's sites (id, kind, biome, region):
+
+```sh
+node .claude/skills/tileset/scripts/realm-preview.ts <scratchpad>/realms.png 1 2
+```
+
 `scripts/rescale-png.js --from N --to M [--crop WxH] in.png out.png` changes the scale of upscaled pixel art (it checks every NxN block is one color). `dump-png.js` exports `decode` and `encode` (rows of RGBA pixels to and from PNG) for other scripts.
 
 ## Map props: map-props.png

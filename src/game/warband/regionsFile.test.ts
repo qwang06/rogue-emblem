@@ -373,3 +373,18 @@ describe('formatRegionSettings layout', () => {
     );
   });
 });
+
+describe('a region biome', () => {
+  it('reads an optional biome and writes it back out', () => {
+    const settings = parseRegionSettings(file([region({ biome: 'lake' }), region()]));
+    expect(settings.regions[0].biome).toBe('lake');
+    expect(settings.regions[1].biome).toBeUndefined();
+    expect(parseRegionSettings(formatRegionSettings(settings))).toEqual(settings);
+  });
+
+  it('refuses a biome it does not know', () => {
+    expect(() => parseRegionSettings(file([region({ biome: 'desert' })]))).toThrow(
+      /^regions\[0\]\.biome must be one of/,
+    );
+  });
+});

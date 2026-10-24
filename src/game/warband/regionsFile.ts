@@ -34,6 +34,7 @@ import type { Grid, Point } from '../grid.ts';
 import { MAP_ARCHETYPES } from '../mapArchetypes.ts';
 import type { MapGenOptions } from '../mapGen.ts';
 import { OBJECTIVE_KINDS, type ObjectiveSpec } from '../objectives.ts';
+import { REGION_BIOMES, type RegionBiome } from './realm/realmRegions.ts';
 import { BUILDING_PALETTES, type BuildingPaletteName } from '../tileset.ts';
 import type { RegionConfig, RegionSettings } from './regions.ts';
 import { createStageLevel } from './stageLevel.ts';
@@ -75,7 +76,17 @@ const TERRAIN_KEYS = [
   'archetype',
 ];
 const GENERATORS = ['classic', 'planned'];
-const REGION_KEYS = ['name', 'description', 'terrain', 'enemies', 'enemyCount', 'treeChance', 'palette', 'objective'];
+const REGION_KEYS = [
+  'name',
+  'description',
+  'terrain',
+  'enemies',
+  'enemyCount',
+  'treeChance',
+  'palette',
+  'objective',
+  'biome',
+];
 
 type Json = Record<string, unknown>;
 
@@ -261,6 +272,12 @@ function parseRegion(value: unknown, path: string): RegionConfig {
     palette: json.palette as BuildingPaletteName,
   };
   if (json.objective !== undefined) region.objective = parseObjective(json.objective, `${path}.objective`);
+  if (json.biome !== undefined) {
+    if (typeof json.biome !== 'string' || !(REGION_BIOMES as readonly string[]).includes(json.biome)) {
+      fail(`${path}.biome`, `must be one of ${REGION_BIOMES.join(', ')}`);
+    }
+    region.biome = json.biome as RegionBiome;
+  }
   return Object.freeze(region);
 }
 

@@ -27,7 +27,7 @@ import type {
   UnitView,
 } from './views.ts';
 
-export type Screen = 'title' | 'battle' | 'preview';
+export type Screen = 'title' | 'battle' | 'preview' | 'overworld';
 export type BattlePhase = 'deployment' | 'battle';
 export type DeploymentStep = 'menu' | 'roster' | 'placing';
 export type { BattleSetup };

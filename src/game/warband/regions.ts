@@ -10,6 +10,7 @@ import type { EnemyGroup } from '../enemySpawns.ts';
 import type { MapGenOptions } from '../mapGen.ts';
 import type { ObjectiveSpec } from '../objectives.ts';
 import type { BuildingPaletteName } from '../tileset.ts';
+import type { RegionBiome } from './realm/realmRegions.ts';
 
 export interface RegionConfig {
   // The region's name, e.g. for a stage banner ("Stage 3: Highlands").
@@ -28,6 +29,10 @@ export interface RegionConfig {
   // The objective every stage in the region plays (placed on each map by
   // stageObjective.ts); if unset, each stage draws its own.
   objective?: ObjectiveSpec;
+  // The land the region's battles are set in, which realm sites on that
+  // land prefer to play (see realm/realmRegions.ts); any site may play a
+  // region without one.
+  biome?: RegionBiome;
 }
 
 // Everything Warband Mode reads per stage: the regions in order and how

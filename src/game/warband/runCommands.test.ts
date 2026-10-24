@@ -3,7 +3,9 @@ import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
 import { Warrior } from '../Warrior.ts';
 import { WOODEN_SPEAR, WOODEN_SWORD } from '../weapons.ts';
+import { DEFAULT_CONTENT } from '../battleSetup.ts';
 import { REST_COST } from './camp.ts';
+import { generateRealm, getNextSites, type Realm } from './realm/realm.ts';
 import { getItemPrice } from './merchant.ts';
 import { getRerollCost, getSkipGold, getStageClearGold, rollStageRewards } from './rewards.ts';
 import { advanceStage, createRun, restoreRoster, type RunState } from './run.ts';
@@ -18,6 +20,7 @@ import {
   type RunCommand,
   type RunSession,
 } from './runCommands.ts';
+import { getCurrentSiteId, startRoute, travelTo } from './travel.ts';
 
 function newRun(stage = 2): RunState {
   const run = createRun(
@@ -256,5 +259,77 @@ describe('getLegalRunCommands', () => {
 
   it('lists nothing during a battle', () => {
     expect(getLegalRunCommands(resumeRunSession(newRun()))).toEqual([]);
+  });
+});
+
+describe('travel', () => {
+  const realm: Realm = generateRealm(3, DEFAULT_CONTENT.regions);
+  const home = (): RunSession => ({ run: startRoute(newRun(1)), phase: 'travel' });
+  // A run on the realm that has walked to a site of `kind`, its battle won.
+  function arrivedBefore(kind: string): RunState | null {
+    for (const site of realm.sites) {
+      const next = getNextSites(realm, site.id).find((other) => other.kind === kind);
+      if (!next || site.kind === 'home') continue;
+      const at = {
+        id: site.id,
+        name: site.name,
+        kind: site.kind,
+        depth: site.depth,
+        region: site.region,
+        levelOffset: 0,
+      };
+      return { ...startRoute(newRun(1)), stage: site.depth + 1, route: { visited: ['0-0', site.id], at } };
+    }
+    return null;
+  }
+
+  it('travels to a battle and fights it', () => {
+    const [first] = getNextSites(realm, '0-0');
+    const session = applyRunCommand(home(), { type: 'travel', siteId: first.id }, { realm }).session;
+    expect(session.phase).toBe('battle');
+    expect(getCurrentSiteId(session.run)).toBe(first.id);
+  });
+
+  it('opens camp in a town, and the reward pick at a shrine', () => {
+    for (const [kind, phase] of [
+      ['town', 'camp'],
+      ['shrine', 'reward'],
+    ] as const) {
+      const run = arrivedBefore(kind);
+      if (!run) continue;
+      const target = getNextSites(realm, getCurrentSiteId(run)).find((site) => site.kind === kind)!;
+      const session = applyRunCommand(
+        { run, phase: 'travel' },
+        { type: 'travel', siteId: target.id },
+        { realm },
+      ).session;
+      expect(session.phase).toBe(phase);
+    }
+  });
+
+  it('refuses a road that is not there, or travel without the realm', () => {
+    const far = realm.sites.find((site) => site.depth === 4)!;
+    expect(() => applyRunCommand(home(), { type: 'travel', siteId: far.id }, { realm })).toThrow(RunCommandError);
+    const [first] = getNextSites(realm, '0-0');
+    expect(() => applyRunCommand(home(), { type: 'travel', siteId: first.id })).toThrow(RunCommandError);
+  });
+
+  it('marches from camp to the overworld on the realm', () => {
+    const [first] = getNextSites(realm, '0-0');
+    const run = { ...travelTo(startRoute(newRun(1)), realm, first.id), stage: 2 };
+    expect(applyRunCommand(campWith(run), { type: 'march' }, { realm }).session.phase).toBe('travel');
+  });
+
+  it('resumes a saved realm run where it stands', () => {
+    expect(resumeRunSession(startRoute(newRun(1))).phase).toBe('travel');
+    const [first] = getNextSites(realm, '0-0');
+    const there = travelTo(startRoute(newRun(1)), realm, first.id);
+    expect(resumeRunSession(there).phase).toBe('battle');
+    expect(resumeRunSession({ ...there, stage: 2 }).phase).toBe('travel');
+  });
+
+  it('lists a travel command for every road on', () => {
+    const commands = getLegalRunCommands(home(), [], { realm });
+    expect(commands).toEqual(getNextSites(realm, '0-0').map((site) => ({ type: 'travel', siteId: site.id })));
   });
 });

@@ -1,9 +1,11 @@
-// A seeded guest joins selected battles. Stage 2 always has one; later
-// three-stage groups each contain one visit. The candidate is rolled before
-// battle so reloading the same stage brings back the same person.
+// A seeded guest joins selected battles. On a linear run, stage 2 always
+// has one and later three-stage groups each contain one visit; on the
+// realm (travel.ts), every village battle has one. The candidate is rolled
+// before battle so reloading the same stage brings back the same person.
 import { createSeededRng } from '../rng.ts';
 import { MAX_ROSTER_SIZE, rollRecruit } from './rewards.ts';
 import type { RunState, UnitSnapshot } from './run.ts';
+import { getRunSite, isRealmRun } from './travel.ts';
 
 export const GUEST_UNIT_ID = 'guest-recruit';
 
@@ -15,8 +17,15 @@ export function isRecruitmentStage(seed: number, stage: number): boolean {
   return stage === group * 3 + 3 + Math.floor(rng() * 3);
 }
 
+// Whether `run`'s current battle fields a guest: a village on the realm,
+// else a recruitment stage (isRecruitmentStage).
+export function hasGuest(run: RunState): boolean {
+  if (isRealmRun(run)) return getRunSite(run)?.kind === 'village';
+  return isRecruitmentStage(run.seed, run.stage);
+}
+
 export function rollGuest(run: RunState): UnitSnapshot | null {
-  if (!isRecruitmentStage(run.seed, run.stage) || run.roster.length >= MAX_ROSTER_SIZE) return null;
+  if (!hasGuest(run) || run.roster.length >= MAX_ROSTER_SIZE) return null;
   const rng = createSeededRng((run.seed ^ Math.imul(run.stage, 0x85ebca6b) ^ 0x6a6f696e) >>> 0);
   return rollRecruit(run, run.stage, rng);
 }

@@ -28,9 +28,19 @@ export function RewardScreen() {
       <section className="reward-screen" aria-label={recruitmentStage ? 'Choose a recruit' : 'Choose a reward'}>
         <header className="panel reward-screen__header">
           <h2 className="reward-screen__title">
-            {recruitmentStage ? `Guest Survived Stage ${recruitmentStage}` : 'Spoils of Battle'}
+            {recruitmentStage
+              ? `Guest Survived Stage ${recruitmentStage}`
+              : stageClear?.blessing
+                ? 'A Blessing'
+                : 'Spoils of Battle'}
           </h2>
-          {stageClear && (
+          {stageClear?.blessing && (
+            <p className="reward-screen__gold">
+              {stageClear.blessing} offers its blessing
+              <span className="reward-screen__total"> · {stageClear.totalGold} gold in the purse</span>
+            </p>
+          )}
+          {stageClear && !stageClear.blessing && (
             <p className="reward-screen__gold">
               Stage {stageClear.stage} cleared: <span className="reward-screen__coin">+{stageClear.gold} gold</span>
               {stageClear.flawless && <span className="reward-screen__flawless"> Flawless!</span>}

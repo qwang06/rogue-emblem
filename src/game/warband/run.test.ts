@@ -383,3 +383,23 @@ describe('serializeRun and parseRun', () => {
     for (const bad of cases) expect(parseRun(JSON.stringify(bad))).toBeNull();
   });
 });
+
+describe('a saved route', () => {
+  const run = createRun(1, new Map([['u', new Soldier({ team: 'player' })]]));
+  const site = { id: '2-1', name: 'Ashford', kind: 'town', depth: 2, region: 1, levelOffset: -1 };
+
+  it('round-trips the sites visited and the one the run is at', () => {
+    const traveled = { ...run, route: { visited: ['0-0', '1-0', '2-1'], at: site } };
+    const saved = parseRun(serializeRun(traveled as RunState));
+    expect(saved?.route).toEqual(traveled.route);
+    expect(Object.isFrozen(saved?.route)).toBe(true);
+    expect(parseRun(serializeRun(run))?.route).toBeUndefined();
+  });
+
+  it('refuses a broken route', () => {
+    const broken = (route: unknown) => parseRun(JSON.stringify({ ...JSON.parse(serializeRun(run)), route }));
+    expect(broken({ visited: [] })).toBeNull();
+    expect(broken({ visited: ['0-0'], at: { ...site, kind: 'castle' } })).toBeNull();
+    expect(broken({ visited: ['0-0'], at: { ...site, depth: -1 } })).toBeNull();
+  });
+});

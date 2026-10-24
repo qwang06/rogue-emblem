@@ -31,7 +31,7 @@ const game = new Phaser.Game({
 let runningSetup: BattleSetup | null = null;
 function syncMapScene(state: GameState) {
   const scene = game.scene.getScene('Grid');
-  const onMap = state.screen !== 'title';
+  const onMap = state.screen === 'battle' || state.screen === 'preview';
   if (onMap && !scene) {
     runningSetup = state.battleSetup;
     game.scene.add('Grid', GridScene, true, state.battleSetup ?? undefined);

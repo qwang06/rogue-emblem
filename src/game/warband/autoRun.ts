@@ -24,6 +24,8 @@ import {
   type RunSession,
 } from './runCommands.ts';
 import { createStartingWarband } from './stageLevel.ts';
+import { getRealm, getNextSites, type Realm } from './realm/realm.ts';
+import { getCurrentSiteId, startRoute } from './travel.ts';
 
 // How a run starts: its seed, and the class and name of its first unit.
 export interface RunStart {
@@ -50,6 +52,9 @@ export interface RunPolicy {
   reward: (session: RunSession) => RunCommand;
   // Camp, one command at a time until it marches.
   camp: (session: RunSession) => RunCommand;
+  // Where to travel on the realm: one of getLegalRunCommands' travel
+  // commands.
+  travel: (session: RunSession, realm: Realm) => RunCommand;
 }
 
 // How one stage's battle went.
@@ -100,13 +105,18 @@ export const BASELINE_POLICY: RunPolicy = Object.freeze({
     return offers.length > 0 ? { type: 'pick-reward', index: pick } : { type: 'skip-reward' };
   },
   camp: (session: RunSession): RunCommand => (canRest(session.run) ? { type: 'rest' } : { type: 'march' }),
+  travel: (session: RunSession, realm: Realm): RunCommand => ({
+    type: 'travel',
+    siteId: getNextSites(realm, getCurrentSiteId(session.run))[0].id,
+  }),
 });
 
-// A new run's session: stage 1's battle, fought by a lone level-1 unit.
+// A new run's session: a lone level-1 unit at home on its realm, choosing
+// where to travel first.
 export function startRun(start: RunStart): RunSession {
   return Object.freeze({
-    run: createRun(start.seed, createStartingWarband(start.classId, start.name)),
-    phase: 'battle' as const,
+    run: startRoute(createRun(start.seed, createStartingWarband(start.classId, start.name))),
+    phase: 'travel' as const,
   });
 }
 
@@ -117,9 +127,10 @@ export function playRun(start: RunStart, policy: RunPolicy, options: AutoRunOpti
   const steps: RunStep[] = [];
   const stages: StageRecord[] = [];
   let session = startRun(start);
+  const realm = getRealm(start.seed, content.regions);
   let campCommands = 0;
   const give = (command: RunCommand) => {
-    session = applyRunCommand(session, command).session;
+    session = applyRunCommand(session, command, { realm }).session;
     steps.push(command);
   };
 
@@ -148,6 +159,10 @@ export function playRun(start: RunStart, policy: RunPolicy, options: AutoRunOpti
       case 'camp':
         give(campCommands++ < maxCampCommands ? policy.camp(session) : { type: 'march' });
         break;
+      case 'travel':
+        give(policy.travel(session, realm));
+        campCommands = 0;
+        break;
       case 'over':
         return done('fallen');
       case 'won':
@@ -169,10 +184,11 @@ export function replayRun(
 ): { session: RunSession; stages: StageRecord[] } {
   const { content = DEFAULT_CONTENT } = options;
   let session = startRun(script.start);
+  const realm = getRealm(script.start.seed, content.regions);
   const stages: StageRecord[] = [];
   for (const step of script.steps) {
     if (step.type !== 'battle') {
-      session = applyRunCommand(session, step).session;
+      session = applyRunCommand(session, step, { realm }).session;
       continue;
     }
     if (session.phase !== 'battle') throw new Error(`A battle step while the run is at ${session.phase}`);
