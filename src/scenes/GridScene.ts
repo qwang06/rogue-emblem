@@ -86,6 +86,11 @@ import {
   type RunCommandResult,
 } from '../game/warband/runCommands.ts';
 import { clearSavedRun, saveRun } from '../data/runSave.ts';
+import { loadMeta, saveMeta } from '../data/metaSave.ts';
+import { addPlayTime, EMPTY_CHRONICLE } from '../game/warband/chronicle.ts';
+import { recordRun } from '../game/warband/meta.ts';
+import { summarizeRun } from '../game/warband/runSummary.ts';
+import { toRunSummaryView, type RunSummaryView } from '../bridge/runSummaryView.ts';
 import { pickReward, planCamp } from '../game/warband/runPolicy.ts';
 import { planPlayerDeployment, planPlayerTurn } from '../game/battle/playerAI.ts';
 import { getCampActions } from '../game/warband/camp.ts';
@@ -151,7 +156,7 @@ import {
   undoLastAction,
   type BattleHistory,
 } from '../game/battle/history.ts';
-import { createBattleState, getRunBattleUnits, type BattleState as Battle } from '../game/battle/state.ts';
+import { createBattleState, getRunBattleResult, type BattleState as Battle } from '../game/battle/state.ts';
 import { isDone } from '../game/turns.ts';
 import {
   ARROW_TILES,
@@ -282,6 +287,8 @@ export class GridScene extends Phaser.Scene {
   shownStats = new Map<string, { health?: number; mana?: number }>();
   dialogs!: DialogScripts;
   setup!: BattleSetup;
+  // When the run's play clock last started (Date.now()), see takePlayTime.
+  playClockFrom = 0;
   // The game content this battle was built from (built-in data plus any uploads).
   content!: GameContent;
   nextBattle: BattleSetup | null = null;
@@ -479,6 +486,7 @@ export class GridScene extends Phaser.Scene {
     gameStore.setState({ ...BATTLE_STATE_DEFAULTS });
 
     this.setup = setup;
+    this.playClockFrom = Date.now(); // the run's play time is counted from here (takePlayTime)
     this.nextBattle = null; // the BattleSetup a victory leads to, once won
     this.rewardOffer = null; // the run and its reward picks after a won Warband stage
     this.recruitOffer = null;
@@ -1224,11 +1232,25 @@ export class GridScene extends Phaser.Scene {
     if (dy !== 0) this.publishMenu('campMenu', moveSelection(this.campMenu!, dy));
   }
 
+  // The real time since the play clock last started (on create(), or the
+  // last call), restarting it: what a Warband run adds to its play time.
+  takePlayTime(): number {
+    const now = Date.now();
+    const elapsed = now - this.playClockFrom;
+    this.playClockFrom = now;
+    return elapsed;
+  }
+
   // Next Stage: leaves camp for the run's next stage.
   marchOn() {
     const marched = tryRunCommand({ run: this.campRun!, phase: 'camp' }, { type: 'march' });
     if (!marched) return;
-    this.nextBattle = runStage(marched.session.run);
+    // The time spent at camp counts toward the run's play time.
+    const run = marched.session.run;
+    this.nextBattle = runStage({
+      ...run,
+      chronicle: addPlayTime(run.chronicle ?? EMPTY_CHRONICLE, this.takePlayTime()),
+    });
     this.leaveBattle();
   }
 
@@ -1872,6 +1894,7 @@ export class GridScene extends Phaser.Scene {
     this.setCursorVisible(false);
     // Completing the objective moves on to the next chapter or stage.
     let runOver: RunOverView | null = null;
+    let runSummary: RunSummaryView | null = null;
     let stageClear: StageClearView | null = null;
     // A stage clear's guaranteed level ups, shown before its result.
     let levelUps: readonly RewardLevelUp[] = [];
@@ -1882,7 +1905,7 @@ export class GridScene extends Phaser.Scene {
       const before = this.setup.run;
       const { session: finished, events } = finishBattleWithEvents(
         { run: before, phase: 'battle' },
-        { units: getRunBattleUnits(this.battle), convoy: this.battle.convoyLoot },
+        getRunBattleResult(this.battle, this.takePlayTime()),
         outcome,
         this.content.regions.finalStage,
       );
@@ -1892,6 +1915,11 @@ export class GridScene extends Phaser.Scene {
       if (ended) {
         clearSavedRun();
         runOver = toRunOverView(run, finished.phase === 'won');
+        // The run's recap, and the renown it earns across runs.
+        const summary = summarizeRun(run, finished.phase === 'won');
+        const recorded = recordRun(loadMeta(), summary);
+        saveMeta(recorded.meta);
+        runSummary = toRunSummaryView(summary, recorded);
       } else {
         const clear = getStageClearGold(before.stage, run.fallen.length - before.fallen.length);
         stageClear = toStageClearView(before.stage, clear, run.gold);
@@ -1915,7 +1943,7 @@ export class GridScene extends Phaser.Scene {
       this.inputLocked = levelUps.length > 0;
       this.showLevelUps(levelUps, () => {
         this.inputLocked = false;
-        gameStore.setState({ battleOutcome: outcome, nextBattle, runOver, stageClear });
+        gameStore.setState({ battleOutcome: outcome, nextBattle, runOver, runSummary, stageClear });
         // A won stage goes straight on to its recruit or reward pick, which
         // shows the clear's gold itself, rather than stopping on the result.
         // Confirm waits a moment there, so one pressed to hurry the battle's

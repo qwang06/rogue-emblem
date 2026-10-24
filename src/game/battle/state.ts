@@ -10,7 +10,7 @@ import { getDeploymentLimit } from '../deployment.ts';
 import type { Level } from '../trainingLevel.ts';
 import type { BattleOutcome, TurnState } from '../turns.ts';
 import type { Unit } from '../Unit.ts';
-import type { ItemSnapshot } from '../warband/run.ts';
+import type { BattleResult, ItemSnapshot } from '../warband/run.ts';
 import { GUEST_UNIT_ID } from '../warband/recruitment.ts';
 
 export type BattleStage = 'deployment' | 'battle';
@@ -41,6 +41,8 @@ export interface BattleState {
   // Items sent to the convoy: loot a full-handed unit couldn't carry, and
   // tomes handed back by a spell learned from them.
   readonly convoyLoot: readonly ItemSnapshot[];
+  // How many units each unit has felled, by unitId (absent for none).
+  readonly kills: ReadonlyMap<string, number>;
   // The seed the battle's next roll comes from (see createResumableRng).
   readonly rngState: number;
 }
@@ -65,6 +67,7 @@ export function createBattleState(
     deployed: Object.freeze([]),
     fallen: new Map(),
     convoyLoot: Object.freeze([]),
+    kills: new Map(),
     rngState: seed >>> 0,
   });
 }
@@ -86,6 +89,19 @@ export function getRunBattleUnits(state: BattleState): Map<string, Unit> {
   const guest = state.units.get(GUEST_UNIT_ID) ?? state.fallen.get(GUEST_UNIT_ID);
   if (guest) units.set(GUEST_UNIT_ID, guest);
   return units;
+}
+
+// What a Warband stage's battle hands its run (see finishStage): the
+// warband's units as they ended it, what it sent to the convoy, who felled
+// what, whether it beat a boss, and `elapsedMs`, how long it took.
+export function getRunBattleResult(state: BattleState, elapsedMs = 0): BattleResult {
+  return {
+    units: getRunBattleUnits(state),
+    convoy: state.convoyLoot,
+    kills: state.kills,
+    bossDefeated: state.objective.kind === 'boss' && state.outcome === 'victory',
+    elapsedMs,
+  };
 }
 
 // What the objective is checked against: every unit still in play, where
