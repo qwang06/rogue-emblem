@@ -18,7 +18,7 @@ import { createSeededRng, randomInt, randomItem, shuffle } from '../rng.ts';
 import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
 import { FIRE, IRON_AXE, IRON_BOW, IRON_SPEAR, canWield, type Weapon } from '../weapons.ts';
 import { WARBAND_NAMES } from './names.ts';
-import { STARTING_CLASSES } from './startingClasses.ts';
+import { ALL_STARTING_CLASSES } from './startingClasses.ts';
 import {
   restoreUnit,
   snapshotUnit,
@@ -360,7 +360,7 @@ export function describeReward(
     case 'recruit': {
       const { unit } = reward;
       const className = classes.find((unitClass) => unitClass.id === unit.classId)?.label ?? unit.classId;
-      const pitch = STARTING_CLASSES.find((starting) => starting.id === unit.classId)?.description;
+      const pitch = ALL_STARTING_CLASSES.find((starting) => starting.id === unit.classId)?.description;
       return {
         label: `Recruit ${unit.name}`,
         description: `A level ${unit.level} ${className} joins the warband.${pitch ? ` ${pitch}` : ''}`,

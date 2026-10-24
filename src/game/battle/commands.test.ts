@@ -6,7 +6,7 @@ import { HEALTH_POTION } from '../items.ts';
 import { TURN_LIMIT } from '../objectives.ts';
 import { IRON_SPEAR, weaponEntry, FISTS } from '../weapons.ts';
 import { applyCommand, BattleCommandError, type BattleCommand, type BattleEvent } from './commands.ts';
-import { createBattleState, getDeployedUnits, type BattleState } from './state.ts';
+import { createBattleState, getDeployedUnits, getRunBattleResult, type BattleState } from './state.ts';
 import { createTestBattle, makeTestUnit } from './testLevel.ts';
 
 function run(state: BattleState, ...commands: BattleCommand[]) {
@@ -173,6 +173,35 @@ describe('attack', () => {
     expect(state.units.get('hero')!.items.some((entry) => entry.item.id === HEALTH_POTION.id)).toBe(true);
     expect(state.outcome).toBe('victory');
     expect(() => applyCommand(state, { type: 'end-phase' })).toThrow(/over/);
+  });
+
+  it('counts the kill for the unit that landed it', () => {
+    const start = createTestBattle({
+      hero: { unit: makeTestUnit({ team: 'player', items: [weaponEntry(IRON_SPEAR)] }), at: { x: 0, y: 0 } },
+      foe: { unit: makeTestUnit({ team: 'enemy', health: 5 }), at: { x: 1, y: 0 } },
+    });
+    expect(start.kills.size).toBe(0);
+    const { state } = run(start, { type: 'attack', unitId: 'hero', target: { x: 1, y: 0 } });
+    expect(state.kills.get('hero')).toBe(1);
+    expect(start.kills.size).toBe(0);
+  });
+
+  it('hands a run the kills, and whether a boss fell, with the battle', () => {
+    const battle = (kind: 'rout' | 'boss') =>
+      createTestBattle(
+        {
+          hero: { unit: makeTestUnit({ team: 'player', items: [weaponEntry(IRON_SPEAR)] }), at: { x: 0, y: 0 } },
+          foe: { unit: makeTestUnit({ team: 'enemy', health: 5 }), at: { x: 1, y: 0 } },
+        },
+        { objective: kind === 'boss' ? { kind: 'boss', unitId: 'foe', name: 'Chief' } : { kind: 'rout' } },
+      );
+    const attack: BattleCommand = { type: 'attack', unitId: 'hero', target: { x: 1, y: 0 } };
+    const boss = getRunBattleResult(run(battle('boss'), attack).state, 1234);
+    expect(boss.kills!.get('hero')).toBe(1);
+    expect(boss.bossDefeated).toBe(true);
+    expect(boss.elapsedMs).toBe(1234);
+    expect(getRunBattleResult(run(battle('rout'), attack).state).bossDefeated).toBe(false);
+    expect(getRunBattleResult(battle('boss')).bossDefeated).toBe(false);
   });
 
   it('refuses a target out of reach or not hostile', () => {

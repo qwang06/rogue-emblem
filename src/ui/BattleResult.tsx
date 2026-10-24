@@ -1,6 +1,7 @@
 import { gameCommands } from '../bridge/commands.ts';
 import { useGameStore } from './useGameStore.ts';
 import { KeyHint } from './KeyHint.tsx';
+import { RunSummary } from './RunSummary.tsx';
 
 const TITLES = { victory: 'Victory', defeat: 'Defeat' };
 
@@ -8,13 +9,15 @@ const TITLES = { victory: 'Victory', defeat: 'Defeat' };
 // input: confirm (or a click) moves on to `nextBattle` after a victory that
 // leads to one, else returns to the title screen. When the battle ended a
 // Warband Mode run, fallen or won, it says so, with the stage it ended on
-// and the units lost along the way. A won stage of a run that carries on
+// and the units lost along the way, or with its recap (RunSummary) when
+// there is one. A won stage of a run that carries on
 // skips this for its recruit or reward pick (RewardScreen), which shows the
 // gold it paid, and the camp (CampMenu) after that.
 export function BattleResult() {
   const outcome = useGameStore((state) => state.battleOutcome);
   const nextBattle = useGameStore((state) => state.nextBattle);
   const runOver = useGameStore((state) => state.runOver);
+  const runSummary = useGameStore((state) => state.runSummary);
   const stageClear = useGameStore((state) => state.stageClear);
   const recruitmentStage = useGameStore((state) => state.recruitmentStage);
   // The reward screen, then the camp, take over from the result.
@@ -22,6 +25,7 @@ export function BattleResult() {
     (state) => state.rewardMenu !== null || state.campMenu !== null || state.rosterScreen !== null,
   );
   if (!outcome || pastResult) return null;
+  if (runSummary) return <RunSummary summary={runSummary} />;
 
   return (
     <div className="pause-overlay">

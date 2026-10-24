@@ -339,6 +339,7 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 - **Renown** per run (stages cleared, bosses beaten, victory) unlocks starting warbands, starting relic choices, classes in the hire pool and new regions. Pure `src/game/warband/meta.ts`, saved to `localStorage` (try/catch).
 - Keep unlocks horizontal (more options), not permanent stat boosts, so each run stays the challenge.
 - **Tests:** renown per run outcome, unlock thresholds, save round-trip and corrupt saves.
+- _Progress:_ `src/game/warband/meta.ts` and `src/data/metaSave.ts`. Every run that ends earns renown (10 per stage cleared, 20 per boss beaten, 50 for a victory), shown on a run recap (`RunSummary`: stages, bosses, kills, play time, the MVP, a memorial for the fallen, relics held, the renown earned and the next unlock), kept from a per-run chronicle (`chronicle.ts`). Unlocks so far are starting classes: the Vanguard at 40 renown and the Guard at 120 (the Acolyte can't reliably win stage 1 alone). _Still to do:_ unlocks for starting relic choices, origins, hire-pool classes and new regions once those exist.
 
 ---
 

@@ -18,7 +18,7 @@ import {
 } from './stageLevel.ts';
 import { getStageRegion } from './regions.ts';
 import { LOOT_ITEMS } from '../loot.ts';
-import { STARTING_CLASSES } from './startingClasses.ts';
+import { ALL_STARTING_CLASSES, STARTING_CLASSES, UNLOCKABLE_STARTING_CLASSES } from './startingClasses.ts';
 import { createUnitOfClass } from '../unitClasses.ts';
 import { calculateDamage, getAttackRange } from '../combat.ts';
 import { countEnemies, getWalkingDistances, isInArea } from '../enemySpawns.ts';
@@ -47,7 +47,7 @@ describe('createStartingWarband', () => {
   });
 
   it('is a single unit of the chosen class', () => {
-    for (const { id } of STARTING_CLASSES) {
+    for (const { id } of ALL_STARTING_CLASSES) {
       const warband = createStartingWarband(id);
       expect([...warband.keys()]).toEqual([`${id}-1`]);
       const unit = warband.get(`${id}-1`)!;
@@ -417,7 +417,7 @@ describe('stage 1', () => {
     }
   });
 
-  it('puts the enemy in reach on turn 1, from any deployment tile, whichever class the run starts as', () => {
+  it('puts the enemy in reach on turn 1, from any deployment tile, whichever base class the run starts as', () => {
     for (const { id } of STARTING_CLASSES) {
       for (const seed of SEEDS) {
         const level = createStageLevel(seed, region, createStartingWarband(id));
@@ -436,8 +436,40 @@ describe('stage 1', () => {
     }
   });
 
+  it('starts the fight on turn 1 for an unlockable class: it strikes the enemy, or stops where the enemy strikes it', () => {
+    for (const { id } of UNLOCKABLE_STARTING_CLASSES) {
+      for (const seed of SEEDS) {
+        const level = createStageLevel(seed, region, createStartingWarband(id));
+        const [unitId] = level.roster;
+        const unit = level.units.get(unitId)!;
+        const enemy = level.units.get('enemy-1')!;
+        const enemyTile = findUnit(level.grid, 'enemy-1')!;
+        const strikes = (
+          grid: typeof level.grid,
+          from: { x: number; y: number },
+          reach: typeof unit,
+          mover: number,
+          to: { x: number; y: number },
+        ) =>
+          getMovementRange(grid, from, mover).some((stop) =>
+            getAttackRange(grid, stop, reach.weapon!.maxRange, reach.weapon!.minRange).some(
+              ({ x, y }) => x === to.x && y === to.y,
+            ),
+          );
+        for (const tile of level.deploymentZone.slice(0, 3)) {
+          const grid = setUnit(level.grid, tile.x, tile.y, unitId);
+          const contact = getMovementRange(grid, tile, unit.movement).some((stop) => {
+            const moved = setUnit(setUnit(grid, tile.x, tile.y, null), stop.x, stop.y, unitId);
+            return strikes(moved, stop, unit, 0, enemyTile) || strikes(moved, enemyTile, enemy, enemy.movement, stop);
+          });
+          expect(contact, `${id} on seed ${seed} from ${tile.x},${tile.y}`).toBe(true);
+        }
+      }
+    }
+  });
+
   it('is weak enough that any lone level-1 starting class wins the trade', () => {
-    for (const { id } of STARTING_CLASSES) {
+    for (const { id } of ALL_STARTING_CLASSES) {
       const level = createStageLevel(1, region, createStartingWarband(id));
       const unit = level.units.get(level.roster[0])!;
       const enemy = level.units.get('enemy-1')!;
@@ -450,7 +482,7 @@ describe('stage 1', () => {
   });
 
   it('gives the usual XP for killing the enemy, not a guaranteed level up', () => {
-    for (const { id } of STARTING_CLASSES) {
+    for (const { id } of ALL_STARTING_CLASSES) {
       const level = createStageLevel(1, region, createStartingWarband(id));
       const unit = level.units.get(level.roster[0])!;
       const enemy = level.units.get('enemy-1')!;

@@ -4,7 +4,9 @@ import { gameStore } from '../bridge/gameStore.ts';
 import { changeVolume, cycleVolume, toggleMute, type AudioSettings } from '../audio/settings.ts';
 import { createActionMenu, getSelectedAction, moveSelection, selectIndex } from '../game/actionMenu.ts';
 import {
+  describeRenown,
   getFirstEnabledIndex,
+  getStartingClassActions,
   getWarbandActions,
   getSettingsActions,
   STARTING_CLASS_ACTIONS,
@@ -18,6 +20,7 @@ import { generateName } from '../game/warband/names.ts';
 import { createRun, type RunState } from '../game/warband/run.ts';
 import { createStartingWarband } from '../game/warband/stageLevel.ts';
 import { loadSavedRun, saveRun } from '../data/runSave.ts';
+import { loadMeta } from '../data/metaSave.ts';
 import { getUnitSprite } from '../game/tileset.ts';
 import { routeHash } from './route.ts';
 import { UnitSprite } from './UnitSprite.tsx';
@@ -37,7 +40,11 @@ type View = 'main' | 'training' | 'warband' | 'new-run' | 'settings';
 const SUBMENUS = {
   training: { heading: 'Training — Choose a Unit', label: 'Choose a unit to train', actions: getTrainingActions },
   warband: { heading: 'Warband Mode', label: 'Warband Mode', actions: () => getWarbandActions(loadSavedRun()) },
-  'new-run': { heading: 'New Run — Choose a Class', label: 'Choose a class', actions: () => STARTING_CLASS_ACTIONS },
+  'new-run': {
+    heading: 'New Run — Choose a Class',
+    label: 'Choose a class',
+    actions: () => getStartingClassActions(loadMeta()),
+  },
   settings: { heading: 'Settings', label: 'Settings', actions: () => getSettingsActions(gameStore.getState().audio) },
 } as const;
 
@@ -244,6 +251,7 @@ export function TitleScreen() {
             onCancel={() => setEditingName(false)}
           />
         )}
+        {view === 'warband' && <p className="title-menu__renown">{describeRenown(loadMeta())}</p>}
         {view === 'new-run' && (
           <p className="title-menu__description" aria-live="polite">
             {description}

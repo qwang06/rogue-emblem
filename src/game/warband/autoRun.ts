@@ -10,7 +10,7 @@ import { planDeployment, planNextTurn } from '../battle/ai.ts';
 import type { BattleCommand } from '../battle/commands.ts';
 import { getCommands, replay } from '../battle/history.ts';
 import { runBattle, type BattlePlanner } from '../battle/runner.ts';
-import { createBattleState, getRunBattleUnits, type BattleState } from '../battle/state.ts';
+import { createBattleState, getRunBattleResult, type BattleState } from '../battle/state.ts';
 import { isPastTurnLimit, type ObjectiveKind } from '../objectives.ts';
 import type { BattleOutcome } from '../turns.ts';
 import { canRest } from './camp.ts';
@@ -195,12 +195,7 @@ function finishStageBattle(
 ): { session: RunSession; record: StageRecord } {
   const before = session.run;
   const turns = state.turnState?.turn ?? 0;
-  const next = finishBattle(
-    session,
-    { units: getRunBattleUnits(state), convoy: state.convoyLoot },
-    state.outcome ?? 'defeat',
-    finalStage,
-  );
+  const next = finishBattle(session, getRunBattleResult(state), state.outcome ?? 'defeat', finalStage);
   return {
     session: next,
     record: {
