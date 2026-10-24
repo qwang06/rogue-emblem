@@ -54,7 +54,7 @@ export function getCurrentSiteId(run: RunState): string {
 }
 
 // The site `run` is at, or undefined at home (or on a linear run).
-export function getRunSite(run: RunState): RunSite | undefined {
+export function getRunSite(run: Pick<RunState, 'route'>): RunSite | undefined {
   return run.route?.at;
 }
 
@@ -104,7 +104,7 @@ export function travelTo(run: RunState, realm: Realm, siteId: string): RunState 
 }
 
 // Whether the warband is in a town: where the merchant is, and rest is free.
-export function isInTown(run: RunState): boolean {
+export function isInTown(run: Pick<RunState, 'route'>): boolean {
   return getRunSite(run)?.kind === 'town';
 }
 
@@ -134,9 +134,14 @@ export function shiftEnemyLevels(region: RegionConfig, offset: number): RegionCo
 export const FORT_GOLD_MULTIPLIER = 2;
 
 // The gold for clearing the run's current stage with `losses` units lost:
-// a stage's clear gold (getStageClearGold), doubled at a fort.
-export function getClearGold(run: RunState, losses: number): { gold: number; flawless: boolean } {
-  const clear = getStageClearGold(run.stage, losses);
+// a stage's clear gold (getStageClearGold, with its bounty `extras`),
+// doubled at a fort.
+export function getClearGold(
+  run: RunState,
+  losses: number,
+  extras: Parameters<typeof getStageClearGold>[2] = {},
+): { gold: number; flawless: boolean } {
+  const clear = getStageClearGold(run.stage, losses, extras);
   return getRunSite(run)?.kind === 'fort' ? { ...clear, gold: clear.gold * FORT_GOLD_MULTIPLIER } : clear;
 }
 

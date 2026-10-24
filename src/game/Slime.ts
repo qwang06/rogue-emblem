@@ -54,6 +54,8 @@ export const SLIME_ITEMS: Inventory = Object.freeze([weaponEntry(TACKLE)]);
 // slime stat line and no mana; it has no skill tree, wields physical
 // weapons, and fights with its Tackle unless given other items.
 export class Slime extends Unit {
+  override monster = true;
+
   constructor({ name = 'Slime', team, level = 1, items = SLIME_ITEMS }: ClassUnitOptions) {
     super({
       name,

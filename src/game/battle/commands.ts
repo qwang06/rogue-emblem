@@ -18,7 +18,8 @@ import { claimLoot, getLootQuantity } from '../loot.ts';
 import { getMovePath, getMovementRange, canMoveAlongPath, type MovementOptions } from '../movement.ts';
 import { getObjectiveOutcome } from '../objectives.ts';
 import { createResumableRng } from '../rng.ts';
-import { calculateSkillDamage, canUseSkill, findLearnedSkill, type Skill } from '../skills.ts';
+import { calculateSkillDamage, canUseSkill, findUnitSkill, type Skill } from '../skills.ts';
+import { hasModifier, sumModifiers } from '../modifiers.ts';
 import { areAllied, getTeamUnitIds, isAllyOf, isHostileTo } from '../teams.ts';
 import {
   getFirstPhase,
@@ -87,6 +88,10 @@ export type BattleEvent =
   | { type: 'skill'; unitId: string; targetId: string; skill: Skill; damage: number; health: number }
   | { type: 'healed'; unitId: string; targetId: string; amount: number }
   | { type: 'item-used'; unitId: string; item: Consumable; amount: number }
+  // A modifier's recovery (see modifiers.ts): HP healed on a kill
+  // (`trigger` 'kill'), or HP or MP recovered as the unit's phase starts
+  // ('phase').
+  | { type: 'recovered'; unitId: string; stat: 'health' | 'mana'; amount: number; trigger: 'kill' | 'phase' }
   // A defeated unit's loot went to `unitId`, or to the convoy when `stored`.
   | { type: 'loot'; unitId: string; item: Item; stored: boolean }
   | { type: 'defeated'; unitId: string; at: Point }
@@ -190,6 +195,7 @@ class Draft {
   deployed: readonly string[];
   fallen: Map<string, Unit>;
   convoyLoot: ItemSnapshot[];
+  kills: Map<string, number>;
   readonly events: BattleEvent[] = [];
   readonly rng: Rng;
   private readonly rngState: () => number;
@@ -207,6 +213,7 @@ class Draft {
     this.deployed = base.deployed;
     this.fallen = new Map(base.fallen);
     this.convoyLoot = [...base.convoyLoot];
+    this.kills = new Map(base.kills);
     const { rng, state } = createResumableRng(base.rngState);
     this.rng = rng;
     this.rngState = state;
@@ -247,6 +254,7 @@ class Draft {
       deployed: this.deployed,
       fallen: this.fallen,
       convoyLoot: Object.freeze(this.convoyLoot),
+      kills: this.kills,
       rngState: this.rngState(),
     });
   }
@@ -357,7 +365,9 @@ function resolveAttack(draft: Draft, attackerId: string, target: TargetTile, fro
     const strikerId = ids[strike.by];
     const struckId = ids[strike.target];
     const striker = draft.edit(strikerId);
-    const { broke, learned, leftover } = striker.spendWeaponUse();
+    // A killing blow can spare the weapon (a Whetstone).
+    const spared = strike.lethal && hasModifier(striker.modifiers, 'spare-weapon-on-kill');
+    const { broke, learned, leftover } = spared ? SPARED_STRIKE : striker.spendWeaponUse();
     if (learned && leftover && areAllied(striker.team, 'player')) {
       draft.convoyLoot.push({ itemId: leftover.item.id, quantity: leftover.quantity });
     }
@@ -376,11 +386,33 @@ function resolveAttack(draft: Draft, attackerId: string, target: TargetTile, fro
     });
     if (!struck.isAlive()) {
       dropLoot(draft, struckId, strikerId);
-      defeat(draft, struckId);
+      defeat(draft, struckId, strikerId);
+      healOnKill(draft, strikerId);
       break;
     }
   }
   awardCombatExperience(draft, ids, strikes);
+}
+
+// What spendWeaponUse would say for a strike that didn't wear the weapon.
+const SPARED_STRIKE = Object.freeze({ broke: false, learned: null, leftover: null });
+
+// A unit that defeated a foe heals its kill-heal modifiers' HP.
+function healOnKill(draft: Draft, unitId: string) {
+  recover(draft, unitId, 'health', sumModifiers(draft.unit(unitId).modifiers, 'kill-heal'), 'kill');
+}
+
+// Restores up to `amount` of a unit's HP or MP for a modifier, with a
+// `recovered` event when that restored anything.
+function recover(draft: Draft, unitId: string, stat: 'health' | 'mana', amount: number, trigger: 'kill' | 'phase') {
+  if (amount <= 0) return;
+  const unit = draft.unit(unitId);
+  const restored = Math.min(amount, stat === 'health' ? unit.maxHealth - unit.health : unit.maxMana - unit.mana);
+  if (restored <= 0) return;
+  const patient = draft.edit(unitId);
+  if (stat === 'health') patient.heal(restored);
+  else patient.restoreMana(restored);
+  draft.events.push({ type: 'recovered', unitId, stat, amount: restored, trigger });
 }
 
 // Only the player's side (its units and guests) earns XP, and only if it
@@ -406,8 +438,7 @@ function grantExperience(draft: Draft, unitId: string, { amount, scaled }: Exper
 // like a single strike that hit.
 function useSkill(draft: Draft, unitId: string, skillId: string, target: Point) {
   const user = requireActor(draft, unitId);
-  const skill =
-    findLearnedSkill(user.unitClass, user.level, skillId) ?? draft.fail(`${unitId} doesn't know ${skillId}`);
+  const skill = findUnitSkill(user, skillId) ?? draft.fail(`${unitId} doesn't know ${skillId}`);
   if (!canUseSkill(user, skill)) draft.fail(`${unitId} can't afford ${skillId}`);
   const from = draft.tileOf(unitId);
   const targets = getAttackTargets(draft.grid, from, skill.range, hostileTo(draft.units, user));
@@ -421,7 +452,8 @@ function useSkill(draft: Draft, unitId: string, skillId: string, target: Point) 
   const lethal = !defender.isAlive();
   if (lethal) {
     dropLoot(draft, tile.unitId, unitId);
-    defeat(draft, tile.unitId);
+    defeat(draft, tile.unitId, unitId);
+    healOnKill(draft, unitId);
   }
   const strikes: Strike[] = [{ by: 'attacker', target: 'defender', damage, hit: true, crit: false, lethal }];
   grantExperience(draft, unitId, getCombatAward(draft.unit(unitId), defender, getCombatOutcome(strikes, 'attacker')));
@@ -473,8 +505,10 @@ function dropLoot(draft: Draft, deadId: string, killerId: string) {
   draft.events.push({ type: 'loot', unitId: killerId, item: loot, stored });
 }
 
-// Takes a unit at 0 health off the map, keeping it with the fallen.
-function defeat(draft: Draft, unitId: string) {
+// Takes a unit at 0 health off the map, keeping it with the fallen, and
+// counts the kill for `killerId`.
+function defeat(draft: Draft, unitId: string, killerId: string) {
+  draft.kills.set(killerId, (draft.kills.get(killerId) ?? 0) + 1);
   const at = draft.tileOf(unitId);
   draft.grid = setUnit(draft.grid, at.x, at.y, null);
   draft.fallen.set(unitId, draft.unit(unitId));
@@ -503,10 +537,17 @@ function hasGuests(draft: Draft): boolean {
 }
 
 // A new phase can decide the battle on its own (a survive objective).
+// Otherwise the phase's units recover their phase-heal and phase-mana
+// modifiers' HP and MP.
 function startPhase(draft: Draft, turnState: TurnState) {
   draft.turnState = turnState;
   draft.events.push({ type: 'phase-started', turnState });
-  checkOutcome(draft);
+  if (checkOutcome(draft)) return;
+  for (const unitId of getTeamUnitIds(draft.units, turnState.team)) {
+    const { modifiers } = draft.unit(unitId);
+    recover(draft, unitId, 'health', sumModifiers(modifiers, 'phase-heal'), 'phase');
+    recover(draft, unitId, 'mana', sumModifiers(modifiers, 'phase-mana'), 'phase');
+  }
 }
 
 function checkOutcome(draft: Draft): boolean {

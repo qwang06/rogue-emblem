@@ -6,9 +6,12 @@ import type { BattleSetup } from '../game/battleSetup.ts';
 import type { BattleOutcome } from '../game/turns.ts';
 import type { MerchantScreenView } from './merchantView.ts';
 import type { RosterScreenView } from './rosterView.ts';
+import type { RunSummaryView } from './runSummaryView.ts';
 import { createStore } from './store.ts';
 import type { AutoSpeed } from '../game/autoSpeed.ts';
+import { DEFAULT_AUDIO_SETTINGS, type AudioSettings } from '../audio/settings.ts';
 import type {
+  BoonPickView,
   CombatForecastView,
   DamagePopupView,
   DialogView,
@@ -16,6 +19,7 @@ import type {
   LevelUpView,
   ObjectiveView,
   PhaseBannerView,
+  RelicView,
   RosterEntryView,
   RewardAction,
   RunOverView,
@@ -58,6 +62,7 @@ export interface BattleState {
   experienceGain: ExperienceGainView | null;
   levelUp: LevelUpView | null;
   damagePopups: readonly DamagePopupView[];
+  defeats: number;
   turn: TurnView | null;
   phaseBanner: PhaseBannerView | null;
   battleOutcome: BattleOutcome | null;
@@ -67,12 +72,15 @@ export interface BattleState {
   objectiveStatus: string | null;
   nextBattle: string | null;
   runOver: RunOverView | null;
+  runSummary: RunSummaryView | null;
   stageClear: StageClearView | null;
   rewardMenu: Menu<RewardAction> | null;
   rewardTeam: readonly TeamUnitView[] | null;
   recruitmentStage: number | null;
+  boonPick: BoonPickView | null;
   campMenu: Menu | null;
   campGold: number | null;
+  campRelics: readonly RelicView[] | null;
   rosterScreen: RosterScreenView | null;
   merchantScreen: MerchantScreenView | null;
 }
@@ -82,6 +90,7 @@ export interface GameState extends BattleState {
   battleSetup: BattleSetup | null;
   autoPlay: boolean;
   autoSpeed: AutoSpeed;
+  audio: AudioSettings;
 }
 
 // State that only exists while the map is running. The map scene resets
@@ -109,6 +118,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   experienceGain: null, // ExperienceGainView from toExperienceGainView() while a unit's XP bar fills after combat, or null
   levelUp: null, // LevelUpView from toLevelUpView() while a level up is being shown, or null
   damagePopups: [], // DamagePopupViews (damage or recovery) from toDamagePopupView() currently on screen
+  defeats: 0, // how many units have fallen this battle (each one plays the defeat sound)
   turn: null, // TurnView from toTurnView() once the battle starts, else null
   phaseBanner: null, // PhaseBannerView from toPhaseBannerView() while a phase is being announced, or null
   battleOutcome: null, // 'victory' | 'defeat' once the battle is decided, else null
@@ -118,12 +128,15 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   objectiveStatus: null, // getObjectiveStatus() of the battle's objective on the current turn (the header's readout) once the battle starts, else null
   nextBattle: null, // describeBattle() of the battle a victory leads to (shown on the result), or null
   runOver: null, // RunOverView from toRunOverView() once a Warband Mode run has ended, or null
+  runSummary: null, // RunSummaryView from toRunSummaryView(), the recap of a Warband Mode run that has ended, or null
   stageClear: null, // StageClearView from toStageClearView() once a Warband Mode stage is won, or null
   rewardMenu: null, // frozen menu of RewardActions (toRewardAction) while the reward screen is up after a won stage, or null
   rewardTeam: null, // TeamUnitViews from toTeamView() of the warband while the reward screen is up, or null
   recruitmentStage: null,
+  boonPick: null, // BoonPickView from toBoonPickView() while the reward screen shows a level up's boon pick (its cards are rewardMenu's), or null
   campMenu: null, // frozen camp menu (getCampActions: Manage Roster / Merchant / Rest / Next Stage) once a won stage's reward is taken, or null
   campGold: null, // the warband's gold while at camp (shown on the camp menu), or null
+  campRelics: null, // RelicViews from toRelicViews() of the warband's relics while at camp (listed on the camp menu), or null
   rosterScreen: null, // RosterScreenView from toRosterScreenView() while the roster screen is open between stages, or null
   merchantScreen: null, // MerchantScreenView from toMerchantScreenView() while the camp's merchant screen is open, or null
 });
@@ -145,5 +158,8 @@ export const gameStore = createStore<GameState>({
   // How fast the map plays its animations, banners and auto play (1x–8x),
   // whether Auto is on or not. Kept from battle to battle.
   autoSpeed: 1,
+  // Sound effect volume and mute (src/audio/settings.ts), loaded from and
+  // saved to the browser by src/audio/index.ts.
+  audio: DEFAULT_AUDIO_SETTINGS,
   ...BATTLE_STATE_DEFAULTS,
 });

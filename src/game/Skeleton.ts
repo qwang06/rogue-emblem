@@ -54,6 +54,8 @@ export const SKELETON_ITEMS: Inventory = Object.freeze([weaponEntry(BONE_CLAWS)]
 // skeleton stat line and no mana; it has no skill tree, wields physical
 // weapons, and fights with its Bone Claws unless given other items.
 export class Skeleton extends Unit {
+  override monster = true;
+
   constructor({ name = 'Skeleton', team, level = 1, items = SKELETON_ITEMS }: ClassUnitOptions) {
     super({
       name,

@@ -40,6 +40,7 @@ import {
   type Consumable,
   type Item,
 } from './items.ts';
+import type { Modifier } from './modifiers.ts';
 import { getTomeSpell, isTome, knowsSpell, learnSpell, recordTomeUse, type TomeProgress } from './tomes.ts';
 import type { Team } from './turns.ts';
 import {
@@ -121,6 +122,15 @@ export class Unit {
   // anyone in reach of its tile but never moves (a boss, see
   // warband/stageObjective.ts).
   holdsPosition = false;
+  // What its relics and boons add for the battle (see modifiers.ts), set
+  // by applyModifiers when a Warband run fields it.
+  modifiers: readonly Modifier[] = Object.freeze([]);
+  // Whether it's a monster (the monster classes set it), for modifiers
+  // that only count against monsters.
+  monster = false;
+  // The level-up boons it has taken in a Warband run (warband/boons.ts),
+  // by id, in the order taken.
+  boons: readonly string[] = Object.freeze([]);
 
   constructor({
     name,

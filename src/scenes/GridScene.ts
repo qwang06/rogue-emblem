@@ -23,6 +23,9 @@ import {
   toObjectiveView,
   toRewardMenuActions,
   toRewardAction,
+  toBoonActions,
+  toBoonPickView,
+  toRelicViews,
   toTeamView,
   toRunOverView,
   toStageClearView,
@@ -54,7 +57,7 @@ import {
   type CarriedStaff,
   type Staff,
 } from '../game/healing.ts';
-import { findLearnedSkill, getLearnedSkills, getSkillActions } from '../game/skills.ts';
+import { findUnitSkill, getSkillActions, getUnitSkills } from '../game/skills.ts';
 import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange } from '../game/combat.ts';
 import { getFitZoom } from '../game/camera.ts';
 import { createCursor, moveCursor } from '../game/cursor.ts';
@@ -75,6 +78,7 @@ import {
   type Reward,
   type RewardLevelUp,
 } from '../game/warband/rewards.ts';
+import { getBoonOffer } from '../game/warband/levelUpPicks.ts';
 import {
   applyRunCommand,
   finishBattleWithEvents,
@@ -83,11 +87,17 @@ import {
   RunCommandError,
   type RunCommand,
   type RunCommandResult,
+  countWarbandKills,
 } from '../game/warband/runCommands.ts';
 import { clearSavedRun, saveRun } from '../data/runSave.ts';
 import { getClearGold, getRunSite, isInTown, isRealmRun } from '../game/warband/travel.ts';
 import { enterRun } from '../bridge/warbandFlow.ts';
-import { pickReward, planCamp } from '../game/warband/runPolicy.ts';
+import { loadMeta, saveMeta } from '../data/metaSave.ts';
+import { addPlayTime, EMPTY_CHRONICLE } from '../game/warband/chronicle.ts';
+import { recordRun } from '../game/warband/meta.ts';
+import { summarizeRun } from '../game/warband/runSummary.ts';
+import { toRunSummaryView, type RunSummaryView } from '../bridge/runSummaryView.ts';
+import { pickBoonOffer, pickReward, planCamp } from '../game/warband/runPolicy.ts';
 import { planPlayerDeployment, planPlayerTurn } from '../game/battle/playerAI.ts';
 import { getCampActions } from '../game/warband/camp.ts';
 import {
@@ -152,7 +162,7 @@ import {
   undoLastAction,
   type BattleHistory,
 } from '../game/battle/history.ts';
-import { createBattleState, getRunBattleUnits, type BattleState as Battle } from '../game/battle/state.ts';
+import { createBattleState, getRunBattleResult, type BattleState as Battle } from '../game/battle/state.ts';
 import { isDone } from '../game/turns.ts';
 import {
   ARROW_TILES,
@@ -178,7 +188,16 @@ import {
   getUnitSprite,
   unitSheetKey,
 } from '../game/tileset.ts';
-import { POTION_COLORS, playHitFlash, playLunge, playPotionGlow, playStoneThrow } from './effects.ts';
+import {
+  POTION_COLORS,
+  playDeathBurst,
+  playHitFlash,
+  playHitStop,
+  playLunge,
+  playPotionGlow,
+  playStoneThrow,
+} from './effects.ts';
+import { CRIT_SHAKE, getLungeDistance, getStrikeJuice, type Shake } from './hitJuice.ts';
 import { addTreeShadow, addUnitShadow } from './unitShadow.ts';
 import { addUnitOutline } from './unitOutline.ts';
 import type { Menu } from '../game/actionMenu.ts';
@@ -230,9 +249,6 @@ const MOVE_STEP_MS = 140;
 const DAMAGE_POPUP_DURATION_MS = 700;
 // How long a missed strike holds before the next one (about a hit flash).
 const MISS_PAUSE_MS = 420;
-// Camera shake on a crit.
-const CRIT_SHAKE_MS = 160;
-const CRIT_SHAKE_INTENSITY = 0.006;
 // How long the "Player Phase" / "Enemy Phase" banner holds the screen.
 const PHASE_BANNER_DURATION_MS = 1200;
 // Pauses in the enemy phase: on each enemy before it moves, and between enemies.
@@ -283,6 +299,8 @@ export class GridScene extends Phaser.Scene {
   shownStats = new Map<string, { health?: number; mana?: number }>();
   dialogs!: DialogScripts;
   setup!: BattleSetup;
+  // When the run's play clock last started (Date.now()), see takePlayTime.
+  playClockFrom = 0;
   // The game content this battle was built from (built-in data plus any uploads).
   content!: GameContent;
   nextBattle: BattleSetup | null = null;
@@ -310,6 +328,9 @@ export class GridScene extends Phaser.Scene {
   // back, the clear's gold paid) and the rewards it offers to pick from.
   rewardOffer: { run: RunState; stage: number; rewards: readonly Reward[]; rerolls: number } | null = null;
   recruitOffer: { run: RunState; stage: number; recruits: readonly Reward[] } | null = null;
+  // While the run owes level-up boon picks (see levelUpPicks.ts): the run
+  // as it stands. They come before the recruit and reward picks.
+  boonRun: RunState | null = null;
   // After the reward is taken: the run as it then stands, while the camp
   // menu (Manage Roster / Next Stage) or the roster screen is up.
   campRun: RunState | null = null;
@@ -483,9 +504,11 @@ export class GridScene extends Phaser.Scene {
     gameStore.setState({ ...BATTLE_STATE_DEFAULTS });
 
     this.setup = setup;
+    this.playClockFrom = Date.now(); // the run's play time is counted from here (takePlayTime)
     this.nextBattle = null; // the BattleSetup a victory leads to, once won
     this.rewardOffer = null; // the run and its reward picks after a won Warband stage
     this.recruitOffer = null;
+    this.boonRun = null; // the run while it owes level-up boon picks
     this.rewardMenu = null; // the reward screen's menu while it's up
     this.campRun = null; // the run between a won Warband stage's reward and the next stage
     this.campMenu = null; // the camp's menu (getCampActions) while it's up
@@ -592,6 +615,11 @@ export class GridScene extends Phaser.Scene {
     // from there starts that stage afresh.
     const savedRun = setup.mode === 'warband' ? setup.run : undefined;
     const pendingReward = savedRun ? getPendingRewardOffer(savedRun) : null;
+    if (savedRun && getBoonOffer(savedRun)) {
+      this.resumeBoonPicks(savedRun);
+      gameStore.setState({ mapLoadProgress: 1, mapReady: true });
+      return;
+    }
     if (savedRun?.pendingRecruitment) {
       this.resumeRecruitment(savedRun);
       gameStore.setState({ mapLoadProgress: 1, mapReady: true });
@@ -692,12 +720,7 @@ export class GridScene extends Phaser.Scene {
     }
 
     if (this.battleOutcome) {
-      if (confirm) {
-        if (this.recruitOffer) this.openRecruitMenu();
-        else if (this.rewardOffer) this.openRewardMenu();
-        else if (this.campAfterOutcome) this.openCamp(this.campAfterOutcome);
-        else this.leaveBattle();
-      }
+      if (confirm) this.openStagePick();
       return;
     }
 
@@ -869,7 +892,7 @@ export class GridScene extends Phaser.Scene {
   openActionMenu() {
     const { unit } = this.activeUnit!;
     const hasWeapons = unit.wieldableWeapons.length > 0;
-    const hasSkills = getLearnedSkills(unit.unitClass, unit.level).length > 0;
+    const hasSkills = getUnitSkills(unit).length > 0;
     const hasItems = getConsumables(unit.items).length > 0;
     const canHeal = getStaves(unit.items).length > 0 ? this.findHealingStaff() !== null : undefined;
     const actions = getUnitActions({ hasSkills, hasItems, hasWeapons, canHeal });
@@ -950,7 +973,7 @@ export class GridScene extends Phaser.Scene {
 
   openSkillMenu() {
     const { unit } = this.activeUnit!;
-    const skills = getLearnedSkills(unit.unitClass, unit.level);
+    const skills = getUnitSkills(unit);
     this.publishMenuAnchor();
     this.publishMenu('skillMenu', createActionMenu(getSkillActions(unit, skills)));
   }
@@ -970,7 +993,7 @@ export class GridScene extends Phaser.Scene {
       if (!skill || skill.disabled) return;
       this.publishMenu('skillMenu', null);
       const { unit, x, y } = this.activeUnit!;
-      this.activeSkill = findLearnedSkill(unit.unitClass, unit.level, skill.id);
+      this.activeSkill = findUnitSkill(unit, skill.id);
       this.setCursor(x, y);
       this.showRange(
         'skill',
@@ -1066,6 +1089,64 @@ export class GridScene extends Phaser.Scene {
   // and the next stage starts. Rerolling spends gold for new offers and
   // keeps the screen up.
 
+  // After a won stage's result: the first pick it owes (its boons, its
+  // guest's recruitment, then its reward), or the next battle.
+  openStagePick() {
+    if (this.boonRun) this.openBoonMenu();
+    else if (this.recruitOffer) this.openRecruitMenu();
+    else if (this.rewardOffer) this.openRewardMenu();
+    else if (this.campAfterOutcome) this.openCamp(this.campAfterOutcome);
+    else this.leaveBattle();
+  }
+
+  // Reopens the boon picks a run saved before them owes, with the stage's
+  // clear when a reward pick follows.
+  resumeBoonPicks(run: RunState) {
+    this.setCursorVisible(false);
+    this.boonRun = run;
+    const pending = run.pendingReward;
+    if (pending) {
+      gameStore.setState({
+        stageClear: toStageClearView(pending.stage, { gold: pending.clearGold, flawless: pending.flawless }, run.gold),
+      });
+    }
+    this.openBoonMenu();
+  }
+
+  // The reward screen as a level up's boon pick: a card per boon, with
+  // whose level up it is in the header.
+  openBoonMenu() {
+    const run = this.boonRun!;
+    const offer = getBoonOffer(run)!;
+    gameStore.setState({ boonPick: toBoonPickView(offer), rewardTeam: toTeamView(run.roster) });
+    this.publishMenu('rewardMenu', createActionMenu(toBoonActions(offer)));
+  }
+
+  updateBoonMenu(delta: number, confirm: boolean) {
+    if (!confirm) {
+      if (delta !== 0) this.publishMenu('rewardMenu', moveSelection(this.rewardMenu!, delta));
+      return;
+    }
+    const result = tryRunCommand(
+      { run: this.boonRun!, phase: 'boon' },
+      { type: 'pick-boon', index: this.rewardMenu!.selectedIndex },
+    );
+    if (!result) return;
+    const { run, phase } = result.session;
+    saveRun(run);
+    if (phase === 'boon') {
+      this.boonRun = run;
+      this.openBoonMenu();
+      return;
+    }
+    this.boonRun = null;
+    gameStore.setState({ boonPick: null });
+    // The picks after the boons are rolled from the run with them taken.
+    if (phase === 'recruit') this.resumeRecruitment(run);
+    else if (phase === 'reward') this.resumeRewardPick(run, getPendingRewardOffer(run)!);
+    else this.openCamp(run);
+  }
+
   // Reopens the reward screen for a run saved before its pick (see
   // getPendingRewardOffer), with the same offers and the stage's clear.
   resumeRewardPick(run: RunState, pending: PendingReward & { rewards: readonly Reward[] }) {
@@ -1136,6 +1217,10 @@ export class GridScene extends Phaser.Scene {
   }
 
   updateRewardMenu(delta: number, confirm: boolean) {
+    if (this.boonRun) {
+      this.updateBoonMenu(delta, confirm);
+      return;
+    }
     if (this.recruitOffer) {
       if (confirm) {
         const { run } = this.recruitOffer;
@@ -1187,12 +1272,21 @@ export class GridScene extends Phaser.Scene {
       const result = tryRunCommand(session, command);
       if (!result) return;
       const after = result.session.run;
-      // A Veteran's Lesson shows each level up it gives before moving on.
+      // A Veteran's Lesson shows each level up it gives, then the boon
+      // picks they owe, before moving on.
       const levelUps = result.events.flatMap((event) => (event.type === 'level-ups' ? event.levelUps : []));
       saveRun(after);
       this.rewardOffer = null;
       this.inputLocked = true;
-      this.showLevelUps(levelUps, () => this.openCamp(after));
+      this.showLevelUps(levelUps, () => {
+        if (result.session.phase !== 'boon') {
+          this.openCamp(after);
+          return;
+        }
+        this.inputLocked = false;
+        this.boonRun = after;
+        this.openBoonMenu();
+      });
       return;
     }
     if (delta !== 0) this.publishMenu('rewardMenu', moveSelection(this.rewardMenu!, delta));
@@ -1224,7 +1318,7 @@ export class GridScene extends Phaser.Scene {
     const actions = getCampActions(run);
     const selected = this.campMenu?.selectedIndex ?? actions.findIndex((action) => action.id === 'march');
     this.publishMenu('campMenu', selectIndex(createActionMenu(actions), selected));
-    gameStore.setState({ campGold: run.gold });
+    gameStore.setState({ campGold: run.gold, campRelics: toRelicViews(run.relics) });
   }
 
   updateCampMenu(dy: number, confirm: boolean) {
@@ -1246,17 +1340,31 @@ export class GridScene extends Phaser.Scene {
     if (dy !== 0) this.publishMenu('campMenu', moveSelection(this.campMenu!, dy));
   }
 
+  // The real time since the play clock last started (on create(), or the
+  // last call), restarting it: what a Warband run adds to its play time.
+  takePlayTime(): number {
+    const now = Date.now();
+    const elapsed = now - this.playClockFrom;
+    this.playClockFrom = now;
+    return elapsed;
+  }
+
   // Next Stage: leaves camp for the run's next stage; on the realm, Travel
   // saves the run and opens the overworld to choose where to go.
   marchOn() {
     const marched = tryRunCommand({ run: this.campRun!, phase: 'camp' }, { type: 'march' });
     if (!marched) return;
+    // The time spent at camp counts toward the run's play time.
+    const run = {
+      ...marched.session.run,
+      chronicle: addPlayTime(marched.session.run.chronicle ?? EMPTY_CHRONICLE, this.takePlayTime()),
+    };
     if (marched.session.phase === 'travel') {
       this.inputLocked = true;
-      enterRun(marched.session.run);
+      enterRun(run);
       return;
     }
-    this.nextBattle = runStage(marched.session.run);
+    this.nextBattle = runStage(run);
     this.leaveBattle();
   }
 
@@ -1705,9 +1813,7 @@ export class GridScene extends Phaser.Scene {
     if (this.merchantScreen) return () => this.publishMerchantScreen(null);
     if (this.campMenu) return () => this.autoCamp();
     if (this.rewardMenu) return () => this.autoReward();
-    if (this.battleOutcome)
-      return () =>
-        this.recruitOffer ? this.openRecruitMenu() : this.rewardOffer ? this.openRewardMenu() : this.leaveBattle();
+    if (this.battleOutcome) return () => this.openStagePick();
     if (this.phase === 'deployment') return () => this.autoDeploy();
     const choosing = this.activeUnit || this.actionMenu || this.weaponMenu || this.skillMenu || this.itemMenu;
     if (this.turnState?.team === 'player' && !choosing) {
@@ -1740,6 +1846,13 @@ export class GridScene extends Phaser.Scene {
   }
 
   autoReward() {
+    if (this.boonRun) {
+      const command = pickBoonOffer({ run: this.boonRun, phase: 'boon' });
+      if (command.type !== 'pick-boon') return;
+      this.publishMenu('rewardMenu', selectIndex(this.rewardMenu!, command.index));
+      this.updateRewardMenu(0, true);
+      return;
+    }
     if (this.recruitOffer) {
       this.publishMenu('rewardMenu', selectIndex(this.rewardMenu!, 0));
       this.updateRewardMenu(0, true);
@@ -1793,10 +1906,21 @@ export class GridScene extends Phaser.Scene {
       return;
     }
     if (findEvent(events, 'phase-started')) {
+      this.showPhaseRecoveries(events);
       this.startPhase();
       return;
     }
     otherwise();
+  }
+
+  // Pops up the HP and MP units recovered as the phase started (a Mending
+  // Charm, a Regeneration boon), over the map as it now stands.
+  showPhaseRecoveries(events: readonly BattleEvent[]) {
+    for (const event of events) {
+      if (event.type !== 'recovered' || event.trigger !== 'phase') continue;
+      const sprite = this.unitSprites.get(event.unitId);
+      if (sprite) this.showDamagePopup(sprite, event.amount, event.stat);
+    }
   }
 
   // Announces the phase the battle is in with a banner (input locked
@@ -1900,6 +2024,7 @@ export class GridScene extends Phaser.Scene {
     this.setCursorVisible(false);
     // Completing the objective moves on to the next chapter or stage.
     let runOver: RunOverView | null = null;
+    let runSummary: RunSummaryView | null = null;
     let stageClear: StageClearView | null = null;
     // A stage clear's guaranteed level ups, shown before its result.
     let levelUps: readonly RewardLevelUp[] = [];
@@ -1908,9 +2033,10 @@ export class GridScene extends Phaser.Scene {
       // stage, or forgets the run once the warband has fallen or won it. A win pays
       // the clear's gold and rolls the rewards the reward screen offers.
       const before = this.setup.run;
+      const result = getRunBattleResult(this.battle, this.takePlayTime());
       const { session: finished, events } = finishBattleWithEvents(
         { run: before, phase: 'battle' },
-        { units: getRunBattleUnits(this.battle), convoy: this.battle.convoyLoot },
+        result,
         outcome,
         this.content.regions.finalStage,
       );
@@ -1920,11 +2046,22 @@ export class GridScene extends Phaser.Scene {
       if (ended) {
         clearSavedRun();
         runOver = toRunOverView(run, finished.phase === 'won');
+        // The run's recap, and the renown it earns across runs.
+        const summary = summarizeRun(run, finished.phase === 'won');
+        const recorded = recordRun(loadMeta(), summary);
+        saveMeta(recorded.meta);
+        runSummary = toRunSummaryView(summary, recorded);
       } else {
-        const clear = getClearGold(before, run.fallen.length - before.fallen.length);
+        const clear = getClearGold(before, run.fallen.length - before.fallen.length, {
+          kills: countWarbandKills(before, result),
+          relics: before.relics,
+        });
         stageClear = toStageClearView(before.stage, clear, run.gold);
         // The run is saved owing the pick, so a reload reopens the reward
-        // screen (resumeRewardPick) instead of skipping it.
+        // screen (resumeRewardPick) instead of skipping it. Boon picks come
+        // first, and the recruit and reward picks are set up once they're
+        // taken (updateBoonMenu).
+        if (finished.phase === 'boon') this.boonRun = run;
         if (finished.phase === 'reward') {
           this.rewardOffer = { run, stage: before.stage, rewards: getRewardOffers(finished), rerolls: 0 };
         }
@@ -1947,14 +2084,15 @@ export class GridScene extends Phaser.Scene {
       this.inputLocked = levelUps.length > 0;
       this.showLevelUps(levelUps, () => {
         this.inputLocked = false;
-        gameStore.setState({ battleOutcome: outcome, nextBattle, runOver, stageClear });
+        gameStore.setState({ battleOutcome: outcome, nextBattle, runOver, runSummary, stageClear });
         // A won stage goes straight on to its recruit or reward pick, which
         // shows the clear's gold itself, rather than stopping on the result.
         // Confirm waits a moment there, so one pressed to hurry the battle's
         // end along doesn't take a reward unseen.
-        if (this.recruitOffer || this.rewardOffer) this.rewardPickOpensAt = this.time.now + REWARD_PICK_GRACE_MS;
-        if (this.recruitOffer) this.openRecruitMenu();
-        else if (this.rewardOffer) this.openRewardMenu();
+        if (this.boonRun || this.recruitOffer || this.rewardOffer) {
+          this.rewardPickOpensAt = this.time.now + REWARD_PICK_GRACE_MS;
+          this.openStagePick();
+        }
       });
     });
   }
@@ -2304,6 +2442,12 @@ export class GridScene extends Phaser.Scene {
       case 'item-used':
         this.playRecovery(event.unitId, event.item.stat, event.amount, next);
         return;
+      // A kill's heal plays like a potion; a phase's recoveries pop up as
+      // the phase starts (see continueBattle).
+      case 'recovered':
+        if (event.trigger === 'kill') this.playRecovery(event.unitId, event.stat, event.amount, next);
+        else next();
+        return;
       case 'loot':
         this.showDamagePopup(
           this.unitSprites.get(event.unitId)!,
@@ -2314,8 +2458,7 @@ export class GridScene extends Phaser.Scene {
         next();
         return;
       case 'defeated':
-        this.removeUnitSprite(event.unitId);
-        next();
+        this.playDefeat(event.unitId, next);
         return;
       case 'experience':
         this.showExperienceGain(event, next);
@@ -2325,25 +2468,77 @@ export class GridScene extends Phaser.Scene {
     }
   }
 
-  // One strike of an exchange: it wears the striker's weapon ("Broke!"
-  // pops up over it if that wears it out, or the spell's name if a tome
-  // strike taught it); a hit shows the struck unit's new health on the HUD
-  // while its sprite flashes and a damage number pops over it (a crit also
-  // shakes the camera); a miss just shows "Miss" for a moment.
+  // One strike of an exchange: the striker lunges at its target (only
+  // leaning in from range) and the blow lands at the far end. It wears the
+  // striker's weapon ("Broke!" pops up over it if that wears it out, or the
+  // spell's name if a tome strike taught it); a hit shows the struck unit's
+  // new health on the HUD while a damage number pops over it, both units
+  // freeze for a beat (hit-stop, longer on a crit or a finishing blow, with
+  // a camera shake on those) and the struck sprite flashes; a miss just
+  // shows "Miss".
   playStrike(strike: BattleEventOf<'strike'>, next: () => void) {
     const strikerSprite = this.unitSprites.get(strike.strikerId)!;
-    if (strike.learned) this.showDamagePopup(strikerSprite, 0, 'learned', strike.learned.label);
-    else if (strike.broke) this.showDamagePopup(strikerSprite, 0, 'broke');
     const sprite = this.unitSprites.get(strike.targetId)!;
-    if (!strike.hit) {
-      this.showDamagePopup(sprite, 0, 'miss');
-      this.time.delayedCall(MISS_PAUSE_MS, next);
-      return;
-    }
-    this.showStats(strike.targetId, { health: strike.health });
-    this.showDamagePopup(sprite, strike.damage, strike.crit ? 'crit' : 'damage');
-    if (strike.crit) this.cameras.main.shake(CRIT_SHAKE_MS, CRIT_SHAKE_INTENSITY);
-    playHitFlash(this, sprite, next);
+    const reducedMotion = prefersReducedMotion();
+    const juice = getStrikeJuice({ hit: strike.hit, crit: strike.crit, lethal: strike.health <= 0 }, reducedMotion);
+    const tiles = Math.round(
+      Math.max(Math.abs(sprite.x - strikerSprite.x), Math.abs(sprite.y - strikerSprite.y)) / TILE_SIZE,
+    );
+
+    // Done once the target's flash (or the miss pause) and the striker's
+    // return have both ended — exactly once, since next moves the battle on.
+    let landed = false;
+    let returned = false;
+    let done = false;
+    const finish = () => {
+      if (done || !landed || !returned) return;
+      done = true;
+      next();
+    };
+    const land = () => {
+      landed = true;
+      finish();
+    };
+
+    const onImpact = () => {
+      if (strike.learned) this.showDamagePopup(strikerSprite, 0, 'learned', strike.learned.label);
+      else if (strike.broke) this.showDamagePopup(strikerSprite, 0, 'broke');
+      if (!strike.hit) {
+        this.showDamagePopup(sprite, 0, 'miss');
+        this.time.delayedCall(MISS_PAUSE_MS, land);
+        return;
+      }
+      this.showStats(strike.targetId, { health: strike.health });
+      this.showDamagePopup(sprite, strike.damage, strike.crit ? 'crit' : 'damage');
+      if (juice.shake) this.shakeCamera(juice.shake);
+      playHitStop(this, sprite, [strikerSprite], juice.hitStopMs, () => playHitFlash(this, sprite, land));
+    };
+    playLunge(this, strikerSprite, spriteCenter(sprite), {
+      distance: getLungeDistance(tiles, reducedMotion),
+      holdMs: juice.hitStopMs,
+      onImpact,
+      onDone: () => {
+        returned = true;
+        finish();
+      },
+    });
+  }
+
+  // Shakes the camera, for as long as the shake lasts at the game speed
+  // (the camera runs on real time, not the scene clock).
+  shakeCamera({ durationMs, intensity }: Shake) {
+    this.cameras.main.shake(this.playbackDuration(durationMs), intensity);
+  }
+
+  // A defeated unit bursts apart, then its sprite comes off the board. The
+  // store's defeat count plays its sound.
+  playDefeat(unitId: string, next: () => void) {
+    const sprite = this.unitSprites.get(unitId)!;
+    gameStore.setState((state) => ({ defeats: state.defeats + 1 }));
+    playDeathBurst(this, sprite, spriteCenter(sprite), prefersReducedMotion(), () => {
+      this.removeUnitSprite(unitId);
+      next();
+    });
   }
 
   // A skill's animation (see playSkillAnimation); the HUD shows the mana
@@ -2364,7 +2559,8 @@ export class GridScene extends Phaser.Scene {
   // POTION_COLORS while a "+N HP" / "+N MP" popup rises over it.
   playRecovery(unitId: string, stat: RestoreStat, amount: number, next: () => void) {
     const sprite = this.unitSprites.get(unitId)!;
-    this.showStats(unitId, { [stat]: this.units.get(unitId)![stat] + amount });
+    const before = this.shownStats.get(unitId)?.[stat] ?? this.units.get(unitId)![stat];
+    this.showStats(unitId, { [stat]: before + amount });
     const center = { x: sprite.x + TILE_SIZE / 2, y: sprite.y + TILE_SIZE / 2 };
     this.showDamagePopup(sprite, amount, stat);
     playPotionGlow(this, sprite, center, POTION_COLORS[stat], next);
@@ -2501,23 +2697,20 @@ export class GridScene extends Phaser.Scene {
       done = true;
       onDone();
     };
-    playLunge(
-      this,
-      userSprite,
-      center(targetSprite),
-      () => {
+    playLunge(this, userSprite, center(targetSprite), {
+      onImpact: () => {
         onImpact();
-        this.cameras.main.shake(CRIT_SHAKE_MS, CRIT_SHAKE_INTENSITY);
+        if (!prefersReducedMotion()) this.shakeCamera(CRIT_SHAKE);
         playHitFlash(this, targetSprite, () => {
           flashed = true;
           finish();
         });
       },
-      () => {
+      onDone: () => {
         returned = true;
         finish();
       },
-    );
+    });
   }
 
   // The active unit uses one of its items on itself (Unit.useItem and
@@ -2934,4 +3127,15 @@ function tryRunCommand(session: Parameters<typeof applyRunCommand>[0], command: 
     if (error instanceof RunCommandError) return null;
     throw error;
   }
+}
+
+// A unit sprite's center in world space (sprites are placed by their top left).
+function spriteCenter(sprite: Sprite): Point {
+  return { x: sprite.x + sprite.displayWidth / 2, y: sprite.y + sprite.displayHeight / 2 };
+}
+
+// Whether the player asked their system for less motion: the map then skips
+// camera shakes and particle bursts.
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
 }

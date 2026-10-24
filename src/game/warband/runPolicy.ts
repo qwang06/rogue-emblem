@@ -1,5 +1,6 @@
 // The default policy for playing a Warband run by itself (see autoRun.ts):
-// how it picks rewards and what it does at camp. Each decision is a small
+// how it picks its starting relic, boons and rewards and what it does at
+// camp. Each decision is a small
 // rule over the run, with its thresholds as named constants to tune. The
 // battles are played by the battle AI (battle/ai.ts). Pure: each function
 // reads a session and returns the next command.
@@ -17,9 +18,11 @@ import { canGiveFromConvoy, lookUpItem } from './convoy.ts';
 import { canBuy, getItemPrice, MERCHANT_STOCK } from './merchant.ts';
 import { MAX_ROSTER_SIZE, type Reward } from './rewards.ts';
 import { restoreUnit, type RunState, type UnitSnapshot } from './run.ts';
-import { getRewardOffers, type RunCommand, type RunSession } from './runCommands.ts';
 import type { Realm, Site } from './realm/realm.ts';
 import { getTravelChoices } from './travel.ts';
+import type { BoonKind } from './boons.ts';
+import { getBoonOffer } from './levelUpPicks.ts';
+import { getRelicOffers, getRewardOffers, type RunCommand, type RunSession } from './runCommands.ts';
 
 // A weapon or staff with this many uses or fewer is about to break: the
 // unit wants a spare.
@@ -38,14 +41,55 @@ export const REWARD_SCORES = Object.freeze({
   recruit: 30,
   newClassBonus: 10,
   arms: 32,
-  drill: 35,
+  relic: 45,
   lesson: 50,
   // Rest scores this times the share of HP the roster is missing.
   restPerMissing: 100,
-  training: 15,
   supplies: 10,
   gold: 20,
 });
+
+// The relics the policy would rather start with, best first; any other
+// counts as worse than all of them.
+export const RELIC_PREFERENCE: readonly string[] = Object.freeze([
+  'bloodpact',
+  'mending-charm',
+  'duelists-gauntlet',
+  'hunters-charm',
+  'bulwark-crest',
+  'scholars-quill',
+  'winged-boots',
+  'hawk-lens',
+]);
+
+// How much the policy wants each kind of boon (higher is better).
+export const BOON_SCORES: Readonly<Record<BoonKind, number>> = Object.freeze({ passive: 3, stat: 2, skill: 1 });
+
+// The starting relic pick: the offer highest in RELIC_PREFERENCE, else the
+// first.
+export function pickStartingRelic(session: RunSession): RunCommand {
+  const offers = getRelicOffers(session);
+  const rank = (id: string) => {
+    const index = RELIC_PREFERENCE.indexOf(id);
+    return index < 0 ? RELIC_PREFERENCE.length : index;
+  };
+  let best = 0;
+  offers.forEach((relic, index) => {
+    if (rank(relic.id) < rank(offers[best].id)) best = index;
+  });
+  return { type: 'pick-relic', index: best };
+}
+
+// A boon pick: the offer whose kind scores highest in BOON_SCORES (the
+// first of equals).
+export function pickBoonOffer(session: RunSession): RunCommand {
+  const boons = getBoonOffer(session.run)?.boons ?? [];
+  let best = 0;
+  boons.forEach((boon, index) => {
+    if (BOON_SCORES[boon.kind] > BOON_SCORES[boons[best].kind]) best = index;
+  });
+  return { type: 'pick-boon', index: best };
+}
 
 // The units that deploy next stage: the healthiest deployCap of the
 // roster (by share of health), as the player battle AI picks them
@@ -67,12 +111,10 @@ export function scoreReward(run: RunState, reward: Reward): number {
       return REWARD_SCORES.restPerMissing * getMissingHealthShare(run.roster);
     case 'arms':
       return REWARD_SCORES.arms;
-    case 'drill':
-      return REWARD_SCORES.drill;
+    case 'relic':
+      return REWARD_SCORES.relic;
     case 'lesson':
       return REWARD_SCORES.lesson;
-    case 'training':
-      return REWARD_SCORES.training;
     case 'supplies':
       return REWARD_SCORES.supplies;
     case 'gold':
@@ -177,10 +219,12 @@ export function planTravel(session: RunSession, realm: Realm): RunCommand {
 }
 
 // The policy autoRun plays with by default: the player battle AI
-// (playerAI.ts) in battle, and pickReward, planCamp and planTravel between
-// battles.
+// (playerAI.ts) in battle, and pickStartingRelic, pickBoonOffer,
+// pickReward, planCamp and planTravel between battles.
 export const DEFAULT_POLICY: RunPolicy = Object.freeze({
   battle: (state: BattleState) => (state.stage === 'deployment' ? planPlayerDeployment(state) : planPlayerTurn(state)),
+  relic: pickStartingRelic,
+  boon: pickBoonOffer,
   reward: pickReward,
   camp: (session: RunSession) => planCamp(session),
   travel: planTravel,

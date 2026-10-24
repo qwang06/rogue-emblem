@@ -1,5 +1,5 @@
 // Plays a whole Warband run without the game running: a policy decides the
-// player's battles, reward picks and camp, the enemy AI (battle/ai.ts)
+// player's starting relic, battles, boon and reward picks and camp, the enemy AI (battle/ai.ts)
 // plays the enemy, and every step is written down as a RunScript that
 // replays the same run exactly (map and dice seeds both come from the run's
 // seed). Balancing runs, tests and the in-game auto-play call this. Pure:
@@ -10,7 +10,7 @@ import { planDeployment, planNextTurn } from '../battle/ai.ts';
 import type { BattleCommand } from '../battle/commands.ts';
 import { getCommands, replay } from '../battle/history.ts';
 import { runBattle, type BattlePlanner } from '../battle/runner.ts';
-import { createBattleState, getRunBattleUnits, type BattleState } from '../battle/state.ts';
+import { createBattleState, getRunBattleResult, type BattleState } from '../battle/state.ts';
 import { isPastTurnLimit, type ObjectiveKind } from '../objectives.ts';
 import type { BattleOutcome } from '../turns.ts';
 import { canRest } from './camp.ts';
@@ -20,6 +20,7 @@ import {
   finishBattle,
   getRecruitOffers,
   getRewardOffers,
+  startRunSession,
   type RunCommand,
   type RunSession,
 } from './runCommands.ts';
@@ -48,6 +49,10 @@ export interface RunScript {
 export interface RunPolicy {
   // The player's deployment, or its next unit's action.
   battle: BattlePlanner;
+  // The starting relic and each level up's boon: a pick-relic or
+  // pick-boon command. The first offer when left out.
+  relic?: (session: RunSession) => RunCommand;
+  boon?: (session: RunSession) => RunCommand;
   // The reward pick: one of getLegalRunCommands' reward commands.
   reward: (session: RunSession) => RunCommand;
   // Camp, one command at a time until it marches.
@@ -111,13 +116,10 @@ export const BASELINE_POLICY: RunPolicy = Object.freeze({
   }),
 });
 
-// A new run's session: a lone level-1 unit at home on its realm, choosing
-// where to travel first.
+// A new run's session: its starting relic pick, then the lone level-1 unit
+// at home on its realm, choosing where to travel first.
 export function startRun(start: RunStart): RunSession {
-  return Object.freeze({
-    run: startRoute(createRun(start.seed, createStartingWarband(start.classId, start.name))),
-    phase: 'travel' as const,
-  });
+  return startRunSession(startRoute(createRun(start.seed, createStartingWarband(start.classId, start.name))));
 }
 
 // Plays a run from `start` with `policy` until the warband falls, wins the
@@ -150,6 +152,12 @@ export function playRun(start: RunStart, policy: RunPolicy, options: AutoRunOpti
         campCommands = 0;
         break;
       }
+      case 'relic':
+        give(policy.relic?.(session) ?? { type: 'pick-relic', index: 0 });
+        break;
+      case 'boon':
+        give(policy.boon?.(session) ?? { type: 'pick-boon', index: 0 });
+        break;
       case 'reward':
         give(policy.reward(session));
         break;
@@ -211,12 +219,7 @@ function finishStageBattle(
 ): { session: RunSession; record: StageRecord } {
   const before = session.run;
   const turns = state.turnState?.turn ?? 0;
-  const next = finishBattle(
-    session,
-    { units: getRunBattleUnits(state), convoy: state.convoyLoot },
-    state.outcome ?? 'defeat',
-    finalStage,
-  );
+  const next = finishBattle(session, getRunBattleResult(state), state.outcome ?? 'defeat', finalStage);
   return {
     session: next,
     record: {

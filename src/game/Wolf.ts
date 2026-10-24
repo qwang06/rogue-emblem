@@ -54,6 +54,8 @@ export const WOLF_ITEMS: Inventory = Object.freeze([weaponEntry(BITE)]);
 // wolf stat line and no mana; it has no skill tree, wields physical
 // weapons, and fights with its Bite unless given other items.
 export class Wolf extends Unit {
+  override monster = true;
+
   constructor({ name = 'Wolf', team, level = 1, items = WOLF_ITEMS }: ClassUnitOptions) {
     super({
       name,

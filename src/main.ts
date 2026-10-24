@@ -2,10 +2,12 @@ import Phaser from 'phaser';
 import { gameStore, type BattleSetup, type GameState } from './bridge/gameStore.ts';
 import { GridScene } from './scenes/GridScene.ts';
 import { mountUI } from './ui/mountUI.tsx';
+import { startAudio } from './audio/index.ts';
 
 // React renders the page first: it owns the layout, including the #game
 // element the canvas goes in.
 mountUI(document.getElementById('root')!);
+startAudio();
 
 // No scenes run at boot: the React title screen is shown first, and the map
 // scene is only started once the player picks a battle.

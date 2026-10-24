@@ -8,8 +8,20 @@ import type { Unit } from '../Unit.ts';
 import { IRON_BOW, IRON_SPEAR, WOODEN_SPEAR } from '../weapons.ts';
 import { REST_COST } from './camp.ts';
 import { createRun, type RunState, type UnitSnapshot } from './run.ts';
-import { applyRunCommand, type RunCommand, type RunSession } from './runCommands.ts';
-import { getDeployingUnits, LOW_USES, pickReward, planCamp, REWARD_SCORES, scoreReward } from './runPolicy.ts';
+import { applyRunCommand, getRelicOffers, startRunSession, type RunCommand, type RunSession } from './runCommands.ts';
+import {
+  BOON_SCORES,
+  getDeployingUnits,
+  LOW_USES,
+  pickBoonOffer,
+  pickReward,
+  pickStartingRelic,
+  planCamp,
+  RELIC_PREFERENCE,
+  REWARD_SCORES,
+  scoreReward,
+} from './runPolicy.ts';
+import { getBoonOffer, queueLevelUpBoons } from './levelUpPicks.ts';
 import type { Reward } from './rewards.ts';
 
 function makeRun(units: Record<string, Unit>, extra: Partial<RunState> = {}): RunState {
@@ -151,5 +163,29 @@ describe('planCamp', () => {
   it("marches without what it can't afford", () => {
     const run = withUnit(makeRun({ a: soldier() }, { gold: 0 }), 'a', (unit) => ({ ...unit, items: [] }));
     expect(playCamp(run)).toEqual([{ type: 'march' }]);
+  });
+});
+
+describe('pickStartingRelic and pickBoonOffer', () => {
+  it('starts with the preferred relic among the offers', () => {
+    for (let seed = 0; seed < 10; seed++) {
+      const session = startRunSession(makeRun({ a: soldier() }, { seed }));
+      const command = pickStartingRelic(session);
+      expect(command.type).toBe('pick-relic');
+      const offers = getRelicOffers(session);
+      const picked = offers[(command as { index: number }).index].id;
+      const rank = (id: string) => (RELIC_PREFERENCE.includes(id) ? RELIC_PREFERENCE.indexOf(id) : 99);
+      for (const offer of offers) expect(rank(picked)).toBeLessThanOrEqual(rank(offer.id));
+    }
+  });
+
+  it('takes the boon of the best-scoring kind', () => {
+    const run = makeRun({ a: soldier() });
+    const owing = queueLevelUpBoons(run, { ...run, roster: [{ ...run.roster[0], level: 2 }] });
+    const boons = getBoonOffer(owing)!.boons;
+    const command = pickBoonOffer({ run: owing, phase: 'boon' });
+    expect(command.type).toBe('pick-boon');
+    const kind = boons[(command as { index: number }).index].kind;
+    for (const boon of boons) expect(BOON_SCORES[kind]).toBeGreaterThanOrEqual(BOON_SCORES[boon.kind]);
   });
 });

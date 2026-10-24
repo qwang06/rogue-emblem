@@ -5,9 +5,9 @@ import { BASELINE_POLICY, playRun, replayRun, startRun, type RunPolicy, type Run
 const START: RunStart = { seed: 11, classId: 'soldier', name: 'Alden' };
 
 describe('startRun', () => {
-  it('starts at home on its realm, choosing where to go, with a lone unit of the class', () => {
+  it('starts on the relic pick, at home on its realm, with a lone unit of the class', () => {
     const session = startRun(START);
-    expect(session.phase).toBe('travel');
+    expect(session.phase).toBe('relic');
     expect(session.run.route?.visited).toEqual(['0-0']);
     expect(session.run.roster.map((unit) => [unit.name, unit.classId])).toEqual([['Alden', 'soldier']]);
   });
@@ -39,7 +39,12 @@ describe('playRun', () => {
   it('writes down a battle per stage and the commands between them', () => {
     const battles = played.script.steps.filter((step) => step.type === 'battle');
     expect(battles).toHaveLength(played.stages.length);
-    expect(played.script.steps.slice(0, 3).map((step) => step.type)).toEqual(['travel', 'battle', 'pick-reward']);
+    expect(played.script.steps.slice(0, 3).map((step) => step.type)).toEqual(['pick-relic', 'travel', 'battle']);
+    expect(played.script.steps[0]).toEqual({ type: 'pick-relic', index: 0 });
+    // Stage 1's clear levels the lone unit up, so a boon comes before the reward.
+    expect(played.script.steps[3].type).toBe('pick-boon');
+    expect(played.script.steps[4].type).toBe('pick-reward');
+    expect(played.session.run.relics.length).toBeGreaterThan(0);
   });
 
   it('plays the same run every time for a start', () => {
@@ -72,6 +77,7 @@ describe('replayRun', () => {
   });
 
   it('refuses a step that does not fit the run', () => {
-    expect(() => replayRun({ start: START, steps: [{ type: 'march' }] })).toThrow(/travel/);
+    expect(() => replayRun({ start: START, steps: [{ type: 'march' }] })).toThrow(/relic/);
+    expect(() => replayRun({ start: START, steps: [{ type: 'battle', commands: [] }] })).toThrow(/battle/);
   });
 });

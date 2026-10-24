@@ -199,6 +199,16 @@
   color: var(--fg-dim);
 }
 
+/* A boon's description can run long, so it wraps rather than its name. */
+.unit-info__list--boons li span:first-child {
+  flex-shrink: 0;
+}
+
+.unit-info__list--boons li span:last-child {
+  flex-shrink: 1;
+  text-align: right;
+}
+
 .unit-info__item--equipped span:first-child {
   color: var(--yellow);
 }

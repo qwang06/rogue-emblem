@@ -5,11 +5,18 @@
 // function returns a new frozen value and leaves its input alone.
 
 import type { MenuAction } from '../actionMenu.ts';
+import { FIELD_KITCHEN, hasRelic } from './relics.ts';
 import type { RunState } from './run.ts';
 import { isInTown, isRealmRun } from './travel.ts';
 
 // What a rest at camp costs: every unit back to full HP and mana.
 export const REST_COST = 15;
+
+// What a rest costs the run: REST_COST, or nothing in a town (see
+// travel.ts) or with the Field Kitchen.
+export function getRestCost(run: Pick<RunState, 'relics' | 'route'>): number {
+  return isInTown(run) || hasRelic(run, FIELD_KITCHEN) ? 0 : REST_COST;
+}
 
 export type CampActionId = 'roster' | 'merchant' | 'rest' | 'march';
 
@@ -37,11 +44,6 @@ export function getCampActions(run: RunState): readonly CampAction[] {
 // town on the realm.
 export function hasMerchant(run: RunState): boolean {
   return !isRealmRun(run) || isInTown(run);
-}
-
-// What resting costs: REST_COST, or nothing in a town.
-export function getRestCost(run: RunState): number {
-  return isInTown(run) ? 0 : REST_COST;
 }
 
 // Whether anyone on the roster is missing HP or mana.

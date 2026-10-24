@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { createActionMenu, getSelectedAction, moveSelection } from './actionMenu.ts';
 import {
+  describeRenown,
   getFirstEnabledIndex,
+  getStartingClassActions,
   getWarbandActions,
-  SETTINGS_ACTIONS,
+  getSettingsActions,
   STARTING_CLASS_ACTIONS,
   TITLE_ACTIONS,
 } from './titleMenu.ts';
-import { STARTING_CLASSES } from './warband/startingClasses.ts';
+import { NEW_META, UNLOCKS } from './warband/meta.ts';
+import { STARTING_CLASSES, UNLOCKABLE_STARTING_CLASSES } from './warband/startingClasses.ts';
 import { advanceStage, createRun } from './warband/run.ts';
 import { createStartingWarband } from './warband/stageLevel.ts';
 
@@ -31,15 +34,26 @@ describe('TITLE_ACTIONS', () => {
   });
 });
 
-describe('SETTINGS_ACTIONS', () => {
-  it('offers the game configs', () => {
-    expect(SETTINGS_ACTIONS.map((a) => a.id)).toEqual(['configs']);
-    expect(SETTINGS_ACTIONS.map((a) => a.label)).toEqual(['Game Configs']);
+describe('getSettingsActions', () => {
+  it('offers sound, volume and the game configs', () => {
+    const actions = getSettingsActions({ muted: false, volume: 0.6 });
+    expect(actions.map((a) => a.id)).toEqual(['sound', 'volume', 'configs']);
+    expect(actions.map((a) => a.label)).toEqual(['Sound: On', 'Volume: 60%', 'Game Configs']);
+  });
+
+  it('shows sound off and the volume at its ends', () => {
+    expect(getSettingsActions({ muted: true, volume: 1 }).map((a) => a.label)).toEqual([
+      'Sound: Off',
+      'Volume: 100%',
+      'Game Configs',
+    ]);
+    expect(getSettingsActions({ muted: false, volume: 0 })[1].label).toBe('Volume: 0%');
   });
 
   it('is frozen', () => {
-    expect(Object.isFrozen(SETTINGS_ACTIONS)).toBe(true);
-    expect(SETTINGS_ACTIONS.every(Object.isFrozen)).toBe(true);
+    const actions = getSettingsActions({ muted: false, volume: 0.6 });
+    expect(Object.isFrozen(actions)).toBe(true);
+    expect(actions.every(Object.isFrozen)).toBe(true);
   });
 });
 
@@ -75,6 +89,36 @@ describe('STARTING_CLASS_ACTIONS', () => {
   it('is frozen', () => {
     expect(Object.isFrozen(STARTING_CLASS_ACTIONS)).toBe(true);
     expect(STARTING_CLASS_ACTIONS.every(Object.isFrozen)).toBe(true);
+  });
+});
+
+describe('getStartingClassActions', () => {
+  it('offers the base classes, then the unlockable ones locked until renown opens them', () => {
+    const actions = getStartingClassActions(NEW_META);
+    expect(actions.map((a) => a.id)).toEqual([...STARTING_CLASSES, ...UNLOCKABLE_STARTING_CLASSES].map((c) => c.id));
+    expect(actions.slice(0, STARTING_CLASSES.length)).toEqual(STARTING_CLASS_ACTIONS);
+    const locked = actions.slice(STARTING_CLASSES.length);
+    expect(locked.every((a) => a.disabled)).toBe(true);
+    expect(locked[0].description).toBe(`Unlocks at ${UNLOCKS[0].renown} renown (0 so far).`);
+    expect(Object.isFrozen(actions)).toBe(true);
+  });
+
+  it('opens a class with its pitch once its renown is reached', () => {
+    const [first] = UNLOCKS;
+    const actions = getStartingClassActions({ ...NEW_META, renown: first.renown });
+    const opened = actions.find((a) => a.id === first.startingClass)!;
+    expect(opened.disabled).toBeUndefined();
+    expect(opened.description).toBe(UNLOCKABLE_STARTING_CLASSES[0].description);
+    expect(actions.filter((a) => a.disabled)).toHaveLength(UNLOCKS.length - 1);
+  });
+});
+
+describe('describeRenown', () => {
+  it('shows the renown and the next unlock, or that everything is open', () => {
+    expect(describeRenown({ ...NEW_META, renown: 15 })).toBe(
+      `Renown 15 · Next: ${UNLOCKS[0].label} at ${UNLOCKS[0].renown}`,
+    );
+    expect(describeRenown({ ...NEW_META, renown: 10_000 })).toBe('Renown 10000 · Everything unlocked');
   });
 });
 

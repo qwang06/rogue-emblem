@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import type { MenuAction } from '../game/actionMenu.ts';
 import { gameStore } from '../bridge/gameStore.ts';
+import { changeVolume, cycleVolume, toggleMute, type AudioSettings } from '../audio/settings.ts';
 import { createActionMenu, getSelectedAction, moveSelection, selectIndex } from '../game/actionMenu.ts';
 import {
+  describeRenown,
   getFirstEnabledIndex,
+  getStartingClassActions,
   getWarbandActions,
-  SETTINGS_ACTIONS,
+  getSettingsActions,
   STARTING_CLASS_ACTIONS,
   TITLE_ACTIONS,
   type StartingClassAction,
@@ -15,10 +18,12 @@ import { FIRST_STORY_CHAPTER } from '../game/battleSetup.ts';
 import { createSeededRng, randomSeed } from '../game/rng.ts';
 import { generateName } from '../game/warband/names.ts';
 import { createRun, type RunState } from '../game/warband/run.ts';
+import { applyRunCommand, getRelicOffers, startRunSession } from '../game/warband/runCommands.ts';
 import { createStartingWarband } from '../game/warband/stageLevel.ts';
 import { loadSavedRun } from '../data/runSave.ts';
 import { enterRun } from '../bridge/warbandFlow.ts';
 import { startRoute } from '../game/warband/travel.ts';
+import { loadMeta } from '../data/metaSave.ts';
 import { getUnitSprite } from '../game/tileset.ts';
 import { routeHash } from './route.ts';
 import { UnitSprite } from './UnitSprite.tsx';
@@ -31,16 +36,24 @@ const MENU_KEYS = [
   ['Enter', 'Confirm'],
 ] as const;
 
-type View = 'main' | 'training' | 'warband' | 'new-run' | 'settings';
+type View = 'main' | 'training' | 'warband' | 'new-run' | 'relic' | 'settings';
 
 // The submenus title entries open: their heading, and the entries to list.
 // New Run is a submenu of Warband Mode's, and Back returns there.
 const SUBMENUS = {
   training: { heading: 'Training — Choose a Unit', label: 'Choose a unit to train', actions: getTrainingActions },
   warband: { heading: 'Warband Mode', label: 'Warband Mode', actions: () => getWarbandActions(loadSavedRun()) },
-  'new-run': { heading: 'New Run — Choose a Class', label: 'Choose a class', actions: () => STARTING_CLASS_ACTIONS },
-  settings: { heading: 'Settings', label: 'Settings', actions: () => SETTINGS_ACTIONS },
+  'new-run': {
+    heading: 'New Run — Choose a Class',
+    label: 'Choose a class',
+    actions: () => getStartingClassActions(loadMeta()),
+  },
+  // Filled in from the new run (relicActions), which the class pick makes.
+  relic: { heading: 'New Run — Choose a Relic', label: 'Choose a relic', actions: () => [] },
+  settings: { heading: 'Settings', label: 'Settings', actions: () => getSettingsActions(gameStore.getState().audio) },
 } as const;
+
+const VOLUME_KEYS = [['←→', 'Volume']] as const;
 
 const NAME_KEYS = [
   ['R', 'New name'],
@@ -58,6 +71,12 @@ function rollName(current?: string): string {
   return generateName(createSeededRng(randomSeed()), current);
 }
 
+// The starting relics `run` offers (see rollStartingRelics), as entries
+// whose description is the relic's.
+function relicActions(run: RunState): StartingClassAction[] {
+  return getRelicOffers(startRunSession(run)).map(({ id, name, description }) => ({ id, label: name, description }));
+}
+
 function mainMenu(selectedIndex = 0) {
   return selectIndex(createActionMenu(TITLE_ACTIONS), selectedIndex);
 }
@@ -67,7 +86,8 @@ function mainMenu(selectedIndex = 0) {
 // saved run (disabled when there's none) or start a new one, and New Run
 // opens one more to pick the base class the warband starts as, and the
 // name of its unit: generated, with buttons (and R / E) to roll another
-// or type one.
+// or type one. Then the run's starting relic is picked from three, and
+// the run begins.
 // Training swaps in a second menu listing the unit classes; picking one
 // starts a small practice battle with that unit. Settings swaps in the
 // settings menu, whose Game Configs opens the config editor (#/configs). Works with the keyboard
@@ -78,6 +98,8 @@ export function TitleScreen() {
   const [menu, setMenu] = useState(() => mainMenu());
   const [unitName, setUnitName] = useState(rollName);
   const [editingName, setEditingName] = useState(false);
+  // The run the class pick made, while its starting relic is picked.
+  const [pendingRun, setPendingRun] = useState<RunState | null>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
   // On short windows the screen scrolls; keep the selected entry in view as
@@ -100,6 +122,15 @@ export function TitleScreen() {
   // Back a level, with the entry that opened the submenu selected: from
   // New Run to Warband Mode's submenu, from the rest to the main menu.
   function goBack() {
+    if (view === 'relic') {
+      // Back to the class pick, keeping the name.
+      const actions = STARTING_CLASS_ACTIONS;
+      const selected = actions.findIndex((action) => action.id === pendingRun?.roster[0]?.classId);
+      setPendingRun(null);
+      setView('new-run');
+      setMenu(selectIndex(createActionMenu(actions), Math.max(0, selected)));
+      return;
+    }
     if (view === 'new-run') {
       openSubmenu('warband', 'new-run');
       return;
@@ -112,7 +143,9 @@ export function TitleScreen() {
   function runAction(action: MenuAction | null) {
     if (!action || action.disabled) return;
     if (view === 'settings') {
-      if (action.id === 'configs') window.location.hash = routeHash({ page: 'configs' });
+      if (action.id === 'sound') changeAudio(toggleMute);
+      else if (action.id === 'volume') changeAudio(cycleVolume);
+      else if (action.id === 'configs') window.location.hash = routeHash({ page: 'configs' });
     } else if (view === 'warband') {
       if (action.id === 'continue-run') {
         const saved = loadSavedRun();
@@ -120,7 +153,13 @@ export function TitleScreen() {
         else openSubmenu('warband', 'new-run');
       } else if (action.id === 'new-run') openSubmenu('new-run');
     } else if (view === 'new-run') {
-      playRun(newRun(action.id, unitName));
+      const run = newRun(action.id, unitName);
+      setPendingRun(run);
+      setView('relic');
+      setMenu(createActionMenu(relicActions(run)));
+    } else if (view === 'relic' && pendingRun) {
+      const index = menu.actions.findIndex((entry) => entry.id === action.id);
+      playRun(applyRunCommand(startRunSession(pendingRun), { type: 'pick-relic', index }).session.run);
     } else if (view === 'training') {
       gameStore.setState({ screen: 'battle', battleSetup: { mode: 'training', unitClass: action.id } });
     } else if (action.id === 'story') {
@@ -128,6 +167,14 @@ export function TitleScreen() {
     } else if (action.id === 'warband' || action.id === 'training' || action.id === 'settings') {
       openSubmenu(action.id);
     }
+  }
+
+  // Changes the sound settings (src/audio/index.ts plays and saves them)
+  // and relabels the settings menu to match, keeping its selection.
+  function changeAudio(update: (settings: AudioSettings) => AudioSettings) {
+    const audio = update(gameStore.getState().audio);
+    gameStore.setState({ audio });
+    setMenu((current) => selectIndex(createActionMenu(getSettingsActions(audio)), current.selectedIndex));
   }
 
   // Saves `run` and carries on with it: the overworld, or its stage.
@@ -145,6 +192,13 @@ export function TitleScreen() {
       } else if (view === 'new-run' && (event.key === 'e' || event.key === 'E')) {
         event.preventDefault();
         setEditingName(true);
+      } else if (
+        view === 'settings' &&
+        getSelectedAction(menu)?.id === 'volume' &&
+        (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
+      ) {
+        event.preventDefault();
+        changeAudio((settings) => changeVolume(settings, event.key === 'ArrowLeft' ? -1 : 1));
       } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
         event.preventDefault();
         setMenu((current) => moveSelection(current, event.key === 'ArrowUp' ? -1 : 1));
@@ -169,9 +223,11 @@ export function TitleScreen() {
   }
 
   const submenu = view === 'main' ? null : SUBMENUS[view];
-  // The pitch of the class selected on the New Run submenu.
+  // The pitch of the class or relic selected on the New Run submenus.
   const description =
-    view === 'new-run' ? (getSelectedAction(menu) as StartingClassAction | null)?.description : undefined;
+    view === 'new-run' || view === 'relic'
+      ? (getSelectedAction(menu) as StartingClassAction | null)?.description
+      : undefined;
 
   return (
     <div className="title-screen" onContextMenu={onContextMenu}>
@@ -226,7 +282,8 @@ export function TitleScreen() {
             onCancel={() => setEditingName(false)}
           />
         )}
-        {view === 'new-run' && (
+        {view === 'warband' && <p className="title-menu__renown">{describeRenown(loadMeta())}</p>}
+        {(view === 'new-run' || view === 'relic') && (
           <p className="title-menu__description" aria-live="polite">
             {description}
           </p>
@@ -238,9 +295,11 @@ export function TitleScreen() {
         entries={
           view === 'new-run'
             ? [...MENU_KEYS, ...NAME_KEYS, ['Esc', 'Back']]
-            : submenu
-              ? [...MENU_KEYS, ['Esc', 'Back']]
-              : MENU_KEYS
+            : view === 'settings'
+              ? [...MENU_KEYS, ...VOLUME_KEYS, ['Esc', 'Back']]
+              : submenu
+                ? [...MENU_KEYS, ['Esc', 'Back']]
+                : MENU_KEYS
         }
       />
     </div>

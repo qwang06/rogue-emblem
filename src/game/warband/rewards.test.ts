@@ -39,11 +39,12 @@ import {
   rollRewards,
   STAGE_CLEAR_GOLD,
   STAGE_CLEAR_GOLD_PER_STAGE,
-  TRAINING_MAX_HEALTH,
+  getRewardChoices,
   type Reward,
 } from './rewards.ts';
 import { WARBAND_NAMES } from './names.ts';
 import { STARTING_CLASSES } from './startingClasses.ts';
+import { BOUNTY_GOLD_PER_KILL, CLOVER_REWARD_CHOICES, RELICS } from './relics.ts';
 
 function runOf(...units: [string, Unit][]): RunState {
   return createRun(7, new Map(units));
@@ -78,6 +79,22 @@ describe('getStageClearGold', () => {
 
   it('pays more on later stages', () => {
     expect(getStageClearGold(5, 0).gold).toBeGreaterThan(getStageClearGold(1, 0).gold);
+  });
+
+  it('pays a bounty per kill only with the Bounty Ledger', () => {
+    const base = getStageClearGold(2, 0).gold;
+    expect(getStageClearGold(2, 0, { kills: 3 }).gold).toBe(base);
+    expect(getStageClearGold(2, 0, { kills: 3, relics: ['bounty-ledger'] }).gold).toBe(base + 3 * BOUNTY_GOLD_PER_KILL);
+    expect(getStageClearGold(2, 0, { kills: 0, relics: ['bounty-ledger'] }).gold).toBe(base);
+  });
+});
+
+describe('getRewardChoices', () => {
+  it('offers more with the Four-Leaf Clover', () => {
+    expect(getRewardChoices(fullRun())).toBe(REWARD_CHOICES);
+    expect(getRewardChoices({ relics: ['four-leaf-clover'] })).toBe(CLOVER_REWARD_CHOICES);
+    const clover = { ...fullRun(), relics: ['four-leaf-clover'] };
+    expect(rollStageRewards(clover, 3)).toHaveLength(CLOVER_REWARD_CHOICES);
   });
 });
 
@@ -130,18 +147,18 @@ describe('rollRewards', () => {
 
   it('offers fewer when the pools run dry', () => {
     const rewards = rollRewards(withRoster(fullRun(), []), 2, createSeededRng(1), 10);
-    expect(kinds(rewards).sort()).toEqual(['gold', 'training']);
+    expect(kinds(rewards).sort()).toEqual(['gold', 'relic']);
   });
 
-  it('only offers useful weapons, drills and lessons', () => {
-    const run = fullRun();
+  it('only offers useful weapons, unheld relics and lessons', () => {
+    const run = { ...fullRun(), relics: [RELICS[0].id] };
     const offers = Array.from({ length: 100 }, (_, seed) => rollRewards(run, 2, createSeededRng(seed))).flat();
     expect(kinds(offers)).toContain('arms');
-    expect(kinds(offers)).toContain('drill');
+    expect(kinds(offers)).toContain('relic');
     expect(kinds(offers)).toContain('lesson');
     for (const reward of offers) {
       if (reward.kind === 'arms') expect([IRON_SPEAR.id, IRON_AXE.id, IRON_BOW.id]).toContain(reward.itemId);
-      if (reward.kind === 'drill') expect(run.roster.some((unit) => unit.id === reward.unitId)).toBe(true);
+      if (reward.kind === 'relic') expect(reward.relicId).not.toBe(RELICS[0].id);
     }
     const maxed = withRoster(
       run,
@@ -265,20 +282,12 @@ describe('applyReward', () => {
     expect(after.roster[2].items).toEqual(fullPack);
   });
 
-  it('trains max HP and current HP up together, stopping at the class cap', () => {
+  it('gives the warband the relic once', () => {
     const run = fullRun();
-    const soldierCap = new Soldier({ name: 'x', team: 'player' }).caps.health!;
-    const nearCap = withRoster(run, [
-      { ...run.roster[0], health: 5 },
-      { ...run.roster[1] },
-      { ...run.roster[0], id: 'capped', maxHealth: soldierCap - 1, health: soldierCap - 1 },
-    ]);
-    const after = applyReward(nearCap, { kind: 'training', maxHealth: TRAINING_MAX_HEALTH });
-    expect(after.roster[0].maxHealth).toBe(run.roster[0].maxHealth + TRAINING_MAX_HEALTH);
-    expect(after.roster[0].health).toBe(5 + TRAINING_MAX_HEALTH);
-    expect(after.roster[1].maxHealth).toBe(run.roster[1].maxHealth + TRAINING_MAX_HEALTH);
-    expect(after.roster[2].maxHealth).toBe(soldierCap);
-    expect(after.roster[2].health).toBe(soldierCap);
+    const after = applyReward(run, { kind: 'relic', relicId: RELICS[1].id });
+    expect(after.relics).toEqual([RELICS[1].id]);
+    expect(applyReward(after, { kind: 'relic', relicId: RELICS[1].id }).relics).toEqual([RELICS[1].id]);
+    expect(run.relics).toEqual([]);
   });
 
   it('adds gold', () => {
@@ -292,20 +301,6 @@ describe('applyReward', () => {
     expect(run.convoy).toEqual([]);
   });
 
-  it('drills only the named ally and respects its stat cap', () => {
-    const run = fullRun();
-    const [soldier, archer] = run.roster;
-    const reward = { kind: 'drill', unitId: soldier.id, name: soldier.name, stat: 'strength' } as const;
-    const after = applyReward(run, reward);
-    expect(after.roster[0].strength).toBe(soldier.strength + 1);
-    expect(after.roster[1]).toEqual(archer);
-    const capped = withRoster(run, [
-      { ...soldier, strength: new Soldier({ team: 'player' }).caps.strength! },
-      ...run.roster.slice(1),
-    ]);
-    expect(applyReward(capped, reward).roster[0]).toEqual(capped.roster[0]);
-  });
-
   it('leaves the stage, convoy and fallen alone', () => {
     const run = fullRun();
     const after = applyReward(run, { kind: 'rest' });
@@ -316,16 +311,12 @@ describe('applyReward', () => {
 });
 
 describe('previewRewardHealth', () => {
-  it("is each unit's HP after resting or training, without changing the run", () => {
+  it("is each unit's HP after resting, without changing the run", () => {
     const run = fullRun();
     const hurt = withRoster(run, [{ ...run.roster[0], health: 4 }, run.roster[1], run.roster[2]]);
     expect(previewRewardHealth(hurt, { kind: 'rest' })).toEqual(
       hurt.roster.map(({ maxHealth }) => ({ health: maxHealth, maxHealth })),
     );
-    expect(previewRewardHealth(hurt, { kind: 'training', maxHealth: TRAINING_MAX_HEALTH })![0]).toEqual({
-      health: 4 + TRAINING_MAX_HEALTH,
-      maxHealth: run.roster[0].maxHealth + TRAINING_MAX_HEALTH,
-    });
     expect(hurt.roster[0].health).toBe(4);
   });
 
@@ -360,12 +351,14 @@ describe('describeReward', () => {
     expect(
       describeReward({ kind: 'supplies', itemId: HEALTH_POTION.id, label: 'Health Potion' }).description,
     ).toContain('Health Potion');
-    expect(describeReward({ kind: 'training', maxHealth: 2 }).description).toContain('+2 max HP');
+    expect(describeReward({ kind: 'relic', relicId: RELICS[0].id })).toEqual({
+      label: RELICS[0].name,
+      description: RELICS[0].description,
+    });
     expect(describeReward({ kind: 'gold', amount: 40 }).label).toBe('40 Gold');
     expect(describeReward({ kind: 'arms', itemId: FIRE.id, label: FIRE.label, uses: 30 }).description).toContain(
       'Fire Tome',
     );
-    expect(describeReward({ kind: 'drill', unitId: 'a', name: 'Alden', stat: 'speed' }).description).toContain('Alden');
   });
 });
 
