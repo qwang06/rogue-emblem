@@ -5,6 +5,7 @@
 
 import { getUnitSprite } from '../game/tileset.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
+import { findRelic } from '../game/warband/relics.ts';
 import { getNextUnlock, type MetaState, type RenownLine, type Unlock } from '../game/warband/meta.ts';
 import { formatPlayTime, type RunSummary, type SummaryUnit } from '../game/warband/runSummary.ts';
 
@@ -49,11 +50,12 @@ export interface RunSummaryView {
 }
 
 // The recap for `summary`, with the renown `recorded` (recordRun's result)
-// gave it. `relicName` names a relic by id.
+// gave it. `relicName` names a relic by id (its relics.ts name, or the id
+// as words for one that isn't known).
 export function toRunSummaryView(
   summary: RunSummary,
   recorded: { meta: MetaState; earned: { lines: readonly RenownLine[]; total: number }; unlocked: readonly Unlock[] },
-  relicName: (id: string) => string = humanizeId,
+  relicName: (id: string) => string = (id) => findRelic(id)?.name ?? humanizeId(id),
 ): RunSummaryView {
   const next = getNextUnlock(recorded.meta);
   return Object.freeze({

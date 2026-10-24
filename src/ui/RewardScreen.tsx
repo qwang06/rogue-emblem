@@ -9,12 +9,20 @@ import { RewardTeam } from './RewardTeam.tsx';
 // the input (arrows move the pick through the cards and then the buttons,
 // confirm takes it); the mouse is forwarded to it. The warband's HP, level
 // and XP show above the cards, with a heal's effect previewed on them.
+// The same screen shows a level up's boon pick (`boonPick`), whose cards
+// are the boons, and a surviving guest's recruitment.
 export function RewardScreen() {
   const menu = useGameStore((state) => state.rewardMenu);
   const stageClear = useGameStore((state) => state.stageClear);
   const recruitmentStage = useGameStore((state) => state.recruitmentStage);
   const team = useGameStore((state) => state.rewardTeam);
+  const boonPick = useGameStore((state) => state.boonPick);
   if (!menu) return null;
+  const title = boonPick
+    ? `${boonPick.name} Reached Level ${boonPick.level}`
+    : recruitmentStage
+      ? `Guest Survived Stage ${recruitmentStage}`
+      : 'Spoils of Battle';
   const entries = menu.actions.map((action, index) => ({ action, index, selected: index === menu.selectedIndex }));
   const cards = entries.filter(
     ({ action }) => action.kind !== 'skip' && action.kind !== 'reroll' && action.kind !== 'decline',
@@ -25,17 +33,24 @@ export function RewardScreen() {
 
   return (
     <div className="pause-overlay">
-      <section className="reward-screen" aria-label={recruitmentStage ? 'Choose a recruit' : 'Choose a reward'}>
+      <section
+        className="reward-screen"
+        aria-label={boonPick ? 'Choose a boon' : recruitmentStage ? 'Choose a recruit' : 'Choose a reward'}
+      >
         <header className="panel reward-screen__header">
-          <h2 className="reward-screen__title">
-            {recruitmentStage ? `Guest Survived Stage ${recruitmentStage}` : 'Spoils of Battle'}
-          </h2>
-          {stageClear && (
+          <h2 className="reward-screen__title">{title}</h2>
+          {boonPick ? (
             <p className="reward-screen__gold">
-              Stage {stageClear.stage} cleared: <span className="reward-screen__coin">+{stageClear.gold} gold</span>
-              {stageClear.flawless && <span className="reward-screen__flawless"> Flawless!</span>}
-              <span className="reward-screen__total"> · {stageClear.totalGold} gold in the purse</span>
+              Pick one for the {boonPick.classLabel} to keep for the rest of the run.
             </p>
+          ) : (
+            stageClear && (
+              <p className="reward-screen__gold">
+                Stage {stageClear.stage} cleared: <span className="reward-screen__coin">+{stageClear.gold} gold</span>
+                {stageClear.flawless && <span className="reward-screen__flawless"> Flawless!</span>}
+                <span className="reward-screen__total"> · {stageClear.totalGold} gold in the purse</span>
+              </p>
+            )
           )}
         </header>
         {team && team.length > 0 && (
@@ -50,7 +65,7 @@ export function RewardScreen() {
                 aria-current={selected ? 'true' : undefined}
                 {...menuItemPointerProps('rewardMenu', index)}
               >
-                <span className="reward-card__kind">{reward.kind}</span>
+                <span className="reward-card__kind">{reward.tag ?? reward.kind}</span>
                 <h3 className="reward-card__label">{reward.label}</h3>
                 <p className="reward-card__description">{reward.description}</p>
                 {reward.stats && (
@@ -87,7 +102,7 @@ export function RewardScreen() {
           className="reward-screen__hint"
           entries={[
             ['←→', 'Choose'],
-            ['Enter', recruitmentStage ? 'Recruit' : 'Take reward'],
+            ['Enter', boonPick ? 'Take boon' : recruitmentStage ? 'Recruit' : 'Take reward'],
           ]}
         />
       </section>

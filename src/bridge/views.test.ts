@@ -8,6 +8,9 @@ import {
   toDamagePopupView,
   toDialogView,
   toObjectiveView,
+  toBoonActions,
+  toBoonPickView,
+  toRelicViews,
   toRewardAction,
   toRewardMenuActions,
   toTeamView,
@@ -32,7 +35,8 @@ import { advanceDialog, createDialog } from '../game/dialog.ts';
 import { HEALTH_POTION, WOODEN_SHIELD } from '../game/items.ts';
 import { FIRE, FISTS, IRON_SPEAR, weaponEntry } from '../game/weapons.ts';
 import { createTurnState, markDone } from '../game/turns.ts';
-import { applyBattleResult, createRun, restoreRoster, snapshotUnit } from '../game/warband/run.ts';
+import { applyBattleResult, createRun, restoreRoster, restoreUnit, snapshotUnit } from '../game/warband/run.ts';
+import { getBoonOffer, queueLevelUpBoons } from '../game/warband/levelUpPicks.ts';
 import { createStartingWarband } from '../game/warband/stageLevel.ts';
 import { PLAYER_ROSTER } from '../game/demoLevel.ts';
 import { Warrior } from '../game/Warrior.ts';
@@ -694,5 +698,38 @@ describe('toTeamView', () => {
     expect(view[1].experienceForLevel).toBeNull();
     expect(Object.isFrozen(view)).toBe(true);
     expect(Object.isFrozen(view[0])).toBe(true);
+  });
+});
+
+describe('toBoonActions and toBoonPickView', () => {
+  it("makes a card per boon, captioned with the boon's kind, and names whose level up it is", () => {
+    const run = createRun(1, new Map([['alden', new Soldier({ name: 'Alden', team: 'player' })]]));
+    const owing = queueLevelUpBoons(run, { ...run, roster: [{ ...run.roster[0], level: 2 }] });
+    const offer = getBoonOffer(owing)!;
+    const actions = toBoonActions(offer);
+    expect(actions.map((action) => [action.kind, action.tag, action.label])).toEqual(
+      offer.boons.map((boon) => ['boon', boon.kind, boon.name]),
+    );
+    expect(new Set(actions.map((action) => action.id)).size).toBe(actions.length);
+    expect(toBoonPickView(offer)).toEqual({ name: 'Alden', classLabel: 'Soldier', level: 2 });
+  });
+});
+
+describe('toRelicViews', () => {
+  it('lists the known relics in order', () => {
+    expect(toRelicViews(['winged-boots', 'nope']).map((relic) => relic.name)).toEqual(['Winged Boots']);
+  });
+});
+
+describe('toUnitDetailView with modifiers', () => {
+  it('counts standing bonuses in the rates and lists passive boons and taught skills', () => {
+    const plain = new Soldier({ name: 'Alden', team: 'player', level: 2 });
+    const boosted = restoreUnit({ ...snapshotUnit('alden', plain), boons: ['keen-eye', 'skill-cleave', 'stalwart'] });
+    const before = toUnitDetailView(plain)!;
+    const after = toUnitDetailView(boosted)!;
+    expect(after.hit).toBe(before.hit + 15);
+    expect(after.avoid).toBe(before.avoid);
+    expect(after.skills.map((skill) => skill.id)).toEqual(['power-strike', 'cleave']);
+    expect(after.passives.map((passive) => passive.id)).toEqual(['keen-eye', 'stalwart']);
   });
 });

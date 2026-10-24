@@ -54,6 +54,8 @@ export const BAT_ITEMS: Inventory = Object.freeze([weaponEntry(FANGS)]);
 // bat stat line and no mana; it has no skill tree, wields physical
 // weapons, and fights with its Fangs unless given other items.
 export class Bat extends Unit {
+  override monster = true;
+
   constructor({ name = 'Bat', team, level = 1, items = BAT_ITEMS }: ClassUnitOptions) {
     super({
       name,

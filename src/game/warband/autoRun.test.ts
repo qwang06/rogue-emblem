@@ -5,9 +5,9 @@ import { BASELINE_POLICY, playRun, replayRun, startRun, type RunPolicy, type Run
 const START: RunStart = { seed: 11, classId: 'soldier', name: 'Alden' };
 
 describe('startRun', () => {
-  it("starts on stage 1's battle with a lone unit of the class", () => {
+  it("starts on the relic pick before stage 1's battle, with a lone unit of the class", () => {
     const session = startRun(START);
-    expect(session.phase).toBe('battle');
+    expect(session.phase).toBe('relic');
     expect(session.run.stage).toBe(1);
     expect(session.run.roster.map((unit) => [unit.name, unit.classId])).toEqual([['Alden', 'soldier']]);
   });
@@ -37,7 +37,12 @@ describe('playRun', () => {
   it('writes down a battle per stage and the commands between them', () => {
     const battles = played.script.steps.filter((step) => step.type === 'battle');
     expect(battles).toHaveLength(played.stages.length);
-    expect(played.script.steps[1].type).toBe('pick-reward');
+    expect(played.script.steps[0]).toEqual({ type: 'pick-relic', index: 0 });
+    expect(played.script.steps[1].type).toBe('battle');
+    // Stage 1's clear levels the lone unit up, so a boon comes before the reward.
+    expect(played.script.steps[2].type).toBe('pick-boon');
+    expect(played.script.steps[3].type).toBe('pick-reward');
+    expect(played.session.run.relics.length).toBeGreaterThan(0);
   });
 
   it('plays the same run every time for a start', () => {
@@ -70,6 +75,7 @@ describe('replayRun', () => {
   });
 
   it('refuses a step that does not fit the run', () => {
-    expect(() => replayRun({ start: START, steps: [{ type: 'march' }] })).toThrow(/battle/);
+    expect(() => replayRun({ start: START, steps: [{ type: 'march' }] })).toThrow(/relic/);
+    expect(() => replayRun({ start: START, steps: [{ type: 'battle', commands: [] }] })).toThrow(/battle/);
   });
 });

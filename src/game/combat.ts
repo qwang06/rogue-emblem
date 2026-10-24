@@ -1,7 +1,8 @@
 // Pure combat rules: which tiles a unit can strike, which of those hold a
 // valid target, how much damage a hit deals, and how a whole exchange of
 // strikes plays out. A unit fights with its equipped weapon (weapons.ts),
-// which sets its range, damage type and might. No Phaser, no rendering,
+// which sets its range, damage type and might, and with whatever its
+// modifiers (modifiers.ts) add for the exchange at hand. No Phaser, no rendering,
 // no hidden state — applying the damage (and spending weapon uses) on a
 // Unit is the caller's job.
 
@@ -16,6 +17,7 @@ import {
   type Rng,
 } from './combatStats.ts';
 import type { Grid, Point } from './grid.ts';
+import { getCombatBonus, isWounded, type CombatBonus, type Modifier } from './modifiers.ts';
 import { WEAPON_DAMAGE_TYPES, type Weapon } from './weapons.ts';
 
 export type DamageType = 'physical' | 'magical';
@@ -26,7 +28,9 @@ export type CombatWeapon = Pick<Weapon, 'type' | 'might' | 'hit' | 'crit' | 'wei
 
 // What the damage formulas read off a unit. Missing stats count as 0; a
 // unit without a weapon hits physically with no might. `armorDefense` is
-// what its worn armor adds to its defense (see getArmorDefense in items.ts).
+// what its worn armor adds to its defense (see getArmorDefense in items.ts),
+// and `bonus` what its modifiers add (damage dealt, guard against damage
+// taken) for the exchange at hand.
 export interface DamageStats {
   strength?: number;
   magic?: number;
@@ -34,6 +38,7 @@ export interface DamageStats {
   armorDefense?: number;
   resistance?: number;
   weapon?: Pick<CombatWeapon, 'type' | 'might'> | null;
+  bonus?: Partial<CombatBonus>;
 }
 
 // What reach reads off a unit: its weapon's range, or nothing without one.
@@ -44,11 +49,16 @@ export interface StrikeRange {
 // Everything a unit brings to a full exchange of strikes: its stats, its
 // equipped weapon (null if it has none, so it can't strike), and the uses
 // that weapon has left (`weaponUses`; null or missing for one that never
-// breaks).
+// breaks). Its `modifiers` (modifiers.ts) give it a combat bonus,
+// checked against its health (`wounded`) and whether its opponent is a
+// `monster`.
 export interface Fighter extends CombatStatLine, DamageStats, StrikeRange {
   health: number;
+  maxHealth?: number;
   weapon?: CombatWeapon | null;
   weaponUses?: number | null;
+  monster?: boolean;
+  modifiers?: readonly Modifier[];
 }
 
 // A fighter as the forecast shows it, health bar and all.
@@ -180,12 +190,65 @@ export function getDamageType(attacker: Pick<DamageStats, 'weapon'>): DamageType
 
 // Damage one hit deals: strength plus weapon might minus defense (and
 // worn armor) for a physical hit, magic plus might minus resistance for a
-// magical one, never below zero. Missing stats count as 0.
+// magical one, plus the attacker's damage bonus and minus the defender's
+// guard bonus, never below zero. Missing stats count as 0.
 export function calculateDamage(attacker: DamageStats, defender: DamageStats): number {
   const { power, guard } = DAMAGE_TYPES[getDamageType(attacker)];
   const might = attacker.weapon?.might ?? 0;
   const armor = guard === 'defense' ? (defender.armorDefense ?? 0) : 0;
-  return Math.max(0, (attacker[power] ?? 0) + might - (defender[guard] ?? 0) - armor);
+  const bonus = (attacker.bonus?.damage ?? 0) - (defender.bonus?.guard ?? 0);
+  return Math.max(0, (attacker[power] ?? 0) + might + bonus - (defender[guard] ?? 0) - armor);
+}
+
+// What the modifier conditions read off a side (see getFighterBonus).
+export interface SkillFighter extends DamageStats {
+  health?: number;
+  maxHealth?: number;
+  monster?: boolean;
+  modifiers?: readonly Modifier[];
+}
+
+// What `unit`'s modifiers add (getCombatBonus) as it fights `opponent`,
+// given whether it's `attacking`, is under half HP and faces a monster;
+// undefined without modifiers.
+export function getFighterBonus(
+  unit: SkillFighter,
+  opponent: SkillFighter,
+  attacking: boolean,
+): CombatBonus | undefined {
+  if (!unit.modifiers || unit.modifiers.length === 0) return undefined;
+  return getCombatBonus(unit.modifiers, {
+    attacking,
+    wounded: unit.health !== undefined && isWounded({ health: unit.health, maxHealth: unit.maxHealth }),
+    vsMonster: opponent.monster === true,
+  });
+}
+
+// `unit` as it fights `opponent` in one exchange, as the attacker or not:
+// a plain copy of the stats the formulas read, with `bonus` set to what
+// its modifiers add (getFighterBonus). A unit without modifiers comes back
+// as it is. Works on a Unit, whose weapon and armor are getters.
+export function withCombatBonus<T extends Fighter>(unit: T, opponent: Fighter, attacking: boolean): T {
+  const bonus = getFighterBonus(unit, opponent, attacking);
+  if (!bonus) return unit;
+  return {
+    health: unit.health,
+    maxHealth: unit.maxHealth,
+    strength: unit.strength,
+    magic: unit.magic,
+    skill: unit.skill,
+    speed: unit.speed,
+    luck: unit.luck,
+    defense: unit.defense,
+    armorDefense: unit.armorDefense,
+    armorWeight: unit.armorWeight,
+    resistance: unit.resistance,
+    weapon: unit.weapon,
+    weaponUses: unit.weaponUses,
+    monster: unit.monster,
+    modifiers: unit.modifiers,
+    bonus,
+  } as T;
 }
 
 // Whether a unit can strike something `distance` orthogonal steps away
@@ -230,7 +293,8 @@ function strikesAvailable(unit: Pick<Fighter, 'weapon' | 'weaponUses'>): number 
 }
 
 // One full exchange when attacker strikes defender, following
-// getStrikeOrder. Each strike rolls to hit (hit chance from combatStats.ts)
+// getStrikeOrder, each side with its modifiers' bonus (withCombatBonus,
+// the attacker as `attacking`). Each strike rolls to hit (hit chance from combatStats.ts)
 // and, if it lands, to crit (×CRIT_MULTIPLIER damage); a miss deals 0.
 // Combat stops as soon as a unit dies. Nothing is mutated — returns
 // { strikes, attackerHealth, defenderHealth }, where strikes is the ordered
@@ -241,10 +305,12 @@ function strikesAvailable(unit: Pick<Fighter, 'weapon' | 'weaponUses'>): number 
 // default Math.random) drives the rolls, and `context.trueHit` switches
 // hit rolls to the two-roll average (see rollChance).
 export function resolveCombat(
-  attacker: Fighter,
-  defender: Fighter,
+  baseAttacker: Fighter,
+  baseDefender: Fighter,
   { distance, rng = Math.random, trueHit = false }: { distance: number; rng?: Rng; trueHit?: boolean },
 ): CombatResult {
+  const attacker = withCombatBonus(baseAttacker, baseDefender, true);
+  const defender = withCombatBonus(baseDefender, baseAttacker, false);
   const health: Record<CombatSide, number> = { attacker: attacker.health, defender: defender.health };
   const units: Record<CombatSide, Fighter> = { attacker, defender };
   const strikes: Strike[] = [];
@@ -269,16 +335,18 @@ export function resolveCombat(
 // What an attack would look like before it's made, for the forecast panel:
 // per side, its current health, the damage one landed (non-crit) strike
 // deals, its hit and crit chances, and how many strikes it gets — the same
-// formulas and strike order resolveCombat rolls against, so the preview
+// formulas, modifier bonuses and strike order resolveCombat rolls against, so the preview
 // and the outcome can't disagree. Returns { attacker, defender }, each
 // { health, maxHealth, damage, hit, crit, strikes, counters }. A defender
 // that can't reach the attacker (`counters` false) has damage, hit and
 // crit null and 0 strikes. `context.distance` is as in resolveCombat.
 export function getCombatForecast(
-  attacker: Combatant,
-  defender: Combatant,
+  baseAttacker: Combatant,
+  baseDefender: Combatant,
   { distance }: { distance: number },
 ): Record<CombatSide, ForecastSide> {
+  const attacker = withCombatBonus(baseAttacker, baseDefender, true);
+  const defender = withCombatBonus(baseDefender, baseAttacker, false);
   const order = getStrikeOrder(attacker, defender, distance);
   const side = (unit: Combatant, opponent: Combatant, role: CombatSide): ForecastSide => {
     const strikes = order.filter((by) => by === role).length;

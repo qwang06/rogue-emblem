@@ -1,5 +1,5 @@
 // Plays a whole Warband run without the game running: a policy decides the
-// player's battles, reward picks and camp, the enemy AI (battle/ai.ts)
+// player's starting relic, battles, boon and reward picks and camp, the enemy AI (battle/ai.ts)
 // plays the enemy, and every step is written down as a RunScript that
 // replays the same run exactly (map and dice seeds both come from the run's
 // seed). Balancing runs, tests and the in-game auto-play call this. Pure:
@@ -20,6 +20,7 @@ import {
   finishBattle,
   getRecruitOffers,
   getRewardOffers,
+  startRunSession,
   type RunCommand,
   type RunSession,
 } from './runCommands.ts';
@@ -46,6 +47,10 @@ export interface RunScript {
 export interface RunPolicy {
   // The player's deployment, or its next unit's action.
   battle: BattlePlanner;
+  // The starting relic and each level up's boon: a pick-relic or
+  // pick-boon command. The first offer when left out.
+  relic?: (session: RunSession) => RunCommand;
+  boon?: (session: RunSession) => RunCommand;
   // The reward pick: one of getLegalRunCommands' reward commands.
   reward: (session: RunSession) => RunCommand;
   // Camp, one command at a time until it marches.
@@ -102,12 +107,10 @@ export const BASELINE_POLICY: RunPolicy = Object.freeze({
   camp: (session: RunSession): RunCommand => (canRest(session.run) ? { type: 'rest' } : { type: 'march' }),
 });
 
-// A new run's session: stage 1's battle, fought by a lone level-1 unit.
+// A new run's session: its starting relic pick, then stage 1's battle,
+// fought by a lone level-1 unit.
 export function startRun(start: RunStart): RunSession {
-  return Object.freeze({
-    run: createRun(start.seed, createStartingWarband(start.classId, start.name)),
-    phase: 'battle' as const,
-  });
+  return startRunSession(createRun(start.seed, createStartingWarband(start.classId, start.name)));
 }
 
 // Plays a run from `start` with `policy` until the warband falls, wins the
@@ -139,6 +142,12 @@ export function playRun(start: RunStart, policy: RunPolicy, options: AutoRunOpti
         campCommands = 0;
         break;
       }
+      case 'relic':
+        give(policy.relic?.(session) ?? { type: 'pick-relic', index: 0 });
+        break;
+      case 'boon':
+        give(policy.boon?.(session) ?? { type: 'pick-boon', index: 0 });
+        break;
       case 'reward':
         give(policy.reward(session));
         break;

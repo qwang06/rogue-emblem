@@ -52,6 +52,11 @@ describe('toRunSummaryView', () => {
     expect(maxed.renown.next).toBeNull();
   });
 
+  it('names a known relic by its name', () => {
+    const held = { ...summary, relics: ['hawk-lens'] };
+    expect(toRunSummaryView(held, recordRun(NEW_META, held)).relics).toEqual(["Hawk's Lens"]);
+  });
+
   it('names relics with the lookup it is given', () => {
     expect(toRunSummaryView(summary, recordRun(NEW_META, summary), () => 'Coin').relics).toEqual(['Coin']);
   });

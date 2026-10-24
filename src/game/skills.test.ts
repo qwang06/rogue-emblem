@@ -4,9 +4,12 @@ import {
   SKILL_UNLOCK_LEVEL,
   THROW_STONES,
   POWER_STRIKE,
+  CLEAVE,
   calculateSkillDamage,
   canUseSkill,
   findLearnedSkill,
+  findUnitSkill,
+  getUnitSkills,
   getLearnedSkills,
   getSkillActions,
   getSkillsLearnedBetween,
@@ -254,5 +257,47 @@ describe('calculateSkillDamage', () => {
       calculateSkillDamage(strike, user, { defense: 0 });
       expect(user.strength).toBe(4);
     });
+  });
+});
+
+describe('getUnitSkills', () => {
+  it("is the class's skills, then those modifiers teach that it lacks", () => {
+    const soldier = { unitClass: 'soldier', level: 2 };
+    expect(getUnitSkills(soldier)).toEqual([POWER_STRIKE]);
+    const taught = { ...soldier, modifiers: [{ kind: 'skill', skill: CLEAVE } as const] };
+    expect(getUnitSkills(taught)).toEqual([POWER_STRIKE, CLEAVE]);
+    const repeat = { ...soldier, modifiers: [{ kind: 'skill', skill: POWER_STRIKE } as const] };
+    expect(getUnitSkills(repeat)).toEqual([POWER_STRIKE]);
+    expect(findUnitSkill(taught, 'cleave')).toBe(CLEAVE);
+    expect(findUnitSkill(soldier, 'cleave')).toBeNull();
+  });
+
+  it('teaches a skill even before the class unlocks its own', () => {
+    expect(getUnitSkills({ unitClass: 'soldier', level: 1, modifiers: [{ kind: 'skill', skill: CLEAVE }] })).toEqual([
+      CLEAVE,
+    ]);
+  });
+});
+
+describe('calculateSkillDamage with modifiers', () => {
+  const user = { strength: 5, weapon: { type: 'physical' as const, might: 0 } };
+  const defender = { defense: 1 };
+
+  it("adds the user's attacking damage bonus and the target's guard", () => {
+    const base = calculateSkillDamage(POWER_STRIKE, user, defender);
+    const brawler = { ...user, modifiers: [{ kind: 'combat', term: 'damage', amount: 3, when: 'attacking' } as const] };
+    expect(calculateSkillDamage(POWER_STRIKE, brawler, defender)).toBe(base + 3);
+    const stalwart = {
+      ...defender,
+      modifiers: [{ kind: 'combat', term: 'guard', amount: 2, when: 'defending' } as const],
+    };
+    expect(calculateSkillDamage(POWER_STRIKE, user, stalwart)).toBe(base - 2);
+  });
+
+  it('counts vs-monster bonuses against a monster', () => {
+    const hunter = { ...user, modifiers: [{ kind: 'combat', term: 'damage', amount: 3, when: 'vs-monster' } as const] };
+    const base = calculateSkillDamage(POWER_STRIKE, user, defender);
+    expect(calculateSkillDamage(POWER_STRIKE, hunter, defender)).toBe(base);
+    expect(calculateSkillDamage(POWER_STRIKE, hunter, { ...defender, monster: true })).toBe(base + 3);
   });
 });

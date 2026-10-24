@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
 import { Warrior } from '../Warrior.ts';
-import { canRest, getCampActions, needsRest, REST_COST, restAtCamp } from './camp.ts';
+import { canRest, getCampActions, getRestCost, needsRest, REST_COST, restAtCamp } from './camp.ts';
 import { createRun, type RunState } from './run.ts';
 
 function campRun(gold: number, hurt = true): RunState {
@@ -75,5 +75,18 @@ describe('restAtCamp', () => {
     restAtCamp(run);
     expect(run.gold).toBe(100);
     expect(run.roster[0].health).toBe(1);
+  });
+});
+
+describe('Field Kitchen', () => {
+  it('makes resting free', () => {
+    const run = { ...campRun(0), relics: ['field-kitchen'] };
+    expect(getRestCost(run)).toBe(0);
+    expect(getRestCost(campRun(0))).toBe(REST_COST);
+    expect(canRest(run)).toBe(true);
+    expect(getCampActions(run)[2]).toMatchObject({ label: 'Rest (free)' });
+    const rested = restAtCamp(run);
+    expect(rested.gold).toBe(0);
+    expect(rested.roster[0].health).toBe(rested.roster[0].maxHealth);
   });
 });

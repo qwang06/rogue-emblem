@@ -3939,6 +3939,45 @@ textarea.draft-input {
   padding-bottom: 12px;
 }
 
+/* The camp menu with the warband's relics beside it, wrapping under it
+   when the stage is too narrow for both. */
+.camp-overlay {
+  flex-wrap: wrap;
+  align-content: center;
+  gap: 24px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.camp-relics {
+  position: relative;
+  width: min(20rem, 100%);
+  padding-top: 12px;
+}
+
+.camp-relics__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.camp-relics__relic {
+  display: grid;
+  gap: 2px;
+}
+
+.camp-relics__name {
+  font-weight: 700;
+  color: var(--fg-bright);
+}
+
+.camp-relics__description {
+  font-size: 0.8125rem;
+  color: var(--fg-dim);
+}
+
 .camp-menu__gold {
   bottom: 0;
   transform: translateY(80%);
