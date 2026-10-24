@@ -195,6 +195,7 @@ class Draft {
   deployed: readonly string[];
   fallen: Map<string, Unit>;
   convoyLoot: ItemSnapshot[];
+  kills: Map<string, number>;
   readonly events: BattleEvent[] = [];
   readonly rng: Rng;
   private readonly rngState: () => number;
@@ -212,6 +213,7 @@ class Draft {
     this.deployed = base.deployed;
     this.fallen = new Map(base.fallen);
     this.convoyLoot = [...base.convoyLoot];
+    this.kills = new Map(base.kills);
     const { rng, state } = createResumableRng(base.rngState);
     this.rng = rng;
     this.rngState = state;
@@ -252,6 +254,7 @@ class Draft {
       deployed: this.deployed,
       fallen: this.fallen,
       convoyLoot: Object.freeze(this.convoyLoot),
+      kills: this.kills,
       rngState: this.rngState(),
     });
   }
@@ -383,7 +386,7 @@ function resolveAttack(draft: Draft, attackerId: string, target: TargetTile, fro
     });
     if (!struck.isAlive()) {
       dropLoot(draft, struckId, strikerId);
-      defeat(draft, struckId);
+      defeat(draft, struckId, strikerId);
       healOnKill(draft, strikerId);
       break;
     }
@@ -449,7 +452,7 @@ function useSkill(draft: Draft, unitId: string, skillId: string, target: Point) 
   const lethal = !defender.isAlive();
   if (lethal) {
     dropLoot(draft, tile.unitId, unitId);
-    defeat(draft, tile.unitId);
+    defeat(draft, tile.unitId, unitId);
     healOnKill(draft, unitId);
   }
   const strikes: Strike[] = [{ by: 'attacker', target: 'defender', damage, hit: true, crit: false, lethal }];
@@ -502,8 +505,10 @@ function dropLoot(draft: Draft, deadId: string, killerId: string) {
   draft.events.push({ type: 'loot', unitId: killerId, item: loot, stored });
 }
 
-// Takes a unit at 0 health off the map, keeping it with the fallen.
-function defeat(draft: Draft, unitId: string) {
+// Takes a unit at 0 health off the map, keeping it with the fallen, and
+// counts the kill for `killerId`.
+function defeat(draft: Draft, unitId: string, killerId: string) {
+  draft.kills.set(killerId, (draft.kills.get(killerId) ?? 0) + 1);
   const at = draft.tileOf(unitId);
   draft.grid = setUnit(draft.grid, at.x, at.y, null);
   draft.fallen.set(unitId, draft.unit(unitId));

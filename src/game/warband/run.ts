@@ -10,6 +10,7 @@ import { HEAL_STAFF } from '../healing.ts';
 import { applyModifiers } from '../modifiers.ts';
 import { getBoonModifiers } from './boons.ts';
 import { getRelicModifiers, hasRelic, PHOENIX_FEATHER } from './relics.ts';
+import { EMPTY_CHRONICLE, parseChronicle, recordBattle, type RunChronicle } from './chronicle.ts';
 import { ARMORS, HEALTH_POTION, MANA_POTION, type Inventory, type Item } from '../items.ts';
 import { createSeededRng } from '../rng.ts';
 import type { TomeProgress } from '../tomes.ts';
@@ -98,6 +99,9 @@ export interface RunState {
   // Level-up boon picks still owed, oldest first (see levelUpPicks.ts), so
   // a run saved before them reopens on them; absent when none are.
   pendingBoons?: readonly PendingBoon[];
+  // What has happened over the run, for its recap (chronicle.ts). Absent
+  // in runs saved before it was kept, which read as an empty one.
+  chronicle?: RunChronicle;
 }
 
 // A reward pick still owed after a won stage: the stage cleared, how many
@@ -114,11 +118,15 @@ export interface PendingReward {
 // the battle (dead ones with 0 health). Units that aren't on the roster
 // (enemies) are ignored, and roster units that didn't deploy are absent.
 // `convoy` is what the battle sent to the convoy (loot a full-handed unit
-// couldn't carry), if anything, and `kills` how many enemies it defeated.
+// couldn't carry), if anything. `kills` (enemies felled by unitId),
+// `bossDefeated` and `elapsedMs` (how long the battle took) go into the
+// run's chronicle.
 export interface BattleResult {
   units: ReadonlyMap<string, Unit>;
   convoy?: readonly ItemSnapshot[];
-  kills?: number;
+  kills?: ReadonlyMap<string, number>;
+  bossDefeated?: boolean;
+  elapsedMs?: number;
 }
 
 // The stats a snapshot stores besides its identity and inventory.
@@ -152,6 +160,7 @@ export function createRun(seed: number, roster: ReadonlyMap<string, Unit>): RunS
     relics: [],
     deployCap: STARTING_DEPLOY_CAP,
     fallen: [],
+    chronicle: EMPTY_CHRONICLE,
   });
 }
 
@@ -217,13 +226,16 @@ export function restoreInventory(snapshots: readonly ItemSnapshot[], items: read
 // The run after a battle: each roster unit in result.units has its XP,
 // levels, stats, HP and inventory (spent weapon uses, broken weapons,
 // used items) written back, and those that died move from the roster to
-// `fallen` — except that with the Phoenix Feather the first of them (in
-// roster order) stays on at 1 HP instead, and the feather is spent.
+// `fallen` (except that with the Phoenix Feather the first of them, in
+// roster order, stays on at 1 HP instead, and the feather is spent).
 // Undeployed units are unchanged. Items the battle sent to the convoy join
-// the end of it. The stage doesn't advance (see advanceStage).
+// the end of it, and the battle goes into the chronicle. The stage doesn't
+// advance (see advanceStage).
 export function applyBattleResult(run: RunState, result: BattleResult): RunState {
   const roster: UnitSnapshot[] = [];
   const fallen = [...run.fallen];
+  const fought: string[] = [];
+  const fell: string[] = [];
   let relics = run.relics;
   for (const snapshot of run.roster) {
     const unit = result.units.get(snapshot.id);
@@ -232,13 +244,25 @@ export function applyBattleResult(run: RunState, result: BattleResult): RunState
       continue;
     }
     const after = snapshotUnit(snapshot.id, unit);
+    fought.push(snapshot.id);
     if (unit.isAlive()) roster.push(after);
     else if (hasRelic({ relics }, PHOENIX_FEATHER)) {
       relics = relics.filter((id) => id !== PHOENIX_FEATHER.id);
       roster.push({ ...after, health: 1 });
-    } else fallen.push(after);
+    } else {
+      fallen.push(after);
+      fell.push(snapshot.id);
+    }
   }
-  return freezeRun({ ...run, roster, fallen, relics, convoy: [...run.convoy, ...(result.convoy ?? [])] });
+  const chronicle = recordBattle(run.chronicle ?? EMPTY_CHRONICLE, {
+    stage: run.stage,
+    kills: result.kills ?? new Map(),
+    unitIds: fought,
+    fallenIds: fell,
+    bossDefeated: result.bossDefeated ?? false,
+    elapsedMs: result.elapsedMs ?? 0,
+  });
+  return freezeRun({ ...run, roster, fallen, relics, convoy: [...run.convoy, ...(result.convoy ?? [])], chronicle });
 }
 
 // The run moved on to its next stage.
@@ -316,6 +340,7 @@ export function parseRun(
     pendingRecruitment,
     pendingGuest,
     pendingBoons,
+    chronicle,
   } = data;
   const itemIds = new Set(items.map((item) => item.id));
   const classIds = new Set(classes.map((unitClass) => unitClass.id));
@@ -339,7 +364,8 @@ export function parseRun(
     (pendingRecruitment !== undefined && (!isWholeNumber(pendingRecruitment) || pendingRecruitment < 1)) ||
     (pendingGuest !== undefined && !isUnitSnapshot(pendingGuest, classIds, isItems)) ||
     (pendingGuest === undefined) !== (pendingRecruitment === undefined) ||
-    (pendingBoons !== undefined && !isPendingBoons(pendingBoons))
+    (pendingBoons !== undefined && !isPendingBoons(pendingBoons)) ||
+    (chronicle !== undefined && parseChronicle(chronicle) === null)
   ) {
     return null;
   }
@@ -357,6 +383,7 @@ export function parseRun(
     ...(pendingRecruitment !== undefined && { pendingRecruitment }),
     ...(pendingGuest !== undefined && { pendingGuest }),
     ...(pendingBoons !== undefined && { pendingBoons }),
+    chronicle: chronicle === undefined ? EMPTY_CHRONICLE : parseChronicle(chronicle)!,
   });
 }
 

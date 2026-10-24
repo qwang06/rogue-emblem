@@ -6,6 +6,7 @@ import type { BattleSetup } from '../game/battleSetup.ts';
 import type { BattleOutcome } from '../game/turns.ts';
 import type { MerchantScreenView } from './merchantView.ts';
 import type { RosterScreenView } from './rosterView.ts';
+import type { RunSummaryView } from './runSummaryView.ts';
 import { createStore } from './store.ts';
 import type { AutoSpeed } from '../game/autoSpeed.ts';
 import type {
@@ -69,6 +70,7 @@ export interface BattleState {
   objectiveStatus: string | null;
   nextBattle: string | null;
   runOver: RunOverView | null;
+  runSummary: RunSummaryView | null;
   stageClear: StageClearView | null;
   rewardMenu: Menu<RewardAction> | null;
   rewardTeam: readonly TeamUnitView[] | null;
@@ -122,6 +124,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   objectiveStatus: null, // getObjectiveStatus() of the battle's objective on the current turn (the header's readout) once the battle starts, else null
   nextBattle: null, // describeBattle() of the battle a victory leads to (shown on the result), or null
   runOver: null, // RunOverView from toRunOverView() once a Warband Mode run has ended, or null
+  runSummary: null, // RunSummaryView from toRunSummaryView(), the recap of a Warband Mode run that has ended, or null
   stageClear: null, // StageClearView from toStageClearView() once a Warband Mode stage is won, or null
   rewardMenu: null, // frozen menu of RewardActions (toRewardAction) while the reward screen is up after a won stage, or null
   rewardTeam: null, // TeamUnitViews from toTeamView() of the warband while the reward screen is up, or null

@@ -338,7 +338,17 @@ describe('level-up boon picks', () => {
 describe('relics in the run rules', () => {
   it("pays the Bounty Ledger's gold for kills with the clear", () => {
     const run = { ...newRun(), relics: ['bounty-ledger'] };
-    const session = finishBattle(resumeRunSession(run), { units: restoreRoster(run), kills: 3 }, 'victory');
+    const session = finishBattle(
+      resumeRunSession(run),
+      {
+        units: restoreRoster(run),
+        kills: new Map([
+          [run.roster[0].id, 3],
+          ['guest', 2],
+        ]),
+      },
+      'victory',
+    );
     expect(session.run.gold).toBe(getStageClearGold(2, 0, { kills: 3, relics: ['bounty-ledger'] }).gold);
     expect(session.run.pendingReward!.clearGold).toBe(session.run.gold);
   });

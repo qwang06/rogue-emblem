@@ -3,7 +3,9 @@ import type { MenuAction } from '../game/actionMenu.ts';
 import { gameStore } from '../bridge/gameStore.ts';
 import { createActionMenu, getSelectedAction, moveSelection, selectIndex } from '../game/actionMenu.ts';
 import {
+  describeRenown,
   getFirstEnabledIndex,
+  getStartingClassActions,
   getWarbandActions,
   SETTINGS_ACTIONS,
   STARTING_CLASS_ACTIONS,
@@ -18,6 +20,7 @@ import { createRun, type RunState } from '../game/warband/run.ts';
 import { applyRunCommand, getRelicOffers, startRunSession } from '../game/warband/runCommands.ts';
 import { createStartingWarband } from '../game/warband/stageLevel.ts';
 import { loadSavedRun, saveRun } from '../data/runSave.ts';
+import { loadMeta } from '../data/metaSave.ts';
 import { getUnitSprite } from '../game/tileset.ts';
 import { routeHash } from './route.ts';
 import { UnitSprite } from './UnitSprite.tsx';
@@ -37,7 +40,11 @@ type View = 'main' | 'training' | 'warband' | 'new-run' | 'relic' | 'settings';
 const SUBMENUS = {
   training: { heading: 'Training — Choose a Unit', label: 'Choose a unit to train', actions: getTrainingActions },
   warband: { heading: 'Warband Mode', label: 'Warband Mode', actions: () => getWarbandActions(loadSavedRun()) },
-  'new-run': { heading: 'New Run — Choose a Class', label: 'Choose a class', actions: () => STARTING_CLASS_ACTIONS },
+  'new-run': {
+    heading: 'New Run — Choose a Class',
+    label: 'Choose a class',
+    actions: () => getStartingClassActions(loadMeta()),
+  },
   // Filled in from the new run (relicActions), which the class pick makes.
   relic: { heading: 'New Run — Choose a Relic', label: 'Choose a relic', actions: () => [] },
   settings: { heading: 'Settings', label: 'Settings', actions: () => SETTINGS_ACTIONS },
@@ -253,6 +260,7 @@ export function TitleScreen() {
             onCancel={() => setEditingName(false)}
           />
         )}
+        {view === 'warband' && <p className="title-menu__renown">{describeRenown(loadMeta())}</p>}
         {(view === 'new-run' || view === 'relic') && (
           <p className="title-menu__description" aria-live="polite">
             {description}

@@ -23,6 +23,7 @@ import {
   STARTING_DEPLOY_CAP,
   type RunState,
 } from './run.ts';
+import { EMPTY_CHRONICLE } from './chronicle.ts';
 
 function startingRun(): RunState {
   return createRun(
@@ -53,6 +54,7 @@ describe('createRun', () => {
     expect(run.relics).toEqual([]);
     expect(run.deployCap).toBe(STARTING_DEPLOY_CAP);
     expect(run.fallen).toEqual([]);
+    expect(run.chronicle).toEqual(EMPTY_CHRONICLE);
     expect(Object.isFrozen(run)).toBe(true);
     expect(Object.isFrozen(run.roster[0])).toBe(true);
   });
@@ -163,6 +165,44 @@ describe('applyBattleResult', () => {
     expect(aldenAfter.health).toBe(alden.maxHealth - 3);
     expect(aldenAfter.items[0]).toEqual({ itemId: IRON_SPEAR.id, quantity: IRON_SPEAR.uses! - 1 });
     expect(brynAfter.items.map((item) => item.itemId)).toEqual([IRON_BOW.id, MANA_POTION.id]);
+  });
+
+  it("records the battle's kills, the fallen's stage, a boss and the time in the chronicle", () => {
+    const run = { ...startingRun(), stage: 3 };
+    const units = restoreRoster(run);
+    units.delete('cato');
+    units.get('bryn')!.takeDamage(99);
+    const after = applyBattleResult(run, {
+      units,
+      kills: new Map([
+        ['alden', 2],
+        ['bryn', 1],
+        ['cato', 5],
+        ['enemy-1', 1],
+      ]),
+      bossDefeated: true,
+      elapsedMs: 90_000,
+    });
+    expect(after.chronicle).toEqual({
+      kills: { alden: 2, bryn: 1 },
+      fallenOn: { bryn: 3 },
+      bossesDefeated: 1,
+      playMs: 90_000,
+    });
+    const again = applyBattleResult(after, { units: restoreRoster(after), kills: new Map([['alden', 1]]) });
+    expect(again.chronicle).toEqual({
+      kills: { alden: 3, bryn: 1 },
+      fallenOn: { bryn: 3 },
+      bossesDefeated: 1,
+      playMs: 90_000,
+    });
+  });
+
+  it('starts a chronicle for a run saved without one', () => {
+    const { chronicle: _, ...run } = startingRun();
+    const units = restoreRoster(run);
+    const after = applyBattleResult(run, { units, kills: new Map([['alden', 1]]) });
+    expect(after.chronicle?.kills).toEqual({ alden: 1 });
   });
 
   it('adds what the battle sent to the convoy at its end', () => {
@@ -342,11 +382,17 @@ describe('serializeRun and parseRun', () => {
       relics: ['lucky-coin'],
       convoy: [{ itemId: FISTS.id, quantity: 1 }],
       pendingReward: { stage: 1, rerolls: 2, clearGold: 25, flawless: false },
+      chronicle: { kills: { alden: 3 }, fallenOn: { cato: 1 }, bossesDefeated: 1, playMs: 61_000 },
     };
 
     const parsed = parseRun(serializeRun(withExtras));
     expect(parsed).toEqual(withExtras);
     expect(restoreRoster(parsed!)).toEqual(restoreRoster(withExtras));
+  });
+
+  it('reads a run saved before the chronicle was kept with an empty one', () => {
+    const { chronicle: _, ...old } = startingRun();
+    expect(parseRun(JSON.stringify(old))?.chronicle).toEqual(EMPTY_CHRONICLE);
   });
 
   it.each([
@@ -367,6 +413,9 @@ describe('serializeRun and parseRun', () => {
       { ...run, gold: 1.5 },
       { ...run, deployCap: 0 },
       { ...run, relics: [3] },
+      { ...run, chronicle: null },
+      { ...run, chronicle: { ...run.chronicle, kills: { alden: -1 } } },
+      { ...run, chronicle: { ...run.chronicle, playMs: 'long' } },
       { ...run, convoy: [{ itemId: 'excalibur', quantity: 1 }] },
       { ...run, convoy: [{ itemId: FISTS.id, quantity: 0 }] },
       { ...run, roster: [{ ...unit, classId: 'dragon' }] },

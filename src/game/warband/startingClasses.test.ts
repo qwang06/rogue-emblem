@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { UNIT_CLASSES } from '../unitClasses.ts';
-import { DEFAULT_STARTING_CLASS, STARTING_CLASSES } from './startingClasses.ts';
+import {
+  ALL_STARTING_CLASSES,
+  DEFAULT_STARTING_CLASS,
+  STARTING_CLASSES,
+  UNLOCKABLE_STARTING_CLASSES,
+} from './startingClasses.ts';
 
 describe('STARTING_CLASSES', () => {
   it('offers the Warrior, the Soldier and the Archer, in that order', () => {
@@ -25,5 +30,27 @@ describe('STARTING_CLASSES', () => {
   it('is frozen', () => {
     expect(Object.isFrozen(STARTING_CLASSES)).toBe(true);
     expect(STARTING_CLASSES.every(Object.isFrozen)).toBe(true);
+  });
+});
+
+describe('UNLOCKABLE_STARTING_CLASSES', () => {
+  it('offers the Vanguard and the Guard once renown opens them', () => {
+    expect(UNLOCKABLE_STARTING_CLASSES.map((c) => c.id)).toEqual(['vanguard', 'guard']);
+  });
+
+  it('names only real playable classes, with their own labels and a pitch, none of them base classes', () => {
+    for (const { id, label, description } of UNLOCKABLE_STARTING_CLASSES) {
+      const unitClass = UNIT_CLASSES.find((c) => c.id === id);
+      expect(unitClass?.label).toBe(label);
+      expect(unitClass?.monster).toBeFalsy();
+      expect(description.length).toBeGreaterThan(0);
+      expect(STARTING_CLASSES.map((c) => c.id)).not.toContain(id);
+    }
+  });
+
+  it('joins the base classes in ALL_STARTING_CLASSES, frozen', () => {
+    expect(ALL_STARTING_CLASSES).toEqual([...STARTING_CLASSES, ...UNLOCKABLE_STARTING_CLASSES]);
+    expect(Object.isFrozen(UNLOCKABLE_STARTING_CLASSES)).toBe(true);
+    expect(UNLOCKABLE_STARTING_CLASSES.every(Object.isFrozen)).toBe(true);
   });
 });

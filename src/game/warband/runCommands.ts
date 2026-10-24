@@ -144,8 +144,14 @@ export function finishBattle(
 // the units below the level the stage guarantees (applyStageClearExperience,
 // reported as a `level-ups` event), owes a boon pick for every level the
 // stage gained (queueLevelUpBoons), pays the clear's gold (with the
-// Bounty Ledger's for `result.kills`) and owes the reward pick, or goes
+// Bounty Ledger's for the warband's kills) and owes the reward pick, or goes
 // straight to camp when there's nothing to offer.
+// How many foes the warband's own units felled in `result` (a guest's
+// kills don't count), for the Bounty Ledger.
+export function countWarbandKills(run: RunState, result: BattleResult): number {
+  return run.roster.reduce((total, { id }) => total + (result.kills?.get(id) ?? 0), 0);
+}
+
 export function finishBattleWithEvents(
   session: RunSession,
   result: BattleResult,
@@ -160,7 +166,7 @@ export function finishBattleWithEvents(
   const leveled = applyStageClearExperience(finished.run, before.stage);
   const events: RunEvent[] = leveled.levelUps.length > 0 ? [{ type: 'level-ups', levelUps: leveled.levelUps }] : [];
   const clear = getStageClearGold(before.stage, finished.run.fallen.length - before.fallen.length, {
-    kills: result.kills,
+    kills: countWarbandKills(before, result),
     relics: before.relics,
   });
   const paid = addGold(queueLevelUpBoons(before, leveled.run), clear.gold);
