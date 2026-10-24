@@ -9,6 +9,7 @@ import type { RosterScreenView } from './rosterView.ts';
 import { createStore } from './store.ts';
 import type { AutoSpeed } from '../game/autoSpeed.ts';
 import type {
+  BoonPickView,
   CombatForecastView,
   DamagePopupView,
   DialogView,
@@ -16,6 +17,7 @@ import type {
   LevelUpView,
   ObjectiveView,
   PhaseBannerView,
+  RelicView,
   RosterEntryView,
   RewardAction,
   RunOverView,
@@ -71,8 +73,10 @@ export interface BattleState {
   rewardMenu: Menu<RewardAction> | null;
   rewardTeam: readonly TeamUnitView[] | null;
   recruitmentStage: number | null;
+  boonPick: BoonPickView | null;
   campMenu: Menu | null;
   campGold: number | null;
+  campRelics: readonly RelicView[] | null;
   rosterScreen: RosterScreenView | null;
   merchantScreen: MerchantScreenView | null;
 }
@@ -122,8 +126,10 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   rewardMenu: null, // frozen menu of RewardActions (toRewardAction) while the reward screen is up after a won stage, or null
   rewardTeam: null, // TeamUnitViews from toTeamView() of the warband while the reward screen is up, or null
   recruitmentStage: null,
+  boonPick: null, // BoonPickView from toBoonPickView() while the reward screen shows a level up's boon pick (its cards are rewardMenu's), or null
   campMenu: null, // frozen camp menu (getCampActions: Manage Roster / Merchant / Rest / Next Stage) once a won stage's reward is taken, or null
   campGold: null, // the warband's gold while at camp (shown on the camp menu), or null
+  campRelics: null, // RelicViews from toRelicViews() of the warband's relics while at camp (listed on the camp menu), or null
   rosterScreen: null, // RosterScreenView from toRosterScreenView() while the roster screen is open between stages, or null
   merchantScreen: null, // MerchantScreenView from toMerchantScreenView() while the camp's merchant screen is open, or null
 });

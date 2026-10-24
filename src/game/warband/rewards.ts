@@ -1,24 +1,27 @@
 // Warband Mode's stage rewards: what a run earns for clearing a stage. Every
 // win pays gold (more for a flawless one, with nobody lost), then the
 // player picks one of a few offered rewards, like Slay the Spire's card
-// pick: recovery, gear, focused growth or gold. Offers are rolled
+// pick: recovery, gear, a relic (relics.ts), a level or gold. Offers are rolled
 // from an Rng (seeded from the run, so a stage always offers the
 // same picks) and each one is applied to the run as a pure function.
 
 import { HEALTH_POTION, MAX_INVENTORY_SLOTS } from '../items.ts';
-import {
-  getExperienceToNextLevel,
-  MAX_LEVEL,
-  rollLevelUp,
-  type LevelUpResult,
-  type PlainGrowthStat,
-} from '../experience.ts';
+import { getExperienceToNextLevel, MAX_LEVEL, rollLevelUp, type LevelUpResult } from '../experience.ts';
 import type { Rng } from '../combatStats.ts';
 import { createSeededRng, randomInt, randomItem, shuffle } from '../rng.ts';
 import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
 import { FIRE, IRON_AXE, IRON_BOW, IRON_SPEAR, canWield, type Weapon } from '../weapons.ts';
 import { WARBAND_NAMES } from './names.ts';
 import { STARTING_CLASSES } from './startingClasses.ts';
+import {
+  BOUNTY_GOLD_PER_KILL,
+  BOUNTY_LEDGER,
+  CLOVER_REWARD_CHOICES,
+  findRelic,
+  FOUR_LEAF_CLOVER,
+  getUnownedRelics,
+  hasRelic,
+} from './relics.ts';
 import {
   restoreUnit,
   snapshotUnit,
@@ -37,7 +40,6 @@ export const FLAWLESS_BONUS_GOLD = 10;
 // How many rewards a stage offers to pick from.
 export const REWARD_CHOICES = 3;
 export const ARMS_CACHE_WEAPONS: readonly Weapon[] = Object.freeze([IRON_SPEAR, IRON_AXE, IRON_BOW, FIRE]);
-export const DRILL_STATS: readonly PlainGrowthStat[] = Object.freeze(['strength', 'magic', 'skill', 'speed']);
 
 // The most units a warband can hold.
 export const MAX_ROSTER_SIZE = 8;
@@ -52,8 +54,6 @@ export const RECRUIT_CLASS_IDS: readonly string[] = Object.freeze([
   'acolyte',
 ]);
 
-// How much max HP Training adds to every unit.
-export const TRAINING_MAX_HEALTH = 2;
 // Gold in a purse: a base plus more per stage.
 export const PURSE_GOLD = 30;
 export const PURSE_GOLD_PER_STAGE = 10;
@@ -65,7 +65,7 @@ export const SKIP_GOLD_PER_STAGE = 5;
 export const REROLL_COST = 10;
 export const REROLL_COST_STEP = 10;
 
-export type RewardKind = 'recruit' | 'rest' | 'supplies' | 'training' | 'gold' | 'arms' | 'drill' | 'lesson';
+export type RewardKind = 'recruit' | 'rest' | 'supplies' | 'relic' | 'gold' | 'arms' | 'lesson';
 
 export type Reward =
   // A new unit joins the roster.
@@ -74,11 +74,10 @@ export type Reward =
   | { kind: 'rest' }
   // Every unit with room gets one of the item.
   | { kind: 'supplies'; itemId: string; label: string }
-  // Every unit gains max HP (and as much current HP).
-  | { kind: 'training'; maxHealth: number }
-  // A fresh weapon in the convoy, or one capped stat for a named ally.
+  // A relic the warband doesn't hold yet (see relics.ts).
+  | { kind: 'relic'; relicId: string }
+  // A fresh weapon in the convoy.
   | { kind: 'arms'; itemId: string; label: string; uses: number }
-  | { kind: 'drill'; unitId: string; name: string; stat: PlainGrowthStat }
   // Every unit gains exactly the XP to its next level; `seed` rolls the
   // level ups' stat gains, so picking it always gives the same ones.
   | { kind: 'lesson'; seed: number }
@@ -86,14 +85,26 @@ export type Reward =
   | { kind: 'gold'; amount: number };
 
 // The gold a cleared stage pays: STAGE_CLEAR_GOLD, STAGE_CLEAR_GOLD_PER_STAGE
-// for each stage, and FLAWLESS_BONUS_GOLD when `losses` (units that died in
-// it) is 0.
-export function getStageClearGold(stage: number, losses: number): { gold: number; flawless: boolean } {
+// for each stage, FLAWLESS_BONUS_GOLD when `losses` (units that died in
+// it) is 0, and with the Bounty Ledger among `relics`,
+// BOUNTY_GOLD_PER_KILL for each of the `kills` enemies it defeated.
+export function getStageClearGold(
+  stage: number,
+  losses: number,
+  { kills = 0, relics = [] }: { kills?: number; relics?: readonly string[] } = {},
+): { gold: number; flawless: boolean } {
   const flawless = losses === 0;
+  const bounty = hasRelic({ relics }, BOUNTY_LEDGER) ? BOUNTY_GOLD_PER_KILL * kills : 0;
   return {
-    gold: STAGE_CLEAR_GOLD + STAGE_CLEAR_GOLD_PER_STAGE * stage + (flawless ? FLAWLESS_BONUS_GOLD : 0),
+    gold: STAGE_CLEAR_GOLD + STAGE_CLEAR_GOLD_PER_STAGE * stage + (flawless ? FLAWLESS_BONUS_GOLD : 0) + bounty,
     flawless,
   };
+}
+
+// How many rewards a pick offers the run: REWARD_CHOICES, or
+// CLOVER_REWARD_CHOICES with the Four-Leaf Clover.
+export function getRewardChoices(run: Pick<RunState, 'relics'>): number {
+  return hasRelic(run, FOUR_LEAF_CLOVER) ? CLOVER_REWARD_CHOICES : REWARD_CHOICES;
 }
 
 // The seed for the reward offers after `stage` of a run started with
@@ -118,7 +129,12 @@ export function getRerollCost(rerolls: number): number {
 // from getRewardSeed and the reroll count, so a stage's offers, and each
 // reroll of them, are always the same.
 export function rollStageRewards(run: RunState, stage: number, rerolls: number = 0): readonly Reward[] {
-  return rollRewards(run, stage, createSeededRng((getRewardSeed(run.seed, stage) + rerolls) >>> 0));
+  return rollRewards(
+    run,
+    stage,
+    createSeededRng((getRewardSeed(run.seed, stage) + rerolls) >>> 0),
+    getRewardChoices(run),
+  );
 }
 
 // Rerolling the offers after `stage` for the `rerolls + 1`th time: the run
@@ -170,7 +186,10 @@ export function getPendingRewardOffer(run: RunState): (PendingReward & { rewards
 // - rest, when anyone is missing HP or mana (never after stage 1, whose
 //   quick fight leaves the warband near full)
 // - supplies, when anyone has room for a Health Potion
-// - training and gold, always
+// - arms, when anyone can wield an Arms Cache weapon
+// - relic, while there's a relic the run doesn't hold
+// - lesson, while anyone is below the max level
+// - gold, always
 export function rollRewards(
   run: RunState,
   stage: number,
@@ -184,9 +203,9 @@ export function rollRewards(
   }
   if (run.roster.some((unit) => canTakeItem(unit, HEALTH_POTION.id))) kinds.push('supplies');
   if (eligibleWeapons(run, classes).length > 0) kinds.push('arms');
-  if (eligibleDrills(run, classes).length > 0) kinds.push('drill');
+  if (getUnownedRelics(run.relics).length > 0) kinds.push('relic');
   if (run.roster.some((unit) => unit.level < MAX_LEVEL)) kinds.push('lesson');
-  kinds.push('training', 'gold');
+  kinds.push('gold');
   const picked = shuffle(rng, kinds).slice(0, Math.max(0, count));
   return Object.freeze(picked.map((kind) => Object.freeze(createReward(kind, run, stage, rng, classes))));
 }
@@ -199,15 +218,11 @@ function createReward(kind: RewardKind, run: RunState, stage: number, rng: Rng, 
       return { kind };
     case 'supplies':
       return { kind, itemId: HEALTH_POTION.id, label: HEALTH_POTION.label };
-    case 'training':
-      return { kind, maxHealth: TRAINING_MAX_HEALTH };
+    case 'relic':
+      return { kind, relicId: randomItem(rng, getUnownedRelics(run.relics)).id };
     case 'arms': {
       const weapon = randomItem(rng, eligibleWeapons(run, classes));
       return { kind, itemId: weapon.id, label: weapon.label, uses: weapon.uses! };
-    }
-    case 'drill': {
-      const { unit, stat } = randomItem(rng, eligibleDrills(run, classes));
-      return { kind, unitId: unit.id, name: unit.name, stat };
     }
     case 'lesson':
       return { kind, seed: Math.floor(rng() * 2 ** 32) };
@@ -220,17 +235,6 @@ function eligibleWeapons(run: RunState, classes: readonly UnitClass[]): Weapon[]
   return ARMS_CACHE_WEAPONS.filter((weapon) =>
     run.roster.some((snapshot) => canWield(restoreUnit(snapshot, classes).weaponTypes, weapon)),
   );
-}
-
-function eligibleDrills(run: RunState, classes: readonly UnitClass[]): { unit: UnitSnapshot; stat: PlainGrowthStat }[] {
-  return run.roster.flatMap((unit) => {
-    const restored = restoreUnit(unit, classes);
-    return DRILL_STATS.filter(
-      (stat) =>
-        (stat !== 'magic' || restored.weaponTypes.includes('magical')) &&
-        unit[stat] < (restored.caps[stat] ?? Infinity),
-    ).map((stat) => ({ unit, stat }));
-  });
 }
 
 // A recruit for `run`: a `classId` unit (a random RECRUIT_CLASS_IDS class
@@ -278,24 +282,10 @@ function applyRewardEffect(run: RunState, reward: Reward, classes: readonly Unit
       return mapRoster(run, (unit) =>
         canTakeItem(unit, reward.itemId) ? { ...unit, items: addItem(unit.items, reward.itemId) } : unit,
       );
-    case 'training':
-      return mapRoster(run, (unit) => {
-        const cap = getHealthCap(unit.classId, classes);
-        const gain = Math.max(0, Math.min(reward.maxHealth, cap - unit.maxHealth));
-        return { ...unit, maxHealth: unit.maxHealth + gain, health: unit.health + gain };
-      });
+    case 'relic':
+      return hasRelic(run, { id: reward.relicId }) ? run : freeze({ ...run, relics: [...run.relics, reward.relicId] });
     case 'arms':
       return freeze({ ...run, convoy: [...run.convoy, { itemId: reward.itemId, quantity: reward.uses }] });
-    case 'drill': {
-      const target = eligibleDrills(run, classes).some(
-        ({ unit, stat }) => unit.id === reward.unitId && stat === reward.stat,
-      );
-      return target
-        ? mapRoster(run, (unit) =>
-            unit.id === reward.unitId ? { ...unit, [reward.stat]: unit[reward.stat] + 1 } : unit,
-          )
-        : run;
-    }
     case 'lesson':
       return applyLessonReward(run, reward, classes).run;
     case 'gold':
@@ -312,7 +302,7 @@ export function previewRewardHealth(
   reward: Reward,
   classes: readonly UnitClass[] = UNIT_CLASSES,
 ): readonly { health: number; maxHealth: number }[] | null {
-  if (reward.kind !== 'rest' && reward.kind !== 'training') return null;
+  if (reward.kind !== 'rest') return null;
   return Object.freeze(
     applyRewardEffect(run, reward, classes).roster.map(({ health, maxHealth }) => Object.freeze({ health, maxHealth })),
   );
@@ -370,12 +360,12 @@ export function describeReward(
       return { label: 'Rest', description: 'The whole warband recovers to full HP and mana.' };
     case 'supplies':
       return { label: 'Supplies', description: `Every unit with room gets a ${reward.label}.` };
-    case 'training':
-      return { label: 'Training', description: `Every unit gains +${reward.maxHealth} max HP.` };
+    case 'relic': {
+      const relic = findRelic(reward.relicId);
+      return { label: relic?.name ?? reward.relicId, description: relic?.description ?? '' };
+    }
     case 'arms':
       return { label: 'Arms Cache', description: `A fresh ${reward.label} goes to the convoy (${reward.uses} uses).` };
-    case 'drill':
-      return { label: 'Field Drill', description: `${reward.name} gains +1 ${reward.stat.toUpperCase()}.` };
     case 'lesson':
       return { label: "Veteran's Lesson", description: 'Every unit gains enough XP to reach its next level.' };
     case 'gold':
@@ -396,10 +386,6 @@ function addItem(items: readonly ItemSnapshot[], itemId: string): ItemSnapshot[]
   return [...items, { itemId, quantity: 1 }];
 }
 
-function getHealthCap(classId: string, classes: readonly UnitClass[]): number {
-  return createUnitOfClass(classId, { name: '', team: 'player' }, classes).caps.health ?? Infinity;
-}
-
 function mapRoster(run: RunState, update: (unit: UnitSnapshot) => UnitSnapshot): RunState {
   return freeze({ ...run, roster: run.roster.map(update) });
 }
@@ -412,6 +398,7 @@ function freeze(run: RunState): RunState {
         Object.freeze({ ...unit, items: Object.freeze(unit.items.map((item) => Object.freeze({ ...item }))) }),
       ),
     ),
+    relics: Object.freeze([...run.relics]),
     ...(run.pendingReward && { pendingReward: Object.freeze({ ...run.pendingReward }) }),
   });
 }

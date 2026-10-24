@@ -680,3 +680,78 @@ describe('getForecastHealthAfter', () => {
     }
   });
 });
+
+describe('combat with modifiers', () => {
+  const fighter = (overrides: Partial<Combatant> = {}): Combatant => ({
+    health: 20,
+    maxHealth: 20,
+    strength: 6,
+    defense: 1,
+    skill: 5,
+    speed: 3,
+    luck: 2,
+    weapon: arms({ might: 2, crit: 5 }),
+    ...overrides,
+  });
+
+  it('reads the same as before with no modifiers', () => {
+    const plain = getCombatForecast(fighter(), fighter(), { distance: 1 });
+    const empty = getCombatForecast(fighter({ modifiers: [] }), fighter({ modifiers: [] }), { distance: 1 });
+    expect(empty).toEqual(plain);
+  });
+
+  it('adds hit, avoid and crit bonuses to the forecast', () => {
+    const plain = getCombatForecast(fighter(), fighter(), { distance: 1 });
+    const keen = getCombatForecast(
+      fighter({
+        modifiers: [
+          { kind: 'combat', term: 'hit', amount: 15 },
+          { kind: 'combat', term: 'crit', amount: 10 },
+        ],
+      }),
+      fighter({ modifiers: [{ kind: 'combat', term: 'avoid', amount: 5 }] }),
+      { distance: 1 },
+    );
+    expect(keen.attacker.hit).toBe(Math.min(100, plain.attacker.hit! + 15 - 5));
+    expect(keen.attacker.crit).toBe(plain.attacker.crit! + 10);
+  });
+
+  it('applies damage and guard bonuses by who attacks', () => {
+    const modifiers = [
+      { kind: 'combat', term: 'damage', amount: 2, when: 'attacking' },
+      { kind: 'combat', term: 'guard', amount: 3, when: 'defending' },
+    ] as const;
+    const base = getCombatForecast(fighter(), fighter(), { distance: 1 });
+    const asAttacker = getCombatForecast(fighter({ modifiers }), fighter(), { distance: 1 });
+    expect(asAttacker.attacker.damage).toBe(base.attacker.damage! + 2);
+    expect(asAttacker.defender.damage).toBe(base.defender.damage);
+    const asDefender = getCombatForecast(fighter(), fighter({ modifiers }), { distance: 1 });
+    expect(asDefender.attacker.damage).toBe(base.attacker.damage! - 3);
+    expect(asDefender.defender.damage).toBe(base.defender.damage);
+  });
+
+  it('counts vs-monster and wounded bonuses only when they hold', () => {
+    const hunter = fighter({ modifiers: [{ kind: 'combat', term: 'damage', amount: 3, when: 'vs-monster' }] });
+    const base = getCombatForecast(fighter(), fighter(), { distance: 1 }).attacker.damage!;
+    expect(getCombatForecast(hunter, fighter(), { distance: 1 }).attacker.damage).toBe(base);
+    expect(getCombatForecast(hunter, fighter({ monster: true }), { distance: 1 }).attacker.damage).toBe(base + 3);
+    const wrath = [{ kind: 'combat', term: 'damage', amount: 4, when: 'wounded' }] as const;
+    expect(getCombatForecast(fighter({ modifiers: wrath }), fighter(), { distance: 1 }).attacker.damage).toBe(base);
+    expect(
+      getCombatForecast(fighter({ modifiers: wrath, health: 9 }), fighter(), { distance: 1 }).attacker.damage,
+    ).toBe(base + 4);
+  });
+
+  it('never lets guard take damage below zero', () => {
+    const wall = fighter({ modifiers: [{ kind: 'combat', term: 'guard', amount: 50 }] });
+    expect(getCombatForecast(fighter(), wall, { distance: 1 }).attacker.damage).toBe(0);
+  });
+
+  it('resolves the exchange the forecast shows', () => {
+    const attacker = fighter({ modifiers: [{ kind: 'combat', term: 'damage', amount: 2, when: 'attacking' }] });
+    const defender = fighter({ modifiers: [{ kind: 'combat', term: 'guard', amount: 1 }] });
+    const forecast = getCombatForecast(attacker, defender, { distance: 1 });
+    const { strikes } = resolveCombat(attacker, defender, { distance: 1, rng: rolls(0, 0.999, 0, 0.999, 0, 0.999) });
+    for (const strike of strikes) expect(strike.damage).toBe(forecast[strike.by].damage);
+  });
+});

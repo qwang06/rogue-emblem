@@ -3,8 +3,12 @@
 // whole percentage, and what a strike actually rolls against is the
 // attacker's rate minus the defender's, clamped to 0–100. The unit's
 // equipped weapon (see weapons.ts) adds its hit and crit, and its weight
-// together with its worn armor's slows a unit weaker than the load. No Phaser, no hidden state; randomness
+// together with its worn armor's slows a unit weaker than the load, and
+// its modifiers' combat bonus (see modifiers.ts) adds to the rates. No
+// Phaser, no hidden state; randomness
 // comes in through an injected `rng` (() => [0, 1)).
+
+import type { CombatBonus } from './modifiers.ts';
 
 // A crit deals this many times the strike's damage.
 export const CRIT_MULTIPLIER = 3;
@@ -20,7 +24,9 @@ export interface WeaponStatLine {
 
 // The stats these formulas read. Missing stats count as 0; a unit without
 // a weapon adds no hit or crit and carries no weight. `armorWeight` is what
-// its worn armor weighs (see getArmorWeight in items.ts).
+// its worn armor weighs (see getArmorWeight in items.ts). `bonus` is what
+// its modifiers add for the exchange at hand (see withCombatBonus in
+// combat.ts); missing terms count as 0.
 export interface CombatStatLine {
   strength?: number;
   skill?: number;
@@ -28,6 +34,7 @@ export interface CombatStatLine {
   luck?: number;
   armorWeight?: number;
   weapon?: WeaponStatLine | null;
+  bonus?: Partial<CombatBonus>;
 }
 
 // A source of randomness in [0, 1), like Math.random.
@@ -45,19 +52,22 @@ export function getAttackSpeed(unit: CombatStatLine): number {
   return (unit.speed ?? 0) - Math.max(0, weight - (unit.strength ?? 0));
 }
 
-// The attacker's raw hit rate: weapon hit + skill × 2 + luck / 2.
+// The attacker's raw hit rate: weapon hit + skill × 2 + luck / 2, plus
+// its hit bonus.
 export function getHit(unit: CombatStatLine): number {
-  return (unit.weapon?.hit ?? 0) + (unit.skill ?? 0) * 2 + Math.floor((unit.luck ?? 0) / 2);
+  return (unit.weapon?.hit ?? 0) + (unit.skill ?? 0) * 2 + Math.floor((unit.luck ?? 0) / 2) + (unit.bonus?.hit ?? 0);
 }
 
-// How well a unit evades: attack speed × 2 + luck (terrain bonuses come later).
+// How well a unit evades: attack speed × 2 + luck, plus its avoid bonus
+// (terrain bonuses come later).
 export function getAvoid(unit: CombatStatLine): number {
-  return getAttackSpeed(unit) * 2 + (unit.luck ?? 0);
+  return getAttackSpeed(unit) * 2 + (unit.luck ?? 0) + (unit.bonus?.avoid ?? 0);
 }
 
-// The attacker's raw crit rate: weapon crit + skill / 2.
+// The attacker's raw crit rate: weapon crit + skill / 2, plus its crit
+// bonus.
 export function getCrit(unit: CombatStatLine): number {
-  return (unit.weapon?.crit ?? 0) + Math.floor((unit.skill ?? 0) / 2);
+  return (unit.weapon?.crit ?? 0) + Math.floor((unit.skill ?? 0) / 2) + (unit.bonus?.crit ?? 0);
 }
 
 // How well a unit wards off crits: its luck.

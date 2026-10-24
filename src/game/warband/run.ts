@@ -7,6 +7,9 @@
 // pure: each function returns a new frozen run and leaves its input alone.
 
 import { HEAL_STAFF } from '../healing.ts';
+import { applyModifiers } from '../modifiers.ts';
+import { getBoonModifiers } from './boons.ts';
+import { getRelicModifiers, hasRelic, PHOENIX_FEATHER } from './relics.ts';
 import { ARMORS, HEALTH_POTION, MANA_POTION, type Inventory, type Item } from '../items.ts';
 import { createSeededRng } from '../rng.ts';
 import type { TomeProgress } from '../tomes.ts';
@@ -37,7 +40,8 @@ export interface ItemSnapshot {
 // run; `classId` is one of UNIT_CLASSES' ids, which supplies what isn't
 // stored (movement, weapon types, growths, caps). `tomeProgress` is how far
 // it is into learning each tome it has struck with (see tomes.ts), absent
-// when it's learning none.
+// when it's learning none; `boons` the level-up boons it has taken (see
+// boons.ts), absent when it has none.
 export interface UnitSnapshot {
   id: string;
   name: string;
@@ -57,6 +61,14 @@ export interface UnitSnapshot {
   resistance: number;
   items: readonly ItemSnapshot[];
   tomeProgress?: TomeProgress;
+  boons?: readonly string[];
+}
+
+// A level-up boon pick still owed: the unit and the level it reached (see
+// levelUpPicks.ts).
+export interface PendingBoon {
+  unitId: string;
+  level: number;
 }
 
 export interface RunState {
@@ -69,7 +81,7 @@ export interface RunState {
   // Items held for the warband rather than by a unit.
   convoy: readonly ItemSnapshot[];
   gold: number;
-  // Relic ids (relics arrive with W.5).
+  // The relics the warband holds, by id (see relics.ts), in the order won.
   relics: readonly string[];
   // How many units deploy to a stage.
   deployCap: number;
@@ -83,6 +95,9 @@ export interface RunState {
   // Cleared stage awaiting a separate recruitment choice.
   pendingRecruitment?: number;
   pendingGuest?: UnitSnapshot;
+  // Level-up boon picks still owed, oldest first (see levelUpPicks.ts), so
+  // a run saved before them reopens on them; absent when none are.
+  pendingBoons?: readonly PendingBoon[];
 }
 
 // A reward pick still owed after a won stage: the stage cleared, how many
@@ -99,10 +114,11 @@ export interface PendingReward {
 // the battle (dead ones with 0 health). Units that aren't on the roster
 // (enemies) are ignored, and roster units that didn't deploy are absent.
 // `convoy` is what the battle sent to the convoy (loot a full-handed unit
-// couldn't carry), if anything.
+// couldn't carry), if anything, and `kills` how many enemies it defeated.
 export interface BattleResult {
   units: ReadonlyMap<string, Unit>;
   convoy?: readonly ItemSnapshot[];
+  kills?: number;
 }
 
 // The stats a snapshot stores besides its identity and inventory.
@@ -151,11 +167,13 @@ export function snapshotUnit(id: string, unit: Unit): UnitSnapshot {
     ...stats,
     items: unit.items.map(({ item, quantity }) => ({ itemId: item.id, quantity })),
     ...(Object.keys(unit.tomeProgress).length > 0 && { tomeProgress: unit.tomeProgress }),
+    ...(unit.boons.length > 0 && { boons: unit.boons }),
   });
 }
 
 // A player Unit rebuilt from `snapshot`: its class's unit with the
-// snapshot's name, level, XP, stats, inventory and tome progress. Throws on an unknown
+// snapshot's name, level, XP, stats, inventory, tome progress and boons,
+// carrying its boons' modifiers (see applyModifiers). Throws on an unknown
 // class or item.
 export function restoreUnit(
   snapshot: UnitSnapshot,
@@ -169,16 +187,21 @@ export function restoreUnit(
   );
   for (const field of STAT_FIELDS) unit[field] = snapshot[field];
   unit.tomeProgress = Object.freeze({ ...snapshot.tomeProgress });
-  return unit;
+  unit.boons = Object.freeze([...(snapshot.boons ?? [])]);
+  return applyModifiers(unit, getBoonModifiers(unit.boons));
 }
 
-// The run's roster as Units by unitId, ready to put in a battle.
+// The run's roster as Units by unitId, ready to put in a battle, each
+// carrying the run's relics' modifiers on top of its boons'.
 export function restoreRoster(
   run: RunState,
   classes?: readonly UnitClass[],
   items?: readonly Item[],
 ): Map<string, Unit> {
-  return new Map(run.roster.map((snapshot) => [snapshot.id, restoreUnit(snapshot, classes, items)]));
+  const relics = getRelicModifiers(run.relics);
+  return new Map(
+    run.roster.map((snapshot) => [snapshot.id, applyModifiers(restoreUnit(snapshot, classes, items), relics)]),
+  );
 }
 
 // Inventory entries for item snapshots, looking each id up in `items`.
@@ -194,11 +217,14 @@ export function restoreInventory(snapshots: readonly ItemSnapshot[], items: read
 // The run after a battle: each roster unit in result.units has its XP,
 // levels, stats, HP and inventory (spent weapon uses, broken weapons,
 // used items) written back, and those that died move from the roster to
-// `fallen`. Undeployed units are unchanged. Items the battle sent to the
-// convoy join the end of it. The stage doesn't advance (see advanceStage).
+// `fallen` — except that with the Phoenix Feather the first of them (in
+// roster order) stays on at 1 HP instead, and the feather is spent.
+// Undeployed units are unchanged. Items the battle sent to the convoy join
+// the end of it. The stage doesn't advance (see advanceStage).
 export function applyBattleResult(run: RunState, result: BattleResult): RunState {
   const roster: UnitSnapshot[] = [];
   const fallen = [...run.fallen];
+  let relics = run.relics;
   for (const snapshot of run.roster) {
     const unit = result.units.get(snapshot.id);
     if (!unit) {
@@ -207,9 +233,12 @@ export function applyBattleResult(run: RunState, result: BattleResult): RunState
     }
     const after = snapshotUnit(snapshot.id, unit);
     if (unit.isAlive()) roster.push(after);
-    else fallen.push(after);
+    else if (hasRelic({ relics }, PHOENIX_FEATHER)) {
+      relics = relics.filter((id) => id !== PHOENIX_FEATHER.id);
+      roster.push({ ...after, health: 1 });
+    } else fallen.push(after);
   }
-  return freezeRun({ ...run, roster, fallen, convoy: [...run.convoy, ...(result.convoy ?? [])] });
+  return freezeRun({ ...run, roster, fallen, relics, convoy: [...run.convoy, ...(result.convoy ?? [])] });
 }
 
 // The run moved on to its next stage.
@@ -286,6 +315,7 @@ export function parseRun(
     pendingReward,
     pendingRecruitment,
     pendingGuest,
+    pendingBoons,
   } = data;
   const itemIds = new Set(items.map((item) => item.id));
   const classIds = new Set(classes.map((unitClass) => unitClass.id));
@@ -308,7 +338,8 @@ export function parseRun(
     (pendingReward !== undefined && !isPendingReward(pendingReward)) ||
     (pendingRecruitment !== undefined && (!isWholeNumber(pendingRecruitment) || pendingRecruitment < 1)) ||
     (pendingGuest !== undefined && !isUnitSnapshot(pendingGuest, classIds, isItems)) ||
-    (pendingGuest === undefined) !== (pendingRecruitment === undefined)
+    (pendingGuest === undefined) !== (pendingRecruitment === undefined) ||
+    (pendingBoons !== undefined && !isPendingBoons(pendingBoons))
   ) {
     return null;
   }
@@ -325,7 +356,17 @@ export function parseRun(
     ...(pendingReward !== undefined && { pendingReward }),
     ...(pendingRecruitment !== undefined && { pendingRecruitment }),
     ...(pendingGuest !== undefined && { pendingGuest }),
+    ...(pendingBoons !== undefined && { pendingBoons }),
   });
+}
+
+function isPendingBoons(value: unknown): value is PendingBoon[] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (entry) => isRecord(entry) && typeof entry.unitId === 'string' && isWholeNumber(entry.level) && entry.level >= 1,
+    )
+  );
 }
 
 function isPendingReward(value: unknown): value is PendingReward {
@@ -355,7 +396,8 @@ function isUnitSnapshot(
     (value.health as number) <= (value.maxHealth as number) &&
     (value.mana as number) <= (value.maxMana as number) &&
     isItems(value.items) &&
-    (value.tomeProgress === undefined || isTomeProgress(value.tomeProgress))
+    (value.tomeProgress === undefined || isTomeProgress(value.tomeProgress)) &&
+    (value.boons === undefined || (Array.isArray(value.boons) && value.boons.every((boon) => typeof boon === 'string')))
   );
 }
 
@@ -382,11 +424,12 @@ function isWholeNumber(value: unknown): value is number {
 }
 
 function freezeSnapshot(snapshot: UnitSnapshot): UnitSnapshot {
-  const { tomeProgress } = snapshot;
+  const { tomeProgress, boons } = snapshot;
   return Object.freeze({
     ...snapshot,
     items: freezeItems(snapshot.items),
     ...(tomeProgress && { tomeProgress: Object.freeze({ ...tomeProgress }) }),
+    ...(boons && { boons: Object.freeze([...boons]) }),
   });
 }
 
@@ -403,5 +446,8 @@ function freezeRun(run: RunState): RunState {
     fallen: Object.freeze(run.fallen.map(freezeSnapshot)),
     ...(run.pendingReward && { pendingReward: Object.freeze({ ...run.pendingReward }) }),
     ...(run.pendingGuest && { pendingGuest: freezeSnapshot(run.pendingGuest) }),
+    ...(run.pendingBoons && {
+      pendingBoons: Object.freeze(run.pendingBoons.map((pending) => Object.freeze({ ...pending }))),
+    }),
   });
 }

@@ -26,7 +26,11 @@ import type { Team, TurnState } from '../game/turns.ts';
 import type { RunState, UnitSnapshot } from '../game/warband/run.ts';
 import { describeReward, previewRewardHealth, type Reward, type RewardKind } from '../game/warband/rewards.ts';
 import type { MenuAction } from '../game/actionMenu.ts';
-import { getLearnedSkills } from '../game/skills.ts';
+import { getUnitSkills } from '../game/skills.ts';
+import { getStandingCombatBonus } from '../game/modifiers.ts';
+import { findBoon, type BoonKind } from '../game/warband/boons.ts';
+import type { BoonOffer } from '../game/warband/levelUpPicks.ts';
+import { findRelic, type Relic } from '../game/warband/relics.ts';
 import type { Unit } from '../game/Unit.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
 import { formatWeaponRange, type WeaponType } from '../game/weapons.ts';
@@ -102,7 +106,8 @@ export interface SkillView {
 
 // The unit info screen's full stat sheet: everything the hover panel shows
 // plus the class name, stat caps, the rates it fights with, its equipped
-// weapon's numbers, the weapon types it can wield and the skills it knows.
+// weapon's numbers, the weapon types it can wield, the skills it knows and
+// the passive boons it has taken (see warband/boons.ts).
 export interface UnitDetailView extends UnitView {
   maxLevel: boolean;
   stats: readonly StatLineView[];
@@ -115,6 +120,7 @@ export interface UnitDetailView extends UnitView {
   equippedWeapon: WeaponDetailView | null;
   weaponTypes: readonly WeaponType[];
   skills: readonly SkillView[];
+  passives: readonly { id: string; label: string; description: string }[];
 }
 
 // The visible world rectangle's top-left plus the zoom.
@@ -202,6 +208,20 @@ export interface LevelUpView {
   durationMs: number;
 }
 
+// Whose level up the boon pick on the reward screen is for.
+export interface BoonPickView {
+  name: string;
+  classLabel: string;
+  level: number;
+}
+
+// A relic as the camp lists it.
+export interface RelicView {
+  id: string;
+  name: string;
+  description: string;
+}
+
 export interface TurnView {
   turn: number;
   team: Team;
@@ -219,10 +239,14 @@ export interface ObjectiveView extends ObjectiveText {
 }
 
 // A reward offered after a Warband Mode stage, as a menu entry. A recruit
-// carries its stat line, so it can be judged before it's picked.
+// carries its stat line, so it can be judged before it's picked. A level
+// up's boons (toBoonActions) are cards on the same screen.
 export interface RewardAction extends MenuAction {
-  // A reward's kind, or 'skip' / 'reroll' for the buttons under the cards.
-  kind: RewardKind | 'skip' | 'reroll' | 'decline';
+  // A reward's kind, 'boon' for a level up's boon, or 'skip' / 'reroll' /
+  // 'decline' for the buttons under the cards.
+  kind: RewardKind | 'boon' | 'skip' | 'reroll' | 'decline';
+  // The card's small caption when it isn't the kind, e.g. a boon's kind.
+  tag?: string;
   description: string;
   stats: readonly { label: string; value: number }[] | null;
   // Each roster unit's HP after taking it, in roster order, for a reward
@@ -349,6 +373,16 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
   const equipped = unit.equippedWeapon;
   const weapon = equipped?.weapon ?? null;
   const damageType = getDamageType(unit);
+  // The rates count the modifiers that hold in any exchange.
+  const bonus = getStandingCombatBonus(unit.modifiers);
+  const rates = {
+    skill: unit.skill,
+    luck: unit.luck,
+    speed: unit.speed,
+    strength: unit.strength,
+    armorWeight: unit.armorWeight,
+    weapon,
+  };
   return Object.freeze({
     ...view,
     maxLevel: unit.level >= MAX_LEVEL,
@@ -356,10 +390,10 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
       DETAIL_STATS.map(([id, label]) => Object.freeze({ id, label, value: unit[id], cap: unit.caps[id] ?? null })),
     ),
     damageType,
-    attack: unit[DAMAGE_TYPES[damageType].power] + (weapon?.might ?? 0),
-    hit: getHit(unit),
-    avoid: getAvoid(unit),
-    crit: getCrit(unit),
+    attack: unit[DAMAGE_TYPES[damageType].power] + (weapon?.might ?? 0) + bonus.damage,
+    hit: getHit({ ...rates, bonus }),
+    avoid: getAvoid({ ...rates, bonus }),
+    crit: getCrit({ ...rates, bonus }),
     attackSpeed: getAttackSpeed(unit),
     equippedWeapon: weapon
       ? Object.freeze({
@@ -376,9 +410,13 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
       : null,
     weaponTypes: unit.weaponTypes,
     skills: Object.freeze(
-      getLearnedSkills(unit.unitClass, unit.level).map(({ id, label, manaCost, range }) =>
-        Object.freeze({ id, label, manaCost, range }),
-      ),
+      getUnitSkills(unit).map(({ id, label, manaCost, range }) => Object.freeze({ id, label, manaCost, range })),
+    ),
+    passives: Object.freeze(
+      unit.boons
+        .map(findBoon)
+        .filter((boon) => boon?.kind === 'passive')
+        .map((boon) => Object.freeze({ id: boon!.id, label: boon!.name, description: boon!.description })),
     ),
   });
 }
@@ -686,6 +724,51 @@ export function toRewardAction(reward: Reward, index: number, run: RunState | nu
     : null;
   const healthAfter = run && previewRewardHealth(run, reward);
   return Object.freeze({ id: `${reward.kind}-${index}`, label, kind: reward.kind, description, stats, healthAfter });
+}
+
+// The captions boon cards carry, by boon kind.
+const BOON_TAGS: Readonly<Record<BoonKind, string>> = Object.freeze({
+  stat: 'stat',
+  skill: 'skill',
+  passive: 'passive',
+});
+
+// A level up's boon pick (see warband/levelUpPicks.ts) as the reward
+// screen's cards, one per boon, with no buttons under them.
+export function toBoonActions(offer: BoonOffer): readonly RewardAction[] {
+  return Object.freeze(
+    offer.boons.map((boon, index) =>
+      Object.freeze({
+        id: `boon-${index}-${boon.id}`,
+        label: boon.name,
+        kind: 'boon' as const,
+        tag: BOON_TAGS[boon.kind],
+        description: boon.description,
+        stats: null,
+        healthAfter: null,
+      }),
+    ),
+  );
+}
+
+// Whose level up `offer` is, for the reward screen's header.
+export function toBoonPickView(offer: BoonOffer): BoonPickView {
+  return Object.freeze({
+    name: offer.unit.name,
+    classLabel: UNIT_CLASSES.find((unitClass) => unitClass.id === offer.unit.classId)?.label ?? offer.unit.classId,
+    level: offer.level,
+  });
+}
+
+// The relics `relicIds` names, in order, for the camp's list; unknown ids
+// are left out.
+export function toRelicViews(relicIds: readonly string[]): readonly RelicView[] {
+  return Object.freeze(
+    relicIds
+      .map(findRelic)
+      .filter((relic): relic is Relic => relic !== null)
+      .map(({ id, name, description }) => Object.freeze({ id, name, description })),
+  );
 }
 
 // Snapshot of what a cleared stage paid (see getStageClearGold).

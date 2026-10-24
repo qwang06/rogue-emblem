@@ -8,6 +8,8 @@ import { IRON_SPEAR, weaponEntry, FISTS } from '../weapons.ts';
 import { applyCommand, BattleCommandError, type BattleCommand, type BattleEvent } from './commands.ts';
 import { createBattleState, getDeployedUnits, type BattleState } from './state.ts';
 import { createTestBattle, makeTestUnit } from './testLevel.ts';
+import type { Modifier } from '../modifiers.ts';
+import { POWER_STRIKE } from '../skills.ts';
 
 function run(state: BattleState, ...commands: BattleCommand[]) {
   const events: BattleEvent[] = [];
@@ -229,6 +231,76 @@ describe('skill', () => {
     expect(() =>
       applyCommand(start, { type: 'skill', unitId: 'hero', skillId: 'power-strike', target: { x: 4, y: 0 } }),
     ).toThrow(/doesn't know/);
+  });
+});
+
+describe('modifiers', () => {
+  // A hero next to a foe it kills in one 6-damage hit.
+  function finisher(modifiers: Modifier[], heroOptions = {}) {
+    const hero = makeTestUnit({ team: 'player', ...heroOptions });
+    hero.modifiers = modifiers;
+    return createTestBattle({
+      hero: { unit: hero, at: { x: 0, y: 0 } },
+      foe: { unit: makeTestUnit({ team: 'enemy', health: 6 }), at: { x: 1, y: 0 } },
+      other: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 7, y: 0 } },
+    });
+  }
+  const strike = { type: 'attack', unitId: 'hero', target: { x: 1, y: 0 } } as const;
+
+  it('heals a unit that defeats a foe by its kill-heal', () => {
+    const start = finisher([{ kind: 'kill-heal', amount: 4 }]);
+    start.units.get('hero')!.health = 10;
+    const { state, events } = run(start, strike);
+    expect(state.units.get('hero')!.health).toBe(14);
+    expect(events).toContainEqual({ type: 'recovered', unitId: 'hero', stat: 'health', amount: 4, trigger: 'kill' });
+  });
+
+  it('heals no more than the unit is missing, and nothing at full HP', () => {
+    const start = finisher([{ kind: 'kill-heal', amount: 4 }]);
+    start.units.get('hero')!.health = 18;
+    expect(run(start, strike).state.units.get('hero')!.health).toBe(20);
+    const full = run(finisher([{ kind: 'kill-heal', amount: 4 }]), strike);
+    expect(types(full.events)).not.toContain('recovered');
+  });
+
+  it('spares the weapon on a killing blow with spare-weapon-on-kill', () => {
+    const uses = (state: BattleState) => state.units.get('hero')!.weaponUses;
+    const before = uses(finisher([]));
+    expect(uses(run(finisher([]), strike).state)).toBe(before! - 1);
+    expect(uses(run(finisher([{ kind: 'spare-weapon-on-kill' }]), strike).state)).toBe(before);
+  });
+
+  it("recovers HP and MP as the unit's phase starts", () => {
+    const hero = makeTestUnit({ team: 'player', mana: 5 });
+    hero.modifiers = [
+      { kind: 'phase-heal', amount: 2 },
+      { kind: 'phase-mana', amount: 1 },
+    ];
+    hero.health = 10;
+    hero.mana = 0;
+    const start = createTestBattle({
+      hero: { unit: hero, at: { x: 0, y: 0 } },
+      foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 7, y: 0 } },
+    });
+    // Starting the battle began the player phase.
+    expect(start.units.get('hero')!).toMatchObject({ health: 12, mana: 1 });
+    const { state, events } = run(start, { type: 'end-phase' }, { type: 'end-phase' });
+    expect(state.units.get('hero')!).toMatchObject({ health: 14, mana: 2 });
+    expect(events.filter((event) => event.type === 'recovered')).toEqual([
+      { type: 'recovered', unitId: 'hero', stat: 'health', amount: 2, trigger: 'phase' },
+      { type: 'recovered', unitId: 'hero', stat: 'mana', amount: 1, trigger: 'phase' },
+    ]);
+  });
+
+  it('uses a skill a modifier taught', () => {
+    const hero = makeTestUnit({ team: 'player', mana: 4 });
+    hero.modifiers = [{ kind: 'skill', skill: POWER_STRIKE }];
+    const start = createTestBattle({
+      hero: { unit: hero, at: { x: 0, y: 0 } },
+      foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 1, y: 0 } },
+    });
+    const { events } = run(start, { type: 'skill', unitId: 'hero', skillId: 'power-strike', target: { x: 1, y: 0 } });
+    expect(events[0]).toMatchObject({ type: 'skill', damage: 9 });
   });
 });
 

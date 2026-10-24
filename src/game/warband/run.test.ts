@@ -383,3 +383,73 @@ describe('serializeRun and parseRun', () => {
     for (const bad of cases) expect(parseRun(JSON.stringify(bad))).toBeNull();
   });
 });
+
+describe('boons and relics on the roster', () => {
+  it('round-trips a unit with boons, giving it their modifiers', () => {
+    const unit = new Soldier({ name: 'Alden', team: 'player' });
+    unit.boons = ['fleet', 'stat-speed'];
+    const snapshot = snapshotUnit('alden', unit);
+    expect(snapshot.boons).toEqual(['fleet', 'stat-speed']);
+    const restored = restoreUnit(snapshot);
+    expect(restored.boons).toEqual(['fleet', 'stat-speed']);
+    expect(restored.movement).toBe(unit.movement + 1);
+    expect(restored.modifiers).toEqual([{ kind: 'movement', amount: 1 }]);
+    // The baked-in movement isn't saved back.
+    expect(snapshotUnit('alden', restored)).toEqual(snapshot);
+  });
+
+  it('leaves boons off a snapshot without any', () => {
+    expect(snapshotUnit('alden', new Soldier({ team: 'player' }))).not.toHaveProperty('boons');
+  });
+
+  it("gives every roster unit the run's relic modifiers on top of its boons'", () => {
+    const run = startingRun();
+    const withBoon = { ...run.roster[0], boons: ['keen-eye'] };
+    const relicRun = { ...run, relics: ['winged-boots', 'hawk-lens'], roster: [withBoon, ...run.roster.slice(1)] };
+    const plain = restoreRoster(run);
+    const units = restoreRoster(relicRun);
+    for (const [id, unit] of units) expect(unit.movement).toBe(plain.get(id)!.movement + 1);
+    expect(units.get('alden')!.modifiers).toEqual([
+      { kind: 'combat', term: 'hit', amount: 15 },
+      { kind: 'movement', amount: 1 },
+      { kind: 'combat', term: 'hit', amount: 15 },
+    ]);
+  });
+
+  it('saves and loads boons and owed boon picks, and refuses broken ones', () => {
+    const run = startingRun();
+    const owing = {
+      ...run,
+      roster: [{ ...run.roster[0], boons: ['fleet'] }, ...run.roster.slice(1)],
+      pendingBoons: [{ unitId: 'alden', level: 2 }],
+    };
+    expect(parseRun(serializeRun(owing))).toEqual(owing);
+    expect(parseRun(JSON.stringify({ ...owing, pendingBoons: [{ unitId: 'alden', level: 0 }] }))).toBeNull();
+    expect(parseRun(JSON.stringify({ ...owing, pendingBoons: 'x' }))).toBeNull();
+    const badBoons = { ...run, roster: [{ ...run.roster[0], boons: [3] }] };
+    expect(parseRun(JSON.stringify(badBoons))).toBeNull();
+  });
+});
+
+describe('Phoenix Feather', () => {
+  it('keeps the first ally to fall on the roster at 1 HP, once', () => {
+    const run = { ...startingRun(), relics: ['phoenix-feather', 'hawk-lens'] };
+    const units = restoreRoster(run);
+    units.get('alden')!.takeDamage(99);
+    units.get('bryn')!.takeDamage(99);
+    const after = applyBattleResult(run, { units });
+    expect(after.roster.map((unit) => [unit.id, unit.health])).toEqual([
+      ['alden', 1],
+      ['cato', units.get('cato')!.health],
+    ]);
+    expect(after.fallen.map((unit) => unit.id)).toEqual(['bryn']);
+    expect(after.relics).toEqual(['hawk-lens']);
+  });
+
+  it('does nothing without the feather', () => {
+    const run = startingRun();
+    const units = restoreRoster(run);
+    units.get('alden')!.takeDamage(99);
+    expect(applyBattleResult(run, { units }).fallen.map((unit) => unit.id)).toEqual(['alden']);
+  });
+});

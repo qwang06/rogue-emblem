@@ -54,6 +54,8 @@ export const ORC_ITEMS: Inventory = Object.freeze([weaponEntry(GREAT_AXE)]);
 // orc stat line and no mana; it has no skill tree, wields physical
 // weapons, and fights with its Great Axe unless given other items.
 export class Orc extends Unit {
+  override monster = true;
+
   constructor({ name = 'Orc', team, level = 1, items = ORC_ITEMS }: ClassUnitOptions) {
     super({
       name,

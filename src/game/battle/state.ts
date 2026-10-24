@@ -88,6 +88,12 @@ export function getRunBattleUnits(state: BattleState): Map<string, Unit> {
   return units;
 }
 
+// How many enemies have fallen so far (a Bounty Ledger's pay, see
+// warband/relics.ts).
+export function getEnemyKills(state: BattleState): number {
+  return [...state.fallen.values()].filter((unit) => unit.team === 'enemy').length;
+}
+
 // What the objective is checked against: every unit still in play, where
 // it stands, and the turn.
 export function getBattleSnapshot(state: BattleState): BattleSnapshot {

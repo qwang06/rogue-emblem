@@ -1,6 +1,7 @@
 // Everything a player does in a Warband run between battles, as plain JSON
 // commands applied by one dispatcher, the way battle/commands.ts does it for
-// a battle: pick, skip or reroll the stage's reward, then at camp rest, buy,
+// a battle: pick the relic a run starts with, take each level up's boon,
+// pick, skip or reroll the stage's reward, then at camp rest, buy,
 // sell, move items between units and the convoy, and march on. The game's
 // screens send these, and so can a script or an AI (see runner.ts), so both
 // take the same path. Pure: each command takes a session to a new one and
@@ -30,14 +31,18 @@ import {
   type RewardLevelUp,
   type Reward,
 } from './rewards.ts';
+import { getBoonOffer, pickBoon, queueLevelUpBoons } from './levelUpPicks.ts';
+import { rollStartingRelics, type Relic } from './relics.ts';
 import { finishStage, snapshotUnit, type BattleResult, type RunState } from './run.ts';
 import { GUEST_UNIT_ID, rollGuest, settleGuest } from './recruitment.ts';
 import { MAX_ROSTER_SIZE } from './rewards.ts';
 import { applyStageClearExperience } from './stageClearExperience.ts';
 
-// Where a run stands: fighting its stage's battle, picking the reward a won
-// stage owes, at camp, or over (the warband fell).
-export type RunPhase = 'battle' | 'recruit' | 'reward' | 'camp' | 'over' | 'won';
+// Where a run stands: picking the relic it starts with, fighting its
+// stage's battle, taking the boons its level ups owe, recruiting a guest,
+// picking the reward a won stage owes, at camp, or over (the warband fell,
+// or won).
+export type RunPhase = 'relic' | 'battle' | 'boon' | 'recruit' | 'reward' | 'camp' | 'over' | 'won';
 
 export interface RunSession {
   readonly run: RunState;
@@ -45,6 +50,10 @@ export interface RunSession {
 }
 
 export type RunCommand =
+  // Takes starting relic `index` (see rollStartingRelics).
+  | { type: 'pick-relic'; index: number }
+  // Takes boon `index` of the first level-up pick owed (see getBoonOffer).
+  | { type: 'pick-boon'; index: number }
   | { type: 'pick-recruit'; index: number }
   | { type: 'decline-recruit' }
   // Takes offer `index` of the reward pick.
@@ -97,10 +106,25 @@ const CAMP_COMMANDS: ReadonlySet<RunCommandType> = new Set(['rest', 'buy', 'sell
 const REWARD_COMMANDS: ReadonlySet<RunCommandType> = new Set(['pick-reward', 'skip-reward', 'reroll-rewards']);
 const RECRUIT_COMMANDS: ReadonlySet<RunCommandType> = new Set(['pick-recruit', 'decline-recruit']);
 
-// A session for `run` as it was saved: on its reward pick if it owes one,
-// else about to fight its stage.
+// A new run's session, about to pick the relic it starts with.
+export function startRunSession(run: RunState): RunSession {
+  return freeze({ run, phase: 'relic' });
+}
+
+// A session for `run` as it was saved: on the boon, recruit or reward
+// pick it owes, in that order, else about to fight its stage.
 export function resumeRunSession(run: RunState): RunSession {
-  return freeze({ run, phase: run.pendingRecruitment ? 'recruit' : getPendingRewardOffer(run) ? 'reward' : 'battle' });
+  const phase = getPickPhase(run);
+  return freeze({ run, phase: phase === 'camp' ? 'battle' : phase });
+}
+
+// Where a won stage goes next: the boon picks its level ups owe, then the
+// guest's recruitment, then the reward pick, then camp.
+function getPickPhase(run: RunState): RunPhase {
+  if (getBoonOffer(run)) return 'boon';
+  if (run.pendingRecruitment) return 'recruit';
+  if (getPendingRewardOffer(run)) return 'reward';
+  return 'camp';
 }
 
 // The session after its stage's battle ends with `outcome` (see
@@ -118,8 +142,10 @@ export function finishBattle(
 // written back (finishStage). A defeat, or a win that leaves nobody, ends
 // the run; a win on `finalStage` wins it ('won'); any other win levels up
 // the units below the level the stage guarantees (applyStageClearExperience,
-// reported as a `level-ups` event), pays the clear's gold and owes the
-// reward pick, or goes straight to camp when there's nothing to offer.
+// reported as a `level-ups` event), owes a boon pick for every level the
+// stage gained (queueLevelUpBoons), pays the clear's gold (with the
+// Bounty Ledger's for `result.kills`) and owes the reward pick, or goes
+// straight to camp when there's nothing to offer.
 export function finishBattleWithEvents(
   session: RunSession,
   result: BattleResult,
@@ -133,8 +159,11 @@ export function finishBattleWithEvents(
     return { session: freeze({ run: finished.run, phase: finished.won ? 'won' : 'over' }), events: [] };
   const leveled = applyStageClearExperience(finished.run, before.stage);
   const events: RunEvent[] = leveled.levelUps.length > 0 ? [{ type: 'level-ups', levelUps: leveled.levelUps }] : [];
-  const clear = getStageClearGold(before.stage, finished.run.fallen.length - before.fallen.length);
-  const paid = addGold(leveled.run, clear.gold);
+  const clear = getStageClearGold(before.stage, finished.run.fallen.length - before.fallen.length, {
+    kills: result.kills,
+    relics: before.relics,
+  });
+  const paid = addGold(queueLevelUpBoons(before, leveled.run), clear.gold);
   const guest = result.units.get(GUEST_UNIT_ID);
   const candidate = guest?.isAlive() && paid.roster.length < MAX_ROSTER_SIZE ? rollGuest(before) : null;
   const pending =
@@ -144,18 +173,18 @@ export function finishBattleWithEvents(
           pendingGuest: Object.freeze({ ...snapshotUnit(candidate.id, guest), name: candidate.name }),
         }
       : {};
-  if (rollStageRewards(paid, before.stage).length === 0) {
-    const run = Object.freeze({ ...paid, ...pending });
-    return { session: freeze({ run, phase: candidate ? 'recruit' : 'camp' }), events };
-  }
-  const run = markRewardPending(paid, {
-    stage: before.stage,
-    rerolls: 0,
-    clearGold: clear.gold,
-    flawless: clear.flawless,
-  });
-  const owing = Object.freeze({ ...run, ...pending });
-  return { session: freeze({ run: owing, phase: candidate ? 'recruit' : 'reward' }), events };
+  const rewarded =
+    rollStageRewards(paid, before.stage).length === 0
+      ? paid
+      : markRewardPending(paid, { stage: before.stage, rerolls: 0, clearGold: clear.gold, flawless: clear.flawless });
+  const run = Object.freeze({ ...rewarded, ...pending });
+  return { session: freeze({ run, phase: getPickPhase(run) }), events };
+}
+
+// The relics a new run's session offers to start with, or none once it's
+// past that pick.
+export function getRelicOffers(session: RunSession): readonly Relic[] {
+  return session.phase === 'relic' ? rollStartingRelics(session.run.seed) : [];
 }
 
 export function getRecruitOffers(session: RunSession): readonly Reward[] {
@@ -179,28 +208,47 @@ export function applyRunCommand(session: RunSession, command: RunCommand): RunCo
   if (session.phase === 'camp' && !CAMP_COMMANDS.has(command.type)) fail(`${command.type} isn't done at camp`);
   if (session.phase === 'reward' && !REWARD_COMMANDS.has(command.type)) fail(`${command.type} isn't a reward pick`);
   if (session.phase === 'recruit' && !RECRUIT_COMMANDS.has(command.type)) fail(`${command.type} isn't a recruit pick`);
+  if (session.phase === 'relic' && command.type !== 'pick-relic') fail(`${command.type} isn't a relic pick`);
+  if (session.phase === 'boon' && command.type !== 'pick-boon') fail(`${command.type} isn't a boon pick`);
+  if (session.phase !== 'relic' && command.type === 'pick-relic') fail('The starting relic is already picked');
+  if (session.phase !== 'boon' && command.type === 'pick-boon') fail('No boon pick is owed');
   if (session.phase === 'battle' || session.phase === 'over' || session.phase === 'won')
     fail(`${command.type} isn't done during ${session.phase}`);
   const { run } = session;
   const camp = (next: RunState): RunCommandResult => ({ session: freeze({ run: next, phase: 'camp' }), events: [] });
 
+  const onward = (next: RunState, events: readonly RunEvent[] = []): RunCommandResult => ({
+    session: freeze({ run: next, phase: getPickPhase(next) }),
+    events,
+  });
+
   switch (command.type) {
+    case 'pick-relic': {
+      const relic = getRelicOffers(session)[command.index];
+      if (!relic) return fail(`No relic offer ${command.index}`);
+      return {
+        session: freeze({ run: Object.freeze({ ...run, relics: [...run.relics, relic.id] }), phase: 'battle' }),
+        events: [],
+      };
+    }
+    case 'pick-boon': {
+      const offer = getBoonOffer(run);
+      if (!offer?.boons[command.index]) return fail(`No boon offer ${command.index}`);
+      return onward(pickBoon(run, command.index));
+    }
     case 'pick-recruit': {
       const offer = getRecruitOffers(session)[command.index];
       if (!offer || offer.kind !== 'recruit') return fail(`No recruit offer ${command.index}`);
-      const next = settleGuest(run, true);
-      return { session: freeze({ run: next, phase: next.pendingReward ? 'reward' : 'camp' }), events: [] };
+      return onward(settleGuest(run, true));
     }
-    case 'decline-recruit': {
-      const next = settleGuest(run, false);
-      return { session: freeze({ run: next, phase: next.pendingReward ? 'reward' : 'camp' }), events: [] };
-    }
+    case 'decline-recruit':
+      return onward(settleGuest(run, false));
     case 'pick-reward': {
       const reward = getRewardOffers(session)[command.index];
       if (!reward) return fail(`No reward offer ${command.index}`);
       if (reward.kind !== 'lesson') return camp(applyReward(run, reward));
       const { run: next, levelUps } = applyLessonReward(run, reward);
-      return { session: freeze({ run: next, phase: 'camp' }), events: [{ type: 'level-ups', levelUps }] };
+      return onward(queueLevelUpBoons(run, next), [{ type: 'level-ups', levelUps }]);
     }
     case 'skip-reward':
       return camp(skipRewards(run, run.pendingReward!.stage));
@@ -242,11 +290,19 @@ export function applyRunCommand(session: RunSession, command: RunCommand): RunCo
 }
 
 // Every command the session accepts as it stands, for an AI to choose
-// from: each reward offer, skip, and reroll when affordable on the pick;
+// from: each starting relic or boon offered on those picks; each reward offer, skip, and reroll when affordable on the pick;
 // at camp, rest when it can, each affordable stock item, each sellable
 // convoy entry, each give, store and equip that's allowed, and march.
 export function getLegalRunCommands(session: RunSession, stock: readonly string[] = MERCHANT_STOCK): RunCommand[] {
   const commands: RunCommand[] = [];
+  if (session.phase === 'relic') {
+    getRelicOffers(session).forEach((_, index) => commands.push({ type: 'pick-relic', index }));
+    return commands;
+  }
+  if (session.phase === 'boon') {
+    getBoonOffer(session.run)?.boons.forEach((_, index) => commands.push({ type: 'pick-boon', index }));
+    return commands;
+  }
   if (session.phase === 'recruit') {
     getRecruitOffers(session).forEach((_, index) => commands.push({ type: 'pick-recruit', index }));
     commands.push({ type: 'decline-recruit' });

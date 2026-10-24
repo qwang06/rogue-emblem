@@ -54,6 +54,8 @@ export const GOBLIN_ITEMS: Inventory = Object.freeze([weaponEntry(CLUB)]);
 // goblin stat line and no mana; it has no skill tree, wields physical
 // weapons, and fights with its Club unless given other items.
 export class Goblin extends Unit {
+  override monster = true;
+
   constructor({ name = 'Goblin', team, level = 1, items = GOBLIN_ITEMS }: ClassUnitOptions) {
     super({
       name,

@@ -5,10 +5,16 @@
 // function returns a new frozen value and leaves its input alone.
 
 import type { MenuAction } from '../actionMenu.ts';
+import { FIELD_KITCHEN, hasRelic } from './relics.ts';
 import type { RunState } from './run.ts';
 
 // What a rest at camp costs: every unit back to full HP and mana.
 export const REST_COST = 15;
+
+// What a rest costs the run: REST_COST, or nothing with the Field Kitchen.
+export function getRestCost(run: Pick<RunState, 'relics'>): number {
+  return hasRelic(run, FIELD_KITCHEN) ? 0 : REST_COST;
+}
 
 export type CampActionId = 'roster' | 'merchant' | 'rest' | 'march';
 
@@ -23,7 +29,11 @@ export function getCampActions(run: RunState): readonly CampAction[] {
     [
       { id: 'roster', label: 'Manage Roster' },
       { id: 'merchant', label: 'Merchant' },
-      { id: 'rest', label: `Rest (${REST_COST} gold)`, disabled: !canRest(run) },
+      {
+        id: 'rest',
+        label: getRestCost(run) > 0 ? `Rest (${getRestCost(run)} gold)` : 'Rest (free)',
+        disabled: !canRest(run),
+      },
       { id: 'march', label: 'Next Stage' },
     ].map((action) => Object.freeze(action as CampAction)),
   );
@@ -36,16 +46,16 @@ export function needsRest(run: RunState): boolean {
 
 // Whether the warband can rest: someone needs it and the run has the gold.
 export function canRest(run: RunState): boolean {
-  return needsRest(run) && run.gold >= REST_COST;
+  return needsRest(run) && run.gold >= getRestCost(run);
 }
 
-// The run after resting: REST_COST spent and every unit at full HP and
+// The run after resting: getRestCost spent and every unit at full HP and
 // mana. Throws when it can't rest (see canRest).
 export function restAtCamp(run: RunState): RunState {
   if (!canRest(run)) throw new Error(needsRest(run) ? 'Not enough gold to rest' : 'Nobody needs rest');
   return Object.freeze({
     ...run,
-    gold: run.gold - REST_COST,
+    gold: run.gold - getRestCost(run),
     roster: Object.freeze(
       run.roster.map((unit) => Object.freeze({ ...unit, health: unit.maxHealth, mana: unit.maxMana })),
     ),

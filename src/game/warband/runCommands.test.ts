@@ -12,8 +12,10 @@ import {
   finishBattle,
   finishBattleWithEvents,
   getLegalRunCommands,
+  getRelicOffers,
   getRewardOffers,
   resumeRunSession,
+  startRunSession,
   RunCommandError,
   type RunCommand,
   type RunSession,
@@ -256,5 +258,93 @@ describe('getLegalRunCommands', () => {
 
   it('lists nothing during a battle', () => {
     expect(getLegalRunCommands(resumeRunSession(newRun()))).toEqual([]);
+  });
+});
+
+describe('starting relic pick', () => {
+  it('starts a new run on the relic pick, and takes the relic into the battle', () => {
+    const session = startRunSession(newRun(1));
+    expect(session.phase).toBe('relic');
+    const offers = getRelicOffers(session);
+    expect(offers).toHaveLength(3);
+    expect(getLegalRunCommands(session)).toEqual(offers.map((_, index) => ({ type: 'pick-relic', index })));
+    const picked = apply(session, { type: 'pick-relic', index: 1 });
+    expect(picked.phase).toBe('battle');
+    expect(picked.run.relics).toEqual([offers[1].id]);
+    expect(getRelicOffers(picked)).toEqual([]);
+  });
+
+  it('refuses anything else on the pick, and a second pick', () => {
+    const session = startRunSession(newRun(1));
+    expect(() => applyRunCommand(session, { type: 'march' })).toThrow(RunCommandError);
+    expect(() => applyRunCommand(session, { type: 'pick-relic', index: 3 })).toThrow(/3/);
+    const picked = apply(session, { type: 'pick-relic', index: 0 });
+    expect(() => applyRunCommand({ ...picked, phase: 'camp' }, { type: 'pick-relic', index: 0 })).toThrow(
+      RunCommandError,
+    );
+  });
+});
+
+describe('level-up boon picks', () => {
+  // Stage 1's clear levels both units to 2, so each owes a boon.
+  const cleared = () => {
+    const run = newRun(1);
+    return finishBattle(resumeRunSession(run), { units: restoreRoster(run) }, 'victory');
+  };
+
+  it('owes a boon per level the stage gained before the reward pick', () => {
+    const session = cleared();
+    expect(session.phase).toBe('boon');
+    expect(session.run.pendingBoons).toEqual([
+      { unitId: 'alden', level: 2 },
+      { unitId: 'cato', level: 2 },
+    ]);
+    expect(session.run.pendingReward).toBeDefined();
+    expect(resumeRunSession(session.run).phase).toBe('boon');
+    expect(getLegalRunCommands(session)).toHaveLength(3);
+  });
+
+  it('takes the boons one by one, then goes on to the reward pick', () => {
+    const first = apply(cleared(), { type: 'pick-boon', index: 0 });
+    expect(first.phase).toBe('boon');
+    expect(first.run.roster[0].boons).toHaveLength(1);
+    const second = apply(first, { type: 'pick-boon', index: 2 });
+    expect(second.phase).toBe('reward');
+    expect(second.run.roster[1].boons).toHaveLength(1);
+    expect(second.run.pendingBoons).toBeUndefined();
+    expect(() => applyRunCommand(second, { type: 'pick-boon', index: 0 })).toThrow(RunCommandError);
+  });
+
+  it('refuses other commands while a boon is owed', () => {
+    expect(() => applyRunCommand(cleared(), { type: 'pick-reward', index: 0 })).toThrow(/boon/);
+    expect(() => applyRunCommand(cleared(), { type: 'pick-boon', index: 7 })).toThrow(/7/);
+  });
+
+  it("owes boons for a Veteran's Lesson's level ups, then goes to camp", () => {
+    let session = won(newRun());
+    let tries = 0;
+    while (!getRewardOffers(session).some((reward) => reward.kind === 'lesson') && tries++ < 20) {
+      session = apply({ ...session, run: { ...session.run, gold: 1000 } }, { type: 'reroll-rewards' });
+    }
+    const index = getRewardOffers(session).findIndex((reward) => reward.kind === 'lesson');
+    const { session: after, events } = applyRunCommand(session, { type: 'pick-reward', index });
+    expect(events[0].type).toBe('level-ups');
+    expect(after.phase).toBe('boon');
+    const done = apply(after, { type: 'pick-boon', index: 0 }, { type: 'pick-boon', index: 0 });
+    expect(done.phase).toBe('camp');
+  });
+});
+
+describe('relics in the run rules', () => {
+  it("pays the Bounty Ledger's gold for kills with the clear", () => {
+    const run = { ...newRun(), relics: ['bounty-ledger'] };
+    const session = finishBattle(resumeRunSession(run), { units: restoreRoster(run), kills: 3 }, 'victory');
+    expect(session.run.gold).toBe(getStageClearGold(2, 0, { kills: 3, relics: ['bounty-ledger'] }).gold);
+    expect(session.run.pendingReward!.clearGold).toBe(session.run.gold);
+  });
+
+  it('offers four rewards with the Four-Leaf Clover', () => {
+    const run = { ...newRun(), relics: ['four-leaf-clover'] };
+    expect(getRewardOffers(won(run))).toHaveLength(4);
   });
 });

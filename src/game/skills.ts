@@ -1,10 +1,19 @@
 // Pure rules for unit skills. Each unit class has a skill tree: a list of
 // { level, skill } entries, and a unit knows every skill in its class's
-// tree whose level it has reached — so skills are gained by leveling up.
+// tree whose level it has reached — so skills are gained by leveling up —
+// plus any its modifiers teach it (a level-up boon, see modifiers.ts).
 // Using a skill costs mana. No Phaser, no rendering, no hidden state.
 
 import type { MenuAction } from './actionMenu.ts';
-import { calculateDamage, DAMAGE_TYPES, getDamageType, type DamageStats } from './combat.ts';
+import {
+  calculateDamage,
+  DAMAGE_TYPES,
+  getDamageType,
+  getFighterBonus,
+  type DamageStats,
+  type SkillFighter,
+} from './combat.ts';
+import { getModifierSkills, type Modifier } from './modifiers.ts';
 
 // A skill: { id, label, manaCost, range, animation, might?, damageScale? }.
 // Its damage is a variant of the user's regular hit: `might` (default 0)
@@ -126,6 +135,26 @@ export function getSkillsLearnedBetween(
   return tree.filter((entry) => entry.level > fromLevel && entry.level <= toLevel).map((entry) => entry.skill);
 }
 
+// What getUnitSkills reads off a unit.
+export interface SkillUser {
+  unitClass: string | null;
+  level: number;
+  modifiers?: readonly Modifier[];
+}
+
+// Every skill `unit` knows: its class's at its level (getLearnedSkills),
+// then those its modifiers teach that the class doesn't.
+export function getUnitSkills(unit: SkillUser, trees: SkillTrees = SKILL_TREES): Skill[] {
+  const learned = getLearnedSkills(unit.unitClass, unit.level, trees);
+  const taught = getModifierSkills(unit.modifiers).filter((skill) => !learned.some(({ id }) => id === skill.id));
+  return [...learned, ...taught];
+}
+
+// Finds a skill `unit` knows (getUnitSkills) by id, or null.
+export function findUnitSkill(unit: SkillUser, skillId: string, trees: SkillTrees = SKILL_TREES): Skill | null {
+  return getUnitSkills(unit, trees).find((skill) => skill.id === skillId) ?? null;
+}
+
 // Finds a skill the unit knows by id, or null.
 export function findLearnedSkill(
   unitClass: string | null,
@@ -140,14 +169,27 @@ export function findLearnedSkill(
 // regular hit (calculateDamage, of its weapon's damage type and with its
 // weapon's might) with the skill's `might` added to its attack power,
 // times its `damageScale`, rounded up — so a scaled-down hit that would
-// have dealt damage still deals at least 1. Never below zero. Skills
-// don't spend weapon uses.
-export function calculateSkillDamage(skill: Skill, user: DamageStats, defender: DamageStats): number {
+// have dealt damage still deals at least 1. Each side's modifiers count
+// as in an exchange the user started (withCombatBonus). Never below zero.
+// Skills don't spend weapon uses.
+export function calculateSkillDamage(skill: Skill, user: SkillFighter, defender: SkillFighter): number {
   const { power } = DAMAGE_TYPES[getDamageType(user)];
-  // Copied field by field: a Unit's weapon is a getter, which a spread drops.
-  const boosted: DamageStats = { strength: user.strength, magic: user.magic, weapon: user.weapon };
+  // Copied field by field: a Unit's weapon and armor are getters, which a
+  // spread drops.
+  const boosted: DamageStats = {
+    strength: user.strength,
+    magic: user.magic,
+    weapon: user.weapon,
+    bonus: getFighterBonus(user, defender, true),
+  };
   boosted[power] = (user[power] ?? 0) + (skill.might ?? 0);
-  return Math.ceil(calculateDamage(boosted, defender) * (skill.damageScale ?? 1));
+  const guarded: DamageStats = {
+    defense: defender.defense,
+    armorDefense: defender.armorDefense,
+    resistance: defender.resistance,
+    bonus: getFighterBonus(defender, user, false),
+  };
+  return Math.ceil(calculateDamage(boosted, guarded) * (skill.damageScale ?? 1));
 }
 
 export function canUseSkill(unit: { mana: number }, skill: Skill): boolean {
