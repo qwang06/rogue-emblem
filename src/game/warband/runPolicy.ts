@@ -47,6 +47,8 @@ export const REWARD_SCORES = Object.freeze({
   restPerMissing: 100,
   supplies: 10,
   gold: 20,
+  // The battle AI never uses skills, so a skill set is worth little to it.
+  scroll: 5,
 });
 
 // The relics the policy would rather start with, best first; any other
@@ -117,6 +119,8 @@ export function scoreReward(run: RunState, reward: Reward): number {
       return REWARD_SCORES.lesson;
     case 'supplies':
       return REWARD_SCORES.supplies;
+    case 'scroll':
+      return REWARD_SCORES.scroll;
     case 'gold':
       return REWARD_SCORES.gold;
   }

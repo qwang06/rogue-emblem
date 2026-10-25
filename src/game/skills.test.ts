@@ -5,6 +5,7 @@ import {
   THROW_STONES,
   POWER_STRIKE,
   CLEAVE,
+  SHIELD_BASH,
   calculateSkillDamage,
   canUseSkill,
   findLearnedSkill,
@@ -13,6 +14,12 @@ import {
   getLearnedSkills,
   getSkillActions,
   getSkillsLearnedBetween,
+  describeSkill,
+  getSecondarySkills,
+  getSkillHealAmount,
+  hasSkillTree,
+  isHealingSkill,
+  MEND,
   type Skill,
   type SkillTrees,
 } from './skills.ts';
@@ -276,6 +283,74 @@ describe('getUnitSkills', () => {
     expect(getUnitSkills({ unitClass: 'soldier', level: 1, modifiers: [{ kind: 'skill', skill: CLEAVE }] })).toEqual([
       CLEAVE,
     ]);
+  });
+});
+
+describe('getSecondarySkills', () => {
+  it("is the secondary class's skills at the unit's own level", () => {
+    expect(getSecondarySkills({ unitClass: 'archer', level: 2, secondaryClass: 'acolyte' })).toEqual([MEND]);
+    expect(getSecondarySkills({ unitClass: 'fighter', level: 3, secondaryClass: 'fighter' }, trees)).toEqual([]);
+    expect(getSecondarySkills({ unitClass: 'mage', level: 3, secondaryClass: 'fighter' }, trees)).toEqual([
+      bash,
+      rally,
+    ]);
+  });
+
+  it("is nothing below the set's first level, without a secondary, or for a class with no tree", () => {
+    expect(getSecondarySkills({ unitClass: 'archer', level: 1, secondaryClass: 'acolyte' })).toEqual([]);
+    expect(getSecondarySkills({ unitClass: 'archer', level: 5 })).toEqual([]);
+    expect(getSecondarySkills({ unitClass: 'archer', level: 5, secondaryClass: null })).toEqual([]);
+    expect(getSecondarySkills({ unitClass: 'fighter', level: 5, secondaryClass: 'mage' }, trees)).toEqual([]);
+  });
+
+  it("joins getUnitSkills after the class's own and before taught ones, without repeats", () => {
+    const guard = { unitClass: 'guard', level: 2, secondaryClass: 'vanguard' };
+    expect(getUnitSkills(guard)).toEqual([SHIELD_BASH, CLEAVE]);
+    const taught = { ...guard, modifiers: [{ kind: 'skill', skill: CLEAVE } as const] };
+    expect(getUnitSkills(taught)).toEqual([SHIELD_BASH, CLEAVE]);
+    expect(findUnitSkill(guard, 'cleave')).toBe(CLEAVE);
+  });
+});
+
+describe('hasSkillTree', () => {
+  it('is true for a class with skills to teach', () => {
+    expect(hasSkillTree('acolyte')).toBe(true);
+    expect(hasSkillTree('fighter', trees)).toBe(true);
+  });
+
+  it('is false for an empty, unknown or monster tree', () => {
+    expect(hasSkillTree('mage', trees)).toBe(false);
+    expect(hasSkillTree('dragon', trees)).toBe(false);
+    expect(hasSkillTree('slime')).toBe(false);
+  });
+});
+
+describe('describeSkill', () => {
+  it('says what each kind of skill does and how far it reaches', () => {
+    expect(describeSkill(MEND)).toBe('Heals an ally next to it for 2 + MAG.');
+    expect(describeSkill(POWER_STRIKE)).toBe('Its regular hit with +3 power on a foe next to it.');
+    expect(describeSkill(THROW_STONES)).toBe('Half its regular hit on a foe up to 4 tiles away.');
+    expect(describeSkill({ ...THROW_STONES, damageScale: 1.5 })).toBe(
+      '1.5× its regular hit on a foe up to 4 tiles away.',
+    );
+  });
+});
+
+describe('MEND', () => {
+  it('heals rather than strikes', () => {
+    expect(isHealingSkill(MEND)).toBe(true);
+    expect(isHealingSkill(POWER_STRIKE)).toBe(false);
+  });
+
+  it("restores its power plus the user's magic, capped at what's missing", () => {
+    expect(getSkillHealAmount(MEND, { magic: 3 }, { health: 1, maxHealth: 20 })).toBe(5);
+    expect(getSkillHealAmount(MEND, { magic: 0 }, { health: 1, maxHealth: 20 })).toBe(2);
+    expect(getSkillHealAmount(MEND, { magic: 3 }, { health: 18, maxHealth: 20 })).toBe(2);
+    expect(getSkillHealAmount(MEND, { magic: 3 }, { health: 20, maxHealth: 20 })).toBe(0);
+  });
+
+  it('heals nothing with no power and no magic', () => {
+    expect(getSkillHealAmount({ ...MEND, power: undefined }, { magic: 0 }, { health: 1, maxHealth: 20 })).toBe(0);
   });
 });
 

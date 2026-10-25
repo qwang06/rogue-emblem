@@ -7,6 +7,7 @@ import { DEFAULT_CONTENT } from '../battleSetup.ts';
 import { REST_COST } from './camp.ts';
 import { generateRealm, getNextSites, type Realm } from './realm/realm.ts';
 import { getItemPrice } from './merchant.ts';
+import { MENTOR_FEE } from './mentors.ts';
 import { getRerollCost, getSkipGold, getStageClearGold, rollStageRewards } from './rewards.ts';
 import { advanceStage, createRun, restoreRoster, type RunState } from './run.ts';
 import {
@@ -229,6 +230,23 @@ describe('camp', () => {
   it("doesn't take a reward command", () => {
     expect(() => apply(campWith(newRun()), { type: 'skip-reward' })).toThrow(/camp/);
   });
+
+  it('learns a secondary skill set from a mentor for the fee, or with a scroll', () => {
+    const run = newRun();
+    const veteran = { ...run.roster[1], level: 2 };
+    const camped = campWith({ ...run, gold: 100, roster: [run.roster[0], veteran] });
+    const taught = apply(camped, { type: 'learn-secondary', unitId: 'alden', classId: 'warrior' });
+    expect(taught.run.gold).toBe(100 - MENTOR_FEE);
+    expect(taught.run.roster[0].secondaryClass).toBe('warrior');
+    expect(() => apply(camped, { type: 'learn-secondary', unitId: 'alden', classId: 'archer' })).toThrow(/archer/);
+    const scrolled = apply(campWith({ ...run, scrolls: 1 }), {
+      type: 'learn-secondary',
+      unitId: 'alden',
+      classId: 'archer',
+    });
+    expect(scrolled.run.roster[0].secondaryClass).toBe('archer');
+    expect(scrolled.run).not.toHaveProperty('scrolls');
+  });
 });
 
 it('takes no command during a battle or once the run is over', () => {
@@ -257,6 +275,16 @@ describe('getLegalRunCommands', () => {
       new Set(['rest', 'buy', 'sell', 'give', 'store', 'equip', 'march']),
     );
     for (const command of commands) expect(() => applyRunCommand(session, command)).not.toThrow();
+  });
+
+  it('lists the skill sets each unit could learn at camp', () => {
+    const session = campWith({ ...newRun(), scrolls: 1 });
+    const lessons = getLegalRunCommands(session).filter((command) => command.type === 'learn-secondary');
+    // Each unit can learn every other class's set with the scroll.
+    expect(lessons).toHaveLength(10);
+    expect(lessons).toContainEqual({ type: 'learn-secondary', unitId: 'alden', classId: 'acolyte' });
+    expect(lessons).not.toContainEqual({ type: 'learn-secondary', unitId: 'alden', classId: 'soldier' });
+    for (const command of lessons) expect(() => applyRunCommand(session, command)).not.toThrow();
   });
 
   it('lists nothing during a battle', () => {

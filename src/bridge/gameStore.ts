@@ -4,6 +4,7 @@ import type { SkillAction } from '../game/skills.ts';
 import type { WeaponAction } from '../game/weapons.ts';
 import type { BattleSetup } from '../game/battleSetup.ts';
 import type { BattleOutcome } from '../game/turns.ts';
+import type { MentorScreenView } from './mentorView.ts';
 import type { MerchantScreenView } from './merchantView.ts';
 import type { RosterScreenView } from './rosterView.ts';
 import type { RunSummaryView } from './runSummaryView.ts';
@@ -83,6 +84,7 @@ export interface BattleState {
   campRelics: readonly RelicView[] | null;
   rosterScreen: RosterScreenView | null;
   merchantScreen: MerchantScreenView | null;
+  mentorScreen: MentorScreenView | null;
 }
 
 export interface GameState extends BattleState {
@@ -134,11 +136,12 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   rewardTeam: null, // TeamUnitViews from toTeamView() of the warband while the reward screen is up, or null
   recruitmentStage: null,
   boonPick: null, // BoonPickView from toBoonPickView() while the reward screen shows a level up's boon pick (its cards are rewardMenu's), or null
-  campMenu: null, // frozen camp menu (getCampActions: Manage Roster / Merchant / Rest / Next Stage) once a won stage's reward is taken, or null
+  campMenu: null, // frozen camp menu (getCampActions: Manage Roster / Merchant / Rest / Mentors / Next Stage) once a won stage's reward is taken, or null
   campGold: null, // the warband's gold while at camp (shown on the camp menu), or null
   campRelics: null, // RelicViews from toRelicViews() of the warband's relics while at camp (listed on the camp menu), or null
   rosterScreen: null, // RosterScreenView from toRosterScreenView() while the roster screen is open between stages, or null
   merchantScreen: null, // MerchantScreenView from toMerchantScreenView() while the camp's merchant screen is open, or null
+  mentorScreen: null, // MentorScreenView from toMentorScreenView() while the camp's mentor screen is open, or null
 });
 
 // The single app-wide store shared by Phaser (writer) and React (reader).

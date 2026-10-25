@@ -43,7 +43,8 @@ export interface ItemSnapshot {
 // stored (movement, weapon types, growths, caps). `tomeProgress` is how far
 // it is into learning each tome it has struck with (see tomes.ts), absent
 // when it's learning none; `boons` the level-up boons it has taken (see
-// boons.ts), absent when it has none.
+// boons.ts), absent when it has none; `secondaryClass` the class whose
+// skill set it has learned at camp (see mentors.ts), absent when none.
 export interface UnitSnapshot {
   id: string;
   name: string;
@@ -64,6 +65,7 @@ export interface UnitSnapshot {
   items: readonly ItemSnapshot[];
   tomeProgress?: TomeProgress;
   boons?: readonly string[];
+  secondaryClass?: string;
 }
 
 // A level-up boon pick still owed: the unit and the level it reached (see
@@ -106,6 +108,9 @@ export interface RunState {
   // What has happened over the run, for its recap (chronicle.ts). Absent
   // in runs saved before it was kept, which read as an empty one.
   chronicle?: RunChronicle;
+  // Mentor's Scrolls held, each a free lesson at camp in any class's skill
+  // set (see mentors.ts); absent when none are.
+  scrolls?: number;
 }
 
 // A reward pick still owed after a won stage: the stage cleared, how many
@@ -181,11 +186,13 @@ export function snapshotUnit(id: string, unit: Unit): UnitSnapshot {
     items: unit.items.map(({ item, quantity }) => ({ itemId: item.id, quantity })),
     ...(Object.keys(unit.tomeProgress).length > 0 && { tomeProgress: unit.tomeProgress }),
     ...(unit.boons.length > 0 && { boons: unit.boons }),
+    ...(unit.secondaryClass !== null && { secondaryClass: unit.secondaryClass }),
   });
 }
 
 // A player Unit rebuilt from `snapshot`: its class's unit with the
-// snapshot's name, level, XP, stats, inventory, tome progress and boons,
+// snapshot's name, level, XP, stats, inventory, tome progress, boons and
+// secondary class,
 // carrying its boons' modifiers (see applyModifiers). Throws on an unknown
 // class or item.
 export function restoreUnit(
@@ -201,6 +208,7 @@ export function restoreUnit(
   for (const field of STAT_FIELDS) unit[field] = snapshot[field];
   unit.tomeProgress = Object.freeze({ ...snapshot.tomeProgress });
   unit.boons = Object.freeze([...(snapshot.boons ?? [])]);
+  unit.secondaryClass = snapshot.secondaryClass ?? null;
   return applyModifiers(unit, getBoonModifiers(unit.boons));
 }
 
@@ -346,6 +354,7 @@ export function parseRun(
     route,
     pendingBoons,
     chronicle,
+    scrolls,
   } = data;
   const itemIds = new Set(items.map((item) => item.id));
   const classIds = new Set(classes.map((unitClass) => unitClass.id));
@@ -371,7 +380,8 @@ export function parseRun(
     (pendingGuest === undefined) !== (pendingRecruitment === undefined) ||
     (route !== undefined && !isRunRoute(route)) ||
     (pendingBoons !== undefined && !isPendingBoons(pendingBoons)) ||
-    (chronicle !== undefined && parseChronicle(chronicle) === null)
+    (chronicle !== undefined && parseChronicle(chronicle) === null) ||
+    (scrolls !== undefined && !isWholeNumber(scrolls))
   ) {
     return null;
   }
@@ -391,6 +401,7 @@ export function parseRun(
     ...(pendingBoons !== undefined && { pendingBoons }),
     chronicle: chronicle === undefined ? EMPTY_CHRONICLE : parseChronicle(chronicle)!,
     ...(route !== undefined && { route }),
+    ...(scrolls !== undefined && scrolls > 0 && { scrolls }),
   });
 }
 
@@ -456,7 +467,10 @@ function isUnitSnapshot(
     (value.mana as number) <= (value.maxMana as number) &&
     isItems(value.items) &&
     (value.tomeProgress === undefined || isTomeProgress(value.tomeProgress)) &&
-    (value.boons === undefined || (Array.isArray(value.boons) && value.boons.every((boon) => typeof boon === 'string')))
+    (value.boons === undefined ||
+      (Array.isArray(value.boons) && value.boons.every((boon) => typeof boon === 'string'))) &&
+    (value.secondaryClass === undefined ||
+      (typeof value.secondaryClass === 'string' && classIds.has(value.secondaryClass)))
   );
 }
 

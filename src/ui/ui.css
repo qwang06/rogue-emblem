@@ -4130,3 +4130,27 @@ textarea.draft-input {
     animation: none;
   }
 }
+
+/* ---- Mentors -------------------------------------------------------- */
+
+/* How a lesson is paid for, sized for its longest note ("Iris · 20 G"),
+   so a row never changes width with it. */
+.mentor-screen__note {
+  flex: none;
+  min-width: 9ch;
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--yellow);
+}
+
+.mentor-screen .action-menu__item--disabled .mentor-screen__note {
+  color: var(--fg-dim);
+}
+
+/* Room for a set's description at three lines, so the window never grows
+   as the cursor moves. */
+.mentor-screen__detail {
+  min-height: 3.9em;
+}
