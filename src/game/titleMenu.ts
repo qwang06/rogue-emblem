@@ -3,9 +3,10 @@
 
 import type { MenuAction } from './actionMenu.ts';
 import type { AudioSettings } from '../audio/settings.ts';
-import { getNextUnlock, getUnlockedStartingClasses, UNLOCKS, type MetaState } from './warband/meta.ts';
+import { HEAT_LEVELS } from './warband/heat.ts';
+import { getNextUnlock, getUnlockedOrigins, UNLOCKS, type MetaState } from './warband/meta.ts';
+import { BASE_ORIGINS, UNLOCKABLE_ORIGINS, type Origin } from './warband/origins.ts';
 import type { RunState } from './warband/run.ts';
-import { STARTING_CLASSES, UNLOCKABLE_STARTING_CLASSES } from './warband/startingClasses.ts';
 
 export const TITLE_ACTIONS: readonly MenuAction[] = Object.freeze([
   Object.freeze({ id: 'story', label: 'Story Mode' }),
@@ -38,29 +39,36 @@ export function getWarbandActions(savedRun: RunState | null): readonly MenuActio
   return Object.freeze([Object.freeze(continueRun), Object.freeze({ id: 'new-run', label: 'New Run' })]);
 }
 
-// An entry on the New Run submenu: a base class to start the run with, and
-// its pitch.
+// An entry on the New Run submenus: an origin (or Heat level) to start
+// the run with, and its pitch.
 export interface StartingClassAction extends MenuAction {
   description: string;
 }
 
-// Entries on the submenu New Run opens: one per base starting class (see
-// STARTING_CLASSES), whose id is the class id.
-export const STARTING_CLASS_ACTIONS: readonly StartingClassAction[] = Object.freeze(
-  STARTING_CLASSES.map(({ id, label, description }) => Object.freeze({ id, label, description })),
-);
+// An origin's entry on the New Run submenu, with the classes of the units
+// it starts with, to draw them.
+export interface OriginAction extends StartingClassAction {
+  units: readonly string[];
+}
 
-// The New Run submenu for a player with `meta`'s renown: the base classes,
-// then every unlockable one (UNLOCKABLE_STARTING_CLASSES), disabled until
-// its renown is reached, its pitch then saying how much it takes.
-export function getStartingClassActions(meta: MetaState): readonly StartingClassAction[] {
-  const unlocked = getUnlockedStartingClasses(meta);
-  const locked = UNLOCKABLE_STARTING_CLASSES.map(({ id, label, description }) => {
-    if (unlocked.includes(id)) return Object.freeze({ id, label, description });
-    const renown = UNLOCKS.find((unlock) => unlock.startingClass === id)?.renown ?? 0;
+function toOriginAction({ id, label, description, units }: Origin): OriginAction {
+  return Object.freeze({ id, label, description, units });
+}
+
+// Entries on the submenu New Run opens before any unlock: one per base
+// origin (see BASE_ORIGINS), whose id is the origin id.
+export const STARTING_CLASS_ACTIONS: readonly OriginAction[] = Object.freeze(BASE_ORIGINS.map(toOriginAction));
+
+// The New Run submenu for a player with `meta`'s renown: the base origins,
+// then every unlockable one (UNLOCKABLE_ORIGINS), disabled until its
+// renown is reached, its pitch then saying how much it takes.
+export function getStartingClassActions(meta: MetaState): readonly OriginAction[] {
+  const unlocked = getUnlockedOrigins(meta);
+  const locked = UNLOCKABLE_ORIGINS.map((origin) => {
+    if (unlocked.includes(origin.id)) return toOriginAction(origin);
+    const renown = UNLOCKS.find((unlock) => unlock.origin === origin.id)?.renown ?? 0;
     return Object.freeze({
-      id,
-      label,
+      ...toOriginAction(origin),
       description: `Unlocks at ${renown} renown (${meta.renown} so far).`,
       disabled: true,
     });
@@ -68,11 +76,46 @@ export function getStartingClassActions(meta: MetaState): readonly StartingClass
   return Object.freeze([...STARTING_CLASS_ACTIONS, ...locked]);
 }
 
-// The Warband Mode submenu's renown line: the renown earned so far and
-// the next unlock it leads to.
+// Whether New Run asks for a Heat level: once a won run has opened one.
+export function hasHeatPick(meta: MetaState): boolean {
+  return meta.heat > 0;
+}
+
+// The Heat submenu for a player with `meta`'s Heat open: no Heat, then
+// every level (id `heat-<level>`), each pitched with its name, its own
+// rule and, above 1, that it keeps the lower levels'. Levels above meta.heat are
+// disabled, their pitch saying which win opens them.
+export function getHeatActions(meta: MetaState): readonly StartingClassAction[] {
+  const levels = HEAT_LEVELS.map(({ level, name, description }) => {
+    const label = `Heat ${level}`;
+    if (level > meta.heat) {
+      return Object.freeze({
+        id: `heat-${level}`,
+        label,
+        description: `${name}: win a run at Heat ${level - 1} to unlock.`,
+        disabled: true,
+      });
+    }
+    const lower = level > 1 ? ` Plus Heat ${level === 2 ? '1' : `1–${level - 1}`}.` : '';
+    return Object.freeze({ id: `heat-${level}`, label, description: `${name}: ${description}${lower}` });
+  });
+  return Object.freeze([
+    Object.freeze({ id: 'heat-0', label: 'No Heat', description: 'The run as it comes.' }),
+    ...levels,
+  ]);
+}
+
+// The Heat level a Heat submenu entry's id picks.
+export function getHeatOfAction(id: string): number {
+  return Number(id.replace('heat-', '')) || 0;
+}
+
+// The Warband Mode submenu's renown line: the renown earned so far, the
+// highest Heat open (once one is), and the next unlock it leads to.
 export function describeRenown(meta: MetaState): string {
   const next = getNextUnlock(meta);
-  return `Renown ${meta.renown} · ${next ? `Next: ${next.label} at ${next.renown}` : 'Everything unlocked'}`;
+  const heat = hasHeatPick(meta) ? ` · Heat ${meta.heat}` : '';
+  return `Renown ${meta.renown}${heat} · ${next ? `Next: ${next.label} at ${next.renown}` : 'Everything unlocked'}`;
 }
 
 // The entry to select when a menu opens: the first that isn't disabled
