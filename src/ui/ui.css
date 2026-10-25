@@ -161,8 +161,11 @@ body {
 
 /* The page fills the window exactly: the header takes its height and the
    map stage takes whatever is left. The padding and gap are the tiling
-   desktop's outer and inner gaps. */
+   desktop's outer and inner gaps. Screens that cover the page but keep
+   the header (the overworld, a battle's loading screen) start at
+   --below-header: the padding, the header's height and the gap. */
 .page {
+  --below-header: calc(6px + 2.75rem + 6px);
   height: 100vh;
   height: 100dvh;
   display: flex;
@@ -181,7 +184,7 @@ body {
   gap: 16px;
   /* A fixed height that fits the two-line deployment status: the header
      never wraps or grows, so the map below never resizes as the status
-     changes. */
+     changes. .page's --below-header counts on it. */
   height: 2.75rem;
   padding: 0 4px;
   font-size: 0.8125rem;
@@ -248,6 +251,14 @@ a.header-button {
 .header-button:hover {
   color: var(--fg-bright);
   background: var(--selection);
+}
+
+/* A header button that can't act on this screen stays in place, greyed
+   out on the bar rather than boxed, so the bar looks the same everywhere. */
+.page-header .header-button:disabled {
+  color: var(--fg-dim);
+  background: transparent;
+  border-color: transparent;
 }
 
 .header-button:active,
@@ -484,6 +495,7 @@ a.header-button {
 .merchant-screen__recipients-title,
 .reward-screen__title,
 .reward-team__title,
+.warband-panel__title,
 .boon-pick__choices-title,
 .roster-screen__title,
 .dialog-box__speaker {
@@ -3559,7 +3571,7 @@ textarea.draft-input {
    continuous screen until the map is ready; then it fades away. */
 .loading-screen {
   position: fixed;
-  inset: 0;
+  inset: var(--below-header) 0 0;
   z-index: 10;
   display: flex;
   flex-direction: column;

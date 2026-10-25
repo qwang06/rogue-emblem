@@ -6,7 +6,7 @@ import { enterRun, getRunScreen } from '../bridge/warbandFlow.ts';
 import { getActiveContent } from '../data/customContent.ts';
 import { loadSavedRun } from '../data/runSave.ts';
 import type { Point } from '../game/grid.ts';
-import { getUnitSprite, TILE_SIZE } from '../game/tileset.ts';
+import { TILE_SIZE } from '../game/tileset.ts';
 import { paintRealmInk, type RgbaImage } from '../game/warband/realm/inkRaster.ts';
 import { BATTLE_SITES, getRealm, type Realm } from '../game/warband/realm/realm.ts';
 import {
@@ -26,6 +26,7 @@ import { GlyphIcon } from './GlyphIcon.tsx';
 import { KeyHint } from './KeyHint.tsx';
 import { UnitSprite } from './UnitSprite.tsx';
 import { useGameStore } from './useGameStore.ts';
+import { WarbandPanel } from './WarbandPanel.tsx';
 import './Overworld.css';
 
 const KEYS = [
@@ -34,7 +35,8 @@ const KEYS = [
 ] as const;
 
 // How long the warband takes per road tile when it travels, and how long
-// auto play waits on the map before it picks a road.
+// auto play waits on the map before it picks a road, at 1x: the header's
+// game speed divides both.
 const STEP_MS = 70;
 const AUTO_DELAY_MS = 700;
 
@@ -78,6 +80,7 @@ function Overworld({ run, realm, onRun }: { run: RunState; realm: Realm; onRun: 
   const view = useMemo(() => toOverworldView(run, realm, getActiveContent().regions), [run, realm]);
   const ink = useMemo(() => getRealmInk(realm), [realm]);
   const autoPlay = useGameStore((state) => state.autoPlay);
+  const speed = useGameStore((state) => state.autoSpeed);
   const [selected, setSelected] = useState(0);
   // The road the warband is walking (as the line drawn for it, in map
   // pixels), and how far along it is, from 0 to 1.
@@ -98,7 +101,13 @@ function Overworld({ run, realm, onRun }: { run: RunState; realm: Realm; onRun: 
     if (!target || walk) return;
     setSelected(index);
     if (prefersReducedMotion() || target.road.length < 2) arrive(target.siteId);
-    else setWalk({ line: routes.choices[index], t: 0, siteId: target.siteId, ms: (target.road.length - 1) * STEP_MS });
+    else
+      setWalk({
+        line: routes.choices[index],
+        t: 0,
+        siteId: target.siteId,
+        ms: ((target.road.length - 1) * STEP_MS) / speed,
+      });
   }
 
   function arrive(siteId: string) {
@@ -135,7 +144,7 @@ function Overworld({ run, realm, onRun }: { run: RunState; realm: Realm; onRun: 
           view.choices.findIndex((site) => site.siteId === command.siteId),
         ),
       );
-    }, AUTO_DELAY_MS);
+    }, AUTO_DELAY_MS / speed);
     return () => window.clearTimeout(timer);
   });
 
@@ -188,21 +197,10 @@ function Overworld({ run, realm, onRun }: { run: RunState; realm: Realm; onRun: 
             {view.depth === 0 ? `Setting out · ${view.finalStage} stages` : `Stage ${view.depth} of ${view.finalStage}`}
           </p>
         </div>
-        <TeamStrip view={view} />
         <p className="overworld__stat overworld__gold" title={`${view.gold} gold`}>
           <GlyphIcon kind="gold" />
           {view.gold}
         </p>
-        <AutoToggle on={autoPlay} />
-        <button
-          type="button"
-          className="header-button header-button--icon"
-          aria-label="Main menu"
-          title="Main menu"
-          onClick={() => gameStore.setState({ screen: 'title' })}
-        >
-          <GlyphIcon kind="home" />
-        </button>
       </header>
 
       <div className="overworld__viewport" ref={viewportRef}>
@@ -291,7 +289,10 @@ function Overworld({ run, realm, onRun }: { run: RunState; realm: Realm; onRun: 
         </div>
       </div>
 
-      <SiteBanner choice={choice} />
+      <div className="overworld__footer">
+        <SiteBanner choice={choice} />
+        <WarbandPanel team={view.team} />
+      </div>
       <KeyHint className="overworld__hint" entries={KEYS} />
       {run.pendingEvent && <EventPanel run={run} autoPlay={autoPlay} onDone={onRun} />}
     </div>
@@ -355,6 +356,7 @@ const EVENT_KEYS = [
 // disabled, with why), then what came of the one taken. Arrows and Enter,
 // or the mouse; with auto play on, it takes the first choice it can.
 function EventPanel({ run, autoPlay, onDone }: { run: RunState; autoPlay: boolean; onDone: (run: RunState) => void }) {
+  const speed = useGameStore((state) => state.autoSpeed);
   const view = toEventView(run)!;
   const [selected, setSelected] = useState(() =>
     Math.max(
@@ -393,16 +395,19 @@ function EventPanel({ run, autoPlay, onDone }: { run: RunState; autoPlay: boolea
 
   useEffect(() => {
     if (!autoPlay) return;
-    const timer = window.setTimeout(() => {
-      if (outcome) onDone(outcome.run);
-      else
-        choose(
-          Math.max(
-            0,
-            view.choices.findIndex((c) => !c.blocked),
-          ),
-        );
-    }, AUTO_DELAY_MS * 2);
+    const timer = window.setTimeout(
+      () => {
+        if (outcome) onDone(outcome.run);
+        else
+          choose(
+            Math.max(
+              0,
+              view.choices.findIndex((c) => !c.blocked),
+            ),
+          );
+      },
+      (AUTO_DELAY_MS * 2) / speed,
+    );
     return () => window.clearTimeout(timer);
   });
 
@@ -446,33 +451,6 @@ function EventPanel({ run, autoPlay, onDone }: { run: RunState; autoPlay: boolea
       </Frame>
       <KeyHint className="overworld__hint" entries={EVENT_KEYS} />
     </div>
-  );
-}
-
-function TeamStrip({ view }: { view: OverworldView }) {
-  return (
-    <ul className="overworld__team" aria-label="Warband">
-      {view.team.map((unit) => (
-        <li key={unit.id} title={`${unit.name} · Lv ${unit.level} · ${unit.health}/${unit.maxHealth} HP`}>
-          <UnitSprite sprite={getUnitSprite(unit.unitClass)} />
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function AutoToggle({ on }: { on: boolean }) {
-  return (
-    <button
-      type="button"
-      className="header-button header-button--icon auto-play-button"
-      aria-pressed={on}
-      aria-label="Auto play"
-      title="Let the AI pick the road"
-      onClick={() => gameStore.setState({ autoPlay: !on })}
-    >
-      <GlyphIcon kind="auto" />
-    </button>
   );
 }
 

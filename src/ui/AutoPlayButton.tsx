@@ -1,4 +1,6 @@
-import { gameCommands } from '../bridge/commands.ts';
+import { gameCommands, type Command } from '../bridge/commands.ts';
+import { gameStore } from '../bridge/gameStore.ts';
+import { changeAutoSpeed, cycleAutoSpeed } from '../game/autoSpeed.ts';
 import { GlyphIcon } from './GlyphIcon.tsx';
 import { useGameStore } from './useGameStore.ts';
 import './AutoPlayButton.css';
@@ -9,13 +11,15 @@ import './AutoPlayButton.css';
 // hands control back; the A key does the same. Beside it, − and + set the
 // game speed, which plays the map's animations faster with Auto on or off;
 // on phones the − and + make way and the speed readout itself steps
-// through the speeds. GridScene does the playing, so it only shows once a
-// battle's map is up to hear the command.
+// through the speeds. It's in the header on every screen, so the bar
+// never changes: in a battle GridScene does the playing, so the buttons
+// wait (disabled) until the map is up to hear the command; on the
+// overworld they set the store straight, where it picks roads and walks
+// at that speed. A region's read-only preview plays nothing.
 export function AutoPlayButton() {
-  const shown = useGameStore((state) => state.mapReady && state.screen === 'battle');
+  const waiting = useGameStore((state) => state.screen === 'preview' || (state.screen === 'battle' && !state.mapReady));
   const on = useGameStore((state) => state.autoPlay);
   const speed = useGameStore((state) => state.autoSpeed);
-  if (!shown) return null;
 
   return (
     <div className="auto-play-controls" aria-label="Auto play controls">
@@ -24,7 +28,8 @@ export function AutoPlayButton() {
         className="header-button header-button--icon auto-play-button"
         aria-pressed={on}
         title="Let the AI play your side (A)"
-        onClick={() => gameCommands.send({ type: 'toggle-auto-play' })}
+        disabled={waiting}
+        onClick={() => send({ type: 'toggle-auto-play' })}
       >
         <GlyphIcon kind="auto" />
         <span className="auto-play-button__label">Auto</span>
@@ -34,8 +39,8 @@ export function AutoPlayButton() {
         className="header-button auto-speed-button"
         aria-label="Decrease game speed"
         title="Decrease game speed"
-        disabled={speed === 1}
-        onClick={() => gameCommands.send({ type: 'change-auto-speed', direction: -1 })}
+        disabled={waiting || speed === 1}
+        onClick={() => send({ type: 'change-auto-speed', direction: -1 })}
       >
         −
       </button>
@@ -44,7 +49,8 @@ export function AutoPlayButton() {
         className="header-button auto-speed-value"
         aria-label={`Game speed ${speed} times`}
         title="Game speed (click to change)"
-        onClick={() => gameCommands.send({ type: 'cycle-auto-speed' })}
+        disabled={waiting}
+        onClick={() => send({ type: 'cycle-auto-speed' })}
       >
         {speed}×
       </button>
@@ -53,11 +59,27 @@ export function AutoPlayButton() {
         className="header-button auto-speed-button"
         aria-label="Increase game speed"
         title="Increase game speed"
-        disabled={speed === 8}
-        onClick={() => gameCommands.send({ type: 'change-auto-speed', direction: 1 })}
+        disabled={waiting || speed === 8}
+        onClick={() => send({ type: 'change-auto-speed', direction: 1 })}
       >
         +
       </button>
     </div>
   );
+}
+
+type AutoCommand = Extract<Command, { type: 'toggle-auto-play' | 'change-auto-speed' | 'cycle-auto-speed' }>;
+
+// To GridScene in a battle, which also clears its queued moves and speeds
+// up its clocks; anywhere else, straight to the store.
+function send(command: AutoCommand) {
+  if (gameStore.getState().screen === 'battle') {
+    gameCommands.send(command);
+    return;
+  }
+  gameStore.setState((state) => {
+    if (command.type === 'toggle-auto-play') return { autoPlay: !state.autoPlay };
+    if (command.type === 'change-auto-speed') return { autoSpeed: changeAutoSpeed(state.autoSpeed, command.direction) };
+    return { autoSpeed: cycleAutoSpeed(state.autoSpeed) };
+  });
 }
