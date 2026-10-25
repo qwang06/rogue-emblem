@@ -3,14 +3,18 @@ import { createActionMenu, getSelectedAction, moveSelection } from './actionMenu
 import {
   describeRenown,
   getFirstEnabledIndex,
+  getHeatActions,
+  getHeatOfAction,
   getStartingClassActions,
   getWarbandActions,
+  hasHeatPick,
   getSettingsActions,
   STARTING_CLASS_ACTIONS,
   TITLE_ACTIONS,
 } from './titleMenu.ts';
 import { NEW_META, UNLOCKS } from './warband/meta.ts';
-import { STARTING_CLASSES, UNLOCKABLE_STARTING_CLASSES } from './warband/startingClasses.ts';
+import { MAX_HEAT } from './warband/heat.ts';
+import { BASE_ORIGINS, UNLOCKABLE_ORIGINS } from './warband/origins.ts';
 import { advanceStage, createRun } from './warband/run.ts';
 import { createStartingWarband } from './warband/stageLevel.ts';
 
@@ -83,7 +87,7 @@ describe('STARTING_CLASS_ACTIONS', () => {
   it('offers each starting class by its id, with its pitch', () => {
     expect(STARTING_CLASS_ACTIONS.map((a) => a.id)).toEqual(['warrior', 'soldier', 'archer']);
     expect(STARTING_CLASS_ACTIONS.map((a) => a.label)).toEqual(['Warrior', 'Soldier', 'Archer']);
-    expect(STARTING_CLASS_ACTIONS.map((a) => a.description)).toEqual(STARTING_CLASSES.map((c) => c.description));
+    expect(STARTING_CLASS_ACTIONS.map((a) => a.description)).toEqual(BASE_ORIGINS.map((c) => c.description));
   });
 
   it('is frozen', () => {
@@ -93,27 +97,54 @@ describe('STARTING_CLASS_ACTIONS', () => {
 });
 
 describe('getStartingClassActions', () => {
-  it('offers the base classes, then the unlockable ones locked until renown opens them', () => {
+  it('offers the base origins, then the unlockable ones locked until renown opens them', () => {
     const actions = getStartingClassActions(NEW_META);
-    expect(actions.map((a) => a.id)).toEqual([...STARTING_CLASSES, ...UNLOCKABLE_STARTING_CLASSES].map((c) => c.id));
-    expect(actions.slice(0, STARTING_CLASSES.length)).toEqual(STARTING_CLASS_ACTIONS);
-    const locked = actions.slice(STARTING_CLASSES.length);
+    expect(actions.map((a) => a.id)).toEqual([...BASE_ORIGINS, ...UNLOCKABLE_ORIGINS].map((c) => c.id));
+    expect(actions.slice(0, BASE_ORIGINS.length)).toEqual(STARTING_CLASS_ACTIONS);
+    expect(actions.find((a) => a.id === 'sellswords')?.units).toEqual(['soldier', 'archer']);
+    const locked = actions.slice(BASE_ORIGINS.length);
     expect(locked.every((a) => a.disabled)).toBe(true);
     expect(locked[0].description).toBe(`Unlocks at ${UNLOCKS[0].renown} renown (0 so far).`);
     expect(Object.isFrozen(actions)).toBe(true);
   });
 
-  it('opens a class with its pitch once its renown is reached', () => {
+  it('opens an origin with its pitch once its renown is reached', () => {
     const [first] = UNLOCKS;
     const actions = getStartingClassActions({ ...NEW_META, renown: first.renown });
-    const opened = actions.find((a) => a.id === first.startingClass)!;
+    const opened = actions.find((a) => a.id === first.origin)!;
     expect(opened.disabled).toBeUndefined();
-    expect(opened.description).toBe(UNLOCKABLE_STARTING_CLASSES[0].description);
+    expect(opened.description).toBe(UNLOCKABLE_ORIGINS[0].description);
     expect(actions.filter((a) => a.disabled)).toHaveLength(UNLOCKS.length - 1);
   });
 });
 
+describe('getHeatActions', () => {
+  it('is only asked for once a Heat is open', () => {
+    expect(hasHeatPick(NEW_META)).toBe(false);
+    expect(hasHeatPick({ ...NEW_META, heat: 1 })).toBe(true);
+  });
+
+  it('offers no Heat, then each level, locked above the highest open', () => {
+    const actions = getHeatActions({ ...NEW_META, heat: 2 });
+    expect(actions.map((a) => a.id)).toEqual(Array.from({ length: MAX_HEAT + 1 }, (_, level) => `heat-${level}`));
+    expect(actions.map((a) => Boolean(a.disabled))).toEqual([false, false, false, ...Array(MAX_HEAT - 2).fill(true)]);
+    expect(actions[1].label).toBe('Heat 1');
+    expect(actions[1].description).toBe('Hardened Foes: Enemies are 1 level higher.');
+    expect(actions[2].description).toMatch(/Plus Heat 1\.$/);
+    expect(actions[3].description).toBe('Costly Rest: win a run at Heat 2 to unlock.');
+    expect(actions.map((a) => getHeatOfAction(a.id))).toEqual(
+      Array.from({ length: MAX_HEAT + 1 }, (_, level) => level),
+    );
+  });
+});
+
 describe('describeRenown', () => {
+  it('shows the highest Heat open once there is one', () => {
+    expect(describeRenown({ ...NEW_META, renown: 15, heat: 2 })).toBe(
+      `Renown 15 · Heat 2 · Next: ${UNLOCKS[0].label} at ${UNLOCKS[0].renown}`,
+    );
+  });
+
   it('shows the renown and the next unlock, or that everything is open', () => {
     expect(describeRenown({ ...NEW_META, renown: 15 })).toBe(
       `Renown 15 · Next: ${UNLOCKS[0].label} at ${UNLOCKS[0].renown}`,

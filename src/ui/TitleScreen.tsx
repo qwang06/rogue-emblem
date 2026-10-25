@@ -6,20 +6,24 @@ import { createActionMenu, getSelectedAction, moveSelection, selectIndex } from 
 import {
   describeRenown,
   getFirstEnabledIndex,
+  getHeatActions,
+  getHeatOfAction,
   getStartingClassActions,
+  hasHeatPick,
   getWarbandActions,
   getSettingsActions,
   STARTING_CLASS_ACTIONS,
   TITLE_ACTIONS,
+  type OriginAction,
   type StartingClassAction,
 } from '../game/titleMenu.ts';
 import { getTrainingActions } from '../game/trainingLevel.ts';
 import { FIRST_STORY_CHAPTER } from '../game/battleSetup.ts';
 import { createSeededRng, randomSeed } from '../game/rng.ts';
 import { generateName } from '../game/warband/names.ts';
-import { createRun, type RunState } from '../game/warband/run.ts';
+import type { RunState } from '../game/warband/run.ts';
 import { applyRunCommand, getRelicOffers, startRunSession } from '../game/warband/runCommands.ts';
-import { createStartingWarband } from '../game/warband/stageLevel.ts';
+import { createOriginRun, getRelicPicks } from '../game/warband/origins.ts';
 import { loadSavedRun } from '../data/runSave.ts';
 import { enterRun } from '../bridge/warbandFlow.ts';
 import { startRoute } from '../game/warband/travel.ts';
@@ -36,7 +40,7 @@ const MENU_KEYS = [
   ['Enter', 'Confirm'],
 ] as const;
 
-type View = 'main' | 'training' | 'warband' | 'new-run' | 'relic' | 'settings';
+type View = 'main' | 'training' | 'warband' | 'new-run' | 'heat' | 'relic' | 'settings';
 
 // The submenus title entries open: their heading, and the entries to list.
 // New Run is a submenu of Warband Mode's, and Back returns there.
@@ -44,10 +48,11 @@ const SUBMENUS = {
   training: { heading: 'Training — Choose a Unit', label: 'Choose a unit to train', actions: getTrainingActions },
   warband: { heading: 'Warband Mode', label: 'Warband Mode', actions: () => getWarbandActions(loadSavedRun()) },
   'new-run': {
-    heading: 'New Run — Choose a Class',
-    label: 'Choose a class',
+    heading: 'New Run — Choose an Origin',
+    label: 'Choose an origin',
     actions: () => getStartingClassActions(loadMeta()),
   },
+  heat: { heading: 'New Run — Choose the Heat', label: 'Choose the Heat', actions: () => getHeatActions(loadMeta()) },
   // Filled in from the new run (relicActions), which the class pick makes.
   relic: { heading: 'New Run — Choose a Relic', label: 'Choose a relic', actions: () => [] },
   settings: { heading: 'Settings', label: 'Settings', actions: () => getSettingsActions(gameStore.getState().audio) },
@@ -60,10 +65,10 @@ const NAME_KEYS = [
   ['E', 'Rename'],
 ] as const;
 
-// A fresh run with a starting warband of `classId` named `name`, at home
-// on its realm.
-function newRun(classId: string, name: string): RunState {
-  return startRoute(createRun(randomSeed(), createStartingWarband(classId, name)));
+// A fresh run started as origin `originId`, its leader named `name`, at
+// Heat `heat`, at home on its realm.
+function newRun(originId: string, name: string, heat: number): RunState {
+  return startRoute(createOriginRun(randomSeed(), originId, name, heat));
 }
 
 // A generated name for the unit a new run starts with, other than `current`.
@@ -84,10 +89,11 @@ function mainMenu(selectedIndex = 0) {
 // The landing screen: the logo over a castle landscape, plus the Story Mode / Warband Mode /
 // Training / Settings menu. Warband Mode opens a submenu to continue the
 // saved run (disabled when there's none) or start a new one, and New Run
-// opens one more to pick the base class the warband starts as, and the
-// name of its unit: generated, with buttons (and R / E) to roll another
-// or type one. Then the run's starting relic is picked from three, and
-// the run begins.
+// opens one more to pick the origin the warband starts as (see
+// origins.ts), and the name of its leader: generated, with buttons (and
+// R / E) to roll another or type one. Once a won run has opened Heat, the
+// Heat level is picked next. Then the run's starting relic is picked from
+// three (twice for an origin with two picks), and the run begins.
 // Training swaps in a second menu listing the unit classes; picking one
 // starts a small practice battle with that unit. Settings swaps in the
 // settings menu, whose Game Configs opens the config editor (#/configs). Works with the keyboard
@@ -98,7 +104,10 @@ export function TitleScreen() {
   const [menu, setMenu] = useState(() => mainMenu());
   const [unitName, setUnitName] = useState(rollName);
   const [editingName, setEditingName] = useState(false);
-  // The run the class pick made, while its starting relic is picked.
+  // The origin picked, while the Heat is picked.
+  const [pendingOrigin, setPendingOrigin] = useState<string | null>(null);
+  // The run the origin (and Heat) pick made, while its starting relics are
+  // picked.
   const [pendingRun, setPendingRun] = useState<RunState | null>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -122,11 +131,22 @@ export function TitleScreen() {
   // Back a level, with the entry that opened the submenu selected: from
   // New Run to Warband Mode's submenu, from the rest to the main menu.
   function goBack() {
-    if (view === 'relic') {
-      // Back to the class pick, keeping the name.
-      const actions = STARTING_CLASS_ACTIONS;
-      const selected = actions.findIndex((action) => action.id === pendingRun?.roster[0]?.classId);
+    if (view === 'relic' && hasHeatPick(loadMeta())) {
+      // Back to the Heat pick, keeping the origin and name.
+      const actions = getHeatActions(loadMeta());
+      const selected = actions.findIndex((action) => getHeatOfAction(action.id) === (pendingRun?.heat ?? 0));
       setPendingRun(null);
+      setView('heat');
+      setMenu(selectIndex(createActionMenu(actions), Math.max(0, selected)));
+      return;
+    }
+    if (view === 'relic' || view === 'heat') {
+      // Back to the origin pick, keeping the name.
+      const actions = getStartingClassActions(loadMeta());
+      const originId = pendingRun?.origin ?? pendingOrigin;
+      const selected = actions.findIndex((action) => action.id === originId);
+      setPendingRun(null);
+      setPendingOrigin(null);
       setView('new-run');
       setMenu(selectIndex(createActionMenu(actions), Math.max(0, selected)));
       return;
@@ -153,13 +173,21 @@ export function TitleScreen() {
         else openSubmenu('warband', 'new-run');
       } else if (action.id === 'new-run') openSubmenu('new-run');
     } else if (view === 'new-run') {
-      const run = newRun(action.id, unitName);
-      setPendingRun(run);
-      setView('relic');
-      setMenu(createActionMenu(relicActions(run)));
+      const meta = loadMeta();
+      if (hasHeatPick(meta)) {
+        setPendingOrigin(action.id);
+        setView('heat');
+        const actions = getHeatActions(meta);
+        setMenu(selectIndex(createActionMenu(actions), meta.heat));
+      } else startRelicPick(newRun(action.id, unitName, 0));
+    } else if (view === 'heat' && pendingOrigin) {
+      startRelicPick(newRun(pendingOrigin, unitName, getHeatOfAction(action.id)));
     } else if (view === 'relic' && pendingRun) {
       const index = menu.actions.findIndex((entry) => entry.id === action.id);
-      playRun(applyRunCommand(startRunSession(pendingRun), { type: 'pick-relic', index }).session.run);
+      const { session } = applyRunCommand(startRunSession(pendingRun), { type: 'pick-relic', index });
+      // An origin with more picks owes another.
+      if (session.phase === 'relic') startRelicPick(session.run);
+      else playRun(session.run);
     } else if (view === 'training') {
       gameStore.setState({ screen: 'battle', battleSetup: { mode: 'training', unitClass: action.id } });
     } else if (action.id === 'story') {
@@ -175,6 +203,13 @@ export function TitleScreen() {
     const audio = update(gameStore.getState().audio);
     gameStore.setState({ audio });
     setMenu((current) => selectIndex(createActionMenu(getSettingsActions(audio)), current.selectedIndex));
+  }
+
+  // Shows the starting relics `run` (a new one) still picks from.
+  function startRelicPick(run: RunState) {
+    setPendingRun(run);
+    setView('relic');
+    setMenu(createActionMenu(relicActions(run)));
   }
 
   // Saves `run` and carries on with it: the overworld, or its stage.
@@ -223,11 +258,15 @@ export function TitleScreen() {
   }
 
   const submenu = view === 'main' ? null : SUBMENUS[view];
-  // The pitch of the class or relic selected on the New Run submenus.
-  const description =
-    view === 'new-run' || view === 'relic'
-      ? (getSelectedAction(menu) as StartingClassAction | null)?.description
-      : undefined;
+  // Which of its starting relics a run with more than one is picking.
+  const relicPicks = pendingRun ? getRelicPicks(pendingRun) : 1;
+  const heading =
+    view === 'relic' && relicPicks > 1
+      ? `${submenu?.heading} (${(pendingRun?.relics.length ?? 0) + 1} of ${relicPicks})`
+      : submenu?.heading;
+  const describes = view === 'new-run' || view === 'heat' || view === 'relic';
+  // The pitch of the origin, Heat or relic selected on the New Run submenus.
+  const description = describes ? (getSelectedAction(menu) as StartingClassAction | null)?.description : undefined;
 
   return (
     <div className="title-screen" onContextMenu={onContextMenu}>
@@ -242,7 +281,7 @@ export function TitleScreen() {
       </header>
 
       <Frame as="nav" className="title-menu" aria-label={submenu?.label ?? 'Main menu'}>
-        {submenu && <h2 className="title-menu__heading">{submenu.heading}</h2>}
+        {submenu && <h2 className="title-menu__heading">{heading}</h2>}
         <ul className="title-menu__list" ref={listRef}>
           {menu.actions.map((action, index) => {
             const selected = index === menu.selectedIndex;
@@ -261,7 +300,11 @@ export function TitleScreen() {
                   onClick={() => runAction(action)}
                 >
                   {view === 'new-run' && (
-                    <UnitSprite sprite={getUnitSprite(action.id)} scale={1.5} animated={selected} />
+                    <span className="title-menu__sprites">
+                      {(action as OriginAction).units.map((classId, unit) => (
+                        <UnitSprite key={unit} sprite={getUnitSprite(classId)} scale={1.25} animated={selected} />
+                      ))}
+                    </span>
                   )}
                   {action.label}
                 </button>
@@ -283,7 +326,7 @@ export function TitleScreen() {
           />
         )}
         {view === 'warband' && <p className="title-menu__renown">{describeRenown(loadMeta())}</p>}
-        {(view === 'new-run' || view === 'relic') && (
+        {describes && (
           <p className="title-menu__description" aria-live="polite">
             {description}
           </p>
