@@ -16,11 +16,14 @@ export const TITLE_ACTIONS: readonly MenuAction[] = Object.freeze([
 
 // Entries on the Settings submenu the title menu's Settings opens, which
 // show the current sound settings: 'sound' turns sound on or off, 'volume'
-// changes the volume, and 'configs' leads to the config editor (#/configs).
+// and 'musicVolume' change the sound effect and music volumes (their ids
+// are the AudioSettings fields), and 'configs' leads to the config editor
+// (#/configs).
 export function getSettingsActions(audio: AudioSettings): readonly MenuAction[] {
   return Object.freeze([
     Object.freeze({ id: 'sound', label: `Sound: ${audio.muted ? 'Off' : 'On'}` }),
-    Object.freeze({ id: 'volume', label: `Volume: ${Math.round(audio.volume * 100)}%` }),
+    Object.freeze({ id: 'volume', label: `Effects: ${Math.round(audio.volume * 100)}%` }),
+    Object.freeze({ id: 'musicVolume', label: `Music: ${Math.round(audio.musicVolume * 100)}%` }),
     Object.freeze({ id: 'configs', label: 'Game Configs' }),
   ]);
 }
