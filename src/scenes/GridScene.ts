@@ -90,7 +90,7 @@ import {
   countWarbandKills,
 } from '../game/warband/runCommands.ts';
 import { clearSavedRun, saveRun } from '../data/runSave.ts';
-import { getClearGold, getRunSite, isInTown, isRealmRun } from '../game/warband/travel.ts';
+import { getClearGold, getRunSite, isInTown, isRealmRun, isSiteDone } from '../game/warband/travel.ts';
 import { enterRun } from '../bridge/warbandFlow.ts';
 import { loadMeta, saveMeta } from '../data/metaSave.ts';
 import { addPlayTime, EMPTY_CHRONICLE } from '../game/warband/chronicle.ts';
@@ -706,7 +706,7 @@ export class GridScene extends Phaser.Scene {
     }
     // A run arriving in a town (see warband/travel.ts) opens its camp over
     // the town, with the merchant and a free rest.
-    if (savedRun && isInTown(savedRun)) {
+    if (savedRun && isInTown(savedRun) && !isSiteDone(savedRun)) {
       this.setCursorVisible(false);
       this.openCamp(savedRun);
       gameStore.setState({ mapLoadProgress: 1, mapReady: true });

@@ -481,15 +481,13 @@ function useZoom(ref: RefObject<HTMLDivElement | null>, rows: number): number {
   return zoom;
 }
 
-// The realm's parchment map (realmInk.ts) painted once at native size by
-// inkRaster.ts, from the ink stamps' pixels, and scaled with the map.
-function RealmCanvas({ realm, ink, zoom }: { realm: Realm; ink: RealmInk; zoom: number }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [stamps, setStamps] = useState<Record<InkStamp, RgbaImage> | null>(null);
+let cachedStamps: Record<InkStamp, RgbaImage> | null = null;
+let stampsPromise: Promise<Record<InkStamp, RgbaImage>> | null = null;
 
-  useEffect(() => {
-    let live = true;
-    Promise.all(
+function loadInkStamps(): Promise<Record<InkStamp, RgbaImage>> {
+  if (cachedStamps) return Promise.resolve(cachedStamps);
+  if (!stampsPromise) {
+    stampsPromise = Promise.all(
       INK_STAMPS.map(
         (stamp) =>
           new Promise<[InkStamp, RgbaImage]>((resolve, reject) => {
@@ -507,13 +505,30 @@ function RealmCanvas({ realm, ink, zoom }: { realm: Realm; ink: RealmInk; zoom: 
             image.src = INK_STAMP_URLS[stamp];
           }),
       ),
-    ).then((loaded) => live && setStamps(Object.fromEntries(loaded) as Record<InkStamp, RgbaImage>));
+    ).then((loaded) => {
+      cachedStamps = Object.fromEntries(loaded) as Record<InkStamp, RgbaImage>;
+      return cachedStamps;
+    });
+  }
+  return stampsPromise;
+}
+
+// The realm's parchment map (realmInk.ts) painted once at native size by
+// inkRaster.ts, from the ink stamps' pixels, and scaled with the map.
+function RealmCanvas({ realm, ink, zoom }: { realm: Realm; ink: RealmInk; zoom: number }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [stamps, setStamps] = useState<Record<InkStamp, RgbaImage> | null>(() => cachedStamps);
+
+  useEffect(() => {
+    if (stamps) return;
+    let live = true;
+    loadInkStamps().then((loaded) => live && setStamps(loaded));
     return () => {
       live = false;
     };
-  }, []);
+  }, [stamps]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const context = canvasRef.current?.getContext('2d');
     if (!context || !stamps) return;
     const { width, height, data } = paintRealmInk(ink, realm.seed, stamps);

@@ -38,7 +38,7 @@ import { rollRelics, rollStartingRelics, STARTING_RELIC_CHOICES, type Relic } fr
 import { getRelicPicks } from './origins.ts';
 import { getRunHeat } from './heat.ts';
 import { createSeededRng } from '../rng.ts';
-import { finishStage, snapshotUnit, type BattleResult, type RunState } from './run.ts';
+import { advanceStage, finishStage, snapshotUnit, type BattleResult, type RunState } from './run.ts';
 import { GUEST_UNIT_ID, rollDraft, rollGuest, settleDraft, settleGuest } from './recruitment.ts';
 import { MAX_ROSTER_SIZE } from './rewards.ts';
 import { applyStageClearExperience } from './stageClearExperience.ts';
@@ -51,6 +51,7 @@ import {
   getRunSite,
   getTravelChoices,
   isFinalBattle,
+  isInTown,
   isRealmRun,
   isSiteDone,
   travelTo,
@@ -173,7 +174,7 @@ export function resumeRunSession(run: RunState): RunSession {
   if (phase !== 'camp') return freeze({ run, phase });
   if (run.pendingEvent) return freeze({ run, phase: 'event' });
   if (!isRealmRun(run)) return freeze({ run, phase: 'battle' });
-  if (getRunSite(run)?.kind === 'town') return freeze({ run, phase: 'camp' });
+  if (isInTown(run) && !isSiteDone(run)) return freeze({ run, phase: 'camp' });
   return freeze({ run, phase: isSiteDone(run) ? 'travel' : 'battle' });
 }
 
@@ -385,8 +386,10 @@ export function applyRunCommand(
         return fail(`Can't promote ${command.unitId} to ${command.promotionId}`);
       }
       return camp(promoteInRun(run, command.unitId, command.promotionId));
-    case 'march':
-      return { session: freeze({ run, phase: isRealmRun(run) ? 'travel' : 'battle' }), events: [] };
+    case 'march': {
+      const next = isInTown(run) && !isSiteDone(run) ? advanceStage(run) : run;
+      return { session: freeze({ run: next, phase: isRealmRun(next) ? 'travel' : 'battle' }), events: [] };
+    }
     case 'travel': {
       const { realm } = context;
       if (!realm) return fail('Travel needs the realm');

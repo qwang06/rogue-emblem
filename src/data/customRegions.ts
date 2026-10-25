@@ -13,15 +13,23 @@ export const CUSTOM_REGIONS_KEY = 'rogue-emblem:custom-dungeon';
 
 export const customRegionsStore = createStoredText(browserStorage(), CUSTOM_REGIONS_KEY);
 
+let lastUpload: { text: string; result: { settings: RegionSettings; error: string | null } } | null = null;
+
 // The settings an uploaded file's text stands for: the built-in ones when
 // there's no upload, or when it no longer parses (`error` says why).
+// Cached for the last text read so every stage doesn't re-parse and
+// re-check the regions' maps.
 export function readRegionsUpload(text: string | null): { settings: RegionSettings; error: string | null } {
   if (text === null) return { settings: REGION_SETTINGS, error: null };
+  if (lastUpload?.text === text) return lastUpload.result;
+  let result: { settings: RegionSettings; error: string | null };
   try {
-    return { settings: parseRegionSettings(text), error: null };
+    result = { settings: parseRegionSettings(text), error: null };
   } catch (error) {
-    return { settings: REGION_SETTINGS, error: (error as Error).message };
+    result = { settings: REGION_SETTINGS, error: (error as Error).message };
   }
+  lastUpload = { text, result };
+  return result;
 }
 
 // The settings Warband Mode plays: this browser's upload, else the built-in ones.

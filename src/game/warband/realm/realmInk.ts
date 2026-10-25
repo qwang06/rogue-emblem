@@ -94,8 +94,13 @@ export const INK_RULES = Object.freeze({
   roadWobble: 0.3,
 });
 
-// The parchment map for `realm` (see the top of this file).
+const inkCache = new WeakMap<Realm, RealmInk>();
+
+// The parchment map for `realm` (see the top of this file), cached per
+// realm so returning to the overworld reuses it.
 export function getRealmInk(realm: Realm): RealmInk {
+  const cached = inkCache.get(realm);
+  if (cached) return cached;
   const { grid } = realm;
   const terrainAt = (x: number, y: number): RealmTerrain | undefined =>
     x < 0 || y < 0 || x >= grid.width || y >= grid.height
@@ -157,7 +162,7 @@ export function getRealmInk(realm: Realm): RealmInk {
     }),
   );
 
-  return Object.freeze({
+  const ink: RealmInk = Object.freeze({
     width: grid.width * TILE_SIZE,
     height: grid.height * TILE_SIZE,
     water: Object.freeze(grid.cells.map((cell) => cell.terrain === 'water')),
@@ -165,6 +170,8 @@ export function getRealmInk(realm: Realm): RealmInk {
     roads: Object.freeze(roads),
     labels: Object.freeze(nameFeatures(realm)),
   });
+  inkCache.set(realm, ink);
+  return ink;
 }
 
 // The drawn line for a route of road tiles (a site's tile, the road's

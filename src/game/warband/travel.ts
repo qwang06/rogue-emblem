@@ -59,17 +59,16 @@ export function getRunSite(run: Pick<RunState, 'route'>): RunSite | undefined {
   return run.route?.at;
 }
 
-// Whether the run has done what its site is for: a battle won (the stage
-// has moved past it), a shrine's blessing picked, a wayside's event
-// settled, home. A town is never
-// done: the warband can shop and rest until it leaves.
+// Whether the run has done what its site is for: a battle won or a town
+// left (the stage has moved past it), a shrine's blessing picked, a
+// wayside's event settled, home.
 export function isSiteDone(run: RunState): boolean {
   const at = getRunSite(run);
   if (!at) return true;
-  if (BATTLE_SITES.has(at.kind)) return run.stage > at.depth;
+  if (BATTLE_SITES.has(at.kind) || at.kind === 'town') return run.stage > at.depth;
   if (at.kind === 'shrine') return !run.pendingReward;
   if (at.kind === 'event') return !run.pendingEvent;
-  return at.kind !== 'town';
+  return true;
 }
 
 // The sites `run` can travel to next: those the roads lead to from where

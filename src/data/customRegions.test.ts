@@ -12,8 +12,11 @@ describe('readRegionsUpload', () => {
     expect(readRegionsUpload(null)).toEqual({ settings: REGION_SETTINGS, error: null });
   });
 
-  it('reads an upload', () => {
-    expect(readRegionsUpload(formatRegionSettings(custom))).toEqual({ settings: custom, error: null });
+  it('reads an upload and caches the parsed settings for the same text', () => {
+    const text = formatRegionSettings(custom);
+    const first = readRegionsUpload(text);
+    expect(first).toEqual({ settings: custom, error: null });
+    expect(readRegionsUpload(text).settings).toBe(first.settings);
   });
 
   it('falls back to the built-in settings when the upload no longer parses', () => {

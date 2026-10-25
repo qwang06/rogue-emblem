@@ -40,7 +40,17 @@ const DEEP_FROM = 10;
 const ROAD_EDGE = 3;
 const ROAD_FILL = 1.6;
 
+let lastPainted: {
+  ink: RealmInk;
+  seed: number;
+  stamps: Readonly<Record<InkStamp, RgbaImage>>;
+  image: RgbaImage;
+} | null = null;
+
 export function paintRealmInk(ink: RealmInk, seed: number, stamps: Readonly<Record<InkStamp, RgbaImage>>): RgbaImage {
+  if (lastPainted && lastPainted.ink === ink && lastPainted.seed === seed && lastPainted.stamps === stamps) {
+    return lastPainted.image;
+  }
   const { width, height } = ink;
   const data = new Uint8ClampedArray(width * height * 4);
   const image = { width, height, data };
@@ -49,6 +59,7 @@ export function paintRealmInk(ink: RealmInk, seed: number, stamps: Readonly<Reco
   for (const road of ink.roads) paintLine(image, road.line, ROAD_EDGE, INK_COLORS.roadEdge);
   for (const road of ink.roads) paintLine(image, road.line, ROAD_FILL, INK_COLORS.road);
   for (const { stamp, x, y } of ink.placements) blit(image, stamps[stamp], x, y);
+  lastPainted = { ink, seed, stamps, image };
   return image;
 }
 
