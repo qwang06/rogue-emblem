@@ -1,3 +1,4 @@
+import type { MentorColumn } from '../game/warband/mentorScreen.ts';
 import type { MerchantTarget } from '../game/warband/merchantScreen.ts';
 import type { RosterTarget } from '../game/warband/rosterScreen.ts';
 
@@ -14,6 +15,8 @@ import type { RosterTarget } from '../game/warband/rosterScreen.ts';
 //   { type: 'select-merchant', column, index } — that entry was clicked
 //   { type: 'hover-promotion', index }   — pointer is over option `index` of the promotion screen
 //   { type: 'select-promotion', index }  — that option was clicked
+//   { type: 'hover-mentor', column, index }  — pointer is over entry `index` of a mentor screen column
+//   { type: 'select-mentor', column, index } — that entry was clicked
 //   { type: 'confirm' }                  — same as pressing Enter/Z
 //   { type: 'cancel' }                   — same as pressing Esc/X
 //   { type: 'main-menu' }                — leave the battle for the title screen, whatever is going on
@@ -42,6 +45,8 @@ export type Command =
   | { type: 'select-merchant'; column: MerchantTarget; index: number }
   | { type: 'hover-promotion'; index: number }
   | { type: 'select-promotion'; index: number }
+  | { type: 'hover-mentor'; column: MentorColumn; index: number }
+  | { type: 'select-mentor'; column: MentorColumn; index: number }
   | { type: 'confirm' }
   | { type: 'cancel' }
   | { type: 'main-menu' }

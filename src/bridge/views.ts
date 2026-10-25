@@ -31,6 +31,8 @@ import { getStandingCombatBonus } from '../game/modifiers.ts';
 import { findBoon, type BoonKind } from '../game/warband/boons.ts';
 import { completesEvolution, findEvolution } from '../game/warband/evolutions.ts';
 import { findPromotion } from '../game/promotions.ts';
+import { findEliteAffix } from '../game/warband/elites.ts';
+import { findQuirk } from '../game/warband/quirks.ts';
 import type { BoonOffer } from '../game/warband/levelUpPicks.ts';
 import { findRelic, type Relic } from '../game/warband/relics.ts';
 import type { Unit } from '../game/Unit.ts';
@@ -99,8 +101,8 @@ export interface WeaponDetailView {
   maxUses: number | null;
 }
 
-// A passive on the unit info screen: a promoted class's, a boon's or an
-// evolution's.
+// A passive on the unit info screen: a promoted class's, a boon's, an elite
+// affix's or an evolution's.
 export interface PassiveView {
   id: string;
   label: string;
@@ -117,9 +119,10 @@ export interface SkillView {
 // The unit info screen's full stat sheet: everything the hover panel shows
 // plus the class name, stat caps, the rates it fights with, its equipped
 // weapon's numbers, the weapon types it can wield, the skills it knows and
-// its passives: the passive boons it has taken (see warband/boons.ts), its
-// promoted class's passive (promotions.ts) and its evolutions
-// (warband/evolutions.ts).
+// its passives: its promoted class's passive (promotions.ts), the passive
+// boons it has taken (see warband/boons.ts), its elite affixes and its
+// evolutions (warband/evolutions.ts), and the quirk it joined with
+// (warband/quirks.ts).
 export interface UnitDetailView extends UnitView {
   maxLevel: boolean;
   stats: readonly StatLineView[];
@@ -132,7 +135,11 @@ export interface UnitDetailView extends UnitView {
   equippedWeapon: WeaponDetailView | null;
   weaponTypes: readonly WeaponType[];
   skills: readonly SkillView[];
+  // The class whose skill set it learned on top of its own (see
+  // warband/mentors.ts), by label, or null.
+  secondaryClass: string | null;
   passives: readonly PassiveView[];
+  quirk: { label: string; description: string } | null;
 }
 
 // The visible world rectangle's top-left plus the zoom.
@@ -172,7 +179,22 @@ export interface CombatForecastView {
   anchor: TileAnchorView;
 }
 
-export type PopupKind = 'damage' | 'crit' | 'miss' | 'health' | 'mana' | 'broke' | 'loot' | 'stored' | 'learned';
+export type PopupKind =
+  | 'damage'
+  | 'crit'
+  | 'miss'
+  | 'health'
+  | 'mana'
+  | 'broke'
+  | 'loot'
+  | 'stored'
+  | 'learned'
+  // A boss's rules (src/game/bosses.ts): its war horn, a goblin arriving
+  // or blocked, its rage.
+  | 'horn'
+  | 'arrived'
+  | 'blocked'
+  | 'enraged';
 
 export interface DamagePopupView {
   id: number;
@@ -390,6 +412,7 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
   const damageType = getDamageType(unit);
   // The rates count the modifiers that hold in any exchange.
   const bonus = getStandingCombatBonus(unit.modifiers);
+  const quirk = unit.quirk ? findQuirk(unit.quirk) : null;
   const rates = {
     skill: unit.skill,
     luck: unit.luck,
@@ -427,19 +450,24 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
     skills: Object.freeze(
       getUnitSkills(unit).map(({ id, label, manaCost, range }) => Object.freeze({ id, label, manaCost, range })),
     ),
+    secondaryClass: unit.secondaryClass && getClassLabel(unit.secondaryClass),
     passives: Object.freeze(getPassiveViews(unit)),
+    quirk: quirk && Object.freeze({ label: quirk.name, description: quirk.description }),
   });
 }
 
 // A unit's passives for the info screen: its class's (a promoted class's),
-// then its passive boons, then its evolutions, marked as one.
+// then its passive boons and elite affixes, then its evolutions, marked as
+// one.
 function getPassiveViews(unit: Unit): PassiveView[] {
   const classPassive = findPromotion(unit.unitClass ?? '')?.passive;
   const boons = unit.boons.map(findBoon).filter((boon) => boon?.kind === 'passive');
+  const affixes = unit.eliteAffixes.map(findEliteAffix).filter((affix) => affix !== null);
   const evolutions = unit.evolutions.map(findEvolution).filter((evolution) => evolution !== null);
   return [
     ...(classPassive ? [{ id: 'class', label: classPassive.name, description: classPassive.description }] : []),
     ...boons.map((boon) => ({ id: boon!.id, label: boon!.name, description: boon!.description })),
+    ...affixes.map((affix) => ({ id: affix.id, label: affix.name, description: affix.description })),
     ...evolutions.map((evolution) => ({
       id: `evolution-${evolution.id}`,
       label: `✦ ${evolution.name}`,
@@ -539,6 +567,10 @@ const POPUP_TEXT: Readonly<Record<PopupKind, (amount: number, label: string) => 
   loot: (_, label) => `Got ${label}`,
   stored: (_, label) => `${label} to convoy`,
   learned: (_, label) => `Learned ${label}!`,
+  horn: () => 'War Horn!',
+  arrived: () => 'Reinforcement!',
+  blocked: () => 'Blocked!',
+  enraged: (amount) => `Enraged! +${amount} STR`,
 });
 
 // Snapshot of one floating number over a unit: damage taken (plain, a

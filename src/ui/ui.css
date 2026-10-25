@@ -1569,6 +1569,30 @@ kbd {
   white-space: nowrap;
 }
 
+/* A boss's rules (see BossBar.css for its bar): the horn and its
+   arrivals read as a warning, a blocked arrival quietly, its rage hot. */
+.damage-popup--horn,
+.damage-popup--arrived,
+.damage-popup--blocked,
+.damage-popup--enraged {
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.damage-popup--horn,
+.damage-popup--arrived {
+  color: var(--yellow);
+}
+
+.damage-popup--blocked {
+  color: var(--fg-dim);
+}
+
+.damage-popup--enraged {
+  font-size: 1.25rem;
+  color: var(--orange);
+}
+
 @keyframes damage-popup-rise {
   from {
     opacity: 1;
@@ -2356,12 +2380,33 @@ kbd {
   color: var(--fg-dim);
 }
 
-/* New Run's class entries: the class's sprite beside its name, so the
-   sprites line up in a column. */
+/* New Run's origin entries: the sprites of the units it starts with
+   beside its name, so the sprites line up in a column. A band's units
+   stand overlapped in a slot as wide as the widest band's, so every name
+   starts at the same place, and a name never wraps (a narrow screen sets
+   them smaller to fit). */
 .title-menu__item--class {
   display: flex;
   align-items: center;
   gap: 12px;
+  white-space: nowrap;
+  font-size: clamp(1.1rem, 4vh, 1.5rem);
+}
+
+.title-menu__sprites {
+  display: flex;
+  flex: none;
+  width: 56px;
+}
+
+.title-menu__sprites > * + * {
+  margin-left: -24px;
+}
+
+@media (max-width: 480px) {
+  .title-menu__item--class {
+    font-size: 1.1rem;
+  }
 }
 
 /* New Run's name row: the starting unit's name, with buttons to roll a new
@@ -4222,4 +4267,28 @@ textarea.draft-input {
   .scroll-list__cue {
     animation: none;
   }
+}
+
+/* ---- Mentors -------------------------------------------------------- */
+
+/* How a lesson is paid for, sized for its longest note ("Iris · 20 G"),
+   so a row never changes width with it. */
+.mentor-screen__note {
+  flex: none;
+  min-width: 9ch;
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--yellow);
+}
+
+.mentor-screen .action-menu__item--disabled .mentor-screen__note {
+  color: var(--fg-dim);
+}
+
+/* Room for a set's description at three lines, so the window never grows
+   as the cursor moves. */
+.mentor-screen__detail {
+  min-height: 3.9em;
 }

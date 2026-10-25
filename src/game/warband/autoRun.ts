@@ -14,25 +14,29 @@ import { createBattleState, getRunBattleResult, type BattleState } from '../batt
 import { isPastTurnLimit, type ObjectiveKind } from '../objectives.ts';
 import type { BattleOutcome } from '../turns.ts';
 import { canRest } from './camp.ts';
-import { createRun } from './run.ts';
 import {
   applyRunCommand,
   finishBattle,
+  getLegalRunCommands,
   getRecruitOffers,
   getRewardOffers,
   startRunSession,
   type RunCommand,
   type RunSession,
 } from './runCommands.ts';
-import { createStartingWarband } from './stageLevel.ts';
+import { createOriginRun } from './origins.ts';
 import { getRealm, getNextSites, type Realm } from './realm/realm.ts';
 import { getCurrentSiteId, startRoute } from './travel.ts';
 
 // How a run starts: its seed, and the class and name of its first unit.
 export interface RunStart {
   seed: number;
+  // The origin it starts as (see origins.ts): a base class's id starts as
+  // that class alone.
   classId: string;
   name: string;
+  // The Heat it's played at (see heat.ts); absent for none.
+  heat?: number;
 }
 
 // One step of a run: a stage's battle (every command given in it, both
@@ -53,8 +57,14 @@ export interface RunPolicy {
   // pick-boon command. The first offer when left out.
   relic?: (session: RunSession) => RunCommand;
   boon?: (session: RunSession) => RunCommand;
+  // A wayside event's choice: a pick-event command. The first choice the
+  // run can take when left out.
+  event?: (session: RunSession) => RunCommand;
   // The reward pick: one of getLegalRunCommands' reward commands.
   reward: (session: RunSession) => RunCommand;
+  // The guest's or a draft's recruit pick: a pick-recruit or
+  // decline-recruit command. The first offer when left out.
+  recruit?: (session: RunSession) => RunCommand;
   // Camp, one command at a time until it marches.
   camp: (session: RunSession) => RunCommand;
   // Where to travel on the realm: one of getLegalRunCommands' travel
@@ -104,7 +114,7 @@ export const BASELINE_POLICY: RunPolicy = Object.freeze({
   battle: (state: BattleState) => (state.stage === 'deployment' ? planDeployment(state) : planNextTurn(state)),
   reward: (session: RunSession): RunCommand => {
     const offers = getRewardOffers(session);
-    const pick = [offers.findIndex((r) => r.kind === 'recruit'), offers.findIndex((r) => r.kind === 'rest'), 0].find(
+    const pick = [offers.findIndex((r) => r.kind === 'draft'), offers.findIndex((r) => r.kind === 'rest'), 0].find(
       (index) => index >= 0,
     )!;
     return offers.length > 0 ? { type: 'pick-reward', index: pick } : { type: 'skip-reward' };
@@ -116,10 +126,10 @@ export const BASELINE_POLICY: RunPolicy = Object.freeze({
   }),
 });
 
-// A new run's session: its starting relic pick, then the lone level-1 unit
-// at home on its realm, choosing where to travel first.
+// A new run's session: its starting relic pick, then its origin's level-1
+// units at home on its realm, choosing where to travel first.
 export function startRun(start: RunStart): RunSession {
-  return startRunSession(startRoute(createRun(start.seed, createStartingWarband(start.classId, start.name))));
+  return startRunSession(startRoute(createOriginRun(start.seed, start.classId, start.name, start.heat ?? 0)));
 }
 
 // Plays a run from `start` with `policy` until the warband falls, wins the
@@ -162,7 +172,10 @@ export function playRun(start: RunStart, policy: RunPolicy, options: AutoRunOpti
         give(policy.reward(session));
         break;
       case 'recruit':
-        give({ type: 'pick-recruit', index: getRecruitOffers(session).length > 0 ? 0 : -1 });
+        give(
+          policy.recruit?.(session) ??
+            (getRecruitOffers(session).length > 0 ? { type: 'pick-recruit', index: 0 } : { type: 'decline-recruit' }),
+        );
         break;
       case 'camp':
         give(campCommands++ < maxCampCommands ? policy.camp(session) : { type: 'march' });
@@ -170,6 +183,9 @@ export function playRun(start: RunStart, policy: RunPolicy, options: AutoRunOpti
       case 'travel':
         give(policy.travel(session, realm));
         campCommands = 0;
+        break;
+      case 'event':
+        give(policy.event?.(session) ?? getLegalRunCommands(session)[0]);
         break;
       case 'over':
         return done('fallen');

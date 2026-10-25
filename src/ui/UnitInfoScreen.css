@@ -228,3 +228,9 @@
     animation: none;
   }
 }
+
+/* "Skills + Acolyte set": the secondary skill set, quieter than the heading. */
+.unit-info__secondary {
+  font-weight: 400;
+  color: var(--muted);
+}

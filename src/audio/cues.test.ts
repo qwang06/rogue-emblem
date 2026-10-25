@@ -25,7 +25,16 @@ const banner = (id: number, team: PhaseBannerView['team']): PhaseBannerView => (
   durationMs: 1000,
 });
 
+const intro = (id: number) => ({ id, name: 'Grukk', title: 'Orc Warlord', taunt: [], durationMs: 2000 });
+
 describe('getSoundCues', () => {
+  it('drums once as a boss name card comes up', () => {
+    expect(getSoundCues(base, { ...base, bossIntro: intro(1) })).toEqual(['bossIntro']);
+    const shown = { ...base, bossIntro: intro(1) };
+    expect(getSoundCues(shown, { ...shown })).toEqual([]);
+    expect(getSoundCues(shown, { ...base, bossIntro: null })).toEqual([]);
+  });
+
   it('plays nothing when nothing changed', () => {
     expect(getSoundCues(base, base)).toEqual([]);
     expect(getSoundCues(base, { ...base })).toEqual([]);
@@ -38,6 +47,8 @@ describe('getSoundCues', () => {
     expect(getSoundCues(base, { ...base, damagePopups: [popup(1, 'health')] })).toEqual(['heal']);
     expect(getSoundCues(base, { ...base, damagePopups: [popup(1, 'mana')] })).toEqual(['heal']);
     expect(getSoundCues(base, { ...base, damagePopups: [popup(1, 'stored')] })).toEqual(['loot']);
+    expect(getSoundCues(base, { ...base, damagePopups: [popup(1, 'horn')] })).toEqual(['warHorn']);
+    expect(getSoundCues(base, { ...base, damagePopups: [popup(1, 'enraged')] })).toEqual(['enrage']);
     expect(getSoundCues(base, { ...base, damagePopups: [popup(1, 'broke')] })).toEqual(['break']);
     expect(getSoundCues(base, { ...base, damagePopups: [popup(1, 'learned')] })).toEqual(['learn']);
   });

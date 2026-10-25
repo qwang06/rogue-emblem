@@ -9,6 +9,8 @@ import { ControlsButton } from './ControlsButton.tsx';
 import { DamagePopups } from './DamagePopups.tsx';
 import { AutoPlayButton } from './AutoPlayButton.tsx';
 import { AutoCommandQueue } from './AutoCommandQueue.tsx';
+import { BossBar } from './BossBar.tsx';
+import { BossIntro } from './BossIntro.tsx';
 import { DangerZoneButton } from './DangerZoneButton.tsx';
 import { DeploymentBanner } from './DeploymentBanner.tsx';
 import { DeploymentMenu } from './DeploymentMenu.tsx';
@@ -27,6 +29,7 @@ import { PauseMenu } from './PauseMenu.tsx';
 import { PhaseBanner } from './PhaseBanner.tsx';
 import { RewardScreen } from './RewardScreen.tsx';
 import { RosterMenu } from './RosterMenu.tsx';
+import { MentorScreen } from './MentorScreen.tsx';
 import { MerchantScreen } from './MerchantScreen.tsx';
 import { PromotionScreen } from './PromotionScreen.tsx';
 import { RosterScreen } from './RosterScreen.tsx';
@@ -93,6 +96,7 @@ export function App() {
             <div className="hud">
               {/* First, so every other overlay paints over it. */}
               <UnitPanel />
+              <BossBar />
               <AutoCommandQueue />
               <DeploymentMenu />
               <RosterMenu />
@@ -104,6 +108,7 @@ export function App() {
               <DamagePopups />
               <ExperienceBar />
               <PhaseBanner />
+              <BossIntro />
               <DialogBox />
               <ObjectiveScreen />
               <UnitInfoScreen />
@@ -114,6 +119,7 @@ export function App() {
               <RosterScreen />
               <MerchantScreen />
               <PromotionScreen />
+              <MentorScreen />
               {/* Over the reward screen too, for a Veteran's Lesson's level ups, and over a cleared stage for its guaranteed ones. */}
               <LevelUpPanel />
             </div>

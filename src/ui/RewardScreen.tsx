@@ -10,21 +10,25 @@ import { RewardTeam } from './RewardTeam.tsx';
 // confirm takes it); the mouse is forwarded to it. The warband's HP, level
 // and XP show above the cards, with a heal's effect previewed on them.
 // The same screen shows a level up's boon pick (`boonPick`), whose cards
-// are the boons, and a surviving guest's recruitment.
+// are the boons, a surviving guest's recruitment, and a Recruit reward's
+// draft of recruits to pick one from.
 export function RewardScreen() {
   const menu = useGameStore((state) => state.rewardMenu);
   const stageClear = useGameStore((state) => state.stageClear);
   const recruitmentStage = useGameStore((state) => state.recruitmentStage);
+  const recruitDraft = useGameStore((state) => state.recruitDraft);
   const team = useGameStore((state) => state.rewardTeam);
   const boonPick = useGameStore((state) => state.boonPick);
   if (!menu) return null;
   const title = boonPick
     ? `${boonPick.name} Reached Level ${boonPick.level}`
-    : recruitmentStage
-      ? `Guest Survived Stage ${recruitmentStage}`
-      : stageClear?.blessing
-        ? 'A Blessing'
-        : 'Spoils of Battle';
+    : recruitmentStage && recruitDraft
+      ? 'Choose a Recruit'
+      : recruitmentStage
+        ? `Guest Survived Stage ${recruitmentStage}`
+        : stageClear?.blessing
+          ? 'A Blessing'
+          : 'Spoils of Battle';
   const entries = menu.actions.map((action, index) => ({ action, index, selected: index === menu.selectedIndex }));
   const cards = entries.filter(
     ({ action }) => action.kind !== 'skip' && action.kind !== 'reroll' && action.kind !== 'decline',
@@ -45,6 +49,8 @@ export function RewardScreen() {
             <p className="reward-screen__gold">
               Pick one for the {boonPick.classLabel} to keep for the rest of the run.
             </p>
+          ) : recruitmentStage && recruitDraft ? (
+            <p className="reward-screen__gold">Pick one to join the warband, quirk and all.</p>
           ) : stageClear?.blessing ? (
             <p className="reward-screen__gold">
               {stageClear.blessing} offers its blessing

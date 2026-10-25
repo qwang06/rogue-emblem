@@ -18,9 +18,16 @@ const summary: RunSummary = {
     { id: 'bryn', name: 'Bryn', classId: 'archer', level: 3, kills: 2, stage: null },
   ],
   relics: ['lucky-coin'],
+  origin: 'sellswords',
+  heat: 0,
 };
 
 describe('toRunSummaryView', () => {
+  it('lists a newly opened Heat level with the unlocks', () => {
+    const won = { ...summary, won: true, stage: 10, stagesCleared: 10 };
+    expect(toRunSummaryView(won, recordRun(NEW_META, won)).renown.unlocked).toContain('Heat 1');
+  });
+
   it('names units by class and sprite, and shows the time as text', () => {
     const view = toRunSummaryView(summary, recordRun(NEW_META, summary));
     expect(view.playTime).toBe('12:34');
@@ -38,6 +45,8 @@ describe('toRunSummaryView', () => {
     ]);
     expect(view.survivors).toBe(0);
     expect(view.relics).toEqual(['Lucky Coin']);
+    expect(view.origin).toBe('Sellswords');
+    expect(view.heat).toBe(0);
     expect(Object.isFrozen(view)).toBe(true);
   });
 

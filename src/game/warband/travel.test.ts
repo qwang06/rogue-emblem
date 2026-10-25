@@ -160,3 +160,28 @@ describe('isFinalBattle', () => {
     expect(isFinalBattle({ ...linearRun(), stage: 9 }, 10)).toBe(false);
   });
 });
+
+describe('waysides and elite lairs', () => {
+  it('owes an event on arriving at a wayside, done once it is settled', () => {
+    const { realm, from, to } = findRoadTo('event');
+    const run = travelTo(standingAt(startRoute(linearRun()), from), realm, to.id);
+    expect(run.pendingEvent).toMatchObject({ depth: to.depth });
+    expect(isSiteDone(run)).toBe(false);
+    expect(getTravelChoices(run, realm)).toEqual([]);
+    expect(isSiteDone({ ...run, pendingEvent: undefined })).toBe(true);
+  });
+
+  it('meets an event it has not seen when it can', () => {
+    const { realm, from, to } = findRoadTo('event');
+    const first = travelTo(standingAt(startRoute(linearRun()), from), realm, to.id).pendingEvent!.id;
+    const seen = { ...standingAt(startRoute(linearRun()), from), seenEvents: [first] };
+    expect(travelTo(seen, realm, to.id).pendingEvent!.id).not.toBe(first);
+  });
+
+  it('fights at an elite lair', () => {
+    const { realm, from, to } = findRoadTo('elite');
+    const run = travelTo(standingAt(startRoute(linearRun()), from), realm, to.id);
+    expect(isSiteDone(run)).toBe(false);
+    expect(run.stage).toBe(to.depth);
+  });
+});

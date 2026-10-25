@@ -7,20 +7,43 @@
 // state passed in is never changed, and the dice come from the state's own
 // seeded rolls. No Phaser.
 
+import {
+  canArrive,
+  getBossRules,
+  getHornUnitId,
+  isHornTurn,
+  pickHornTile,
+  shouldEnrage,
+  type BossState,
+} from '../bosses.ts';
 import { getAttackTargets, resolveCombat, type Strike, type TargetTile } from '../combat.ts';
 import { canDeployUnit, canDeployUnitAt, canStartBattle, isPlaced, placeUnit } from '../deployment.ts';
 import { getPhaseMovement } from '../enemyAI.ts';
-import { getCombatAward, getCombatOutcome, type ExperienceAward, type ExperienceGain } from '../experience.ts';
-import { findTileAt, findUnit, getDistance, moveUnit, setUnit, type Grid, type Point } from '../grid.ts';
+import {
+  getCombatAward,
+  getCombatOutcome,
+  growToLevel,
+  type ExperienceAward,
+  type ExperienceGain,
+} from '../experience.ts';
+import { findTileAt, findUnit, getCell, getDistance, moveUnit, setUnit, type Grid, type Point } from '../grid.ts';
 import { getHealAmount, getHealTargets, HEAL_EXPERIENCE, isStaff, isWounded } from '../healing.ts';
 import { canUseItem, findItem, type Consumable, type Item } from '../items.ts';
 import { claimLoot, getLootQuantity } from '../loot.ts';
 import { getMovePath, getMovementRange, canMoveAlongPath, type MovementOptions } from '../movement.ts';
 import { getObjectiveOutcome } from '../objectives.ts';
 import { createResumableRng } from '../rng.ts';
-import { calculateSkillDamage, canUseSkill, findUnitSkill, type Skill } from '../skills.ts';
+import {
+  calculateSkillDamage,
+  canUseSkill,
+  findUnitSkill,
+  getSkillHealAmount,
+  isHealingSkill,
+  type Skill,
+} from '../skills.ts';
 import { hasModifier, sumModifiers } from '../modifiers.ts';
 import { areAllied, getTeamUnitIds, isAllyOf, isHostileTo } from '../teams.ts';
+import { createUnitOfClass, UNIT_CLASSES } from '../unitClasses.ts';
 import {
   getFirstPhase,
   hasMoved,
@@ -52,7 +75,8 @@ export type BattleCommand =
   | { type: 'equip'; unitId: string; index: number }
   // Attacks the hostile unit on `target` with the equipped weapon.
   | { type: 'attack'; unitId: string; target: Point }
-  // Uses a learned skill on the hostile unit on `target`.
+  // Uses a learned skill on the hostile unit on `target` (the wounded ally
+  // there, for a healing skill).
   | { type: 'skill'; unitId: string; skillId: string; target: Point }
   // Heals the wounded ally on `target` with the staff in slot `staffIndex`.
   | { type: 'heal'; unitId: string; staffIndex: number; target: Point }
@@ -86,7 +110,9 @@ export type BattleEvent =
       learned: Weapon | null;
     }
   | { type: 'skill'; unitId: string; targetId: string; skill: Skill; damage: number; health: number }
-  | { type: 'healed'; unitId: string; targetId: string; amount: number }
+  // A heal, with a staff or with `skill` (a healing skill, which spent its
+  // mana).
+  | { type: 'healed'; unitId: string; targetId: string; amount: number; skill?: Skill }
   | { type: 'item-used'; unitId: string; item: Consumable; amount: number }
   // A modifier's recovery (see modifiers.ts): HP healed on a kill
   // (`trigger` 'kill'), or HP or MP recovered as the unit's phase starts
@@ -99,6 +125,14 @@ export type BattleEvent =
   | { type: 'experience'; unitId: string; from: { level: number; experience: number }; result: ExperienceGain }
   | { type: 'unit-done'; unitId: string }
   | { type: 'phase-started'; turnState: TurnState }
+  // A boss's rules (see bosses.ts): its war horn marked `at` for an
+  // arrival next enemy phase; that arrival came (`unitId`, done for the
+  // phase it arrives in) or was blocked by `blockerId` standing there; or
+  // a hit left it enraged, `strength` STR up and on the move.
+  | { type: 'war-horn'; unitId: string; at: Point }
+  | { type: 'reinforced'; unitId: string; at: Point }
+  | { type: 'reinforcement-blocked'; blockerId: string | null; at: Point }
+  | { type: 'boss-enraged'; unitId: string; strength: number }
   | { type: 'outcome'; outcome: BattleOutcome };
 
 // The event of one type, e.g. BattleEventOf<'strike'>.
@@ -184,6 +218,37 @@ export function hostileTo(units: ReadonlyMap<string, { team: Unit['team'] }>, un
   return (unitId: string) => isHostileTo(units, unit.team, unitId);
 }
 
+// Whether the unit `otherId` is one `healerId` can heal: an ally of its,
+// not itself, and wounded.
+export function woundedAllyOf(units: ReadonlyMap<string, Unit>, healerId: string) {
+  const healer = units.get(healerId);
+  return (otherId: string) => {
+    const other = units.get(otherId);
+    return (
+      otherId !== healerId &&
+      healer !== undefined &&
+      other !== undefined &&
+      areAllied(other.team, healer.team) &&
+      isWounded(other)
+    );
+  };
+}
+
+// The tiles the unit `unitId` can use `skill` on from `from`: hostile units
+// in its range, or wounded allies for a healing skill.
+export function getSkillTargets(
+  grid: Grid,
+  units: ReadonlyMap<string, Unit>,
+  unitId: string,
+  from: Point,
+  skill: Skill,
+): TargetTile[] {
+  const user = units.get(unitId);
+  if (!user) return [];
+  const canTarget = isHealingSkill(skill) ? woundedAllyOf(units, unitId) : hostileTo(units, user);
+  return getAttackTargets(grid, from, skill.range, canTarget);
+}
+
 // The state being built from the last one: the parts a command changes,
 // copied, and the units it changes cloned once each.
 class Draft {
@@ -196,6 +261,7 @@ class Draft {
   fallen: Map<string, Unit>;
   convoyLoot: ItemSnapshot[];
   kills: Map<string, number>;
+  boss: BossState | null;
   readonly events: BattleEvent[] = [];
   readonly rng: Rng;
   private readonly rngState: () => number;
@@ -214,6 +280,7 @@ class Draft {
     this.fallen = new Map(base.fallen);
     this.convoyLoot = [...base.convoyLoot];
     this.kills = new Map(base.kills);
+    this.boss = base.boss;
     const { rng, state } = createResumableRng(base.rngState);
     this.rng = rng;
     this.rngState = state;
@@ -256,6 +323,7 @@ class Draft {
       convoyLoot: Object.freeze(this.convoyLoot),
       kills: this.kills,
       rngState: this.rngState(),
+      boss: this.boss,
     });
   }
 }
@@ -435,13 +503,16 @@ function grantExperience(draft: Draft, unitId: string, { amount, scaled }: Exper
 }
 
 // A skill always lands: mana is spent and its damage dealt, and it earns XP
-// like a single strike that hit.
+// like a single strike that hit. A healing skill mends instead (mendWith).
 function useSkill(draft: Draft, unitId: string, skillId: string, target: Point) {
   const user = requireActor(draft, unitId);
   const skill = findUnitSkill(user, skillId) ?? draft.fail(`${unitId} doesn't know ${skillId}`);
   if (!canUseSkill(user, skill)) draft.fail(`${unitId} can't afford ${skillId}`);
-  const from = draft.tileOf(unitId);
-  const targets = getAttackTargets(draft.grid, from, skill.range, hostileTo(draft.units, user));
+  if (isHealingSkill(skill)) {
+    mendWith(draft, unitId, skill, target);
+    return;
+  }
+  const targets = getSkillTargets(draft.grid, draft.units, unitId, draft.tileOf(unitId), skill);
   const tile = findTileAt(targets, target) ?? draft.fail(`no foe in reach on (${target.x}, ${target.y})`);
 
   const defender = draft.edit(tile.unitId);
@@ -460,16 +531,27 @@ function useSkill(draft: Draft, unitId: string, skillId: string, target: Point) 
   finishAction(draft, unitId);
 }
 
+// A healing skill on the wounded ally on `target`: its mana is spent, the
+// ally regains getSkillHealAmount, and the user earns a heal's XP.
+function mendWith(draft: Draft, unitId: string, skill: Skill, target: Point) {
+  const targets = getSkillTargets(draft.grid, draft.units, unitId, draft.tileOf(unitId), skill);
+  const tile = findTileAt(targets, target) ?? draft.fail(`no wounded ally in reach on (${target.x}, ${target.y})`);
+
+  const patient = draft.edit(tile.unitId);
+  const amount = getSkillHealAmount(skill, draft.unit(unitId), patient);
+  patient.heal(amount);
+  draft.edit(unitId).spendMana(skill.manaCost);
+  draft.events.push({ type: 'healed', unitId, targetId: tile.unitId, amount, skill });
+  grantExperience(draft, unitId, { amount: HEAL_EXPERIENCE, scaled: true });
+  finishAction(draft, unitId);
+}
+
 function heal(draft: Draft, unitId: string, staffIndex: number, target: Point) {
   const healer = requireActor(draft, unitId);
   const staff = healer.items[staffIndex]?.item;
   if (!staff || !isStaff(staff)) draft.fail(`${unitId} has no staff in slot ${staffIndex}`);
   const from = draft.tileOf(unitId);
-  const canHeal = (otherId: string) => {
-    const other = draft.units.get(otherId);
-    return otherId !== unitId && other !== undefined && areAllied(other.team, healer.team) && isWounded(other);
-  };
-  const targets = getHealTargets(draft.grid, from, staff, canHeal);
+  const targets = getHealTargets(draft.grid, from, staff, woundedAllyOf(draft.units, unitId));
   const tile = findTileAt(targets, target) ?? draft.fail(`no wounded ally in reach on (${target.x}, ${target.y})`);
 
   const patient = draft.edit(tile.unitId);
@@ -522,6 +604,7 @@ function finishAction(draft: Draft, unitId: string) {
   draft.turnState = markDone(draft.turnState!, unitId);
   draft.events.push({ type: 'unit-done', unitId });
   if (checkOutcome(draft)) return;
+  enrageBoss(draft);
   const turnState = draft.turnState;
   if (isPhaseOver(turnState, getTeamUnitIds(draft.units, turnState.team))) startPhase(draft, getNextPhase(draft));
 }
@@ -537,12 +620,14 @@ function hasGuests(draft: Draft): boolean {
 }
 
 // A new phase can decide the battle on its own (a survive objective).
-// Otherwise the phase's units recover their phase-heal and phase-mana
-// modifiers' HP and MP.
+// Otherwise an enemy phase plays its boss's horn (runBossHorn), and the
+// phase's units recover their phase-heal and phase-mana modifiers' HP and
+// MP.
 function startPhase(draft: Draft, turnState: TurnState) {
   draft.turnState = turnState;
   draft.events.push({ type: 'phase-started', turnState });
   if (checkOutcome(draft)) return;
+  if (turnState.team === 'enemy') runBossHorn(draft);
   for (const unitId of getTeamUnitIds(draft.units, turnState.team)) {
     const { modifiers } = draft.unit(unitId);
     recover(draft, unitId, 'health', sumModifiers(modifiers, 'phase-heal'), 'phase');
@@ -563,4 +648,56 @@ function checkOutcome(draft: Draft): boolean {
   draft.outcome = outcome;
   draft.events.push({ type: 'outcome', outcome });
   return true;
+}
+
+// The boss's horn as an enemy phase starts, while the boss is in play:
+// the arrival its last call marked comes, done for this phase (or is
+// blocked by whoever stands on its tile), then, on a horn turn, it marks
+// the tile for the next one.
+function runBossHorn(draft: Draft) {
+  const boss = draft.boss;
+  const horn = boss && getBossRules(boss.rulesId)?.horn;
+  if (!boss || !horn || !draft.units.has(boss.unitId)) return;
+  let { incoming, called } = boss;
+  if (incoming) {
+    const at = incoming;
+    if (canArrive(draft.grid, at)) {
+      called += 1;
+      const unitId = getHornUnitId(called);
+      const label = UNIT_CLASSES.find((c) => c.id === horn.unitClass)?.label ?? horn.unitClass;
+      const arrival = createUnitOfClass(horn.unitClass, { name: `Enemy ${label}`, team: 'enemy' });
+      growToLevel(arrival, horn.level);
+      draft.units.set(unitId, arrival);
+      draft.grid = setUnit(draft.grid, at.x, at.y, unitId);
+      draft.turnState = markDone(draft.turnState!, unitId);
+      draft.events.push({ type: 'reinforced', unitId, at });
+    } else {
+      const blockerId = getCell(draft.grid, at.x, at.y)?.unitId ?? null;
+      draft.events.push({ type: 'reinforcement-blocked', blockerId, at });
+    }
+    incoming = null;
+  }
+  const turn = draft.turnState!.turn;
+  if (isHornTurn(horn, turn, { called, incoming })) {
+    const at = pickHornTile(draft.grid, draft.tileOf(boss.unitId), horn.reach);
+    if (at) {
+      incoming = Object.freeze(at);
+      draft.events.push({ type: 'war-horn', unitId: boss.unitId, at });
+    }
+  }
+  draft.boss = Object.freeze({ ...boss, incoming, called });
+}
+
+// A boss whose last hit left it at or under its enrage share enrages: its
+// STR rises and it stops holding its ground.
+function enrageBoss(draft: Draft) {
+  const boss = draft.boss;
+  const enrage = boss && getBossRules(boss.rulesId)?.enrage;
+  const unit = boss && draft.units.get(boss.unitId);
+  if (!boss || !enrage || !unit || !shouldEnrage(enrage, boss, unit.health, unit.maxHealth)) return;
+  const raging = draft.edit(boss.unitId);
+  raging.strength += enrage.strength;
+  raging.holdsPosition = false;
+  draft.boss = Object.freeze({ ...boss, enraged: true });
+  draft.events.push({ type: 'boss-enraged', unitId: boss.unitId, strength: enrage.strength });
 }

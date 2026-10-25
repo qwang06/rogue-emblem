@@ -12,7 +12,7 @@ import { setUnit, type Point } from '../grid.ts';
 import { getBuildingSprites, getFeatureSprites } from '../mapArt.ts';
 import { pickZonedEnemyTiles } from '../enemySpawns.ts';
 import type { Rng } from '../combatStats.ts';
-import { getAverageLevelUp } from '../experience.ts';
+import { growToLevel } from '../experience.ts';
 import { assignLoot } from '../loot.ts';
 import type { GeneratedTerrain } from '../mapGen.ts';
 import { generateMap } from '../mapPlan.ts';
@@ -42,14 +42,8 @@ export function createStartingWarband(
   return new Map([[`${classId}-1`, createUnitOfClass(classId, { name, team: 'player' })]]);
 }
 
-// Levels `unit` up to `level` on its average growths (getAverageLevelUp),
-// one level up at a time, so its stats are the same for the same class and
-// level every time. Does nothing when it's already there.
-export function growToLevel(unit: Unit, level: number): void {
-  for (let step = unit.level; step < level; step = unit.level) {
-    unit.levelUp(getAverageLevelUp(unit, unit.growths, step, unit.caps));
-  }
-}
+// Kept here too, where enemy groups first used it.
+export { growToLevel };
 
 // The class an enemy group's units are when it doesn't set one.
 export const DEFAULT_ENEMY_CLASS = 'soldier';

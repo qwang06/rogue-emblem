@@ -500,6 +500,27 @@ describe('boons and relics on the roster', () => {
   });
 });
 
+describe('quirks on the roster', () => {
+  it("round-trips a unit's quirk, giving it the quirk's modifiers", () => {
+    const unit = new Soldier({ name: 'Alden', team: 'player' });
+    unit.quirk = 'lucky';
+    const snapshot = snapshotUnit('alden', unit);
+    expect(snapshot.quirk).toBe('lucky');
+    const restored = restoreUnit(snapshot);
+    expect(restored.quirk).toBe('lucky');
+    expect(restored.modifiers).toEqual([{ kind: 'combat', term: 'avoid', amount: 10 }]);
+    expect(snapshotUnit('alden', restored)).toEqual(snapshot);
+    expect(snapshotUnit('alden', new Soldier({ team: 'player' }))).not.toHaveProperty('quirk');
+  });
+
+  it('saves and loads quirks, and refuses a broken one', () => {
+    const run = startingRun();
+    const quirky = { ...run, roster: [{ ...run.roster[0], quirk: 'brave' }, ...run.roster.slice(1)] };
+    expect(parseRun(serializeRun(quirky))).toEqual(quirky);
+    expect(parseRun(JSON.stringify({ ...run, roster: [{ ...run.roster[0], quirk: 3 }] }))).toBeNull();
+  });
+});
+
 describe('Phoenix Feather', () => {
   it('keeps the first ally to fall on the roster at 1 HP, once', () => {
     const run = { ...startingRun(), relics: ['phoenix-feather', 'hawk-lens'] };
@@ -520,5 +541,19 @@ describe('Phoenix Feather', () => {
     const units = restoreRoster(run);
     units.get('alden')!.takeDamage(99);
     expect(applyBattleResult(run, { units }).fallen.map((unit) => unit.id)).toEqual(['alden']);
+  });
+});
+
+describe('a saved wayside event', () => {
+  const run = createRun(1, new Map([['u', new Soldier({ team: 'player' })]]));
+
+  it('round-trips the event owed and the ones seen, and refuses broken ones', () => {
+    const owing = { ...run, pendingEvent: { id: 'gambler', depth: 4 }, seenEvents: ['old-shrine'] };
+    const saved = parseRun(serializeRun(owing));
+    expect(saved?.pendingEvent).toEqual(owing.pendingEvent);
+    expect(saved?.seenEvents).toEqual(['old-shrine']);
+    const broken = (fields: object) => parseRun(JSON.stringify({ ...JSON.parse(serializeRun(run)), ...fields }));
+    expect(broken({ pendingEvent: { id: 3, depth: 1 } })).toBeNull();
+    expect(broken({ seenEvents: [1] })).toBeNull();
   });
 });

@@ -72,7 +72,7 @@ Warband Mode's regions. A run fights stage after stage; every `stagesPerRegion` 
   - `level`: 1–20, the level the group's enemies are, grown from level 1 on their class's average growths (so the same class and level always has the same stats). Unset, level 1.
   - `health`: 1–99, the HP the group's enemies start the battle with (never past their max), e.g. a wounded soldier for an easier fight. Unset, they start at full health.
   - `levelUpOnKill`: true makes killing one of the group's enemies give the killer exactly a level up.
-  - `boss`: a name, e.g. `"Orc Warlord"`, makes the group's first enemy a boss by that name: it holds its ground, and a boss objective targets it.
+  - `boss`: a name, e.g. `"Orc Warlord"`, makes the group's first enemy a boss by that name: it holds its ground, and a boss objective targets it. A boss named after one in `src/game/bosses.ts` (today only `"Orc Warlord"`) also fights by that boss's rules (the Warlord's war horn and rage) and gets its name card; any other name is a plain boss.
 
   A file whose limits leave too few tiles for its enemies on a test map is turned away. An older file's `"enemyCount": n` still loads, as `n` enemies in the north third, and so does a group's `region` (what `area` used to be called).
 
