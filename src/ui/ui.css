@@ -1569,6 +1569,30 @@ kbd {
   white-space: nowrap;
 }
 
+/* A boss's rules (see BossBar.css for its bar): the horn and its
+   arrivals read as a warning, a blocked arrival quietly, its rage hot. */
+.damage-popup--horn,
+.damage-popup--arrived,
+.damage-popup--blocked,
+.damage-popup--enraged {
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.damage-popup--horn,
+.damage-popup--arrived {
+  color: var(--yellow);
+}
+
+.damage-popup--blocked {
+  color: var(--fg-dim);
+}
+
+.damage-popup--enraged {
+  font-size: 1.25rem;
+  color: var(--orange);
+}
+
 @keyframes damage-popup-rise {
   from {
     opacity: 1;

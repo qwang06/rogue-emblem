@@ -7,11 +7,26 @@
 // state passed in is never changed, and the dice come from the state's own
 // seeded rolls. No Phaser.
 
+import {
+  canArrive,
+  getBossRules,
+  getHornUnitId,
+  isHornTurn,
+  pickHornTile,
+  shouldEnrage,
+  type BossState,
+} from '../bosses.ts';
 import { getAttackTargets, resolveCombat, type Strike, type TargetTile } from '../combat.ts';
 import { canDeployUnit, canDeployUnitAt, canStartBattle, isPlaced, placeUnit } from '../deployment.ts';
 import { getPhaseMovement } from '../enemyAI.ts';
-import { getCombatAward, getCombatOutcome, type ExperienceAward, type ExperienceGain } from '../experience.ts';
-import { findTileAt, findUnit, getDistance, moveUnit, setUnit, type Grid, type Point } from '../grid.ts';
+import {
+  getCombatAward,
+  getCombatOutcome,
+  growToLevel,
+  type ExperienceAward,
+  type ExperienceGain,
+} from '../experience.ts';
+import { findTileAt, findUnit, getCell, getDistance, moveUnit, setUnit, type Grid, type Point } from '../grid.ts';
 import { getHealAmount, getHealTargets, HEAL_EXPERIENCE, isStaff, isWounded } from '../healing.ts';
 import { canUseItem, findItem, type Consumable, type Item } from '../items.ts';
 import { claimLoot, getLootQuantity } from '../loot.ts';
@@ -21,6 +36,7 @@ import { createResumableRng } from '../rng.ts';
 import { calculateSkillDamage, canUseSkill, findUnitSkill, type Skill } from '../skills.ts';
 import { hasModifier, sumModifiers } from '../modifiers.ts';
 import { areAllied, getTeamUnitIds, isAllyOf, isHostileTo } from '../teams.ts';
+import { createUnitOfClass, UNIT_CLASSES } from '../unitClasses.ts';
 import {
   getFirstPhase,
   hasMoved,
@@ -99,6 +115,14 @@ export type BattleEvent =
   | { type: 'experience'; unitId: string; from: { level: number; experience: number }; result: ExperienceGain }
   | { type: 'unit-done'; unitId: string }
   | { type: 'phase-started'; turnState: TurnState }
+  // A boss's rules (see bosses.ts): its war horn marked `at` for an
+  // arrival next enemy phase; that arrival came (`unitId`, done for the
+  // phase it arrives in) or was blocked by `blockerId` standing there; or
+  // a hit left it enraged, `strength` STR up and on the move.
+  | { type: 'war-horn'; unitId: string; at: Point }
+  | { type: 'reinforced'; unitId: string; at: Point }
+  | { type: 'reinforcement-blocked'; blockerId: string | null; at: Point }
+  | { type: 'boss-enraged'; unitId: string; strength: number }
   | { type: 'outcome'; outcome: BattleOutcome };
 
 // The event of one type, e.g. BattleEventOf<'strike'>.
@@ -196,6 +220,7 @@ class Draft {
   fallen: Map<string, Unit>;
   convoyLoot: ItemSnapshot[];
   kills: Map<string, number>;
+  boss: BossState | null;
   readonly events: BattleEvent[] = [];
   readonly rng: Rng;
   private readonly rngState: () => number;
@@ -214,6 +239,7 @@ class Draft {
     this.fallen = new Map(base.fallen);
     this.convoyLoot = [...base.convoyLoot];
     this.kills = new Map(base.kills);
+    this.boss = base.boss;
     const { rng, state } = createResumableRng(base.rngState);
     this.rng = rng;
     this.rngState = state;
@@ -256,6 +282,7 @@ class Draft {
       convoyLoot: Object.freeze(this.convoyLoot),
       kills: this.kills,
       rngState: this.rngState(),
+      boss: this.boss,
     });
   }
 }
@@ -522,6 +549,7 @@ function finishAction(draft: Draft, unitId: string) {
   draft.turnState = markDone(draft.turnState!, unitId);
   draft.events.push({ type: 'unit-done', unitId });
   if (checkOutcome(draft)) return;
+  enrageBoss(draft);
   const turnState = draft.turnState;
   if (isPhaseOver(turnState, getTeamUnitIds(draft.units, turnState.team))) startPhase(draft, getNextPhase(draft));
 }
@@ -537,12 +565,14 @@ function hasGuests(draft: Draft): boolean {
 }
 
 // A new phase can decide the battle on its own (a survive objective).
-// Otherwise the phase's units recover their phase-heal and phase-mana
-// modifiers' HP and MP.
+// Otherwise an enemy phase plays its boss's horn (runBossHorn), and the
+// phase's units recover their phase-heal and phase-mana modifiers' HP and
+// MP.
 function startPhase(draft: Draft, turnState: TurnState) {
   draft.turnState = turnState;
   draft.events.push({ type: 'phase-started', turnState });
   if (checkOutcome(draft)) return;
+  if (turnState.team === 'enemy') runBossHorn(draft);
   for (const unitId of getTeamUnitIds(draft.units, turnState.team)) {
     const { modifiers } = draft.unit(unitId);
     recover(draft, unitId, 'health', sumModifiers(modifiers, 'phase-heal'), 'phase');
@@ -563,4 +593,56 @@ function checkOutcome(draft: Draft): boolean {
   draft.outcome = outcome;
   draft.events.push({ type: 'outcome', outcome });
   return true;
+}
+
+// The boss's horn as an enemy phase starts, while the boss is in play:
+// the arrival its last call marked comes, done for this phase (or is
+// blocked by whoever stands on its tile), then, on a horn turn, it marks
+// the tile for the next one.
+function runBossHorn(draft: Draft) {
+  const boss = draft.boss;
+  const horn = boss && getBossRules(boss.rulesId)?.horn;
+  if (!boss || !horn || !draft.units.has(boss.unitId)) return;
+  let { incoming, called } = boss;
+  if (incoming) {
+    const at = incoming;
+    if (canArrive(draft.grid, at)) {
+      called += 1;
+      const unitId = getHornUnitId(called);
+      const label = UNIT_CLASSES.find((c) => c.id === horn.unitClass)?.label ?? horn.unitClass;
+      const arrival = createUnitOfClass(horn.unitClass, { name: `Enemy ${label}`, team: 'enemy' });
+      growToLevel(arrival, horn.level);
+      draft.units.set(unitId, arrival);
+      draft.grid = setUnit(draft.grid, at.x, at.y, unitId);
+      draft.turnState = markDone(draft.turnState!, unitId);
+      draft.events.push({ type: 'reinforced', unitId, at });
+    } else {
+      const blockerId = getCell(draft.grid, at.x, at.y)?.unitId ?? null;
+      draft.events.push({ type: 'reinforcement-blocked', blockerId, at });
+    }
+    incoming = null;
+  }
+  const turn = draft.turnState!.turn;
+  if (isHornTurn(horn, turn, { called, incoming })) {
+    const at = pickHornTile(draft.grid, draft.tileOf(boss.unitId), horn.reach);
+    if (at) {
+      incoming = Object.freeze(at);
+      draft.events.push({ type: 'war-horn', unitId: boss.unitId, at });
+    }
+  }
+  draft.boss = Object.freeze({ ...boss, incoming, called });
+}
+
+// A boss whose last hit left it at or under its enrage share enrages: its
+// STR rises and it stops holding its ground.
+function enrageBoss(draft: Draft) {
+  const boss = draft.boss;
+  const enrage = boss && getBossRules(boss.rulesId)?.enrage;
+  const unit = boss && draft.units.get(boss.unitId);
+  if (!boss || !enrage || !unit || !shouldEnrage(enrage, boss, unit.health, unit.maxHealth)) return;
+  const raging = draft.edit(boss.unitId);
+  raging.strength += enrage.strength;
+  raging.holdsPosition = false;
+  draft.boss = Object.freeze({ ...boss, enraged: true });
+  draft.events.push({ type: 'boss-enraged', unitId: boss.unitId, strength: enrage.strength });
 }

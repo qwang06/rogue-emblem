@@ -211,6 +211,7 @@ import type { StructurePlacement, TreePlacement } from '../game/demoLevel.ts';
 import type { Facing } from '../game/facing.ts';
 import type { UnitAnimation } from '../game/tileset.ts';
 import type { PopupKind } from '../bridge/views.ts';
+import { isSameBossBar, toBossBarView, toBossIntroView } from '../bridge/bossView.ts';
 import type { Skill } from '../game/skills.ts';
 import type { BattleOutcome, Team, TurnState } from '../game/turns.ts';
 import type { Unit } from '../game/Unit.ts';
@@ -240,6 +241,15 @@ const DEPLOYMENT_ZONE_ALPHA = 0.4;
 const SEIZE_TILE_COLOR = 0xfbbf24;
 const SEIZE_TILE_ALPHA = 0.3;
 const SEIZE_TILE_PULSE_MS = 700;
+// The tile a boss's war horn marked for its next arrival (see bosses.ts):
+// a red outline over a faint fill that pulses faster than a seize tile's.
+const INCOMING_TILE_COLOR = 0xef4444;
+const INCOMING_TILE_ALPHA = 0.35;
+const INCOMING_TILE_PULSE_MS = 450;
+// How long a boss's name card holds the screen as its stage opens.
+const BOSS_INTRO_DURATION_MS = 3200;
+// How long a boss's rage holds before the battle goes on.
+const ENRAGE_PAUSE_MS = 600;
 // Deployment menu entries, by index, for re-opening it on a given one.
 const PLACE_UNITS_INDEX = 0;
 const START_INDEX = 1;
@@ -378,6 +388,9 @@ export class GridScene extends Phaser.Scene {
   cursor!: Point;
   cursorSprite!: Sprite;
   unitSprites!: Map<string, Sprite>;
+  // The marker on the tile a boss's horn marked, and that tile as "x,y".
+  incomingMarker: Phaser.GameObjects.Rectangle | null = null;
+  incomingMarkerKey: string | null = null;
 
   constructor() {
     super('Grid');
@@ -482,6 +495,8 @@ export class GridScene extends Phaser.Scene {
   syncShown() {
     this.shown = this.battle;
     this.shownStats.clear();
+    this.publishBossBar();
+    this.refreshIncomingMarker();
   }
 
   preload() {
@@ -524,6 +539,8 @@ export class GridScene extends Phaser.Scene {
     this.history = createHistory(createBattleState(level, getBattleDiceSeed(setup) ?? randomSeed()));
     this.shown = this.battle;
     this.shownStats = new Map();
+    this.incomingMarker = null; // the last battle's marker went with its scene
+    this.incomingMarkerKey = null;
     this.dialogs = level.dialogs; // the level's conversations by trigger (src/game/dialogScript.ts)
 
     const paletteName = level.palette ?? DEFAULT_BUILDING_PALETTE;
@@ -639,14 +656,18 @@ export class GridScene extends Phaser.Scene {
       return;
     }
     this.updateHoveredUnit();
+    this.publishBossBar();
     // Levels with units to place open on deployment, with the objective on
     // its menu; others (e.g. training, where everyone starts on the map)
     // show the Objective screen and go straight to the battle. Either waits
-    // for the level's opening dialog, if it has one.
-    this.playTriggeredDialog('opening', () => {
-      if (this.deploymentZone.length > 0) this.startDeployment();
-      else this.showObjective(() => this.startBattle());
-    });
+    // for the level's opening dialog, if it has one, and a boss stage's
+    // name card after it.
+    this.playTriggeredDialog('opening', () =>
+      this.showBossIntro(() => {
+        if (this.deploymentZone.length > 0) this.startDeployment();
+        else this.showObjective(() => this.startBattle());
+      }),
+    );
     gameStore.setState({ mapLoadProgress: 1, mapReady: true });
   }
 
@@ -1905,12 +1926,94 @@ export class GridScene extends Phaser.Scene {
       this.showOutcome(outcome);
       return;
     }
+    this.showBossCalls(events);
     if (findEvent(events, 'phase-started')) {
       this.showPhaseRecoveries(events);
       this.startPhase();
       return;
     }
     otherwise();
+  }
+
+  // Shows what a boss's horn did as the enemy phase started (see
+  // bosses.ts), over the map as it now stands: the horn over the boss, a
+  // goblin arriving on its marked tile, or whoever stood there blocking it.
+  showBossCalls(events: readonly BattleEvent[]) {
+    for (const event of events) {
+      if (event.type === 'reinforced' && !this.unitSprites.has(event.unitId)) {
+        this.addUnitSprite(event.unitId, event.at.x, event.at.y);
+        this.showDamagePopup(this.unitSprites.get(event.unitId)!, 0, 'arrived');
+      }
+      if (event.type === 'reinforcement-blocked' && event.blockerId) {
+        const sprite = this.unitSprites.get(event.blockerId);
+        if (sprite) this.showDamagePopup(sprite, 0, 'blocked');
+      }
+      if (event.type === 'war-horn') {
+        const sprite = this.unitSprites.get(event.unitId);
+        if (sprite) this.showDamagePopup(sprite, 0, 'horn');
+      }
+    }
+  }
+
+  // The boss's name card (see toBossIntroView) on a boss stage, input
+  // locked until it's gone or confirm cuts it short; then `onDone`. Any
+  // other stage goes straight on.
+  showBossIntro(onDone: () => void) {
+    const intro = toBossIntroView({
+      id: this.nextBannerId++,
+      objective: this.objective,
+      durationMs: this.playbackDuration(BOSS_INTRO_DURATION_MS),
+    });
+    if (!intro) {
+      onDone();
+      return;
+    }
+    this.inputLocked = true;
+    gameStore.setState({ bossIntro: intro });
+    this.waitSkippably(BOSS_INTRO_DURATION_MS, () => {
+      gameStore.setState({ bossIntro: null });
+      this.inputLocked = false;
+      onDone();
+    });
+  }
+
+  // Publishes the boss's HP bar (see toBossBarView) as the map shows it,
+  // a hit ahead of the battle included; nothing in a preview.
+  publishBossBar() {
+    const { objective, boss } = this.shown;
+    const bossId = objective.kind === 'boss' ? objective.unitId : null;
+    const unit = bossId ? this.units.get(bossId) : undefined;
+    const health = (bossId ? this.shownStats.get(bossId)?.health : undefined) ?? unit?.health;
+    const bar = this.preview ? null : toBossBarView(objective, boss, unit, health);
+    if (!isSameBossBar(bar, gameStore.getState().bossBar)) gameStore.setState({ bossBar: bar });
+  }
+
+  // Marks the tile the boss's horn marked for its next arrival, as the map
+  // shows the battle, and takes the marker down once it's spent.
+  refreshIncomingMarker() {
+    const tile = this.shown.boss?.incoming ?? null;
+    const key = tile ? `${tile.x},${tile.y}` : null;
+    if (key === this.incomingMarkerKey) return;
+    if (this.incomingMarker) {
+      this.tweens.killTweensOf(this.incomingMarker);
+      this.incomingMarker.destroy();
+    }
+    this.incomingMarker = null;
+    this.incomingMarkerKey = key;
+    if (!tile) return;
+    const { x, y } = gridToWorld(tile.x, tile.y, TILE_SIZE);
+    this.incomingMarker = this.add
+      .rectangle(x, y, TILE_SIZE, TILE_SIZE, INCOMING_TILE_COLOR, INCOMING_TILE_ALPHA)
+      .setOrigin(0, 0)
+      .setStrokeStyle(2, INCOMING_TILE_COLOR)
+      .setDepth(0.42);
+    this.tweens.add({
+      targets: this.incomingMarker,
+      alpha: { from: 1, to: 0.35 },
+      duration: INCOMING_TILE_PULSE_MS,
+      yoyo: true,
+      repeat: -1,
+    });
   }
 
   // Pops up the HP and MP units recovered as the phase started (a Mending
@@ -2463,6 +2566,13 @@ export class GridScene extends Phaser.Scene {
       case 'experience':
         this.showExperienceGain(event, next);
         return;
+      // A boss's rage: it roars over the map before the battle goes on.
+      case 'boss-enraged': {
+        const sprite = this.unitSprites.get(event.unitId);
+        if (sprite) this.showDamagePopup(sprite, event.strength, 'enraged');
+        this.time.delayedCall(this.playbackDuration(ENRAGE_PAUSE_MS), next);
+        return;
+      }
       default:
         next();
     }
@@ -2571,6 +2681,7 @@ export class GridScene extends Phaser.Scene {
   showStats(unitId: string, stats: { health?: number; mana?: number }) {
     this.shownStats.set(unitId, { ...this.shownStats.get(unitId), ...stats });
     this.publishHoveredUnit();
+    this.publishBossBar();
   }
 
   // Waits `durationMs` (at the game speed) and then runs `onDone`, unless
