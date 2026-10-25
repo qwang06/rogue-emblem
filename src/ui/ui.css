@@ -3746,6 +3746,11 @@ textarea.draft-input {
   align-self: center;
 }
 
+.reward-card__icon {
+  display: block;
+  image-rendering: pixelated;
+}
+
 .reward-card__label {
   margin: 0;
   font-size: 1rem;
