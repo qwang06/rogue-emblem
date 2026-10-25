@@ -3,7 +3,8 @@ import { GlyphIcon } from './GlyphIcon.tsx';
 import { useGameStore } from './useGameStore.ts';
 import './AutoPlayButton.css';
 
-// Header button (a play arrow) that lets the player's side play itself
+// Header button (a play arrow and the word Auto, since the arrow alone
+// reads as play/pause) that lets the player's side play itself
 // (its turns, and in a Warband run its reward picks and camp too), or
 // hands control back; the A key does the same. Beside it, − and + set the
 // game speed, which plays the map's animations faster with Auto on or off;
@@ -22,11 +23,11 @@ export function AutoPlayButton() {
         type="button"
         className="header-button header-button--icon auto-play-button"
         aria-pressed={on}
-        aria-label="Auto play"
         title="Let the AI play your side (A)"
         onClick={() => gameCommands.send({ type: 'toggle-auto-play' })}
       >
         <GlyphIcon kind="auto" />
+        <span className="auto-play-button__label">Auto</span>
       </button>
       <button
         type="button"
