@@ -1,5 +1,5 @@
 // The default policy for playing a Warband run by itself (see autoRun.ts):
-// how it picks its starting relic, boons and rewards and what it does at
+// how it picks its starting relic, boons, rewards and recruits and what it does at
 // camp. Each decision is a small
 // rule over the run, with its thresholds as named constants to tune. The
 // battles are played by the battle AI (battle/ai.ts). Pure: each function
@@ -22,7 +22,7 @@ import type { Realm, Site } from './realm/realm.ts';
 import { getTravelChoices } from './travel.ts';
 import type { BoonKind } from './boons.ts';
 import { getBoonOffer } from './levelUpPicks.ts';
-import { getRelicOffers, getRewardOffers, type RunCommand, type RunSession } from './runCommands.ts';
+import { getRecruitOffers, getRelicOffers, getRewardOffers, type RunCommand, type RunSession } from './runCommands.ts';
 
 // A weapon or staff with this many uses or fewer is about to break: the
 // unit wants a spare.
@@ -107,6 +107,11 @@ export function scoreReward(run: RunState, reward: Reward): number {
       const isNew = !run.roster.some((unit) => unit.classId === reward.unit.classId);
       return REWARD_SCORES.recruit + (isNew ? REWARD_SCORES.newClassBonus : 0);
     }
+    // A draft offers several classes, so one is almost always new.
+    case 'draft':
+      if (run.roster.length >= MAX_ROSTER_SIZE) return 0;
+      if (run.roster.length < run.deployCap) return REWARD_SCORES.recruitNeeded;
+      return REWARD_SCORES.recruit + REWARD_SCORES.newClassBonus;
     case 'rest':
       return REWARD_SCORES.restPerMissing * getMissingHealthShare(run.roster);
     case 'arms':
@@ -132,6 +137,16 @@ export function pickReward(session: RunSession): RunCommand {
     if (scoreReward(session.run, reward) > scoreReward(session.run, offers[best])) best = index;
   });
   return { type: 'pick-reward', index: best };
+}
+
+// The recruit pick: the first offered recruit of a class the roster
+// lacks, else the first offered, or decline when there's none.
+export function pickRecruit(session: RunSession): RunCommand {
+  const offers = getRecruitOffers(session);
+  if (offers.length === 0) return { type: 'decline-recruit' };
+  const isNew = (reward: Reward) =>
+    reward.kind === 'recruit' && !session.run.roster.some((unit) => unit.classId === reward.unit.classId);
+  return { type: 'pick-recruit', index: Math.max(0, offers.findIndex(isNew)) };
 }
 
 // Camp, one command at a time, in this order:
@@ -231,12 +246,13 @@ export function planTravel(session: RunSession, realm: Realm): RunCommand {
 
 // The policy autoRun plays with by default: the player battle AI
 // (playerAI.ts) in battle, and pickStartingRelic, pickBoonOffer,
-// pickReward, planCamp and planTravel between battles.
+// pickReward, pickRecruit, planCamp and planTravel between battles.
 export const DEFAULT_POLICY: RunPolicy = Object.freeze({
   battle: (state: BattleState) => (state.stage === 'deployment' ? planPlayerDeployment(state) : planPlayerTurn(state)),
   relic: pickStartingRelic,
   boon: pickBoonOffer,
   reward: pickReward,
+  recruit: pickRecruit,
   camp: (session: RunSession) => planCamp(session),
   travel: planTravel,
 });

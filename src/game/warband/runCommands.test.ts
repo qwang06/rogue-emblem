@@ -133,7 +133,8 @@ describe('the reward pick', () => {
 
   it('takes an offer and goes to camp', () => {
     const session = won(newRun());
-    const after = apply(session, { type: 'pick-reward', index: 0 });
+    const index = getRewardOffers(session).findIndex((reward) => reward.kind !== 'draft');
+    const after = apply(session, { type: 'pick-reward', index });
     expect(after.phase).toBe('camp');
     expect(after.run.pendingReward).toBeUndefined();
   });

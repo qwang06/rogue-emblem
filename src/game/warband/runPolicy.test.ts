@@ -8,12 +8,20 @@ import type { Unit } from '../Unit.ts';
 import { IRON_BOW, IRON_SPEAR, WOODEN_SPEAR } from '../weapons.ts';
 import { REST_COST } from './camp.ts';
 import { createRun, type RunState, type UnitSnapshot } from './run.ts';
-import { applyRunCommand, getRelicOffers, startRunSession, type RunCommand, type RunSession } from './runCommands.ts';
+import {
+  applyRunCommand,
+  getRecruitOffers,
+  getRelicOffers,
+  startRunSession,
+  type RunCommand,
+  type RunSession,
+} from './runCommands.ts';
 import {
   BOON_SCORES,
   getDeployingUnits,
   LOW_USES,
   pickBoonOffer,
+  pickRecruit,
   pickReward,
   pickStartingRelic,
   planCamp,
@@ -22,7 +30,7 @@ import {
   scoreReward,
 } from './runPolicy.ts';
 import { getBoonOffer, queueLevelUpBoons } from './levelUpPicks.ts';
-import type { Reward } from './rewards.ts';
+import { MAX_ROSTER_SIZE, RECRUIT_CLASS_IDS, type Reward } from './rewards.ts';
 
 function makeRun(units: Record<string, Unit>, extra: Partial<RunState> = {}): RunState {
   return { ...createRun(3, new Map(Object.entries(units))), ...extra };
@@ -63,11 +71,40 @@ describe('scoreReward', () => {
     expect(scoreReward(run, recruit('archer'))).toBeGreaterThan(scoreReward(run, recruit('soldier')));
   });
 
+  it('wants a draft like a recruit of a new class, and not at all at a full roster', () => {
+    const draft: Reward = { kind: 'draft', stage: 2 };
+    expect(scoreReward(makeRun({ a: soldier() }), draft)).toBe(REWARD_SCORES.recruitNeeded);
+    const filled = makeRun({ a: soldier() }, { deployCap: 1 });
+    expect(scoreReward(filled, draft)).toBe(scoreReward(filled, recruit('archer')));
+    const full = makeRun({ a: soldier() });
+    expect(scoreReward({ ...full, roster: Array(MAX_ROSTER_SIZE).fill(full.roster[0]) }, draft)).toBe(0);
+  });
+
   it('wants a rest as much as the roster is hurt', () => {
     const run = makeRun({ a: soldier() });
     expect(scoreReward(run, { kind: 'rest' })).toBe(0);
     const hurt = withUnit(run, 'a', (unit) => ({ ...unit, health: Math.floor(unit.maxHealth / 2) }));
     expect(scoreReward(hurt, { kind: 'rest' })).toBeGreaterThan(REWARD_SCORES.gold);
+  });
+});
+
+describe('pickRecruit', () => {
+  it('drafts the first recruit of a class the roster lacks', () => {
+    const run = { ...makeRun({ a: soldier() }), pendingDraft: 2 };
+    const session: RunSession = { run, phase: 'recruit' };
+    const offers = getRecruitOffers(session);
+    const index = offers.findIndex((offer) => offer.kind === 'recruit' && offer.unit.classId !== 'soldier');
+    expect(pickRecruit(session)).toEqual({ type: 'pick-recruit', index });
+  });
+
+  it('takes the first recruit when every class is already on the roster, and declines with none', () => {
+    const run = { ...makeRun({ a: soldier() }), pendingDraft: 2 };
+    const everyClass = {
+      ...run,
+      roster: RECRUIT_CLASS_IDS.map((classId, i) => ({ ...run.roster[0], id: `u${i}`, classId })),
+    };
+    expect(pickRecruit({ run: everyClass, phase: 'recruit' })).toEqual({ type: 'pick-recruit', index: 0 });
+    expect(pickRecruit(camp(makeRun({ a: soldier() })))).toEqual({ type: 'decline-recruit' });
   });
 });
 

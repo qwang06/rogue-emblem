@@ -80,6 +80,9 @@ export interface BattleState {
   rewardMenu: Menu<RewardAction> | null;
   rewardTeam: readonly TeamUnitView[] | null;
   recruitmentStage: number | null;
+  // Whether the recruit pick is a Recruit reward's draft rather than a
+  // guest's recruitment.
+  recruitDraft: boolean;
   boonPick: BoonPickView | null;
   campMenu: Menu | null;
   campGold: number | null;
@@ -138,6 +141,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   rewardMenu: null, // frozen menu of RewardActions (toRewardAction) while the reward screen is up after a won stage, or null
   rewardTeam: null, // TeamUnitViews from toTeamView() of the warband while the reward screen is up, or null
   recruitmentStage: null,
+  recruitDraft: false,
   boonPick: null, // BoonPickView from toBoonPickView() while the reward screen shows a level up's boon pick (its cards are rewardMenu's), or null
   campMenu: null, // frozen camp menu (getCampActions: Manage Roster / Merchant / Rest / Next Stage) once a won stage's reward is taken, or null
   campGold: null, // the warband's gold while at camp (shown on the camp menu), or null

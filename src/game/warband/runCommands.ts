@@ -36,7 +36,7 @@ import { getRelicPicks } from './origins.ts';
 import { getRunHeat } from './heat.ts';
 import { createSeededRng } from '../rng.ts';
 import { finishStage, snapshotUnit, type BattleResult, type RunState } from './run.ts';
-import { GUEST_UNIT_ID, rollGuest, settleGuest } from './recruitment.ts';
+import { GUEST_UNIT_ID, rollDraft, rollGuest, settleDraft, settleGuest } from './recruitment.ts';
 import { MAX_ROSTER_SIZE } from './rewards.ts';
 import { applyStageClearExperience } from './stageClearExperience.ts';
 import { getEventChoices, resolveEvent } from './events.ts';
@@ -55,9 +55,9 @@ import {
 
 // Where a run stands: picking the relic it starts with, fighting its
 // stage's battle, taking the boons its level ups owe, recruiting a guest,
-// picking the reward a won stage owes, at camp, choosing where to travel on
-// the realm (travel.ts), choosing at a wayside event (events.ts), or over
-// (the warband fell, or won).
+// picking the reward a won stage owes (or the draft a Recruit reward opens),
+// at camp, choosing where to travel on the realm (travel.ts), choosing at a
+// wayside event (events.ts), or over (the warband fell, or won).
 export type RunPhase =
   'relic' | 'battle' | 'boon' | 'recruit' | 'reward' | 'camp' | 'travel' | 'event' | 'over' | 'won';
 
@@ -71,7 +71,10 @@ export type RunCommand =
   | { type: 'pick-relic'; index: number }
   // Takes boon `index` of the first level-up pick owed (see getBoonOffer).
   | { type: 'pick-boon'; index: number }
+  // Takes recruit `index` of the guest's or the draft's offers (see
+  // getRecruitOffers).
   | { type: 'pick-recruit'; index: number }
+  // Turns the guest or the whole draft down.
   | { type: 'decline-recruit' }
   // Takes offer `index` of the reward pick.
   | { type: 'pick-reward'; index: number }
@@ -156,10 +159,11 @@ export function resumeRunSession(run: RunState): RunSession {
 }
 
 // Where a won stage goes next: the boon picks its level ups owe, then the
-// guest's recruitment, then the reward pick, then camp.
+// guest's recruitment, then the reward pick, then a Recruit reward's
+// draft, then camp.
 function getPickPhase(run: RunState): RunPhase {
   if (getBoonOffer(run)) return 'boon';
-  if (run.pendingRecruitment) return 'recruit';
+  if (run.pendingRecruitment || run.pendingDraft !== undefined) return 'recruit';
   if (getPendingRewardOffer(run)) return 'reward';
   return 'camp';
 }
@@ -237,10 +241,14 @@ export function getRelicOffers(session: RunSession): readonly Relic[] {
   return rollRelics(rng, run.relics, STARTING_RELIC_CHOICES);
 }
 
+// The recruits the session's recruit pick offers: the guest who survived,
+// else the draft's (rollDraft), or none when it isn't on one.
 export function getRecruitOffers(session: RunSession): readonly Reward[] {
-  return session.phase === 'recruit' && session.run.pendingGuest
-    ? [{ kind: 'recruit', unit: session.run.pendingGuest }]
-    : [];
+  if (session.phase !== 'recruit') return [];
+  const { run } = session;
+  if (run.pendingGuest) return [{ kind: 'recruit', unit: run.pendingGuest }];
+  if (run.pendingDraft === undefined) return [];
+  return rollDraft(run, run.pendingDraft).map((unit) => Object.freeze({ kind: 'recruit' as const, unit }));
 }
 
 // The reward offers the session's pick shows, or none when it isn't on one.
@@ -301,14 +309,14 @@ export function applyRunCommand(
     case 'pick-recruit': {
       const offer = getRecruitOffers(session)[command.index];
       if (!offer || offer.kind !== 'recruit') return fail(`No recruit offer ${command.index}`);
-      return onward(settleGuest(run, true));
+      return onward(run.pendingGuest ? settleGuest(run, true) : settleDraft(run, command.index));
     }
     case 'decline-recruit':
-      return onward(settleGuest(run, false));
+      return onward(run.pendingGuest ? settleGuest(run, false) : settleDraft(run, null));
     case 'pick-reward': {
       const reward = getRewardOffers(session)[command.index];
       if (!reward) return fail(`No reward offer ${command.index}`);
-      if (reward.kind !== 'lesson') return camp(applyReward(run, reward));
+      if (reward.kind !== 'lesson') return onward(applyReward(run, reward));
       const { run: next, levelUps } = applyLessonReward(run, reward);
       return onward(queueLevelUpBoons(run, next), [{ type: 'level-ups', levelUps }]);
     }

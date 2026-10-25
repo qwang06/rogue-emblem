@@ -134,6 +134,9 @@ export class Unit {
   // The elite affixes it fights with at an elite lair (warband/elites.ts),
   // by id.
   eliteAffixes: readonly string[] = Object.freeze([]);
+  // The quirk it joined a Warband run with (warband/quirks.ts), by id, or
+  // null.
+  quirk: string | null = null;
 
   constructor({
     name,
