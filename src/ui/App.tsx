@@ -29,6 +29,7 @@ import { PageHeader } from './PageHeader.tsx';
 import { PauseMenu } from './PauseMenu.tsx';
 import { PhaseBanner } from './PhaseBanner.tsx';
 import { RewardScreen } from './RewardScreen.tsx';
+import { BoonPickScreen } from './BoonPickScreen.tsx';
 import { RosterMenu } from './RosterMenu.tsx';
 import { MentorScreen } from './MentorScreen.tsx';
 import { MerchantScreen } from './MerchantScreen.tsx';
@@ -117,6 +118,7 @@ export function App() {
               <PauseMenu />
               <BattleResult />
               <RewardScreen />
+              <BoonPickScreen />
               <CampMenu />
               <RosterScreen />
               <MerchantScreen />

@@ -9,9 +9,10 @@ import { RewardTeam } from './RewardTeam.tsx';
 // the input (arrows move the pick through the cards and then the buttons,
 // confirm takes it); the mouse is forwarded to it. The warband's HP, level
 // and XP show above the cards, with a heal's effect previewed on them.
-// The same screen shows a level up's boon pick (`boonPick`), whose cards
-// are the boons, a surviving guest's recruitment, and a Recruit reward's
-// draft of recruits to pick one from.
+// The same screen shows a surviving guest's recruitment and a Recruit
+// reward's draft of recruits to pick one from. A level up's boon pick
+// (`boonPick`) shares its menu but has a screen of its own
+// (BoonPickScreen).
 export function RewardScreen() {
   const menu = useGameStore((state) => state.rewardMenu);
   const stageClear = useGameStore((state) => state.stageClear);
@@ -19,10 +20,9 @@ export function RewardScreen() {
   const recruitDraft = useGameStore((state) => state.recruitDraft);
   const team = useGameStore((state) => state.rewardTeam);
   const boonPick = useGameStore((state) => state.boonPick);
-  if (!menu) return null;
-  const title = boonPick
-    ? `${boonPick.name} Reached Level ${boonPick.level}`
-    : recruitmentStage && recruitDraft
+  if (!menu || boonPick) return null;
+  const title =
+    recruitmentStage && recruitDraft
       ? 'Choose a Recruit'
       : recruitmentStage
         ? `Guest Survived Stage ${recruitmentStage}`
@@ -39,17 +39,10 @@ export function RewardScreen() {
 
   return (
     <div className="pause-overlay">
-      <section
-        className="reward-screen"
-        aria-label={boonPick ? 'Choose a boon' : recruitmentStage ? 'Choose a recruit' : 'Choose a reward'}
-      >
+      <section className="reward-screen" aria-label={recruitmentStage ? 'Choose a recruit' : 'Choose a reward'}>
         <header className="panel reward-screen__header">
           <h2 className="reward-screen__title">{title}</h2>
-          {boonPick ? (
-            <p className="reward-screen__gold">
-              Pick one for the {boonPick.classLabel} to keep for the rest of the run.
-            </p>
-          ) : recruitmentStage && recruitDraft ? (
+          {recruitmentStage && recruitDraft ? (
             <p className="reward-screen__gold">Pick one to join the warband, quirk and all.</p>
           ) : stageClear?.blessing ? (
             <p className="reward-screen__gold">
@@ -115,7 +108,7 @@ export function RewardScreen() {
           className="reward-screen__hint"
           entries={[
             ['←→', 'Choose'],
-            ['Enter', boonPick ? 'Take boon' : recruitmentStage ? 'Recruit' : 'Take reward'],
+            ['Enter', recruitmentStage ? 'Recruit' : 'Take reward'],
           ]}
         />
       </section>

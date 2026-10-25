@@ -24,7 +24,6 @@ import {
   toRewardMenuActions,
   toRewardAction,
   toBoonActions,
-  toBoonPickView,
   toRelicViews,
   toTeamView,
   toRunOverView,
@@ -79,6 +78,7 @@ import {
   type RewardLevelUp,
 } from '../game/warband/rewards.ts';
 import { getBoonOffer } from '../game/warband/levelUpPicks.ts';
+import { toBoonPickView } from '../bridge/boonPickView.ts';
 import {
   applyRunCommand,
   finishBattleWithEvents,
@@ -318,6 +318,8 @@ const EXPERIENCE_BAR_MS = 1100;
 const LEVEL_UP_MS = 2400;
 // How long the reward pick a won stage opens on ignores confirm.
 const REWARD_PICK_GRACE_MS = 500;
+// How long a boon pick waits before taking confirm: its level-up effect.
+const BOON_PICK_GRACE_MS = 700;
 // Tint for units that are done for the phase.
 const DONE_TINT = 0x808080;
 
@@ -660,7 +662,7 @@ export class GridScene extends Phaser.Scene {
     this.inputLocked = false; // input is ignored while a move, hit, banner, or the enemy phase plays out
     this.battleOutcome = null; // 'victory' | 'defeat' once the battle is decided
     this.nextBannerId = 1;
-    this.rewardPickOpensAt = 0; // scene time a won stage's reward pick starts taking confirm
+    this.rewardPickOpensAt = 0; // scene time a won stage's reward pick, or a boon pick, starts taking confirm
     this.skippableWait = null; // the banner, XP bar or level up confirm can cut short (waitSkippably), or null
     this.hoveredUnit = null;
     this.hoveredUnitId = null;
@@ -1204,13 +1206,15 @@ export class GridScene extends Phaser.Scene {
     this.openBoonMenu();
   }
 
-  // The reward screen as a level up's boon pick: a card per boon, with
-  // whose level up it is in the header.
+  // The level-up screen for a level up's boon pick: an entry per boon,
+  // with whose level up it is. It holds off confirming while its level-up
+  // effect plays, so a held Enter can't take a boon unseen.
   openBoonMenu() {
     const run = this.boonRun!;
     const offer = getBoonOffer(run)!;
-    gameStore.setState({ boonPick: toBoonPickView(offer), rewardTeam: toTeamView(run.roster) });
+    gameStore.setState({ boonPick: toBoonPickView(offer, run.relics), rewardTeam: toTeamView(run.roster) });
     this.publishMenu('rewardMenu', createActionMenu(toBoonActions(offer, run.relics)));
+    this.rewardPickOpensAt = this.time.now + BOON_PICK_GRACE_MS;
   }
 
   updateBoonMenu(delta: number, confirm: boolean) {

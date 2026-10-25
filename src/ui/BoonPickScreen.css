@@ -1,0 +1,542 @@
+/* ---- Level-up boon pick ---------------------------------------------- */
+
+/* Its own look, apart from the reward screen's cards: a night-blue wash
+   over the map, the unit in a column of gold light on a blue banner, and
+   the boons as an icon list in a parchment window beside it. Nothing that
+   changes with the pick takes space (see "UI layout" in AGENTS.md): the
+   hand hangs in each row's left padding, the stat preview's "▸N" is always
+   laid out (hidden on rows it doesn't raise), and the description box
+   keeps room for the longest one. */
+.boon-pick-overlay {
+  container-type: inline-size;
+  background: radial-gradient(circle at 50% 40%, rgb(48 56 140 / 55%), rgb(10 10 24 / 86%) 70%);
+}
+
+.boon-pick {
+  box-sizing: border-box;
+  width: min(46rem, calc(100% - 32px));
+  max-height: calc(100% - 24px);
+  padding: 12px 8px 8px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 17rem minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+/* One column on a phone: the unit on top, the boons under it. */
+@container (max-width: 40rem) {
+  .boon-pick {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .boon-pick__glory {
+    height: 128px;
+  }
+}
+
+/* ---- The unit, in its column of light ---- */
+
+.boon-pick__stage {
+  position: relative;
+  padding: 0 10px 10px;
+  overflow: hidden;
+  text-align: center;
+  color: var(--fg);
+  animation: boon-pick-pop 220ms ease-out both;
+}
+
+.boon-pick__glory {
+  position: relative;
+  height: 150px;
+  margin: 0 -10px;
+  overflow: hidden;
+  background: radial-gradient(ellipse 60% 70% at 50% 78%, #4f7ce0 0%, #2a4fa8 45%, #142458 100%);
+  border-bottom: var(--px) solid #142458;
+}
+
+/* Slow-turning rays behind everything, fading out toward the edges. */
+.boon-pick__rays {
+  position: absolute;
+  left: 50%;
+  top: 70%;
+  width: 360px;
+  height: 360px;
+  margin: -180px 0 0 -180px;
+  background: repeating-conic-gradient(rgb(255 226 138 / 30%) 0deg 7deg, transparent 7deg 22.5deg);
+  mask-image: radial-gradient(circle, #000 15%, transparent 62%);
+  animation:
+    boon-pick-fade-in 600ms ease-out both,
+    boon-pick-spin 18s linear infinite;
+}
+
+/* The column of light the unit stands in. */
+.boon-pick__pillar {
+  position: absolute;
+  left: calc(50% - 36px);
+  bottom: 0;
+  width: 72px;
+  height: 100%;
+  background: linear-gradient(to top, rgb(255 244 196 / 85%), rgb(255 226 138 / 35%) 55%, rgb(255 226 138 / 0%));
+  transform-origin: bottom;
+  animation:
+    boon-pick-pillar-in 450ms ease-out both,
+    boon-pick-pillar-pulse 1.6s ease-in-out 450ms infinite;
+}
+
+/* A gold ring bursting out from the unit's feet as the screen opens. */
+.boon-pick__ring {
+  position: absolute;
+  left: calc(50% - 40px);
+  bottom: 6px;
+  width: 80px;
+  height: 28px;
+  box-sizing: border-box;
+  border: calc(2 * var(--px)) solid #ffe28a;
+  border-radius: 50%;
+  opacity: 0;
+  animation: boon-pick-ring 800ms ease-out 120ms;
+}
+
+/* Square sparks rising up the column, a step at a time like pixel art. */
+.boon-pick__spark {
+  position: absolute;
+  left: var(--x);
+  bottom: 8px;
+  width: calc(2 * var(--px));
+  height: calc(2 * var(--px));
+  background: #fff6c8;
+  box-shadow: 0 0 0 var(--px) rgb(255 208 64 / 60%);
+  opacity: 0;
+  animation: boon-pick-spark 1.7s steps(12) var(--delay) infinite;
+}
+
+.boon-pick__hero {
+  position: absolute;
+  left: calc(50% - 48px);
+  bottom: 10px;
+  width: 96px;
+  height: 96px;
+  animation:
+    boon-pick-hop 520ms steps(6) 150ms both,
+    boon-pick-glow 1.6s ease-in-out 450ms infinite alternate;
+}
+
+/* A white flash over the stage as it opens. */
+.boon-pick__flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  animation: boon-pick-flash 500ms ease-out;
+}
+
+.boon-pick__title {
+  position: relative;
+  margin: -12px 0 2px;
+  font-family: var(--display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #ffe28a;
+  text-shadow:
+    var(--px) 0 #2a170a,
+    calc(-1 * var(--px)) 0 #2a170a,
+    0 var(--px) #2a170a,
+    0 calc(-1 * var(--px)) #2a170a,
+    var(--px) calc(2 * var(--px)) #2a170a;
+}
+
+/* Each letter drops in, then they wave one after another. */
+.boon-pick__letter {
+  display: inline-block;
+  animation:
+    boon-pick-letter-in 360ms cubic-bezier(0.3, 1.6, 0.5, 1) calc(200ms + var(--i) * 45ms) both,
+    boon-pick-letter-wave 2.4s steps(4) calc(1000ms + var(--i) * 90ms) infinite;
+}
+
+.boon-pick__who {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.boon-pick__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 700;
+  color: var(--fg-bright);
+}
+
+.boon-pick__class {
+  color: var(--fg-dim);
+}
+
+.boon-pick__level {
+  margin: 0 0 8px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+
+.boon-pick__level-was {
+  color: var(--fg-dim);
+}
+
+.boon-pick__level-arrow {
+  margin: 0 6px;
+  color: var(--fg-dim);
+}
+
+.boon-pick__level-now {
+  display: inline-block;
+  font-size: 1.25rem;
+  color: var(--yellow);
+  animation: boon-pick-level-pop 400ms cubic-bezier(0.3, 1.6, 0.5, 1) 550ms both;
+}
+
+/* Two columns of "STR 5 ▸7", as on the GBA's level-up window. */
+.boon-pick__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 16px;
+  margin: 0;
+  padding: 6px 4px 0;
+  border-top: var(--px) solid var(--muted);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+}
+
+.boon-pick__stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  color: var(--fg);
+}
+
+.boon-pick__stat dt {
+  color: var(--fg-dim);
+}
+
+.boon-pick__stat dd {
+  margin: 0;
+}
+
+.boon-pick__stat-after {
+  display: inline-block;
+  min-width: 3.5ch;
+  margin-left: 2px;
+  text-align: right;
+  font-weight: 700;
+  color: var(--yellow);
+  visibility: hidden;
+}
+
+.boon-pick__stat--up dt {
+  color: var(--fg-bright);
+}
+
+.boon-pick__stat--up .boon-pick__stat-after {
+  visibility: visible;
+  animation: boon-pick-blink 0.9s steps(1) infinite;
+}
+
+/* ---- The boons ---- */
+
+.boon-pick__choices {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 10px 8px;
+  animation: boon-pick-slide-in 320ms ease-out 250ms both;
+}
+
+.boon-pick__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Each row: the icon in a slot, the name, and the kind's tag. The wide
+   left padding is the hand's spot. */
+.boon-pick__boon {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 4px 26px;
+  border: var(--px) solid transparent;
+  cursor: pointer;
+  animation: boon-pick-slide-in 260ms ease-out calc(400ms + var(--i) * 90ms) both;
+}
+
+.boon-pick__boon--selected {
+  background: var(--selection);
+  border-color: var(--accent);
+}
+
+.boon-pick__boon--selected::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  width: var(--pointer-w);
+  height: var(--pointer-h);
+  margin-top: calc(var(--pointer-h) / -2);
+  background: var(--pointer) center / 100% 100% no-repeat;
+  image-rendering: pixelated;
+  animation: pointer-bob 0.8s steps(1) infinite;
+}
+
+.boon-pick__boon-icon,
+.boon-pick__detail-icon {
+  display: grid;
+  place-items: center;
+  padding: var(--px);
+  background: var(--bg-light);
+  border: var(--border);
+}
+
+.boon-pick__boon--selected .boon-pick__boon-icon {
+  border-color: var(--accent);
+}
+
+.boon-pick__boon-name {
+  overflow-wrap: anywhere;
+  font-weight: 700;
+  color: var(--fg-bright);
+}
+
+.boon-pick__boon--selected .boon-pick__boon-name {
+  color: var(--accent);
+}
+
+.boon-pick__boon-kind {
+  padding: 0 6px;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  text-transform: uppercase;
+  color: var(--boon-kind);
+  border: var(--px) solid currentColor;
+}
+
+.boon-pick__boon--stat,
+.boon-icon--stat {
+  --boon-kind: var(--yellow);
+}
+
+.boon-pick__boon--skill,
+.boon-icon--skill {
+  --boon-kind: var(--blue);
+}
+
+.boon-pick__boon--passive,
+.boon-icon--passive {
+  --boon-kind: var(--cyan);
+}
+
+/* The picked boon, big, with its whole description. Its height is set
+   for the longest description, so moving the pick never resizes it. */
+.boon-pick__detail {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 6.75rem;
+  box-sizing: border-box;
+  padding: 8px;
+  border-top: var(--rule);
+}
+
+.boon-pick__detail-text {
+  min-width: 0;
+}
+
+.boon-pick__detail-text p {
+  margin: 0;
+}
+
+.boon-pick__detail-name {
+  font-weight: 700;
+  color: var(--fg-bright);
+}
+
+.boon-pick__detail-description {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.boon-pick__detail-evolves {
+  min-height: 1.5em;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  font-weight: 700;
+  color: var(--magenta);
+}
+
+.boon-pick__hint {
+  margin: 0;
+}
+
+/* A boon's icon, or its kind's letter where it has none yet. */
+.boon-icon {
+  display: block;
+  image-rendering: pixelated;
+}
+
+.boon-icon--missing {
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--boon-kind);
+}
+
+@keyframes boon-pick-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+
+@keyframes boon-pick-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+
+@keyframes boon-pick-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes boon-pick-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@keyframes boon-pick-pillar-in {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes boon-pick-pillar-pulse {
+  50% {
+    opacity: 0.65;
+  }
+}
+
+@keyframes boon-pick-ring {
+  0% {
+    opacity: 1;
+    transform: scale(0.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+@keyframes boon-pick-spark {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-120px);
+  }
+}
+
+@keyframes boon-pick-hop {
+  0% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-18px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes boon-pick-glow {
+  from {
+    filter: drop-shadow(0 0 2px #ffe28a);
+  }
+  to {
+    filter: drop-shadow(0 0 6px #ffd040) brightness(1.15);
+  }
+}
+
+@keyframes boon-pick-flash {
+  from {
+    opacity: 0.9;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes boon-pick-letter-in {
+  from {
+    opacity: 0;
+    transform: translateY(-24px);
+  }
+}
+
+@keyframes boon-pick-letter-wave {
+  0%,
+  20%,
+  100% {
+    transform: translateY(0);
+  }
+  10% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes boon-pick-level-pop {
+  from {
+    opacity: 0;
+    transform: scale(2);
+  }
+}
+
+@keyframes boon-pick-blink {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boon-pick *,
+  .boon-pick *::before {
+    animation: none !important;
+  }
+
+  .boon-pick__ring,
+  .boon-pick__flash,
+  .boon-pick__spark {
+    display: none;
+  }
+}
