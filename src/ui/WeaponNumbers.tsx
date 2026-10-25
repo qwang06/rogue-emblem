@@ -6,7 +6,8 @@ import { StatIcon, type StatIconKind } from './StatIcon.tsx';
 // forecast's own icons), a kettlebell for weight, a dashed arrow for range
 // and a gauge for the uses left (∞ for a weapon that never breaks). Each
 // chip's name is its tooltip and is read out, so the icons never stand in
-// for the word alone. Leave a number out to skip its chip.
+// for the word alone. Leave a number out to skip its chip; uses reads
+// "12/40" with maxUses and just the count without.
 export interface WeaponNumbersProps {
   might?: number;
   hit?: number;
@@ -26,7 +27,7 @@ export function WeaponNumbers({ might, hit, crit, weight, range, uses, maxUses }
     ['Crit', { stat: 'crit' }, crit],
     ['Weight', { glyph: 'weight' }, weight],
     ['Range', { glyph: 'range' }, range],
-    ['Uses', { glyph: 'uses' }, uses === undefined ? undefined : uses === null ? '∞' : `${uses}/${maxUses ?? uses}`],
+    ['Uses', { glyph: 'uses' }, formatUses(uses, maxUses)],
   ];
   return (
     <span className="weapon-numbers">
@@ -41,4 +42,10 @@ export function WeaponNumbers({ might, hit, crit, weight, range, uses, maxUses }
       )}
     </span>
   );
+}
+
+function formatUses(uses: number | null | undefined, maxUses: number | null | undefined): string | number | undefined {
+  if (uses === undefined) return undefined;
+  if (uses === null) return '∞';
+  return maxUses == null ? uses : `${uses}/${maxUses}`;
 }

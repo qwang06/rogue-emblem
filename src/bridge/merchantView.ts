@@ -9,7 +9,7 @@ import { lookUpItem } from '../game/warband/convoy.ts';
 import { canBuy, canSell, getItemPrice, getPurchaseQuantity, getSellPrice } from '../game/warband/merchant.ts';
 import type { MerchantColumn, MerchantScreenState } from '../game/warband/merchantScreen.ts';
 import { RUN_ITEMS } from '../game/warband/run.ts';
-import { describeItem } from './rosterView.ts';
+import { describeItem, type ItemDetail } from './rosterView.ts';
 
 // A stock or convoy entry. `quantity` is how many (a weapon's or staff's
 // uses), or null for a weapon that never breaks or armor; `price` is what
@@ -44,7 +44,7 @@ export interface MerchantScreenView {
   convoy: readonly MerchantItemView[];
   // The highlighted item: its name and what it does. Null over an empty
   // convoy.
-  detail: { label: string; description: string } | null;
+  detail: ItemDetail | null;
   // Who the highlighted stock item is for, while that's being asked: the
   // entries and the highlighted one. Null otherwise.
   recipients: { entries: readonly MerchantRecipientView[]; selectedIndex: number } | null;

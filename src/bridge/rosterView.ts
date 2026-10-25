@@ -58,7 +58,7 @@ export interface RosterScreenView {
   actions: Menu<RosterItemAction> | null;
   // The highlighted item (in the items or convoy column): its name and
   // what it does. Null over the units or an empty list.
-  detail: { label: string; description: string } | null;
+  detail: ItemDetail | null;
 }
 
 export function toRosterScreenView(
@@ -124,21 +124,51 @@ export function toRosterScreenView(
   });
 }
 
-// An item's name and a line on what it does: a weapon's hands and numbers,
-// armor's defense, a staff's healing, a seal's use, a consumable's recovery.
-export function describeItem(item: Item): { label: string; description: string } {
-  const describe = (description: string) => Object.freeze({ label: item.label, description });
+// A weapon's or staff's numbers, which the roster and merchant show as
+// icon chips (WeaponNumbers) after the line. Uses is null for one that
+// never breaks.
+export interface ItemNumbers {
+  might?: number;
+  hit?: number;
+  crit?: number;
+  weight?: number;
+  range: string;
+  uses: number | null;
+}
+
+export interface ItemDetail {
+  label: string;
+  description: string;
+  numbers?: ItemNumbers;
+}
+
+// An item's name and a line on what it does: a weapon's type and hands,
+// armor's defense, a staff's healing, a seal's use, a consumable's
+// recovery. A weapon's numbers, and a staff's range and uses, come apart
+// in `numbers`.
+export function describeItem(item: Item): ItemDetail {
+  const describe = (description: string, numbers?: ItemNumbers): ItemDetail =>
+    Object.freeze(
+      numbers
+        ? { label: item.label, description, numbers: Object.freeze(numbers) }
+        : { label: item.label, description },
+    );
   if (item.kind === 'weapon') {
     const kind = item.type[0].toUpperCase() + item.type.slice(1);
-    const uses = item.uses === null ? 'never breaks' : `${item.uses} uses`;
-    return describe(
-      `${kind} weapon · ${formatHands(item.hands)} · Mt ${item.might} · Hit ${item.hit} · Crt ${item.crit} · Wt ${item.weight} · Rng ${formatWeaponRange(item)} · ${uses}`,
-    );
+    return describe(`${kind} weapon · ${formatHands(item.hands)}`, {
+      might: item.might,
+      hit: item.hit,
+      crit: item.crit,
+      weight: item.weight,
+      range: formatWeaponRange(item),
+      uses: item.uses,
+    });
   }
   if (item.kind === 'staff') {
-    return describe(
-      `Staff · ${formatHands(item.hands)} · Heals ${item.power} + MAG · Rng ${formatWeaponRange(item)} · ${item.uses} uses`,
-    );
+    return describe(`Staff · ${formatHands(item.hands)} · Heals ${item.power} + MAG`, {
+      range: formatWeaponRange(item),
+      uses: item.uses,
+    });
   }
   if (item.kind === 'armor') {
     const stats = `DEF +${item.defense} against physical hits · Wt ${item.weight}`;

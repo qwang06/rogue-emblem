@@ -4061,9 +4061,12 @@ textarea.draft-input {
   color: var(--accent);
 }
 
-/* Room for the most units a warband holds (eight). */
+/* Room for the most units a warband holds (eight) where the window is
+   tall enough, else as many as fit beside the header, title, detail and
+   hints, down to the six inventory slots; the units scroll (ScrollList).
+   The height follows the window only, never what's listed. */
 .roster-screen__list {
-  height: calc(8 * var(--row));
+  height: clamp(calc(6 * var(--row)), calc(100dvh - 360px), calc(8 * var(--row)));
 }
 
 .roster-screen__list--convoy {
@@ -4139,9 +4142,44 @@ textarea.draft-input {
 
 .roster-screen__count {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  min-width: calc(16px + 4ch);
   font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
   color: var(--fg-dim);
+}
+
+.merchant-screen__price .pixel-icon {
+  width: 12px;
+  height: 12px;
+}
+
+/* A unit's HP: the count over a small GBA trough. */
+.roster-screen__hp {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-dim);
+}
+
+.roster-screen__hp-bar {
+  display: flex;
+  width: 3rem;
+  height: calc(2 * var(--px));
+  background: #3a3040;
+  box-shadow: 0 0 0 1px var(--fg-bright);
+}
+
+.roster-screen__hp-bar > span {
+  background: var(--hp);
 }
 
 /* An item's actions hang off the right of its row, over the convoy. */
@@ -4281,7 +4319,11 @@ textarea.draft-input {
 
 .merchant-screen__price {
   flex: none;
-  min-width: 4.5ch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  min-width: calc(12px + 4ch);
   font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
   text-align: right;

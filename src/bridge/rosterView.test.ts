@@ -4,7 +4,7 @@ import { HEALTH_POTION, WOODEN_ARMOR, WOODEN_SHIELD } from '../game/items.ts';
 import { Soldier } from '../game/Soldier.ts';
 import type { Unit } from '../game/Unit.ts';
 import { Warrior } from '../game/Warrior.ts';
-import { FISTS, IRON_AXE } from '../game/weapons.ts';
+import { FISTS, formatWeaponRange, IRON_AXE } from '../game/weapons.ts';
 import { createRun, type ItemSnapshot, type RunState } from '../game/warband/run.ts';
 import { confirmRoster, openRosterScreen, pointRosterCursor } from '../game/warband/rosterScreen.ts';
 import { describeItem, toRosterScreenView } from './rosterView.ts';
@@ -93,11 +93,17 @@ describe('armor and icons', () => {
 
 describe('describeItem', () => {
   it('describes weapons, staves and consumables', () => {
-    expect(describeItem(IRON_AXE).description).toBe(
-      'Physical weapon · 1H · Mt 3 · Hit 65 · Crt 0 · Wt 5 · Rng 1 · 40 uses',
-    );
-    expect(describeItem(FISTS).description).toMatch(/never breaks$/);
-    expect(describeItem(HEAL_STAFF).description).toMatch(/^Staff · 2H · Heals 2 \+ MAG/);
+    expect(describeItem(IRON_AXE)).toEqual({
+      label: IRON_AXE.label,
+      description: 'Physical weapon · 1H',
+      numbers: { might: 3, hit: 65, crit: 0, weight: 5, range: '1', uses: 40 },
+    });
+    expect(describeItem(FISTS).numbers?.uses).toBeNull();
+    expect(describeItem(HEAL_STAFF)).toMatchObject({
+      description: 'Staff · 2H · Heals 2 + MAG',
+      numbers: { range: formatWeaponRange(HEAL_STAFF), uses: HEAL_STAFF.uses },
+    });
+    expect(describeItem(WOODEN_SHIELD).numbers).toBeUndefined();
     expect(describeItem(WOODEN_SHIELD).description).toBe(
       'Shield · DEF +1 against physical hits · Wt 1 · With a 1H weapon only',
     );
