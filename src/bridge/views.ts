@@ -37,7 +37,8 @@ import type { BoonOffer } from '../game/warband/levelUpPicks.ts';
 import { findRelic, type Relic } from '../game/warband/relics.ts';
 import type { Unit } from '../game/Unit.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
-import { getUnitSprite } from '../game/tileset.ts';
+import { getItemSprite, getUnitSprite } from '../game/tileset.ts';
+import { MASTER_SEAL } from '../game/items.ts';
 import { formatWeaponRange, type WeaponType } from '../game/weapons.ts';
 
 // One inventory slot. `quantity` is how many are left (for a weapon, its
@@ -283,6 +284,9 @@ export interface RewardAction extends MenuAction {
   // A recruit's art name (getUnitSprite), for its sprite on the card;
   // absent on other rewards.
   sprite?: string;
+  // The icon (a SPRITE_URLS key, getItemSprite) of the item a Supplies,
+  // Arms or Seal reward gives; absent on other rewards.
+  itemIcon?: string;
   // Each roster unit's HP after taking it, in roster order, for a reward
   // that restores HP (see previewRewardHealth), else null.
   healthAfter: readonly { health: number; maxHealth: number }[] | null;
@@ -794,6 +798,13 @@ export function toRewardAction(reward: Reward, index: number, run: RunState | nu
       )
     : null;
   const healthAfter = run && previewRewardHealth(run, reward);
+  const itemId =
+    reward.kind === 'supplies' || reward.kind === 'arms'
+      ? reward.itemId
+      : reward.kind === 'seal'
+        ? MASTER_SEAL.id
+        : null;
+  const itemIcon = itemId ? getItemSprite(itemId) : null;
   return Object.freeze({
     id: `${reward.kind}-${index}`,
     label,
@@ -802,6 +813,7 @@ export function toRewardAction(reward: Reward, index: number, run: RunState | nu
     stats,
     healthAfter,
     ...(unit ? { sprite: getUnitSprite(unit.classId) } : {}),
+    ...(itemIcon ? { itemIcon } : {}),
   });
 }
 

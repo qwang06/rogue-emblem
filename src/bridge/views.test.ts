@@ -1,4 +1,4 @@
-import { getUnitSprite } from '../game/tileset.ts';
+import { getItemSprite, getUnitSprite } from '../game/tileset.ts';
 import { describe, expect, it } from 'vitest';
 import { Unit } from '../game/Unit.ts';
 import {
@@ -681,6 +681,17 @@ describe('toRewardAction', () => {
     expect(action.stats?.map(({ label }) => label)).toEqual(['HP', 'STR', 'MAG', 'SKL', 'SPD', 'DEF', 'RES']);
     expect(action.stats?.find(({ label }) => label === 'MAG')?.value).toBe(unit.magic);
     expect(action.sprite).toBe(getUnitSprite(unit.classId));
+  });
+
+  it('carries the icon of the item a reward gives, and none for other rewards', () => {
+    expect(toRewardAction({ kind: 'arms', itemId: 'iron-axe', label: 'Iron Axe', uses: 40 }, 0).itemIcon).toBe(
+      getItemSprite('iron-axe'),
+    );
+    expect(toRewardAction({ kind: 'supplies', itemId: 'health-potion', label: 'Health Potion' }, 0).itemIcon).toBe(
+      getItemSprite('health-potion'),
+    );
+    expect(toRewardAction({ kind: 'seal' }, 0).itemIcon).toBe(getItemSprite('master-seal'));
+    expect(toRewardAction({ kind: 'rest' }, 0)).not.toHaveProperty('itemIcon');
   });
 });
 
