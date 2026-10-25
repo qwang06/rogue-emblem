@@ -1,3 +1,4 @@
+import { getUnitSprite } from '../game/tileset.ts';
 import { describe, expect, it } from 'vitest';
 import { Unit } from '../game/Unit.ts';
 import {
@@ -623,9 +624,18 @@ describe('toLevelUpView', () => {
 });
 
 describe('toObjectiveView', () => {
-  it('carries the battle title and the objective words, frozen', () => {
-    const view = toObjectiveView('Stage 2: Lakeside', { goal: 'Defeat all enemies', defeat: 'All your units fall' });
-    expect(view).toEqual({ battle: 'Stage 2: Lakeside', goal: 'Defeat all enemies', defeat: 'All your units fall' });
+  it('carries the battle title, the objective kind and words, frozen', () => {
+    const view = toObjectiveView('Stage 2: Lakeside', {
+      kind: 'rout',
+      goal: 'Defeat all enemies',
+      defeat: 'All your units fall',
+    });
+    expect(view).toEqual({
+      battle: 'Stage 2: Lakeside',
+      kind: 'rout',
+      goal: 'Defeat all enemies',
+      defeat: 'All your units fall',
+    });
     expect(Object.isFrozen(view)).toBe(true);
   });
 });
@@ -664,12 +674,13 @@ describe('toRewardAction', () => {
     expect(Object.isFrozen(action)).toBe(true);
   });
 
-  it("carries a recruit's stat line", () => {
+  it("carries a recruit's stat line and sprite", () => {
     const unit = snapshotUnit('recruit-1', new Acolyte({ name: 'Dara', team: 'player' }));
     const action = toRewardAction({ kind: 'recruit', unit }, 0);
     expect(action.label).toBe('Recruit Dara');
     expect(action.stats?.map(({ label }) => label)).toEqual(['HP', 'STR', 'MAG', 'SKL', 'SPD', 'DEF', 'RES']);
     expect(action.stats?.find(({ label }) => label === 'MAG')?.value).toBe(unit.magic);
+    expect(action.sprite).toBe(getUnitSprite(unit.classId));
   });
 });
 

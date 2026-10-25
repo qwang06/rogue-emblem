@@ -1,5 +1,6 @@
 import { useGameStore } from './useGameStore.ts';
 import { menuItemPointerProps } from './menuPointer.ts';
+import { MenuIcon } from './MenuIcon.tsx';
 
 // The End Turn / Undo / Main Menu / Settings menu opened with Esc on the bare map.
 // GridScene handles the input; the mouse is forwarded to it.
@@ -14,7 +15,7 @@ export function PauseMenu() {
         <ul className="action-menu__list">
           {menu.actions.map((action, index) => {
             const selected = index === menu.selectedIndex;
-            const classes = ['action-menu__item'];
+            const classes = ['action-menu__item', 'action-menu__item--icon'];
             if (selected) classes.push('action-menu__item--selected');
             if (action.disabled) classes.push('action-menu__item--disabled');
             return (
@@ -25,6 +26,7 @@ export function PauseMenu() {
                 aria-disabled={action.disabled ? 'true' : undefined}
                 {...menuItemPointerProps('pauseMenu', index)}
               >
+                <MenuIcon id={action.id} />
                 {action.label}
               </li>
             );

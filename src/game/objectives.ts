@@ -44,6 +44,8 @@ export const ROUT: Objective = Object.freeze({ kind: 'rout' });
 export const DEFAULT_OBJECTIVE: Objective = ROUT;
 
 export interface ObjectiveText {
+  // Which kind it is, for its icon.
+  kind: ObjectiveKind;
   // What the player must do to win.
   goal: string;
   // What loses the battle.
@@ -52,19 +54,19 @@ export interface ObjectiveText {
 
 const turnsText = (turns: number) => `${turns} turn${turns === 1 ? '' : 's'}`;
 
-// The objective as the words the Objective screen shows.
+// The objective as the words the Objective screen shows, with its kind.
 export function describeObjective(objective: Objective): ObjectiveText {
   const defeat =
     objective.kind === 'survive' ? 'All your units fall' : `All your units fall, or turn ${TURN_LIMIT} ends`;
   switch (objective.kind) {
     case 'rout':
-      return Object.freeze({ goal: 'Defeat all enemies', defeat });
+      return Object.freeze({ kind: objective.kind, goal: 'Defeat all enemies', defeat });
     case 'seize':
-      return Object.freeze({ goal: 'Seize the marked tile', defeat });
+      return Object.freeze({ kind: objective.kind, goal: 'Seize the marked tile', defeat });
     case 'boss':
-      return Object.freeze({ goal: `Defeat ${objective.name}`, defeat });
+      return Object.freeze({ kind: objective.kind, goal: `Defeat ${objective.name}`, defeat });
     case 'survive':
-      return Object.freeze({ goal: `Survive ${turnsText(objective.turns)}`, defeat });
+      return Object.freeze({ kind: objective.kind, goal: `Survive ${turnsText(objective.turns)}`, defeat });
   }
 }
 

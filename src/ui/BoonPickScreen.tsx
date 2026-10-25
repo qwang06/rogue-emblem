@@ -7,6 +7,7 @@ import { menuItemPointerProps } from './menuPointer.ts';
 import { UnitSprite } from './UnitSprite.tsx';
 import { useGameStore } from './useGameStore.ts';
 import './BoonPickScreen.css';
+import { StatLabel } from './StatLabel.tsx';
 
 const KIND_LABELS: Readonly<Record<BoonKind, string>> = { stat: 'Stat', skill: 'Skill', passive: 'Passive' };
 const TITLE = 'Level Up!';
@@ -75,7 +76,9 @@ export function BoonPickScreen() {
               if (up > 0) classes.push('boon-pick__stat--up');
               return (
                 <div key={stat.stat} className={classes.join(' ')}>
-                  <dt>{stat.label}</dt>
+                  <dt>
+                    <StatLabel label={stat.label} />
+                  </dt>
                   <dd>
                     {stat.value}
                     <span className="boon-pick__stat-gain">{stat.gain > 0 ? `+${stat.gain}` : ''}</span>

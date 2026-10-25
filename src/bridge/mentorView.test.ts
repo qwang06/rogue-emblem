@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Acolyte } from '../game/Acolyte.ts';
 import { Archer } from '../game/Archer.ts';
+import { getUnitSprite } from '../game/tileset.ts';
 import type { Unit } from '../game/Unit.ts';
 import { addScrolls, getSecondaryClassIds, MENTOR_FEE } from '../game/warband/mentors.ts';
 import { confirmMentor, openMentorScreen, pointMentorCursor } from '../game/warband/mentorScreen.ts';
@@ -24,7 +25,14 @@ describe('toMentorScreenView', () => {
   it("lists the units and the picked unit's lessons with how each is paid", () => {
     const view = toMentorScreenView(openMentorScreen(campRun()));
     expect(view).toMatchObject({ gold: 50, scrolls: 0, column: 'units', unitIndex: 0, detail: null });
-    expect(view.units[0]).toEqual({ key: 'wren', name: 'Wren', classLabel: 'Archer', level: 2, secondary: null });
+    expect(view.units[0]).toEqual({
+      key: 'wren',
+      name: 'Wren',
+      classLabel: 'Archer',
+      sprite: getUnitSprite('archer'),
+      level: 2,
+      secondary: null,
+    });
     expect(view.lessons.map(({ label }) => label)).toEqual(['Warrior', 'Soldier', 'Vanguard', 'Guard', 'Acolyte']);
     expect(view.lessons[ACOLYTE_LESSON]).toEqual({
       key: 'acolyte',

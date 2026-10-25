@@ -1,9 +1,10 @@
 import { gameCommands } from '../bridge/commands.ts';
 import { useGameStore } from './useGameStore.ts';
+import { GlyphIcon } from './GlyphIcon.tsx';
 import { KeyHint } from './KeyHint.tsx';
 
 // Shown over the map before the battle starts (after the opening dialog):
-// what wins the battle and what loses it. GridScene handles the input
+// what wins the battle (after its kind's icon) and what loses it. GridScene handles the input
 // (confirm, cancel or a click carries on).
 export function ObjectiveScreen() {
   const objective = useGameStore((state) => state.objective);
@@ -16,7 +17,10 @@ export function ObjectiveScreen() {
         <h2 className="objective__title" id="objective-title">
           Objective
         </h2>
-        <p className="objective__goal">{objective.goal}</p>
+        <p className="objective__goal">
+          <GlyphIcon kind={objective.kind} />
+          {objective.goal}
+        </p>
         <p className="objective__defeat">
           <span className="objective__label">Defeat</span> {objective.defeat}
         </p>

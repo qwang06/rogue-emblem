@@ -5,6 +5,7 @@
 // built fresh from the screen's state.
 
 import { describeSkill } from '../game/skills.ts';
+import { getUnitSprite } from '../game/tileset.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
 import { getScrolls, getSkillSet, MENTOR_FEE, type Lesson } from '../game/warband/mentors.ts';
 import { getPickedLessons, type MentorColumn, type MentorScreenState } from '../game/warband/mentorScreen.ts';
@@ -15,6 +16,8 @@ export interface MentorUnitView {
   key: string;
   name: string;
   classLabel: string;
+  // The unit's art name (getUnitSprite).
+  sprite: string;
   level: number;
   secondary: string | null;
 }
@@ -70,6 +73,7 @@ export function toMentorScreenView(state: MentorScreenState): MentorScreenView {
       key: unit.id,
       name: unit.name,
       classLabel: classLabel(unit.classId),
+      sprite: getUnitSprite(unit.classId),
       level: unit.level,
       secondary: unit.secondaryClass ? classLabel(unit.secondaryClass) : null,
     }),

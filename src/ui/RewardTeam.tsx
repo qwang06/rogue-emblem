@@ -1,12 +1,18 @@
 import type { RewardAction, TeamUnitView } from '../bridge/views.ts';
+import { GlyphIcon } from './GlyphIcon.tsx';
+import { StatLabel } from './StatLabel.tsx';
+import { UnitSprite } from './UnitSprite.tsx';
 
-// The warband on the reward screen: each unit's level, XP and HP in a small
-// tile, four to a row (two on a phone) so a full warband of eight stays
+// The warband on the reward screen: each unit's sprite, level, XP and HP in
+// a small tile, four to a row (two on a phone) so a full warband of eight stays
 // short enough to keep the cards in view, and the player can tell who's
 // hurt before picking. The class is in the tile's tooltip. While a reward that restores
 // HP is selected, each row previews it as "12/20 ▸ 20/20", the HP it would
 // add blinking on the bar. The "▸ 20/20" is always laid out (hidden when
-// nothing is previewed), so moving the pick never reflows the rows.
+// nothing is previewed), so moving the pick never reflows the rows. On a
+// phone the preview takes the current HP's place, both laid out in one
+// cell, and XP is left out, so a tile stays narrow enough for two to a
+// row.
 export function RewardTeam({ team, preview }: { team: readonly TeamUnitView[]; preview: RewardAction['healthAfter'] }) {
   return (
     <section className="panel reward-team" aria-label="Warband">
@@ -28,15 +34,24 @@ function TeamRow({ unit, after }: { unit: TeamUnitView; after: { health: number;
   const changed = after !== null && (after.health !== unit.health || after.maxHealth !== unit.maxHealth);
   return (
     <li className="reward-team__unit" title={`${unit.name}, ${unit.unitClass}`}>
+      <span className="reward-team__sprite" aria-hidden="true">
+        <UnitSprite sprite={unit.sprite} />
+      </span>
       <span className="reward-team__head">
         <span className="reward-team__name">{unit.name}</span>
         <span className="reward-team__level">
           Lv {unit.level}
-          <span className="reward-team__exp"> E {unit.experienceForLevel === null ? '--' : unit.experience}</span>
+          <span className="reward-team__exp">
+            <GlyphIcon kind="exp" />
+            <span className="visually-hidden">EXP </span>
+            {unit.experienceForLevel === null ? '--' : unit.experience}
+          </span>
         </span>
       </span>
-      <span className="reward-team__label">HP</span>
-      <span className="reward-team__hp">
+      <span className="reward-team__label">
+        <StatLabel label="HP" />
+      </span>
+      <span className={`reward-team__hp${after ? ' reward-team__hp--preview' : ''}`}>
         <span className="reward-team__hp-now">
           {unit.health}/{unit.maxHealth}
         </span>
