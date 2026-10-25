@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import type { MenuAction } from '../game/actionMenu.ts';
 import { gameStore } from '../bridge/gameStore.ts';
-import { changeVolume, cycleVolume, toggleMute, type AudioSettings } from '../audio/settings.ts';
+import { changeVolume, cycleVolume, toggleMute, type AudioSettings, type VolumeChannel } from '../audio/settings.ts';
 import { createActionMenu, getSelectedAction, moveSelection, selectIndex } from '../game/actionMenu.ts';
 import {
   describeRenown,
@@ -54,6 +54,11 @@ const SUBMENUS = {
 } as const;
 
 const VOLUME_KEYS = [['←→', 'Volume']] as const;
+
+// Whether a Settings entry is one of the volumes (its id names the field).
+function isVolumeChannel(id: string | undefined): id is VolumeChannel {
+  return id === 'volume' || id === 'musicVolume';
+}
 
 const NAME_KEYS = [
   ['R', 'New name'],
@@ -144,8 +149,10 @@ export function TitleScreen() {
     if (!action || action.disabled) return;
     if (view === 'settings') {
       if (action.id === 'sound') changeAudio(toggleMute);
-      else if (action.id === 'volume') changeAudio(cycleVolume);
-      else if (action.id === 'configs') window.location.hash = routeHash({ page: 'configs' });
+      else if (isVolumeChannel(action.id)) {
+        const channel = action.id;
+        changeAudio((settings) => cycleVolume(settings, channel));
+      } else if (action.id === 'configs') window.location.hash = routeHash({ page: 'configs' });
     } else if (view === 'warband') {
       if (action.id === 'continue-run') {
         const saved = loadSavedRun();
@@ -184,6 +191,7 @@ export function TitleScreen() {
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      const selectedId = getSelectedAction(menu)?.id;
       // The name box handles its own keys.
       if (editingName || event.target instanceof HTMLInputElement) return;
       if (view === 'new-run' && (event.key === 'r' || event.key === 'R')) {
@@ -194,11 +202,11 @@ export function TitleScreen() {
         setEditingName(true);
       } else if (
         view === 'settings' &&
-        getSelectedAction(menu)?.id === 'volume' &&
+        isVolumeChannel(selectedId) &&
         (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
       ) {
         event.preventDefault();
-        changeAudio((settings) => changeVolume(settings, event.key === 'ArrowLeft' ? -1 : 1));
+        changeAudio((settings) => changeVolume(settings, event.key === 'ArrowLeft' ? -1 : 1, selectedId));
       } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
         event.preventDefault();
         setMenu((current) => moveSelection(current, event.key === 'ArrowUp' ? -1 : 1));
