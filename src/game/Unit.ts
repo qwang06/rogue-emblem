@@ -54,6 +54,9 @@ import {
   type WeaponType,
 } from './weapons.ts';
 
+// A standout enemy: its stage's boss, or an elite at an elite lair.
+export type UnitRank = 'boss' | 'elite';
+
 export interface UnitOptions {
   name: string;
   unitClass?: string | null;
@@ -138,6 +141,9 @@ export class Unit {
   // The elite affixes it fights with at an elite lair (warband/elites.ts),
   // by id.
   eliteAffixes: readonly string[] = Object.freeze([]);
+  // Whether it's its stage's boss (warband/stageObjective.ts) or an elite
+  // (warband/elites.ts), which the map and HUD mark it as; null for neither.
+  rank: UnitRank | null = null;
   // The class whose skill set it has learned on top of its own (see
   // skills.ts and warband/mentors.ts), or null.
   secondaryClass: string | null = null;

@@ -91,6 +91,8 @@ describe('placeObjective', () => {
     expect(objective).toEqual({ kind: 'boss', unitId: 'enemy-2', name: 'Skeleton Chief' });
     expect(level.units.get('enemy-2')!.holdsPosition).toBe(true);
     expect(level.units.get('enemy-1')!.holdsPosition).toBe(false);
+    expect(level.units.get('enemy-2')!.rank).toBe('boss');
+    expect(level.units.get('enemy-1')!.rank).toBeNull();
   });
 
   it('targets the level’s named boss as it is, while it’s on the map', () => {
@@ -99,6 +101,7 @@ describe('placeObjective', () => {
     const objective = placeObjective({ kind: 'boss' }, { ...level, bossUnitId: 'enemy-1' });
     expect(objective).toEqual({ kind: 'boss', unitId: 'enemy-1', name: 'Orc Warlord' });
     expect(level.units.get('enemy-1')!.level).toBe(1);
+    expect(level.units.get('enemy-1')!.rank).toBe('boss');
     expect(placeObjective({ kind: 'boss' }, { ...smallLevel(MAP), bossUnitId: 'enemy-9' })).toMatchObject({
       unitId: 'enemy-2',
     });
@@ -121,6 +124,7 @@ describe('makeBoss', () => {
     expect(unit.strength).toBe(before.strength + BOSS_LEVELS);
     expect(unit.defense).toBe(before.defense + BOSS_LEVELS);
     expect(unit.holdsPosition).toBe(true);
+    expect(unit.rank).toBe('boss');
   });
 });
 

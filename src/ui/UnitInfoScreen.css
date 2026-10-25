@@ -54,6 +54,12 @@
   border: var(--rule);
 }
 
+/* Holds the sprite and, for a boss or an elite, its badge on its corner. */
+.unit-info__sprite {
+  position: relative;
+  display: inline-flex;
+}
+
 .unit-info__name {
   margin: 0;
   overflow: hidden;

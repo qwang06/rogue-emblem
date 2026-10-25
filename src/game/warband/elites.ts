@@ -62,6 +62,7 @@ export function rollEliteAffixes(runSeed: number, depth: number): EliteAffix[] {
 // Gives the enemies among `units` (in their map order) `affixes` in turn,
 // one each, and the boss (`bossUnitId`) all of them: each affix's
 // modifiers, its id in `eliteAffixes`, and its name before the unit's.
+// Every enemy but the boss is ranked 'elite'.
 export function applyEliteAffixes(
   units: ReadonlyMap<string, Unit>,
   affixes: readonly EliteAffix[],
@@ -77,6 +78,9 @@ export function applyEliteAffixes(
       given.flatMap((one) => one.modifiers),
     );
     unit.eliteAffixes = Object.freeze([...unit.eliteAffixes, ...given.map((one) => one.id)]);
-    if (unitId !== bossUnitId) unit.name = `${given[0].name} ${unit.name.replace(/^Enemy /, '')}`;
+    if (unitId !== bossUnitId) {
+      unit.name = `${given[0].name} ${unit.name.replace(/^Enemy /, '')}`;
+      unit.rank = 'elite';
+    }
   }
 }

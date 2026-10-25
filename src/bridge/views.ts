@@ -35,7 +35,7 @@ import { findEliteAffix } from '../game/warband/elites.ts';
 import { findQuirk } from '../game/warband/quirks.ts';
 import type { BoonOffer } from '../game/warband/levelUpPicks.ts';
 import { findRelic, type Relic } from '../game/warband/relics.ts';
-import type { Unit } from '../game/Unit.ts';
+import type { Unit, UnitRank } from '../game/Unit.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
 import { getItemSprite, getUnitSprite } from '../game/tileset.ts';
 import { MASTER_SEAL } from '../game/items.ts';
@@ -79,6 +79,8 @@ export interface UnitView {
   items: readonly ItemView[];
   // The label of the item it drops when defeated (see loot.ts), if any.
   loot: string | null;
+  // Whether it's its stage's boss or an elite (Unit.rank), for its badge.
+  rank: UnitRank | null;
 }
 
 // One stat on the unit info screen: its value and the most its class can
@@ -167,6 +169,8 @@ export interface TileAnchorView {
 export interface ForecastSideView extends ForecastSide {
   name: string;
   team: Team;
+  // Whether it's a boss or an elite (Unit.rank), for its badge.
+  rank: UnitRank | null;
   weapon: string | null;
   // The weapon's item id, for its icon.
   weaponId: string | null;
@@ -390,6 +394,7 @@ export function toUnitView(unit: Unit | null | undefined): UnitView | null {
       ),
     ),
     loot: unit.loot?.label ?? null,
+    rank: unit.rank,
   });
 }
 
@@ -527,6 +532,7 @@ export function mergeTileAnchors(a: TileAnchorView, b: TileAnchorView): TileAnch
 export interface ForecastFighter {
   name: string;
   team: Team;
+  rank?: UnitRank | null;
   weapon: { label: string; id?: string | null } | null;
 }
 
@@ -554,6 +560,7 @@ export function toCombatForecastView({
     Object.freeze({
       name: unit.name,
       team: unit.team,
+      rank: unit.rank ?? null,
       weapon: unit.weapon?.label ?? null,
       weaponId: unit.weapon?.id ?? null,
       ...forecast[role],

@@ -11,7 +11,9 @@ import type { Autotile, SheetTile } from './autotile.ts';
 import type { BuildingKind } from './buildings.ts';
 import type { Facing } from './facing.ts';
 import type { ArrowPiece } from './moveArrow.ts';
+import type { PixelArt } from './pixelShapes.ts';
 import type { Team } from './turns.ts';
+import type { UnitRank } from './Unit.ts';
 
 export type UnitAnimation = 'idle' | 'move';
 
@@ -340,6 +342,52 @@ export const UNIT_SHADOW: Shadow = {
 export const UNIT_OUTLINE: { width: number; colors: Readonly<Record<Team, number>> } = {
   width: 1,
   colors: { player: 0x4a8cff, enemy: 0xff4a4a, guest: 0x4ad860 },
+};
+
+// The badge pinned to a boss's or an elite's tile on the map, and shown on
+// its portrait in the HUD, so the standouts read at a glance without
+// changing their sprites (boss and elite monsters look like any other of
+// their class): a white skull on a red plate for the boss, a gold star on a
+// violet plate for an elite. Each is drawn pixel by pixel (getPixelArtSpans)
+// at 1 world pixel per art pixel, its top-left corner at (x, y) within the
+// unit's tile, tucked into the top-right corner.
+export const RANK_BADGES: Readonly<Record<UnitRank, PixelArt & { x: number; y: number }>> = {
+  boss: {
+    x: 21,
+    y: 0,
+    palette: { O: 0x1a0d12, R: 0xc0283a, D: 0x8a1426, W: 0xf5ecd6, K: 0x2a1018 },
+    rows: [
+      '...OOOOO...',
+      '..ORRRRRO..',
+      '.ORRWWWRRO.',
+      'ORRWWWWWRRO',
+      'ORWKKWKKWRO',
+      'ORWKKWKKWRO',
+      'ORRWWKWWRRO',
+      'ORDRWWWRDRO',
+      '.ORDWKWDRO.',
+      '..ORDDDRO..',
+      '...OOOOO...',
+    ],
+  },
+  elite: {
+    x: 21,
+    y: 0,
+    palette: { O: 0x1a0d12, P: 0x3a2a5a, Y: 0xffd23a, L: 0xfff4a0 },
+    rows: [
+      '...OOOOO...',
+      '..OPPYPPO..',
+      '.OPPPYPPPO.',
+      'OPPPLYYPPPO',
+      'OYYYYYYYYYO',
+      'OPYYYYYYYPO',
+      'OPPYYYYYPPO',
+      'OPPYYPYYPPO',
+      '.OPYPPPYPO.',
+      '..OPPPPPO..',
+      '...OOOOO...',
+    ],
+  },
 };
 
 // The blob shadow drawn at the foot of every tree, in the same terms as

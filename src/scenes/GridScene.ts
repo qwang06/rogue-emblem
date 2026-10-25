@@ -231,6 +231,7 @@ import {
 import { CRIT_SHAKE, getLungeDistance, getStrikeJuice, type Shake } from './hitJuice.ts';
 import { addTreeShadow, addUnitShadow } from './unitShadow.ts';
 import { addUnitOutline } from './unitOutline.ts';
+import { addRankBadge } from './rankBadge.ts';
 import type { Menu } from '../game/actionMenu.ts';
 import type { Dialog, DialogLine } from '../game/dialog.ts';
 import type { DialogScripts } from '../game/dialogScript.ts';
@@ -2504,7 +2505,7 @@ export class GridScene extends Phaser.Scene {
       const push = skill.push ? getPushResult(this.grid, this.units, target, getPushDirection({ x, y }, target)) : null;
       const forecast = getSkillForecast(skill, unit, defender, push);
       const anchor = mergeTileAnchors(this.getTileAnchor({ x, y }), this.getTileAnchor(target));
-      const attacker = { name: unit.name, team: unit.team, weapon: { label: skill.label, id: null } };
+      const attacker = { name: unit.name, team: unit.team, rank: unit.rank, weapon: { label: skill.label, id: null } };
       gameStore.setState({ combatForecast: toCombatForecastView({ forecast, attacker, defender, anchor }) });
       return;
     }
@@ -3527,6 +3528,7 @@ export class GridScene extends Phaser.Scene {
       .play(this.unitAnimation(art, 'idle', UNIT_SHEET.defaultFacing));
     addUnitOutline(this, sprite, UNIT_OUTLINE.colors[unit.team]);
     addUnitShadow(this, sprite);
+    if (unit.rank) addRankBadge(this, sprite, unit.rank);
     this.unitSprites.set(unitId, sprite);
   }
 
