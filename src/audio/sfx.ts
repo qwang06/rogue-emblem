@@ -70,6 +70,18 @@ export const SOUND_EFFECTS: Readonly<Record<SoundCue, readonly Voice[]>> = Objec
   playerPhase: [tone('square', G5 / 2, G5 / 2, 0, 0.12, 0.14), tone('square', C5, C5, 0.12, 0.3, 0.16)],
   enemyPhase: [tone('sawtooth', A3, A3, 0, 0.14, 0.16), tone('sawtooth', A3 * 0.94, A3 * 0.94, 0.14, 0.35, 0.16)],
   guestPhase: [tone('triangle', A4, A4, 0, 0.12, 0.2), tone('triangle', E5, E5, 0.12, 0.28, 0.2)],
+  // Low drums under a falling minor call, as a boss's name card comes up.
+  bossIntro: [
+    tone('noise', 400, 80, 0, 0.3, 0.45),
+    tone('noise', 400, 80, 0.32, 0.3, 0.45),
+    tone('sawtooth', A3, A3, 0.6, 0.25, 0.18),
+    tone('sawtooth', F4 / 2, F4 / 2, 0.85, 0.25, 0.18),
+    tone('sawtooth', D4 / 2, D4 / 2, 1.1, 0.6, 0.2),
+  ],
+  // A war horn: a low brassy swell that bends up.
+  warHorn: [tone('sawtooth', 110, 147, 0, 0.7, 0.22), tone('square', 55, 73, 0, 0.7, 0.12)],
+  // A roar: a falling growl over a burst of noise.
+  enrage: [tone('sawtooth', 160, 70, 0, 0.5, 0.3), tone('noise', 1500, 200, 0, 0.45, 0.35)],
   victory: [
     ...arpeggio('square', [C5, E5, G5, C6], 0.12, 0.14, 0.14),
     tone('square', C6, C6, 0.48, 0.6, 0.16),

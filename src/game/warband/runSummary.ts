@@ -40,6 +40,10 @@ export interface RunSummary {
   memorial: readonly MemorialEntry[];
   // The relic ids the run held.
   relics: readonly string[];
+  // The origin it started as (see origins.ts), null in a run saved before
+  // origins, and the Heat it was played at.
+  origin: string | null;
+  heat: number;
 }
 
 // The recap of `run`, which has ended (`won` or fallen).
@@ -72,6 +76,8 @@ export function summarizeRun(run: RunState, won: boolean): RunSummary {
     survivors: Object.freeze(survivors),
     memorial: Object.freeze(memorial),
     relics: Object.freeze([...run.relics]),
+    origin: run.origin ?? null,
+    heat: run.heat ?? 0,
   });
 }
 

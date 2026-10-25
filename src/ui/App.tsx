@@ -9,6 +9,8 @@ import { ControlsButton } from './ControlsButton.tsx';
 import { DamagePopups } from './DamagePopups.tsx';
 import { AutoPlayButton } from './AutoPlayButton.tsx';
 import { AutoCommandQueue } from './AutoCommandQueue.tsx';
+import { BossBar } from './BossBar.tsx';
+import { BossIntro } from './BossIntro.tsx';
 import { DangerZoneButton } from './DangerZoneButton.tsx';
 import { DeploymentBanner } from './DeploymentBanner.tsx';
 import { DeploymentMenu } from './DeploymentMenu.tsx';
@@ -92,6 +94,7 @@ export function App() {
             <div className="hud">
               {/* First, so every other overlay paints over it. */}
               <UnitPanel />
+              <BossBar />
               <AutoCommandQueue />
               <DeploymentMenu />
               <RosterMenu />
@@ -103,6 +106,7 @@ export function App() {
               <DamagePopups />
               <ExperienceBar />
               <PhaseBanner />
+              <BossIntro />
               <DialogBox />
               <ObjectiveScreen />
               <UnitInfoScreen />

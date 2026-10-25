@@ -14,7 +14,6 @@ import { createBattleState, getRunBattleResult, type BattleState } from '../batt
 import { isPastTurnLimit, type ObjectiveKind } from '../objectives.ts';
 import type { BattleOutcome } from '../turns.ts';
 import { canRest } from './camp.ts';
-import { createRun } from './run.ts';
 import {
   applyRunCommand,
   finishBattle,
@@ -24,15 +23,19 @@ import {
   type RunCommand,
   type RunSession,
 } from './runCommands.ts';
-import { createStartingWarband } from './stageLevel.ts';
+import { createOriginRun } from './origins.ts';
 import { getRealm, getNextSites, type Realm } from './realm/realm.ts';
 import { getCurrentSiteId, startRoute } from './travel.ts';
 
 // How a run starts: its seed, and the class and name of its first unit.
 export interface RunStart {
   seed: number;
+  // The origin it starts as (see origins.ts): a base class's id starts as
+  // that class alone.
   classId: string;
   name: string;
+  // The Heat it's played at (see heat.ts); absent for none.
+  heat?: number;
 }
 
 // One step of a run: a stage's battle (every command given in it, both
@@ -119,10 +122,10 @@ export const BASELINE_POLICY: RunPolicy = Object.freeze({
   }),
 });
 
-// A new run's session: its starting relic pick, then the lone level-1 unit
-// at home on its realm, choosing where to travel first.
+// A new run's session: its starting relic pick, then its origin's level-1
+// units at home on its realm, choosing where to travel first.
 export function startRun(start: RunStart): RunSession {
-  return startRunSession(startRoute(createRun(start.seed, createStartingWarband(start.classId, start.name))));
+  return startRunSession(startRoute(createOriginRun(start.seed, start.classId, start.name, start.heat ?? 0)));
 }
 
 // Plays a run from `start` with `policy` until the warband falls, wins the
