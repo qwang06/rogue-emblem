@@ -2,6 +2,7 @@ import { getUnitSprite } from '../game/tileset.ts';
 import type { Team } from '../game/turns.ts';
 import { ItemIcon } from './ItemIcon.tsx';
 import { pickCornerAwayFromTile } from './menuPlacement.ts';
+import { StatLabel } from './StatLabel.tsx';
 import { UnitSprite } from './UnitSprite.tsx';
 import { useGameStore } from './useGameStore.ts';
 
@@ -23,12 +24,13 @@ const TEAM_NOUNS: Readonly<Record<Team, string>> = { player: 'Ally', enemy: 'Ene
 // Compact card for the unit under the cursor, docked in a top corner of the
 // map, laid out like a GBA status window: a framed portrait (the map
 // sprite, enlarged, until units have portraits) beside NAME / CLASS / LV
-// lines, then labelled HP, MP and (for player units and guests below the level cap)
-// EXP bars, a plain grid of stats (RNG is its equipped weapon's), and its
-// items (up to six, see MAX_INVENTORY_SLOTS) one per row with their icons
-// — potions with their count, weapons with their uses left (∞ if they
-// never break) and the equipped one highlighted — long names cut short
-// with an ellipsis; left out when it has none. An enemy carrying loot (see
+// lines, then HP, MP and (for player units and guests below the level
+// cap) EXP bars, a plain grid of stats (RNG is its equipped weapon's), the
+// bars and stats each led by its icon (StatLabel), and its items (up to
+// six, see MAX_INVENTORY_SLOTS) one per row with their icons — potions
+// with their count, weapons with their uses left (∞ if they never break)
+// and the equipped one highlighted — long names cut short with an
+// ellipsis; left out when it has none. An enemy carrying loot (see
 // loot.ts) shows it under a "Drops" line. The team shows as the window's
 // color. It sits in the corner away from the hovered unit so it never
 // covers it, and steps aside while the combat forecast (which already
@@ -80,7 +82,9 @@ export function UnitPanel() {
       <dl className="unit-panel__stats">
         {STATS.map(([label, key]) => (
           <div key={key} className="unit-panel__stat">
-            <dt>{label}</dt>
+            <dt>
+              <StatLabel label={label} />
+            </dt>
             <dd>{unit[key]}</dd>
           </div>
         ))}
@@ -121,7 +125,9 @@ export function Meter({ label, value, max, kind }: { label: string; value: numbe
   const percent = max > 0 ? (value / max) * 100 : 0;
   return (
     <div className={`meter meter--${kind}`}>
-      <span className="meter__label">{label}</span>
+      <span className="meter__label">
+        <StatLabel label={label} />
+      </span>
       <span className="meter__track">
         <span className="meter__fill" style={{ width: `${percent}%` }} />
       </span>

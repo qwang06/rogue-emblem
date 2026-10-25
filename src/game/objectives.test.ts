@@ -44,10 +44,14 @@ describe('objectives', () => {
 
   it('describes each kind, every one lost when all your units fall, all but survive at the turn limit', () => {
     const defeat = 'All your units fall, or turn 40 ends';
-    expect(describeObjective(ROUT)).toEqual({ goal: 'Defeat all enemies', defeat });
-    expect(describeObjective(SEIZE)).toEqual({ goal: 'Seize the marked tile', defeat });
-    expect(describeObjective(BOSS)).toEqual({ goal: 'Defeat Goblin Chief', defeat });
-    expect(describeObjective(SURVIVE)).toEqual({ goal: 'Survive 4 turns', defeat: 'All your units fall' });
+    expect(describeObjective(ROUT)).toEqual({ kind: 'rout', goal: 'Defeat all enemies', defeat });
+    expect(describeObjective(SEIZE)).toEqual({ kind: 'seize', goal: 'Seize the marked tile', defeat });
+    expect(describeObjective(BOSS)).toEqual({ kind: 'boss', goal: 'Defeat Goblin Chief', defeat });
+    expect(describeObjective(SURVIVE)).toEqual({
+      kind: 'survive',
+      goal: 'Survive 4 turns',
+      defeat: 'All your units fall',
+    });
     expect(describeObjective({ kind: 'survive', turns: 1 }).goal).toBe('Survive 1 turn');
   });
 

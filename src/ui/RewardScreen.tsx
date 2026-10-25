@@ -2,6 +2,8 @@ import { useGameStore } from './useGameStore.ts';
 import { KeyHint } from './KeyHint.tsx';
 import { menuItemPointerProps } from './menuPointer.ts';
 import { RewardTeam } from './RewardTeam.tsx';
+import { StatLabel } from './StatLabel.tsx';
+import { UnitSprite } from './UnitSprite.tsx';
 
 // Shown after a won Warband Mode stage's result: what the clear paid, and
 // the rewards to pick one of, side by side like Slay the Spire's card
@@ -72,13 +74,20 @@ export function RewardScreen() {
                 {...menuItemPointerProps('rewardMenu', index)}
               >
                 <span className="reward-card__kind">{reward.tag ?? reward.kind}</span>
+                {reward.sprite && (
+                  <span className="reward-card__sprite" aria-hidden="true">
+                    <UnitSprite sprite={reward.sprite} scale={2} animated={selected} />
+                  </span>
+                )}
                 <h3 className="reward-card__label">{reward.label}</h3>
                 <p className="reward-card__description">{reward.description}</p>
                 {reward.stats && (
                   <dl className="reward-card__stats">
                     {reward.stats.map((stat) => (
                       <div key={stat.label} className="reward-card__stat">
-                        <dt>{stat.label}</dt>
+                        <dt>
+                          <StatLabel label={stat.label} />
+                        </dt>
                         <dd>{stat.value}</dd>
                       </div>
                     ))}

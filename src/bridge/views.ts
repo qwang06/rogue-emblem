@@ -37,6 +37,7 @@ import type { BoonOffer } from '../game/warband/levelUpPicks.ts';
 import { findRelic, type Relic } from '../game/warband/relics.ts';
 import type { Unit } from '../game/Unit.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
+import { getUnitSprite } from '../game/tileset.ts';
 import { formatWeaponRange, type WeaponType } from '../game/weapons.ts';
 
 // One inventory slot. `quantity` is how many are left (for a weapon, its
@@ -279,6 +280,9 @@ export interface RewardAction extends MenuAction {
   tag?: string;
   description: string;
   stats: readonly { label: string; value: number }[] | null;
+  // A recruit's art name (getUnitSprite), for its sprite on the card;
+  // absent on other rewards.
+  sprite?: string;
   // Each roster unit's HP after taking it, in roster order, for a reward
   // that restores HP (see previewRewardHealth), else null.
   healthAfter: readonly { health: number; maxHealth: number }[] | null;
@@ -290,6 +294,8 @@ export interface TeamUnitView {
   id: string;
   name: string;
   unitClass: string;
+  // The unit's art name (getUnitSprite), for its sprite in the tile.
+  sprite: string;
   level: number;
   // XP toward the next level, and how much that level takes; null at
   // MAX_LEVEL.
@@ -757,7 +763,7 @@ export function toDialogView({
 // Snapshot for the Objective screen: the battle's title and its objective's
 // words (src/game/objectives.ts).
 export function toObjectiveView(battle: string, text: ObjectiveText): ObjectiveView {
-  return Object.freeze({ battle, goal: text.goal, defeat: text.defeat });
+  return Object.freeze({ battle, kind: text.kind, goal: text.goal, defeat: text.defeat });
 }
 
 // Snapshot for the result screen of a run that has ended
@@ -788,7 +794,15 @@ export function toRewardAction(reward: Reward, index: number, run: RunState | nu
       )
     : null;
   const healthAfter = run && previewRewardHealth(run, reward);
-  return Object.freeze({ id: `${reward.kind}-${index}`, label, kind: reward.kind, description, stats, healthAfter });
+  return Object.freeze({
+    id: `${reward.kind}-${index}`,
+    label,
+    kind: reward.kind,
+    description,
+    stats,
+    healthAfter,
+    ...(unit ? { sprite: getUnitSprite(unit.classId) } : {}),
+  });
 }
 
 // The captions boon cards carry, by boon kind.
@@ -874,6 +888,7 @@ export function toTeamView(roster: readonly UnitSnapshot[]): readonly TeamUnitVi
         id: unit.id,
         name: unit.name,
         unitClass: UNIT_CLASSES.find((unitClass) => unitClass.id === unit.classId)?.label ?? unit.classId,
+        sprite: getUnitSprite(unit.classId),
         level: unit.level,
         experience: unit.experience,
         experienceForLevel: unit.level >= MAX_LEVEL ? null : getExperienceForLevel(unit.level),

@@ -1,6 +1,7 @@
 import { getUnitSprite } from '../game/tileset.ts';
 import { UnitSprite } from './UnitSprite.tsx';
 import { useGameStore } from './useGameStore.ts';
+import { StatLabel } from './StatLabel.tsx';
 
 // The level-up announcement, laid out like the GBA's: the unit's portrait
 // (its map sprite, enlarged, until units have portraits) beside its name
@@ -27,7 +28,9 @@ export function LevelUpPanel() {
         <dl className="level-up__stats">
           {levelUp.stats.map((stat) => (
             <div key={stat.id} className={`level-up__stat${stat.gain > 0 ? ' level-up__stat--up' : ''}`}>
-              <dt>{stat.label}</dt>
+              <dt>
+                <StatLabel label={stat.label} />
+              </dt>
               <dd>
                 {stat.value}
                 <span className="level-up__gain">{stat.gain > 0 ? `+${stat.gain}` : ''}</span>

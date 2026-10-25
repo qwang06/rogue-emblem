@@ -3,6 +3,7 @@ import { gameCommands } from '../bridge/commands.ts';
 import type { MentorColumn } from '../game/warband/mentorScreen.ts';
 import { KeyHint } from './KeyHint.tsx';
 import { ScrollList } from './ScrollList.tsx';
+import { UnitSprite } from './UnitSprite.tsx';
 import { useGameStore } from './useGameStore.ts';
 
 // Mouse handlers for an entry of the mentor screen: hovering moves the
@@ -62,6 +63,7 @@ export function MentorScreen() {
                     aria-current={index === view.unitIndex ? 'true' : undefined}
                     {...pointerProps('units', index)}
                   >
+                    <UnitSprite sprite={unit.sprite} />
                     <span className="roster-screen__unit">
                       <span className="roster-screen__name">{unit.name}</span>
                       <span className="roster-screen__meta">

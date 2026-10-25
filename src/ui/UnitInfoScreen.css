@@ -83,7 +83,16 @@
 
 .unit-info__pairs dt,
 .unit-info__rate dt {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   color: var(--fg-dim);
+}
+
+/* Keeps a rate without an icon (AS, RNG) lined up with those that have one. */
+.unit-info__no-icon {
+  flex: none;
+  width: 16px;
 }
 
 .unit-info__pairs dd,
@@ -114,7 +123,7 @@
 
 .unit-info__stat {
   display: grid;
-  grid-template-columns: 2rem 1fr 3rem;
+  grid-template-columns: 3.6rem 1fr 3rem;
   align-items: center;
   gap: 8px;
 }
@@ -174,12 +183,32 @@
   color: var(--yellow);
 }
 
-.unit-info__weapon-numbers {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 10px;
+.unit-info__weapon .weapon-numbers {
   font-size: 0.8125rem;
   color: var(--fg-dim);
+}
+
+/* An item's name after its icon, half a tile so the row stays one line. */
+.unit-info__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.unit-info__item .item-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.unit-info__skill-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.unit-info__skill-cost .pixel-icon:last-of-type {
+  margin-left: 6px;
 }
 
 .unit-info__list {

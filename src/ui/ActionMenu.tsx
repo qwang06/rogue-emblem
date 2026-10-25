@@ -1,10 +1,12 @@
 import { useGameStore } from './useGameStore.ts';
 import { menuItemPointerProps } from './menuPointer.ts';
+import { MenuIcon } from './MenuIcon.tsx';
 import { useMenuBesideUnit } from './useMenuBesideUnit.ts';
 
 // Displays the unit action menu while one is open. Selection is driven by
 // GridScene; this component renders the snapshot and forwards the mouse.
 // Disabled actions (e.g. Skill before any are learned) are greyed out.
+// Each entry leads with its icon (MenuIcon).
 export function ActionMenu() {
   const menu = useGameStore((state) => state.actionMenu);
   const placement = useMenuBesideUnit(Boolean(menu));
@@ -15,7 +17,7 @@ export function ActionMenu() {
       <ul className="action-menu__list">
         {menu.actions.map((action, index) => {
           const selected = index === menu.selectedIndex;
-          const classes = ['action-menu__item'];
+          const classes = ['action-menu__item', 'action-menu__item--icon'];
           if (selected) classes.push('action-menu__item--selected');
           if (action.disabled) classes.push('action-menu__item--disabled');
           return (
@@ -26,6 +28,7 @@ export function ActionMenu() {
               {...menuItemPointerProps('actionMenu', index)}
               aria-disabled={action.disabled ? 'true' : undefined}
             >
+              <MenuIcon id={action.id} />
               {action.label}
             </li>
           );
