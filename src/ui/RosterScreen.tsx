@@ -3,7 +3,10 @@ import { SPRITE_URLS } from '../assets/sprites.ts';
 import { gameCommands } from '../bridge/commands.ts';
 import type { RosterItemView } from '../bridge/rosterView.ts';
 import type { RosterTarget } from '../game/warband/rosterScreen.ts';
+import { ItemCount } from './ItemCount.tsx';
+import { ItemDetailLine } from './ItemDetailLine.tsx';
 import { KeyHint } from './KeyHint.tsx';
+import { ScrollList } from './ScrollList.tsx';
 import { UnitSprite } from './UnitSprite.tsx';
 import { useGameStore } from './useGameStore.ts';
 
@@ -33,11 +36,21 @@ function ItemIcon({ item }: { item: RosterItemView }) {
   return url ? <img className="roster-screen__icon" src={url} alt="" /> : <span className="roster-screen__icon" />;
 }
 
-// How many are left (a weapon's uses), ∞ for one that never breaks, and
-// nothing for armor, which doesn't wear out.
-function ItemCount({ item }: { item: RosterItemView }) {
-  const count = item.quantity ?? (item.kind === 'armor' ? '' : '∞');
-  return <span className="roster-screen__count">{count}</span>;
+// A unit's HP as its count over a small bar, so the hurt stand out down
+// the list.
+function HealthGauge({ health, maxHealth }: { health: number; maxHealth: number }) {
+  const percent = maxHealth > 0 ? Math.min(100, (health / maxHealth) * 100) : 0;
+  return (
+    <span className="roster-screen__hp" title={`HP ${health}/${maxHealth}`}>
+      <span className="roster-screen__hp-count">
+        <span className="visually-hidden">HP </span>
+        {health}/{maxHealth}
+      </span>
+      <span className="roster-screen__hp-bar" aria-hidden="true">
+        <span style={{ width: `${percent}%` }} />
+      </span>
+    </span>
+  );
 }
 
 // Warband Mode's roster screen between stages (see
@@ -62,7 +75,10 @@ export function RosterScreen() {
           <div className="roster-screen__columns">
             <section className={`roster-screen__column${focus === 'units' ? ' roster-screen__column--focused' : ''}`}>
               <h3 className="roster-screen__heading">Units</h3>
-              <ul className="action-menu__list roster-screen__list roster-screen__list--units">
+              <ScrollList
+                className="action-menu__list roster-screen__list roster-screen__list--units"
+                selectedIndex={view.unitIndex}
+              >
                 {view.units.map((unit, index) => {
                   const selected = index === view.unitIndex;
                   return (
@@ -76,13 +92,14 @@ export function RosterScreen() {
                       <span className="roster-screen__unit">
                         <span className="roster-screen__name">{unit.name}</span>
                         <span className="roster-screen__meta">
-                          {unit.classLabel} · Lv {unit.level} · HP {unit.health}/{unit.maxHealth}
+                          {unit.classLabel} · Lv {unit.level}
                         </span>
                       </span>
+                      <HealthGauge health={unit.health} maxHealth={unit.maxHealth} />
                     </li>
                   );
                 })}
-              </ul>
+              </ScrollList>
             </section>
 
             <section
@@ -166,17 +183,10 @@ export function RosterScreen() {
             </section>
           </div>
 
-          <p className="roster-screen__detail">
-            {view.detail ? (
-              <>
-                <span className="roster-screen__detail-label">{view.detail.label}</span> {view.detail.description}
-              </>
-            ) : (
-              <span className="roster-screen__detail-hint">
-                Pick a unit, then equip or store its items, or give it items from the convoy.
-              </span>
-            )}
-          </p>
+          <ItemDetailLine
+            detail={view.detail}
+            hint="Pick a unit, then equip or store its items, or give it items from the convoy."
+          />
           <KeyHint
             className="roster-screen__hint"
             entries={[

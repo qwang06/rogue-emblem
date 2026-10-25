@@ -3,6 +3,9 @@ import { SPRITE_URLS } from '../assets/sprites.ts';
 import { gameCommands } from '../bridge/commands.ts';
 import type { MerchantItemView, MerchantScreenView } from '../bridge/merchantView.ts';
 import type { MerchantColumn, MerchantTarget } from '../game/warband/merchantScreen.ts';
+import { GlyphIcon } from './GlyphIcon.tsx';
+import { ItemCount } from './ItemCount.tsx';
+import { ItemDetailLine } from './ItemDetailLine.tsx';
 import { KeyHint } from './KeyHint.tsx';
 import { ScrollList } from './ScrollList.tsx';
 import { useGameStore } from './useGameStore.ts';
@@ -28,7 +31,7 @@ function rowClass(selected: boolean, focused: boolean, disabled: boolean) {
 }
 
 // One stock or convoy row: icon, name, uses (∞ for a weapon that never
-// breaks, nothing for armor) and price.
+// breaks, nothing for armor) or count, and price behind a coin.
 function ItemRow({
   item,
   column,
@@ -45,7 +48,6 @@ function ItemRow({
   disabledTitle: string;
 }) {
   const url = item.icon ? SPRITE_URLS[item.icon] : undefined;
-  const count = item.quantity ?? (item.kind === 'armor' ? '' : '∞');
   return (
     <li
       className={rowClass(selected, focused, item.disabled)}
@@ -56,8 +58,12 @@ function ItemRow({
     >
       {url ? <img className="roster-screen__icon" src={url} alt="" /> : <span className="roster-screen__icon" />}
       <span className="roster-screen__label">{item.label}</span>
-      <span className="roster-screen__count">{count}</span>
-      <span className="merchant-screen__price">{item.price} G</span>
+      <ItemCount item={item} />
+      <span className="merchant-screen__price" title={`${item.price} gold`}>
+        <GlyphIcon kind="gold" />
+        <span className="visually-hidden">Price </span>
+        {item.price}
+      </span>
     </li>
   );
 }
@@ -166,17 +172,10 @@ export function MerchantScreen() {
             </section>
           </div>
 
-          <p className="roster-screen__detail">
-            {view.detail ? (
-              <>
-                <span className="roster-screen__detail-label">{view.detail.label}</span> {view.detail.description}
-              </>
-            ) : (
-              <span className="roster-screen__detail-hint">
-                Buy for a unit or the convoy. Store a unit's items in the convoy to sell them.
-              </span>
-            )}
-          </p>
+          <ItemDetailLine
+            detail={view.detail}
+            hint="Buy for a unit or the convoy. Store a unit's items in the convoy to sell them."
+          />
           {view.recipients && (
             <RecipientMenu recipients={view.recipients} item={view.stock[view.stockIndex]?.label ?? ''} />
           )}
