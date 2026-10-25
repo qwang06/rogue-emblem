@@ -1149,6 +1149,15 @@ kbd {
   image-rendering: pixelated;
 }
 
+/* Item art is painted at 32px, so shrinking it pixelated drops whole rows
+   and columns; the smaller spots smooth it instead. */
+.unit-info__item .item-icon,
+.unit-panel__item .item-icon,
+.combat-forecast__weapon .item-icon,
+.item-menu__item .item-icon {
+  image-rendering: auto;
+}
+
 /* PixelIcon's bitmaps (StatIcon, GlyphIcon) at two screen pixels per art
    pixel, sitting on the text's middle when inline. */
 .pixel-icon {
