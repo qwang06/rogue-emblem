@@ -124,7 +124,11 @@ export function MerchantScreen() {
       <div className="roster-screen__scroll merchant-screen__scroll">
         <section className="panel roster-screen merchant-screen" aria-label="Merchant">
           <h2 className="roster-screen__title">Merchant</h2>
-          <p className="merchant-screen__gold">{view.gold} gold</p>
+          <p className="merchant-screen__gold" title={`${view.gold} gold`}>
+            <GlyphIcon kind="gold" />
+            {view.gold}
+            <span className="visually-hidden"> gold</span>
+          </p>
           <div className="roster-screen__columns merchant-screen__columns">
             <section
               className={`roster-screen__column${view.column === 'stock' ? ' roster-screen__column--focused' : ''}`}

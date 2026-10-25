@@ -19,6 +19,10 @@ export type GlyphKind =
   | 'item'
   | 'wait'
   | 'undo'
+  // Camp commands.
+  | 'roster'
+  | 'promote'
+  | 'book'
   // Objectives (ObjectiveKind) and the turn.
   | ObjectiveKind
   | 'turn'
@@ -43,6 +47,9 @@ const GLYPHS: Record<GlyphKind, readonly string[]> = {
   skill: ['...b....', '...b....', '.b.b.b..', '..bbb...', 'bbbwbbb.', '..bbb...', '.b.b.b..', '...b....'],
   item: ['...gg...', '..o..o..', '.oddddo.', 'oddddddo', 'oddggddo', 'oddddddo', '.oddddo.', '..oooo..'],
   wait: ['oooooooo', '.o....o.', '..oyyo..', '...oo...', '...oo...', '..o..o..', '.oyyyyo.', 'oooooooo'],
+  roster: ['....dd..', '...dddd.', '.oo.dddd', 'oooo.dd.', 'oooo.dd.', '.oo.dddd', 'oooooddd', 'oooooddd'],
+  promote: ['...gg...', '..gggg..', '.gggggg.', 'gggggggg', '..gggg..', '..gggg..', '..gggg..', '..gggg..'],
+  book: ['oooooo..', 'obbbbbo.', 'obwwwbo.', 'obbbbbo.', 'obwwwbo.', 'obbbbbo.', 'oooooooo', '.owwwwwo'],
   undo: ['..o.....', '.oo.....', 'ooooooo.', '.oo....o', '..o....o', '.......o', '...oooo.', '........'],
   rout: ['s......s', '.s....s.', '..s..s..', '...ss...', '...ss...', '..g..g..', '.gg..gg.', 'g......g'],
   seize: ['.orrrr..', '.orrrrr.', '.orrrr..', '.o......', '.o......', '.o......', '.o......', 'ooo.....'],
