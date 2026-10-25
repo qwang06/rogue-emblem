@@ -1,3 +1,5 @@
+import { RUN_ITEMS } from './warband/run.ts';
+import { WEAPONS } from './weapons.ts';
 import { describe, expect, it } from 'vitest';
 import { SPRITE_URLS } from '../assets/sprites.ts';
 import { FACINGS } from './facing.ts';
@@ -38,7 +40,11 @@ describe('sprite keys', () => {
       expect(SPRITE_URLS).toHaveProperty([key]);
       expect(getItemSprite(itemId)).toBe(key);
     }
-    expect(getItemSprite('health-potion')).toBeNull();
+    expect(getItemSprite('no-such-item')).toBeNull();
+  });
+
+  it('has an icon for every item a run can hold, and every weapon', () => {
+    for (const item of [...RUN_ITEMS, ...WEAPONS]) expect(getItemSprite(item.id), item.id).not.toBeNull();
   });
 
   it('has an icon for the whole wooden set', () => {
