@@ -1,3 +1,5 @@
+import { GlyphIcon } from './GlyphIcon.tsx';
+import { MenuIcon } from './MenuIcon.tsx';
 import { useGameStore } from './useGameStore.ts';
 import { menuItemPointerProps } from './menuPointer.ts';
 
@@ -6,7 +8,7 @@ import { menuItemPointerProps } from './menuPointer.ts';
 // (RosterScreen), Merchant the merchant screen (MerchantScreen), Promote
 // the promotion screen (PromotionScreen), Rest heals everyone for gold,
 // Mentors opens the mentor screen (MentorScreen), Next Stage marches on.
-// The warband's gold sits in the window's bottom border, and the relics it
+// The warband's gold, behind a coin, sits in the window's bottom border, and the relics it
 // holds are listed beside the menu (below it on a narrow stage). It hides
 // while one of those screens is open. GridScene handles the input; the
 // mouse is forwarded to it.
@@ -30,7 +32,7 @@ export function CampMenu() {
         <ul className="action-menu__list">
           {menu.actions.map((action, index) => {
             const selected = index === menu.selectedIndex;
-            const classes = ['action-menu__item'];
+            const classes = ['action-menu__item', 'action-menu__item--icon'];
             if (selected) classes.push('action-menu__item--selected');
             if (action.disabled) classes.push('action-menu__item--disabled');
             return (
@@ -41,12 +43,19 @@ export function CampMenu() {
                 aria-disabled={action.disabled ? 'true' : undefined}
                 {...menuItemPointerProps('campMenu', index)}
               >
+                <MenuIcon id={action.id} />
                 {action.label}
               </li>
             );
           })}
         </ul>
-        {gold !== null && <p className="camp-menu__gold">{gold} gold</p>}
+        {gold !== null && (
+          <p className="camp-menu__gold" title={`${gold} gold`}>
+            <GlyphIcon kind="gold" />
+            {gold}
+            <span className="visually-hidden"> gold</span>
+          </p>
+        )}
       </nav>
       {relics && relics.length > 0 && (
         <aside className="panel camp-relics" aria-label="Relics">

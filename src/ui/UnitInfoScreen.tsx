@@ -17,15 +17,16 @@ const WEAPON_TYPE_LABELS = { physical: 'Physical', magical: 'Magic', siege: 'Sie
 
 // The unit info screen: a full stat sheet for the unit the cursor was on
 // when I was pressed, over a dimmed map. On the left, who it is (sprite,
-// name, class, level, HP/MP bars and an EXP bar for player units, movement
-// and the weapon types it can wield); then each stat with a bar filled
-// toward its class's cap; then the rates it fights with, its equipped
-// weapon's numbers as icon chips (WeaponNumbers), its items with their
-// icons, its skills with their MP and range, its passive boons and its
-// quirk. Stats are labelled with their icon and abbreviation (StatLabel),
-// so the icons the rest of the UI shows alone are learned here. The hover UnitPanel stays the quick
-// view. GridScene handles the input (I, confirm or cancel closes it), and
-// a click anywhere closes it too.
+// name, class, level, HP/MP bars and an EXP bar for player units, movement,
+// the weapon types it can wield, and its quirk); then each stat with a bar
+// filled toward its class's cap, with its passive boons under them; then
+// the rates it fights with, its equipped weapon's numbers as icon chips
+// (WeaponNumbers), its items with their icons and its skills with their MP
+// and range. Stats are labelled with their icon and abbreviation
+// (StatLabel), so the icons the rest of the UI shows alone are learned
+// here. The hover UnitPanel stays the quick view. GridScene handles the
+// input (I, confirm or cancel closes it), and a click anywhere closes it
+// too.
 export function UnitInfoScreen() {
   const unit = useGameStore((state) => state.unitInfo);
   if (!unit) return null;
@@ -76,6 +77,17 @@ function Identity({ unit }: { unit: UnitDetailView }) {
           </dd>
         </div>
       </dl>
+      {unit.quirk && (
+        <>
+          <h3 className="unit-info__heading">Quirk</h3>
+          <ul className="unit-info__list unit-info__list--boons">
+            <li>
+              <span>{unit.quirk.label}</span>
+              <span>{unit.quirk.description}</span>
+            </li>
+          </ul>
+        </>
+      )}
     </div>
   );
 }
@@ -106,7 +118,30 @@ function Stats({ unit }: { unit: UnitDetailView }) {
           );
         })}
       </dl>
+      <Passives unit={unit} />
     </div>
+  );
+}
+
+// Passive boons, under the stats, where the column has room to spare
+// beside the longer combat column.
+function Passives({ unit }: { unit: UnitDetailView }) {
+  return (
+    <>
+      {unit.passives.length > 0 && (
+        <>
+          <h3 className="unit-info__heading">Passives</h3>
+          <ul className="unit-info__list unit-info__list--boons">
+            {unit.passives.map((passive) => (
+              <li key={passive.id}>
+                <span>{passive.label}</span>
+                <span>{passive.description}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </>
   );
 }
 
@@ -177,32 +212,6 @@ function Combat({ unit }: { unit: UnitDetailView }) {
         </ul>
       ) : (
         <p className="unit-info__empty">None</p>
-      )}
-
-      {unit.passives.length > 0 && (
-        <>
-          <h3 className="unit-info__heading">Passives</h3>
-          <ul className="unit-info__list unit-info__list--boons">
-            {unit.passives.map((passive) => (
-              <li key={passive.id}>
-                <span>{passive.label}</span>
-                <span>{passive.description}</span>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      {unit.quirk && (
-        <>
-          <h3 className="unit-info__heading">Quirk</h3>
-          <ul className="unit-info__list unit-info__list--boons">
-            <li>
-              <span>{unit.quirk.label}</span>
-              <span>{unit.quirk.description}</span>
-            </li>
-          </ul>
-        </>
       )}
     </div>
   );

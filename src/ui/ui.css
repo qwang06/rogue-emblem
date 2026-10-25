@@ -2582,6 +2582,24 @@ kbd {
   }
 }
 
+/* The origin list is the longest menu (eight entries, the name row and
+   the pitch): the logo and rows give up height so it fits a laptop's
+   window without scrolling. */
+.title-screen:has(.title-menu__item--class) {
+  gap: clamp(8px, 2vh, 40px);
+  padding-top: clamp(12px, 2vh, 36px);
+}
+
+.title-screen:has(.title-menu__item--class) .title-logo {
+  font-size: clamp(38.5px, min(13vw, 7vh), 140px);
+}
+
+.title-screen:has(.title-menu__item--class) .title-menu__item--class {
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: clamp(0.9rem, 3vh, 1.5rem);
+}
+
 /* New Run's name row: the starting unit's name, with buttons to roll a new
    one or type one. A fixed height, so editing doesn't move the menu. */
 .name-field {
@@ -3670,6 +3688,18 @@ textarea.draft-input {
   .reward-screen__choices {
     grid-template-columns: 1fr;
   }
+
+  /* Stacked, the cards run past the stage: Skip and Reroll stay pinned
+     to the bottom of the scroll box on a dark band, so they're never
+     below the fold. */
+  .reward-screen .reward-screen__buttons {
+    position: sticky;
+    bottom: -8px;
+    z-index: 1;
+    margin: 0 -8px -8px;
+    padding: 10px 8px;
+    background: rgb(20 14 10 / 92%);
+  }
 }
 
 .reward-card {
@@ -4224,6 +4254,9 @@ textarea.draft-input {
 .merchant-screen__gold {
   position: absolute;
   right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   margin: 0;
   padding: 0 8px;
   font-size: 0.8125rem;
@@ -4246,7 +4279,9 @@ textarea.draft-input {
 .camp-overlay {
   flex-wrap: wrap;
   align-content: center;
-  gap: 24px;
+  /* Rows far enough apart that the gold plate hanging off the menu's
+     bottom edge clears the Relics plate on top of the box under it. */
+  gap: 44px 24px;
   padding: 16px;
   overflow-y: auto;
 }
