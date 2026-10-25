@@ -89,9 +89,9 @@ describe('describeObjectiveSpec', () => {
 });
 
 describe('getOverworldZoom', () => {
-  it('scales by whole steps up to 2 when the map fits, shrinking to half size at most', () => {
+  it('fills the height it has, from half size up to double', () => {
     expect(getOverworldZoom(18 * 32, 18, 32)).toBe(1);
-    expect(getOverworldZoom(18 * 32 * 1.9, 18, 32)).toBe(1);
+    expect(getOverworldZoom(18 * 32 * 1.5, 18, 32)).toBe(1.5);
     expect(getOverworldZoom(18 * 32 * 5, 18, 32)).toBe(2);
     expect(getOverworldZoom(18 * 32 * 0.75, 18, 32)).toBe(0.75);
     expect(getOverworldZoom(10, 18, 32)).toBe(0.5);
