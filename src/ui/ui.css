@@ -1158,6 +1158,10 @@ kbd {
   vertical-align: middle;
 }
 
+.pixel-icon--art {
+  image-rendering: pixelated;
+}
+
 /* The icons' colors (see PixelIcon and GlyphIcon): text, ink, dim, blade,
    light, gold, pale gold, steel, white, red, blue, green and EXP blue. */
 .pixel-icon__c {
@@ -4192,6 +4196,13 @@ textarea.draft-input {
 .merchant-screen__price .pixel-icon {
   width: 12px;
   height: 12px;
+}
+
+/* Painted 16px art shrunk to 12px drops whole rows when pixelated, so
+   these small spots smooth it instead. */
+.reward-team__exp .pixel-icon--art,
+.merchant-screen__price .pixel-icon--art {
+  image-rendering: auto;
 }
 
 /* A unit's HP: the count over a small GBA trough. */
