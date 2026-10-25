@@ -95,6 +95,7 @@ import { enterRun } from '../bridge/warbandFlow.ts';
 import { loadMeta, saveMeta } from '../data/metaSave.ts';
 import { addPlayTime, EMPTY_CHRONICLE } from '../game/warband/chronicle.ts';
 import { recordRun } from '../game/warband/meta.ts';
+import { getRunHeat } from '../game/warband/heat.ts';
 import { summarizeRun } from '../game/warband/runSummary.ts';
 import { toRunSummaryView, type RunSummaryView } from '../bridge/runSummaryView.ts';
 import { pickBoonOffer, pickReward, planCamp } from '../game/warband/runPolicy.ts';
@@ -2158,6 +2159,7 @@ export class GridScene extends Phaser.Scene {
         const clear = getClearGold(before, run.fallen.length - before.fallen.length, {
           kills: countWarbandKills(before, result),
           relics: before.relics,
+          heat: getRunHeat(before),
         });
         stageClear = toStageClearView(before.stage, clear, run.gold);
         // The run is saved owing the pick, so a reload reopens the reward

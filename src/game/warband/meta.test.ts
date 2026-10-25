@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getNextUnlock,
   getRunRenown,
-  getUnlockedStartingClasses,
+  getUnlockedOrigins,
   isUnlocked,
   NEW_META,
   parseMeta,
@@ -10,11 +10,13 @@ import {
   RENOWN_FOR_VICTORY,
   RENOWN_PER_BOSS,
   RENOWN_PER_STAGE,
+  RENOWN_PERCENT_PER_HEAT,
   serializeMeta,
   UNLOCKS,
   type MetaState,
 } from './meta.ts';
-import { UNLOCKABLE_STARTING_CLASSES } from './startingClasses.ts';
+import { MAX_HEAT } from './heat.ts';
+import { UNLOCKABLE_ORIGINS } from './origins.ts';
 
 const meta = (renown: number): MetaState => ({ ...NEW_META, renown });
 
@@ -41,8 +43,8 @@ describe('getRunRenown', () => {
 });
 
 describe('UNLOCKS', () => {
-  it('opens each unlockable starting class once, cheapest first', () => {
-    expect(UNLOCKS.map((unlock) => unlock.startingClass)).toEqual(UNLOCKABLE_STARTING_CLASSES.map(({ id }) => id));
+  it('opens each unlockable origin once, cheapest first', () => {
+    expect(UNLOCKS.map((unlock) => unlock.origin)).toEqual(UNLOCKABLE_ORIGINS.map(({ id }) => id));
     const costs = UNLOCKS.map((unlock) => unlock.renown);
     expect(costs).toEqual([...costs].sort((a, b) => a - b));
     expect(costs.every((cost) => Number.isInteger(cost) && cost > 0)).toBe(true);
@@ -60,20 +62,20 @@ describe('UNLOCKS', () => {
   });
 });
 
-describe('isUnlocked, getUnlockedStartingClasses and getNextUnlock', () => {
+describe('isUnlocked, getUnlockedOrigins and getNextUnlock', () => {
   it('opens an unlock at exactly its renown', () => {
     const [first] = UNLOCKS;
     expect(isUnlocked(meta(first.renown - 1), first)).toBe(false);
     expect(isUnlocked(meta(first.renown), first)).toBe(true);
   });
 
-  it('lists the starting classes renown has opened, and what comes next', () => {
+  it('lists the origins renown has opened, and what comes next', () => {
     const [first, second] = UNLOCKS;
-    expect(getUnlockedStartingClasses(NEW_META)).toEqual([]);
+    expect(getUnlockedOrigins(NEW_META)).toEqual([]);
     expect(getNextUnlock(NEW_META)).toBe(first);
-    expect(getUnlockedStartingClasses(meta(first.renown))).toEqual([first.startingClass]);
+    expect(getUnlockedOrigins(meta(first.renown))).toEqual([first.origin]);
     expect(getNextUnlock(meta(first.renown))).toBe(second);
-    expect(getUnlockedStartingClasses(meta(10_000))).toEqual(UNLOCKS.map((unlock) => unlock.startingClass));
+    expect(getUnlockedOrigins(meta(10_000))).toEqual(UNLOCKS.map((unlock) => unlock.origin));
     expect(getNextUnlock(meta(10_000))).toBeNull();
   });
 });
@@ -81,7 +83,13 @@ describe('isUnlocked, getUnlockedStartingClasses and getNextUnlock', () => {
 describe('recordRun', () => {
   it('adds the renown, counts the run and keeps the best stage', () => {
     const fell = recordRun(NEW_META, { stage: 5, stagesCleared: 4, bossesDefeated: 1, won: false });
-    expect(fell.meta).toEqual({ renown: 4 * RENOWN_PER_STAGE + RENOWN_PER_BOSS, runs: 1, wins: 0, bestStage: 5 });
+    expect(fell.meta).toEqual({
+      renown: 4 * RENOWN_PER_STAGE + RENOWN_PER_BOSS,
+      runs: 1,
+      wins: 0,
+      bestStage: 5,
+      heat: 0,
+    });
     expect(fell.earned.total).toBe(fell.meta.renown);
     const won = recordRun(fell.meta, { stage: 10, stagesCleared: 10, bossesDefeated: 1, won: true });
     expect(won.meta.runs).toBe(2);
@@ -107,10 +115,51 @@ describe('recordRun', () => {
   });
 });
 
+describe('Heat', () => {
+  const won = { stage: 10, stagesCleared: 10, bossesDefeated: 1, won: true };
+  const fell = { stage: 4, stagesCleared: 3, bossesDefeated: 0, won: false };
+
+  it('opens Heat 1 with the first win, and the next with a win at the highest open', () => {
+    const first = recordRun(NEW_META, won);
+    expect(first.meta.heat).toBe(1);
+    expect(first.heatUnlocked).toBe(1);
+    const second = recordRun(first.meta, { ...won, heat: 1 });
+    expect(second.meta.heat).toBe(2);
+    expect(second.heatUnlocked).toBe(2);
+  });
+
+  it('opens nothing for a loss, or a win below the highest Heat open', () => {
+    const at = (heat: number) => ({ ...NEW_META, heat });
+    expect(recordRun(at(2), { ...fell, heat: 2 }).meta.heat).toBe(2);
+    expect(recordRun(at(2), { ...won, heat: 1 }).meta.heat).toBe(2);
+    expect(recordRun(at(2), { ...won, heat: 1 }).heatUnlocked).toBeNull();
+    expect(recordRun(NEW_META, fell).heatUnlocked).toBeNull();
+  });
+
+  it('stops at the highest Heat', () => {
+    const top = recordRun({ ...NEW_META, heat: MAX_HEAT }, { ...won, heat: MAX_HEAT });
+    expect(top.meta.heat).toBe(MAX_HEAT);
+    expect(top.heatUnlocked).toBeNull();
+  });
+
+  it('pays a share more renown for each Heat level', () => {
+    const base = getRunRenown(won).total;
+    const hot = getRunRenown({ ...won, heat: 2 });
+    expect(hot.total).toBe(base + Math.floor((base * RENOWN_PERCENT_PER_HEAT * 2) / 100));
+    expect(hot.lines.at(-1)).toEqual({ label: 'Heat 2', count: 1, renown: hot.total - base });
+    expect(getRunRenown({ ...won, heat: 0 }).lines.map((line) => line.label)).not.toContain('Heat 0');
+  });
+});
+
 describe('serializeMeta and parseMeta', () => {
   it('round-trips', () => {
-    const state = { renown: 140, runs: 3, wins: 1, bestStage: 10 };
+    const state = { renown: 140, runs: 3, wins: 1, bestStage: 10, heat: 2 };
     expect(parseMeta(serializeMeta(state))).toEqual(state);
+  });
+
+  it('opens Heat 1 for a save from before Heat that has a win', () => {
+    expect(parseMeta('{"renown": 140, "runs": 3, "wins": 1, "bestStage": 10}')?.heat).toBe(1);
+    expect(parseMeta('{"renown": 40, "runs": 3, "wins": 0, "bestStage": 5}')?.heat).toBe(0);
   });
 
   it.each([
@@ -121,6 +170,8 @@ describe('serializeMeta and parseMeta', () => {
     ['negative renown', '{"renown": -1, "runs": 0, "wins": 0, "bestStage": 0}'],
     ['fractional runs', '{"renown": 0, "runs": 1.5, "wins": 0, "bestStage": 0}'],
     ['more wins than runs', '{"renown": 0, "runs": 1, "wins": 2, "bestStage": 0}'],
+    ['a Heat past the highest', `{"renown": 0, "runs": 1, "wins": 1, "bestStage": 0, "heat": ${MAX_HEAT + 1}}`],
+    ['a fractional Heat', '{"renown": 0, "runs": 1, "wins": 1, "bestStage": 0, "heat": 1.5}'],
   ])('rejects %s', (_, text) => {
     expect(parseMeta(text)).toBeNull();
   });

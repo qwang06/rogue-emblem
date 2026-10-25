@@ -5,6 +5,7 @@
 // function returns a new frozen value and leaves its input alone.
 
 import type { MenuAction } from '../actionMenu.ts';
+import { getRunHeatRules } from './heat.ts';
 import { FIELD_KITCHEN, hasRelic } from './relics.ts';
 import type { RunState } from './run.ts';
 import { isInTown, isRealmRun } from './travel.ts';
@@ -12,10 +13,11 @@ import { isInTown, isRealmRun } from './travel.ts';
 // What a rest at camp costs: every unit back to full HP and mana.
 export const REST_COST = 15;
 
-// What a rest costs the run: REST_COST, or nothing in a town (see
-// travel.ts) or with the Field Kitchen.
-export function getRestCost(run: Pick<RunState, 'relics' | 'route'>): number {
-  return isInTown(run) || hasRelic(run, FIELD_KITCHEN) ? 0 : REST_COST;
+// What a rest costs the run: REST_COST times its Heat's multiplier (see
+// heat.ts), or nothing in a town (see travel.ts) or with the Field Kitchen.
+export function getRestCost(run: Pick<RunState, 'relics' | 'route' | 'heat'>): number {
+  if (isInTown(run) || hasRelic(run, FIELD_KITCHEN)) return 0;
+  return REST_COST * getRunHeatRules(run).restCostMultiplier;
 }
 
 export type CampActionId = 'roster' | 'merchant' | 'rest' | 'march';

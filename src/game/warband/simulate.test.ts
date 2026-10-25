@@ -11,6 +11,10 @@ describe('getSimStarts', () => {
       { seed: 2, classId: 'archer', name: 'Lead' },
     ]);
   });
+
+  it('plays the starts at a Heat when given one', () => {
+    expect(getSimStarts(1, ['sellswords'], 2)).toEqual([{ seed: 1, classId: 'sellswords', name: 'Lead', heat: 2 }]);
+  });
 });
 
 describe('simulate', () => {

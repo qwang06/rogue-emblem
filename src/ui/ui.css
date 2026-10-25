@@ -2380,12 +2380,33 @@ kbd {
   color: var(--fg-dim);
 }
 
-/* New Run's class entries: the class's sprite beside its name, so the
-   sprites line up in a column. */
+/* New Run's origin entries: the sprites of the units it starts with
+   beside its name, so the sprites line up in a column. A band's units
+   stand overlapped in a slot as wide as the widest band's, so every name
+   starts at the same place, and a name never wraps (a narrow screen sets
+   them smaller to fit). */
 .title-menu__item--class {
   display: flex;
   align-items: center;
   gap: 12px;
+  white-space: nowrap;
+  font-size: clamp(1.1rem, 4vh, 1.5rem);
+}
+
+.title-menu__sprites {
+  display: flex;
+  flex: none;
+  width: 56px;
+}
+
+.title-menu__sprites > * + * {
+  margin-left: -24px;
+}
+
+@media (max-width: 480px) {
+  .title-menu__item--class {
+    font-size: 1.1rem;
+  }
 }
 
 /* New Run's name row: the starting unit's name, with buttons to roll a new
