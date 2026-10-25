@@ -2,7 +2,7 @@
 // how it stands for the warband (visited, here, a choice, or ahead), the
 // roads it has travelled and the ones it can take next, and a card per
 // choice saying what waits there. Pure: the React OverworldScreen draws
-// this and the realm's art (realmArt.ts).
+// this over the realm's parchment map (realmInk.ts).
 
 import type { Point } from '../game/grid.ts';
 import { SURVIVE_TURNS, type ObjectiveSpec } from '../game/objectives.ts';

@@ -1,62 +1,54 @@
 // Renders Warband realms (src/game/warband/realm/) to one PNG, one realm
-// under the other, painted from getRealmDrawList the way the overworld
-// screen paints them, with a colored square on each site by kind, and
-// prints each realm's sites.
+// under the other, painted the way the overworld screen paints them: the
+// parchment map from getRealmInk and paintRealmInk, with each site's icon
+// (src/assets/realm/sites/) stood on its tile. Prints each realm's sites
+// and the names lettered on it.
 //
 //   node .claude/skills/tileset/scripts/realm-preview.ts out.png 1 2 3
 
 import { readFileSync } from 'node:fs';
-import { MAP_PROPS_SHEET, TILE_SIZE } from '../../../../src/game/tileset.ts';
+import { TILE_SIZE } from '../../../../src/game/tileset.ts';
+import { paintRealmInk, type RgbaImage } from '../../../../src/game/warband/realm/inkRaster.ts';
 import { generateRealm } from '../../../../src/game/warband/realm/realm.ts';
-import { getRealmDrawList } from '../../../../src/game/warband/realm/realmArt.ts';
+import { getRealmInk, INK_STAMPS, type InkStamp } from '../../../../src/game/warband/realm/realmInk.ts';
 import { decode, encode } from './dump-png.js';
 
 const [output, ...seeds] = process.argv.slice(2);
 const settings = JSON.parse(readFileSync('src/data/regions.json', 'utf8'));
-const sheets: Record<string, number[][][]> = {
-  overworld: decode('src/assets/overworld.png'),
-  [MAP_PROPS_SHEET.key]: decode('src/assets/map-props.png'),
-};
-const realms = seeds.map((seed) => generateRealm(Number(seed), settings));
-const { width: columns, height: rows } = realms[0].grid;
-const width = columns * TILE_SIZE;
-const height = realms.length * (rows + 1) * TILE_SIZE;
-const scene: number[][][] = Array.from({ length: height }, () => Array.from({ length: width }, () => [40, 40, 48]));
 
-const blend = (image: number[][][], frame: number, size: number, x: number, y: number) => {
-  const perRow = image[0].length / size;
-  const sx = (frame % perRow) * size;
-  const sy = Math.floor(frame / perRow) * size;
-  for (let j = 0; j < size; j++) {
-    for (let i = 0; i < size; i++) {
-      const pixel = image[sy + j][sx + i];
-      const under = scene[y + j]?.[x + i];
-      if (!under) continue;
-      const alpha = pixel[3] / 255;
-      scene[y + j][x + i] = [0, 1, 2].map((k) => Math.round(pixel[k] * alpha + under[k] * (1 - alpha)));
+const load = (file: string): RgbaImage => {
+  const rows: number[][][] = decode(file);
+  return { width: rows[0].length, height: rows.length, data: new Uint8ClampedArray(rows.flat(2)) };
+};
+const stamps = Object.fromEntries(INK_STAMPS.map((id) => [id, load(`src/assets/realm/ink/${id}.png`)])) as Record<
+  InkStamp,
+  RgbaImage
+>;
+const icons: Record<string, RgbaImage> = {};
+const icon = (kind: string) => (icons[kind] ??= load(`src/assets/realm/sites/${kind}.png`));
+
+const realms = seeds.map((seed) => generateRealm(Number(seed), settings));
+const maps = realms.map((realm) => {
+  const ink = getRealmInk(realm);
+  const map = paintRealmInk(ink, realm.seed, stamps);
+  for (const site of realm.sites) {
+    // As on screen: the icon's 64px disc centered on the tile, its foot a
+    // little below the tile's middle.
+    const art = icon(site.kind);
+    const left = site.x * TILE_SIZE + TILE_SIZE / 2 - art.width / 2;
+    const top = site.y * TILE_SIZE + TILE_SIZE * 0.75 - art.height;
+    for (let y = 0; y < art.height; y++) {
+      for (let x = 0; x < art.width; x++) {
+        const s = (y * art.width + x) * 4;
+        const tx = left + x;
+        const ty = top + y;
+        const alpha = art.data[s + 3] / 255;
+        if (!alpha || tx < 0 || ty < 0 || tx >= map.width || ty >= map.height) continue;
+        const t = (ty * map.width + tx) * 4;
+        for (let c = 0; c < 3; c++) map.data[t + c] += (art.data[s + c] - map.data[t + c]) * alpha;
+      }
     }
   }
-};
-const box = (rgb: number[], x: number, y: number, size: number) => {
-  for (let j = 0; j < size; j++) for (let i = 0; i < size; i++) if (scene[y + j]?.[x + i]) scene[y + j][x + i] = rgb;
-};
-
-const COLORS: Record<string, number[]> = {
-  battle: [220, 40, 40],
-  village: [240, 160, 40],
-  fort: [140, 0, 0],
-  town: [40, 120, 240],
-  shrine: [240, 240, 240],
-  elite: [160, 40, 200],
-  event: [240, 230, 40],
-  home: [40, 200, 80],
-  hold: [0, 0, 0],
-};
-
-realms.forEach((realm, n) => {
-  const top = n * (rows + 1) * TILE_SIZE;
-  for (const draw of getRealmDrawList(realm)) blend(sheets[draw.sheet], draw.frame, draw.size, draw.x, top + draw.y);
-  for (const site of realm.sites) box(COLORS[site.kind], site.x * TILE_SIZE + 11, top + site.y * TILE_SIZE + 22, 10);
   console.log(`seed ${realm.seed}: ${realm.name}`);
   for (const site of realm.sites) {
     const offset = site.levelOffset ? ` (${site.levelOffset > 0 ? '+' : ''}${site.levelOffset})` : '';
@@ -64,8 +56,19 @@ realms.forEach((realm, n) => {
       `  ${site.id.padEnd(5)} ${site.kind.padEnd(8)} ${site.biome.padEnd(7)} ${settings.regions[site.region].name}${offset}  ${site.name}`,
     );
   }
+  console.log(`  lettered: ${ink.labels.map((label) => label.text).join(', ')}`);
+  return map;
 });
-encode(
-  output,
-  scene.map((row) => row.map((pixel) => [...pixel, 255])),
-);
+
+const gap = TILE_SIZE;
+const rows: number[][][] = [];
+for (const map of maps) {
+  for (let y = 0; y < map.height; y++) {
+    const row: number[][] = [];
+    for (let x = 0; x < map.width; x++)
+      row.push([...map.data.subarray((y * map.width + x) * 4, (y * map.width + x) * 4 + 3), 255]);
+    rows.push(row);
+  }
+  for (let y = 0; y < gap; y++) rows.push(Array.from({ length: maps[0].width }, () => [40, 40, 48, 255]));
+}
+encode(output, rows);

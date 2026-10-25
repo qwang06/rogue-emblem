@@ -18,7 +18,6 @@ import {
   TOWN_EVERY,
   type Realm,
 } from './realm.ts';
-import { getRealmDrawList } from './realmArt.ts';
 
 const SETTINGS = DEFAULT_CONTENT.regions;
 const SEEDS = Array.from({ length: 24 }, (_, i) => i * 7919 + 3);
@@ -248,31 +247,5 @@ describe('pickKinds', () => {
       });
       expect(kinds.at(-2)).toContain('town');
     }
-  });
-});
-
-describe('getRealmDrawList', () => {
-  it('draws grass under every tile, then the rest, inside the map', () => {
-    const realm = REALMS[0];
-    const draws = getRealmDrawList(realm);
-    const cells = realm.grid.width * realm.grid.height;
-    expect(draws.length).toBeGreaterThan(cells);
-    expect(new Set(draws.slice(0, cells).map((draw) => draw.frame)).size).toBe(1);
-    for (const draw of draws) {
-      expect(draw.x).toBeGreaterThanOrEqual(0);
-      expect(draw.y).toBeGreaterThanOrEqual(0);
-      expect(draw.x).toBeLessThan(realm.grid.width * 32);
-      expect(draw.y).toBeLessThan(realm.grid.height * 32);
-    }
-  });
-
-  it('animates the water and nothing else', () => {
-    const realm = REALMS[0];
-    const still = getRealmDrawList(realm, 0);
-    const moved = getRealmDrawList(realm, 1);
-    expect(moved).toHaveLength(still.length);
-    const changed = still.filter((draw, i) => draw.frame !== moved[i].frame);
-    const hasWater = realm.grid.cells.some((cell) => cell.terrain === 'water');
-    expect(changed.length > 0).toBe(hasWater);
   });
 });

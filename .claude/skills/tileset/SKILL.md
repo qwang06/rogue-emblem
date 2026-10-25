@@ -89,13 +89,20 @@ To judge the procedural map generator's output, `map-preview.ts` renders `genera
 node .claude/skills/tileset/scripts/map-preview.ts --scale 1 --palette a-stone <scratchpad>/maps.png 1 2 3
 ```
 
-`realm-preview.ts` does the same for the Warband overworld (`generateRealm` in `src/game/warband/realm/`): it renders whole realms for some seeds the way the overworld screen paints them (`getRealmDrawList`), one under the other, and prints each realm's sites (id, kind, biome, region):
+`realm-preview.ts` does the same for the Warband overworld (`generateRealm` in `src/game/warband/realm/`): it renders whole realms for some seeds the way the overworld screen paints them (the parchment map from `getRealmInk` and `paintRealmInk`, with each site's icon stood on its tile), one under the other, and prints each realm's sites (id, kind, biome, region) and the names lettered on it:
 
 ```sh
 node .claude/skills/tileset/scripts/realm-preview.ts <scratchpad>/realms.png 1 2
 ```
 
 `scripts/rescale-png.js --from N --to M [--crop WxH] in.png out.png` changes the scale of upscaled pixel art (it checks every NxN block is one color). `dump-png.js` exports `decode` and `encode` (rows of RGBA pixels to and from PNG) for other scripts.
+
+## Overworld art: src/assets/realm/
+
+The Warband overworld is a parchment map (`realmInk.ts`, `inkRaster.ts`), not the terrain sheet, so its art is its own. All of it was made with PixelLab `create_image_pro_flash`, transparent background, no style image; the raw outputs and every prompt are in the project files under `art/overworld-ink/raw/`.
+
+- `sites/<SiteKind>.png` (64x64, one per kind: home, battle, village, fort, elite, town, shrine, event, hold): a Tactics Ogre-style location icon, a little diorama on a round raised disc of earth and grass seen three-quarters from above, fully colored (green grass, grey stone, red roofs), single dark brown outline. Opaque bounds run about x 2–62 and y 3–61, the rim's foot at y 56–61; the hold fills the canvas top to bottom (banner tips at y 0, foot at y 63). Home is two canvas tents and a campfire, battle crossed swords and a broken palisade, village thatched cottages round a well, fort a square crenellated stone fort, elite a cave mouth under a horned skull with red eyes, town a walled town with a spire and windmill, shrine a white pillared shrine with a blue crystal, event a signpost crossroads with a covered cart, hold a dark castle with red banners. The screen draws them at two tiles, centered on the site's tile with the disc's foot a little below its middle.
+- `ink/<InkStamp>.png` (32x32, `max_colors: 6`): cartographer's symbols in sepia ink with a tan wash, no ground: `tree-pine-1/2` and `tree-round-1/2` (~18px wide, x 6–26, trunk foot at y 26–29), `mountain-1/2/3` (x 1–31 peaks hatched on the right, y 4–29), `hill-1` (a low mound, x 3–29, y 11–25), `grass-1/2` (tufts in x 10–22, y 10–21), `waves-1` (three wavy lines, x 5–27, y 11–24). `realmIcons.test.ts` fails when a kind or stamp has no image, or an image has no kind or stamp.
 
 ## Map props: map-props.png
 
