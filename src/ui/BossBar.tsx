@@ -2,10 +2,10 @@ import { Frame } from './Frame.tsx';
 import { useGameStore } from './useGameStore.ts';
 import './Boss.css';
 
-// The boss's HP bar while it lives in a boss battle: its name and title,
-// a wide HP meter with the numbers, and tags for its rules' state (its
-// horn has marked a tile, it has enraged). The tags keep their room when
-// they're off, so the bar never changes size.
+// The boss's HP bar while it lives in a boss battle, one row above the
+// map: its name and title, a wide HP meter with the numbers, and tags for
+// its rules' state (its horn has marked a tile, it has enraged). The tags
+// keep their room when they're off, so the bar never changes size.
 export function BossBar() {
   const bar = useGameStore((state) => state.bossBar);
   const decided = useGameStore((state) => state.battleOutcome !== null);
@@ -22,10 +22,6 @@ export function BossBar() {
       <div className="boss-bar__head">
         <span className="boss-bar__name">{bar.name}</span>
         {bar.title && <span className="boss-bar__title">{bar.title}</span>}
-        <span className="boss-bar__tags">
-          <Tag on={bar.hornSounded} kind="horn" label="Horn" />
-          <Tag on={bar.enraged} kind="enraged" label="Enraged" />
-        </span>
       </div>
       <div className="meter meter--hp boss-bar__meter">
         <span className="meter__label">HP</span>
@@ -36,6 +32,10 @@ export function BossBar() {
           {bar.health}/{bar.maxHealth}
         </span>
       </div>
+      <span className="boss-bar__tags">
+        <Tag on={bar.hornSounded} kind="horn" label="Horn" />
+        <Tag on={bar.enraged} kind="enraged" label="Enraged" />
+      </span>
     </Frame>
   );
 }

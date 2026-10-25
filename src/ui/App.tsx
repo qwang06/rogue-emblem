@@ -90,6 +90,8 @@ export function App() {
       </PageHeader>
 
       <main className="page__main">
+        {/* Above the stage rather than over it, so it never hides a tile: the stage gives up its height. */}
+        <BossBar />
         {/* The stage fills this area, and the canvas fills the stage (see ui.css). */}
         <div className="stage-area">
           {/* Right click anywhere on the map or its menus cancels, like Esc. */}
@@ -99,7 +101,6 @@ export function App() {
               {/* First, so every other overlay paints over it. */}
               <UnitPanel />
               <MapTags />
-              <BossBar />
               <AutoCommandQueue />
               <DeploymentMenu />
               <RosterMenu />
