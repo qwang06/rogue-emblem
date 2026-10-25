@@ -20,6 +20,7 @@ import type { RegionSettings } from '../regions.ts';
 import { nameRealm, nameSite } from './realmNames.ts';
 import { detectBiome, pickSiteRegion } from './realmRegions.ts';
 import { carveRoad, linkColumns } from './realmRoads.ts';
+import { getOnwardRoads } from './realmRoutes.ts';
 import { clearSpecks, generateRealmLand, LAND_RULES, landAt, setLand, type RealmLand } from './realmTerrain.ts';
 
 // What stands at a site, which says what happens there:
@@ -205,17 +206,17 @@ export function getHomeSite(realm: Realm): Site {
   return realm.sites.find((site) => site.depth === 0)!;
 }
 
-// The sites the roads lead to from site `id`, north to south.
+// The sites reachable along the roads and their shared junctions from
+// site `id`, at the next depth, north to south.
 export function getNextSites(realm: Realm, id: string): Site[] {
-  return realm.roads
-    .filter((road) => road.from === id)
+  return getOnwardRoads(realm, id)
     .map((road) => getSite(realm, road.to)!)
     .sort((a, b) => a.y - b.y);
 }
 
 // The road from `from` to `to`, or undefined when none joins them.
 export function getRoad(realm: Realm, from: string, to: string): Road | undefined {
-  return realm.roads.find((road) => road.from === from && road.to === to);
+  return getOnwardRoads(realm, from).find((road) => road.to === to);
 }
 
 const cache = new Map<string, { settings: RegionSettings; realm: Realm }>();
