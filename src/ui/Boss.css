@@ -70,13 +70,17 @@
 /* The HP bar: a one-row red strip between the header and the map. It
    sits in the page's flow rather than over the stage, so the stage gives
    up its height and the map refits below it: no tile is ever hidden.
-   Name | meter | tags, at a fixed height. */
+   Name | meter | tags, at a fixed height, centered and capped in width
+   so the meter doesn't run the length of a wide window. */
 .boss-bar {
   flex: none;
+  align-self: center;
   display: flex;
   align-items: center;
   gap: 12px;
   box-sizing: border-box;
+  width: calc(100% - 4px);
+  max-width: 44rem;
   height: 2.25rem;
   margin: 0 2px 4px;
   padding: 0 12px;
@@ -144,12 +148,14 @@
   visibility: hidden;
 }
 
-.boss-bar__meter {
+/* Doubled up to outrank `.meter`'s fixed 16px label column, which the
+   larger label would spill out of, whichever stylesheet loads last. */
+.boss-bar .boss-bar__meter {
   flex: 1 1 8rem;
-  max-width: 32rem;
   min-width: 6rem;
-  margin: 0 0 0 auto;
+  margin: 0;
   grid-template-columns: auto 1fr auto;
+  gap: 8px;
   font-size: 0.875rem;
 }
 
@@ -180,7 +186,7 @@
     letter-spacing: 0.02em;
   }
 
-  .boss-bar__meter {
+  .boss-bar .boss-bar__meter {
     flex-basis: 4.5rem;
     min-width: 4.5rem;
     gap: 4px;
