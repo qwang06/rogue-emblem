@@ -161,7 +161,7 @@ function Combat({ unit }: { unit: UnitDetailView }) {
 
       {unit.passives.length > 0 && (
         <>
-          <h3 className="unit-info__heading">Boons</h3>
+          <h3 className="unit-info__heading">Passives</h3>
           <ul className="unit-info__list unit-info__list--boons">
             {unit.passives.map((passive) => (
               <li key={passive.id}>

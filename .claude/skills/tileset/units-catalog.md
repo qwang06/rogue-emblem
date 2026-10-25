@@ -1,9 +1,10 @@
 # Unit sprite catalog
 
 What's in `src/assets/units/`: every unit sheet from the source pack, read
-from the pixels. Only `Soldier_03`, `Archer_02`, `Vanguard_04`,
-`Soldier_04` and `Acolyte_02` are wired into the game
-(`UNIT_SPRITES` in `src/game/tileset.ts`); everything else is ready to import
+from the pixels. `Soldier_03`, `Archer_02`, `Vanguard_04`, `Soldier_04` and
+`Acolyte_02` (the base classes) and the promoted classes' twelve variants
+(listed under "Variants are team colors and races" below) are wired into the
+game (`UNIT_SPRITES` in `src/game/tileset.ts`); everything else is ready to import
 in `src/assets/sprites.ts` when a class needs art.
 
 ## Warrior (generated, not from the pack)
@@ -95,7 +96,16 @@ share a design, and `01` and `02` are each unique. Units with no team design
 The game currently gives a class the same art on both teams, so the variant is
 a look rather than a team marker. `Villager_01` (blue), `Soldier_03` (pink), `Archer_02` (orange),
 `Vanguard_04` (brown, axe), `Soldier_04` (brown tower shield, the guard class) and `Acolyte_02` (orange
-robe, the acolyte class) are what's in use.
+robe, the acolyte class) are what's in use for the base classes.
+
+The promoted classes (`src/game/promotions.ts`) each wear another variant, close to their base
+class's look: Hero `Vanguard_02` (gold spear), Berserker `Vanguard_06` (red, axe, ginger beard),
+General `Soldier_05` (green crested helm, the soldier's design recolored), Halberdier `Soldier_02`
+(topknot), Sniper `Archer_03` (crested helm), Arbalest `Siege_03` (a ballista, no rider), Champion
+`Vanguard_03` (gold-tipped spear), Bombardier `Sapper_04` (keg on the back), Bastion `Soldier_06`
+(red tower shield, the guard's design recolored), Templar `Vanguard_01` (wizard with a staff),
+Bishop `Acolyte_01` (blue robe) and Sage `Acolyte_03` (pink robe). Checked as a contact sheet of
+each down-facing idle frame; none brings its own ground shadow.
 
 ## Units
 

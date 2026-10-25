@@ -3,6 +3,8 @@ import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
 import { Warrior } from '../Warrior.ts';
 import { canRest, canTakeLesson, getCampActions, getRestCost, needsRest, REST_COST, restAtCamp } from './camp.ts';
+import { MASTER_SEAL } from '../items.ts';
+import { PROMOTION_LEVEL } from '../promotions.ts';
 import { createRun, type RunState } from './run.ts';
 import { HOME_SITE_ID, type RunSite } from './travel.ts';
 
@@ -48,6 +50,32 @@ describe('getCampActions', () => {
     expect(getCampActions(campRun(100))[2].disabled).toBe(false);
     expect(getCampActions(campRun(REST_COST - 1))[2].disabled).toBe(true);
     expect(getCampActions(campRun(100, false))[2].disabled).toBe(true);
+  });
+});
+
+describe('the Promote action', () => {
+  const promotable = (run: RunState, seals: number): RunState => ({
+    ...run,
+    convoy: Array.from({ length: seals }, () => ({ itemId: MASTER_SEAL.id, quantity: 1 })),
+    roster: run.roster.map((unit, i) => (i === 0 ? { ...unit, level: PROMOTION_LEVEL } : unit)),
+  });
+
+  it('shows once someone could promote, after the merchant', () => {
+    expect(getCampActions(promotable(campRun(100), 1)).map((action) => action.id)).toEqual([
+      'roster',
+      'merchant',
+      'promote',
+      'rest',
+      'mentors',
+      'march',
+    ]);
+  });
+
+  it('is disabled without a seal', () => {
+    const promote = (seals: number) =>
+      getCampActions(promotable(campRun(100), seals)).find((action) => action.id === 'promote');
+    expect(promote(1)?.disabled).toBe(false);
+    expect(promote(0)?.disabled).toBe(true);
   });
 });
 

@@ -3,19 +3,23 @@ import { menuItemPointerProps } from './menuPointer.ts';
 
 // The camp between Warband Mode stages, once the reward is taken (see
 // src/game/warband/camp.ts): Manage Roster opens the roster screen
-// (RosterScreen), Merchant the merchant screen (MerchantScreen), Rest
-// heals everyone for gold, Mentors opens the mentor screen
-// (MentorScreen), Next Stage marches on. The warband's gold sits in the
-// window's bottom border, and the relics it holds are listed beside the
-// menu (below it on a narrow stage). It stays up, under the roster,
-// merchant or mentor screen, while one is open. GridScene handles the input; the
+// (RosterScreen), Merchant the merchant screen (MerchantScreen), Promote
+// the promotion screen (PromotionScreen), Rest heals everyone for gold,
+// Mentors opens the mentor screen (MentorScreen), Next Stage marches on.
+// The warband's gold sits in the window's bottom border, and the relics it
+// holds are listed beside the menu (below it on a narrow stage). It hides
+// while one of those screens is open. GridScene handles the input; the
 // mouse is forwarded to it.
 export function CampMenu() {
   const menu = useGameStore((state) => state.campMenu);
   const gold = useGameStore((state) => state.campGold);
   const relics = useGameStore((state) => state.campRelics);
   const screenOpen = useGameStore(
-    (state) => state.rosterScreen !== null || state.merchantScreen !== null || state.mentorScreen !== null,
+    (state) =>
+      state.rosterScreen !== null ||
+      state.merchantScreen !== null ||
+      state.promotionScreen !== null ||
+      state.mentorScreen !== null,
   );
   if (!menu || screenOpen) return null;
 

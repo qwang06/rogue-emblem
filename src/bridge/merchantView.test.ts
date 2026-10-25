@@ -24,6 +24,7 @@ describe('toMerchantScreenView', () => {
       ['Wooden Armor', 25, true],
       ['Iron Bow', 45, true],
       ['Heal', 40, true],
+      ['Master Seal', 60, true],
     ]);
     expect(view.stock[0].quantity).toBe(20);
     expect(view.stock[4].quantity).toBeNull();

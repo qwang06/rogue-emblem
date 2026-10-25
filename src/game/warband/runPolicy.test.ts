@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { Acolyte } from '../Acolyte.ts';
 import { Archer } from '../Archer.ts';
 import { HEAL_STAFF } from '../healing.ts';
-import { WOODEN_SHIELD } from '../items.ts';
+import { MASTER_SEAL, WOODEN_SHIELD } from '../items.ts';
+import { PROMOTION_LEVEL } from '../promotions.ts';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
 import { IRON_BOW, IRON_SPEAR, WOODEN_SPEAR } from '../weapons.ts';
@@ -134,6 +135,31 @@ describe('getDeployingUnits', () => {
 describe('planCamp', () => {
   it('marches when everyone is armed and well', () => {
     expect(playCamp(makeRun({ a: soldier() }, { gold: 100 }))).toEqual([{ type: 'march' }]);
+  });
+
+  it('promotes a unit that can, to its first promotion', () => {
+    const run = withUnit(
+      makeRun({ a: soldier() }, { gold: 0, convoy: [{ itemId: MASTER_SEAL.id, quantity: 1 }] }),
+      'a',
+      (unit) => ({
+        ...unit,
+        level: PROMOTION_LEVEL,
+      }),
+    );
+    expect(playCamp(run)).toEqual([{ type: 'promote', unitId: 'a', promotionId: 'general' }, { type: 'march' }]);
+  });
+
+  it('buys a seal for a unit that can promote when it has gold to spare', () => {
+    const run = withUnit(makeRun({ a: soldier() }, { gold: 200 }), 'a', (unit) => ({
+      ...unit,
+      level: PROMOTION_LEVEL,
+    }));
+    expect(playCamp(run).map((command) => command.type)).toEqual(['buy', 'promote', 'march']);
+    const poor = withUnit(makeRun({ a: soldier() }, { gold: 60 }), 'a', (unit) => ({
+      ...unit,
+      level: PROMOTION_LEVEL,
+    }));
+    expect(playCamp(poor)).toEqual([{ type: 'march' }]);
   });
 
   it('rests at once when someone deploying is badly hurt', () => {

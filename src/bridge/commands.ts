@@ -13,6 +13,8 @@ import type { RosterTarget } from '../game/warband/rosterScreen.ts';
 //   { type: 'select-roster', target, index } — that entry was clicked
 //   { type: 'hover-merchant', column, index }  — pointer is over entry `index` of a merchant screen column (or its "who is it for" menu)
 //   { type: 'select-merchant', column, index } — that entry was clicked
+//   { type: 'hover-promotion', index }   — pointer is over option `index` of the promotion screen
+//   { type: 'select-promotion', index }  — that option was clicked
 //   { type: 'hover-mentor', column, index }  — pointer is over entry `index` of a mentor screen column
 //   { type: 'select-mentor', column, index } — that entry was clicked
 //   { type: 'confirm' }                  — same as pressing Enter/Z
@@ -41,6 +43,8 @@ export type Command =
   | { type: 'select-roster'; target: RosterTarget; index: number }
   | { type: 'hover-merchant'; column: MerchantTarget; index: number }
   | { type: 'select-merchant'; column: MerchantTarget; index: number }
+  | { type: 'hover-promotion'; index: number }
+  | { type: 'select-promotion'; index: number }
   | { type: 'hover-mentor'; column: MentorColumn; index: number }
   | { type: 'select-mentor'; column: MentorColumn; index: number }
   | { type: 'confirm' }

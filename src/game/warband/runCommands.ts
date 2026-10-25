@@ -2,9 +2,9 @@
 // commands applied by one dispatcher, the way battle/commands.ts does it for
 // a battle: pick the relic a run starts with, take each level up's boon,
 // pick, skip or reroll the stage's reward, then at camp rest, buy, sell,
-// move items between units and the convoy, learn a secondary skill set,
-// and march on. The game's screens send these, and so can a script or an
-// AI (see runner.ts), so both take the same path. Pure: each command takes a session to a new one and
+// move items between units and the convoy, promote, learn a secondary
+// skill set, and march on. The game's screens send these, and so can a
+// script or an AI (see runner.ts), so both take the same path. Pure: each command takes a session to a new one and
 // leaves the old one alone.
 
 import type { BattleOutcome } from '../turns.ts';
@@ -31,6 +31,8 @@ import {
   type Reward,
 } from './rewards.ts';
 import { getBoonOffer, pickBoon, queueLevelUpBoons } from './levelUpPicks.ts';
+import { getPromotions } from '../promotions.ts';
+import { canPromoteInRun, getPromotionCandidates, promoteInRun } from './promotion.ts';
 import { canLearnSecondary, getLessons, learnSecondary } from './mentors.ts';
 import { rollRelics, rollStartingRelics, STARTING_RELIC_CHOICES, type Relic } from './relics.ts';
 import { getRelicPicks } from './origins.ts';
@@ -96,6 +98,9 @@ export type RunCommand =
   | { type: 'store'; unitId: string; itemIndex: number }
   // Camp: equips (or wears) a unit's item at `itemIndex`.
   | { type: 'equip'; unitId: string; itemIndex: number }
+  // Camp: spends a Master Seal to promote a unit to `promotionId` (see
+  // promotion.ts).
+  | { type: 'promote'; unitId: string; promotionId: string }
   // Camp: the unit `unitId` learns `classId`'s skill set as its secondary,
   // from a mentor or with a scroll (see mentors.ts).
   | { type: 'learn-secondary'; unitId: string; classId: string }
@@ -140,6 +145,7 @@ const CAMP_COMMANDS: ReadonlySet<RunCommandType> = new Set([
   'give',
   'store',
   'equip',
+  'promote',
   'learn-secondary',
   'march',
 ]);
@@ -374,6 +380,11 @@ export function applyRunCommand(
         return fail(`Can't equip ${command.unitId}'s item ${command.itemIndex}`);
       }
       return camp(equipInRoster(run, command.unitId, command.itemIndex));
+    case 'promote':
+      if (!canPromoteInRun(run, command.unitId, command.promotionId)) {
+        return fail(`Can't promote ${command.unitId} to ${command.promotionId}`);
+      }
+      return camp(promoteInRun(run, command.unitId, command.promotionId));
     case 'march':
       return { session: freeze({ run, phase: isRealmRun(run) ? 'travel' : 'battle' }), events: [] };
     case 'travel': {
@@ -398,7 +409,8 @@ export function applyRunCommand(
 // Every command the session accepts as it stands, for an AI to choose
 // from: each starting relic or boon offered on those picks; each reward offer, skip, and reroll when affordable on the pick;
 // at camp, rest when it can, each affordable stock item, each sellable
-// convoy entry, each give, store and equip that's allowed, and march; while
+// convoy entry, each give, store and equip that's allowed, each promotion
+// the warband has a seal for, and march; while
 // travelling, a trip to each site the roads lead to (given the realm).
 export function getLegalRunCommands(
   session: RunSession,
@@ -456,6 +468,11 @@ export function getLegalRunCommands(
     });
     for (const { classId, source } of getLessons(run, unitId)) {
       if (source) commands.push({ type: 'learn-secondary', unitId, classId });
+    }
+  }
+  for (const unit of getPromotionCandidates(run)) {
+    for (const { id } of getPromotions(unit.classId)) {
+      if (canPromoteInRun(run, unit.id, id)) commands.push({ type: 'promote', unitId: unit.id, promotionId: id });
     }
   }
   commands.push({ type: 'march' });

@@ -29,6 +29,8 @@ import type { MenuAction } from '../game/actionMenu.ts';
 import { getUnitSkills } from '../game/skills.ts';
 import { getStandingCombatBonus } from '../game/modifiers.ts';
 import { findBoon, type BoonKind } from '../game/warband/boons.ts';
+import { completesEvolution, findEvolution } from '../game/warband/evolutions.ts';
+import { findPromotion } from '../game/promotions.ts';
 import { findEliteAffix } from '../game/warband/elites.ts';
 import { findQuirk } from '../game/warband/quirks.ts';
 import type { BoonOffer } from '../game/warband/levelUpPicks.ts';
@@ -99,6 +101,14 @@ export interface WeaponDetailView {
   maxUses: number | null;
 }
 
+// A passive on the unit info screen: a promoted class's, a boon's, an elite
+// affix's or an evolution's.
+export interface PassiveView {
+  id: string;
+  label: string;
+  description: string;
+}
+
 export interface SkillView {
   id: string;
   label: string;
@@ -109,8 +119,10 @@ export interface SkillView {
 // The unit info screen's full stat sheet: everything the hover panel shows
 // plus the class name, stat caps, the rates it fights with, its equipped
 // weapon's numbers, the weapon types it can wield, the skills it knows and
-// the passive boons it has taken (see warband/boons.ts) and the quirk it
-// joined with (warband/quirks.ts).
+// its passives: its promoted class's passive (promotions.ts), the passive
+// boons it has taken (see warband/boons.ts), its elite affixes and its
+// evolutions (warband/evolutions.ts), and the quirk it joined with
+// (warband/quirks.ts).
 export interface UnitDetailView extends UnitView {
   maxLevel: boolean;
   stats: readonly StatLineView[];
@@ -126,7 +138,7 @@ export interface UnitDetailView extends UnitView {
   // The class whose skill set it learned on top of its own (see
   // warband/mentors.ts), by label, or null.
   secondaryClass: string | null;
-  passives: readonly { id: string; label: string; description: string }[];
+  passives: readonly PassiveView[];
   quirk: { label: string; description: string } | null;
 }
 
@@ -442,18 +454,29 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
       getUnitSkills(unit).map(({ id, label, manaCost, range }) => Object.freeze({ id, label, manaCost, range })),
     ),
     secondaryClass: unit.secondaryClass && getClassLabel(unit.secondaryClass),
-    passives: Object.freeze([
-      ...unit.boons
-        .map(findBoon)
-        .filter((boon) => boon?.kind === 'passive')
-        .map((boon) => Object.freeze({ id: boon!.id, label: boon!.name, description: boon!.description })),
-      ...unit.eliteAffixes
-        .map(findEliteAffix)
-        .filter((affix) => affix !== null)
-        .map((affix) => Object.freeze({ id: affix.id, label: affix.name, description: affix.description })),
-    ]),
+    passives: Object.freeze(getPassiveViews(unit)),
     quirk: quirk && Object.freeze({ label: quirk.name, description: quirk.description }),
   });
+}
+
+// A unit's passives for the info screen: its class's (a promoted class's),
+// then its passive boons and elite affixes, then its evolutions, marked as
+// one.
+function getPassiveViews(unit: Unit): PassiveView[] {
+  const classPassive = findPromotion(unit.unitClass ?? '')?.passive;
+  const boons = unit.boons.map(findBoon).filter((boon) => boon?.kind === 'passive');
+  const affixes = unit.eliteAffixes.map(findEliteAffix).filter((affix) => affix !== null);
+  const evolutions = unit.evolutions.map(findEvolution).filter((evolution) => evolution !== null);
+  return [
+    ...(classPassive ? [{ id: 'class', label: classPassive.name, description: classPassive.description }] : []),
+    ...boons.map((boon) => ({ id: boon!.id, label: boon!.name, description: boon!.description })),
+    ...affixes.map((affix) => ({ id: affix.id, label: affix.name, description: affix.description })),
+    ...evolutions.map((evolution) => ({
+      id: `evolution-${evolution.id}`,
+      label: `✦ ${evolution.name}`,
+      description: evolution.description,
+    })),
+  ].map((passive) => Object.freeze(passive));
 }
 
 // Converts a world-space point to screen pixels (relative to the canvas and
@@ -776,15 +799,19 @@ const BOON_TAGS: Readonly<Record<BoonKind, string>> = Object.freeze({
 });
 
 // A level up's boon pick (see warband/levelUpPicks.ts) as the reward
-// screen's cards, one per boon, with no buttons under them.
-export function toBoonActions(offer: BoonOffer): readonly RewardAction[] {
+// screen's cards, one per boon, with no buttons under them. A boon that
+// would complete an evolution for the unit, with the warband's `relics`
+// (see warband/evolutions.ts), says so in its caption.
+export function toBoonActions(offer: BoonOffer, relics: readonly string[] = []): readonly RewardAction[] {
   return Object.freeze(
     offer.boons.map((boon, index) =>
       Object.freeze({
         id: `boon-${index}-${boon.id}`,
         label: boon.name,
         kind: 'boon' as const,
-        tag: BOON_TAGS[boon.kind],
+        tag: completesEvolution(offer.unit, relics, { boon: boon.id })
+          ? `${BOON_TAGS[boon.kind]} · evolves!`
+          : BOON_TAGS[boon.kind],
         description: boon.description,
         stats: null,
         healthAfter: null,

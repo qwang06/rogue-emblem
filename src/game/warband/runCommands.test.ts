@@ -4,6 +4,8 @@ import type { Unit } from '../Unit.ts';
 import { Warrior } from '../Warrior.ts';
 import { WOODEN_SPEAR, WOODEN_SWORD } from '../weapons.ts';
 import { DEFAULT_CONTENT } from '../battleSetup.ts';
+import { MASTER_SEAL } from '../items.ts';
+import { PROMOTION_LEVEL } from '../promotions.ts';
 import { REST_COST } from './camp.ts';
 import { generateRealm, getNextSites, type Realm } from './realm/realm.ts';
 import { getItemPrice } from './merchant.ts';
@@ -460,6 +462,47 @@ describe('relics in the run rules', () => {
   it('offers four rewards with the Four-Leaf Clover', () => {
     const run = { ...newRun(), relics: ['four-leaf-clover'] };
     expect(getRewardOffers(won(run))).toHaveLength(4);
+  });
+});
+
+describe('promote', () => {
+  const sealed = (run: RunState): RunState => ({
+    ...run,
+    convoy: [{ itemId: MASTER_SEAL.id, quantity: 1 }],
+    roster: run.roster.map((unit) => ({ ...unit, level: PROMOTION_LEVEL })),
+  });
+
+  it('promotes a unit at camp, spending the seal', () => {
+    const session = apply(campWith(sealed(newRun())), { type: 'promote', unitId: 'cato', promotionId: 'hero' });
+    expect(session.phase).toBe('camp');
+    expect(session.run.roster.find((unit) => unit.id === 'cato')!.classId).toBe('hero');
+    expect(session.run.convoy).toEqual([]);
+  });
+
+  it("refuses a promotion the unit can't make", () => {
+    const camp = campWith(sealed(newRun()));
+    expect(() => applyRunCommand(camp, { type: 'promote', unitId: 'cato', promotionId: 'general' })).toThrow(
+      RunCommandError,
+    );
+    expect(() =>
+      applyRunCommand(campWith({ ...sealed(newRun()), convoy: [] }), {
+        type: 'promote',
+        unitId: 'cato',
+        promotionId: 'hero',
+      }),
+    ).toThrow(RunCommandError);
+  });
+
+  it('is legal at camp for each promotion the warband has a seal for', () => {
+    const promotions = getLegalRunCommands(campWith(sealed(newRun()))).filter((c) => c.type === 'promote');
+    expect(promotions).toEqual([
+      { type: 'promote', unitId: 'alden', promotionId: 'general' },
+      { type: 'promote', unitId: 'alden', promotionId: 'halberdier' },
+      { type: 'promote', unitId: 'cato', promotionId: 'hero' },
+      { type: 'promote', unitId: 'cato', promotionId: 'berserker' },
+    ]);
+    const unsealed = getLegalRunCommands(campWith({ ...sealed(newRun()), convoy: [] }));
+    expect(unsealed.some((c) => c.type === 'promote')).toBe(false);
   });
 });
 

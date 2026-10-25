@@ -38,6 +38,10 @@ describe('getSecondaryClassIds', () => {
     expect(getSecondaryClassIds({ classId: 'acolyte' })).not.toContain('acolyte');
   });
 
+  it("counts a promoted unit's base class as its own", () => {
+    expect(getSecondaryClassIds({ classId: 'sniper' })).toEqual(getSecondaryClassIds({ classId: 'archer' }));
+  });
+
   it('leaves out classes with no skills to teach', () => {
     const rules = { classes: [{ id: 'mage', label: 'Mage', create: () => null as never }], trees: { mage: [] } };
     expect(getSecondaryClassIds({ classId: 'archer' }, rules)).toEqual([]);
@@ -47,6 +51,12 @@ describe('getSecondaryClassIds', () => {
 describe('findMentor', () => {
   it('is a roster unit of the class that knows its skills', () => {
     expect(findMentor(campRun(), 'wren', 'acolyte')?.id).toBe('iris');
+  });
+
+  it('can be a promotion of the class', () => {
+    const run = campRun();
+    const promoted = { ...run, roster: run.roster.map((u) => (u.id === 'iris' ? { ...u, classId: 'bishop' } : u)) };
+    expect(findMentor(promoted, 'wren', 'acolyte')?.id).toBe('iris');
   });
 
   it("is nobody below the set's first level, for the learner itself, or for a class nobody has", () => {

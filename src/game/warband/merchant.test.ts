@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { HEAL_STAFF } from '../healing.ts';
-import { HEALTH_POTION, WOODEN_ARMOR, WOODEN_SHIELD, type Item } from '../items.ts';
+import { HEALTH_POTION, MASTER_SEAL, WOODEN_ARMOR, WOODEN_SHIELD, type Item } from '../items.ts';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
 import {
@@ -35,7 +35,7 @@ function campRun(gold: number, convoy: ItemSnapshot[] = []): RunState {
 }
 
 describe('MERCHANT_STOCK', () => {
-  it('sells the wooden set, a bow and a Heal staff', () => {
+  it('sells the wooden set, a bow, a Heal staff and the Master Seal', () => {
     expect(MERCHANT_STOCK).toEqual([
       WOODEN_SWORD.id,
       WOODEN_SPEAR.id,
@@ -44,6 +44,7 @@ describe('MERCHANT_STOCK', () => {
       WOODEN_ARMOR.id,
       IRON_BOW.id,
       HEAL_STAFF.id,
+      MASTER_SEAL.id,
     ]);
   });
 

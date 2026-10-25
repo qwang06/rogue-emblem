@@ -32,6 +32,7 @@ import { RewardScreen } from './RewardScreen.tsx';
 import { RosterMenu } from './RosterMenu.tsx';
 import { MentorScreen } from './MentorScreen.tsx';
 import { MerchantScreen } from './MerchantScreen.tsx';
+import { PromotionScreen } from './PromotionScreen.tsx';
 import { RosterScreen } from './RosterScreen.tsx';
 import { SettingsButton } from './SettingsButton.tsx';
 import { SkillMenu } from './SkillMenu.tsx';
@@ -119,6 +120,7 @@ export function App() {
               <CampMenu />
               <RosterScreen />
               <MerchantScreen />
+              <PromotionScreen />
               <MentorScreen />
               {/* Over the reward screen too, for a Veteran's Lesson's level ups, and over a cleared stage for its guaranteed ones. */}
               <LevelUpPanel />

@@ -9,7 +9,7 @@
 // Everything here is pure: each function returns a new frozen run and
 // leaves its input alone.
 
-import { HEALTH_POTION, MANA_POTION, WOODEN_ARMOR, WOODEN_SHIELD, type Item } from '../items.ts';
+import { HEALTH_POTION, MANA_POTION, MASTER_SEAL, WOODEN_ARMOR, WOODEN_SHIELD, type Item } from '../items.ts';
 import { HEAL_STAFF } from '../healing.ts';
 import {
   BALLISTA,
@@ -26,7 +26,8 @@ import { canCarry, giveFromConvoy, isMovable, isStackable, lookUpItem } from './
 import { RUN_ITEMS, type ItemSnapshot, type RunState } from './run.ts';
 
 // What the merchant sells, by item id: the wooden set, plus a bow and a
-// Heal staff, so an archer or a healer whose own wears out can replace it.
+// Heal staff, so an archer or a healer whose own wears out can replace it,
+// and the Master Seal a promotion spends (see promotion.ts).
 export const MERCHANT_STOCK: readonly string[] = Object.freeze([
   WOODEN_SWORD.id,
   WOODEN_SPEAR.id,
@@ -35,6 +36,7 @@ export const MERCHANT_STOCK: readonly string[] = Object.freeze([
   WOODEN_ARMOR.id,
   IRON_BOW.id,
   HEAL_STAFF.id,
+  MASTER_SEAL.id,
 ]);
 
 // The full price of a fresh item, in gold, by item id. Gold per stage
@@ -55,6 +57,7 @@ export const ITEM_PRICES: Readonly<Record<string, number>> = Object.freeze({
   [HEAL_STAFF.id]: 40,
   [HEALTH_POTION.id]: 10,
   [MANA_POTION.id]: 10,
+  [MASTER_SEAL.id]: 60,
 });
 
 // The price of an item ITEM_PRICES doesn't list, by kind.
@@ -63,6 +66,7 @@ export const DEFAULT_PRICES: Readonly<Record<Item['kind'], number>> = Object.fre
   staff: 40,
   armor: 20,
   consumable: 10,
+  seal: 60,
 });
 
 // What a fresh `item` costs: its ITEM_PRICES entry, else its kind's

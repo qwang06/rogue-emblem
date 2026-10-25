@@ -111,6 +111,16 @@ import {
 } from '../game/warband/merchantScreen.ts';
 import { toMerchantScreenView } from '../bridge/merchantView.ts';
 import {
+  cancelPromotion,
+  confirmPromotion,
+  isPromotionScreenDone,
+  movePromotionCursor,
+  openPromotionScreen,
+  pointPromotionCursor,
+  type PromotionScreenState,
+} from '../game/warband/promotionScreen.ts';
+import { toPromotionScreenView } from '../bridge/promotionView.ts';
+import {
   cancelMentor,
   confirmMentor,
   moveMentorCursor,
@@ -386,6 +396,7 @@ export class GridScene extends Phaser.Scene {
   campAfterOutcome: RunState | null = null;
   rosterScreen: RosterScreenState | null = null;
   merchantScreen: MerchantScreenState | null = null;
+  promotionScreen: PromotionScreenState | null = null;
   mentorScreen: MentorScreenState | null = null;
   pauseMenu: Menu | null = null;
   placingUnitId: string | null = null;
@@ -569,6 +580,7 @@ export class GridScene extends Phaser.Scene {
     this.campAfterOutcome = null; // a won realm stage's run when its result leads straight to camp
     this.rosterScreen = null; // the roster screen's state while it's open
     this.merchantScreen = null; // the merchant screen's state while it's open
+    this.promotionScreen = null; // the promotion screen's state while it's open
     this.mentorScreen = null; // the mentor screen's state while it's open
     // Configs uploaded in the config editor replace the built-in ones.
     this.content = getActiveContent();
@@ -771,6 +783,11 @@ export class GridScene extends Phaser.Scene {
 
     if (this.merchantScreen) {
       this.updateMerchantScreen(dx, dy, confirm, cancel);
+      return;
+    }
+
+    if (this.promotionScreen) {
+      this.updatePromotionScreen(dy, confirm, cancel);
       return;
     }
 
@@ -1193,7 +1210,7 @@ export class GridScene extends Phaser.Scene {
     const run = this.boonRun!;
     const offer = getBoonOffer(run)!;
     gameStore.setState({ boonPick: toBoonPickView(offer), rewardTeam: toTeamView(run.roster) });
-    this.publishMenu('rewardMenu', createActionMenu(toBoonActions(offer)));
+    this.publishMenu('rewardMenu', createActionMenu(toBoonActions(offer, run.relics)));
   }
 
   updateBoonMenu(delta: number, confirm: boolean) {
@@ -1381,7 +1398,9 @@ export class GridScene extends Phaser.Scene {
   // screen (src/game/warband/rosterScreen.ts) to equip units and move items
   // to and from the convoy; Merchant, which opens the merchant screen
   // (src/game/warband/merchantScreen.ts) to buy into and sell from the
-  // convoy; Rest, a full heal for gold; Mentors, which opens the mentor
+  // convoy; Promote, which opens the promotion screen
+  // (src/game/warband/promotionScreen.ts) to spend a Master Seal on a
+  // unit; Rest, a full heal for gold; Mentors, which opens the mentor
   // screen (src/game/warband/mentorScreen.ts) to learn secondary skill
   // sets; and Next Stage. Every change at camp is saved straight away.
 
@@ -1413,6 +1432,8 @@ export class GridScene extends Phaser.Scene {
         this.publishRosterScreen(openRosterScreen(this.campRun!));
       } else if (action.id === 'merchant') {
         this.publishMerchantScreen(openMerchantScreen(this.campRun!));
+      } else if (action.id === 'promote') {
+        this.publishPromotionScreen(openPromotionScreen(this.campRun!));
       } else if (action.id === 'mentors') {
         this.publishMentorScreen(openMentorScreen(this.campRun!));
       } else if (action.id === 'rest') {
@@ -1492,6 +1513,28 @@ export class GridScene extends Phaser.Scene {
     if (state && state.run !== this.campRun) this.setCampRun(state.run);
     this.merchantScreen = state;
     gameStore.setState({ merchantScreen: state && toMerchantScreenView(state) });
+  }
+
+  updatePromotionScreen(dy: number, confirm: boolean, cancel: boolean) {
+    const state = this.promotionScreen!;
+    if (cancel) {
+      this.publishPromotionScreen(cancelPromotion());
+    } else if (confirm) {
+      this.publishPromotionScreen(confirmPromotion(state));
+    } else if (dy !== 0) {
+      this.publishPromotionScreen(movePromotionCursor(state, dy));
+    }
+  }
+
+  // Shows the promotion screen in `state` (or closes it, back to the camp,
+  // for null), saving the run whenever a promotion changed it. It closes
+  // by itself once nobody is left to promote.
+  publishPromotionScreen(state: PromotionScreenState | null) {
+    if (state === this.promotionScreen) return;
+    if (state && state.run !== this.campRun) this.setCampRun(state.run);
+    const open = state && !isPromotionScreenDone(state) ? state : null;
+    this.promotionScreen = open;
+    gameStore.setState({ promotionScreen: open && toPromotionScreenView(open) });
   }
 
   updateMentorScreen(dx: number, dy: number, confirm: boolean, cancel: boolean) {
@@ -1917,6 +1960,7 @@ export class GridScene extends Phaser.Scene {
     if (this.onObjectiveDone) return () => this.hideObjective();
     if (this.rosterScreen) return () => this.publishRosterScreen(null);
     if (this.merchantScreen) return () => this.publishMerchantScreen(null);
+    if (this.promotionScreen) return () => this.publishPromotionScreen(null);
     if (this.mentorScreen) return () => this.publishMentorScreen(null);
     if (this.campMenu) return () => this.autoCamp();
     if (this.rewardMenu) return () => this.autoReward();
@@ -3188,7 +3232,16 @@ export class GridScene extends Phaser.Scene {
           break;
         case 'click-tile':
           // The reward screen and the camp are picked from, not clicked through.
-          if (this.rewardMenu || this.campMenu || this.rosterScreen || this.merchantScreen || this.mentorScreen) break;
+          if (
+            this.rewardMenu ||
+            this.campMenu ||
+            this.rosterScreen ||
+            this.merchantScreen ||
+            this.promotionScreen ||
+            this.mentorScreen
+          ) {
+            break;
+          }
           if (this.battleOutcome) {
             result.confirm = true;
           } else if (this.canRoamCursor()) {
@@ -3214,6 +3267,12 @@ export class GridScene extends Phaser.Scene {
           if (!this.merchantScreen) break;
           this.publishMerchantScreen(pointMerchantCursor(this.merchantScreen, command.column, command.index));
           if (command.type === 'select-merchant') result.confirm = true;
+          break;
+        case 'hover-promotion':
+        case 'select-promotion':
+          if (!this.promotionScreen) break;
+          this.publishPromotionScreen(pointPromotionCursor(this.promotionScreen, command.index));
+          if (command.type === 'select-promotion') result.confirm = true;
           break;
         case 'hover-mentor':
         case 'select-mentor':

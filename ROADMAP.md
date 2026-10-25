@@ -199,6 +199,7 @@ Write a short design note in this file before building.
 
 - Promotion item at level 10+: advance to a stronger class (Soldier → General, Archer → Sniper, ...), stat bonuses, new weapon types, level resets to 1.
 - _Warband Mode's version is W.7_ (promotion at camp, gaining or upgrading a trait). Build the promotion rules once and share them.
+- _Progress:_ the shared rules are in `src/game/promotions.ts` (two promotions per class, stat bonuses, raised caps, new weapon types, a skill and a passive each), built for W.7. The campaign's promotion item and whether its level resets to 1 are still to do.
 
 ### [ ] 4.6 Supports (stretch)
 
@@ -333,11 +334,12 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 - Record each class's traits in `UNITS.md`.
 - **Tests:** thresholds (one short, exact, over), units without the trait unaffected, undeployed units don't count, tier upgrades.
 
-### [ ] W.7 Promotion and rally
+### [x] W.7 Promotion and rally
 
 - **Promotion** at camp: a level 10+ unit spends a seal to promote (Soldier → General, Archer → Sniper, ...), with stat bonuses and new weapon types, and the promoted class **gains or upgrades a trait**, tying upgrades into sets. Shares rules with 4.5.
 - Optional **rally**: dismiss a unit to give another of its class XP or +1 to a stat, so spare recruits are worth something. Decide when building.
 - **Tests:** promotion eligibility, stat bonuses and caps, traits after promotion, rally gains.
+- _Done:_ a unit of level 5 or more (units end a run around level 6 to 10, so 10 was out of reach) spends a Master Seal at camp (Promote on the camp menu, `src/game/warband/promotion.ts` and `promotionScreen.ts`) to become one of its class's two promotions (`src/game/promotions.ts`, listed in `UNITS.md`), keeping its level. Seals come from the merchant (60 gold) or a stage reward. Evolutions (Warband idea 33, `src/game/warband/evolutions.ts`) came with it: hidden boon, relic and class recipes that unlock a skill or a stronger passive, some needing a promoted class. _Deferred:_ traits after promotion (W.6 isn't built), rally, and a codex that records evolutions found across runs.
 
 ### [ ] W.8 Objective variety
 

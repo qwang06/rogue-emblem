@@ -14,6 +14,7 @@
 // Learning a set replaces the one the unit had. Everything here is pure:
 // each function returns a new frozen run and leaves its input alone.
 
+import { getBaseClassId } from '../promotions.ts';
 import { getLearnedSkills, hasSkillTree, SKILL_TREES, type Skill, type SkillTrees } from '../skills.ts';
 import { PLAYABLE_CLASSES, type UnitClass } from '../unitClasses.ts';
 import type { RunState, UnitSnapshot } from './run.ts';
@@ -57,17 +58,20 @@ export function addScrolls(run: RunState, count: number = 1): RunState {
 }
 
 // The classes `unit` could take a secondary skill set from: every class
-// with skills to teach but its own, in class order.
+// with skills to teach but its own (a promoted unit's base class counts as
+// its own, see promotions.ts), in class order.
 export function getSecondaryClassIds(
   unit: Pick<UnitSnapshot, 'classId'>,
   rules: MentorRules = DEFAULT_RULES,
 ): string[] {
-  return rules.classes.filter(({ id }) => id !== unit.classId && hasSkillTree(id, rules.trees)).map(({ id }) => id);
+  return rules.classes
+    .filter(({ id }) => id !== getBaseClassId(unit.classId) && hasSkillTree(id, rules.trees))
+    .map(({ id }) => id);
 }
 
 // The roster unit that can teach `unitId` the `classId` skill set: the
-// first one of that class, other than the learner, that knows at least one
-// of its skills. Null when there's none.
+// first one of that class or a promotion of it, other than the learner,
+// that knows at least one of its skills. Null when there's none.
 export function findMentor(
   run: RunState,
   unitId: string,
@@ -78,7 +82,7 @@ export function findMentor(
     run.roster.find(
       (other) =>
         other.id !== unitId &&
-        other.classId === classId &&
+        getBaseClassId(other.classId) === classId &&
         getLearnedSkills(classId, other.level, rules.trees).length > 0,
     ) ?? null
   );
