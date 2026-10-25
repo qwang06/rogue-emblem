@@ -1,10 +1,12 @@
 // The camp between Warband Mode stages, once the reward is taken: its menu
-// (Manage Roster, Merchant, Rest, Next Stage or Travel) and the rest. Manage
-// Roster opens the roster screen (rosterScreen.ts) and Merchant the
-// merchant screen (merchantScreen.ts). Everything here is pure: each
+// (Manage Roster, Merchant, Promote, Rest, Next Stage or Travel) and the
+// rest. Manage Roster opens the roster screen (rosterScreen.ts), Merchant
+// the merchant screen (merchantScreen.ts) and Promote the promotion screen
+// (promotionScreen.ts). Everything here is pure: each
 // function returns a new frozen value and leaves its input alone.
 
 import type { MenuAction } from '../actionMenu.ts';
+import { countSeals, getPromotionCandidates } from './promotion.ts';
 import { FIELD_KITCHEN, hasRelic } from './relics.ts';
 import type { RunState } from './run.ts';
 import { isInTown, isRealmRun } from './travel.ts';
@@ -18,14 +20,15 @@ export function getRestCost(run: Pick<RunState, 'relics' | 'route'>): number {
   return isInTown(run) || hasRelic(run, FIELD_KITCHEN) ? 0 : REST_COST;
 }
 
-export type CampActionId = 'roster' | 'merchant' | 'rest' | 'march';
+export type CampActionId = 'roster' | 'merchant' | 'promote' | 'rest' | 'march';
 
 export interface CampAction extends MenuAction {
   id: CampActionId;
 }
 
-// The camp menu for `run`. Rest names its cost and is disabled when the
-// warband can't afford it or nobody needs it. A run on the realm (see
+// The camp menu for `run`. Promote shows once a unit could promote, and is
+// disabled while the warband holds no Master Seal. Rest names its cost and
+// is disabled when the warband can't afford it or nobody needs it. A run on the realm (see
 // travel.ts) only finds the merchant in a town, rests free there, and
 // travels on rather than marching to the next stage.
 export function getCampActions(run: RunState): readonly CampAction[] {
@@ -34,6 +37,9 @@ export function getCampActions(run: RunState): readonly CampAction[] {
     [
       { id: 'roster', label: 'Manage Roster' },
       ...(hasMerchant(run) ? [{ id: 'merchant', label: 'Merchant' }] : []),
+      ...(getPromotionCandidates(run).length > 0
+        ? [{ id: 'promote', label: 'Promote', disabled: countSeals(run) === 0 }]
+        : []),
       { id: 'rest', label: cost > 0 ? `Rest (${cost} gold)` : 'Rest (free)', disabled: !canRest(run) },
       { id: 'march', label: isRealmRun(run) ? 'Travel' : 'Next Stage' },
     ].map((action) => Object.freeze(action as CampAction)),

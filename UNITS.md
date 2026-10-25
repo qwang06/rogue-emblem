@@ -1,6 +1,6 @@
 # UNITS.md
 
-Reference for every unit class: base stats, growth rates, caps, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Warrior.ts`, `src/game/Soldier.ts`, `src/game/Archer.ts`, `src/game/Vanguard.ts`, `src/game/Guard.ts`, `src/game/Acolyte.ts`, `src/game/Slime.ts`, `src/game/Goblin.ts`, `src/game/Skeleton.ts`, `src/game/Bat.ts`, `src/game/Wolf.ts`, `src/game/Orc.ts`, `src/game/healing.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
+Reference for every unit class: base stats, growth rates, caps, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Warrior.ts`, `src/game/Soldier.ts`, `src/game/Archer.ts`, `src/game/Vanguard.ts`, `src/game/Guard.ts`, `src/game/Acolyte.ts`, `src/game/promotions.ts`, `src/game/Slime.ts`, `src/game/Goblin.ts`, `src/game/Skeleton.ts`, `src/game/Bat.ts`, `src/game/Wolf.ts`, `src/game/Orc.ts`, `src/game/healing.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
 
 ## How the numbers work
 
@@ -217,6 +217,361 @@ The healer and the warband's magic user: it mends a wounded ally next to it with
 | ----- | ---------- | ---- | ----- | ------ |
 
 It learns no skills yet. Knows Light, and carries a Heal staff, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
+
+## Promotions
+
+In Warband Mode a unit that has reached **level 5** can promote at camp by spending a **Master Seal** (60 gold from the merchant, or a stage reward offered once someone is a level short of promoting and the warband holds none). Each base class has two promotions to choose from, defined in `src/game/promotions.ts`. A promotion:
+
+- adds a few points to the stats on the spot, each up to the new cap (a max HP or MP gain raises the current value too);
+- raises every cap by 5 (HP by 10) and shifts the growths;
+- keeps the base class's skill tree and adds a skill of its own, known at once;
+- carries a passive into every battle;
+- for four of them, masters a second weapon type and hands over a weapon of it.
+
+Level, XP, items, boons and tome progress carry over, so a promotion is a step up rather than a fresh start. Promoted classes are never recruits, starting picks or Training choices.
+
+| Base class | Promotes to          | Second weapon type, gift      |
+| ---------- | -------------------- | ----------------------------- |
+| Warrior    | Hero, Berserker      | –                             |
+| Soldier    | General, Halberdier  | –                             |
+| Archer     | Sniper, Arbalest     | Arbalest: siege, Ballista     |
+| Vanguard   | Champion, Bombardier | Bombardier: siege, Powder Keg |
+| Guard      | Bastion, Templar     | Templar: magical, Light       |
+| Acolyte    | Bishop, Sage         | Sage: a Fire Tome             |
+
+## Hero
+
+Promoted from the Warrior. The all-rounder the warrior was growing into: quick, sure-handed and hard to stop. Promoting adds +4 HP, +2 STR, +2 SKL, +2 SPD, +1 DEF, +1 RES (each up to the new cap). The Base column is a fresh level-1 Hero: the Warrior's base stats plus those bonuses.
+
+| Stat | Base | Growth | Cap |
+| ---- | ---- | ------ | --- |
+| HP   | 14   | 85%    | 60  |
+| MP   | 5    | 45%    | 40  |
+| STR  | 5    | 60%    | 30  |
+| MAG  | 0    | 10%    | 25  |
+| SKL  | 5    | 60%    | 30  |
+| SPD  | 5    | 60%    | 30  |
+| LCK  | 2    | 50%    | 30  |
+| DEF  | 3    | 45%    | 30  |
+| RES  | 1    | 25%    | 30  |
+| MOV  | 5    | –      | –   |
+
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| physical     | Wooden Sword    | 150%    |
+
+| Skill        | Learned at | Mana | Range | Damage                           |
+| ------------ | ---------- | ---- | ----- | -------------------------------- |
+| Throw Stones | 2          | 2    | 1–4   | Half the regular hit, rounded up |
+| Sunder       | 1          | 3    | 1     | The regular hit with +4 power    |
+
+Passive, **Hero's Poise**: +10 crit.
+
+## Berserker
+
+Promoted from the Warrior. Trades guard for raw strength, and hits hardest when bleeding. Promoting adds +6 HP, +3 STR, +1 SKL, +1 SPD (each up to the new cap). The Base column is a fresh level-1 Berserker: the Warrior's base stats plus those bonuses.
+
+| Stat | Base | Growth | Cap |
+| ---- | ---- | ------ | --- |
+| HP   | 16   | 90%    | 60  |
+| MP   | 5    | 45%    | 40  |
+| STR  | 6    | 70%    | 30  |
+| MAG  | 0    | 10%    | 25  |
+| SKL  | 4    | 55%    | 30  |
+| SPD  | 4    | 55%    | 30  |
+| LCK  | 2    | 50%    | 30  |
+| DEF  | 2    | 35%    | 30  |
+| RES  | 0    | 25%    | 30  |
+| MOV  | 5    | –      | –   |
+
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| physical     | Wooden Sword    | 150%    |
+
+| Skill        | Learned at | Mana | Range | Damage                           |
+| ------------ | ---------- | ---- | ----- | -------------------------------- |
+| Throw Stones | 2          | 2    | 1–4   | Half the regular hit, rounded up |
+| Frenzy       | 1          | 4    | 1     | The regular hit with +6 power    |
+
+Passive, **Bloodrage**: +3 damage while under half HP.
+
+## General
+
+Promoted from the Soldier. Heavy armor over the spear: holds the line and shrugs off blows. Promoting adds +5 HP, +2 STR, +4 DEF, +2 RES (each up to the new cap). The Base column is a fresh level-1 General: the Soldier's base stats plus those bonuses.
+
+| Stat | Base | Growth | Cap |
+| ---- | ---- | ------ | --- |
+| HP   | 15   | 70%    | 50  |
+| MP   | 5    | 40%    | 35  |
+| STR  | 6    | 45%    | 25  |
+| MAG  | 0    | 5%     | 25  |
+| SKL  | 3    | 40%    | 25  |
+| SPD  | 3    | 30%    | 25  |
+| LCK  | 2    | 30%    | 25  |
+| DEF  | 6    | 45%    | 25  |
+| RES  | 2    | 15%    | 25  |
+| MOV  | 5    | –      | –   |
+
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| physical     | Iron Spear      | 100%    |
+
+| Skill        | Learned at | Mana | Range | Damage                        |
+| ------------ | ---------- | ---- | ----- | ----------------------------- |
+| Power Strike | 2          | 2    | 1     | The regular hit with +3 power |
+| Impale       | 1          | 3    | 1     | The regular hit with +5 power |
+
+Passive, **Iron Wall**: Takes 2 less damage when attacked.
+
+## Halberdier
+
+Promoted from the Soldier. A long polearm and a sure aim: strikes from two tiles off with Lunge. Promoting adds +3 HP, +2 STR, +3 SKL, +2 SPD (each up to the new cap). The Base column is a fresh level-1 Halberdier: the Soldier's base stats plus those bonuses.
+
+| Stat | Base | Growth | Cap |
+| ---- | ---- | ------ | --- |
+| HP   | 13   | 70%    | 50  |
+| MP   | 5    | 40%    | 35  |
+| STR  | 6    | 45%    | 25  |
+| MAG  | 0    | 5%     | 25  |
+| SKL  | 6    | 50%    | 25  |
+| SPD  | 5    | 50%    | 25  |
+| LCK  | 2    | 30%    | 25  |
+| DEF  | 2    | 30%    | 25  |
+| RES  | 0    | 15%    | 25  |
+| MOV  | 5    | –      | –   |
+
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| physical     | Iron Spear      | 100%    |
+
+| Skill        | Learned at | Mana | Range | Damage                        |
+| ------------ | ---------- | ---- | ----- | ----------------------------- |
+| Power Strike | 2          | 2    | 1     | The regular hit with +3 power |
+| Lunge        | 1          | 3    | 1–2   | The regular hit with +2 power |
+
+Passive, **Reach**: +15 hit.
+
+## Sniper
+
+Promoted from the Archer. A master of the bow, deadly from four tiles away. Promoting adds +3 HP, +2 STR, +3 SKL, +1 SPD, +1 LCK (each up to the new cap). The Base column is a fresh level-1 Sniper: the Archer's base stats plus those bonuses.
+
+| Stat | Base | Growth | Cap |
+| ---- | ---- | ------ | --- |
+| HP   | 12   | 60%    | 50  |
+| MP   | 5    | 40%    | 35  |
+| STR  | 5    | 45%    | 25  |
+| MAG  | 0    | 5%     | 25  |
+| SKL  | 8    | 65%    | 25  |
+| SPD  | 5    | 45%    | 25  |
+| LCK  | 3    | 35%    | 25  |
+| DEF  | 1    | 20%    | 25  |
+| RES  | 1    | 20%    | 25  |
+| MOV  | 5    | –      | –   |
+
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| physical     | Iron Bow        | 100%    |
+
+| Skill         | Learned at | Mana | Range | Damage                        |
+| ------------- | ---------- | ---- | ----- | ----------------------------- |
+| Long Shot     | 2          | 2    | 1–3   | The regular hit               |
+| Piercing Shot | 1          | 3    | 1–4   | The regular hit with +2 power |
+
+Passive, **Deadeye**: +10 crit.
+
+## Arbalest
+
+Promoted from the Archer. Crews a ballista: slow, but masters siege weapons and gets one on promotion. Promoting adds +5 HP, +3 STR, +2 DEF, −1 MOV (each up to the new cap). The Base column is a fresh level-1 Arbalest: the Archer's base stats plus those bonuses.
+
+| Stat | Base | Growth | Cap |
+| ---- | ---- | ------ | --- |
+| HP   | 14   | 60%    | 50  |
+| MP   | 5    | 40%    | 35  |
+| STR  | 6    | 50%    | 25  |
+| MAG  | 0    | 5%     | 25  |
+| SKL  | 5    | 55%    | 25  |
+| SPD  | 4    | 35%    | 25  |
+| LCK  | 2    | 35%    | 25  |
+| DEF  | 3    | 30%    | 25  |
+| RES  | 1    | 20%    | 25  |
+| MOV  | 4    | –      | –   |
+
+| Weapon types    | Starting weapon | XP rate |
+| --------------- | --------------- | ------- |
+| physical, siege | Iron Bow        | 100%    |
+
+| Skill     | Learned at | Mana | Range | Damage                        |
+| --------- | ---------- | ---- | ----- | ----------------------------- |
+| Long Shot | 2          | 2    | 1–3   | The regular hit               |
+| Bombard   | 1          | 3    | 1–3   | The regular hit with +3 power |
+
+Passive, **Braced**: +2 damage when it attacks. Gets a Ballista on promotion (in its inventory, or the convoy when it's full).
+
+## Champion
+
+Promoted from the Vanguard. The axe in sure hands at last: faster and far more accurate. Promoting adds +4 HP, +2 STR, +2 SKL, +2 SPD, +1 DEF (each up to the new cap). The Base column is a fresh level-1 Champion: the Vanguard's base stats plus those bonuses.
+
+| Stat | Base | Growth | Cap |
+| ---- | ---- | ------ | --- |
+| HP   | 16   | 85%    | 50  |
+| MP   | 5    | 30%    | 35  |
+| STR  | 7    | 55%    | 25  |
+| MAG  | 0    | 0%     | 25  |
+| SKL  | 4    | 40%    | 25  |
+| SPD  | 4    | 40%    | 25  |
+| LCK  | 1    | 25%    | 25  |
+| DEF  | 3    | 30%    | 25  |
+| RES  | 0    | 10%    | 25  |
+| MOV  | 5    | –      | –   |
+
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| physical     | Iron Axe        | 100%    |
+
+| Skill         | Learned at | Mana | Range | Damage                        |
+| ------------- | ---------- | ---- | ----- | ----------------------------- |
+| Cleave        | 2          | 2    | 1     | The regular hit with +2 power |
+| Crushing Blow | 1          | 3    | 1     | The regular hit with +5 power |
+
+Passive, **Onslaught**: +2 damage when it attacks.
+
+## Bombardier
+
+Promoted from the Vanguard. Masters siege weapons and gets a powder keg on promotion. Promoting adds +3 HP, +2 STR, +2 SKL, +1 DEF (each up to the new cap). The Base column is a fresh level-1 Bombardier: the Vanguard's base stats plus those bonuses.
+
+| Stat | Base | Growth | Cap |
+| ---- | ---- | ------ | --- |
+| HP   | 15   | 85%    | 50  |
+| MP   | 5    | 30%    | 35  |
+| STR  | 7    | 55%    | 25  |
+| MAG  | 0    | 0%     | 25  |
+| SKL  | 4    | 40%    | 25  |
+| SPD  | 2    | 30%    | 25  |
+| LCK  | 1    | 25%    | 25  |
+| DEF  | 3    | 30%    | 25  |
+| RES  | 0    | 10%    | 25  |
+| MOV  | 5    | –      | –   |
+
+| Weapon types    | Starting weapon | XP rate |
+| --------------- | --------------- | ------- |
+| physical, siege | Iron Axe        | 100%    |
+
+| Skill  | Learned at | Mana | Range | Damage                        |
+| ------ | ---------- | ---- | ----- | ----------------------------- |
+| Cleave | 2          | 2    | 1     | The regular hit with +2 power |
+| Blast  | 1          | 3    | 1–2   | The regular hit with +3 power |
+
+Passive, **Steady Fuse**: +10 hit. Gets a Powder Keg on promotion (in its inventory, or the convoy when it's full).
+
+## Bastion
+
+Promoted from the Guard. A living wall: harder to hurt with weapons or magic. Promoting adds +5 HP, +1 STR, +3 DEF, +3 RES (each up to the new cap). The Base column is a fresh level-1 Bastion: the Guard's base stats plus those bonuses.
+
+| Stat | Base | Growth | Cap |
+| ---- | ---- | ------ | --- |
+| HP   | 17   | 75%    | 50  |
+| MP   | 5    | 25%    | 35  |
+| STR  | 5    | 45%    | 25  |
+| MAG  | 0    | 0%     | 25  |
+| SKL  | 3    | 35%    | 25  |
+| SPD  | 1    | 20%    | 25  |
+| LCK  | 1    | 25%    | 25  |
+| DEF  | 8    | 60%    | 25  |
+| RES  | 3    | 25%    | 25  |
+| MOV  | 4    | –      | –   |
+
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| physical     | Iron Spear      | 100%    |
+
+| Skill        | Learned at | Mana | Range | Damage                        |
+| ------------ | ---------- | ---- | ----- | ----------------------------- |
+| Shield Bash  | 2          | 2    | 1     | The regular hit with +1 power |
+| Bulwark Bash | 1          | 3    | 1     | The regular hit with +3 power |
+
+Passive, **Bulwark**: Takes 2 less damage from every hit.
+
+## Templar
+
+Promoted from the Guard. Spear and spell: learns magic and gets Light on promotion. Promoting adds +3 HP, +3 MAG, +1 SPD, +4 RES (each up to the new cap). The Base column is a fresh level-1 Templar: the Guard's base stats plus those bonuses.
+
+| Stat | Base | Growth | Cap |
+| ---- | ---- | ------ | --- |
+| HP   | 15   | 75%    | 50  |
+| MP   | 5    | 25%    | 35  |
+| STR  | 4    | 45%    | 25  |
+| MAG  | 3    | 35%    | 25  |
+| SKL  | 3    | 35%    | 25  |
+| SPD  | 2    | 20%    | 25  |
+| LCK  | 1    | 25%    | 25  |
+| DEF  | 5    | 50%    | 25  |
+| RES  | 4    | 30%    | 25  |
+| MOV  | 4    | –      | –   |
+
+| Weapon types      | Starting weapon | XP rate |
+| ----------------- | --------------- | ------- |
+| physical, magical | Iron Spear      | 100%    |
+
+| Skill       | Learned at | Mana | Range | Damage                        |
+| ----------- | ---------- | ---- | ----- | ----------------------------- |
+| Shield Bash | 2          | 2    | 1     | The regular hit with +1 power |
+| Holy Strike | 1          | 3    | 1     | The regular hit with +3 power |
+
+Passive, **Devotion**: Recovers 1 HP at the start of each of your phases. Gets a Light on promotion (in its inventory, or the convoy when it's full).
+
+## Bishop
+
+Promoted from the Acolyte. A seasoned healer whose mana never runs dry. Promoting adds +3 HP, +3 MP, +2 MAG, +3 RES (each up to the new cap). The Base column is a fresh level-1 Bishop: the Acolyte's base stats plus those bonuses.
+
+| Stat | Base | Growth | Cap |
+| ---- | ---- | ------ | --- |
+| HP   | 11   | 60%    | 50  |
+| MP   | 9    | 50%    | 35  |
+| STR  | 1    | 10%    | 25  |
+| MAG  | 5    | 55%    | 25  |
+| SKL  | 2    | 30%    | 25  |
+| SPD  | 3    | 40%    | 25  |
+| LCK  | 4    | 50%    | 25  |
+| DEF  | 1    | 15%    | 25  |
+| RES  | 7    | 50%    | 25  |
+| MOV  | 5    | –      | –   |
+
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| magical      | Light           | 100%    |
+
+| Skill | Learned at | Mana | Range | Damage                        |
+| ----- | ---------- | ---- | ----- | ----------------------------- |
+| Smite | 1          | 3    | 1–2   | The regular hit with +3 power |
+
+Passive, **Wellspring**: Recovers 1 MP at the start of each of your phases.
+
+## Sage
+
+Promoted from the Acolyte. Turns to battle magic and gets a Fire Tome on promotion. Promoting adds +2 HP, +3 MAG, +2 SKL, +2 SPD (each up to the new cap). The Base column is a fresh level-1 Sage: the Acolyte's base stats plus those bonuses.
+
+| Stat | Base | Growth | Cap |
+| ---- | ---- | ------ | --- |
+| HP   | 10   | 50%    | 50  |
+| MP   | 6    | 50%    | 35  |
+| STR  | 1    | 10%    | 25  |
+| MAG  | 6    | 60%    | 25  |
+| SKL  | 4    | 40%    | 25  |
+| SPD  | 5    | 45%    | 25  |
+| LCK  | 4    | 50%    | 25  |
+| DEF  | 1    | 15%    | 25  |
+| RES  | 4    | 45%    | 25  |
+| MOV  | 5    | –      | –   |
+
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| magical      | Light           | 100%    |
+
+| Skill | Learned at | Mana | Range | Damage                        |
+| ----- | ---------- | ---- | ----- | ----------------------------- |
+| Flare | 1          | 3    | 1–2   | The regular hit with +4 power |
+
+Passive, **Arcane Focus**: +10 hit. Gets a Fire Tome on promotion (in its inventory, or the convoy when it's full).
 
 ## Slime
 

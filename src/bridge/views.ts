@@ -29,6 +29,8 @@ import type { MenuAction } from '../game/actionMenu.ts';
 import { getUnitSkills } from '../game/skills.ts';
 import { getStandingCombatBonus } from '../game/modifiers.ts';
 import { findBoon, type BoonKind } from '../game/warband/boons.ts';
+import { completesEvolution, findEvolution } from '../game/warband/evolutions.ts';
+import { findPromotion } from '../game/promotions.ts';
 import type { BoonOffer } from '../game/warband/levelUpPicks.ts';
 import { findRelic, type Relic } from '../game/warband/relics.ts';
 import type { Unit } from '../game/Unit.ts';
@@ -97,6 +99,14 @@ export interface WeaponDetailView {
   maxUses: number | null;
 }
 
+// A passive on the unit info screen: a promoted class's, a boon's or an
+// evolution's.
+export interface PassiveView {
+  id: string;
+  label: string;
+  description: string;
+}
+
 export interface SkillView {
   id: string;
   label: string;
@@ -107,7 +117,9 @@ export interface SkillView {
 // The unit info screen's full stat sheet: everything the hover panel shows
 // plus the class name, stat caps, the rates it fights with, its equipped
 // weapon's numbers, the weapon types it can wield, the skills it knows and
-// the passive boons it has taken (see warband/boons.ts).
+// its passives: the passive boons it has taken (see warband/boons.ts), its
+// promoted class's passive (promotions.ts) and its evolutions
+// (warband/evolutions.ts).
 export interface UnitDetailView extends UnitView {
   maxLevel: boolean;
   stats: readonly StatLineView[];
@@ -120,7 +132,7 @@ export interface UnitDetailView extends UnitView {
   equippedWeapon: WeaponDetailView | null;
   weaponTypes: readonly WeaponType[];
   skills: readonly SkillView[];
-  passives: readonly { id: string; label: string; description: string }[];
+  passives: readonly PassiveView[];
 }
 
 // The visible world rectangle's top-left plus the zoom.
@@ -415,13 +427,25 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
     skills: Object.freeze(
       getUnitSkills(unit).map(({ id, label, manaCost, range }) => Object.freeze({ id, label, manaCost, range })),
     ),
-    passives: Object.freeze(
-      unit.boons
-        .map(findBoon)
-        .filter((boon) => boon?.kind === 'passive')
-        .map((boon) => Object.freeze({ id: boon!.id, label: boon!.name, description: boon!.description })),
-    ),
+    passives: Object.freeze(getPassiveViews(unit)),
   });
+}
+
+// A unit's passives for the info screen: its class's (a promoted class's),
+// then its passive boons, then its evolutions, marked as one.
+function getPassiveViews(unit: Unit): PassiveView[] {
+  const classPassive = findPromotion(unit.unitClass ?? '')?.passive;
+  const boons = unit.boons.map(findBoon).filter((boon) => boon?.kind === 'passive');
+  const evolutions = unit.evolutions.map(findEvolution).filter((evolution) => evolution !== null);
+  return [
+    ...(classPassive ? [{ id: 'class', label: classPassive.name, description: classPassive.description }] : []),
+    ...boons.map((boon) => ({ id: boon!.id, label: boon!.name, description: boon!.description })),
+    ...evolutions.map((evolution) => ({
+      id: `evolution-${evolution.id}`,
+      label: `✦ ${evolution.name}`,
+      description: evolution.description,
+    })),
+  ].map((passive) => Object.freeze(passive));
 }
 
 // Converts a world-space point to screen pixels (relative to the canvas and
@@ -737,15 +761,19 @@ const BOON_TAGS: Readonly<Record<BoonKind, string>> = Object.freeze({
 });
 
 // A level up's boon pick (see warband/levelUpPicks.ts) as the reward
-// screen's cards, one per boon, with no buttons under them.
-export function toBoonActions(offer: BoonOffer): readonly RewardAction[] {
+// screen's cards, one per boon, with no buttons under them. A boon that
+// would complete an evolution for the unit, with the warband's `relics`
+// (see warband/evolutions.ts), says so in its caption.
+export function toBoonActions(offer: BoonOffer, relics: readonly string[] = []): readonly RewardAction[] {
   return Object.freeze(
     offer.boons.map((boon, index) =>
       Object.freeze({
         id: `boon-${index}-${boon.id}`,
         label: boon.name,
         kind: 'boon' as const,
-        tag: BOON_TAGS[boon.kind],
+        tag: completesEvolution(offer.unit, relics, { boon: boon.id })
+          ? `${BOON_TAGS[boon.kind]} · evolves!`
+          : BOON_TAGS[boon.kind],
         description: boon.description,
         stats: null,
         healthAfter: null,

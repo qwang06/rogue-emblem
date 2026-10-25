@@ -37,6 +37,8 @@ import { FIRE, FISTS, IRON_SPEAR, weaponEntry } from '../game/weapons.ts';
 import { createTurnState, markDone } from '../game/turns.ts';
 import { applyBattleResult, createRun, restoreRoster, restoreUnit, snapshotUnit } from '../game/warband/run.ts';
 import { getBoonOffer, queueLevelUpBoons } from '../game/warband/levelUpPicks.ts';
+import { findBoon } from '../game/warband/boons.ts';
+import { Archer } from '../game/Archer.ts';
 import { createStartingWarband } from '../game/warband/stageLevel.ts';
 import { PLAYER_ROSTER } from '../game/demoLevel.ts';
 import { Warrior } from '../game/Warrior.ts';
@@ -716,6 +718,13 @@ describe('toBoonActions and toBoonPickView', () => {
     );
     expect(new Set(actions.map((action) => action.id)).size).toBe(actions.length);
     expect(toBoonPickView(offer)).toEqual({ name: 'Alden', classLabel: 'Soldier', level: 2 });
+  });
+
+  it('marks a boon that would complete an evolution', () => {
+    const run = createRun(1, new Map([['bryn', new Archer({ name: 'Bryn', team: 'player' })]]));
+    const unit = { ...run.roster[0], boons: ['keen-eye'] };
+    const offer = { unit, level: 3, boons: [findBoon('deadly')!, findBoon('nimble')!] };
+    expect(toBoonActions(offer).map((action) => action.tag)).toEqual(['passive · evolves!', 'passive']);
   });
 });
 

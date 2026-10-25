@@ -41,7 +41,16 @@ export interface Armor {
   weight: number;
 }
 
-export type Item = Consumable | Weapon | Staff | Armor;
+// A seal: { kind: 'seal', id, label }. Spent at camp to promote a unit
+// (see promotions.ts and warband/promotion.ts); it does nothing in battle
+// and takes a slot like a weapon, never stacking.
+export interface Seal {
+  kind: 'seal';
+  id: string;
+  label: string;
+}
+
+export type Item = Consumable | Weapon | Staff | Armor | Seal;
 
 export interface InventoryEntry {
   item: Item;
@@ -98,6 +107,8 @@ export const WOODEN_ARMOR: Armor = Object.freeze({
 });
 
 export const ARMORS: readonly Armor[] = Object.freeze([WOODEN_SHIELD, WOODEN_ARMOR]);
+
+export const MASTER_SEAL: Seal = Object.freeze({ kind: 'seal', id: 'master-seal', label: 'Master Seal' });
 
 export function isArmor(item: { kind: string }): item is Armor {
   return item.kind === 'armor';

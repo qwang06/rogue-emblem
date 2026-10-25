@@ -9,9 +9,10 @@
 import { HEAL_STAFF } from '../healing.ts';
 import { applyModifiers } from '../modifiers.ts';
 import { getBoonModifiers } from './boons.ts';
+import { getEvolutions } from './evolutions.ts';
 import { getRelicModifiers, hasRelic, PHOENIX_FEATHER } from './relics.ts';
 import { EMPTY_CHRONICLE, parseChronicle, recordBattle, type RunChronicle } from './chronicle.ts';
-import { ARMORS, HEALTH_POTION, MANA_POTION, type Inventory, type Item } from '../items.ts';
+import { ARMORS, HEALTH_POTION, MANA_POTION, MASTER_SEAL, type Inventory, type Item } from '../items.ts';
 import { createSeededRng } from '../rng.ts';
 import type { TomeProgress } from '../tomes.ts';
 import type { RunRoute, RunSite } from './travel.ts';
@@ -30,6 +31,7 @@ export const RUN_ITEMS: readonly Item[] = Object.freeze([
   HEAL_STAFF,
   HEALTH_POTION,
   MANA_POTION,
+  MASTER_SEAL,
 ]);
 
 // An inventory entry by item id: a weapon's quantity is its uses left.
@@ -205,7 +207,8 @@ export function restoreUnit(
 }
 
 // The run's roster as Units by unitId, ready to put in a battle, each
-// carrying the run's relics' modifiers on top of its boons'.
+// carrying the run's relics' modifiers and its evolutions' (evolutions.ts)
+// on top of its boons'.
 export function restoreRoster(
   run: RunState,
   classes?: readonly UnitClass[],
@@ -213,7 +216,12 @@ export function restoreRoster(
 ): Map<string, Unit> {
   const relics = getRelicModifiers(run.relics);
   return new Map(
-    run.roster.map((snapshot) => [snapshot.id, applyModifiers(restoreUnit(snapshot, classes, items), relics)]),
+    run.roster.map((snapshot) => {
+      const evolutions = getEvolutions(snapshot, run.relics);
+      const unit = restoreUnit(snapshot, classes, items);
+      unit.evolutions = Object.freeze(evolutions.map(({ id }) => id));
+      return [snapshot.id, applyModifiers(unit, [...relics, ...evolutions.flatMap(({ modifiers }) => modifiers)])];
+    }),
   );
 }
 

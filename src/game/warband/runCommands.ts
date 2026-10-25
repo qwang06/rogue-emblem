@@ -2,7 +2,7 @@
 // commands applied by one dispatcher, the way battle/commands.ts does it for
 // a battle: pick the relic a run starts with, take each level up's boon,
 // pick, skip or reroll the stage's reward, then at camp rest, buy,
-// sell, move items between units and the convoy, and march on. The game's
+// sell, move items between units and the convoy, promote, and march on. The game's
 // screens send these, and so can a script or an AI (see runner.ts), so both
 // take the same path. Pure: each command takes a session to a new one and
 // leaves the old one alone.
@@ -31,6 +31,8 @@ import {
   type Reward,
 } from './rewards.ts';
 import { getBoonOffer, pickBoon, queueLevelUpBoons } from './levelUpPicks.ts';
+import { getPromotions } from '../promotions.ts';
+import { canPromoteInRun, getPromotionCandidates, promoteInRun } from './promotion.ts';
 import { rollStartingRelics, type Relic } from './relics.ts';
 import { finishStage, snapshotUnit, type BattleResult, type RunState } from './run.ts';
 import { GUEST_UNIT_ID, rollGuest, settleGuest } from './recruitment.ts';
@@ -86,6 +88,9 @@ export type RunCommand =
   | { type: 'store'; unitId: string; itemIndex: number }
   // Camp: equips (or wears) a unit's item at `itemIndex`.
   | { type: 'equip'; unitId: string; itemIndex: number }
+  // Camp: spends a Master Seal to promote a unit to `promotionId` (see
+  // promotion.ts).
+  | { type: 'promote'; unitId: string; promotionId: string }
   // Camp: leaves for the next stage's battle, or on the realm, to choose
   // where to travel.
   | { type: 'march' }
@@ -116,7 +121,16 @@ export class RunCommandError extends Error {
 }
 
 // The commands camp accepts; the reward pick accepts the rest but march.
-const CAMP_COMMANDS: ReadonlySet<RunCommandType> = new Set(['rest', 'buy', 'sell', 'give', 'store', 'equip', 'march']);
+const CAMP_COMMANDS: ReadonlySet<RunCommandType> = new Set([
+  'rest',
+  'buy',
+  'sell',
+  'give',
+  'store',
+  'equip',
+  'promote',
+  'march',
+]);
 const REWARD_COMMANDS: ReadonlySet<RunCommandType> = new Set(['pick-reward', 'skip-reward', 'reroll-rewards']);
 const RECRUIT_COMMANDS: ReadonlySet<RunCommandType> = new Set(['pick-recruit', 'decline-recruit']);
 
@@ -328,6 +342,11 @@ export function applyRunCommand(
         return fail(`Can't equip ${command.unitId}'s item ${command.itemIndex}`);
       }
       return camp(equipInRoster(run, command.unitId, command.itemIndex));
+    case 'promote':
+      if (!canPromoteInRun(run, command.unitId, command.promotionId)) {
+        return fail(`Can't promote ${command.unitId} to ${command.promotionId}`);
+      }
+      return camp(promoteInRun(run, command.unitId, command.promotionId));
     case 'march':
       return { session: freeze({ run, phase: isRealmRun(run) ? 'travel' : 'battle' }), events: [] };
     case 'travel': {
@@ -345,7 +364,8 @@ export function applyRunCommand(
 // Every command the session accepts as it stands, for an AI to choose
 // from: each starting relic or boon offered on those picks; each reward offer, skip, and reroll when affordable on the pick;
 // at camp, rest when it can, each affordable stock item, each sellable
-// convoy entry, each give, store and equip that's allowed, and march; while
+// convoy entry, each give, store and equip that's allowed, each promotion
+// the warband has a seal for, and march; while
 // travelling, a trip to each site the roads lead to (given the realm).
 export function getLegalRunCommands(
   session: RunSession,
@@ -395,6 +415,11 @@ export function getLegalRunCommands(
       if (canStoreInConvoy(run, unitId, itemIndex)) commands.push({ type: 'store', unitId, itemIndex });
       if (canEquipInRoster(run, unitId, itemIndex)) commands.push({ type: 'equip', unitId, itemIndex });
     });
+  }
+  for (const unit of getPromotionCandidates(run)) {
+    for (const { id } of getPromotions(unit.classId)) {
+      if (canPromoteInRun(run, unit.id, id)) commands.push({ type: 'promote', unitId: unit.id, promotionId: id });
+    }
   }
   commands.push({ type: 'march' });
   return commands;

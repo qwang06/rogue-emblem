@@ -104,18 +104,70 @@ export const SHIELD_BASH: Skill = Object.freeze({
   animation: 'strike',
 });
 
+// The skills a promoted class learns on promotion (see promotions.ts),
+// each a heavier or longer-reaching variant of the regular hit, at 3 or 4
+// mana.
+function promotionSkill(id: string, label: string, fields: Partial<Skill>): Skill {
+  return Object.freeze({ id, label, manaCost: 3, range: 1, animation: 'strike', ...fields });
+}
+
+export const SUNDER = promotionSkill('sunder', 'Sunder', { might: 4 });
+export const FRENZY = promotionSkill('frenzy', 'Frenzy', { manaCost: 4, might: 6 });
+export const IMPALE = promotionSkill('impale', 'Impale', { might: 5 });
+export const LUNGE = promotionSkill('lunge', 'Lunge', { range: 2, might: 2 });
+export const PIERCING_SHOT = promotionSkill('piercing-shot', 'Piercing Shot', {
+  range: 4,
+  might: 2,
+  animation: 'stone',
+});
+export const BOMBARD = promotionSkill('bombard', 'Bombard', { range: 3, might: 3, animation: 'stone' });
+export const CRUSHING_BLOW = promotionSkill('crushing-blow', 'Crushing Blow', { might: 5 });
+export const BLAST = promotionSkill('blast', 'Blast', { range: 2, might: 3, animation: 'stone' });
+export const BULWARK_BASH = promotionSkill('bulwark-bash', 'Bulwark Bash', { might: 3 });
+export const HOLY_STRIKE = promotionSkill('holy-strike', 'Holy Strike', { might: 3 });
+export const SMITE = promotionSkill('smite', 'Smite', { range: 2, might: 3, animation: 'stone' });
+export const FLARE = promotionSkill('flare', 'Flare', { range: 2, might: 4, animation: 'stone' });
+
+// The skills an evolution teaches (see warband/evolutions.ts).
+export const VOLLEY = promotionSkill('volley', 'Volley', { range: 3, might: 3, animation: 'stone' });
+export const INFERNO = promotionSkill('inferno', 'Inferno', { manaCost: 4, range: 3, might: 5, animation: 'stone' });
+export const EARTHSHAKER = promotionSkill('earthshaker', 'Earthshaker', { manaCost: 4, might: 8 });
+
 // The level each class's first skill unlocks at: a new unit starts with
 // none and learns it on its first level up.
 export const SKILL_UNLOCK_LEVEL = 2;
 
-// unitClass -> [{ level, skill }]. Classes without an entry know no skills.
-export const SKILL_TREES: SkillTrees = Object.freeze({
+// The base classes' trees, which the promoted classes build on.
+const BASE_SKILL_TREES: SkillTrees = Object.freeze({
   warrior: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: THROW_STONES })]),
   soldier: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: POWER_STRIKE })]),
   archer: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: LONG_SHOT })]),
   vanguard: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: CLEAVE })]),
   guard: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: SHIELD_BASH })]),
 });
+
+// unitClass -> [{ level, skill }]. Classes without an entry know no skills.
+export const SKILL_TREES: SkillTrees = Object.freeze({
+  ...BASE_SKILL_TREES,
+  hero: promotedTree('warrior', SUNDER),
+  berserker: promotedTree('warrior', FRENZY),
+  general: promotedTree('soldier', IMPALE),
+  halberdier: promotedTree('soldier', LUNGE),
+  sniper: promotedTree('archer', PIERCING_SHOT),
+  arbalest: promotedTree('archer', BOMBARD),
+  champion: promotedTree('vanguard', CRUSHING_BLOW),
+  bombardier: promotedTree('vanguard', BLAST),
+  bastion: promotedTree('guard', BULWARK_BASH),
+  templar: promotedTree('guard', HOLY_STRIKE),
+  bishop: promotedTree('acolyte', SMITE),
+  sage: promotedTree('acolyte', FLARE),
+});
+
+// A promoted class's tree: the tree of the class it promotes from, then
+// `skill`, known from level 1 (a unit promotes well past it).
+function promotedTree(from: string, skill: Skill): readonly SkillTreeEntry[] {
+  return Object.freeze([...(BASE_SKILL_TREES[from] ?? []), Object.freeze({ level: 1, skill })]);
+}
 
 // Every skill a unit of unitClass knows at the given level, in tree order.
 export function getLearnedSkills(unitClass: string | null, level: number, trees: SkillTrees = SKILL_TREES): Skill[] {

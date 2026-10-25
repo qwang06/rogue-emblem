@@ -4024,6 +4024,99 @@ textarea.draft-input {
   color: var(--yellow);
 }
 
+/* ---- Promotion screen ------------------------------------------------ */
+
+/* The options on the left, what the highlighted one does on the right.
+   Both columns are a fixed height, so moving the cursor or a longer
+   description never resizes the window (see "UI layout" in AGENTS.md). */
+.promotion-screen__scroll {
+  width: min(48rem, calc(100% - 32px));
+}
+
+.promotion-screen__columns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.promotion-screen {
+  --promotion-height: calc(7 * var(--row));
+}
+
+.promotion-screen .promotion-screen__list {
+  height: var(--promotion-height);
+}
+
+.promotion-screen__detail {
+  box-sizing: border-box;
+  height: var(--promotion-height);
+  padding: 8px 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+}
+
+.promotion-screen__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.promotion-screen__class {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--fg-bright);
+}
+
+.promotion-screen__evolves {
+  font-size: 0.75rem;
+  color: var(--yellow);
+}
+
+.promotion-screen__who,
+.promotion-screen__description {
+  margin: 0;
+  color: var(--fg-dim);
+}
+
+/* Three lines reserved, the longest class line's length. */
+.promotion-screen__description {
+  min-height: 3.9em;
+}
+
+.promotion-screen__facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 2px 10px;
+  margin: 0;
+}
+
+.promotion-screen__facts dt {
+  font-weight: 700;
+  color: var(--fg-dim);
+}
+
+.promotion-screen__facts dd {
+  margin: 0;
+}
+
+/* Stacked on narrow stages: a shorter list over the detail. */
+@container (max-width: 34rem) {
+  .promotion-screen__columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .promotion-screen .promotion-screen__list {
+    height: calc(4 * var(--row));
+  }
+
+  .promotion-screen__detail {
+    height: auto;
+    min-height: var(--promotion-height);
+  }
+}
+
 /* Who a bought item is for: a menu over the middle of the merchant
    window, which dims behind it. */
 .merchant-screen__recipients-layer {

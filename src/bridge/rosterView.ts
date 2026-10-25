@@ -5,6 +5,7 @@
 
 import type { Menu } from '../game/actionMenu.ts';
 import { MAX_INVENTORY_SLOTS, type Item } from '../game/items.ts';
+import { PROMOTION_LEVEL } from '../game/promotions.ts';
 import { getItemSprite, getUnitSprite } from '../game/tileset.ts';
 import { UNIT_CLASSES, type UnitClass } from '../game/unitClasses.ts';
 import { formatWeaponRange, type Hands } from '../game/weapons.ts';
@@ -124,7 +125,7 @@ export function toRosterScreenView(
 }
 
 // An item's name and a line on what it does: a weapon's hands and numbers,
-// armor's defense, a staff's healing, a consumable's recovery.
+// armor's defense, a staff's healing, a seal's use, a consumable's recovery.
 export function describeItem(item: Item): { label: string; description: string } {
   const describe = (description: string) => Object.freeze({ label: item.label, description });
   if (item.kind === 'weapon') {
@@ -144,6 +145,7 @@ export function describeItem(item: Item): { label: string; description: string }
     if (item.slot === 'shield') return describe(`Shield · ${stats} · With a 1H weapon only`);
     return describe(`Body armor · ${stats}`);
   }
+  if (item.kind === 'seal') return describe(`Spent at camp to promote a unit of level ${PROMOTION_LEVEL} or more.`);
   return describe(`Restores up to ${item.amount} ${item.stat === 'health' ? 'HP' : 'mana'}.`);
 }
 

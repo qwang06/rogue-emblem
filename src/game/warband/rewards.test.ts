@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Archer } from '../Archer.ts';
-import { HEALTH_POTION, MAX_INVENTORY_SLOTS } from '../items.ts';
+import { HEALTH_POTION, MASTER_SEAL, MAX_INVENTORY_SLOTS } from '../items.ts';
+import { PROMOTION_LEVEL } from '../promotions.ts';
 import { createSeededRng } from '../rng.ts';
 import { Soldier } from '../Soldier.ts';
 import { Unit } from '../Unit.ts';
@@ -537,5 +538,28 @@ describe('a reward pick owed across a reload', () => {
   it('leaves a run that owes nothing as it is', () => {
     const run = fullRun();
     expect(clearPendingReward(run)).toBe(run);
+  });
+});
+
+describe('the seal reward', () => {
+  const offered = (run: RunState) =>
+    Array.from({ length: 40 }, (_, seed) => kinds(rollRewards(run, 4, createSeededRng(seed), 7))).flat();
+  const atLevel = (run: RunState, level: number) =>
+    withRoster(
+      run,
+      run.roster.map((unit) => ({ ...unit, level })),
+    );
+
+  it('is offered once someone is a level short of promoting and the warband holds no seal', () => {
+    expect(offered(atLevel(fullRun(), PROMOTION_LEVEL - 2))).not.toContain('seal');
+    expect(offered(atLevel(fullRun(), PROMOTION_LEVEL - 1))).toContain('seal');
+    const sealed = { ...atLevel(fullRun(), PROMOTION_LEVEL), convoy: [{ itemId: MASTER_SEAL.id, quantity: 1 }] };
+    expect(offered(sealed)).not.toContain('seal');
+  });
+
+  it('puts a Master Seal in the convoy', () => {
+    const run = applyReward(fullRun(), { kind: 'seal' });
+    expect(run.convoy).toEqual([{ itemId: MASTER_SEAL.id, quantity: 1 }]);
+    expect(describeReward({ kind: 'seal' }).label).toBe('Master Seal');
   });
 });

@@ -8,12 +8,14 @@
 import { planPlayerDeployment, planPlayerTurn } from '../battle/playerAI.ts';
 import type { BattleState } from '../battle/state.ts';
 import { isStaff } from '../healing.ts';
-import { isArmor, type Item } from '../items.ts';
+import { isArmor, MASTER_SEAL, type Item } from '../items.ts';
+import { getPromotions } from '../promotions.ts';
 import type { Unit } from '../Unit.ts';
 import { createUnitOfClass } from '../unitClasses.ts';
 import { canWield, isWeapon } from '../weapons.ts';
 import type { RunPolicy } from './autoRun.ts';
-import { canRest, hasMerchant } from './camp.ts';
+import { canRest, hasMerchant, REST_COST } from './camp.ts';
+import { canPromoteInRun, getPromotionCandidates } from './promotion.ts';
 import { canGiveFromConvoy, lookUpItem } from './convoy.ts';
 import { canBuy, getItemPrice, MERCHANT_STOCK } from './merchant.ts';
 import { MAX_ROSTER_SIZE, type Reward } from './rewards.ts';
@@ -43,6 +45,7 @@ export const REWARD_SCORES = Object.freeze({
   arms: 32,
   relic: 45,
   lesson: 50,
+  seal: 40,
   // Rest scores this times the share of HP the roster is missing.
   restPerMissing: 100,
   supplies: 10,
@@ -115,6 +118,8 @@ export function scoreReward(run: RunState, reward: Reward): number {
       return REWARD_SCORES.relic;
     case 'lesson':
       return REWARD_SCORES.lesson;
+    case 'seal':
+      return REWARD_SCORES.seal;
     case 'supplies':
       return REWARD_SCORES.supplies;
     case 'gold':
@@ -135,6 +140,8 @@ export function pickReward(session: RunSession): RunCommand {
 }
 
 // Camp, one command at a time, in this order:
+// 0. promote the first unit that can, to its class's first promotion, or
+//    buy a seal for it when there's a merchant and gold to spare
 // 1. rest if anyone deploying is badly hurt (REST_BELOW_HEALTH)
 // 2. each deploying unit armed: equip its best carried weapon (or staff)
 //    if what it holds is about to break, else take one from the convoy,
@@ -144,6 +151,17 @@ export function pickReward(session: RunSession): RunCommand {
 export function planCamp(session: RunSession, stock: readonly string[] = MERCHANT_STOCK): RunCommand {
   const { run } = session;
   const deploying = getDeployingUnits(run);
+  const [candidate] = getPromotionCandidates(run);
+  if (candidate) {
+    const [promotion] = getPromotions(candidate.classId);
+    if (canPromoteInRun(run, candidate.id, promotion.id)) {
+      return { type: 'promote', unitId: candidate.id, promotionId: promotion.id };
+    }
+    const price = getItemPrice(MASTER_SEAL);
+    if (hasMerchant(run) && canBuy(run, MASTER_SEAL.id, stock) && run.gold >= price + REST_COST) {
+      return { type: 'buy', itemId: MASTER_SEAL.id };
+    }
+  }
   if (canRest(run) && deploying.some((unit) => unit.health < unit.maxHealth * REST_BELOW_HEALTH)) {
     return { type: 'rest' };
   }

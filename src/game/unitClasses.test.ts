@@ -4,7 +4,7 @@ import { createUnitOfClass, PLAYABLE_CLASSES, UNIT_CLASSES } from './unitClasses
 import type { ClassUnitOptions, Unit } from './Unit.ts';
 
 describe('UNIT_CLASSES', () => {
-  it('lists the six player classes, then the six monsters', () => {
+  it('lists the six player classes, then the twelve promoted classes, then the six monsters', () => {
     expect(UNIT_CLASSES.map((c) => c.id)).toEqual([
       'warrior',
       'soldier',
@@ -12,6 +12,18 @@ describe('UNIT_CLASSES', () => {
       'vanguard',
       'guard',
       'acolyte',
+      'hero',
+      'berserker',
+      'general',
+      'halberdier',
+      'sniper',
+      'arbalest',
+      'champion',
+      'bombardier',
+      'bastion',
+      'templar',
+      'bishop',
+      'sage',
       'slime',
       'goblin',
       'skeleton',
@@ -26,6 +38,18 @@ describe('UNIT_CLASSES', () => {
       'Vanguard',
       'Guard',
       'Acolyte',
+      'Hero',
+      'Berserker',
+      'General',
+      'Halberdier',
+      'Sniper',
+      'Arbalest',
+      'Champion',
+      'Bombardier',
+      'Bastion',
+      'Templar',
+      'Bishop',
+      'Sage',
       'Slime',
       'Goblin',
       'Skeleton',
@@ -48,7 +72,7 @@ describe('UNIT_CLASSES', () => {
 });
 
 describe('PLAYABLE_CLASSES', () => {
-  it('lists the six player classes and none of the monsters', () => {
+  it('lists the six player classes and none of the promoted classes or monsters', () => {
     expect(PLAYABLE_CLASSES.map((c) => c.id)).toEqual(['warrior', 'soldier', 'archer', 'vanguard', 'guard', 'acolyte']);
   });
 
@@ -60,6 +84,23 @@ describe('PLAYABLE_CLASSES', () => {
       'bat',
       'wolf',
       'orc',
+    ]);
+  });
+
+  it('marks each promoted class with the class it promotes from', () => {
+    expect(UNIT_CLASSES.filter((c) => c.promotedFrom).map((c) => [c.id, c.promotedFrom])).toEqual([
+      ['hero', 'warrior'],
+      ['berserker', 'warrior'],
+      ['general', 'soldier'],
+      ['halberdier', 'soldier'],
+      ['sniper', 'archer'],
+      ['arbalest', 'archer'],
+      ['champion', 'vanguard'],
+      ['bombardier', 'vanguard'],
+      ['bastion', 'guard'],
+      ['templar', 'guard'],
+      ['bishop', 'acolyte'],
+      ['sage', 'acolyte'],
     ]);
   });
 

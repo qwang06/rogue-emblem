@@ -1,11 +1,13 @@
 // Warband Mode's stage rewards: what a run earns for clearing a stage. Every
 // win pays gold (more for a flawless one, with nobody lost), then the
 // player picks one of a few offered rewards, like Slay the Spire's card
-// pick: recovery, gear, a relic (relics.ts), a level or gold. Offers are rolled
+// pick: recovery, gear, a relic (relics.ts), a level, a Master Seal or gold. Offers are rolled
 // from an Rng (seeded from the run, so a stage always offers the
 // same picks) and each one is applied to the run as a pure function.
 
-import { HEALTH_POTION, MAX_INVENTORY_SLOTS } from '../items.ts';
+import { HEALTH_POTION, MASTER_SEAL, MAX_INVENTORY_SLOTS } from '../items.ts';
+import { getPromotions, PROMOTION_LEVEL } from '../promotions.ts';
+import { countSeals } from './promotion.ts';
 import { getExperienceToNextLevel, MAX_LEVEL, rollLevelUp, type LevelUpResult } from '../experience.ts';
 import type { Rng } from '../combatStats.ts';
 import { createSeededRng, randomInt, randomItem, shuffle } from '../rng.ts';
@@ -65,7 +67,7 @@ export const SKIP_GOLD_PER_STAGE = 5;
 export const REROLL_COST = 10;
 export const REROLL_COST_STEP = 10;
 
-export type RewardKind = 'recruit' | 'rest' | 'supplies' | 'relic' | 'gold' | 'arms' | 'lesson';
+export type RewardKind = 'recruit' | 'rest' | 'supplies' | 'relic' | 'gold' | 'arms' | 'lesson' | 'seal';
 
 export type Reward =
   // A new unit joins the roster.
@@ -81,6 +83,8 @@ export type Reward =
   // Every unit gains exactly the XP to its next level; `seed` rolls the
   // level ups' stat gains, so picking it always gives the same ones.
   | { kind: 'lesson'; seed: number }
+  // A Master Seal in the convoy, to promote a unit at camp.
+  | { kind: 'seal' }
   // Gold for the warband.
   | { kind: 'gold'; amount: number };
 
@@ -189,6 +193,8 @@ export function getPendingRewardOffer(run: RunState): (PendingReward & { rewards
 // - arms, when anyone can wield an Arms Cache weapon
 // - relic, while there's a relic the run doesn't hold
 // - lesson, while anyone is below the max level
+// - seal, while the warband holds none and someone is a level short of
+//   promoting or past it (see promotion.ts)
 // - gold, always
 export function rollRewards(
   run: RunState,
@@ -205,6 +211,7 @@ export function rollRewards(
   if (eligibleWeapons(run, classes).length > 0) kinds.push('arms');
   if (getUnownedRelics(run.relics).length > 0) kinds.push('relic');
   if (run.roster.some((unit) => unit.level < MAX_LEVEL)) kinds.push('lesson');
+  if (wantsSeal(run)) kinds.push('seal');
   kinds.push('gold');
   const picked = shuffle(rng, kinds).slice(0, Math.max(0, count));
   return Object.freeze(picked.map((kind) => Object.freeze(createReward(kind, run, stage, rng, classes))));
@@ -226,9 +233,20 @@ function createReward(kind: RewardKind, run: RunState, stage: number, rng: Rng, 
     }
     case 'lesson':
       return { kind, seed: Math.floor(rng() * 2 ** 32) };
+    case 'seal':
+      return { kind };
     case 'gold':
       return { kind, amount: PURSE_GOLD + PURSE_GOLD_PER_STAGE * stage };
   }
+}
+
+// Whether a seal is worth offering: the warband holds none, and a unit
+// that has promotions is within a level of PROMOTION_LEVEL.
+function wantsSeal(run: RunState): boolean {
+  return (
+    countSeals(run) === 0 &&
+    run.roster.some((unit) => unit.level >= PROMOTION_LEVEL - 1 && getPromotions(unit.classId).length > 0)
+  );
 }
 
 function eligibleWeapons(run: RunState, classes: readonly UnitClass[]): Weapon[] {
@@ -288,6 +306,8 @@ function applyRewardEffect(run: RunState, reward: Reward, classes: readonly Unit
       return freeze({ ...run, convoy: [...run.convoy, { itemId: reward.itemId, quantity: reward.uses }] });
     case 'lesson':
       return applyLessonReward(run, reward, classes).run;
+    case 'seal':
+      return freeze({ ...run, convoy: [...run.convoy, { itemId: MASTER_SEAL.id, quantity: 1 }] });
     case 'gold':
       return addGold(run, reward.amount);
   }
@@ -368,6 +388,11 @@ export function describeReward(
       return { label: 'Arms Cache', description: `A fresh ${reward.label} goes to the convoy (${reward.uses} uses).` };
     case 'lesson':
       return { label: "Veteran's Lesson", description: 'Every unit gains enough XP to reach its next level.' };
+    case 'seal':
+      return {
+        label: MASTER_SEAL.label,
+        description: `Goes to the convoy. Spend it at camp to promote a unit of level ${PROMOTION_LEVEL} or more.`,
+      };
     case 'gold':
       return { label: `${reward.amount} Gold`, description: 'A purse of coin, for the camp to come.' };
   }

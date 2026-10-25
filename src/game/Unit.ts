@@ -131,6 +131,9 @@ export class Unit {
   // The level-up boons it has taken in a Warband run (warband/boons.ts),
   // by id, in the order taken.
   boons: readonly string[] = Object.freeze([]);
+  // The evolutions it has in a Warband run (warband/evolutions.ts), by id,
+  // set with their modifiers when the run fields it.
+  evolutions: readonly string[] = Object.freeze([]);
 
   constructor({
     name,

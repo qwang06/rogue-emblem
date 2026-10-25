@@ -13,9 +13,11 @@ import {
   getLearnedSkills,
   getSkillActions,
   getSkillsLearnedBetween,
+  SUNDER,
   type Skill,
   type SkillTrees,
 } from './skills.ts';
+import { isPromotedClass, PROMOTIONS } from './promotions.ts';
 import { Soldier } from './Soldier.ts';
 
 // A skill with the fields a test doesn't care about filled in.
@@ -49,8 +51,9 @@ describe('SKILL_TREES', () => {
     expect(getSkillsLearnedBetween('warrior', 1, 2)).toEqual([THROW_STONES]);
   });
 
-  it('teaches every class nothing at level 1 and its skill at SKILL_UNLOCK_LEVEL', () => {
+  it('teaches every base class nothing at level 1 and its skill at SKILL_UNLOCK_LEVEL', () => {
     for (const [unitClass, tree] of Object.entries(SKILL_TREES)) {
+      if (isPromotedClass(unitClass)) continue;
       expect(getLearnedSkills(unitClass, 1), unitClass).toEqual([]);
       expect(
         tree.map((entry) => entry.level),
@@ -58,6 +61,22 @@ describe('SKILL_TREES', () => {
       ).toEqual([SKILL_UNLOCK_LEVEL]);
     }
     expect(SKILL_UNLOCK_LEVEL).toBe(2);
+  });
+
+  it("gives every promoted class its base class's tree, then a skill of its own from level 1", () => {
+    for (const promotion of PROMOTIONS) {
+      const base = SKILL_TREES[promotion.from] ?? [];
+      const tree = SKILL_TREES[promotion.id];
+      expect(tree.slice(0, -1), promotion.id).toEqual(base);
+      const own = tree[tree.length - 1];
+      expect(own.level, promotion.id).toBe(1);
+      expect(
+        base.some(({ skill }) => skill.id === own.skill.id),
+        promotion.id,
+      ).toBe(false);
+      expect(getLearnedSkills(promotion.id, 1), promotion.id).toEqual([own.skill]);
+    }
+    expect(getLearnedSkills('hero', SKILL_UNLOCK_LEVEL)).toEqual([THROW_STONES, SUNDER]);
   });
 
   it('keeps each skill to its own class', () => {
