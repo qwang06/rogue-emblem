@@ -24,8 +24,11 @@
   cursor: default;
 }
 
-.auto-speed-value {
-  width: 1.7rem;
+/* The speed readout is a button too (it steps through the speeds), sized
+   for "8×" so the number changing never moves its neighbors. */
+.header-button.auto-speed-value {
+  width: 1.9rem;
+  padding-inline: 0;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }

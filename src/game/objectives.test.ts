@@ -59,16 +59,20 @@ describe('objectives', () => {
 
 describe('getObjectiveStatus', () => {
   it('names the kind in a word and counts the turn out of the turn limit', () => {
-    expect(getObjectiveStatus(ROUT, 3)).toBe('Rout 3/40');
-    expect(getObjectiveStatus(SEIZE, 3)).toBe('Seize 3/40');
-    expect(getObjectiveStatus(BOSS, 40)).toBe('Boss 40/40');
-    expect(getObjectiveStatus(ROUT, 41)).toBe('Rout 40/40');
+    expect(getObjectiveStatus(ROUT, 3)).toEqual({ kind: 'rout', name: 'Rout', turn: 3, limit: 40 });
+    expect(getObjectiveStatus(SEIZE, 3)).toEqual({ kind: 'seize', name: 'Seize', turn: 3, limit: 40 });
+    expect(getObjectiveStatus(BOSS, 40)).toEqual({ kind: 'boss', name: 'Boss', turn: 40, limit: 40 });
+    expect(getObjectiveStatus(ROUT, 41)).toEqual({ kind: 'rout', name: 'Rout', turn: 40, limit: 40 });
   });
 
   it('counts a survive objective’s turns, never past the last', () => {
-    expect(getObjectiveStatus(SURVIVE, 1)).toBe('Survive 1/4');
-    expect(getObjectiveStatus(SURVIVE, 4)).toBe('Survive 4/4');
-    expect(getObjectiveStatus(SURVIVE, 5)).toBe('Survive 4/4');
+    expect(getObjectiveStatus(SURVIVE, 1)).toMatchObject({ kind: 'survive', name: 'Survive', turn: 1, limit: 4 });
+    expect(getObjectiveStatus(SURVIVE, 4)).toMatchObject({ turn: 4, limit: 4 });
+    expect(getObjectiveStatus(SURVIVE, 5)).toMatchObject({ turn: 4, limit: 4 });
+  });
+
+  it('is frozen', () => {
+    expect(Object.isFrozen(getObjectiveStatus(ROUT, 1))).toBe(true);
   });
 });
 

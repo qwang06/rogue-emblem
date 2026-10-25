@@ -22,6 +22,7 @@ import { getCurrentSiteId } from '../game/warband/travel.ts';
 import { applyRunCommand, resumeRunSession } from '../game/warband/runCommands.ts';
 import { planTravel } from '../game/warband/runPolicy.ts';
 import { Frame } from './Frame.tsx';
+import { GlyphIcon } from './GlyphIcon.tsx';
 import { KeyHint } from './KeyHint.tsx';
 import { UnitSprite } from './UnitSprite.tsx';
 import { useGameStore } from './useGameStore.ts';
@@ -188,10 +189,19 @@ function Overworld({ run, realm, onRun }: { run: RunState; realm: Realm; onRun: 
           </p>
         </div>
         <TeamStrip view={view} />
-        <p className="overworld__stat overworld__gold">{view.gold} G</p>
+        <p className="overworld__stat overworld__gold" title={`${view.gold} gold`}>
+          <GlyphIcon kind="gold" />
+          {view.gold}
+        </p>
         <AutoToggle on={autoPlay} />
-        <button type="button" className="header-button" onClick={() => gameStore.setState({ screen: 'title' })}>
-          Main Menu
+        <button
+          type="button"
+          className="header-button header-button--icon"
+          aria-label="Main menu"
+          title="Main menu"
+          onClick={() => gameStore.setState({ screen: 'title' })}
+        >
+          <GlyphIcon kind="home" />
         </button>
       </header>
 
@@ -455,12 +465,13 @@ function AutoToggle({ on }: { on: boolean }) {
   return (
     <button
       type="button"
-      className="header-button"
+      className="header-button header-button--icon auto-play-button"
       aria-pressed={on}
+      aria-label="Auto play"
       title="Let the AI pick the road"
       onClick={() => gameStore.setState({ autoPlay: !on })}
     >
-      Auto
+      <GlyphIcon kind="auto" />
     </button>
   );
 }

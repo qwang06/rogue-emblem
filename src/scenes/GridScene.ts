@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { SPRITE_URLS } from '../assets/sprites.ts';
 import terrainSheetUrl from '../assets/overworld.png';
 import { gameCommands, type Command, type MenuField } from '../bridge/commands.ts';
-import { changeAutoSpeed } from '../game/autoSpeed.ts';
+import { changeAutoSpeed, cycleAutoSpeed } from '../game/autoSpeed.ts';
 import { getActiveContent } from '../data/customContent.ts';
 import {
   BATTLE_STATE_DEFAULTS,
@@ -1919,6 +1919,11 @@ export class GridScene extends Phaser.Scene {
     this.applyAutoSpeed();
   }
 
+  cycleAutoSpeed() {
+    gameStore.setState((state) => ({ autoSpeed: cycleAutoSpeed(state.autoSpeed) }));
+    this.applyAutoSpeed();
+  }
+
   // The speed setting (the header's − and +) plays every animation, banner
   // and pause faster, whether Auto is on or the player is playing.
   applyAutoSpeed() {
@@ -3239,6 +3244,7 @@ export class GridScene extends Phaser.Scene {
     if (queue.some((command) => command.type === 'toggle-auto-play')) this.toggleAutoPlay();
     for (const command of queue) {
       if (command.type === 'change-auto-speed') this.changeAutoSpeed(command.direction);
+      if (command.type === 'cycle-auto-speed') this.cycleAutoSpeed();
     }
     if (this.inputLocked) return result;
 

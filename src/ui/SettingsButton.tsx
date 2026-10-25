@@ -1,6 +1,7 @@
 import { gameStore } from '../bridge/gameStore.ts';
 import { FEATURE_FLAGS } from '../featureFlags.ts';
 import { changeVolume, toggleMute, VOLUME_STEP, type AudioSettings, type VolumeChannel } from '../audio/settings.ts';
+import { GlyphIcon } from './GlyphIcon.tsx';
 import { HeaderPopover } from './HeaderPopover.tsx';
 import { useGameStore } from './useGameStore.ts';
 
@@ -8,7 +9,7 @@ type AudioUpdate = (settings: AudioSettings) => AudioSettings;
 
 const setAudio = (update: AudioUpdate) => gameStore.setState((state) => ({ audio: update(state.audio) }));
 
-// Header button that opens the settings panel: sound on or off, and the
+// Header button (a gear) that opens the settings panel: sound on or off, and the
 // sound effect and music volumes (music only with its feature flag on). They live in the store, where
 // src/audio/index.ts picks them up (and saves them), so changing them
 // doesn't touch the game.
@@ -16,7 +17,12 @@ export function SettingsButton() {
   const audio = useGameStore((state) => state.audio);
 
   return (
-    <HeaderPopover button="Settings" title="Settings">
+    <HeaderPopover
+      button={<GlyphIcon kind="settings" />}
+      label="Settings"
+      title="Settings"
+      className="header-button--icon"
+    >
       <div className="settings__row">
         <span className="settings__label">Sound</span>
         <button

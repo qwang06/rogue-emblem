@@ -68,12 +68,25 @@ export function describeObjective(objective: Objective): ObjectiveText {
   }
 }
 
-// The header's short readout of the objective on turn `turn`: its kind and
-// the turn being played out of the turns it has, e.g. "Seize 3/40" (out of
-// TURN_LIMIT) or "Survive 2/4" (out of the turns to survive).
-export function getObjectiveStatus(objective: Objective, turn: number): string {
+// The header's short readout of the objective on turn `turn`: its kind (in
+// a word, for the icon's label) and the turn being played out of the turns
+// it has, e.g. Seize 3/40 (out of TURN_LIMIT) or Survive 2/4 (out of the
+// turns to survive).
+export interface ObjectiveStatus {
+  kind: ObjectiveKind;
+  name: string;
+  turn: number;
+  limit: number;
+}
+
+export function getObjectiveStatus(objective: Objective, turn: number): ObjectiveStatus {
   const limit = objective.kind === 'survive' ? objective.turns : TURN_LIMIT;
-  return `${OBJECTIVE_NAMES[objective.kind]} ${Math.min(turn, limit)}/${limit}`;
+  return Object.freeze({
+    kind: objective.kind,
+    name: OBJECTIVE_NAMES[objective.kind],
+    turn: Math.min(turn, limit),
+    limit,
+  });
 }
 
 const OBJECTIVE_NAMES: Record<ObjectiveKind, string> = {

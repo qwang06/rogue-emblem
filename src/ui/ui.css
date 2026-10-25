@@ -262,11 +262,25 @@ a.header-button {
   outline-offset: 2px;
 }
 
-/* Icon-only header buttons (Controls): square-ish, icon centered. */
+/* Icon-only header buttons (Auto, Danger, Controls, Settings, Main Menu):
+   square-ish, icon centered; the icon's 8x8 glyph shows at 2x. */
 .header-button--icon {
   display: flex;
   align-items: center;
+  justify-content: center;
+  min-height: 1.75rem;
   padding: 3px 7px;
+}
+
+/* Kept for screen readers, never shown (e.g. an objective's name beside
+   its icon). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* Header popovers (Settings, Controls) drop down from their button, over the page. */
@@ -368,8 +382,10 @@ a.header-button {
   overflow: hidden;
 }
 
-/* Narrow windows: the header stays one row at its fixed height; the brand
-   drops to just the gem on phones to leave room for the status. */
+/* Narrow windows: the header stays one row at its fixed height. On phones
+   the brand, the phase's "Phase", the deployment hint, the speed's − and
+   + and the keyboard reference (no keys on a phone) make way for the
+   status and the icon buttons. */
 @media (max-width: 48rem) {
   .page {
     padding: 4px 6px 6px;
@@ -386,22 +402,30 @@ a.header-button {
 
 @media (max-width: 36rem) {
   .page-header {
-    gap: 4px;
+    gap: 2px;
     font-size: 0.6875rem;
   }
 
-  .header-button {
-    padding: 3px 5px;
+  .header-button,
+  .header-button--icon {
+    padding: 3px 4px;
   }
 
-  .page-header__name,
-  .turn-indicator__word {
+  .page-header__brand,
+  .turn-indicator__word,
+  .auto-speed-button,
+  .deployment-banner__hint,
+  .header-popover:has(.controls-button) {
     display: none;
   }
 
   .turn-indicator {
     gap: 2px;
     letter-spacing: 0;
+  }
+
+  .page-header .turn-indicator > .frame {
+    padding: 0 2px;
   }
 }
 
@@ -1075,36 +1099,65 @@ kbd {
   image-rendering: pixelated;
 }
 
-/* StatIcon's 8x8 bitmaps at two screen pixels per art pixel. */
-.stat-icon {
+/* PixelIcon's bitmaps (StatIcon, GlyphIcon) at two screen pixels per art
+   pixel, sitting on the text's middle when inline. */
+.pixel-icon {
   flex: none;
   width: 16px;
   height: 16px;
+  vertical-align: middle;
 }
 
-/* The icons' colors: blade, light, dark, gold, red and white. */
-.stat-icon__b {
-  fill: var(--blue);
+/* The icons' colors (see PixelIcon and GlyphIcon): text, ink, dim, blade,
+   light, gold, pale gold, steel, white, red, blue, green and EXP blue. */
+.pixel-icon__c {
+  fill: currentColor;
 }
 
-.stat-icon__l {
+.pixel-icon__o,
+.pixel-icon__l {
   fill: var(--fg-bright);
 }
 
-.stat-icon__d {
+.pixel-icon__d {
   fill: var(--fg-dim);
 }
 
-.stat-icon__g {
-  fill: var(--yellow);
+.pixel-icon__b {
+  fill: var(--blue);
 }
 
-.stat-icon__r {
+.pixel-icon__g {
+  fill: #c88a1c;
+}
+
+.pixel-icon__y {
+  fill: #f0c850;
+}
+
+.pixel-icon__s {
+  fill: #a8b0c0;
+}
+
+.pixel-icon__w {
+  fill: #fff;
+}
+
+.pixel-icon__r {
   fill: var(--red);
 }
 
-.stat-icon__w {
-  fill: #fff;
+.pixel-icon__n {
+  fill: var(--green);
+}
+
+.pixel-icon__x {
+  fill: var(--exp);
+}
+
+/* StatIcon's gold stays the theme's yellow, as the forecast always drew it. */
+.stat-icon .pixel-icon__g {
+  fill: var(--yellow);
 }
 
 /* ---- Experience and level ups ----------------------------------------- */
@@ -1662,8 +1715,13 @@ kbd {
   letter-spacing: 0.04em;
 }
 
-/* The survive count ticks up each turn without changing the banner's width. */
+/* The turn and objective banners lead with their glyph; the counts tick up
+   each turn without changing the banners' widths. */
+.turn-indicator__turn,
 .turn-indicator__objective {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   font-variant-numeric: tabular-nums;
 }
 
