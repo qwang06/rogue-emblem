@@ -11,6 +11,7 @@ import type { Point } from '../../grid.ts';
 import { createSeededRng, randomItem } from '../../rng.ts';
 import { TILE_SIZE } from '../../tileset.ts';
 import type { Realm } from './realm.ts';
+import { getRoadNetwork } from './realmRoutes.ts';
 import type { RealmTerrain } from './realmTerrain.ts';
 
 // The map symbols, each a 32x32 image in src/assets/realm/ink/ named by id.
@@ -229,25 +230,7 @@ export function pointAlong(line: readonly Point[], t: number): Point {
 // to the other, never because two roads run side by side.
 export function getRoadChains(realm: Realm): Point[][] {
   const key = (p: Point) => `${p.x},${p.y}`;
-  const links = new Map<string, Set<string>>();
-  const points = new Map<string, Point>();
-  const link = (a: Point, b: Point) => {
-    for (const [from, to] of [
-      [a, b],
-      [b, a],
-    ]) {
-      points.set(key(from), { x: from.x, y: from.y });
-      if (!links.has(key(from))) links.set(key(from), new Set());
-      links.get(key(from))!.add(key(to));
-    }
-  };
-  for (const road of realm.roads) {
-    const from = realm.sites.find((site) => site.id === road.from);
-    const to = realm.sites.find((site) => site.id === road.to);
-    if (!from || !to) continue;
-    const tiles = [from, ...road.path, to];
-    for (let i = 0; i < tiles.length - 1; i++) if (key(tiles[i]) !== key(tiles[i + 1])) link(tiles[i], tiles[i + 1]);
-  }
+  const { links, points } = getRoadNetwork(realm);
   const sites = new Set(realm.sites.map(key));
   const isNode = (k: string) => sites.has(k) || links.get(k)!.size !== 2;
   const walked = new Set<string>();

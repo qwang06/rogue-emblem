@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../game/battleSetup.ts';
 import { Soldier } from '../game/Soldier.ts';
-import { generateRealm, getNextSites } from '../game/warband/realm/realm.ts';
+import { generateRealm, getNextSites, getSite } from '../game/warband/realm/realm.ts';
+import { getRealmInk, getRouteLine } from '../game/warband/realm/realmInk.ts';
 import { createRun } from '../game/warband/run.ts';
 import { startRoute, travelTo } from '../game/warband/travel.ts';
 import {
@@ -48,6 +49,28 @@ describe('toOverworldView', () => {
     expect(view.travelled).toHaveLength(1);
     expect(view.choices).toEqual([]);
     expect(view.depth).toBe(1);
+  });
+
+  it('offers a connected branch after a battle even when it belongs to another original road', () => {
+    const realm = generateRealm(10, SETTINGS);
+    // These roads share a junction at (28, 9), but their original links
+    // omit the turn from 6-1 to 7-1.
+    const from = getSite(realm, '6-1')!;
+    const to = getSite(realm, '7-1')!;
+    expect(realm.roads.some((road) => road.from === from.id && road.to === to.id)).toBe(false);
+    const run = { ...home, stage: from.depth + 1, route: { visited: [from.id], at: from } };
+    const view = toOverworldView(run, realm, SETTINGS);
+    const choice = view.choices.find((site) => site.siteId === to.id);
+    expect(choice).toBeDefined();
+    expect(view.sites.find((site) => site.id === to.id)?.state).toBe('choice');
+    const line = getRouteLine(getRealmInk(realm), choice!.road);
+    const centers = choice!.road.map((point) => ({ x: point.x * 32 + 16, y: point.y * 32 + 16 }));
+    expect(line[0]).toEqual(centers[0]);
+    expect(line.at(-1)).toEqual(centers.at(-1));
+    expect(line).not.toEqual(centers); // Uses the drawn stretches, not the fallback through tile centers.
+    const arrived = travelTo(run, realm, to.id);
+    expect(arrived.route?.visited).toEqual([from.id, to.id]);
+    expect(toOverworldView(arrived, realm, SETTINGS).travelled).toEqual([choice!.road]);
   });
 });
 
