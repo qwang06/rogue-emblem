@@ -8,6 +8,7 @@ import {
   CURSOR_ANIMATION,
   ITEM_SPRITES,
   getItemSprite,
+  RANK_BADGES,
   STRUCTURE_SPRITES,
   TERRAIN_SHEET,
   TILE_SIZE,
@@ -104,6 +105,24 @@ describe('shadows', () => {
       expect(Number.isInteger(centerX - width / 2)).toBe(true);
       expect(Number.isInteger(centerY - height / 2)).toBe(true);
     }
+  });
+});
+
+describe('RANK_BADGES', () => {
+  it('are rectangles of named colors that fit inside one tile', () => {
+    for (const { x, y, rows, palette } of Object.values(RANK_BADGES)) {
+      const width = rows[0].length;
+      expect(rows.every((row) => row.length === width)).toBe(true);
+      expect(x).toBeGreaterThanOrEqual(0);
+      expect(y).toBeGreaterThanOrEqual(0);
+      expect(x + width).toBeLessThanOrEqual(TILE_SIZE);
+      expect(y + rows.length).toBeLessThanOrEqual(TILE_SIZE);
+      for (const char of rows.join('')) expect(char === '.' || char in palette).toBe(true);
+    }
+  });
+
+  it('look different for a boss and an elite', () => {
+    expect(RANK_BADGES.boss.rows).not.toEqual(RANK_BADGES.elite.rows);
   });
 });
 

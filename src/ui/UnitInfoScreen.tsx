@@ -4,6 +4,7 @@ import { getExperienceForLevel } from '../game/experience.ts';
 import { getUnitSprite } from '../game/tileset.ts';
 import { GlyphIcon } from './GlyphIcon.tsx';
 import { ItemIcon } from './ItemIcon.tsx';
+import { getRankLabel, RankBadge } from './RankBadge.tsx';
 import { StatIcon, type StatIconKind } from './StatIcon.tsx';
 import { StatLabel } from './StatLabel.tsx';
 import { UnitSprite } from './UnitSprite.tsx';
@@ -47,13 +48,17 @@ function Identity({ unit }: { unit: UnitDetailView }) {
   return (
     <div className="unit-info__identity">
       <div className="unit-info__portrait">
-        <UnitSprite sprite={getUnitSprite(unit.unitClass)} scale={2} animated />
+        <span className="unit-info__sprite">
+          <UnitSprite sprite={getUnitSprite(unit.unitClass)} scale={2} animated />
+          {unit.rank && <RankBadge rank={unit.rank} scale={2} className="rank-badge--portrait" />}
+        </span>
       </div>
       <h2 className="unit-info__name" id="unit-info-name">
         {unit.name}
       </h2>
       <p className="unit-info__class">
         {unit.classLabel ?? 'No class'}, level {unit.level}
+        {unit.rank && ` · ${getRankLabel(unit.rank)}`}
       </p>
       <Meter label="HP" value={unit.health} max={unit.maxHealth} kind="hp" />
       <Meter label="MP" value={unit.mana} max={unit.maxMana} kind="mp" />

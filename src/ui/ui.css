@@ -573,6 +573,7 @@ a.header-button {
 /* A square frame the size of two map tiles; the map sprite stands in,
    enlarged with crisp pixels, until units have portraits. */
 .unit-panel__portrait {
+  position: relative;
   flex: none;
   display: grid;
   place-items: center;
@@ -1044,6 +1045,12 @@ kbd {
     transparent calc(50% - 2rem) calc(50% + 2rem),
     var(--right) calc(50% + 2rem)
   );
+}
+
+/* A boss's or an elite's badge before its name, on the text's middle. */
+.combat-forecast__name .rank-badge {
+  margin-right: 3px;
+  vertical-align: -1px;
 }
 
 .combat-forecast__name--player {
@@ -4626,4 +4633,17 @@ textarea.draft-input {
    as the cursor moves. */
 .mentor-screen__detail {
   min-height: 3.9em;
+}
+
+/* A boss's or an elite's map badge on its portrait (the map sprite at 2x),
+   in the same top-right spot as on its map tile. Absolute, so it takes no
+   space. */
+.rank-badge {
+  flex: none;
+}
+
+.rank-badge--portrait {
+  position: absolute;
+  top: 0;
+  right: 0;
 }

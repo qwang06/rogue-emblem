@@ -81,6 +81,7 @@ export function placeObjective(spec: ObjectiveSpec, level: ObjectiveLevel): Obje
     case 'boss': {
       const named = level.bossUnitId ? level.units.get(level.bossUnitId) : undefined;
       if (named && level.bossUnitId && findUnit(level.grid, level.bossUnitId)) {
+        named.rank = 'boss';
         return Object.freeze({ kind: 'boss', unitId: level.bossUnitId, name: named.name });
       }
       let best: { unitId: string; distance: number } | null = null;
@@ -114,11 +115,12 @@ function pickSeizeTile(level: ObjectiveLevel, fromZone: (p: Point) => number): P
 }
 
 // Turns `unit` into a boss: named "<Class> Chief", BOSS_LEVELS levels up
-// (BOSS_LEVEL_GAINS each) and holding its ground (it strikes whoever comes
-// in reach but never moves).
+// (BOSS_LEVEL_GAINS each), holding its ground (it strikes whoever comes in
+// reach but never moves) and ranked 'boss'.
 export function makeBoss(unit: Unit): void {
   const label = UNIT_CLASSES.find((c) => c.id === unit.unitClass)?.label ?? unit.unitClass ?? 'Enemy';
   unit.name = `${label} Chief`;
   for (let i = 0; i < BOSS_LEVELS; i++) unit.levelUp(BOSS_LEVEL_GAINS);
   unit.holdsPosition = true;
+  unit.rank = 'boss';
 }

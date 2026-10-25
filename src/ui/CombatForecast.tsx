@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { ForecastSideView } from '../bridge/views.ts';
 import { ItemIcon } from './ItemIcon.tsx';
+import { RankBadge } from './RankBadge.tsx';
 import { StatIcon, type StatIconKind } from './StatIcon.tsx';
 import { usePanelBesideAnchor } from './useMenuBesideUnit.ts';
 import { useGameStore } from './useGameStore.ts';
@@ -27,8 +28,8 @@ export function CombatForecast() {
     >
       <div className="combat-forecast__head">
         <div className="combat-forecast__names">
-          <span className={`combat-forecast__name combat-forecast__name--${attacker.team}`}>{attacker.name}</span>
-          <span className={`combat-forecast__name combat-forecast__name--${defender.team}`}>{defender.name}</span>
+          <Name side={attacker} />
+          <Name side={defender} />
         </div>
         <div className="combat-forecast__weapons">
           <Weapon side={attacker} />
@@ -46,6 +47,16 @@ export function CombatForecast() {
         <Row icon="crit" label="Crt" attacker={attacker.crit} defender={defender.crit} />
       </div>
     </section>
+  );
+}
+
+// A side's name, led by its badge when it's a boss or an elite.
+function Name({ side }: { side: ForecastSideView }) {
+  return (
+    <span className={`combat-forecast__name combat-forecast__name--${side.team}`}>
+      {side.rank && <RankBadge rank={side.rank} />}
+      {side.name}
+    </span>
   );
 }
 

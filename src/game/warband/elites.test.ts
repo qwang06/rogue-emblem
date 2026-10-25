@@ -31,6 +31,7 @@ describe('applyEliteAffixes', () => {
     applyEliteAffixes(units, [armored, swift]);
     expect([...units.values()].map((u) => u.name)).toEqual(['Armored Soldier', 'Swift Soldier', 'Armored Soldier']);
     expect(units.get('enemy-1')!.eliteAffixes).toEqual(['armored']);
+    expect([...units.values()].map((u) => u.rank)).toEqual(['elite', 'elite', 'elite']);
     const context = { attacking: false, wounded: false, vsMonster: false };
     expect(getCombatBonus(units.get('enemy-1')!.modifiers, context).guard).toBe(3);
     expect(units.get('enemy-2')!.movement).toBe(plainMove + 1);
@@ -39,7 +40,10 @@ describe('applyEliteAffixes', () => {
   it('gives the boss every affix and keeps its name', () => {
     const units = enemies(2);
     units.get('enemy-2')!.name = 'Orc Warlord';
+    units.get('enemy-2')!.rank = 'boss';
     applyEliteAffixes(units, [armored, swift], 'enemy-2');
+    expect(units.get('enemy-2')!.rank).toBe('boss');
+    expect(units.get('enemy-1')!.rank).toBe('elite');
     expect(units.get('enemy-2')!.eliteAffixes).toEqual(['armored', 'swift']);
     expect(units.get('enemy-2')!.name).toBe('Orc Warlord');
   });

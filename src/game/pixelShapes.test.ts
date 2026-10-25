@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getEllipseSpans, getOutlineMask } from './pixelShapes.ts';
+import { getEllipseSpans, getOutlineMask, getPixelArtSpans } from './pixelShapes.ts';
 
 describe('getEllipseSpans', () => {
   it('has one span per row, top to bottom', () => {
@@ -84,5 +84,22 @@ describe('getOutlineMask', () => {
     expect([...getOutlineMask(blank.alpha, 4, 2, 4, 1)].every((v) => v === 0)).toBe(true);
     const dot = image(['.#..']);
     expect([...getOutlineMask(dot.alpha, 4, 1, 4, 0)].every((v) => v === 0)).toBe(true);
+  });
+});
+
+describe('getPixelArtSpans', () => {
+  it('runs each row into one span per stretch of a color, skipping unnamed characters', () => {
+    const art = { rows: ['.AAB', 'B..A'], palette: { A: 0xff0000, B: 0x00ff00 } };
+    expect(getPixelArtSpans(art)).toEqual([
+      { y: 0, x: 1, width: 2, color: 0xff0000 },
+      { y: 0, x: 3, width: 1, color: 0x00ff00 },
+      { y: 1, x: 0, width: 1, color: 0x00ff00 },
+      { y: 1, x: 3, width: 1, color: 0xff0000 },
+    ]);
+  });
+
+  it('gives nothing for blank art', () => {
+    expect(getPixelArtSpans({ rows: ['...', ''], palette: { A: 0 } })).toEqual([]);
+    expect(getPixelArtSpans({ rows: [], palette: {} })).toEqual([]);
   });
 });

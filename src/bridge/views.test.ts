@@ -77,6 +77,7 @@ describe('toUnitView', () => {
       weapon: null,
       items: [],
       loot: null,
+      rank: null,
     });
   });
 
@@ -93,6 +94,14 @@ describe('toUnitView', () => {
     const unit = makeUnit();
     unit.loot = WOODEN_SHIELD;
     expect(toUnitView(unit)!.loot).toBe('Wooden Shield');
+  });
+
+  it('carries whether the unit is a boss or an elite', () => {
+    const unit = makeUnit();
+    unit.rank = 'boss';
+    expect(toUnitView(unit)!.rank).toBe('boss');
+    unit.rank = 'elite';
+    expect(toUnitView(unit)!.rank).toBe('elite');
   });
 
   it("shows the equipped weapon's range and name", () => {
@@ -510,12 +519,21 @@ describe('toCombatForecastView', () => {
       attacker: {
         name: 'Soldier',
         team: 'player',
+        rank: null,
         weapon: 'Iron Spear',
         weaponId: 'iron-spear',
         ...forecast.attacker,
         healthAfter: 10,
       },
-      defender: { name: 'Bandit', team: 'enemy', weapon: null, weaponId: null, ...forecast.defender, healthAfter: 0 },
+      defender: {
+        name: 'Bandit',
+        team: 'enemy',
+        rank: null,
+        weapon: null,
+        weaponId: null,
+        ...forecast.defender,
+        healthAfter: 0,
+      },
       anchor,
     });
     expect(Object.isFrozen(view)).toBe(true);
@@ -543,6 +561,16 @@ describe('toCombatForecastView', () => {
       healthAfter: 10,
     });
     expect(view.defender.healthAfter).toBe(1);
+    expect(view.attacker.rank).toBeNull();
+  });
+
+  it("carries a boss's or an elite's rank", () => {
+    const defender = new Unit({ name: 'Grukk', health: 10, strength: 4, defense: 2, movement: 5, team: 'enemy' });
+    defender.rank = 'boss';
+    const attacker = { name: 'Soldier', team: 'player' as const, rank: 'elite' as const, weapon: null };
+    const view = toCombatForecastView({ forecast, attacker, defender, anchor });
+    expect(view.defender.rank).toBe('boss');
+    expect(view.attacker.rank).toBe('elite');
   });
 });
 

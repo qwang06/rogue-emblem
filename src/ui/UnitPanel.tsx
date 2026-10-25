@@ -2,6 +2,7 @@ import { getUnitSprite } from '../game/tileset.ts';
 import type { Team } from '../game/turns.ts';
 import { ItemIcon } from './ItemIcon.tsx';
 import { pickCornerAwayFromTile } from './menuPlacement.ts';
+import { RankBadge } from './RankBadge.tsx';
 import { StatLabel } from './StatLabel.tsx';
 import { UnitSprite } from './UnitSprite.tsx';
 import { useGameStore } from './useGameStore.ts';
@@ -24,7 +25,8 @@ const TEAM_NOUNS: Readonly<Record<Team, string>> = { player: 'Ally', enemy: 'Ene
 // Compact card for the unit under the cursor, docked in a top corner of the
 // map, laid out like a GBA status window: a framed portrait (the map
 // sprite, enlarged, until units have portraits) beside NAME / CLASS / LV
-// lines, then HP, MP and (for player units and guests below the level
+// lines (a boss or an elite wearing its map badge on the portrait's
+// corner), then HP, MP and (for player units and guests below the level
 // cap) EXP bars, a plain grid of stats (RNG is its equipped weapon's), the
 // bars and stats each led by its icon (StatLabel), and its items (up to
 // six, see MAX_INVENTORY_SLOTS) one per row with their icons — potions
@@ -54,6 +56,7 @@ export function UnitPanel() {
       <div className="unit-panel__header">
         <span className="unit-panel__portrait">
           <UnitSprite sprite={getUnitSprite(unit.unitClass)} scale={2} />
+          {unit.rank && <RankBadge rank={unit.rank} scale={2} className="rank-badge--portrait" />}
         </span>
         <dl className="unit-panel__lines">
           <div className="unit-panel__line">
