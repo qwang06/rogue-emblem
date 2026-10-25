@@ -433,3 +433,36 @@ describe('relics in the run rules', () => {
     expect(getRewardOffers(won(run))).toHaveLength(4);
   });
 });
+
+describe('wayside events', () => {
+  const atEvent = (id: string): RunState => ({
+    ...startRoute(newRun(3)),
+    route: {
+      visited: ['0-0', '3-0'],
+      at: { id: '3-0', name: 'Ash Wayside', kind: 'event', depth: 3, region: 2, levelOffset: 0 },
+    },
+    pendingEvent: { id, depth: 3 },
+  });
+
+  it('opens on the event, takes a choice, reports it and goes back to travelling', () => {
+    const hurt = atEvent('healing-spring');
+    const session = resumeRunSession({ ...hurt, roster: hurt.roster.map((u) => ({ ...u, health: 1 })) });
+    expect(session.phase).toBe('event');
+    expect(getLegalRunCommands(session)).toEqual([
+      { type: 'pick-event', index: 0 },
+      { type: 'pick-event', index: 1 },
+    ]);
+    const result = applyRunCommand(session, { type: 'pick-event', index: 1 });
+    expect(result.session.phase).toBe('travel');
+    expect(result.session.run.pendingEvent).toBeUndefined();
+    expect(result.events[0]).toMatchObject({ type: 'event-outcome' });
+  });
+
+  it('refuses anything else at an event, a blocked choice, and an event choice elsewhere', () => {
+    const session = resumeRunSession({ ...atEvent('gambler'), gold: 0 });
+    expect(() => applyRunCommand(session, { type: 'march' })).toThrow(RunCommandError);
+    expect(() => applyRunCommand(session, { type: 'pick-event', index: 0 })).toThrow(/gold/);
+    expect(getLegalRunCommands(session)).toEqual([{ type: 'pick-event', index: 1 }]);
+    expect(() => applyRunCommand(campWith(newRun()), { type: 'pick-event', index: 0 })).toThrow(RunCommandError);
+  });
+});

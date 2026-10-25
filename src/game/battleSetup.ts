@@ -15,6 +15,7 @@ import { getMoveCost } from './movement.ts';
 import { createStageLevel, pickStageArchetype, withArchetype } from './warband/stageLevel.ts';
 import { pickStageObjective, placeObjective } from './warband/stageObjective.ts';
 import { getStageLootCount } from './loot.ts';
+import { applyEliteAffixes, rollEliteAffixes } from './warband/elites.ts';
 import { getRunSite, getSiteRegion } from './warband/travel.ts';
 import type { RegionConfig } from './warband/regions.ts';
 import { createDemoLevel, type DemoLevel } from './demoLevel.ts';
@@ -122,6 +123,10 @@ export function createBattleLevel(
         }
       }
       const objective = placeObjective(spec, level);
+      if (setup.run && getRunSite(setup.run)?.kind === 'elite') {
+        const bossUnitId = objective.kind === 'boss' ? objective.unitId : undefined;
+        applyEliteAffixes(level.units, rollEliteAffixes(setup.run.seed, setup.stage), bossUnitId);
+      }
       return { ...level, objective };
     }
   }

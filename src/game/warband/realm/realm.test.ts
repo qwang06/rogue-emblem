@@ -147,6 +147,16 @@ describe('generateRealm', () => {
   });
 });
 
+describe('elite lairs and waysides', () => {
+  it('turn up across realms, never before depth 3', () => {
+    const kinds = REALMS.flatMap((realm) => realm.sites);
+    expect(kinds.some((site) => site.kind === 'elite')).toBe(true);
+    expect(kinds.some((site) => site.kind === 'event')).toBe(true);
+    for (const site of kinds)
+      if (site.kind === 'elite' || site.kind === 'event') expect(site.depth).toBeGreaterThanOrEqual(3);
+  });
+});
+
 describe('getNextSites and getRoad', () => {
   const realm = REALMS[0];
 
@@ -225,12 +235,14 @@ describe('pickKinds', () => {
     }
   });
 
-  it('has at most one town and one shrine per depth, a town every few depths and one before the Hold', () => {
+  it('has at most one town, shrine, elite lair and wayside per depth, a town every few depths and one before the Hold', () => {
     for (const kinds of all) {
       let lastTown = 1;
       kinds.forEach((column, d) => {
         expect(column.filter((kind) => kind === 'town').length).toBeLessThanOrEqual(1);
-        expect(column.filter((kind) => kind === 'shrine').length).toBeLessThanOrEqual(1);
+        for (const single of ['shrine', 'elite', 'event'] as const) {
+          expect(column.filter((kind) => kind === single).length).toBeLessThanOrEqual(1);
+        }
         if (column.includes('town')) lastTown = d;
         if (d > 1 && d < kinds.length - 1) expect(d - lastTown).toBeLessThan(TOWN_EVERY);
       });

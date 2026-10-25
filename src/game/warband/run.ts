@@ -73,6 +73,12 @@ export interface PendingBoon {
   level: number;
 }
 
+// A wayside event still owed a choice (see events.ts).
+export interface PendingEvent {
+  id: string;
+  depth: number;
+}
+
 export interface RunState {
   // The run's seed: each stage's map seed comes from it (getStageSeed).
   seed: number;
@@ -100,6 +106,11 @@ export interface RunState {
   // Where a run that travels a realm has been and is (see travel.ts);
   // absent on a run that fights stage after stage.
   route?: RunRoute;
+  // The wayside event the run stands at and still owes a choice (see
+  // events.ts): its id and the site's depth, which seeds its dice.
+  pendingEvent?: PendingEvent;
+  // The wayside events the run has met, by id, so it meets new ones.
+  seenEvents?: readonly string[];
   // Level-up boon picks still owed, oldest first (see levelUpPicks.ts), so
   // a run saved before them reopens on them; absent when none are.
   pendingBoons?: readonly PendingBoon[];
@@ -344,6 +355,8 @@ export function parseRun(
     pendingRecruitment,
     pendingGuest,
     route,
+    pendingEvent,
+    seenEvents,
     pendingBoons,
     chronicle,
   } = data;
@@ -370,6 +383,8 @@ export function parseRun(
     (pendingGuest !== undefined && !isUnitSnapshot(pendingGuest, classIds, isItems)) ||
     (pendingGuest === undefined) !== (pendingRecruitment === undefined) ||
     (route !== undefined && !isRunRoute(route)) ||
+    (pendingEvent !== undefined && !isPendingEvent(pendingEvent)) ||
+    (seenEvents !== undefined && !(Array.isArray(seenEvents) && seenEvents.every((id) => typeof id === 'string'))) ||
     (pendingBoons !== undefined && !isPendingBoons(pendingBoons)) ||
     (chronicle !== undefined && parseChronicle(chronicle) === null)
   ) {
@@ -391,10 +406,12 @@ export function parseRun(
     ...(pendingBoons !== undefined && { pendingBoons }),
     chronicle: chronicle === undefined ? EMPTY_CHRONICLE : parseChronicle(chronicle)!,
     ...(route !== undefined && { route }),
+    ...(pendingEvent !== undefined && { pendingEvent }),
+    ...(seenEvents !== undefined && { seenEvents }),
   });
 }
 
-const SITE_KINDS = new Set(['home', 'battle', 'village', 'fort', 'town', 'shrine', 'hold']);
+const SITE_KINDS = new Set(['home', 'battle', 'village', 'fort', 'elite', 'town', 'shrine', 'event', 'hold']);
 
 function isRunRoute(value: unknown): value is RunRoute {
   return (
@@ -417,6 +434,10 @@ function isRunSite(value: unknown): value is RunSite {
     isWholeNumber(value.region) &&
     Number.isInteger(value.levelOffset)
   );
+}
+
+function isPendingEvent(value: unknown): value is PendingEvent {
+  return isRecord(value) && typeof value.id === 'string' && isWholeNumber(value.depth);
 }
 
 function isPendingBoons(value: unknown): value is PendingBoon[] {
@@ -511,6 +532,8 @@ function freezeRun(run: RunState): RunState {
         ...(run.route.at && { at: Object.freeze({ ...run.route.at }) }),
       }),
     }),
+    ...(run.pendingEvent && { pendingEvent: Object.freeze({ ...run.pendingEvent }) }),
+    ...(run.seenEvents && { seenEvents: Object.freeze([...run.seenEvents]) }),
     ...(run.pendingBoons && {
       pendingBoons: Object.freeze(run.pendingBoons.map((pending) => Object.freeze({ ...pending }))),
     }),

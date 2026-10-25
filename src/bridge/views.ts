@@ -29,6 +29,7 @@ import type { MenuAction } from '../game/actionMenu.ts';
 import { getUnitSkills } from '../game/skills.ts';
 import { getStandingCombatBonus } from '../game/modifiers.ts';
 import { findBoon, type BoonKind } from '../game/warband/boons.ts';
+import { findEliteAffix } from '../game/warband/elites.ts';
 import type { BoonOffer } from '../game/warband/levelUpPicks.ts';
 import { findRelic, type Relic } from '../game/warband/relics.ts';
 import type { Unit } from '../game/Unit.ts';
@@ -415,12 +416,16 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
     skills: Object.freeze(
       getUnitSkills(unit).map(({ id, label, manaCost, range }) => Object.freeze({ id, label, manaCost, range })),
     ),
-    passives: Object.freeze(
-      unit.boons
+    passives: Object.freeze([
+      ...unit.boons
         .map(findBoon)
         .filter((boon) => boon?.kind === 'passive')
         .map((boon) => Object.freeze({ id: boon!.id, label: boon!.name, description: boon!.description })),
-    ),
+      ...unit.eliteAffixes
+        .map(findEliteAffix)
+        .filter((affix) => affix !== null)
+        .map((affix) => Object.freeze({ id: affix.id, label: affix.name, description: affix.description })),
+    ]),
   });
 }
 

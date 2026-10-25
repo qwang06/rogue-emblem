@@ -1,6 +1,7 @@
 // Pure modifier rules: the one way bonuses reach the game's formulas. A
 // modifier is plain data ({ kind, ... }) that a relic (warband/relics.ts),
-// a level-up boon (warband/boons.ts) and, later, traits or elite enemies
+// a level-up boon (warband/boons.ts), an elite affix (warband/elites.ts)
+// and, later, traits
 // hand a unit. A unit carries its modifiers for a battle
 // (`Unit.modifiers`), and the rules read them from there:
 // - 'combat' adds to a combat term (hit, avoid, crit, damage dealt, or

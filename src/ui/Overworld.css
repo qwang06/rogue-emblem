@@ -139,7 +139,30 @@
   box-shadow: 0 0 0 var(--px) #2a170a;
 }
 
-.overworld__site--visited.overworld__site--battle::before {
+/* An elite lair's badge is gold on black; a wayside's is a question mark. */
+.overworld__site--elite::before {
+  color: #e8b030;
+  background: #2a170a;
+}
+
+.overworld__site--event::before {
+  content: '?';
+  position: absolute;
+  right: -10%;
+  bottom: -10%;
+  width: 46%;
+  height: 46%;
+  display: grid;
+  place-items: center;
+  font-size: calc(var(--tile) * 0.4);
+  line-height: 1;
+  color: #2a170a;
+  background: #e8b030;
+  box-shadow: 0 0 0 var(--px) #2a170a;
+}
+
+.overworld__site--visited.overworld__site--battle::before,
+.overworld__site--visited.overworld__site--event::before {
   background: #6a5a48;
 }
 
@@ -263,4 +286,108 @@
   .overworld__arrow {
     animation: none;
   }
+}
+
+/* ---- Wayside event -------------------------------------------------- */
+
+/* Covers the map with a dim veil and the event's window in the middle. */
+.overworld-event {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px;
+  background: rgb(20 12 6 / 60%);
+}
+
+.overworld-event__panel {
+  box-sizing: border-box;
+  width: min(34rem, 100%);
+  font-size: 0.8rem;
+  color: var(--fg);
+}
+
+.overworld-event__title {
+  margin: 0 0 4px;
+  font-size: 1.1rem;
+  font-weight: normal;
+  color: var(--fg-bright);
+}
+
+.overworld-event__text {
+  margin: 0 0 8px;
+}
+
+.overworld-event__choices {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A choice: its label over what it does. Selecting it only changes its
+   background and the pointer beside it. */
+.overworld-event__choice {
+  position: relative;
+  display: grid;
+  width: 100%;
+  padding: 4px 8px;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.overworld-event__choice--selected {
+  background: var(--selection);
+}
+
+.overworld-event__choice--selected::before {
+  content: '';
+  position: absolute;
+  left: calc(-1 * var(--pointer-w) - 2px);
+  top: 50%;
+  width: var(--pointer-w);
+  height: var(--pointer-h);
+  translate: 0 -50%;
+  background: var(--pointer) center / 100% 100% no-repeat;
+  image-rendering: pixelated;
+}
+
+.overworld-event__choice:disabled {
+  cursor: default;
+  color: var(--fg-dim);
+}
+
+.overworld-event__label {
+  color: inherit;
+  font-size: 0.9rem;
+}
+
+.overworld-event__choice:not(:disabled) .overworld-event__label {
+  color: var(--fg-bright);
+}
+
+.overworld-event__detail {
+  color: var(--fg-dim);
+}
+
+/* Two lines kept for what happened, so taking a choice doesn't grow the
+   window. */
+.overworld-event__outcome {
+  min-height: 2.6em;
+  margin: 8px 0 4px;
+  color: var(--fg-bright);
+}
+
+.overworld-event__continue {
+  display: block;
+  margin-left: auto;
 }

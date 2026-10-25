@@ -20,6 +20,7 @@ import {
   findRelic,
   FOUR_LEAF_CLOVER,
   getUnownedRelics,
+  rollRelics,
   hasRelic,
 } from './relics.ts';
 import {
@@ -127,14 +128,27 @@ export function getRerollCost(rerolls: number): number {
 
 // The offers after `stage`, rerolled `rerolls` times: rollRewards seeded
 // from getRewardSeed and the reroll count, so a stage's offers, and each
-// reroll of them, are always the same.
+// reroll of them, are always the same. An elite lair's are relics the run
+// doesn't hold (the usual kinds once it holds every relic).
 export function rollStageRewards(run: RunState, stage: number, rerolls: number = 0): readonly Reward[] {
+  const relics = isEliteClear(run, stage)
+    ? rollRelics(createSeededRng((getRewardSeed(run.seed, stage) + rerolls) >>> 0), run.relics, getRewardChoices(run))
+    : [];
+  if (relics.length > 0)
+    return Object.freeze(relics.map((relic) => Object.freeze({ kind: 'relic' as const, relicId: relic.id })));
   return rollRewards(
     run,
     stage,
     createSeededRng((getRewardSeed(run.seed, stage) + rerolls) >>> 0),
     getRewardChoices(run),
   );
+}
+
+// Whether the offers after `stage` are an elite lair's (realm/realm.ts):
+// the run stands at a lair of that depth, whose pick is all relics.
+export function isEliteClear(run: Pick<RunState, 'route'>, stage: number): boolean {
+  const at = run.route?.at;
+  return at?.kind === 'elite' && at.depth === stage;
 }
 
 // Rerolling the offers after `stage` for the `rerolls + 1`th time: the run
@@ -231,7 +245,8 @@ function createReward(kind: RewardKind, run: RunState, stage: number, rng: Rng, 
   }
 }
 
-function eligibleWeapons(run: RunState, classes: readonly UnitClass[]): Weapon[] {
+// The Arms Cache weapons someone in the run's roster can wield.
+export function eligibleWeapons(run: RunState, classes: readonly UnitClass[] = UNIT_CLASSES): Weapon[] {
   return ARMS_CACHE_WEAPONS.filter((weapon) =>
     run.roster.some((snapshot) => canWield(restoreUnit(snapshot, classes).weaponTypes, weapon)),
   );

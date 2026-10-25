@@ -522,3 +522,17 @@ describe('Phoenix Feather', () => {
     expect(applyBattleResult(run, { units }).fallen.map((unit) => unit.id)).toEqual(['alden']);
   });
 });
+
+describe('a saved wayside event', () => {
+  const run = createRun(1, new Map([['u', new Soldier({ team: 'player' })]]));
+
+  it('round-trips the event owed and the ones seen, and refuses broken ones', () => {
+    const owing = { ...run, pendingEvent: { id: 'gambler', depth: 4 }, seenEvents: ['old-shrine'] };
+    const saved = parseRun(serializeRun(owing));
+    expect(saved?.pendingEvent).toEqual(owing.pendingEvent);
+    expect(saved?.seenEvents).toEqual(['old-shrine']);
+    const broken = (fields: object) => parseRun(JSON.stringify({ ...JSON.parse(serializeRun(run)), ...fields }));
+    expect(broken({ pendingEvent: { id: 3, depth: 1 } })).toBeNull();
+    expect(broken({ seenEvents: [1] })).toBeNull();
+  });
+});

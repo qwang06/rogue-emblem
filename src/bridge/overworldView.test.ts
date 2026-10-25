@@ -9,6 +9,7 @@ import {
   describeObjectiveSpec,
   getOverworldZoom,
   toOverworldView,
+  toEventView,
   toSiteDetailView,
 } from './overworldView.ts';
 
@@ -94,5 +95,22 @@ describe('getOverworldZoom', () => {
     expect(getOverworldZoom(18 * 32 * 5, 18, 32)).toBe(2);
     expect(getOverworldZoom(18 * 32 * 0.75, 18, 32)).toBe(0.75);
     expect(getOverworldZoom(10, 18, 32)).toBe(0.5);
+  });
+});
+
+describe('toEventView', () => {
+  it("shows the owed event's story and choices, with why one is blocked", () => {
+    const view = toEventView({ ...home, gold: 0, pendingEvent: { id: 'gambler', depth: 3 } })!;
+    expect(view.title).toBe('Gambler');
+    expect(view.choices.map((choice) => choice.blocked)).toEqual(['Needs 30 gold', null]);
+    expect(toEventView(home)).toBeNull();
+  });
+});
+
+describe('elite lair cards', () => {
+  it("list the lair's affixes after its enemies", () => {
+    const lair = generateRealm(3, SETTINGS).sites.find((site) => site.kind === 'elite');
+    if (!lair) return;
+    expect(toSiteDetailView(home, lair, SETTINGS).enemies).toMatch(/· [A-Z]\w+, [A-Z]\w+$/);
   });
 });

@@ -2,8 +2,9 @@
 // camp in the west to the Warlord's Hold in the east. Sites stand in
 // columns by depth (stops from the start), joined by roads that only lead
 // east, so the player picks a route: battlefields, villages to defend (and
-// recruit from), forts, towns with a merchant and a free rest, and shrines
-// that grant a blessing without a fight. Each site plays a region
+// recruit from), forts, elite lairs that pay a relic, towns with a merchant
+// and a free rest, shrines that grant a blessing without a fight, and
+// waysides where something happens (events.ts). Each site plays a region
 // (realmRegions.ts) that suits the land around it and its depth.
 //
 // The realm is rebuilt from the run's seed and the region settings
@@ -27,13 +28,16 @@ import { clearSpecks, generateRealmLand, LAND_RULES, landAt, setLand, type Realm
 //   'village' a battle with a villager fighting alongside as a guest, who
 //             can be recruited after
 //   'fort'    a harder battle (enemies a level up) that pays double gold
+//   'elite'   a harder battle (enemies with elite affixes, elites.ts) whose
+//             reward pick is a pick of relics
 //   'town'    no battle: the merchant, and a free rest
 //   'shrine'  no battle: a free reward pick (a blessing)
+//   'event'   no battle: a wayside event, a short choice (events.ts)
 //   'hold'    the final battle; winning it wins the run
-export type SiteKind = 'home' | 'battle' | 'village' | 'fort' | 'town' | 'shrine' | 'hold';
+export type SiteKind = 'home' | 'battle' | 'village' | 'fort' | 'elite' | 'town' | 'shrine' | 'event' | 'hold';
 
 // The kinds where the warband fights.
-export const BATTLE_SITES: ReadonlySet<SiteKind> = new Set(['battle', 'village', 'fort', 'hold']);
+export const BATTLE_SITES: ReadonlySet<SiteKind> = new Set(['battle', 'village', 'fort', 'elite', 'hold']);
 
 // The land around a site (see detectBiome).
 export type Biome = 'meadow' | 'lake' | 'forest' | 'hills';
@@ -81,15 +85,19 @@ const REALM_MARGIN = 2;
 export const REALM_PALETTE: BuildingPaletteName = 'a-orange';
 
 // How often each kind appears at an ordinary depth (3 and on), as weights.
-// Forts only appear from FORT_FROM on.
+// Forts only appear from FORT_FROM on, and a depth has at most one each of
+// a town, a shrine, an elite lair and a wayside event.
 export const SITE_WEIGHTS: Readonly<Partial<Record<SiteKind, number>>> = Object.freeze({
-  battle: 45,
-  village: 25,
+  battle: 38,
+  village: 22,
   town: 4,
-  shrine: 6,
-  fort: 14,
+  shrine: 5,
+  fort: 12,
+  elite: 9,
+  event: 12,
 });
 export const FORT_FROM = 4;
+const ONE_PER_DEPTH: ReadonlySet<SiteKind> = new Set(['town', 'shrine', 'elite', 'event']);
 // Every this many depths there's at least one town to reach.
 export const TOWN_EVERY = 3;
 
@@ -99,8 +107,10 @@ const SITE_BUILDINGS: Readonly<Partial<Record<SiteKind, BuildingKind>>> = {
   home: 'camp',
   village: 'farm',
   fort: 'fort',
+  elite: 'tower',
   town: 'house',
   shrine: 'temple',
+  event: 'fountain',
   hold: 'castle',
 };
 const SITE_EXTRAS: Readonly<Partial<Record<SiteKind, readonly BuildingKind[]>>> = {
@@ -248,7 +258,8 @@ export function layOutColumns(depth: number, height: number, rng: Rng): Point[][
 // What stands at each site, column by column (see SiteKind): home, then
 // two battlefields for the run's opener, villages at depth 2 so an early
 // recruit is always on offer, then a weighted mix with at least one fight
-// per depth, at most one town and one shrine per depth, and a town at least
+// per depth, at most one each of a town, shrine, elite lair and wayside
+// event per depth (ONE_PER_DEPTH), and a town at least
 // every TOWN_EVERY depths; the depth before the Hold always has a town (a
 // last stop before the end), and the end is the Hold.
 export function pickKinds(counts: readonly number[], rng: Rng): SiteKind[][] {
@@ -264,10 +275,7 @@ export function pickKinds(counts: readonly number[], rng: Rng): SiteKind[][] {
     if (needTown) kinds.push('town');
     while (kinds.length < count) {
       const allowed = (Object.entries(SITE_WEIGHTS) as [SiteKind, number][]).filter(
-        ([kind]) =>
-          !(kind === 'fort' && d < FORT_FROM) &&
-          !(kind === 'town' && kinds.includes('town')) &&
-          !(kind === 'shrine' && kinds.includes('shrine')),
+        ([kind]) => !(kind === 'fort' && d < FORT_FROM) && !(ONE_PER_DEPTH.has(kind) && kinds.includes(kind)),
       );
       const total = allowed.reduce((sum, [, weight]) => sum + weight, 0);
       let roll = rng() * total;

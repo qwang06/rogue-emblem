@@ -8,7 +8,9 @@ import type { Point } from '../game/grid.ts';
 import { SURVIVE_TURNS, type ObjectiveSpec } from '../game/objectives.ts';
 import { getUnitSprite } from '../game/tileset.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
-import { getRoad, getSite, type Realm, type Site, type SiteKind } from '../game/warband/realm/realm.ts';
+import { BATTLE_SITES, getRoad, getSite, type Realm, type Site, type SiteKind } from '../game/warband/realm/realm.ts';
+import { rollEliteAffixes } from '../game/warband/elites.ts';
+import { findEvent, getEventChoices } from '../game/warband/events.ts';
 import type { RegionSettings } from '../game/warband/regions.ts';
 import { getStageSeed, type RunState } from '../game/warband/run.ts';
 import { pickStageObjective } from '../game/warband/stageObjective.ts';
@@ -71,12 +73,14 @@ const KIND_TEXT: Readonly<Record<SiteKind, { label: string; blurb: string }>> = 
   battle: { label: 'Battle', blurb: 'Fight for the road ahead.' },
   village: { label: 'Village', blurb: 'Defend the village. A villager fights beside you and may join after.' },
   fort: { label: 'Fort', blurb: 'A stronghold: enemies a level stronger, and double gold.' },
+  elite: { label: 'Elite Lair', blurb: 'Elite enemies with dangerous traits. Win to pick a relic.' },
   town: { label: 'Town', blurb: 'No battle. Visit the merchant and rest for free.' },
   shrine: { label: 'Shrine', blurb: 'No battle. Receive a blessing: pick one of three rewards.' },
+  event: { label: 'Wayside', blurb: 'No battle. Something waits by the road: a choice, for better or worse.' },
   hold: { label: 'The Hold', blurb: 'The final battle. Win it to win the run.' },
 };
 
-const BATTLE_KINDS: ReadonlySet<SiteKind> = new Set(['battle', 'village', 'fort', 'hold']);
+const BATTLE_KINDS: ReadonlySet<SiteKind> = BATTLE_SITES;
 
 export function toOverworldView(run: RunState, realm: Realm, settings: RegionSettings): OverworldView {
   const visited = run.route?.visited ?? [getCurrentSiteId(run)];
@@ -153,12 +157,22 @@ export function toSiteDetailView(run: RunState, site: Site, settings: RegionSett
     kindLabel: label,
     blurb,
     region: region?.name ?? null,
-    enemies: region ? describeEnemies(region.enemies) : null,
+    enemies: region ? describeSiteEnemies(run, site, region.enemies) : null,
     objective: region
       ? describeObjectiveSpec(pickStageObjective(site.depth, region, getStageSeed(run.seed, site.depth)))
       : null,
     stage: site.depth,
   });
+}
+
+// The enemies at `site` (describeEnemies), with an elite lair's affixes
+// after them: "Goblin ×2 · Lv 4 · Armored, Keen".
+function describeSiteEnemies(run: RunState, site: Site, groups: Parameters<typeof describeEnemies>[0]): string | null {
+  const enemies = describeEnemies(groups);
+  if (site.kind !== 'elite' || !enemies) return enemies;
+  return `${enemies} · ${rollEliteAffixes(run.seed, site.depth)
+    .map((affix) => affix.name)
+    .join(', ')}`;
 }
 
 // "Goblin ×2, Skeleton · Lv 2–3": the enemies by class, in the order they
@@ -205,4 +219,24 @@ export function getOverworldZoom(available: number, rows: number, tileSize: numb
   const fit = available / (rows * tileSize);
   if (fit >= 1) return Math.min(2, Math.floor(fit));
   return Math.max(0.5, fit);
+}
+
+// The wayside event the run owes a choice, for the overworld's event
+// panel; null when it owes none.
+export interface EventView {
+  title: string;
+  text: string;
+  choices: readonly { label: string; detail: string; blocked: string | null }[];
+}
+
+export function toEventView(run: RunState): EventView | null {
+  const event = run.pendingEvent && findEvent(run.pendingEvent.id);
+  if (!event) return null;
+  return Object.freeze({
+    title: event.title,
+    text: event.text,
+    choices: Object.freeze(
+      getEventChoices(run).map(({ label, detail, blocked }) => Object.freeze({ label, detail, blocked })),
+    ),
+  });
 }

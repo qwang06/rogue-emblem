@@ -36,6 +36,7 @@ import { finishStage, snapshotUnit, type BattleResult, type RunState } from './r
 import { GUEST_UNIT_ID, rollGuest, settleGuest } from './recruitment.ts';
 import { MAX_ROSTER_SIZE } from './rewards.ts';
 import { applyStageClearExperience } from './stageClearExperience.ts';
+import { getEventChoices, resolveEvent } from './events.ts';
 import type { Realm } from './realm/realm.ts';
 import { BATTLE_SITES } from './realm/realm.ts';
 import {
@@ -52,8 +53,10 @@ import {
 // Where a run stands: picking the relic it starts with, fighting its
 // stage's battle, taking the boons its level ups owe, recruiting a guest,
 // picking the reward a won stage owes, at camp, choosing where to travel on
-// the realm (travel.ts), or over (the warband fell, or won).
-export type RunPhase = 'relic' | 'battle' | 'boon' | 'recruit' | 'reward' | 'camp' | 'travel' | 'over' | 'won';
+// the realm (travel.ts), choosing at a wayside event (events.ts), or over
+// (the warband fell, or won).
+export type RunPhase =
+  'relic' | 'battle' | 'boon' | 'recruit' | 'reward' | 'camp' | 'travel' | 'event' | 'over' | 'won';
 
 export interface RunSession {
   readonly run: RunState;
@@ -90,14 +93,18 @@ export type RunCommand =
   // where to travel.
   | { type: 'march' }
   // Travel: goes to the realm site `siteId`, one the roads lead to.
-  | { type: 'travel'; siteId: string };
+  | { type: 'travel'; siteId: string }
+  // Takes choice `index` of the wayside event the run stands at (events.ts).
+  | { type: 'pick-event'; index: number };
 
 export type RunCommandType = RunCommand['type'];
 
 // What a command did that a screen may want to show beyond the new run.
 export type RunEvent =
   // A lesson reward's or a stage clear's level ups, in roster order.
-  { type: 'level-ups'; levelUps: readonly RewardLevelUp[] };
+  | { type: 'level-ups'; levelUps: readonly RewardLevelUp[] }
+  // What came of a wayside event's choice.
+  | { type: 'event-outcome'; text: string };
 
 export interface RunCommandResult {
   session: RunSession;
@@ -138,6 +145,7 @@ export function startRunSession(run: RunState): RunSession {
 export function resumeRunSession(run: RunState): RunSession {
   const phase = getPickPhase(run);
   if (phase !== 'camp') return freeze({ run, phase });
+  if (run.pendingEvent) return freeze({ run, phase: 'event' });
   if (!isRealmRun(run)) return freeze({ run, phase: 'battle' });
   if (getRunSite(run)?.kind === 'town') return freeze({ run, phase: 'camp' });
   return freeze({ run, phase: isSiteDone(run) ? 'travel' : 'battle' });
@@ -249,6 +257,8 @@ export function applyRunCommand(
   if (session.phase !== 'relic' && command.type === 'pick-relic') fail('The starting relic is already picked');
   if (session.phase !== 'boon' && command.type === 'pick-boon') fail('No boon pick is owed');
   if (session.phase === 'travel' && command.type !== 'travel') fail(`${command.type} isn't done while travelling`);
+  if (session.phase === 'event' && command.type !== 'pick-event') fail(`${command.type} isn't an event choice`);
+  if (session.phase !== 'event' && command.type === 'pick-event') fail('No event is owed');
   if (session.phase !== 'travel' && command.type === 'travel')
     fail(`Travel is chosen from the realm, not ${session.phase}`);
   if (session.phase === 'battle' || session.phase === 'over' || session.phase === 'won')
@@ -336,8 +346,15 @@ export function applyRunCommand(
       if (!canTravel(run, realm, command.siteId)) return fail(`No road to ${command.siteId}`);
       const next = travelTo(run, realm, command.siteId);
       const kind = getRunSite(next)!.kind;
-      const phase: RunPhase = BATTLE_SITES.has(kind) ? 'battle' : getPickPhase(next);
+      const phase: RunPhase = BATTLE_SITES.has(kind) ? 'battle' : next.pendingEvent ? 'event' : getPickPhase(next);
       return { session: freeze({ run: next, phase }), events: [] };
+    }
+    case 'pick-event': {
+      const choice = getEventChoices(run)[command.index];
+      if (!choice) return fail(`No event choice ${command.index}`);
+      if (choice.blocked) return fail(choice.blocked);
+      const { run: next, text } = resolveEvent(run, command.index);
+      return { session: resumeRunSession(next), events: [{ type: 'event-outcome', text }] };
     }
   }
 }
@@ -359,6 +376,12 @@ export function getLegalRunCommands(
   }
   if (session.phase === 'boon') {
     getBoonOffer(session.run)?.boons.forEach((_, index) => commands.push({ type: 'pick-boon', index }));
+    return commands;
+  }
+  if (session.phase === 'event') {
+    getEventChoices(session.run).forEach((choice, index) => {
+      if (!choice.blocked) commands.push({ type: 'pick-event', index });
+    });
     return commands;
   }
   if (session.phase === 'travel') {

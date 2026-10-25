@@ -173,6 +173,11 @@ export const SITE_SCORES = Object.freeze({
   // and otherwise.
   fortReady: 45,
   fort: 5,
+  // An elite lair, likewise, for its relics.
+  eliteReady: 50,
+  elite: 4,
+  // A wayside event.
+  event: 30,
   hold: 100,
 });
 // A fort wants at least this many units.
@@ -201,6 +206,12 @@ export function scoreSite(run: RunState, site: Site, stock: readonly string[] = 
       return run.roster.length >= FORT_ROSTER && missing < REST_MISSING_HEALTH / 2
         ? SITE_SCORES.fortReady
         : SITE_SCORES.fort;
+    case 'elite':
+      return run.roster.length >= FORT_ROSTER && missing < REST_MISSING_HEALTH / 2
+        ? SITE_SCORES.eliteReady
+        : SITE_SCORES.elite;
+    case 'event':
+      return SITE_SCORES.event;
     case 'hold':
       return SITE_SCORES.hold;
     case 'home':

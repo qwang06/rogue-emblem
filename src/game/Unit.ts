@@ -131,6 +131,9 @@ export class Unit {
   // The level-up boons it has taken in a Warband run (warband/boons.ts),
   // by id, in the order taken.
   boons: readonly string[] = Object.freeze([]);
+  // The elite affixes it fights with at an elite lair (warband/elites.ts),
+  // by id.
+  eliteAffixes: readonly string[] = Object.freeze([]);
 
   constructor({
     name,

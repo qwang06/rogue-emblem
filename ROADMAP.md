@@ -268,6 +268,13 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 - **Tests:** generator determinism, connectivity, non-crossing links, kinds rules, region windows and biomes, road carving, travel rules, the run commands, the saved route, the overworld view.
 - _Deferred:_ the camp after a field battle still has Rest for gold (could become town-only later). Map events on the overworld (wandering enemies, roadside encounters) and a "turn par" are for later. Region bosses (W.2) would sit naturally on forts and the Hold.
 
+### [x] W.E Elite lairs and wayside events
+
+- **Elite lairs** on the realm (from depth 3, at most one per depth): every enemy carries one of the lair's two affixes (Armored, Swift, Berserk, Regenerating, Keen, Brutal), the boss both, named on the unit and listed on its info screen. The reward pick is three relics.
+- **Wayside events** (from depth 3, at most one per depth): twelve short stops with two or three choices, each with a cost, in a window over the overworld. A run meets events it hasn't seen first.
+- **Tests:** affix rolls and application, each event's choices and outcomes, blocked choices, the event phase and command, saves, relic offers.
+- _Deferred:_ more events and affixes; events that start a fight.
+
 ### [ ] W.2 Enemy scaling and region bosses
 
 - `EnemyGroup` (`enemySpawns.ts`) gains `class`, `level` (or a level offset from the stage), an optional `weapon`, and `boss`.

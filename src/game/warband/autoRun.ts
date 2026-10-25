@@ -18,6 +18,7 @@ import { createRun } from './run.ts';
 import {
   applyRunCommand,
   finishBattle,
+  getLegalRunCommands,
   getRecruitOffers,
   getRewardOffers,
   startRunSession,
@@ -53,6 +54,9 @@ export interface RunPolicy {
   // pick-boon command. The first offer when left out.
   relic?: (session: RunSession) => RunCommand;
   boon?: (session: RunSession) => RunCommand;
+  // A wayside event's choice: a pick-event command. The first choice the
+  // run can take when left out.
+  event?: (session: RunSession) => RunCommand;
   // The reward pick: one of getLegalRunCommands' reward commands.
   reward: (session: RunSession) => RunCommand;
   // Camp, one command at a time until it marches.
@@ -170,6 +174,9 @@ export function playRun(start: RunStart, policy: RunPolicy, options: AutoRunOpti
       case 'travel':
         give(policy.travel(session, realm));
         campCommands = 0;
+        break;
+      case 'event':
+        give(policy.event?.(session) ?? getLegalRunCommands(session)[0]);
         break;
       case 'over':
         return done('fallen');

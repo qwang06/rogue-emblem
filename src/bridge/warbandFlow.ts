@@ -12,7 +12,8 @@ import { BATTLE_STATE_DEFAULTS, gameStore } from './gameStore.ts';
 
 // The screen `run` continues on: 'overworld' or 'battle'.
 export function getRunScreen(run: RunState): 'overworld' | 'battle' {
-  return resumeRunSession(run).phase === 'travel' ? 'overworld' : 'battle';
+  const { phase } = resumeRunSession(run);
+  return phase === 'travel' || phase === 'event' ? 'overworld' : 'battle';
 }
 
 // Saves `run` and shows the screen it continues on.

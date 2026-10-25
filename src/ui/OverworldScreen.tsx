@@ -2,15 +2,16 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import terrainSheetUrl from '../assets/overworld.png';
 import { SPRITE_URLS } from '../assets/sprites.ts';
 import { gameStore } from '../bridge/gameStore.ts';
-import { getOverworldZoom, toOverworldView, type OverworldView } from '../bridge/overworldView.ts';
-import { enterRun } from '../bridge/warbandFlow.ts';
+import { getOverworldZoom, toEventView, toOverworldView, type OverworldView } from '../bridge/overworldView.ts';
+import { enterRun, getRunScreen } from '../bridge/warbandFlow.ts';
 import { getActiveContent } from '../data/customContent.ts';
 import { loadSavedRun } from '../data/runSave.ts';
 import type { Point } from '../game/grid.ts';
 import { getUnitSprite, MAP_PROPS_SHEET, TERRAIN_AUTOTILES, TERRAIN_SHEET, TILE_SIZE } from '../game/tileset.ts';
-import { getRealm, type Realm } from '../game/warband/realm/realm.ts';
+import { BATTLE_SITES, getRealm, type Realm } from '../game/warband/realm/realm.ts';
 import { getRealmDrawList, REALM_WATER_FRAMES } from '../game/warband/realm/realmArt.ts';
 import type { RunState } from '../game/warband/run.ts';
+import { getCurrentSiteId } from '../game/warband/travel.ts';
 import { applyRunCommand, resumeRunSession } from '../game/warband/runCommands.ts';
 import { planTravel } from '../game/warband/runPolicy.ts';
 import { Frame } from './Frame.tsx';
@@ -47,7 +48,7 @@ function prefersReducedMotion(): boolean {
 // realm's draw list (realmArt.ts) at native size and scaled up whole,
 // with site markers laid over it in a layer of the same size.
 export function OverworldScreen() {
-  const [run] = useState(() => loadSavedRun());
+  const [run, setRun] = useState(() => loadSavedRun());
   const realm = useMemo(() => (run ? getRealm(run.seed, getActiveContent().regions) : null), [run]);
 
   if (!run || !realm) {
@@ -60,10 +61,16 @@ export function OverworldScreen() {
       </div>
     );
   }
-  return <Overworld run={run} realm={realm} />;
+  // Saves `next` and carries on with it: staying here (a wayside event, or
+  // its outcome settled) or on to the map scene.
+  function carryOn(next: RunState) {
+    enterRun(next);
+    if (getRunScreen(next) === 'overworld') setRun(next);
+  }
+  return <Overworld key={getCurrentSiteId(run)} run={run} realm={realm} onRun={carryOn} />;
 }
 
-function Overworld({ run, realm }: { run: RunState; realm: Realm }) {
+function Overworld({ run, realm, onRun }: { run: RunState; realm: Realm; onRun: (run: RunState) => void }) {
   const view = useMemo(() => toOverworldView(run, realm, getActiveContent().regions), [run, realm]);
   const autoPlay = useGameStore((state) => state.autoPlay);
   const [selected, setSelected] = useState(0);
@@ -83,7 +90,7 @@ function Overworld({ run, realm }: { run: RunState; realm: Realm }) {
 
   function arrive(siteId: string) {
     const { session } = applyRunCommand(resumeRunSession(run), { type: 'travel', siteId }, { realm });
-    enterRun(session.run);
+    onRun(session.run);
   }
 
   // Walks the warband a tile at a time, then arrives.
@@ -194,7 +201,9 @@ function Overworld({ run, realm }: { run: RunState; realm: Realm }) {
             const index = view.choices.findIndex((c) => c.siteId === site.id);
             const classes = ['overworld__site', `overworld__site--${site.state}`];
             if (index >= 0 && index === selected) classes.push('overworld__site--selected');
-            if (['battle', 'village', 'fort', 'hold'].includes(site.kind)) classes.push('overworld__site--battle');
+            if (BATTLE_SITES.has(site.kind)) classes.push('overworld__site--battle');
+            if (site.kind === 'elite') classes.push('overworld__site--elite');
+            if (site.kind === 'event') classes.push('overworld__site--event');
             const labelled = site.state === 'choice' || site.state === 'current' || site.kind === 'hold';
             return (
               <button
@@ -243,6 +252,110 @@ function Overworld({ run, realm }: { run: RunState; realm: Realm }) {
       </Frame>
 
       <KeyHint className="overworld__hint" entries={KEYS} />
+      {run.pendingEvent && <EventPanel run={run} autoPlay={autoPlay} onDone={onRun} />}
+    </div>
+  );
+}
+
+const EVENT_KEYS = [
+  ['↑↓', 'Choose'],
+  ['Enter', 'Confirm'],
+] as const;
+
+// A wayside event over the map: its story and choices (blocked ones
+// disabled, with why), then what came of the one taken. Arrows and Enter,
+// or the mouse; with auto play on, it takes the first choice it can.
+function EventPanel({ run, autoPlay, onDone }: { run: RunState; autoPlay: boolean; onDone: (run: RunState) => void }) {
+  const view = toEventView(run)!;
+  const [selected, setSelected] = useState(() =>
+    Math.max(
+      0,
+      view.choices.findIndex((c) => !c.blocked),
+    ),
+  );
+  const [outcome, setOutcome] = useState<{ run: RunState; text: string } | null>(null);
+
+  function choose(index: number) {
+    if (outcome || view.choices[index]?.blocked) return;
+    const { session, events } = applyRunCommand(resumeRunSession(run), { type: 'pick-event', index });
+    const said = events.find((event) => event.type === 'event-outcome');
+    setOutcome({ run: session.run, text: said?.type === 'event-outcome' ? said.text : '' });
+  }
+
+  function confirm() {
+    if (outcome) onDone(outcome.run);
+    else choose(selected);
+  }
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        const count = view.choices.length;
+        setSelected((current) => (current + (event.key === 'ArrowUp' ? -1 : 1) + count) % count);
+      } else if (event.key === 'Enter' || event.key === 'z' || event.key === 'Z' || event.key === ' ') {
+        event.preventDefault();
+        confirm();
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
+
+  useEffect(() => {
+    if (!autoPlay) return;
+    const timer = window.setTimeout(() => {
+      if (outcome) onDone(outcome.run);
+      else
+        choose(
+          Math.max(
+            0,
+            view.choices.findIndex((c) => !c.blocked),
+          ),
+        );
+    }, AUTO_DELAY_MS * 2);
+    return () => window.clearTimeout(timer);
+  });
+
+  return (
+    <div className="overworld-event">
+      <Frame className="overworld-event__panel" role="dialog" aria-label={view.title}>
+        <h2 className="overworld-event__title">{view.title}</h2>
+        <p className="overworld-event__text">{view.text}</p>
+        <ul className="overworld-event__choices">
+          {view.choices.map((choice, index) => {
+            const classes = ['overworld-event__choice'];
+            if (index === selected && !outcome) classes.push('overworld-event__choice--selected');
+            return (
+              <li key={choice.label}>
+                <button
+                  type="button"
+                  className={classes.join(' ')}
+                  disabled={choice.blocked !== null || outcome !== null}
+                  onMouseEnter={() => setSelected(index)}
+                  onClick={() => choose(index)}
+                >
+                  <span className="overworld-event__label">{choice.label}</span>
+                  <span className="overworld-event__detail">{choice.blocked ?? choice.detail}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        {/* Reserved whether or not a choice has been taken, so the panel keeps its size. */}
+        <p className="overworld-event__outcome" aria-live="polite">
+          {outcome?.text ?? ' '}
+        </p>
+        <button
+          type="button"
+          className="header-button overworld-event__continue"
+          style={{ visibility: outcome ? 'visible' : 'hidden' }}
+          onClick={() => outcome && onDone(outcome.run)}
+        >
+          Continue
+        </button>
+      </Frame>
+      <KeyHint className="overworld__hint" entries={EVENT_KEYS} />
     </div>
   );
 }

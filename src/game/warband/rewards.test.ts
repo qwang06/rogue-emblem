@@ -41,6 +41,7 @@ import {
   STAGE_CLEAR_GOLD_PER_STAGE,
   getRewardChoices,
   type Reward,
+  isEliteClear,
 } from './rewards.ts';
 import { WARBAND_NAMES } from './names.ts';
 import { STARTING_CLASSES } from './startingClasses.ts';
@@ -537,5 +538,32 @@ describe('a reward pick owed across a reload', () => {
   it('leaves a run that owes nothing as it is', () => {
     const run = fullRun();
     expect(clearPendingReward(run)).toBe(run);
+  });
+});
+
+describe("an elite lair's reward pick", () => {
+  const lair = (run: RunState, depth = 5): RunState => ({
+    ...run,
+    route: {
+      visited: ['0-0', `${depth}-0`],
+      at: { id: `${depth}-0`, name: 'Rook Lair', kind: 'elite', depth, region: 3, levelOffset: 0 },
+    },
+  });
+  const run = () => createRun(4, new Map([['alden', new Soldier({ name: 'Alden', team: 'player' })]]));
+
+  it('offers relics the run does not hold, the same on a reload and new on a reroll', () => {
+    const at = lair({ ...run(), relics: ['hawk-lens'] });
+    expect(isEliteClear(at, 5)).toBe(true);
+    const offers = rollStageRewards(at, 5);
+    expect(offers).toHaveLength(3);
+    expect(offers.every((offer) => offer.kind === 'relic' && offer.relicId !== 'hawk-lens')).toBe(true);
+    expect(rollStageRewards(at, 5)).toEqual(offers);
+    expect(rollStageRewards(at, 5, 1)).not.toEqual(offers);
+  });
+
+  it('is an ordinary pick for any other stage or site', () => {
+    expect(isEliteClear(lair(run()), 4)).toBe(false);
+    expect(isEliteClear(run(), 5)).toBe(false);
+    expect(rollStageRewards(lair(run()), 4).every((offer) => offer.kind === 'relic')).toBe(false);
   });
 });

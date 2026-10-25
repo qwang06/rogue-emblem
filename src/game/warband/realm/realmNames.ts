@@ -84,6 +84,10 @@ function rollName(kind: SiteKind, biome: Biome, rng: Rng): string {
       return `Shrine of St. ${randomItem(rng, SAINTS)}`;
     case 'fort':
       return `Fort ${prefix}`;
+    case 'elite':
+      return randomItem(rng, [`${prefix} Lair`, `${prefix} Den`, `${prefix} Barrow`]);
+    case 'event':
+      return randomItem(rng, [`${prefix} Crossroads`, `${prefix} Wayside`, `Old ${prefix} Road`]);
     case 'battle':
     case 'hold':
       return randomItem(rng, BATTLE_PATTERNS[biome])(prefix);
