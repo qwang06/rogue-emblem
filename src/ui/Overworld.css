@@ -78,10 +78,11 @@
   list-style: none;
 }
 
-/* The map's window: as tall as the screen leaves, scrolling sideways, its
-   edges darkened like old paper. */
+/* The map's window: as tall as the screen leaves, scrolling sideways,
+   with the map centered in it when it's narrower. */
 .overworld__viewport {
   position: relative;
+  display: flex;
   flex: 1;
   min-height: 0;
   overflow-x: auto;
@@ -91,7 +92,8 @@
 
 .overworld__map {
   position: relative;
-  margin: 0 auto;
+  flex: none;
+  margin: auto;
 }
 
 .overworld__map::after {

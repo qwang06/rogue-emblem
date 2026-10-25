@@ -214,12 +214,11 @@ export function describeObjectiveSpec(spec: ObjectiveSpec): string {
 }
 
 // The scale the realm map draws at to fill `available` pixels of height
-// with its `rows` tiles: whole multiples from 1 up to 2 when it fits, so
-// pixels stay crisp, else shrunk to fit, but never below half size.
+// with its `rows` tiles: as big as fits, up to double size, and never
+// below half size (the map then scrolls).
 export function getOverworldZoom(available: number, rows: number, tileSize: number): number {
   const fit = available / (rows * tileSize);
-  if (fit >= 1) return Math.min(2, Math.floor(fit));
-  return Math.max(0.5, fit);
+  return Math.min(2, Math.max(0.5, fit));
 }
 
 // The wayside event the run owes a choice, for the overworld's event
