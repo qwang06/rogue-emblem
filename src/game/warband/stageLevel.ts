@@ -8,7 +8,8 @@
 // keep mapCheck.ts's rules.
 
 import { PLAYER_ROSTER, type DemoLevel, type TreePlacement } from '../demoLevel.ts';
-import { setUnit, type Point } from '../grid.ts';
+import { setTerrain, setUnit, type Point } from '../grid.ts';
+import { pickSpikeTiles, SPIKES } from '../hazards.ts';
 import { getBuildingSprites, getFeatureSprites } from '../mapArt.ts';
 import { pickZonedEnemyTiles } from '../enemySpawns.ts';
 import type { Rng } from '../combatStats.ts';
@@ -20,7 +21,7 @@ import { checkMap } from '../mapCheck.ts';
 import { getMapMetrics, scoreMap, type MapMetrics } from '../mapScore.ts';
 import type { MapArchetype } from '../mapArchetypes.ts';
 import { DEFAULT_OBJECTIVE, type ObjectiveKind } from '../objectives.ts';
-import { createSeededRng, randomItem } from '../rng.ts';
+import { createSeededRng, randomInt, randomItem } from '../rng.ts';
 import type { Unit } from '../Unit.ts';
 import { createUnitOfClass, UNIT_CLASSES } from '../unitClasses.ts';
 import { BUILDING_ART, BUILDING_PALETTES, FOREST_ART, MOUNTAIN_ART } from '../tileset.ts';
@@ -55,6 +56,16 @@ export function growToLevel(unit: Unit, level: number): void {
 export const DEFAULT_ENEMY_CLASS = 'soldier';
 
 const key = ({ x, y }: Point) => `${x},${y}`;
+
+// How often a stage's map has spike traps, how many (from, to), and how
+// far from an enemy's start they lie (see pickSpikeTiles).
+export const SPIKE_TRAP_CHANCE = 0.5;
+export const SPIKE_TRAP_COUNT = Object.freeze({ min: 2, max: 3 });
+export const SPIKE_TRAP_REACH = 3;
+
+// Mixed into the stage seed so the traps' draw doesn't change the rest of
+// the stage.
+const SPIKE_SEED_SALT = 0x51c3e5;
 
 // How many candidate maps a stage's seed lays out to keep the best of.
 export const MAP_CANDIDATES = 30;
@@ -154,6 +165,8 @@ export function pickStageLayout(seed: number, region: RegionConfig, candidates =
 //   other art covers
 // - objective: a rout; battleSetup.ts places the stage's own (stageObjective.ts)
 // - seizeTile: the tile the map's archetype planned for a seize, if any
+// - spike traps (hazards.ts): on SPIKE_TRAP_CHANCE of seeds, a few near
+//   the enemies' starts, drawn from the seed apart from everything else
 // - loot: `lootCount` of the enemies (as many as there are, if fewer) each
 //   carry an item to drop (see assignLoot), picked after everything else so
 //   the map is the same whatever the count
@@ -194,9 +207,10 @@ export function createStageLevel(
 
   // Tiles a tree would clash with: the deployment zone, and any tile a
   // building, its overhang, or a mountain's peak is drawn on.
+  const buildingTiles = getBuildingSprites(buildings, BUILDING_PALETTES[region.palette], BUILDING_ART);
   const covered = new Set([
     ...deploymentZone.map(key),
-    ...getBuildingSprites(buildings, BUILDING_PALETTES[region.palette], BUILDING_ART).map(key),
+    ...buildingTiles.map(key),
     ...getFeatureSprites(grid, FOREST_ART, MOUNTAIN_ART).map(key),
   ]);
   const decorations: TreePlacement[] = grid.cells
@@ -206,6 +220,22 @@ export function createStageLevel(
 
   const enemyIds = enemyTiles.map((_, i) => `enemy-${i + 1}`);
   for (const [unitId, item] of assignLoot(enemyIds, lootCount, rng)) units.get(unitId)!.loot = item;
+
+  const trapRng = createSeededRng(seed ^ SPIKE_SEED_SALT);
+  if (trapRng() < SPIKE_TRAP_CHANCE) {
+    const seizeTile = layout.terrain.seizeTile;
+    const spikes = pickSpikeTiles(
+      grid,
+      {
+        count: randomInt(trapRng, SPIKE_TRAP_COUNT.min, SPIKE_TRAP_COUNT.max),
+        enemyTiles,
+        reach: SPIKE_TRAP_REACH,
+        avoid: [...deploymentZone, ...decorations, ...buildingTiles, ...(seizeTile ? [seizeTile] : [])],
+      },
+      trapRng,
+    );
+    for (const { x, y } of spikes) grid = setTerrain(grid, x, y, SPIKES);
+  }
 
   return {
     grid,

@@ -144,6 +144,7 @@ import { getQuarterFrameMap, getTileFrame, type Autotile } from '../game/autotil
 import {
   getBuildingSprites,
   getCrossingSprites,
+  getHazardSprites,
   getFeatureSprites,
   getWallAutotile,
   type MapSprite,
@@ -153,6 +154,9 @@ import { pickAttackPlan } from '../game/attackMove.ts';
 import { getDangerZone } from '../game/dangerZone.ts';
 import { getPauseActions } from '../game/pauseMenu.ts';
 import { planNextTurn } from '../game/battle/ai.ts';
+import { getEnemyIntents, getIntentThreats, type EnemyIntent } from '../game/battle/intents.ts';
+import { getPushDirection, getPushResult } from '../game/push.ts';
+import { toIntentTagView, toPushTagView } from '../bridge/mapTagView.ts';
 import { findEvent, type BattleCommand, type BattleEvent, type BattleEventOf } from '../game/battle/commands.ts';
 import {
   createHistory,
@@ -172,6 +176,7 @@ import {
   CURSOR_ANIMATION,
   DEFAULT_BUILDING_PALETTE,
   FORD_ART,
+  SPIKES_ART,
   FOREST_ART,
   GATE_ART,
   MAP_PROPS_SHEET,
@@ -233,6 +238,20 @@ const HEAL_RANGE_ALPHA = 0.45;
 // sits under every other highlight.
 const DANGER_ZONE_COLOR = 0x9f1239;
 const DANGER_ZONE_ALPHA = 0.35;
+// Enemy intents: the route an enemy will walk (thin, faint) and the arrow
+// onto the unit it'll strike, over the highlights and the move arrow but
+// under units.
+const INTENT_COLOR = 0xdc2626;
+const INTENT_ROUTE_ALPHA = 0.5;
+const INTENT_ARROW_ALPHA = 0.9;
+const INTENT_DEPTH = 0.65;
+// Where an aimed Shove would leave its target.
+const PUSH_PREVIEW_COLOR = 0x3858b0;
+const PUSH_PREVIEW_ALPHA = 0.5;
+// A shoved unit's slide onto its new tile, and the nudge of one that's
+// stopped (in px).
+const PUSH_SLIDE_MS = 160;
+const PUSH_BUMP_PX = 6;
 const DEPLOYMENT_ZONE_COLOR = 0xfacc15;
 const DEPLOYMENT_ZONE_ALPHA = 0.4;
 // A seize objective's tile: a gold outline over a faint fill that pulses,
@@ -351,6 +370,8 @@ export class GridScene extends Phaser.Scene {
   rangeTiles: Phaser.GameObjects.Rectangle[] | null = null;
   dangerZoneVisible = false;
   dangerZoneTiles: Phaser.GameObjects.Rectangle[] = [];
+  intentGraphics: Phaser.GameObjects.Graphics | null = null;
+  pushPreviewTiles: Phaser.GameObjects.Rectangle[] = [];
   autoElapsed = 0;
   pendingAutoCommands: BattleCommand[] = [];
   inspectedEnemyId: string | null = null;
@@ -531,6 +552,7 @@ export class GridScene extends Phaser.Scene {
     this.renderTerrain(this.grid, { ...TERRAIN_AUTOTILES, wall: getWallAutotile(palette) });
     this.renderMapSprites([
       ...getCrossingSprites(this.grid, BRIDGE_ART, GATE_ART[paletteName], FORD_ART, MAP_PROPS_SHEET),
+      ...getHazardSprites(this.grid, SPIKES_ART, MAP_PROPS_SHEET),
       ...getFeatureSprites(this.grid, FOREST_ART, MOUNTAIN_ART),
       ...getBuildingSprites(level.buildings ?? [], palette, BUILDING_ART),
     ]);
@@ -578,6 +600,8 @@ export class GridScene extends Phaser.Scene {
     this.rangeTiles = null; // highlight rectangles for the current range
     this.dangerZoneVisible = false; // whether every enemy's reach is shaded (toggled with D or the header button)
     this.dangerZoneTiles = []; // highlight rectangles for the danger zone
+    this.intentGraphics = null; // the enemies' intent lines, drawn during the player phase
+    this.pushPreviewTiles = []; // where an aimed Shove would leave its target
     this.autoElapsed = 0; // ms since auto play's last step (see updateAutoPlay)
     this.pendingAutoCommands = [];
     this.inspectedEnemyId = null; // an enemy picked on the bare map to show just its reach
@@ -661,6 +685,8 @@ export class GridScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.RENDER, () => {
       if (this.activeUnit) this.publishMenuAnchor();
       if (this.rangeMode === 'attack') this.updateCombatForecast();
+      if (this.rangeMode === 'skill') this.updatePushPreview();
+      this.refreshIntents();
     });
   }
 
@@ -1001,6 +1027,7 @@ export class GridScene extends Phaser.Scene {
         SKILL_RANGE_COLOR,
         SKILL_RANGE_ALPHA,
       );
+      this.updatePushPreview();
       return;
     }
 
@@ -1721,7 +1748,7 @@ export class GridScene extends Phaser.Scene {
   placeUnit(unitId: string, { x, y }: Point) {
     this.dispatch({ type: 'place', unitId, to: { x, y } });
     this.syncShown();
-    this.refreshDangerZone();
+    this.refreshThreats();
     for (const id of this.roster) {
       const at = findUnit(this.grid, id);
       const sprite = this.unitSprites.get(id);
@@ -1898,7 +1925,7 @@ export class GridScene extends Phaser.Scene {
   continueBattle(events: readonly BattleEvent[], otherwise: () => void) {
     this.syncShown();
     this.refreshDoneTints();
-    this.refreshDangerZone();
+    this.refreshThreats();
     this.updateHoveredUnit();
     const { outcome } = this.battle;
     if (outcome) {
@@ -2001,7 +2028,7 @@ export class GridScene extends Phaser.Scene {
     for (const sprite of this.unitSprites.values()) sprite.destroy();
     this.renderUnits(this.grid);
     this.refreshDoneTints();
-    this.refreshDangerZone();
+    this.refreshThreats();
     const turnState = this.turnState!;
     gameStore.setState({
       turn: toTurnView(turnState),
@@ -2282,6 +2309,7 @@ export class GridScene extends Phaser.Scene {
     this.activeSkill = null;
     this.activeStaff = null;
     this.updateCombatForecast();
+    this.updatePushPreview();
     this.clearMoveArrow();
     this.moveRange = null;
     this.movePath = null;
@@ -2293,6 +2321,13 @@ export class GridScene extends Phaser.Scene {
   // on. It's redrawn whenever a unit finishes acting, falls, or is placed,
   // since any of those can change who reaches where. Separately, picking
   // an enemy on the bare map shows just that enemy's reach.
+
+  // Redraws everything that shows what the enemies threaten: the danger
+  // zone and their intents.
+  refreshThreats() {
+    this.refreshDangerZone();
+    this.refreshIntents();
+  }
 
   toggleDangerZone() {
     if (this.preview || this.battleOutcome) return;
@@ -2319,6 +2354,49 @@ export class GridScene extends Phaser.Scene {
       DANGER_ZONE_ALPHA,
     );
     for (const tile of this.dangerZoneTiles) tile.setDepth(0.45);
+  }
+
+  // ---- Enemy intents ----------------------------------------------------
+  // During the player phase every enemy's plan for the coming enemy phase
+  // (src/game/battle/intents.ts) shows on the map: a faint line along the
+  // route it'll walk, and from where it stops an arrow onto the unit it'll
+  // strike, whose tile React tags with the HP it stands to lose. Redrawn
+  // whenever the battle on the map changes; hidden in any other phase.
+
+  refreshIntents() {
+    this.intentGraphics ??= this.add.graphics().setDepth(INTENT_DEPTH);
+    this.intentGraphics.clear();
+    const { stage, outcome, turnState } = this.shown;
+    const showing = !this.preview && stage === 'battle' && !outcome && turnState?.team === 'player';
+    const intents = showing ? getEnemyIntents(this.shown) : [];
+    for (const intent of intents) this.drawIntent(this.intentGraphics, intent);
+    const tags = getIntentThreats(this.shown, intents).map((threat) =>
+      toIntentTagView(threat, this.getTileAnchor(threat.at)),
+    );
+    gameStore.setState({ intentTags: tags });
+  }
+
+  drawIntent(graphics: Phaser.GameObjects.Graphics, { path, target }: EnemyIntent) {
+    const center = ({ x, y }: Point) => new Phaser.Math.Vector2((x + 0.5) * TILE_SIZE, (y + 0.5) * TILE_SIZE);
+    const end = center(path[path.length - 1]);
+    if (path.length > 1) {
+      graphics.lineStyle(2, INTENT_COLOR, INTENT_ROUTE_ALPHA);
+      graphics.strokePoints(path.map(center), false);
+      if (!target) graphics.fillStyle(INTENT_COLOR, INTENT_ROUTE_ALPHA).fillCircle(end.x, end.y, 3);
+    }
+    if (!target) return;
+    // From the edge of the attacker's tile to the edge of its target's, so
+    // neither sprite hides the arrow.
+    const tip = center(target);
+    const direction = tip.clone().subtract(end).normalize();
+    const from = end.clone().add(direction.clone().scale(TILE_SIZE * 0.3));
+    const to = tip.clone().subtract(direction.clone().scale(TILE_SIZE * 0.4));
+    const side = new Phaser.Math.Vector2(-direction.y, direction.x).scale(4);
+    const base = to.clone().subtract(direction.clone().scale(7));
+    graphics.lineStyle(3, INTENT_COLOR, INTENT_ARROW_ALPHA).lineBetween(from.x, from.y, base.x, base.y);
+    graphics
+      .fillStyle(INTENT_COLOR, INTENT_ARROW_ALPHA)
+      .fillTriangle(to.x, to.y, base.x + side.x, base.y + side.y, base.x - side.x, base.y - side.y);
   }
 
   // Shows where the enemy `unitId` can move and strike, or hides it again
@@ -2359,6 +2437,7 @@ export class GridScene extends Phaser.Scene {
     this.dispatch({ type: 'move', unitId, to, path });
     this.walkSprite(this.unitSprites.get(unitId)!, path, () => {
       this.syncShown();
+      this.refreshIntents();
       this.activeUnit = { ...this.activeUnit!, x: to.x, y: to.y, origin: from, movedAt };
       this.inputLocked = false;
       if (attack) {
@@ -2390,6 +2469,7 @@ export class GridScene extends Phaser.Scene {
     const { unitId, origin, movedAt } = this.activeUnit!;
     this.history = rewindTo(this.history, movedAt!);
     this.syncShown();
+    this.refreshIntents();
     const pos = gridToWorld(origin!.x, origin!.y, TILE_SIZE);
     this.unitSprites.get(unitId)!.setPosition(pos.x, pos.y);
     this.activeUnit = { unitId, x: origin!.x, y: origin!.y };
@@ -2435,6 +2515,9 @@ export class GridScene extends Phaser.Scene {
         return;
       case 'skill':
         this.playSkill(event, next);
+        return;
+      case 'pushed':
+        this.playPush(event, next);
         return;
       case 'healed':
         this.playRecovery(event.targetId, 'health', event.amount, next);
@@ -2550,9 +2633,70 @@ export class GridScene extends Phaser.Scene {
     const onImpact = () => {
       this.showStats(unitId, { mana });
       this.showStats(targetId, { health });
-      this.showDamagePopup(targetSprite, damage);
+      // A Shove's blow does nothing itself: the push that follows shows
+      // what it cost.
+      if (damage > 0 || !skill.push) this.showDamagePopup(targetSprite, damage);
     };
     this.playSkillAnimation(skill.animation, userSprite, targetSprite, onImpact, next);
+  }
+
+  // A shove: the shoved unit slides onto its new tile, or (stopped by
+  // something) lurches toward it and back. Then whatever it cost shows: a
+  // flash and the damage over it and over a unit it slammed into, "Drowned!"
+  // as it sinks into deep water (its defeat plays next), or "Steadfast" for
+  // a unit that holds its ground.
+  playPush({ push, health, collidedHealth }: BattleEventOf<'pushed'>, next: () => void) {
+    const sprite = this.unitSprites.get(push.unitId)!;
+    const land = () => {
+      if (push.blocked === 'steadfast') this.showDamagePopup(sprite, 0, 'steadfast');
+      if (push.collidedId && collidedHealth !== null) {
+        const collided = this.unitSprites.get(push.collidedId)!;
+        this.showStats(push.collidedId, { health: collidedHealth });
+        this.showDamagePopup(collided, push.collisionDamage);
+        playHitFlash(this, collided);
+      }
+      if (push.drowned) {
+        this.showDamagePopup(sprite, 0, 'drowned');
+        this.tweens.add({
+          targets: sprite,
+          alpha: 0.2,
+          y: sprite.y + 6,
+          duration: PUSH_SLIDE_MS * 2,
+          onComplete: next,
+        });
+        return;
+      }
+      if (push.damage <= 0) {
+        next();
+        return;
+      }
+      this.showStats(push.unitId, { health });
+      this.showDamagePopup(sprite, push.damage);
+      playHitFlash(this, sprite, next);
+    };
+    if (push.moved) {
+      this.tweens.add({
+        targets: sprite,
+        ...gridToWorld(push.to.x, push.to.y, TILE_SIZE),
+        duration: PUSH_SLIDE_MS,
+        ease: 'Quad.easeOut',
+        onComplete: land,
+      });
+      return;
+    }
+    if (push.blocked === 'steadfast') {
+      land();
+      return;
+    }
+    const { direction } = push;
+    this.tweens.add({
+      targets: sprite,
+      x: sprite.x + direction.x * PUSH_BUMP_PX,
+      y: sprite.y + direction.y * PUSH_BUMP_PX,
+      duration: PUSH_SLIDE_MS / 2,
+      yoyo: true,
+      onComplete: land,
+    });
   }
 
   // A heal or a potion: the unit glows in the stat's color from
@@ -2641,15 +2785,40 @@ export class GridScene extends Phaser.Scene {
   // Uses the aimed skill on the unit under the cursor, if it's a hostile
   // unit in the skill's range.
   tryUseSkill() {
-    const { unit, unitId, x, y } = this.activeUnit!;
+    const { unitId } = this.activeUnit!;
     const skill = this.activeSkill!;
-    const targets = getAttackTargets(this.grid, { x, y }, skill.range, this.isHostileTo(unit));
-    const target = findTileAt(targets, this.cursor);
+    const target = this.getSkillTargetUnderCursor();
     if (!target) return;
 
     this.hideRange();
     this.activeUnit = null;
     this.playPlayerAction({ type: 'skill', unitId, skillId: skill.id, target: { x: target.x, y: target.y } });
+  }
+
+  // The hostile unit under the cursor that the aimed skill reaches from the
+  // active unit's tile, as { x, y, unitId }, or null.
+  getSkillTargetUnderCursor() {
+    const { unit, x, y } = this.activeUnit!;
+    const targets = getAttackTargets(this.grid, { x, y }, this.activeSkill!.range, this.isHostileTo(unit));
+    return findTileAt(targets, this.cursor);
+  }
+
+  // While aiming a Shove (a push skill) at a foe, shades the tile the shove
+  // would leave it on (src/game/push.ts) and has React tag it with what
+  // happens there; clears both otherwise.
+  updatePushPreview() {
+    for (const tile of this.pushPreviewTiles) tile.destroy();
+    this.pushPreviewTiles = [];
+    const target = this.rangeMode === 'skill' && this.activeSkill?.push ? this.getSkillTargetUnderCursor() : null;
+    if (!target) {
+      gameStore.setState({ pushTag: null });
+      return;
+    }
+    const { x, y } = this.activeUnit!;
+    const push = getPushResult(this.grid, this.units, target, getPushDirection({ x, y }, target))!;
+    this.pushPreviewTiles = this.drawTileHighlights([push.to], PUSH_PREVIEW_COLOR, PUSH_PREVIEW_ALPHA);
+    const health = this.units.get(push.unitId)!.health;
+    gameStore.setState({ pushTag: toPushTagView(push, health, this.getTileAnchor(push.to)) });
   }
 
   // Heals the wounded ally under the cursor with the staff being aimed, if
@@ -2911,6 +3080,7 @@ export class GridScene extends Phaser.Scene {
     this.updateCursorSprite();
     this.updateHoveredUnit();
     if (this.rangeMode === 'attack') this.updateCombatForecast();
+    if (this.rangeMode === 'skill') this.updatePushPreview();
   }
 
   // Looks up the unit (if any) under the visible cursor and, only on change,

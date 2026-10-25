@@ -160,7 +160,8 @@ export interface CombatForecastView {
   anchor: TileAnchorView;
 }
 
-export type PopupKind = 'damage' | 'crit' | 'miss' | 'health' | 'mana' | 'broke' | 'loot' | 'stored' | 'learned';
+export type PopupKind =
+  'damage' | 'crit' | 'miss' | 'health' | 'mana' | 'broke' | 'loot' | 'stored' | 'learned' | 'drowned' | 'steadfast';
 
 export interface DamagePopupView {
   id: number;
@@ -504,7 +505,8 @@ export function toCombatForecastView({
 // How each kind of popup reads: damage is the bare number (a crit calls
 // itself out), a miss says so, recovery says what was restored, a weapon
 // that wore out says it broke, loot names the item picked up (or sent to
-// the convoy), and a spell learned from a tome names the spell.
+// the convoy), a spell learned from a tome names the spell, and a shove
+// says when its unit drowned or wouldn't budge.
 const POPUP_TEXT: Readonly<Record<PopupKind, (amount: number, label: string) => string>> = Object.freeze({
   damage: (amount) => `${amount}`,
   crit: (amount) => `Crit! ${amount}`,
@@ -515,6 +517,8 @@ const POPUP_TEXT: Readonly<Record<PopupKind, (amount: number, label: string) => 
   loot: (_, label) => `Got ${label}`,
   stored: (_, label) => `${label} to convoy`,
   learned: (_, label) => `Learned ${label}!`,
+  drowned: () => 'Drowned!',
+  steadfast: () => 'Steadfast',
 });
 
 // Snapshot of one floating number over a unit: damage taken (plain, a

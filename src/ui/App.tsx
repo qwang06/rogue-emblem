@@ -7,6 +7,7 @@ import { CombatForecast } from './CombatForecast.tsx';
 import { ConfigEditor } from './ConfigEditor.tsx';
 import { ControlsButton } from './ControlsButton.tsx';
 import { DamagePopups } from './DamagePopups.tsx';
+import { MapTags } from './MapTags.tsx';
 import { AutoPlayButton } from './AutoPlayButton.tsx';
 import { AutoCommandQueue } from './AutoCommandQueue.tsx';
 import { DangerZoneButton } from './DangerZoneButton.tsx';
@@ -92,6 +93,7 @@ export function App() {
             <div className="hud">
               {/* First, so every other overlay paints over it. */}
               <UnitPanel />
+              <MapTags />
               <AutoCommandQueue />
               <DeploymentMenu />
               <RosterMenu />

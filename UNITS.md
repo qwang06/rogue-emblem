@@ -18,6 +18,7 @@ Reference for every unit class: base stats, growth rates, caps, weapons and skil
 - **Growths** are the % chance a stat rises by 1 on each level up. A stat never grows past its cap. Max level is 20. Level 1 to 2 takes 50 XP, every level after 100 XP.
 - **XP rate** scales every XP gain (combat, skills, healing): a unit with a 150% rate earns 15 XP where others earn 10, rounded to the nearest point and never below 1.
 - **Skills** always hit, never crit, and the target can't counter. Their damage is the user's regular hit (weapon might included) with any bonus `STR` added, then scaled; scaled damage rounds up. Using one costs mana, earns XP like a landed hit, and spends no weapon uses.
+- **Shove** (Soldier and Guard, from level 1) deals no damage of its own: it pushes the adjacent foe one tile straight away from the user. Onto open ground it just slides; onto a spike trap it takes 5 damage; into deep water (not a ford) it drowns. If the map's edge, a wall, a mountain or another unit is in the way it stays put and takes 2 damage, and a unit it slams into takes 2 too. A boss holds its ground and can't be shoved. A unit knocked out by a shove is the shover's kill. Walking over a spike trap is safe.
 
 Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.md` (`combat.ts`, `combatStats.ts`, `weapons.ts`, `experience.ts`, `skills.ts`).
 
@@ -103,6 +104,7 @@ The spear-and-shield infantry: the enemy in the demo battle, and a choice in Tra
 
 | Skill        | Learned at | Mana | Range | Damage                      |
 | ------------ | ---------- | ---- | ----- | --------------------------- |
+| Shove        | 1          | 1    | 1     | None; pushes the foe a tile |
 | Power Strike | 2          | 2    | 1     | The regular hit with +3 STR |
 
 Carries an Iron Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
@@ -184,6 +186,7 @@ The armored infantry behind a tower shield: a soldier's strength and spear with 
 
 | Skill       | Learned at | Mana | Range | Damage                      |
 | ----------- | ---------- | ---- | ----- | --------------------------- |
+| Shove       | 1          | 1    | 1     | None; pushes the foe a tile |
 | Shield Bash | 2          | 2    | 1     | The regular hit with +1 STR |
 
 Carries an Iron Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
@@ -388,7 +391,7 @@ Warrior and Soldier differ by a point of strength and their weapons: the wooden 
 | Soldier  | Guard   | Iron Spear   | 0      | 84% | 0%   | 1       |
 | Acolyte  | Soldier | Light        | 3      | 88% | 0%   | 1       |
 
-Every class learns its skill at level 2, its first level up; the skill rows use level-1 stats.
+Every class learns its skill at level 2, its first level up (the Soldier's and Guard's Shove, which deals no damage, is known from level 1); the skill rows use level-1 stats.
 
 | Skill        | User     | Target  | Damage | Hit    | Crit  | Strikes       |
 | ------------ | -------- | ------- | ------ | ------ | ----- | ------------- |

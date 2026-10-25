@@ -173,7 +173,7 @@ export const BRIDGE_ART: { vertical: SheetTile; horizontal: SheetTile } = {
 
 // Map props the terrain sheet doesn't have, drawn to match it by
 // .claude/skills/tileset/scripts/draw-map-props.js: a gateway per palette
-// and ford stepping stones. A 32px sheet like the terrain one.
+// ford stepping stones and a spike trap. A 32px sheet like the terrain one.
 export const MAP_PROPS_SHEET = { key: 'map-props', columns: 11 };
 
 // Each palette's gateway on MAP_PROPS_SHEET: `posts` (a short post either
@@ -194,6 +194,10 @@ export const GATE_ART: Record<BuildingPaletteName, { posts: SheetTile; lintel: S
 
 // Ford stepping stones on MAP_PROPS_SHEET, over a ford's water.
 export const FORD_ART: SheetTile = [10, 0];
+
+// A spike trap on MAP_PROPS_SHEET, over the ground of a spikes cell
+// (src/game/hazards.ts).
+export const SPIKES_ART: SheetTile = [10, 1];
 
 // Unit art keyed by unit class, so every unit of a class looks alike
 // whichever side it's on. Each names a set of sheets, one per animation in

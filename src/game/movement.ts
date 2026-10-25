@@ -42,6 +42,9 @@ export const TERRAIN_MOVE_COSTS: TerrainCosts = Object.freeze({
   ford: 2,
   // A gateway through a wall.
   gate: 1,
+  // A spike trap: safe to pick your way across, only a shove onto it
+  // hurts (see hazards.ts).
+  spikes: 1,
 });
 
 export function getMoveCost(terrain: Terrain, terrainCosts: TerrainCosts = TERRAIN_MOVE_COSTS): number {

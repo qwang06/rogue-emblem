@@ -15,12 +15,13 @@ import {
 } from './combat.ts';
 import { getModifierSkills, type Modifier } from './modifiers.ts';
 
-// A skill: { id, label, manaCost, range, animation, might?, damageScale? }.
-// Its damage is a variant of the user's regular hit: `might` (default 0)
-// is added to the user's attack power, and the resulting damage is
-// multiplied by `damageScale` (default 1). `range` is how far away
-// (orthogonal steps) the target can be, and `animation` names the effect
-// the presentation layer plays for it.
+// A skill: { id, label, manaCost, range, animation, might?, damageScale?,
+// push? }. Its damage is a variant of the user's regular hit: `might`
+// (default 0) is added to the user's attack power, and the resulting
+// damage is multiplied by `damageScale` (default 1). `range` is how far
+// away (orthogonal steps) the target can be, and `animation` names the
+// effect the presentation layer plays for it. A `push` skill also shoves a
+// target it leaves standing one tile away from the user (see push.ts).
 
 export interface Skill {
   id: string;
@@ -30,6 +31,7 @@ export interface Skill {
   animation: string;
   might?: number;
   damageScale?: number;
+  push?: boolean;
 }
 
 export interface SkillTreeEntry {
@@ -104,17 +106,36 @@ export const SHIELD_BASH: Skill = Object.freeze({
   animation: 'strike',
 });
 
+// A shove with no blow behind it: the adjacent foe is pushed one tile
+// away, onto spikes or into deep water if they're there, or slammed into
+// whatever stops it (see push.ts). It deals no damage of its own.
+export const SHOVE: Skill = Object.freeze({
+  id: 'shove',
+  label: 'Shove',
+  manaCost: 1,
+  range: 1,
+  damageScale: 0,
+  push: true,
+  animation: 'strike',
+});
+
 // The level each class's first skill unlocks at: a new unit starts with
-// none and learns it on its first level up.
+// none (bar a Shove) and learns it on its first level up.
 export const SKILL_UNLOCK_LEVEL = 2;
 
 // unitClass -> [{ level, skill }]. Classes without an entry know no skills.
 export const SKILL_TREES: SkillTrees = Object.freeze({
   warrior: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: THROW_STONES })]),
-  soldier: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: POWER_STRIKE })]),
+  soldier: Object.freeze([
+    Object.freeze({ level: 1, skill: SHOVE }),
+    Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: POWER_STRIKE }),
+  ]),
   archer: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: LONG_SHOT })]),
   vanguard: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: CLEAVE })]),
-  guard: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: SHIELD_BASH })]),
+  guard: Object.freeze([
+    Object.freeze({ level: 1, skill: SHOVE }),
+    Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: SHIELD_BASH }),
+  ]),
 });
 
 // Every skill a unit of unitClass knows at the given level, in tree order.
