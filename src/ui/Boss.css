@@ -1,0 +1,174 @@
+/* ---- Boss battles: the name card and the HP bar ---------------------- */
+
+/* The name card: a red banner mid-map, over the phase banner's spot. It
+   fades and settles in, holds, and fades out over the published
+   duration. */
+.boss-intro {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  box-sizing: border-box;
+  width: min(30rem, calc(100% - 32px));
+  padding: 10px 20px 12px;
+  text-align: center;
+  transform: translate(-50%, -50%);
+  animation-name: boss-intro-show;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+}
+
+.boss-intro p {
+  margin: 0;
+}
+
+.boss-intro__name {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #ffd8b8;
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: var(--px) var(--px) 0 rgb(0 0 0 / 45%);
+}
+
+.boss-intro__title {
+  margin-top: 4px;
+  color: var(--accent);
+  font-size: 1.125rem;
+  letter-spacing: 0.12em;
+}
+
+.boss-intro__taunt {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: var(--px) solid var(--muted);
+  color: var(--fg);
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+@keyframes boss-intro-show {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+  15%,
+  85% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* The HP bar: a wide red strip along the bottom of the map, clear of the
+   unit panel in the top corners; along the top where the map is wide
+   enough for it to sit between them. Read-only, so the pointer passes
+   through. */
+.hud .boss-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  box-sizing: border-box;
+  width: min(26rem, calc(100% - 24px));
+  padding: 4px 12px 6px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+@media (min-width: 80rem) {
+  .hud .boss-bar {
+    top: 12px;
+    bottom: auto;
+  }
+}
+
+.boss-bar__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.boss-bar__name {
+  flex: none;
+  color: #ffd8b8;
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.boss-bar__title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--fg-dim);
+  font-size: 0.875rem;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Both tags always take their room; an off one is only invisible. */
+.boss-bar__tags {
+  display: flex;
+  flex: none;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.boss-bar__tag {
+  padding: 0 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: var(--px) solid currentColor;
+}
+
+.boss-bar__tag--horn {
+  color: var(--accent);
+}
+
+.boss-bar__tag--enraged {
+  color: #ff9a6a;
+}
+
+.boss-bar__tag--off {
+  visibility: hidden;
+}
+
+.boss-bar__meter {
+  font-size: 0.875rem;
+}
+
+.boss-bar__meter .meter__track {
+  height: calc(6 * var(--px));
+}
+
+/* Enraged, the bar burns orange. */
+.boss-bar--enraged .meter__fill {
+  background: var(--orange);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boss-intro {
+    animation-name: boss-intro-fade;
+  }
+}
+
+@keyframes boss-intro-fade {
+  0%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

@@ -5,6 +5,7 @@
 
 import { getUnitSprite } from '../game/tileset.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
+import { findOrigin } from '../game/warband/origins.ts';
 import { findRelic } from '../game/warband/relics.ts';
 import { getNextUnlock, type MetaState, type RenownLine, type Unlock } from '../game/warband/meta.ts';
 import { formatPlayTime, type RunSummary, type SummaryUnit } from '../game/warband/runSummary.ts';
@@ -46,6 +47,10 @@ export interface RunSummaryView {
   memorial: readonly MemorialView[];
   // The relics held, by name.
   relics: readonly string[];
+  // The origin it started as, by label (null for a run from before
+  // origins), and the Heat it was played at.
+  origin: string | null;
+  heat: number;
   renown: RenownView;
 }
 
@@ -54,7 +59,12 @@ export interface RunSummaryView {
 // as words for one that isn't known).
 export function toRunSummaryView(
   summary: RunSummary,
-  recorded: { meta: MetaState; earned: { lines: readonly RenownLine[]; total: number }; unlocked: readonly Unlock[] },
+  recorded: {
+    meta: MetaState;
+    earned: { lines: readonly RenownLine[]; total: number };
+    unlocked: readonly Unlock[];
+    heatUnlocked?: number | null;
+  },
   relicName: (id: string) => string = (id) => findRelic(id)?.name ?? humanizeId(id),
 ): RunSummaryView {
   const next = getNextUnlock(recorded.meta);
@@ -71,11 +81,16 @@ export function toRunSummaryView(
       summary.memorial.map((unit) => Object.freeze({ ...toSummaryUnitView(unit), stage: unit.stage })),
     ),
     relics: Object.freeze(summary.relics.map(relicName)),
+    origin: summary.origin && (findOrigin(summary.origin)?.label ?? humanizeId(summary.origin)),
+    heat: summary.heat,
     renown: Object.freeze({
       lines: recorded.earned.lines,
       earned: recorded.earned.total,
       total: recorded.meta.renown,
-      unlocked: Object.freeze(recorded.unlocked.map((unlock) => unlock.label)),
+      unlocked: Object.freeze([
+        ...recorded.unlocked.map((unlock) => unlock.label),
+        ...(recorded.heatUnlocked ? [`Heat ${recorded.heatUnlocked}`] : []),
+      ]),
       next: next && Object.freeze({ label: next.label, renown: next.renown }),
     }),
   });

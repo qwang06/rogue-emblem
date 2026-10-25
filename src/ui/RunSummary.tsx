@@ -29,6 +29,7 @@ export function RunSummary({ summary }: { summary: RunSummaryView }) {
         <p className="run-summary__line">
           {summary.won ? `Won the run on stage ${summary.stage}.` : `Fell on stage ${summary.stage}.`}
           {summary.survivors > 0 && ` ${summary.survivors} still standing.`}
+          {summary.origin && ` Started as ${summary.origin}${summary.heat > 0 ? ` at Heat ${summary.heat}` : ''}.`}
         </p>
 
         <div className="run-summary__columns">

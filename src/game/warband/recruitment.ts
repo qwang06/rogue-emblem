@@ -3,6 +3,7 @@
 // realm (travel.ts), every village battle has one. The candidate is rolled
 // before battle so reloading the same stage brings back the same person.
 import { createSeededRng } from '../rng.ts';
+import { getRunHeatRules } from './heat.ts';
 import { MAX_ROSTER_SIZE, rollRecruit } from './rewards.ts';
 import type { RunState, UnitSnapshot } from './run.ts';
 import { getRunSite, isRealmRun } from './travel.ts';
@@ -18,8 +19,10 @@ export function isRecruitmentStage(seed: number, stage: number): boolean {
 }
 
 // Whether `run`'s current battle fields a guest: a village on the realm,
-// else a recruitment stage (isRecruitmentStage).
+// else a recruitment stage (isRecruitmentStage). Never at a Heat that
+// turns guests away (see heat.ts).
 export function hasGuest(run: RunState): boolean {
+  if (!getRunHeatRules(run).guests) return false;
   if (isRealmRun(run)) return getRunSite(run)?.kind === 'village';
   return isRecruitmentStage(run.seed, run.stage);
 }

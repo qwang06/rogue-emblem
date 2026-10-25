@@ -10,6 +10,7 @@ import { HEAL_STAFF } from '../healing.ts';
 import { applyModifiers } from '../modifiers.ts';
 import { getBoonModifiers } from './boons.ts';
 import { getRelicModifiers, hasRelic, PHOENIX_FEATHER } from './relics.ts';
+import { MAX_HEAT } from './heat.ts';
 import { EMPTY_CHRONICLE, parseChronicle, recordBattle, type RunChronicle } from './chronicle.ts';
 import { ARMORS, HEALTH_POTION, MANA_POTION, type Inventory, type Item } from '../items.ts';
 import { createSeededRng } from '../rng.ts';
@@ -111,6 +112,11 @@ export interface RunState {
   // Mentor's Scrolls held, each a free lesson at camp in any class's skill
   // set (see mentors.ts); absent when none are.
   scrolls?: number;
+  // The origin the run started as (see origins.ts); absent in runs saved
+  // before origins, which started as a lone unit of their class.
+  origin?: string;
+  // The Heat level it's played at (see heat.ts); absent at no Heat.
+  heat?: number;
 }
 
 // A reward pick still owed after a won stage: the stage cleared, how many
@@ -355,6 +361,8 @@ export function parseRun(
     pendingBoons,
     chronicle,
     scrolls,
+    origin,
+    heat,
   } = data;
   const itemIds = new Set(items.map((item) => item.id));
   const classIds = new Set(classes.map((unitClass) => unitClass.id));
@@ -381,7 +389,9 @@ export function parseRun(
     (route !== undefined && !isRunRoute(route)) ||
     (pendingBoons !== undefined && !isPendingBoons(pendingBoons)) ||
     (chronicle !== undefined && parseChronicle(chronicle) === null) ||
-    (scrolls !== undefined && !isWholeNumber(scrolls))
+    (scrolls !== undefined && !isWholeNumber(scrolls)) ||
+    (origin !== undefined && typeof origin !== 'string') ||
+    (heat !== undefined && (!isWholeNumber(heat) || heat < 1 || heat > MAX_HEAT))
   ) {
     return null;
   }
@@ -402,6 +412,8 @@ export function parseRun(
     chronicle: chronicle === undefined ? EMPTY_CHRONICLE : parseChronicle(chronicle)!,
     ...(route !== undefined && { route }),
     ...(scrolls !== undefined && scrolls > 0 && { scrolls }),
+    ...(origin !== undefined && { origin }),
+    ...(heat !== undefined && { heat }),
   });
 }
 

@@ -4,6 +4,7 @@
 // old one, so any earlier state can be kept and gone back to (history.ts).
 // No Phaser, no hidden state.
 
+import { createBossState, type BossState } from '../bosses.ts';
 import { findUnit, type Grid, type Point } from '../grid.ts';
 import { DEFAULT_OBJECTIVE, type BattleSnapshot, type Objective } from '../objectives.ts';
 import { getDeploymentLimit } from '../deployment.ts';
@@ -45,6 +46,9 @@ export interface BattleState {
   readonly kills: ReadonlyMap<string, number>;
   // The seed the battle's next roll comes from (see createResumableRng).
   readonly rngState: number;
+  // A boss with rules of its own (see bosses.ts): whether it has enraged
+  // and where its horn's next arrival comes. Null for any other battle.
+  readonly boss: BossState | null;
 }
 
 // The state a level starts in, before any unit is placed, with its rolls
@@ -54,13 +58,14 @@ export function createBattleState(
   level: Pick<Level, 'grid' | 'units' | 'roster' | 'deploymentZone' | 'maxDeployed' | 'objective'>,
   seed: number,
 ): BattleState {
+  const objective = level.objective ?? DEFAULT_OBJECTIVE;
   return Object.freeze({
     grid: level.grid,
     units: new Map(level.units),
     roster: Object.freeze([...level.roster]),
     deploymentZone: Object.freeze([...level.deploymentZone]),
     deploymentLimit: getDeploymentLimit(level.roster, level.deploymentZone, level.maxDeployed),
-    objective: level.objective ?? DEFAULT_OBJECTIVE,
+    objective,
     stage: 'deployment',
     turnState: null,
     outcome: null,
@@ -69,6 +74,7 @@ export function createBattleState(
     convoyLoot: Object.freeze([]),
     kills: new Map(),
     rngState: seed >>> 0,
+    boss: createBossState(objective),
   });
 }
 
