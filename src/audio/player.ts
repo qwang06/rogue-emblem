@@ -14,14 +14,10 @@ export interface SoundPlayer {
   setMasterGain(gain: number): void;
 }
 
-// Browsers only let audio start after a click or key press, so create the
-// player from one. Null where there's no Web Audio.
-export function createSoundPlayer(): SoundPlayer | null {
-  const AudioContextClass = typeof window === 'undefined' ? undefined : window.AudioContext;
-  if (!AudioContextClass) return null;
-  const context = new AudioContextClass();
+// Plays sound effects into `destination` through its own volume.
+export function createSoundPlayer(context: AudioContext, destination: AudioNode): SoundPlayer {
   const master = context.createGain();
-  master.connect(context.destination);
+  master.connect(destination);
   let masterGain = 1;
   let noise: AudioBuffer | null = null;
 

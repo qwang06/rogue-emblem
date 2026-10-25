@@ -39,23 +39,23 @@ describe('TITLE_ACTIONS', () => {
 });
 
 describe('getSettingsActions', () => {
-  it('offers sound, volume and the game configs', () => {
-    const actions = getSettingsActions({ muted: false, volume: 0.6 });
-    expect(actions.map((a) => a.id)).toEqual(['sound', 'volume', 'configs']);
-    expect(actions.map((a) => a.label)).toEqual(['Sound: On', 'Volume: 60%', 'Game Configs']);
+  it('offers sound, both volumes and the game configs', () => {
+    const actions = getSettingsActions({ muted: false, volume: 0.6, musicVolume: 0.4 });
+    expect(actions.map((a) => a.id)).toEqual(['sound', 'volume', 'musicVolume', 'configs']);
+    expect(actions.map((a) => a.label)).toEqual(['Sound: On', 'Effects: 60%', 'Music: 40%', 'Game Configs']);
   });
 
   it('shows sound off and the volume at its ends', () => {
-    expect(getSettingsActions({ muted: true, volume: 1 }).map((a) => a.label)).toEqual([
+    expect(getSettingsActions({ muted: true, volume: 1, musicVolume: 0 }).map((a) => a.label)).toEqual([
       'Sound: Off',
-      'Volume: 100%',
+      'Effects: 100%',
+      'Music: 0%',
       'Game Configs',
     ]);
-    expect(getSettingsActions({ muted: false, volume: 0 })[1].label).toBe('Volume: 0%');
   });
 
   it('is frozen', () => {
-    const actions = getSettingsActions({ muted: false, volume: 0.6 });
+    const actions = getSettingsActions({ muted: false, volume: 0.6, musicVolume: 0.4 });
     expect(Object.isFrozen(actions)).toBe(true);
     expect(actions.every(Object.isFrozen)).toBe(true);
   });
