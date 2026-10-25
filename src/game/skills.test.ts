@@ -18,6 +18,7 @@ import {
   SUNDER,
   describeSkill,
   getSecondarySkills,
+  getSkillForecast,
   getSkillHealAmount,
   hasSkillTree,
   isHealingSkill,
@@ -396,5 +397,39 @@ describe('calculateSkillDamage with modifiers', () => {
     const base = calculateSkillDamage(POWER_STRIKE, user, defender);
     expect(calculateSkillDamage(POWER_STRIKE, hunter, defender)).toBe(base);
     expect(calculateSkillDamage(POWER_STRIKE, hunter, { ...defender, monster: true })).toBe(base + 3);
+  });
+});
+
+describe('getSkillForecast', () => {
+  const user = { health: 10, maxHealth: 10, strength: 4, defense: 2 };
+  const defender = { health: 9, maxHealth: 10, strength: 4, defense: 2 };
+
+  it('forecasts a guaranteed single hit with no counterattack', () => {
+    expect(getSkillForecast(POWER_STRIKE, user, defender)).toEqual({
+      attacker: {
+        health: 10,
+        maxHealth: 10,
+        damage: 5,
+        hit: 100,
+        crit: 0,
+        strikes: 1,
+        counters: true,
+      },
+      defender: {
+        health: 9,
+        maxHealth: 10,
+        damage: null,
+        hit: null,
+        crit: null,
+        strikes: 0,
+        counters: false,
+      },
+    });
+  });
+
+  it('includes push hazard or bump damage on a Shove, and full HP when drowning', () => {
+    expect(getSkillForecast(SHOVE, user, defender, { damage: 0, drowned: false }).attacker.damage).toBe(0);
+    expect(getSkillForecast(SHOVE, user, defender, { damage: 5, drowned: false }).attacker.damage).toBe(5);
+    expect(getSkillForecast(SHOVE, user, defender, { damage: 0, drowned: true }).attacker.damage).toBe(9);
   });
 });

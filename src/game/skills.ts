@@ -13,7 +13,9 @@ import {
   DAMAGE_TYPES,
   getDamageType,
   getFighterBonus,
+  type CombatSide,
   type DamageStats,
+  type ForecastSide,
   type SkillFighter,
 } from './combat.ts';
 import { getModifierSkills, type Modifier } from './modifiers.ts';
@@ -305,6 +307,47 @@ export function calculateSkillDamage(skill: Skill, user: SkillFighter, defender:
     bonus: getFighterBonus(defender, user, false),
   };
   return Math.ceil(calculateDamage(boosted, guarded) * (skill.damageScale ?? 1));
+}
+
+export type SkillForecastFighter = SkillFighter & {
+  health: number;
+  maxHealth: number;
+};
+
+// Forecast for `user` using an offensive `skill` on `defender`, in the same
+// shape as getCombatForecast so the combat forecast window can display it:
+// a skill always lands once, never crits, and can't be countered. For a push
+// skill, `push` adds the shove's damage (or all the target's remaining HP if
+// it drowns).
+export function getSkillForecast(
+  skill: Skill,
+  user: SkillForecastFighter,
+  defender: SkillForecastFighter,
+  push: { damage: number; drowned: boolean } | null = null,
+): Record<CombatSide, ForecastSide> {
+  const struck = calculateSkillDamage(skill, user, defender);
+  const survived = defender.health - struck > 0;
+  const pushDamage = skill.push && push && survived ? (push.drowned ? defender.health - struck : push.damage) : 0;
+  return {
+    attacker: {
+      health: user.health,
+      maxHealth: user.maxHealth,
+      damage: struck + pushDamage,
+      hit: 100,
+      crit: 0,
+      strikes: 1,
+      counters: true,
+    },
+    defender: {
+      health: defender.health,
+      maxHealth: defender.maxHealth,
+      damage: null,
+      hit: null,
+      crit: null,
+      strikes: 0,
+      counters: false,
+    },
+  };
 }
 
 // Whether `skill` mends an ally rather than striking a foe.

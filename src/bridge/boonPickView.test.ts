@@ -11,9 +11,13 @@ function soldierRun() {
 }
 
 describe('toBoonPickView', () => {
-  it('names whose level up it is, with their sprite and stats', () => {
+  it('names whose level up it is, with their sprite, stats, gains and learned skills', () => {
     const run = soldierRun();
-    const owing = queueLevelUpBoons(run, { ...run, roster: [{ ...run.roster[0], level: 2 }] });
+    const before = run.roster[0];
+    const owing = queueLevelUpBoons(run, {
+      ...run,
+      roster: [{ ...before, level: 2, maxHealth: before.maxHealth + 1, strength: before.strength + 1 }],
+    });
     const view = toBoonPickView(getBoonOffer(owing)!);
     const unit = owing.roster[0];
     expect(view).toMatchObject({
@@ -22,18 +26,21 @@ describe('toBoonPickView', () => {
       classLabel: 'Soldier',
       sprite: 'Soldier_03',
       level: 2,
+      skills: ['Power Strike'],
     });
-    expect(view.stats.map((stat) => [stat.label, stat.value])).toEqual([
-      ['HP', unit.maxHealth],
-      ['STR', unit.strength],
-      ['MAG', unit.magic],
-      ['SKL', unit.skill],
-      ['SPD', unit.speed],
-      ['LCK', unit.luck],
-      ['DEF', unit.defense],
-      ['RES', unit.resistance],
+    expect(view.stats.map((stat) => [stat.label, stat.value, stat.gain])).toEqual([
+      ['HP', unit.maxHealth, 1],
+      ['MP', unit.maxMana, 0],
+      ['STR', unit.strength, 1],
+      ['MAG', unit.magic, 0],
+      ['SKL', unit.skill, 0],
+      ['SPD', unit.speed, 0],
+      ['LCK', unit.luck, 0],
+      ['DEF', unit.defense, 0],
+      ['RES', unit.resistance, 0],
     ]);
     expect(Object.isFrozen(view)).toBe(true);
+    expect(Object.isFrozen(view.skills)).toBe(true);
   });
 
   it('lists each boon in the offer, in order, with what a stat boon raises', () => {

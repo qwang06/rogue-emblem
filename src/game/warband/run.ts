@@ -6,6 +6,7 @@
 // run. Units that die join `fallen` and never come back. Everything here is
 // pure: each function returns a new frozen run and leaves its input alone.
 
+import { GROWTH_STATS, type GrowthStat } from '../experience.ts';
 import { HEAL_STAFF } from '../healing.ts';
 import { applyModifiers } from '../modifiers.ts';
 import { getBoonModifiers } from './boons.ts';
@@ -74,11 +75,12 @@ export interface UnitSnapshot {
   secondaryClass?: string;
 }
 
-// A level-up boon pick still owed: the unit and the level it reached (see
-// levelUpPicks.ts).
+// A level-up boon pick still owed: the unit, the level it reached, and any
+// stat gains that level up rolled (see levelUpPicks.ts).
 export interface PendingBoon {
   unitId: string;
   level: number;
+  gains?: Partial<Record<GrowthStat, number>>;
 }
 
 // A wayside event still owed a choice (see events.ts).
@@ -481,11 +483,24 @@ function isPendingEvent(value: unknown): value is PendingEvent {
   return isRecord(value) && typeof value.id === 'string' && isWholeNumber(value.depth);
 }
 
+const GROWTH_STAT_SET: ReadonlySet<string> = new Set(GROWTH_STATS);
+
+function isStatGains(value: unknown): value is Partial<Record<GrowthStat, number>> {
+  return (
+    isRecord(value) && Object.entries(value).every(([key, gain]) => GROWTH_STAT_SET.has(key) && isWholeNumber(gain))
+  );
+}
+
 function isPendingBoons(value: unknown): value is PendingBoon[] {
   return (
     Array.isArray(value) &&
     value.every(
-      (entry) => isRecord(entry) && typeof entry.unitId === 'string' && isWholeNumber(entry.level) && entry.level >= 1,
+      (entry) =>
+        isRecord(entry) &&
+        typeof entry.unitId === 'string' &&
+        isWholeNumber(entry.level) &&
+        entry.level >= 1 &&
+        (entry.gains === undefined || isStatGains(entry.gains)),
     )
   );
 }
@@ -580,7 +595,14 @@ function freezeRun(run: RunState): RunState {
     ...(run.pendingEvent && { pendingEvent: Object.freeze({ ...run.pendingEvent }) }),
     ...(run.seenEvents && { seenEvents: Object.freeze([...run.seenEvents]) }),
     ...(run.pendingBoons && {
-      pendingBoons: Object.freeze(run.pendingBoons.map((pending) => Object.freeze({ ...pending }))),
+      pendingBoons: Object.freeze(
+        run.pendingBoons.map((pending) =>
+          Object.freeze({
+            ...pending,
+            ...(pending.gains && { gains: Object.freeze({ ...pending.gains }) }),
+          }),
+        ),
+      ),
     }),
   });
 }

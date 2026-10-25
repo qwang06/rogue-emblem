@@ -416,9 +416,9 @@ describe('level-up boon picks', () => {
   it('owes a boon per level the stage gained before the reward pick', () => {
     const session = cleared();
     expect(session.phase).toBe('boon');
-    expect(session.run.pendingBoons).toEqual([
-      { unitId: 'alden', level: 2 },
-      { unitId: 'cato', level: 2 },
+    expect(session.run.pendingBoons).toMatchObject([
+      { unitId: 'alden', level: 2, gains: expect.any(Object) },
+      { unitId: 'cato', level: 2, gains: expect.any(Object) },
     ]);
     expect(session.run.pendingReward).toBeDefined();
     expect(resumeRunSession(session.run).phase).toBe('boon');

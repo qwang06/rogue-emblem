@@ -6,17 +6,41 @@
 // are seeded from the run's seed, the unit and the level, so they never
 // change between visits. Pure: each function returns a new frozen run.
 
+import { GROWTH_STATS, type GrowthStat } from '../experience.ts';
 import { createSeededRng } from '../rng.ts';
 import type { UnitClass } from '../unitClasses.ts';
 import { findBoon, rollBoons, takeBoon, type Boon } from './boons.ts';
 import { restoreUnit, snapshotUnit, type PendingBoon, type RunState, type UnitSnapshot } from './run.ts';
 
-// A boon pick as it's offered: the unit, the level it reached, and the
-// boons to choose from.
+// A boon pick as it's offered: the unit, the level it reached, the boons to
+// choose from, and any stat gains the level-up roll gave.
 export interface BoonOffer {
   unit: UnitSnapshot;
   level: number;
   boons: readonly Boon[];
+  gains?: Partial<Record<GrowthStat, number>>;
+}
+
+const SNAPSHOT_STAT_KEYS: Readonly<Record<GrowthStat, keyof UnitSnapshot>> = Object.freeze({
+  health: 'maxHealth',
+  mana: 'maxMana',
+  strength: 'strength',
+  magic: 'magic',
+  skill: 'skill',
+  speed: 'speed',
+  luck: 'luck',
+  defense: 'defense',
+  resistance: 'resistance',
+});
+
+function diffStats(before: UnitSnapshot, after: UnitSnapshot): Partial<Record<GrowthStat, number>> | undefined {
+  const gains: Partial<Record<GrowthStat, number>> = {};
+  for (const stat of GROWTH_STATS) {
+    const key = SNAPSHOT_STAT_KEYS[stat];
+    const diff = (after[key] as number) - (before[key] as number);
+    if (diff > 0) gains[stat] = diff;
+  }
+  return Object.keys(gains).length > 0 ? Object.freeze(gains) : undefined;
 }
 
 // The seed the boon offer for `unitId` reaching `level` rolls from, in a
@@ -29,13 +53,21 @@ export function getBoonSeed(runSeed: number, unitId: string, level: number): num
 
 // `after` (a run that `before` became) owing a boon pick for each level
 // any unit on both rosters gained between them, queued after the ones it
-// already owes, unit by unit in roster order and level by level.
+// already owes, unit by unit in roster order and level by level, with any
+// stat gains from `before` to `after` recorded on the pick.
 export function queueLevelUpBoons(before: RunState, after: RunState): RunState {
   const queued: PendingBoon[] = [];
   for (const unit of after.roster) {
     const was = before.roster.find((snapshot) => snapshot.id === unit.id);
-    if (!was) continue;
-    for (let level = was.level + 1; level <= unit.level; level++) queued.push({ unitId: unit.id, level });
+    if (!was || unit.level <= was.level) continue;
+    const gains = diffStats(was, unit);
+    for (let level = was.level + 1; level <= unit.level; level++) {
+      queued.push({
+        unitId: unit.id,
+        level,
+        ...(level === unit.level && gains ? { gains } : {}),
+      });
+    }
   }
   if (queued.length === 0) return after;
   return setPending(after, [...(after.pendingBoons ?? []), ...queued]);
@@ -94,7 +126,14 @@ function rollOffer(run: RunState, pending: PendingBoon, classes?: readonly UnitC
     restoreUnit(unit, classes),
     createSeededRng(getBoonSeed(run.seed, pending.unitId, pending.level)),
   );
-  return boons.length > 0 ? Object.freeze({ unit, level: pending.level, boons: Object.freeze(boons) }) : null;
+  return boons.length > 0
+    ? Object.freeze({
+        unit,
+        level: pending.level,
+        boons: Object.freeze(boons),
+        ...(pending.gains && { gains: pending.gains }),
+      })
+    : null;
 }
 
 function setPending(run: RunState, pending: readonly PendingBoon[]): RunState {
@@ -102,6 +141,13 @@ function setPending(run: RunState, pending: readonly PendingBoon[]): RunState {
   if (pending.length === 0) return Object.freeze(rest);
   return Object.freeze({
     ...rest,
-    pendingBoons: Object.freeze(pending.map((entry) => Object.freeze({ ...entry }))),
+    pendingBoons: Object.freeze(
+      pending.map((entry) =>
+        Object.freeze({
+          ...entry,
+          ...(entry.gains && { gains: Object.freeze({ ...entry.gains }) }),
+        }),
+      ),
+    ),
   });
 }

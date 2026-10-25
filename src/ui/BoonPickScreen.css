@@ -230,6 +230,14 @@
   margin: 0;
 }
 
+.boon-pick__stat-gain {
+  display: inline-block;
+  min-width: 2ch;
+  margin-left: 3px;
+  font-weight: 700;
+  color: var(--green);
+}
+
 .boon-pick__stat-after {
   display: inline-block;
   min-width: 3.5ch;
@@ -240,6 +248,12 @@
   visibility: hidden;
 }
 
+.boon-pick__stat--grew,
+.boon-pick__stat--up {
+  color: var(--fg-bright);
+}
+
+.boon-pick__stat--grew dt,
 .boon-pick__stat--up dt {
   color: var(--fg-bright);
 }
@@ -247,6 +261,13 @@
 .boon-pick__stat--up .boon-pick__stat-after {
   visibility: visible;
   animation: boon-pick-blink 0.9s steps(1) infinite;
+}
+
+.boon-pick__skills {
+  margin: 8px 0 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--magenta);
 }
 
 /* ---- The boons ---- */

@@ -56,7 +56,7 @@ import {
   type CarriedStaff,
   type Staff,
 } from '../game/healing.ts';
-import { findUnitSkill, getSkillActions, getUnitSkills, isHealingSkill } from '../game/skills.ts';
+import { findUnitSkill, getSkillActions, getSkillForecast, getUnitSkills, isHealingSkill } from '../game/skills.ts';
 import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange } from '../game/combat.ts';
 import { getFitZoom } from '../game/camera.ts';
 import { createCursor, moveCursor } from '../game/cursor.ts';
@@ -738,7 +738,7 @@ export class GridScene extends Phaser.Scene {
     // an open unit menu to the refitted map then.
     this.events.once(Phaser.Scenes.Events.RENDER, () => {
       if (this.activeUnit) this.publishMenuAnchor();
-      if (this.rangeMode === 'attack') this.updateCombatForecast();
+      if (this.rangeMode === 'attack' || this.rangeMode === 'skill') this.updateCombatForecast();
       if (this.rangeMode === 'skill') this.updatePushPreview();
       this.refreshIntents();
     });
@@ -1082,9 +1082,8 @@ export class GridScene extends Phaser.Scene {
       const skill = getSelectedAction(this.skillMenu!);
       if (!skill || skill.disabled) return;
       this.publishMenu('skillMenu', null);
-      const { unit, x, y } = this.activeUnit!;
+      const { unit, unitId, x, y } = this.activeUnit!;
       this.activeSkill = findUnitSkill(unit, skill.id);
-      this.setCursor(x, y);
       // A healing skill's reach shows in green, like a staff's.
       const healing = isHealingSkill(this.activeSkill!);
       this.showRange(
@@ -1093,7 +1092,9 @@ export class GridScene extends Phaser.Scene {
         healing ? HEAL_RANGE_COLOR : SKILL_RANGE_COLOR,
         healing ? HEAL_RANGE_ALPHA : SKILL_RANGE_ALPHA,
       );
-      this.updatePushPreview();
+      const [first] = getSkillTargets(this.grid, this.units, unitId, { x, y }, this.activeSkill!);
+      if (first) this.setCursor(first.x, first.y);
+      else this.setCursor(x, y);
       return;
     }
 
@@ -1370,27 +1371,19 @@ export class GridScene extends Phaser.Scene {
       const result = tryRunCommand(session, command);
       if (!result) return;
       const after = result.session.run;
-      // A Veteran's Lesson shows each level up it gives, then the boon
-      // picks they owe, before moving on.
-      const levelUps = result.events.flatMap((event) => (event.type === 'level-ups' ? event.levelUps : []));
       saveRun(after);
       this.rewardOffer = null;
-      this.inputLocked = true;
-      this.showLevelUps(levelUps, () => {
-        // A Recruit reward opens its draft.
-        if (result.session.phase === 'recruit') {
-          this.inputLocked = false;
-          this.resumeRecruitment(after);
-          return;
-        }
-        if (result.session.phase !== 'boon') {
-          this.openCamp(after);
-          return;
-        }
-        this.inputLocked = false;
-        this.boonRun = after;
-        this.openBoonMenu();
-      });
+      // A Recruit reward opens its draft.
+      if (result.session.phase === 'recruit') {
+        this.resumeRecruitment(after);
+        return;
+      }
+      if (result.session.phase !== 'boon') {
+        this.openCamp(after);
+        return;
+      }
+      this.boonRun = after;
+      this.openBoonMenu();
       return;
     }
     if (delta !== 0) this.publishMenu('rewardMenu', moveSelection(this.rewardMenu!, delta));
@@ -2263,21 +2256,18 @@ export class GridScene extends Phaser.Scene {
     let runOver: RunOverView | null = null;
     let runSummary: RunSummaryView | null = null;
     let stageClear: StageClearView | null = null;
-    // A stage clear's guaranteed level ups, shown before its result.
-    let levelUps: readonly RewardLevelUp[] = [];
     if (this.setup.mode === 'warband' && this.setup.run) {
       // A run writes the battle back to its roster and saves the next
       // stage, or forgets the run once the warband has fallen or won it. A win pays
       // the clear's gold and rolls the rewards the reward screen offers.
       const before = this.setup.run;
       const result = getRunBattleResult(this.battle, this.takePlayTime());
-      const { session: finished, events } = finishBattleWithEvents(
+      const { session: finished } = finishBattleWithEvents(
         { run: before, phase: 'battle' },
         result,
         outcome,
         this.content.regions.finalStage,
       );
-      levelUps = events.flatMap((event) => (event.type === 'level-ups' ? event.levelUps : []));
       const { run } = finished;
       const ended = finished.phase === 'over' || finished.phase === 'won';
       if (ended) {
@@ -2319,19 +2309,15 @@ export class GridScene extends Phaser.Scene {
     }
     const nextBattle = this.nextBattle && describeBattle(this.nextBattle, this.content);
     this.playTriggeredDialog(outcome, () => {
-      this.inputLocked = levelUps.length > 0;
-      this.showLevelUps(levelUps, () => {
-        this.inputLocked = false;
-        gameStore.setState({ battleOutcome: outcome, nextBattle, runOver, runSummary, stageClear });
-        // A won stage goes straight on to its recruit or reward pick, which
-        // shows the clear's gold itself, rather than stopping on the result.
-        // Confirm waits a moment there, so one pressed to hurry the battle's
-        // end along doesn't take a reward unseen.
-        if (this.boonRun || this.recruitOffer || this.rewardOffer) {
-          this.rewardPickOpensAt = this.time.now + REWARD_PICK_GRACE_MS;
-          this.openStagePick();
-        }
-      });
+      gameStore.setState({ battleOutcome: outcome, nextBattle, runOver, runSummary, stageClear });
+      // A won stage goes straight on to its recruit or reward pick, which
+      // shows the clear's gold itself, rather than stopping on the result.
+      // Confirm waits a moment there, so one pressed to hurry the battle's
+      // end along doesn't take a reward unseen.
+      if (this.boonRun || this.recruitOffer || this.rewardOffer) {
+        this.rewardPickOpensAt = this.time.now + REWARD_PICK_GRACE_MS;
+        this.openStagePick();
+      }
     });
   }
 
@@ -2481,22 +2467,43 @@ export class GridScene extends Phaser.Scene {
     return findTileAt(targets, this.cursor);
   }
 
-  // While aiming an attack, publishes the combat forecast
-  // (getCombatForecast in src/game/combat.ts) against the target under the
-  // cursor, anchored beside both units for React's CombatForecast to draw;
-  // clears it whenever there's no target to forecast.
+  // While aiming an attack or an offensive skill, publishes the combat
+  // forecast (getCombatForecast in src/game/combat.ts, or getSkillForecast
+  // in src/game/skills.ts) against the target under the cursor, anchored
+  // beside both units for React's CombatForecast to draw; clears it whenever
+  // there's no target to forecast.
   updateCombatForecast() {
-    const target = this.rangeMode === 'attack' ? this.getAttackTargetUnderCursor() : null;
-    if (!target) {
-      gameStore.setState({ combatForecast: null });
+    if (this.rangeMode === 'attack') {
+      const target = this.getAttackTargetUnderCursor();
+      if (!target) {
+        gameStore.setState({ combatForecast: null });
+        return;
+      }
+      const { unit, x, y } = this.activeUnit!;
+      const defender = this.units.get(target.unitId)!;
+      const distance = getDistance({ x, y }, target);
+      const forecast = getCombatForecast(unit, defender, { distance });
+      const anchor = mergeTileAnchors(this.getTileAnchor({ x, y }), this.getTileAnchor(target));
+      gameStore.setState({ combatForecast: toCombatForecastView({ forecast, attacker: unit, defender, anchor }) });
       return;
     }
-    const { unit, x, y } = this.activeUnit!;
-    const defender = this.units.get(target.unitId)!;
-    const distance = getDistance({ x, y }, target);
-    const forecast = getCombatForecast(unit, defender, { distance });
-    const anchor = mergeTileAnchors(this.getTileAnchor({ x, y }), this.getTileAnchor(target));
-    gameStore.setState({ combatForecast: toCombatForecastView({ forecast, attacker: unit, defender, anchor }) });
+    if (this.rangeMode === 'skill' && this.activeSkill && !isHealingSkill(this.activeSkill)) {
+      const target = this.getSkillTargetUnderCursor();
+      if (!target) {
+        gameStore.setState({ combatForecast: null });
+        return;
+      }
+      const { unit, x, y } = this.activeUnit!;
+      const skill = this.activeSkill;
+      const defender = this.units.get(target.unitId)!;
+      const push = skill.push ? getPushResult(this.grid, this.units, target, getPushDirection({ x, y }, target)) : null;
+      const forecast = getSkillForecast(skill, unit, defender, push);
+      const anchor = mergeTileAnchors(this.getTileAnchor({ x, y }), this.getTileAnchor(target));
+      const attacker = { name: unit.name, team: unit.team, weapon: { label: skill.label, id: null } };
+      gameStore.setState({ combatForecast: toCombatForecastView({ forecast, attacker, defender, anchor }) });
+      return;
+    }
+    gameStore.setState({ combatForecast: null });
   }
 
   showRange(mode: RangeMode, tiles: readonly Point[], color: number, alpha: number) {
@@ -2976,6 +2983,12 @@ export class GridScene extends Phaser.Scene {
 
     this.waitSkippably(EXPERIENCE_BAR_MS, () => {
       gameStore.setState({ experienceGain: null });
+      // In Warband Mode, the combined level-up and boon pick screen shows
+      // each level gained once the battle finishes.
+      if (this.setup.mode === 'warband') {
+        onDone();
+        return;
+      }
       this.showLevelUps(
         result.levelUps.map((levelUp) => ({ name: unit.name, unitClass: unit.unitClass, levelUp })),
         onDone,
@@ -3323,7 +3336,7 @@ export class GridScene extends Phaser.Scene {
     this.cursor = moveCursor(this.grid, this.cursor, x - this.cursor.x, y - this.cursor.y);
     this.updateCursorSprite();
     this.updateHoveredUnit();
-    if (this.rangeMode === 'attack') this.updateCombatForecast();
+    if (this.rangeMode === 'attack' || this.rangeMode === 'skill') this.updateCombatForecast();
     if (this.rangeMode === 'skill') this.updatePushPreview();
   }
 
