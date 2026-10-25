@@ -46,7 +46,8 @@ export interface ItemSnapshot {
 // it is into learning each tome it has struck with (see tomes.ts), absent
 // when it's learning none; `boons` the level-up boons it has taken (see
 // boons.ts), absent when it has none; `quirk` the quirk it joined with (see
-// quirks.ts), absent when it has none.
+// quirks.ts), absent when it has none; `secondaryClass` the class whose
+// skill set it has learned at camp (see mentors.ts), absent when none.
 export interface UnitSnapshot {
   id: string;
   name: string;
@@ -68,6 +69,7 @@ export interface UnitSnapshot {
   tomeProgress?: TomeProgress;
   boons?: readonly string[];
   quirk?: string;
+  secondaryClass?: string;
 }
 
 // A level-up boon pick still owed: the unit and the level it reached (see
@@ -113,6 +115,9 @@ export interface RunState {
   // What has happened over the run, for its recap (chronicle.ts). Absent
   // in runs saved before it was kept, which read as an empty one.
   chronicle?: RunChronicle;
+  // Mentor's Scrolls held, each a free lesson at camp in any class's skill
+  // set (see mentors.ts); absent when none are.
+  scrolls?: number;
   // The origin the run started as (see origins.ts); absent in runs saved
   // before origins, which started as a lone unit of their class.
   origin?: string;
@@ -194,13 +199,14 @@ export function snapshotUnit(id: string, unit: Unit): UnitSnapshot {
     ...(Object.keys(unit.tomeProgress).length > 0 && { tomeProgress: unit.tomeProgress }),
     ...(unit.boons.length > 0 && { boons: unit.boons }),
     ...(unit.quirk && { quirk: unit.quirk }),
+    ...(unit.secondaryClass !== null && { secondaryClass: unit.secondaryClass }),
   });
 }
 
 // A player Unit rebuilt from `snapshot`: its class's unit with the
-// snapshot's name, level, XP, stats, inventory, tome progress, boons and
-// quirk, carrying their modifiers (see applyModifiers). Throws on an unknown
-// class or item.
+// snapshot's name, level, XP, stats, inventory, tome progress, boons,
+// quirk and secondary class, carrying the boons' and quirk's modifiers
+// (see applyModifiers). Throws on an unknown class or item.
 export function restoreUnit(
   snapshot: UnitSnapshot,
   classes: readonly UnitClass[] = UNIT_CLASSES,
@@ -215,6 +221,7 @@ export function restoreUnit(
   unit.tomeProgress = Object.freeze({ ...snapshot.tomeProgress });
   unit.boons = Object.freeze([...(snapshot.boons ?? [])]);
   unit.quirk = snapshot.quirk ?? null;
+  unit.secondaryClass = snapshot.secondaryClass ?? null;
   return applyModifiers(unit, [...getBoonModifiers(unit.boons), ...getQuirkModifiers(unit.quirk)]);
 }
 
@@ -361,6 +368,7 @@ export function parseRun(
     route,
     pendingBoons,
     chronicle,
+    scrolls,
     origin,
     heat,
   } = data;
@@ -390,6 +398,7 @@ export function parseRun(
     (route !== undefined && !isRunRoute(route)) ||
     (pendingBoons !== undefined && !isPendingBoons(pendingBoons)) ||
     (chronicle !== undefined && parseChronicle(chronicle) === null) ||
+    (scrolls !== undefined && !isWholeNumber(scrolls)) ||
     (origin !== undefined && typeof origin !== 'string') ||
     (heat !== undefined && (!isWholeNumber(heat) || heat < 1 || heat > MAX_HEAT))
   ) {
@@ -412,6 +421,7 @@ export function parseRun(
     ...(pendingBoons !== undefined && { pendingBoons }),
     chronicle: chronicle === undefined ? EMPTY_CHRONICLE : parseChronicle(chronicle)!,
     ...(route !== undefined && { route }),
+    ...(scrolls !== undefined && scrolls > 0 && { scrolls }),
     ...(origin !== undefined && { origin }),
     ...(heat !== undefined && { heat }),
   });
@@ -481,7 +491,9 @@ function isUnitSnapshot(
     (value.tomeProgress === undefined || isTomeProgress(value.tomeProgress)) &&
     (value.boons === undefined ||
       (Array.isArray(value.boons) && value.boons.every((boon) => typeof boon === 'string'))) &&
-    (value.quirk === undefined || typeof value.quirk === 'string')
+    (value.quirk === undefined || typeof value.quirk === 'string') &&
+    (value.secondaryClass === undefined ||
+      (typeof value.secondaryClass === 'string' && classIds.has(value.secondaryClass)))
   );
 }
 

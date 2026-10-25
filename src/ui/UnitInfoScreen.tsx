@@ -141,7 +141,9 @@ function Combat({ unit }: { unit: UnitDetailView }) {
         <p className="unit-info__empty">None</p>
       )}
 
-      <h3 className="unit-info__heading">Skills</h3>
+      <h3 className="unit-info__heading">
+        Skills{unit.secondaryClass && <span className="unit-info__secondary"> + {unit.secondaryClass} set</span>}
+      </h3>
       {unit.skills.length > 0 ? (
         <ul className="unit-info__list">
           {unit.skills.map((skill) => (

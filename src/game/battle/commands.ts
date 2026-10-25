@@ -33,7 +33,14 @@ import { claimLoot, getLootQuantity } from '../loot.ts';
 import { getMovePath, getMovementRange, canMoveAlongPath, type MovementOptions } from '../movement.ts';
 import { getObjectiveOutcome } from '../objectives.ts';
 import { createResumableRng } from '../rng.ts';
-import { calculateSkillDamage, canUseSkill, findUnitSkill, type Skill } from '../skills.ts';
+import {
+  calculateSkillDamage,
+  canUseSkill,
+  findUnitSkill,
+  getSkillHealAmount,
+  isHealingSkill,
+  type Skill,
+} from '../skills.ts';
 import { hasModifier, sumModifiers } from '../modifiers.ts';
 import { areAllied, getTeamUnitIds, isAllyOf, isHostileTo } from '../teams.ts';
 import { createUnitOfClass, UNIT_CLASSES } from '../unitClasses.ts';
@@ -68,7 +75,8 @@ export type BattleCommand =
   | { type: 'equip'; unitId: string; index: number }
   // Attacks the hostile unit on `target` with the equipped weapon.
   | { type: 'attack'; unitId: string; target: Point }
-  // Uses a learned skill on the hostile unit on `target`.
+  // Uses a learned skill on the hostile unit on `target` (the wounded ally
+  // there, for a healing skill).
   | { type: 'skill'; unitId: string; skillId: string; target: Point }
   // Heals the wounded ally on `target` with the staff in slot `staffIndex`.
   | { type: 'heal'; unitId: string; staffIndex: number; target: Point }
@@ -102,7 +110,9 @@ export type BattleEvent =
       learned: Weapon | null;
     }
   | { type: 'skill'; unitId: string; targetId: string; skill: Skill; damage: number; health: number }
-  | { type: 'healed'; unitId: string; targetId: string; amount: number }
+  // A heal, with a staff or with `skill` (a healing skill, which spent its
+  // mana).
+  | { type: 'healed'; unitId: string; targetId: string; amount: number; skill?: Skill }
   | { type: 'item-used'; unitId: string; item: Consumable; amount: number }
   // A modifier's recovery (see modifiers.ts): HP healed on a kill
   // (`trigger` 'kill'), or HP or MP recovered as the unit's phase starts
@@ -206,6 +216,37 @@ export function getMovementOptions(units: ReadonlyMap<string, { team: Unit['team
 // Whether a unitId is hostile to `unit` (on another team).
 export function hostileTo(units: ReadonlyMap<string, { team: Unit['team'] }>, unit: Unit) {
   return (unitId: string) => isHostileTo(units, unit.team, unitId);
+}
+
+// Whether the unit `otherId` is one `healerId` can heal: an ally of its,
+// not itself, and wounded.
+export function woundedAllyOf(units: ReadonlyMap<string, Unit>, healerId: string) {
+  const healer = units.get(healerId);
+  return (otherId: string) => {
+    const other = units.get(otherId);
+    return (
+      otherId !== healerId &&
+      healer !== undefined &&
+      other !== undefined &&
+      areAllied(other.team, healer.team) &&
+      isWounded(other)
+    );
+  };
+}
+
+// The tiles the unit `unitId` can use `skill` on from `from`: hostile units
+// in its range, or wounded allies for a healing skill.
+export function getSkillTargets(
+  grid: Grid,
+  units: ReadonlyMap<string, Unit>,
+  unitId: string,
+  from: Point,
+  skill: Skill,
+): TargetTile[] {
+  const user = units.get(unitId);
+  if (!user) return [];
+  const canTarget = isHealingSkill(skill) ? woundedAllyOf(units, unitId) : hostileTo(units, user);
+  return getAttackTargets(grid, from, skill.range, canTarget);
 }
 
 // The state being built from the last one: the parts a command changes,
@@ -462,13 +503,16 @@ function grantExperience(draft: Draft, unitId: string, { amount, scaled }: Exper
 }
 
 // A skill always lands: mana is spent and its damage dealt, and it earns XP
-// like a single strike that hit.
+// like a single strike that hit. A healing skill mends instead (mendWith).
 function useSkill(draft: Draft, unitId: string, skillId: string, target: Point) {
   const user = requireActor(draft, unitId);
   const skill = findUnitSkill(user, skillId) ?? draft.fail(`${unitId} doesn't know ${skillId}`);
   if (!canUseSkill(user, skill)) draft.fail(`${unitId} can't afford ${skillId}`);
-  const from = draft.tileOf(unitId);
-  const targets = getAttackTargets(draft.grid, from, skill.range, hostileTo(draft.units, user));
+  if (isHealingSkill(skill)) {
+    mendWith(draft, unitId, skill, target);
+    return;
+  }
+  const targets = getSkillTargets(draft.grid, draft.units, unitId, draft.tileOf(unitId), skill);
   const tile = findTileAt(targets, target) ?? draft.fail(`no foe in reach on (${target.x}, ${target.y})`);
 
   const defender = draft.edit(tile.unitId);
@@ -487,16 +531,27 @@ function useSkill(draft: Draft, unitId: string, skillId: string, target: Point) 
   finishAction(draft, unitId);
 }
 
+// A healing skill on the wounded ally on `target`: its mana is spent, the
+// ally regains getSkillHealAmount, and the user earns a heal's XP.
+function mendWith(draft: Draft, unitId: string, skill: Skill, target: Point) {
+  const targets = getSkillTargets(draft.grid, draft.units, unitId, draft.tileOf(unitId), skill);
+  const tile = findTileAt(targets, target) ?? draft.fail(`no wounded ally in reach on (${target.x}, ${target.y})`);
+
+  const patient = draft.edit(tile.unitId);
+  const amount = getSkillHealAmount(skill, draft.unit(unitId), patient);
+  patient.heal(amount);
+  draft.edit(unitId).spendMana(skill.manaCost);
+  draft.events.push({ type: 'healed', unitId, targetId: tile.unitId, amount, skill });
+  grantExperience(draft, unitId, { amount: HEAL_EXPERIENCE, scaled: true });
+  finishAction(draft, unitId);
+}
+
 function heal(draft: Draft, unitId: string, staffIndex: number, target: Point) {
   const healer = requireActor(draft, unitId);
   const staff = healer.items[staffIndex]?.item;
   if (!staff || !isStaff(staff)) draft.fail(`${unitId} has no staff in slot ${staffIndex}`);
   const from = draft.tileOf(unitId);
-  const canHeal = (otherId: string) => {
-    const other = draft.units.get(otherId);
-    return otherId !== unitId && other !== undefined && areAllied(other.team, healer.team) && isWounded(other);
-  };
-  const targets = getHealTargets(draft.grid, from, staff, canHeal);
+  const targets = getHealTargets(draft.grid, from, staff, woundedAllyOf(draft.units, unitId));
   const tile = findTileAt(targets, target) ?? draft.fail(`no wounded ally in reach on (${target.x}, ${target.y})`);
 
   const patient = draft.edit(tile.unitId);

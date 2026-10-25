@@ -192,6 +192,13 @@ describe('rollRewards', () => {
     ).not.toContainEqual(expect.objectContaining({ kind: 'lesson' }));
   });
 
+  it("offers a Mentor's Scroll after stage 1, never on it", () => {
+    const offers = (stage: number) =>
+      Array.from({ length: 60 }, (_, seed) => rollRewards(fullRun(), stage, createSeededRng(seed))).flat();
+    expect(kinds(offers(2))).toContain('scroll');
+    expect(kinds(offers(1))).not.toContain('scroll');
+  });
+
   it('offers nothing when asked for none', () => {
     expect(rollRewards(fullRun(), 1, createSeededRng(1), 0)).toEqual([]);
   });
@@ -366,6 +373,13 @@ describe('applyReward', () => {
     expect(applyReward(fullRun(), { kind: 'gold', amount: 40 }).gold).toBe(40);
   });
 
+  it("adds a Mentor's Scroll, kept through a save", () => {
+    const once = applyReward(fullRun(), { kind: 'scroll' });
+    expect(once.scrolls).toBe(1);
+    expect(applyReward(once, { kind: 'scroll' }).scrolls).toBe(2);
+    expect(parseRun(serializeRun(once))?.scrolls).toBe(1);
+  });
+
   it('puts a fresh weapon in the convoy and leaves the original run alone', () => {
     const run = fullRun();
     const after = applyReward(run, { kind: 'arms', itemId: FIRE.id, label: FIRE.label, uses: FIRE.uses! });
@@ -438,6 +452,7 @@ describe('describeReward', () => {
       description: RELICS[0].description,
     });
     expect(describeReward({ kind: 'gold', amount: 40 }).label).toBe('40 Gold');
+    expect(describeReward({ kind: 'scroll' }).label).toBe("Mentor's Scroll");
     expect(describeReward({ kind: 'arms', itemId: FIRE.id, label: FIRE.label, uses: 30 }).description).toContain(
       'Fire Tome',
     );
