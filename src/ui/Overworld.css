@@ -2,7 +2,7 @@
 
 /* The realm map between a Warband run's battles, as an old parchment map
    in the manner of Tactics Ogre and Final Fantasy Tactics: it covers the
-   page, with the realm's name over the map, the map filling the middle
+   page under its header, with the realm's name over the map, the map filling the middle
    and scrolling sideways, and the highlighted site's banner under it, all
    on dark leather so the parchment's edges burn into it. */
 @font-face {
@@ -17,7 +17,7 @@
   --ink: #4a301a;
   --map-face: 'IM Fell English SC', Georgia, serif;
   position: fixed;
-  inset: 0;
+  inset: var(--below-header) 0 0;
   z-index: 10;
   display: flex;
   flex-direction: column;
@@ -71,14 +71,6 @@
   align-items: center;
   gap: 4px;
   color: var(--yellow);
-}
-
-.overworld__team {
-  display: flex;
-  gap: 2px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
 /* The map's window: as tall as the screen leaves, scrolling sideways,
@@ -342,6 +334,101 @@
 
 .overworld__leader--walking {
   translate: -50% -85%;
+}
+
+/* Under the map: the site banner, and the warband's window beside it
+   (under it on a phone). */
+.overworld__footer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
+.overworld__footer > .overworld__banner {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .overworld__footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* The warband: a parchment window like the reward screen's, its tiles a
+   sprite beside its level over an HP bar. */
+.warband-panel {
+  position: relative;
+  flex: none;
+  margin-top: 0.6rem;
+  padding: 10px 10px 6px;
+}
+
+.warband-panel__units {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.warband-panel__unit {
+  display: grid;
+  grid-template-columns: 32px 2.6rem;
+  grid-template-rows: 1fr auto;
+  align-items: center;
+  column-gap: 4px;
+  font-size: 0.6875rem;
+  line-height: 1.2;
+}
+
+.warband-panel__sprite {
+  grid-row: 1 / 3;
+}
+
+.warband-panel__level {
+  white-space: nowrap;
+  font-weight: 700;
+  color: var(--fg-bright);
+}
+
+/* A GBA trough like the reward screen's. */
+.warband-panel__bar {
+  display: flex;
+  height: calc(4 * var(--px));
+  margin: var(--px);
+  background: #3a3040;
+  box-shadow: 0 0 0 var(--px) var(--fg-bright);
+  overflow: hidden;
+}
+
+.warband-panel__bar > span {
+  background: var(--hp);
+}
+
+/* On a phone: all eight in a row, each sprite over its bar. */
+@media (max-width: 640px) {
+  .warband-panel__units {
+    grid-template-columns: repeat(8, 32px);
+    justify-content: space-between;
+  }
+
+  .warband-panel__unit {
+    grid-template-columns: 32px;
+    grid-template-rows: auto auto;
+  }
+
+  .warband-panel__sprite {
+    grid-row: auto;
+  }
+
+  .warband-panel__level {
+    display: none;
+  }
 }
 
 /* The highlighted site's banner: its kind and stage, its name over a gold
