@@ -135,6 +135,9 @@ export class Unit {
   // The class whose skill set it has learned on top of its own (see
   // skills.ts and warband/mentors.ts), or null.
   secondaryClass: string | null = null;
+  // The quirk it joined a Warband run with (warband/quirks.ts), by id, or
+  // null.
+  quirk: string | null = null;
 
   constructor({
     name,

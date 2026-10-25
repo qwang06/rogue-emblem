@@ -9,6 +9,7 @@
 import { HEAL_STAFF } from '../healing.ts';
 import { applyModifiers } from '../modifiers.ts';
 import { getBoonModifiers } from './boons.ts';
+import { getQuirkModifiers } from './quirks.ts';
 import { getRelicModifiers, hasRelic, PHOENIX_FEATHER } from './relics.ts';
 import { MAX_HEAT } from './heat.ts';
 import { EMPTY_CHRONICLE, parseChronicle, recordBattle, type RunChronicle } from './chronicle.ts';
@@ -44,7 +45,8 @@ export interface ItemSnapshot {
 // stored (movement, weapon types, growths, caps). `tomeProgress` is how far
 // it is into learning each tome it has struck with (see tomes.ts), absent
 // when it's learning none; `boons` the level-up boons it has taken (see
-// boons.ts), absent when it has none; `secondaryClass` the class whose
+// boons.ts), absent when it has none; `quirk` the quirk it joined with (see
+// quirks.ts), absent when it has none; `secondaryClass` the class whose
 // skill set it has learned at camp (see mentors.ts), absent when none.
 export interface UnitSnapshot {
   id: string;
@@ -66,6 +68,7 @@ export interface UnitSnapshot {
   items: readonly ItemSnapshot[];
   tomeProgress?: TomeProgress;
   boons?: readonly string[];
+  quirk?: string;
   secondaryClass?: string;
 }
 
@@ -100,6 +103,9 @@ export interface RunState {
   // Cleared stage awaiting a separate recruitment choice.
   pendingRecruitment?: number;
   pendingGuest?: UnitSnapshot;
+  // Set while a Recruit reward's draft (recruitment.ts) is still to be
+  // picked: the stage whose reward it was, which its candidates roll from.
+  pendingDraft?: number;
   // Where a run that travels a realm has been and is (see travel.ts);
   // absent on a run that fights stage after stage.
   route?: RunRoute;
@@ -192,15 +198,15 @@ export function snapshotUnit(id: string, unit: Unit): UnitSnapshot {
     items: unit.items.map(({ item, quantity }) => ({ itemId: item.id, quantity })),
     ...(Object.keys(unit.tomeProgress).length > 0 && { tomeProgress: unit.tomeProgress }),
     ...(unit.boons.length > 0 && { boons: unit.boons }),
+    ...(unit.quirk && { quirk: unit.quirk }),
     ...(unit.secondaryClass !== null && { secondaryClass: unit.secondaryClass }),
   });
 }
 
 // A player Unit rebuilt from `snapshot`: its class's unit with the
-// snapshot's name, level, XP, stats, inventory, tome progress, boons and
-// secondary class,
-// carrying its boons' modifiers (see applyModifiers). Throws on an unknown
-// class or item.
+// snapshot's name, level, XP, stats, inventory, tome progress, boons,
+// quirk and secondary class, carrying the boons' and quirk's modifiers
+// (see applyModifiers). Throws on an unknown class or item.
 export function restoreUnit(
   snapshot: UnitSnapshot,
   classes: readonly UnitClass[] = UNIT_CLASSES,
@@ -214,8 +220,9 @@ export function restoreUnit(
   for (const field of STAT_FIELDS) unit[field] = snapshot[field];
   unit.tomeProgress = Object.freeze({ ...snapshot.tomeProgress });
   unit.boons = Object.freeze([...(snapshot.boons ?? [])]);
+  unit.quirk = snapshot.quirk ?? null;
   unit.secondaryClass = snapshot.secondaryClass ?? null;
-  return applyModifiers(unit, getBoonModifiers(unit.boons));
+  return applyModifiers(unit, [...getBoonModifiers(unit.boons), ...getQuirkModifiers(unit.quirk)]);
 }
 
 // The run's roster as Units by unitId, ready to put in a battle, each
@@ -357,6 +364,7 @@ export function parseRun(
     pendingReward,
     pendingRecruitment,
     pendingGuest,
+    pendingDraft,
     route,
     pendingBoons,
     chronicle,
@@ -386,6 +394,7 @@ export function parseRun(
     (pendingRecruitment !== undefined && (!isWholeNumber(pendingRecruitment) || pendingRecruitment < 1)) ||
     (pendingGuest !== undefined && !isUnitSnapshot(pendingGuest, classIds, isItems)) ||
     (pendingGuest === undefined) !== (pendingRecruitment === undefined) ||
+    (pendingDraft !== undefined && (!isWholeNumber(pendingDraft) || pendingDraft < 1)) ||
     (route !== undefined && !isRunRoute(route)) ||
     (pendingBoons !== undefined && !isPendingBoons(pendingBoons)) ||
     (chronicle !== undefined && parseChronicle(chronicle) === null) ||
@@ -408,6 +417,7 @@ export function parseRun(
     ...(pendingReward !== undefined && { pendingReward }),
     ...(pendingRecruitment !== undefined && { pendingRecruitment }),
     ...(pendingGuest !== undefined && { pendingGuest }),
+    ...(pendingDraft !== undefined && { pendingDraft }),
     ...(pendingBoons !== undefined && { pendingBoons }),
     chronicle: chronicle === undefined ? EMPTY_CHRONICLE : parseChronicle(chronicle)!,
     ...(route !== undefined && { route }),
@@ -481,6 +491,7 @@ function isUnitSnapshot(
     (value.tomeProgress === undefined || isTomeProgress(value.tomeProgress)) &&
     (value.boons === undefined ||
       (Array.isArray(value.boons) && value.boons.every((boon) => typeof boon === 'string'))) &&
+    (value.quirk === undefined || typeof value.quirk === 'string') &&
     (value.secondaryClass === undefined ||
       (typeof value.secondaryClass === 'string' && classIds.has(value.secondaryClass)))
   );

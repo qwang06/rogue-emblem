@@ -15,7 +15,7 @@ const WEAPON_TYPE_LABELS = { physical: 'Physical', magical: 'Magic', siege: 'Sie
 // name, class, level and XP for player units, HP/MP bars, movement and the
 // weapon types it can wield); then each stat with a bar filled toward its
 // class's cap; then the rates it fights with, its equipped weapon's
-// numbers, its items, its skills and its passive boons. The hover UnitPanel stays the quick
+// numbers, its items, its skills, its passive boons and its quirk. The hover UnitPanel stays the quick
 // view. GridScene handles the input (I, confirm or cancel closes it), and
 // a click anywhere closes it too.
 export function UnitInfoScreen() {
@@ -169,6 +169,18 @@ function Combat({ unit }: { unit: UnitDetailView }) {
                 <span>{passive.description}</span>
               </li>
             ))}
+          </ul>
+        </>
+      )}
+
+      {unit.quirk && (
+        <>
+          <h3 className="unit-info__heading">Quirk</h3>
+          <ul className="unit-info__list unit-info__list--boons">
+            <li>
+              <span>{unit.quirk.label}</span>
+              <span>{unit.quirk.description}</span>
+            </li>
           </ul>
         </>
       )}

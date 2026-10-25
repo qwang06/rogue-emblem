@@ -353,7 +353,8 @@ export class GridScene extends Phaser.Scene {
   // After a won Warband stage: the run as it stands (the battle written
   // back, the clear's gold paid) and the rewards it offers to pick from.
   rewardOffer: { run: RunState; stage: number; rewards: readonly Reward[]; rerolls: number } | null = null;
-  recruitOffer: { run: RunState; stage: number; recruits: readonly Reward[] } | null = null;
+  // The guest's recruitment, or a Recruit reward's draft (`draft`).
+  recruitOffer: { run: RunState; stage: number; recruits: readonly Reward[]; draft: boolean } | null = null;
   // While the run owes level-up boon picks (see levelUpPicks.ts): the run
   // as it stands. They come before the recruit and reward picks.
   boonRun: RunState | null = null;
@@ -655,7 +656,7 @@ export class GridScene extends Phaser.Scene {
       gameStore.setState({ mapLoadProgress: 1, mapReady: true });
       return;
     }
-    if (savedRun?.pendingRecruitment) {
+    if (savedRun && (savedRun.pendingRecruitment || savedRun.pendingDraft !== undefined)) {
       this.resumeRecruitment(savedRun);
       gameStore.setState({ mapLoadProgress: 1, mapReady: true });
       return;
@@ -1212,11 +1213,14 @@ export class GridScene extends Phaser.Scene {
     this.openRewardMenu();
   }
 
+  // Opens the guest's recruitment, or with no guest owed, the draft a
+  // Recruit reward opened (see warband/recruitment.ts).
   resumeRecruitment(run: RunState) {
     this.setCursorVisible(false);
-    const stage = run.pendingRecruitment!;
+    const draft = !run.pendingGuest;
+    const stage = draft ? run.pendingDraft! : run.pendingRecruitment!;
     const session = { run, phase: 'recruit' as const };
-    this.recruitOffer = { run, stage, recruits: getRecruitOffers(session) };
+    this.recruitOffer = { run, stage, recruits: getRecruitOffers(session), draft };
     const pending = run.pendingReward;
     if (pending) {
       this.rewardOffer = {
@@ -1233,8 +1237,8 @@ export class GridScene extends Phaser.Scene {
   }
 
   openRecruitMenu() {
-    const { run, stage, recruits } = this.recruitOffer!;
-    gameStore.setState({ recruitmentStage: stage, rewardTeam: toTeamView(run.roster) });
+    const { run, stage, recruits, draft } = this.recruitOffer!;
+    gameStore.setState({ recruitmentStage: stage, recruitDraft: draft, rewardTeam: toTeamView(run.roster) });
     this.publishMenu(
       'rewardMenu',
       createActionMenu([
@@ -1243,7 +1247,7 @@ export class GridScene extends Phaser.Scene {
           id: 'decline',
           kind: 'decline',
           label: 'Decline',
-          description: 'Continue without recruiting the guest.',
+          description: draft ? 'Continue without recruiting anyone.' : 'Continue without recruiting the guest.',
           stats: null,
           healthAfter: null,
         },
@@ -1279,7 +1283,7 @@ export class GridScene extends Phaser.Scene {
         if (!result) return;
         saveRun(result.session.run);
         this.recruitOffer = null;
-        gameStore.setState({ recruitmentStage: null });
+        gameStore.setState({ recruitmentStage: null, recruitDraft: false });
         if (result.session.phase === 'reward') {
           const pending = result.session.run.pendingReward!;
           this.rewardOffer = {
@@ -1325,6 +1329,12 @@ export class GridScene extends Phaser.Scene {
       this.rewardOffer = null;
       this.inputLocked = true;
       this.showLevelUps(levelUps, () => {
+        // A Recruit reward opens its draft.
+        if (result.session.phase === 'recruit') {
+          this.inputLocked = false;
+          this.resumeRecruitment(after);
+          return;
+        }
         if (result.session.phase !== 'boon') {
           this.openCamp(after);
           return;
@@ -2219,8 +2229,8 @@ export class GridScene extends Phaser.Scene {
           this.rewardOffer = { run, stage: before.stage, rewards: getRewardOffers(finished), rerolls: 0 };
         }
         if (finished.phase === 'recruit') {
-          this.recruitOffer = { run, stage: before.stage, recruits: getRecruitOffers(finished) };
-          gameStore.setState({ recruitmentStage: before.stage });
+          this.recruitOffer = { run, stage: before.stage, recruits: getRecruitOffers(finished), draft: false };
+          gameStore.setState({ recruitmentStage: before.stage, recruitDraft: false });
         }
         saveRun(run);
       }

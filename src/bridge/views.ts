@@ -29,6 +29,7 @@ import type { MenuAction } from '../game/actionMenu.ts';
 import { getUnitSkills } from '../game/skills.ts';
 import { getStandingCombatBonus } from '../game/modifiers.ts';
 import { findBoon, type BoonKind } from '../game/warband/boons.ts';
+import { findQuirk } from '../game/warband/quirks.ts';
 import type { BoonOffer } from '../game/warband/levelUpPicks.ts';
 import { findRelic, type Relic } from '../game/warband/relics.ts';
 import type { Unit } from '../game/Unit.ts';
@@ -107,7 +108,8 @@ export interface SkillView {
 // The unit info screen's full stat sheet: everything the hover panel shows
 // plus the class name, stat caps, the rates it fights with, its equipped
 // weapon's numbers, the weapon types it can wield, the skills it knows and
-// the passive boons it has taken (see warband/boons.ts).
+// the passive boons it has taken (see warband/boons.ts) and the quirk it
+// joined with (warband/quirks.ts).
 export interface UnitDetailView extends UnitView {
   maxLevel: boolean;
   stats: readonly StatLineView[];
@@ -124,6 +126,7 @@ export interface UnitDetailView extends UnitView {
   // warband/mentors.ts), by label, or null.
   secondaryClass: string | null;
   passives: readonly { id: string; label: string; description: string }[];
+  quirk: { label: string; description: string } | null;
 }
 
 // The visible world rectangle's top-left plus the zoom.
@@ -396,6 +399,7 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
   const damageType = getDamageType(unit);
   // The rates count the modifiers that hold in any exchange.
   const bonus = getStandingCombatBonus(unit.modifiers);
+  const quirk = unit.quirk ? findQuirk(unit.quirk) : null;
   const rates = {
     skill: unit.skill,
     luck: unit.luck,
@@ -440,6 +444,7 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
         .filter((boon) => boon?.kind === 'passive')
         .map((boon) => Object.freeze({ id: boon!.id, label: boon!.name, description: boon!.description })),
     ),
+    quirk: quirk && Object.freeze({ label: quirk.name, description: quirk.description }),
   });
 }
 

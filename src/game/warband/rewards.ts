@@ -13,6 +13,7 @@ import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from '../unitClasses.
 import { FIRE, IRON_AXE, IRON_BOW, IRON_SPEAR, canWield, type Weapon } from '../weapons.ts';
 import { addScrolls, getSecondaryClassIds } from './mentors.ts';
 import { WARBAND_NAMES } from './names.ts';
+import { findQuirk, rollQuirk } from './quirks.ts';
 import { ALL_STARTING_CLASSES } from './startingClasses.ts';
 import { applyHeatToClearGold } from './heat.ts';
 import {
@@ -43,6 +44,9 @@ export const FLAWLESS_BONUS_GOLD = 10;
 export const REWARD_CHOICES = 3;
 export const ARMS_CACHE_WEAPONS: readonly Weapon[] = Object.freeze([IRON_SPEAR, IRON_AXE, IRON_BOW, FIRE]);
 
+// How many recruits a Recruit reward's draft offers (see recruitment.ts).
+export const DRAFT_CHOICES = 3;
+
 // The most units a warband can hold.
 export const MAX_ROSTER_SIZE = 8;
 
@@ -67,11 +71,14 @@ export const SKIP_GOLD_PER_STAGE = 5;
 export const REROLL_COST = 10;
 export const REROLL_COST_STEP = 10;
 
-export type RewardKind = 'recruit' | 'rest' | 'supplies' | 'relic' | 'gold' | 'arms' | 'lesson' | 'scroll';
+export type RewardKind = 'recruit' | 'draft' | 'rest' | 'supplies' | 'relic' | 'gold' | 'arms' | 'lesson' | 'scroll';
 
 export type Reward =
   // A new unit joins the roster.
   | { kind: 'recruit'; unit: UnitSnapshot }
+  // A pick of recruits to draft one from, rolled from `stage` (see
+  // rollDraft in recruitment.ts).
+  | { kind: 'draft'; stage: number }
   // Every unit is restored to full HP and mana.
   | { kind: 'rest' }
   // Every unit with room gets one of the item.
@@ -127,6 +134,13 @@ export function getSkipGold(stage: number): number {
 // `rerolls` times this stage.
 export function getRerollCost(rerolls: number): number {
   return REROLL_COST + REROLL_COST_STEP * rerolls;
+}
+
+// How many units a warband should have once it has cleared `stage`: 2
+// after stage 1, then one more every other stage (4 by stage 4, 6 by stage
+// 8), up to MAX_ROSTER_SIZE. Below it, every reward pick offers a Recruit.
+export function getRecruitTarget(stage: number): number {
+  return Math.min(MAX_ROSTER_SIZE, 2 + Math.floor(stage / 2));
 }
 
 // The offers after `stage`, rerolled `rerolls` times: rollRewards seeded
@@ -187,6 +201,8 @@ export function getPendingRewardOffer(run: RunState): (PendingReward & { rewards
 // The rewards offered after clearing `stage`, for `run` as it stands (the
 // battle written back). Up to `count` of different kinds, in a random
 // order, from the kinds that would do something:
+// - draft, while the roster has room, and always among the offers while
+//   it's below getRecruitTarget(stage)
 // - rest, when anyone is missing HP or mana (never after stage 1, whose
 //   quick fight leaves the warband near full)
 // - supplies, when anyone has room for a Health Potion
@@ -203,6 +219,9 @@ export function rollRewards(
   classes: readonly UnitClass[] = UNIT_CLASSES,
 ): readonly Reward[] {
   const kinds: RewardKind[] = [];
+  const draft = run.roster.length < MAX_ROSTER_SIZE;
+  const draftNeeded = draft && run.roster.length < getRecruitTarget(stage);
+  if (draft && !draftNeeded) kinds.push('draft');
   if (stage !== 1 && run.roster.some((unit) => unit.health < unit.maxHealth || unit.mana < unit.maxMana)) {
     kinds.push('rest');
   }
@@ -212,7 +231,11 @@ export function rollRewards(
   if (run.roster.some((unit) => unit.level < MAX_LEVEL)) kinds.push('lesson');
   if (stage !== 1 && run.roster.some((unit) => getSecondaryClassIds(unit).length > 0)) kinds.push('scroll');
   kinds.push('gold');
-  const picked = shuffle(rng, kinds).slice(0, Math.max(0, count));
+  const size = Math.max(0, count);
+  const picked =
+    draftNeeded && size > 0
+      ? shuffle(rng, ['draft', ...shuffle(rng, kinds).slice(0, size - 1)] as RewardKind[])
+      : shuffle(rng, kinds).slice(0, size);
   return Object.freeze(picked.map((kind) => Object.freeze(createReward(kind, run, stage, rng, classes))));
 }
 
@@ -220,6 +243,8 @@ function createReward(kind: RewardKind, run: RunState, stage: number, rng: Rng, 
   switch (kind) {
     case 'recruit':
       return { kind, unit: rollRecruit(run, stage, rng, classes) };
+    case 'draft':
+      return { kind, stage };
     case 'rest':
       return { kind };
     case 'supplies':
@@ -249,13 +274,25 @@ function eligibleWeapons(run: RunState, classes: readonly UnitClass[]): Weapon[]
 // when none is given) at the roster's average level (rounded down, at least
 // 1), its level ups rolled from its growths, named from WARBAND_NAMES (one
 // nobody in the run has and that isn't in `takenNames`; "Recruit" once
-// they've all been used), with an id no unit in the run has.
+// they've all been used), with an id no unit in the run has and that isn't
+// in `takenIds`, and a random quirk (quirks.ts; one not in `takenQuirks`
+// while any are left), whose max HP is in its stats.
 export function rollRecruit(
   run: RunState,
   stage: number,
   rng: Rng,
   classes: readonly UnitClass[] = UNIT_CLASSES,
-  { classId, takenNames = [] }: { classId?: string; takenNames?: readonly string[] } = {},
+  {
+    classId,
+    takenNames = [],
+    takenIds = [],
+    takenQuirks = [],
+  }: {
+    classId?: string;
+    takenNames?: readonly string[];
+    takenIds?: readonly string[];
+    takenQuirks?: readonly string[];
+  } = {},
 ): UnitSnapshot {
   const everyone = [...run.roster, ...run.fallen];
   const usedNames = new Set([...everyone.map((unit) => unit.name), ...takenNames]);
@@ -266,15 +303,20 @@ export function rollRecruit(
   const level = Math.max(1, Math.floor(totalLevel / Math.max(1, run.roster.length)));
   const unit = createUnitOfClass(classId, { name, team: 'player' }, classes);
   while (unit.level < level) unit.levelUp(rollLevelUp(unit, unit.growths, rng, unit.caps));
-  const usedIds = new Set(everyone.map((snapshot) => snapshot.id));
+  const usedIds = new Set([...everyone.map((snapshot) => snapshot.id), ...takenIds]);
   let id = `recruit-${stage}`;
   while (usedIds.has(id)) id = `recruit-${stage}-${randomInt(rng, 0, 9999)}`;
+  const quirk = rollQuirk(rng, takenQuirks);
+  unit.quirk = quirk.id;
+  unit.maxHealth += quirk.maxHealth;
+  unit.health += quirk.maxHealth;
   return snapshotUnit(id, unit);
 }
 
 // The run with `reward` applied, and no reward pick owed. Rewards that
 // can't do anything (a recruit when the roster is full, supplies nobody has
-// room for) leave units as they are.
+// room for) leave units as they are. A draft owes its pick (pendingDraft)
+// instead, settled in recruitment.ts.
 export function applyReward(run: RunState, reward: Reward, classes: readonly UnitClass[] = UNIT_CLASSES): RunState {
   return clearPendingReward(applyRewardEffect(run, reward, classes));
 }
@@ -284,6 +326,9 @@ function applyRewardEffect(run: RunState, reward: Reward, classes: readonly Unit
     case 'recruit':
       if (run.roster.length >= MAX_ROSTER_SIZE) return run;
       return freeze({ ...run, roster: [...run.roster, reward.unit] });
+    case 'draft':
+      if (run.roster.length >= MAX_ROSTER_SIZE) return run;
+      return freeze({ ...run, pendingDraft: reward.stage });
     case 'rest':
       return mapRoster(run, (unit) => ({ ...unit, health: unit.maxHealth, mana: unit.maxMana }));
     case 'supplies':
@@ -361,11 +406,21 @@ export function describeReward(
       const { unit } = reward;
       const className = classes.find((unitClass) => unitClass.id === unit.classId)?.label ?? unit.classId;
       const pitch = ALL_STARTING_CLASSES.find((starting) => starting.id === unit.classId)?.description;
+      const quirk = unit.quirk ? findQuirk(unit.quirk) : null;
       return {
         label: `Recruit ${unit.name}`,
-        description: `A level ${unit.level} ${className} joins the warband.${pitch ? ` ${pitch}` : ''}`,
+        description: [
+          `A level ${unit.level} ${className} joins the warband.`,
+          ...(quirk ? [`${quirk.name}: ${quirk.description}`] : []),
+          ...(pitch ? [pitch] : []),
+        ].join(' '),
       };
     }
+    case 'draft':
+      return {
+        label: 'Recruit',
+        description: `Choose one of ${DRAFT_CHOICES} recruits, each with a quirk, to join the warband.`,
+      };
     case 'rest':
       return { label: 'Rest', description: 'The whole warband recovers to full HP and mana.' };
     case 'supplies':
