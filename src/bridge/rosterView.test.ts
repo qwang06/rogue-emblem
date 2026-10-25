@@ -38,7 +38,7 @@ describe('toRosterScreenView', () => {
       {
         key: 'iron-axe@0',
         label: 'Iron Axe',
-        icon: null,
+        icon: 'iron-axe',
         kind: 'weapon',
         quantity: 12,
         equipped: false,
