@@ -160,7 +160,22 @@ export interface CombatForecastView {
   anchor: TileAnchorView;
 }
 
-export type PopupKind = 'damage' | 'crit' | 'miss' | 'health' | 'mana' | 'broke' | 'loot' | 'stored' | 'learned';
+export type PopupKind =
+  | 'damage'
+  | 'crit'
+  | 'miss'
+  | 'health'
+  | 'mana'
+  | 'broke'
+  | 'loot'
+  | 'stored'
+  | 'learned'
+  // A boss's rules (src/game/bosses.ts): its war horn, a goblin arriving
+  // or blocked, its rage.
+  | 'horn'
+  | 'arrived'
+  | 'blocked'
+  | 'enraged';
 
 export interface DamagePopupView {
   id: number;
@@ -515,6 +530,10 @@ const POPUP_TEXT: Readonly<Record<PopupKind, (amount: number, label: string) => 
   loot: (_, label) => `Got ${label}`,
   stored: (_, label) => `${label} to convoy`,
   learned: (_, label) => `Learned ${label}!`,
+  horn: () => 'War Horn!',
+  arrived: () => 'Reinforcement!',
+  blocked: () => 'Blocked!',
+  enraged: (amount) => `Enraged! +${amount} STR`,
 });
 
 // Snapshot of one floating number over a unit: damage taken (plain, a
