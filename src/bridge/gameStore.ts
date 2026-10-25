@@ -4,6 +4,7 @@ import type { SkillAction } from '../game/skills.ts';
 import type { WeaponAction } from '../game/weapons.ts';
 import type { BattleSetup } from '../game/battleSetup.ts';
 import type { BattleOutcome } from '../game/turns.ts';
+import type { BoonPickView } from './boonPickView.ts';
 import type { MentorScreenView } from './mentorView.ts';
 import type { BossBarView, BossIntroView } from './bossView.ts';
 import type { MapTagView } from './mapTagView.ts';
@@ -15,7 +16,6 @@ import { createStore } from './store.ts';
 import type { AutoSpeed } from '../game/autoSpeed.ts';
 import { DEFAULT_AUDIO_SETTINGS, type AudioSettings } from '../audio/settings.ts';
 import type {
-  BoonPickView,
   CombatForecastView,
   DamagePopupView,
   DialogView,
@@ -151,7 +151,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   rewardTeam: null, // TeamUnitViews from toTeamView() of the warband while the reward screen is up, or null
   recruitmentStage: null,
   recruitDraft: false,
-  boonPick: null, // BoonPickView from toBoonPickView() while the reward screen shows a level up's boon pick (its cards are rewardMenu's), or null
+  boonPick: null, // BoonPickView from toBoonPickView() while the level-up screen shows a level up's boon pick (its entries are rewardMenu's), or null
   campMenu: null, // frozen camp menu (getCampActions: Manage Roster / Merchant / Promote / Rest / Mentors / Next Stage) once a won stage's reward is taken, or null
   campGold: null, // the warband's gold while at camp (shown on the camp menu), or null
   campRelics: null, // RelicViews from toRelicViews() of the warband's relics while at camp (listed on the camp menu), or null

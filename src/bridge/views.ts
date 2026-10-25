@@ -245,13 +245,6 @@ export interface LevelUpView {
   durationMs: number;
 }
 
-// Whose level up the boon pick on the reward screen is for.
-export interface BoonPickView {
-  name: string;
-  classLabel: string;
-  level: number;
-}
-
 // A relic as the camp lists it.
 export interface RelicView {
   id: string;
@@ -798,8 +791,9 @@ const BOON_TAGS: Readonly<Record<BoonKind, string>> = Object.freeze({
   passive: 'passive',
 });
 
-// A level up's boon pick (see warband/levelUpPicks.ts) as the reward
-// screen's cards, one per boon, with no buttons under them. A boon that
+// A level up's boon pick (see warband/levelUpPicks.ts) as the level-up
+// screen's menu, an entry per boon (boonPickView.ts has what it shows of
+// each). A boon that
 // would complete an evolution for the unit, with the warband's `relics`
 // (see warband/evolutions.ts), says so in its caption.
 export function toBoonActions(offer: BoonOffer, relics: readonly string[] = []): readonly RewardAction[] {
@@ -818,15 +812,6 @@ export function toBoonActions(offer: BoonOffer, relics: readonly string[] = []):
       }),
     ),
   );
-}
-
-// Whose level up `offer` is, for the reward screen's header.
-export function toBoonPickView(offer: BoonOffer): BoonPickView {
-  return Object.freeze({
-    name: offer.unit.name,
-    classLabel: UNIT_CLASSES.find((unitClass) => unitClass.id === offer.unit.classId)?.label ?? offer.unit.classId,
-    level: offer.level,
-  });
 }
 
 // The relics `relicIds` names, in order, for the camp's list; unknown ids

@@ -9,7 +9,6 @@ import {
   toDialogView,
   toObjectiveView,
   toBoonActions,
-  toBoonPickView,
   toRelicViews,
   toRewardAction,
   toRewardMenuActions,
@@ -721,8 +720,8 @@ describe('toTeamView', () => {
   });
 });
 
-describe('toBoonActions and toBoonPickView', () => {
-  it("makes a card per boon, captioned with the boon's kind, and names whose level up it is", () => {
+describe('toBoonActions', () => {
+  it("makes an entry per boon, captioned with the boon's kind", () => {
     const run = createRun(1, new Map([['alden', new Soldier({ name: 'Alden', team: 'player' })]]));
     const owing = queueLevelUpBoons(run, { ...run, roster: [{ ...run.roster[0], level: 2 }] });
     const offer = getBoonOffer(owing)!;
@@ -731,7 +730,6 @@ describe('toBoonActions and toBoonPickView', () => {
       offer.boons.map((boon) => ['boon', boon.kind, boon.name]),
     );
     expect(new Set(actions.map((action) => action.id)).size).toBe(actions.length);
-    expect(toBoonPickView(offer)).toEqual({ name: 'Alden', classLabel: 'Soldier', level: 2 });
   });
 
   it('marks a boon that would complete an evolution', () => {
