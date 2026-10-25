@@ -19,14 +19,16 @@ export const TITLE_ACTIONS: readonly MenuAction[] = Object.freeze([
 // show the current sound settings: 'sound' turns sound on or off, 'volume'
 // and 'musicVolume' change the sound effect and music volumes (their ids
 // are the AudioSettings fields), and 'configs' leads to the config editor
-// (#/configs).
-export function getSettingsActions(audio: AudioSettings): readonly MenuAction[] {
-  return Object.freeze([
-    Object.freeze({ id: 'sound', label: `Sound: ${audio.muted ? 'Off' : 'On'}` }),
-    Object.freeze({ id: 'volume', label: `Effects: ${Math.round(audio.volume * 100)}%` }),
-    Object.freeze({ id: 'musicVolume', label: `Music: ${Math.round(audio.musicVolume * 100)}%` }),
-    Object.freeze({ id: 'configs', label: 'Game Configs' }),
-  ]);
+// (#/configs). The music volume is only offered when `music` is on (the
+// music feature flag, src/featureFlags.ts).
+export function getSettingsActions(audio: AudioSettings, { music }: { music: boolean }): readonly MenuAction[] {
+  const entries: MenuAction[] = [
+    { id: 'sound', label: `Sound: ${audio.muted ? 'Off' : 'On'}` },
+    { id: 'volume', label: `Effects: ${Math.round(audio.volume * 100)}%` },
+    ...(music ? [{ id: 'musicVolume', label: `Music: ${Math.round(audio.musicVolume * 100)}%` }] : []),
+    { id: 'configs', label: 'Game Configs' },
+  ];
+  return Object.freeze(entries.map((entry) => Object.freeze(entry)));
 }
 
 // Entries on the submenu Warband Mode opens: carry on with the saved run

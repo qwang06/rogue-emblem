@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import type { MenuAction } from '../game/actionMenu.ts';
 import { gameStore } from '../bridge/gameStore.ts';
+import { FEATURE_FLAGS } from '../featureFlags.ts';
 import { changeVolume, cycleVolume, toggleMute, type AudioSettings, type VolumeChannel } from '../audio/settings.ts';
 import { createActionMenu, getSelectedAction, moveSelection, selectIndex } from '../game/actionMenu.ts';
 import {
@@ -55,7 +56,11 @@ const SUBMENUS = {
   heat: { heading: 'New Run — Choose the Heat', label: 'Choose the Heat', actions: () => getHeatActions(loadMeta()) },
   // Filled in from the new run (relicActions), which the class pick makes.
   relic: { heading: 'New Run — Choose a Relic', label: 'Choose a relic', actions: () => [] },
-  settings: { heading: 'Settings', label: 'Settings', actions: () => getSettingsActions(gameStore.getState().audio) },
+  settings: {
+    heading: 'Settings',
+    label: 'Settings',
+    actions: () => getSettingsActions(gameStore.getState().audio, FEATURE_FLAGS),
+  },
 } as const;
 
 const VOLUME_KEYS = [['←→', 'Volume']] as const;
@@ -209,7 +214,9 @@ export function TitleScreen() {
   function changeAudio(update: (settings: AudioSettings) => AudioSettings) {
     const audio = update(gameStore.getState().audio);
     gameStore.setState({ audio });
-    setMenu((current) => selectIndex(createActionMenu(getSettingsActions(audio)), current.selectedIndex));
+    setMenu((current) =>
+      selectIndex(createActionMenu(getSettingsActions(audio, FEATURE_FLAGS)), current.selectedIndex),
+    );
   }
 
   // Shows the starting relics `run` (a new one) still picks from.
