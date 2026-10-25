@@ -11,6 +11,7 @@ import type { Rng } from '../combatStats.ts';
 import { createSeededRng, randomInt, randomItem, shuffle } from '../rng.ts';
 import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
 import { FIRE, IRON_AXE, IRON_BOW, IRON_SPEAR, canWield, type Weapon } from '../weapons.ts';
+import { addScrolls, getSecondaryClassIds } from './mentors.ts';
 import { WARBAND_NAMES } from './names.ts';
 import { findQuirk, rollQuirk } from './quirks.ts';
 import { ALL_STARTING_CLASSES } from './startingClasses.ts';
@@ -71,7 +72,7 @@ export const SKIP_GOLD_PER_STAGE = 5;
 export const REROLL_COST = 10;
 export const REROLL_COST_STEP = 10;
 
-export type RewardKind = 'recruit' | 'draft' | 'rest' | 'supplies' | 'relic' | 'gold' | 'arms' | 'lesson';
+export type RewardKind = 'recruit' | 'draft' | 'rest' | 'supplies' | 'relic' | 'gold' | 'arms' | 'lesson' | 'scroll';
 
 export type Reward =
   // A new unit joins the roster.
@@ -90,6 +91,9 @@ export type Reward =
   // Every unit gains exactly the XP to its next level; `seed` rolls the
   // level ups' stat gains, so picking it always gives the same ones.
   | { kind: 'lesson'; seed: number }
+  // A Mentor's Scroll: a free lesson at camp in any class's skill set (see
+  // mentors.ts).
+  | { kind: 'scroll' }
   // Gold for the warband.
   | { kind: 'gold'; amount: number };
 
@@ -219,6 +223,7 @@ export function getPendingRewardOffer(run: RunState): (PendingReward & { rewards
 // - arms, when anyone can wield an Arms Cache weapon
 // - relic, while there's a relic the run doesn't hold
 // - lesson, while anyone is below the max level
+// - scroll, from stage 2 on, while anyone has a skill set to learn
 // - gold, always
 export function rollRewards(
   run: RunState,
@@ -238,6 +243,7 @@ export function rollRewards(
   if (eligibleWeapons(run, classes).length > 0) kinds.push('arms');
   if (getUnownedRelics(run.relics).length > 0) kinds.push('relic');
   if (run.roster.some((unit) => unit.level < MAX_LEVEL)) kinds.push('lesson');
+  if (stage !== 1 && run.roster.some((unit) => getSecondaryClassIds(unit).length > 0)) kinds.push('scroll');
   kinds.push('gold');
   const size = Math.max(0, count);
   const picked =
@@ -265,6 +271,8 @@ function createReward(kind: RewardKind, run: RunState, stage: number, rng: Rng, 
     }
     case 'lesson':
       return { kind, seed: Math.floor(rng() * 2 ** 32) };
+    case 'scroll':
+      return { kind };
     case 'gold':
       return { kind, amount: PURSE_GOLD + PURSE_GOLD_PER_STAGE * stage };
   }
@@ -348,6 +356,8 @@ function applyRewardEffect(run: RunState, reward: Reward, classes: readonly Unit
       return freeze({ ...run, convoy: [...run.convoy, { itemId: reward.itemId, quantity: reward.uses }] });
     case 'lesson':
       return applyLessonReward(run, reward, classes).run;
+    case 'scroll':
+      return addScrolls(run);
     case 'gold':
       return addGold(run, reward.amount);
   }
@@ -438,6 +448,11 @@ export function describeReward(
       return { label: 'Arms Cache', description: `A fresh ${reward.label} goes to the convoy (${reward.uses} uses).` };
     case 'lesson':
       return { label: "Veteran's Lesson", description: 'Every unit gains enough XP to reach its next level.' };
+    case 'scroll':
+      return {
+        label: "Mentor's Scroll",
+        description: "One unit learns another class's skills at camp, free, with no mentor needed.",
+      };
     case 'gold':
       return { label: `${reward.amount} Gold`, description: 'A purse of coin, for the camp to come.' };
   }

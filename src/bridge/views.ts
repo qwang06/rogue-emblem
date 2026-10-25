@@ -123,6 +123,9 @@ export interface UnitDetailView extends UnitView {
   equippedWeapon: WeaponDetailView | null;
   weaponTypes: readonly WeaponType[];
   skills: readonly SkillView[];
+  // The class whose skill set it learned on top of its own (see
+  // warband/mentors.ts), by label, or null.
+  secondaryClass: string | null;
   passives: readonly { id: string; label: string; description: string }[];
   quirk: { label: string; description: string } | null;
 }
@@ -435,6 +438,7 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
     skills: Object.freeze(
       getUnitSkills(unit).map(({ id, label, manaCost, range }) => Object.freeze({ id, label, manaCost, range })),
     ),
+    secondaryClass: unit.secondaryClass && getClassLabel(unit.secondaryClass),
     passives: Object.freeze([
       ...unit.boons
         .map(findBoon)

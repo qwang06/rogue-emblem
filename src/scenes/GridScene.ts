@@ -57,7 +57,7 @@ import {
   type CarriedStaff,
   type Staff,
 } from '../game/healing.ts';
-import { findUnitSkill, getSkillActions, getUnitSkills } from '../game/skills.ts';
+import { findUnitSkill, getSkillActions, getUnitSkills, isHealingSkill } from '../game/skills.ts';
 import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange } from '../game/combat.ts';
 import { getFitZoom } from '../game/camera.ts';
 import { createCursor, moveCursor } from '../game/cursor.ts';
@@ -111,6 +111,15 @@ import {
 } from '../game/warband/merchantScreen.ts';
 import { toMerchantScreenView } from '../bridge/merchantView.ts';
 import {
+  cancelMentor,
+  confirmMentor,
+  moveMentorCursor,
+  openMentorScreen,
+  pointMentorCursor,
+  type MentorScreenState,
+} from '../game/warband/mentorScreen.ts';
+import { toMentorScreenView } from '../bridge/mentorView.ts';
+import {
   cancelRoster,
   confirmRoster,
   moveRosterCursor,
@@ -154,7 +163,13 @@ import { pickAttackPlan } from '../game/attackMove.ts';
 import { getDangerZone } from '../game/dangerZone.ts';
 import { getPauseActions } from '../game/pauseMenu.ts';
 import { planNextTurn } from '../game/battle/ai.ts';
-import { findEvent, type BattleCommand, type BattleEvent, type BattleEventOf } from '../game/battle/commands.ts';
+import {
+  findEvent,
+  getSkillTargets,
+  type BattleCommand,
+  type BattleEvent,
+  type BattleEventOf,
+} from '../game/battle/commands.ts';
 import {
   createHistory,
   dispatch,
@@ -352,6 +367,7 @@ export class GridScene extends Phaser.Scene {
   campAfterOutcome: RunState | null = null;
   rosterScreen: RosterScreenState | null = null;
   merchantScreen: MerchantScreenState | null = null;
+  mentorScreen: MentorScreenState | null = null;
   pauseMenu: Menu | null = null;
   placingUnitId: string | null = null;
   zoneTiles: Phaser.GameObjects.Rectangle[] | null = null;
@@ -532,6 +548,7 @@ export class GridScene extends Phaser.Scene {
     this.campAfterOutcome = null; // a won realm stage's run when its result leads straight to camp
     this.rosterScreen = null; // the roster screen's state while it's open
     this.merchantScreen = null; // the merchant screen's state while it's open
+    this.mentorScreen = null; // the mentor screen's state while it's open
     // Configs uploaded in the config editor replace the built-in ones.
     this.content = getActiveContent();
     const level = createBattleLevel(setup, this.content);
@@ -728,6 +745,11 @@ export class GridScene extends Phaser.Scene {
 
     if (this.merchantScreen) {
       this.updateMerchantScreen(dx, dy, confirm, cancel);
+      return;
+    }
+
+    if (this.mentorScreen) {
+      this.updateMentorScreen(dx, dy, confirm, cancel);
       return;
     }
 
@@ -1018,11 +1040,13 @@ export class GridScene extends Phaser.Scene {
       const { unit, x, y } = this.activeUnit!;
       this.activeSkill = findUnitSkill(unit, skill.id);
       this.setCursor(x, y);
+      // A healing skill's reach shows in green, like a staff's.
+      const healing = isHealingSkill(this.activeSkill!);
       this.showRange(
         'skill',
         getAttackRange(this.grid, { x, y }, this.activeSkill!.range),
-        SKILL_RANGE_COLOR,
-        SKILL_RANGE_ALPHA,
+        healing ? HEAL_RANGE_COLOR : SKILL_RANGE_COLOR,
+        healing ? HEAL_RANGE_ALPHA : SKILL_RANGE_ALPHA,
       );
       return;
     }
@@ -1330,8 +1354,9 @@ export class GridScene extends Phaser.Scene {
   // screen (src/game/warband/rosterScreen.ts) to equip units and move items
   // to and from the convoy; Merchant, which opens the merchant screen
   // (src/game/warband/merchantScreen.ts) to buy into and sell from the
-  // convoy; Rest, a full heal for gold; and Next Stage. Every change at
-  // camp is saved straight away.
+  // convoy; Rest, a full heal for gold; Mentors, which opens the mentor
+  // screen (src/game/warband/mentorScreen.ts) to learn secondary skill
+  // sets; and Next Stage. Every change at camp is saved straight away.
 
   openCamp(run: RunState) {
     this.inputLocked = false;
@@ -1361,6 +1386,8 @@ export class GridScene extends Phaser.Scene {
         this.publishRosterScreen(openRosterScreen(this.campRun!));
       } else if (action.id === 'merchant') {
         this.publishMerchantScreen(openMerchantScreen(this.campRun!));
+      } else if (action.id === 'mentors') {
+        this.publishMentorScreen(openMentorScreen(this.campRun!));
       } else if (action.id === 'rest') {
         const rested = tryRunCommand({ run: this.campRun!, phase: 'camp' }, { type: 'rest' });
         if (rested) this.setCampRun(rested.session.run);
@@ -1438,6 +1465,26 @@ export class GridScene extends Phaser.Scene {
     if (state && state.run !== this.campRun) this.setCampRun(state.run);
     this.merchantScreen = state;
     gameStore.setState({ merchantScreen: state && toMerchantScreenView(state) });
+  }
+
+  updateMentorScreen(dx: number, dy: number, confirm: boolean, cancel: boolean) {
+    const state = this.mentorScreen!;
+    if (cancel) {
+      this.publishMentorScreen(cancelMentor(state));
+    } else if (confirm) {
+      this.publishMentorScreen(confirmMentor(state));
+    } else if (dx !== 0 || dy !== 0) {
+      this.publishMentorScreen(moveMentorCursor(state, dx, dy));
+    }
+  }
+
+  // Shows the mentor screen in `state` (or closes it, back to the camp, for
+  // null), saving the run whenever a lesson changed it.
+  publishMentorScreen(state: MentorScreenState | null) {
+    if (state === this.mentorScreen) return;
+    if (state && state.run !== this.campRun) this.setCampRun(state.run);
+    this.mentorScreen = state;
+    gameStore.setState({ mentorScreen: state && toMentorScreenView(state) });
   }
 
   // After the result: on to the next battle if the victory leads to one,
@@ -1843,6 +1890,7 @@ export class GridScene extends Phaser.Scene {
     if (this.onObjectiveDone) return () => this.hideObjective();
     if (this.rosterScreen) return () => this.publishRosterScreen(null);
     if (this.merchantScreen) return () => this.publishMerchantScreen(null);
+    if (this.mentorScreen) return () => this.publishMentorScreen(null);
     if (this.campMenu) return () => this.autoCamp();
     if (this.rewardMenu) return () => this.autoReward();
     if (this.battleOutcome) return () => this.openStagePick();
@@ -2552,6 +2600,9 @@ export class GridScene extends Phaser.Scene {
         this.playSkill(event, next);
         return;
       case 'healed':
+        // A healing skill's mana goes as the heal lands.
+        if (event.skill)
+          this.showStats(event.unitId, { mana: this.units.get(event.unitId)!.mana - event.skill.manaCost });
         this.playRecovery(event.targetId, 'health', event.amount, next);
         return;
       case 'item-used':
@@ -2762,11 +2813,11 @@ export class GridScene extends Phaser.Scene {
   }
 
   // Uses the aimed skill on the unit under the cursor, if it's a hostile
-  // unit in the skill's range.
+  // unit in the skill's range (a wounded ally, for a healing skill).
   tryUseSkill() {
-    const { unit, unitId, x, y } = this.activeUnit!;
+    const { unitId, x, y } = this.activeUnit!;
     const skill = this.activeSkill!;
-    const targets = getAttackTargets(this.grid, { x, y }, skill.range, this.isHostileTo(unit));
+    const targets = getSkillTargets(this.grid, this.units, unitId, { x, y }, skill);
     const target = findTileAt(targets, this.cursor);
     if (!target) return;
 
@@ -2967,7 +3018,7 @@ export class GridScene extends Phaser.Scene {
           break;
         case 'click-tile':
           // The reward screen and the camp are picked from, not clicked through.
-          if (this.rewardMenu || this.campMenu || this.rosterScreen || this.merchantScreen) break;
+          if (this.rewardMenu || this.campMenu || this.rosterScreen || this.merchantScreen || this.mentorScreen) break;
           if (this.battleOutcome) {
             result.confirm = true;
           } else if (this.canRoamCursor()) {
@@ -2993,6 +3044,12 @@ export class GridScene extends Phaser.Scene {
           if (!this.merchantScreen) break;
           this.publishMerchantScreen(pointMerchantCursor(this.merchantScreen, command.column, command.index));
           if (command.type === 'select-merchant') result.confirm = true;
+          break;
+        case 'hover-mentor':
+        case 'select-mentor':
+          if (!this.mentorScreen) break;
+          this.publishMentorScreen(pointMentorCursor(this.mentorScreen, command.column, command.index));
+          if (command.type === 'select-mentor') result.confirm = true;
           break;
         case 'confirm':
           result.confirm = true;

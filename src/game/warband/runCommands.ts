@@ -1,10 +1,10 @@
 // Everything a player does in a Warband run between battles, as plain JSON
 // commands applied by one dispatcher, the way battle/commands.ts does it for
 // a battle: pick the relic a run starts with, take each level up's boon,
-// pick, skip or reroll the stage's reward, then at camp rest, buy,
-// sell, move items between units and the convoy, and march on. The game's
-// screens send these, and so can a script or an AI (see runner.ts), so both
-// take the same path. Pure: each command takes a session to a new one and
+// pick, skip or reroll the stage's reward, then at camp rest, buy, sell,
+// move items between units and the convoy, learn a secondary skill set,
+// and march on. The game's screens send these, and so can a script or an
+// AI (see runner.ts), so both take the same path. Pure: each command takes a session to a new one and
 // leaves the old one alone.
 
 import type { BattleOutcome } from '../turns.ts';
@@ -31,6 +31,7 @@ import {
   type Reward,
 } from './rewards.ts';
 import { getBoonOffer, pickBoon, queueLevelUpBoons } from './levelUpPicks.ts';
+import { canLearnSecondary, getLessons, learnSecondary } from './mentors.ts';
 import { rollRelics, rollStartingRelics, STARTING_RELIC_CHOICES, type Relic } from './relics.ts';
 import { getRelicPicks } from './origins.ts';
 import { getRunHeat } from './heat.ts';
@@ -95,6 +96,9 @@ export type RunCommand =
   | { type: 'store'; unitId: string; itemIndex: number }
   // Camp: equips (or wears) a unit's item at `itemIndex`.
   | { type: 'equip'; unitId: string; itemIndex: number }
+  // Camp: the unit `unitId` learns `classId`'s skill set as its secondary,
+  // from a mentor or with a scroll (see mentors.ts).
+  | { type: 'learn-secondary'; unitId: string; classId: string }
   // Camp: leaves for the next stage's battle, or on the realm, to choose
   // where to travel.
   | { type: 'march' }
@@ -129,7 +133,16 @@ export class RunCommandError extends Error {
 }
 
 // The commands camp accepts; the reward pick accepts the rest but march.
-const CAMP_COMMANDS: ReadonlySet<RunCommandType> = new Set(['rest', 'buy', 'sell', 'give', 'store', 'equip', 'march']);
+const CAMP_COMMANDS: ReadonlySet<RunCommandType> = new Set([
+  'rest',
+  'buy',
+  'sell',
+  'give',
+  'store',
+  'equip',
+  'learn-secondary',
+  'march',
+]);
 const REWARD_COMMANDS: ReadonlySet<RunCommandType> = new Set(['pick-reward', 'skip-reward', 'reroll-rewards']);
 const RECRUIT_COMMANDS: ReadonlySet<RunCommandType> = new Set(['pick-recruit', 'decline-recruit']);
 
@@ -331,6 +344,11 @@ export function applyRunCommand(
     case 'rest':
       if (!canRest(run)) return fail('Resting needs someone hurt and the gold for it');
       return camp(restAtCamp(run));
+    case 'learn-secondary':
+      if (!canLearnSecondary(run, command.unitId, command.classId)) {
+        return fail(`${command.unitId} can't learn the ${command.classId} skill set`);
+      }
+      return camp(learnSecondary(run, command.unitId, command.classId));
     case 'buy': {
       if (!hasMerchant(run)) return fail('No merchant here');
       const unitId = command.unitId ?? null;
@@ -436,6 +454,9 @@ export function getLegalRunCommands(
       if (canStoreInConvoy(run, unitId, itemIndex)) commands.push({ type: 'store', unitId, itemIndex });
       if (canEquipInRoster(run, unitId, itemIndex)) commands.push({ type: 'equip', unitId, itemIndex });
     });
+    for (const { classId, source } of getLessons(run, unitId)) {
+      if (source) commands.push({ type: 'learn-secondary', unitId, classId });
+    }
   }
   commands.push({ type: 'march' });
   return commands;
