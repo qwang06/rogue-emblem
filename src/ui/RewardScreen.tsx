@@ -4,6 +4,9 @@ import { menuItemPointerProps } from './menuPointer.ts';
 import { RewardTeam } from './RewardTeam.tsx';
 import { StatLabel } from './StatLabel.tsx';
 import { UnitSprite } from './UnitSprite.tsx';
+import { SPRITE_URLS } from '../assets/sprites.ts';
+import { REWARD_ICON_URLS } from '../assets/rewardIcons.ts';
+import type { RewardAction } from '../bridge/views.ts';
 
 // Shown after a won Warband Mode stage's result: what the clear paid, and
 // the rewards to pick one of, side by side like Slay the Spire's card
@@ -74,11 +77,7 @@ export function RewardScreen() {
                 {...menuItemPointerProps('rewardMenu', index)}
               >
                 <span className="reward-card__kind">{reward.tag ?? reward.kind}</span>
-                {reward.sprite && (
-                  <span className="reward-card__sprite" aria-hidden="true">
-                    <UnitSprite sprite={reward.sprite} scale={2} animated={selected} />
-                  </span>
-                )}
+                <RewardPicture reward={reward} selected={selected} />
                 <h3 className="reward-card__label">{reward.label}</h3>
                 <p className="reward-card__description">{reward.description}</p>
                 {reward.stats && (
@@ -122,5 +121,26 @@ export function RewardScreen() {
         />
       </section>
     </div>
+  );
+}
+
+// A card's picture at 2x, so the pick reads at a glance: a recruit's unit
+// (idling while picked), the item a Supplies, Arms or Seal reward gives,
+// else the reward kind's icon. Every card in a row has one, so the cards
+// line up.
+function RewardPicture({ reward, selected }: { reward: RewardAction; selected: boolean }) {
+  if (reward.sprite) {
+    return (
+      <span className="reward-card__sprite" aria-hidden="true">
+        <UnitSprite sprite={reward.sprite} scale={2} animated={selected} />
+      </span>
+    );
+  }
+  const url = reward.itemIcon ? SPRITE_URLS[reward.itemIcon] : REWARD_ICON_URLS[reward.kind];
+  if (!url) return null;
+  return (
+    <span className="reward-card__sprite" aria-hidden="true">
+      <img className="reward-card__icon" src={url} alt="" width={64} height={64} />
+    </span>
   );
 }
