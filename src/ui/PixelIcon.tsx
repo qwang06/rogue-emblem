@@ -24,3 +24,9 @@ export function PixelIcon({ rows, className = '' }: { rows: readonly string[]; c
     </svg>
   );
 }
+
+// A painted 16x16 icon (GLYPH_ICON_URLS) in a PixelIcon's place: the same
+// box and classes, so every size rule for the bitmap icons applies to it.
+export function PixelArtIcon({ url, className = '' }: { url: string; className?: string }) {
+  return <img className={`pixel-icon pixel-icon--art ${className}`.trim()} src={url} alt="" aria-hidden="true" />;
+}

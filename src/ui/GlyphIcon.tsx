@@ -1,4 +1,5 @@
-import { PixelIcon } from './PixelIcon.tsx';
+import { GLYPH_ICON_URLS } from '../assets/glyphIcons.ts';
+import { PixelArtIcon, PixelIcon } from './PixelIcon.tsx';
 import type { ObjectiveKind } from '../game/objectives.ts';
 
 // The game's small UI glyphs, drawn as 8x8 bitmaps like StatIcon (see
@@ -68,6 +69,10 @@ const GLYPHS: Record<GlyphKind, readonly string[]> = {
   uses: ['........', '........', 'ooooooo.', 'onnnn.oo', 'onnnn.oo', 'ooooooo.', '........', '........'],
 };
 
+// Drawn as its painted icon from src/assets/glyphs/ where it has one, else
+// as the bitmap.
 export function GlyphIcon({ kind, className = '' }: { kind: GlyphKind; className?: string }) {
-  return <PixelIcon rows={GLYPHS[kind]} className={`glyph-icon ${className}`.trim()} />;
+  const classes = `glyph-icon ${className}`.trim();
+  const url = GLYPH_ICON_URLS[kind];
+  return url ? <PixelArtIcon url={url} className={classes} /> : <PixelIcon rows={GLYPHS[kind]} className={classes} />;
 }
