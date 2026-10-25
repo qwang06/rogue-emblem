@@ -4,11 +4,13 @@ import {
   getBuildingSprites,
   getCrossingSprites,
   getFeatureSprites,
+  getHazardSprites,
   getWallAutotile,
   pickVariant,
   type MapSprite,
 } from './mapArt.ts';
 import { parseTerrainMap } from './terrainMap.ts';
+import { createGrid, setTerrain } from './grid.ts';
 import {
   BRIDGE_ART,
   BUILDING_ART,
@@ -19,6 +21,7 @@ import {
   DEFAULT_BUILDING_PALETTE,
   FOREST_ART,
   MOUNTAIN_ART,
+  SPIKES_ART,
   TERRAIN_SHEET,
   type BuildingPaletteName,
 } from './tileset.ts';
@@ -176,6 +179,17 @@ describe('getWallAutotile', () => {
   it('takes the notched 3x3 of the palette’s rampart group, running on through gates', () => {
     expect(getWallAutotile(BUILDING_PALETTES['a-stone'])).toEqual({ block: [1, 33], inner: [2, 34], joins: ['gate'] });
     expect(getWallAutotile(BUILDING_PALETTES['b-red'])).toEqual({ block: [19, 41], inner: [20, 42], joins: ['gate'] });
+  });
+});
+
+describe('getHazardSprites', () => {
+  it('lays a spike trap on each spikes cell, off the props sheet', () => {
+    let grid = createGrid(3, 2, 'grass');
+    grid = setTerrain(grid, 2, 1, 'spikes');
+    expect(getHazardSprites(grid, SPIKES_ART, MAP_PROPS_SHEET)).toEqual([
+      { x: 2, y: 1, tile: SPIKES_ART, layer: 'ground', sheet: MAP_PROPS_SHEET },
+    ]);
+    expect(getHazardSprites(createGrid(2, 2, 'grass'), SPIKES_ART, MAP_PROPS_SHEET)).toEqual([]);
   });
 });
 

@@ -9,6 +9,7 @@
 //   [i, 0] gateway posts for palette i (GATE_PALETTES order), drawn under units
 //   [i, 1] gateway lintel for palette i, drawn over units
 //   [10, 0] ford stepping stones, drawn over the river's water
+//   [10, 1] a spike trap, drawn over the ground under units
 
 import { decode, encode } from './dump-png.js';
 
@@ -162,6 +163,43 @@ const FORD = [
   '................',
 ];
 
+// The bridge's stone colors ([11, 2]), darkest first: its outline, its
+// shaded face, its light face and its glint.
+const STEEL = (() => {
+  const seen = new Map();
+  for (let y = 0; y < 32; y++) {
+    for (let x = 0; x < 32; x++) {
+      const px = sample([11, 2], x, y);
+      if (px[3] === 255) seen.set(px.slice(0, 3).join(), px);
+    }
+  }
+  return [...seen.values()].sort((a, b) => a[0] + a[1] + a[2] - (b[0] + b[1] + b[2]));
+})();
+
+// A spike trap: five steel spikes (the bridge's stone colors, lit from the
+// left, each with a glint on its tip) in two staggered rows, standing in a
+// sunken pit of the dirt path's sand edged in the steel's dark tone.
+// It keeps to the tile's middle so the grass shows round it.
+const SPIKES = [
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '...G....G...G...',
+  '...L....L...L...',
+  '..LLMOOLLMOLLM..',
+  '.OLMMGPLMMGLMMO.',
+  '.OOOOLPOOOLOOOO.',
+  '.OPPLLMPPLLMPpO.',
+  '.OPPLMMPPLMMPPO.',
+  '.OpPOOOPPOOOPPO.',
+  '..OOOOOOOOOOOO..',
+  '................',
+];
+const SPIKE_COLORS = { O: STEEL[0], M: STEEL[1], L: STEEL[2], G: STEEL[STEEL.length - 1], P: SAND, p: SPECK };
+
 // 16x16 role art at 2x into the 32px cell (column, row) of `rows`; a 'w'
 // takes the pixel of `under` (32x32) instead.
 function stamp(rows, column, row, art, colors, under = null) {
@@ -182,5 +220,6 @@ GATE_PALETTES.forEach(([, wall], i) => {
   stamp(rows, i, 1, GATE_LINTEL, colors);
 });
 stamp(rows, GATE_PALETTES.length, 0, FORD, ROCK);
+stamp(rows, GATE_PALETTES.length, 1, SPIKES, SPIKE_COLORS);
 encode(OUT, rows);
 console.log(`${OUT}: ${COLUMNS * 32}x64`);

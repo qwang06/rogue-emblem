@@ -6,6 +6,7 @@ import type { BattleSetup } from '../game/battleSetup.ts';
 import type { BattleOutcome } from '../game/turns.ts';
 import type { MentorScreenView } from './mentorView.ts';
 import type { BossBarView, BossIntroView } from './bossView.ts';
+import type { MapTagView } from './mapTagView.ts';
 import type { MerchantScreenView } from './merchantView.ts';
 import type { PromotionScreenView } from './promotionView.ts';
 import type { RosterScreenView } from './rosterView.ts';
@@ -61,6 +62,8 @@ export interface BattleState {
   itemMenu: Menu<ItemAction> | null;
   combatForecast: CombatForecastView | null;
   dangerZoneVisible: boolean;
+  intentTags: readonly MapTagView[];
+  pushTag: MapTagView | null;
   menuAnchor: TileAnchorView | null;
   experienceGain: ExperienceGainView | null;
   levelUp: LevelUpView | null;
@@ -124,6 +127,8 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   itemMenu: null, // frozen menu of the active unit's items (from getItemActions) while open, or null
   combatForecast: null, // CombatForecastView from toCombatForecastView() while aiming an attack at a target, or null
   dangerZoneVisible: false, // whether the map shades every tile an enemy could strike next phase (toggled with D)
+  intentTags: [], // MapTagViews from toIntentTagView(): the HP the enemies' intents threaten each unit with, during the player phase
+  pushTag: null, // MapTagView from toPushTagView() of what the Shove being aimed would do, or null
   menuAnchor: null, // TileAnchorView from toTileAnchorView() of the active unit's tile, which its menus open beside, or null
   experienceGain: null, // ExperienceGainView from toExperienceGainView() while a unit's XP bar fills after combat, or null
   levelUp: null, // LevelUpView from toLevelUpView() while a level up is being shown, or null

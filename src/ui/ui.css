@@ -1517,6 +1517,38 @@ kbd {
   padding-top: 12px;
 }
 
+/* Tags pinned on a tile's top edge: an enemy intent's threatened HP, or
+   what an aimed Shove would do. A small chip that never moves or grows. */
+.map-tag {
+  position: absolute;
+  transform: translate(-50%, -60%);
+  padding: 0 3px;
+  font-family: var(--sans);
+  font-size: 0.875rem;
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+  pointer-events: none;
+  color: var(--bar-fg);
+  background: var(--red);
+  box-shadow: 0 0 0 var(--px) var(--desktop);
+}
+
+.map-tag--lethal {
+  background: #7a0f16;
+  box-shadow:
+    0 0 0 var(--px) var(--desktop),
+    0 0 0 calc(2 * var(--px)) var(--orange);
+}
+
+.map-tag--hazard {
+  background: var(--orange);
+}
+
+.map-tag--push {
+  background: var(--bar);
+}
+
 /* Damage numbers: bold, with a hard dark edge so they read on any tile. */
 .damage-popup {
   position: absolute;
@@ -1550,6 +1582,17 @@ kbd {
 
 .damage-popup--miss {
   font-size: 1.0625rem;
+  color: var(--fg-dim);
+}
+
+/* Drowning reads in the water's color. */
+.damage-popup--drowned {
+  font-size: 1.0625rem;
+  color: var(--cyan);
+}
+
+.damage-popup--steadfast {
+  font-size: 1rem;
   color: var(--fg-dim);
 }
 

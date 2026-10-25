@@ -6,6 +6,7 @@ import {
   POWER_STRIKE,
   CLEAVE,
   SHIELD_BASH,
+  SHOVE,
   calculateSkillDamage,
   canUseSkill,
   findLearnedSkill,
@@ -48,8 +49,8 @@ const trees: SkillTrees = {
 };
 
 describe('SKILL_TREES', () => {
-  it('teaches the soldier Power Strike at level 2, its first level up', () => {
-    expect(getLearnedSkills('soldier', 1)).toEqual([]);
+  it('teaches the soldier Shove from the start and Power Strike at level 2, its first level up', () => {
+    expect(getLearnedSkills('soldier', 1)).toEqual([SHOVE]);
     expect(getSkillsLearnedBetween('soldier', 1, 2)).toEqual([POWER_STRIKE]);
   });
 
@@ -58,14 +59,15 @@ describe('SKILL_TREES', () => {
     expect(getSkillsLearnedBetween('warrior', 1, 2)).toEqual([THROW_STONES]);
   });
 
-  it('teaches every base class nothing at level 1 and its skill at SKILL_UNLOCK_LEVEL', () => {
+  it('teaches every base class nothing at level 1 but a Shove, and its skill at SKILL_UNLOCK_LEVEL', () => {
     for (const [unitClass, tree] of Object.entries(SKILL_TREES)) {
       if (isPromotedClass(unitClass)) continue;
-      expect(getLearnedSkills(unitClass, 1), unitClass).toEqual([]);
+      const shoves = ['soldier', 'guard'].includes(unitClass);
+      expect(getLearnedSkills(unitClass, 1), unitClass).toEqual(shoves ? [SHOVE] : []);
       expect(
         tree.map((entry) => entry.level),
         unitClass,
-      ).toEqual([SKILL_UNLOCK_LEVEL]);
+      ).toEqual(shoves ? [1, SKILL_UNLOCK_LEVEL] : [SKILL_UNLOCK_LEVEL]);
     }
     expect(SKILL_UNLOCK_LEVEL).toBe(2);
   });
@@ -81,7 +83,8 @@ describe('SKILL_TREES', () => {
         base.some(({ skill }) => skill.id === own.skill.id),
         promotion.id,
       ).toBe(false);
-      expect(getLearnedSkills(promotion.id, 1), promotion.id).toEqual([own.skill]);
+      const knownAtOne = base.filter(({ level }) => level <= 1).map(({ skill }) => skill);
+      expect(getLearnedSkills(promotion.id, 1), promotion.id).toEqual([...knownAtOne, own.skill]);
     }
     expect(getLearnedSkills('hero', SKILL_UNLOCK_LEVEL)).toEqual([THROW_STONES, SUNDER]);
   });
@@ -289,17 +292,17 @@ describe('calculateSkillDamage', () => {
 describe('getUnitSkills', () => {
   it("is the class's skills, then those modifiers teach that it lacks", () => {
     const soldier = { unitClass: 'soldier', level: 2 };
-    expect(getUnitSkills(soldier)).toEqual([POWER_STRIKE]);
+    expect(getUnitSkills(soldier)).toEqual([SHOVE, POWER_STRIKE]);
     const taught = { ...soldier, modifiers: [{ kind: 'skill', skill: CLEAVE } as const] };
-    expect(getUnitSkills(taught)).toEqual([POWER_STRIKE, CLEAVE]);
+    expect(getUnitSkills(taught)).toEqual([SHOVE, POWER_STRIKE, CLEAVE]);
     const repeat = { ...soldier, modifiers: [{ kind: 'skill', skill: POWER_STRIKE } as const] };
-    expect(getUnitSkills(repeat)).toEqual([POWER_STRIKE]);
+    expect(getUnitSkills(repeat)).toEqual([SHOVE, POWER_STRIKE]);
     expect(findUnitSkill(taught, 'cleave')).toBe(CLEAVE);
     expect(findUnitSkill(soldier, 'cleave')).toBeNull();
   });
 
   it('teaches a skill even before the class unlocks its own', () => {
-    expect(getUnitSkills({ unitClass: 'soldier', level: 1, modifiers: [{ kind: 'skill', skill: CLEAVE }] })).toEqual([
+    expect(getUnitSkills({ unitClass: 'warrior', level: 1, modifiers: [{ kind: 'skill', skill: CLEAVE }] })).toEqual([
       CLEAVE,
     ]);
   });
@@ -324,9 +327,9 @@ describe('getSecondarySkills', () => {
 
   it("joins getUnitSkills after the class's own and before taught ones, without repeats", () => {
     const guard = { unitClass: 'guard', level: 2, secondaryClass: 'vanguard' };
-    expect(getUnitSkills(guard)).toEqual([SHIELD_BASH, CLEAVE]);
+    expect(getUnitSkills(guard)).toEqual([SHOVE, SHIELD_BASH, CLEAVE]);
     const taught = { ...guard, modifiers: [{ kind: 'skill', skill: CLEAVE } as const] };
-    expect(getUnitSkills(taught)).toEqual([SHIELD_BASH, CLEAVE]);
+    expect(getUnitSkills(taught)).toEqual([SHOVE, SHIELD_BASH, CLEAVE]);
     expect(findUnitSkill(guard, 'cleave')).toBe(CLEAVE);
   });
 });

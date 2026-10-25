@@ -32,6 +32,7 @@ import { canUseItem, findItem, type Consumable, type Item } from '../items.ts';
 import { claimLoot, getLootQuantity } from '../loot.ts';
 import { getMovePath, getMovementRange, canMoveAlongPath, type MovementOptions } from '../movement.ts';
 import { getObjectiveOutcome } from '../objectives.ts';
+import { getPushDirection, getPushResult, type PushResult } from '../push.ts';
 import { createResumableRng } from '../rng.ts';
 import {
   calculateSkillDamage,
@@ -110,6 +111,10 @@ export type BattleEvent =
       learned: Weapon | null;
     }
   | { type: 'skill'; unitId: string; targetId: string; skill: Skill; damage: number; health: number }
+  // A push skill shoved `push.unitId` (see push.ts). `health` is the shoved
+  // unit's health after it, `collidedHealth` that of the unit it slammed
+  // into, if any. A unit it left at 0 health (or drowned) is `defeated` next.
+  | { type: 'pushed'; unitId: string; push: PushResult; health: number; collidedHealth: number | null }
   // A heal, with a staff or with `skill` (a healing skill, which spent its
   // mana).
   | { type: 'healed'; unitId: string; targetId: string; amount: number; skill?: Skill }
@@ -512,23 +517,59 @@ function useSkill(draft: Draft, unitId: string, skillId: string, target: Point) 
     mendWith(draft, unitId, skill, target);
     return;
   }
-  const targets = getSkillTargets(draft.grid, draft.units, unitId, draft.tileOf(unitId), skill);
+  const from = draft.tileOf(unitId);
+  const targets = getSkillTargets(draft.grid, draft.units, unitId, from, skill);
   const tile = findTileAt(targets, target) ?? draft.fail(`no foe in reach on (${target.x}, ${target.y})`);
 
   const defender = draft.edit(tile.unitId);
-  const damage = calculateSkillDamage(skill, user, defender);
+  const struck = calculateSkillDamage(skill, user, defender);
   draft.edit(unitId).spendMana(skill.manaCost);
-  defender.takeDamage(damage);
-  draft.events.push({ type: 'skill', unitId, targetId: tile.unitId, skill, damage, health: defender.health });
+  defender.takeDamage(struck);
+  draft.events.push({ type: 'skill', unitId, targetId: tile.unitId, skill, damage: struck, health: defender.health });
+  const shoved = skill.push && defender.isAlive() ? push(draft, unitId, from, tile) : null;
+  const damage = struck + (shoved?.damage ?? 0);
   const lethal = !defender.isAlive();
   if (lethal) {
     dropLoot(draft, tile.unitId, unitId);
     defeat(draft, tile.unitId, unitId);
     healOnKill(draft, unitId);
   }
+  if (shoved?.collidedId) knockOut(draft, shoved.collidedId, unitId);
   const strikes: Strike[] = [{ by: 'attacker', target: 'defender', damage, hit: true, crit: false, lethal }];
   grantExperience(draft, unitId, getCombatAward(draft.unit(unitId), defender, getCombatOutcome(strikes, 'attacker')));
   finishAction(draft, unitId);
+}
+
+// Shoves the unit on `target` one tile away from `from` (getPushResult):
+// it slides there and loses what the push costs it, or sinks to 0 health
+// (and is taken off the map by the caller), and a unit it slammed into
+// loses the bump too.
+function push(draft: Draft, pusherId: string, from: Point, target: TargetTile): PushResult | null {
+  const result = getPushResult(draft.grid, draft.units, target, getPushDirection(from, target));
+  if (!result) return null;
+  const shoved = draft.edit(result.unitId);
+  if (result.moved && !result.drowned) draft.grid = moveUnit(draft.grid, result.from, result.to);
+  shoved.takeDamage(result.drowned ? shoved.health : result.damage);
+  const collided = result.collidedId ? draft.edit(result.collidedId) : null;
+  collided?.takeDamage(result.collisionDamage);
+  draft.events.push({
+    type: 'pushed',
+    unitId: pusherId,
+    push: result,
+    health: shoved.health,
+    collidedHealth: collided?.health ?? null,
+  });
+  return result;
+}
+
+// Takes a unit a shove left at 0 health off the map: a kill for the
+// shover when it was a foe, and a loss with no one to credit otherwise.
+function knockOut(draft: Draft, unitId: string, shoverId: string) {
+  if (draft.unit(unitId).isAlive()) return;
+  const hostile = !areAllied(draft.unit(unitId).team, draft.unit(shoverId).team);
+  if (hostile) dropLoot(draft, unitId, shoverId);
+  defeat(draft, unitId, hostile ? shoverId : null);
+  if (hostile) healOnKill(draft, shoverId);
 }
 
 // A healing skill on the wounded ally on `target`: its mana is spent, the
@@ -587,10 +628,10 @@ function dropLoot(draft: Draft, deadId: string, killerId: string) {
   draft.events.push({ type: 'loot', unitId: killerId, item: loot, stored });
 }
 
-// Takes a unit at 0 health off the map, keeping it with the fallen, and
-// counts the kill for `killerId`.
-function defeat(draft: Draft, unitId: string, killerId: string) {
-  draft.kills.set(killerId, (draft.kills.get(killerId) ?? 0) + 1);
+// Takes a unit at 0 health (or drowned) off the map, keeping it with the
+// fallen, and counts the kill for `killerId` (no one's when null).
+function defeat(draft: Draft, unitId: string, killerId: string | null) {
+  if (killerId) draft.kills.set(killerId, (draft.kills.get(killerId) ?? 0) + 1);
   const at = draft.tileOf(unitId);
   draft.grid = setUnit(draft.grid, at.x, at.y, null);
   draft.fallen.set(unitId, draft.unit(unitId));

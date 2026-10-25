@@ -5,12 +5,22 @@ import { HEAL_STAFF, staffEntry } from '../healing.ts';
 import { HEALTH_POTION } from '../items.ts';
 import { TURN_LIMIT } from '../objectives.ts';
 import { IRON_SPEAR, weaponEntry, FISTS } from '../weapons.ts';
-import { applyCommand, BattleCommandError, getSkillTargets, type BattleCommand, type BattleEvent } from './commands.ts';
+import {
+  applyCommand,
+  BattleCommandError,
+  findEvent,
+  getSkillTargets,
+  type BattleCommand,
+  type BattleEvent,
+} from './commands.ts';
 import { createBattleState, getDeployedUnits, getRunBattleResult, type BattleState } from './state.ts';
 import { createTestBattle, makeTestUnit } from './testLevel.ts';
 import type { Modifier } from '../modifiers.ts';
-import { MEND, POWER_STRIKE, type Skill } from '../skills.ts';
+import { MEND, POWER_STRIKE, SHOVE, type Skill } from '../skills.ts';
 import { isDone } from '../turns.ts';
+import { setTerrain } from '../grid.ts';
+import { BUMP_DAMAGE } from '../push.ts';
+import { HAZARDS, SPIKES } from '../hazards.ts';
 
 function run(state: BattleState, ...commands: BattleCommand[]) {
   const events: BattleEvent[] = [];
@@ -261,6 +271,76 @@ describe('skill', () => {
     expect(() =>
       applyCommand(start, { type: 'skill', unitId: 'hero', skillId: 'power-strike', target: { x: 4, y: 0 } }),
     ).toThrow(/doesn't know/);
+  });
+});
+
+describe('shove', () => {
+  // A shover with Shove next to a foe on a 6x1 strip, `terrain` on the
+  // tile behind the foe and anyone in `others` where they're put.
+  function shoveAt(terrain = 'grass', others: Parameters<typeof createTestBattle>[0] = {}, foeOptions = {}) {
+    const hero = makeTestUnit({ team: 'player', mana: 3 });
+    hero.modifiers = [{ kind: 'skill', skill: SHOVE }];
+    const start = createTestBattle(
+      {
+        hero: { unit: hero, at: { x: 1, y: 0 } },
+        foe: { unit: makeTestUnit({ team: 'enemy', ...foeOptions }), at: { x: 2, y: 0 } },
+        far: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 5, y: 0 } },
+        ...others,
+      },
+      { width: 6 },
+    );
+    return { ...start, grid: setTerrain(start.grid, 3, 0, terrain) };
+  }
+  const shove = { type: 'skill', unitId: 'hero', skillId: 'shove', target: { x: 2, y: 0 } } as const;
+
+  it('pushes the foe a tile away, unhurt on open ground, for its mana', () => {
+    const { state, events } = run(shoveAt(), shove);
+    expect(findUnit(state.grid, 'foe')).toEqual({ x: 3, y: 0 });
+    expect(state.units.get('foe')!.health).toBe(20);
+    expect(state.units.get('hero')!.mana).toBe(3 - SHOVE.manaCost);
+    expect(types(events).slice(0, 2)).toEqual(['skill', 'pushed']);
+    expect(findEvent(events, 'pushed')).toMatchObject({ unitId: 'hero', health: 20, push: { to: { x: 3, y: 0 } } });
+  });
+
+  it('impales the foe on spikes', () => {
+    const { state } = run(shoveAt(SPIKES), shove);
+    expect(findUnit(state.grid, 'foe')).toEqual({ x: 3, y: 0 });
+    expect(state.units.get('foe')!.health).toBe(20 - HAZARDS[SPIKES].damage);
+  });
+
+  it('drowns the foe in deep water: a kill for the shover, with its loot', () => {
+    const { state, events } = run(shoveAt('water'), shove);
+    expect(state.units.has('foe')).toBe(false);
+    expect(state.fallen.get('foe')!.health).toBe(0);
+    expect(state.kills.get('hero')).toBe(1);
+    expect(types(events)).toContain('defeated');
+    expect(findEvent(events, 'pushed')).toMatchObject({ health: 0, push: { drowned: true } });
+  });
+
+  it('bumps the foe into a unit behind it, hurting both', () => {
+    const { state } = run(
+      shoveAt('grass', { other: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 3, y: 0 } } }),
+      shove,
+    );
+    expect(findUnit(state.grid, 'foe')).toEqual({ x: 2, y: 0 });
+    expect(state.units.get('foe')!.health).toBe(20 - BUMP_DAMAGE);
+    expect(state.units.get('other')!.health).toBe(20 - BUMP_DAMAGE);
+  });
+
+  it('knocks out a unit a bump leaves at 0 health', () => {
+    const others = { other: { unit: makeTestUnit({ team: 'enemy', health: BUMP_DAMAGE }), at: { x: 3, y: 0 } } };
+    const { state } = run(shoveAt('grass', others, { health: BUMP_DAMAGE }), shove);
+    expect(state.units.has('foe')).toBe(false);
+    expect(state.units.has('other')).toBe(false);
+    expect(state.kills.get('hero')).toBe(2);
+  });
+
+  it("can't budge a unit that holds its ground", () => {
+    const start = shoveAt('water');
+    start.units.get('foe')!.holdsPosition = true;
+    const { state } = run(start, shove);
+    expect(findUnit(state.grid, 'foe')).toEqual({ x: 2, y: 0 });
+    expect(state.units.get('foe')!.health).toBe(20);
   });
 });
 

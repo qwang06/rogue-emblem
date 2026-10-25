@@ -12,6 +12,8 @@ import {
   OBJECTIVE_ARCHETYPES,
   pickStageArchetype,
   pickStageLayout,
+  SPIKE_TRAP_COUNT,
+  SPIKE_TRAP_REACH,
   withArchetype,
   WARBAND_LEADER_NAME,
   WARBAND_MAX_DEPLOYED,
@@ -22,7 +24,8 @@ import { ALL_STARTING_CLASSES, STARTING_CLASSES, UNLOCKABLE_STARTING_CLASSES } f
 import { createUnitOfClass } from '../unitClasses.ts';
 import { calculateDamage, getAttackRange } from '../combat.ts';
 import { countEnemies, getWalkingDistances, isInArea } from '../enemySpawns.ts';
-import { findUnit, getCell, setUnit } from '../grid.ts';
+import { findUnit, getCell, getDistance, setUnit } from '../grid.ts';
+import { SPIKES } from '../hazards.ts';
 import { getMovementRange } from '../movement.ts';
 import { getBuildingSprites, getFeatureSprites } from '../mapArt.ts';
 import { getReachable, terrainToRows } from '../mapGen.ts';
@@ -181,6 +184,23 @@ describe('createStageLevel', () => {
     expect(terrainToRows(a.grid)).toEqual(terrainToRows(b.grid));
     expect(a.grid.cells.map((c) => c.unitId)).toEqual(b.grid.cells.map((c) => c.unitId));
     expect(a.decorations).toEqual(b.decorations);
+  });
+
+  it('lays a few spike traps on some maps, near the enemies and off the deployment zone', () => {
+    const withTraps = BATTLES.filter(({ level }) => level.grid.cells.some((c) => c.terrain === SPIKES));
+    expect(withTraps.length).toBeGreaterThan(BATTLES.length * 0.3);
+    expect(withTraps.length).toBeLessThan(BATTLES.length * 0.7);
+    for (const { level } of withTraps) {
+      const traps = level.grid.cells.filter((c) => c.terrain === SPIKES);
+      expect(traps.length).toBeLessThanOrEqual(SPIKE_TRAP_COUNT.max);
+      const enemies = level.grid.cells.filter((c) => c.unitId?.startsWith('enemy-'));
+      for (const trap of traps) {
+        expect(trap.unitId).toBeNull();
+        expect(level.deploymentZone.some((tile) => getDistance(tile, trap) <= 1)).toBe(false);
+        expect(level.decorations.some((tree) => getDistance(tree, trap) <= 1)).toBe(false);
+        expect(enemies.some((enemy) => getDistance(enemy, trap) <= SPIKE_TRAP_REACH)).toBe(true);
+      }
+    }
   });
 
   it('builds different maps from different seeds', () => {

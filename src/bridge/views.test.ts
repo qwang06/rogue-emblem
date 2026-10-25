@@ -27,7 +27,7 @@ import {
   type TileAnchorView,
 } from './views.ts';
 import type { ExperienceGain } from '../game/experience.ts';
-import { POWER_STRIKE } from '../game/skills.ts';
+import { POWER_STRIKE, SHOVE, type Skill } from '../game/skills.ts';
 import { MAX_LEVEL } from '../game/experience.ts';
 import { Soldier } from '../game/Soldier.ts';
 import { Acolyte } from '../game/Acolyte.ts';
@@ -250,10 +250,17 @@ describe('toUnitDetailView', () => {
   });
 
   it("lists the skills the unit's class has taught it", () => {
+    const entry = (skill: Skill) => ({
+      id: skill.id,
+      label: skill.label,
+      manaCost: skill.manaCost,
+      range: skill.range,
+    });
     expect(toUnitDetailView(new Soldier({ team: 'player', level: 2 }))!.skills).toEqual([
-      { id: POWER_STRIKE.id, label: POWER_STRIKE.label, manaCost: POWER_STRIKE.manaCost, range: POWER_STRIKE.range },
+      entry(SHOVE),
+      entry(POWER_STRIKE),
     ]);
-    expect(toUnitDetailView(new Soldier({ team: 'player' }))!.skills).toEqual([]);
+    expect(toUnitDetailView(new Soldier({ team: 'player' }))!.skills).toEqual([entry(SHOVE)]);
     expect(toUnitDetailView(makeUnit())!.skills).toEqual([]);
   });
 
@@ -749,7 +756,7 @@ describe('toUnitDetailView with modifiers', () => {
     const after = toUnitDetailView(boosted)!;
     expect(after.hit).toBe(before.hit + 15);
     expect(after.avoid).toBe(before.avoid);
-    expect(after.skills.map((skill) => skill.id)).toEqual(['power-strike', 'cleave']);
+    expect(after.skills.map((skill) => skill.id)).toEqual(['shove', 'power-strike', 'cleave']);
     expect(after.passives.map((passive) => passive.id)).toEqual(['keen-eye', 'stalwart']);
   });
 });

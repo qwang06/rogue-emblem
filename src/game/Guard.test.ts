@@ -3,7 +3,7 @@ import { calculateDamage } from './combat.ts';
 import { getAttackSpeed } from './combatStats.ts';
 import { GUARD_CAPS, GUARD_GROWTHS, GUARD_ITEMS, GUARD_STATS, Guard } from './Guard.ts';
 import { HEALTH_POTION, MANA_POTION } from './items.ts';
-import { getLearnedSkills, SHIELD_BASH } from './skills.ts';
+import { getLearnedSkills, SHIELD_BASH, SHOVE } from './skills.ts';
 import { Soldier } from './Soldier.ts';
 import { Unit } from './Unit.ts';
 import { FIRE, IRON_SPEAR, weaponEntry } from './weapons.ts';
@@ -51,9 +51,9 @@ describe('Guard', () => {
     expect(guard.weapon).toBe(IRON_SPEAR);
   });
 
-  it('learns Shield Bash at level 2', () => {
-    expect(getLearnedSkills('guard', 1)).toEqual([]);
-    expect(getLearnedSkills('guard', 2)).toEqual([SHIELD_BASH]);
+  it('knows Shove from the start and learns Shield Bash at level 2', () => {
+    expect(getLearnedSkills('guard', 1)).toEqual([SHOVE]);
+    expect(getLearnedSkills('guard', 2)).toEqual([SHOVE, SHIELD_BASH]);
   });
 
   it('accepts a custom name and level', () => {

@@ -19,6 +19,7 @@ Reference for every unit class: base stats, growth rates, caps, weapons and skil
 - **XP rate** scales every XP gain (combat, skills, healing): a unit with a 150% rate earns 15 XP where others earn 10, rounded to the nearest point and never below 1.
 - **Skills** always hit, never crit, and the target can't counter. Their damage is the user's regular hit (weapon might included) with any bonus `STR` added, then scaled; scaled damage rounds up. Using one costs mana, earns XP like a landed hit, and spends no weapon uses. A healing skill (Mend) instead restores its power + the user's `MAG` to a wounded ally in range, capped at the ally's missing HP, and earns 10 XP like a staff heal.
 - **Secondary skill sets** (Warband Mode): a unit can learn one other class's skill set at camp and knows that class's skills as it reaches their levels, as if they were its own. A mentor (a roster unit of that class that knows its skills) teaches it for 20 gold; a Mentor's Scroll, a stage reward, teaches any class's set for free. A new set replaces the old one.
+- **Shove** (Soldier, Guard and their promotions, from level 1) deals no damage of its own: it pushes the adjacent foe one tile straight away from the user. Onto open ground it just slides; onto a spike trap it takes 5 damage; into deep water (not a ford) it drowns. If the map's edge, a wall, a mountain or another unit is in the way it stays put and takes 2 damage, and a unit it slams into takes 2 too. A boss holds its ground and can't be shoved. A unit knocked out by a shove is the shover's kill. Walking over a spike trap is safe.
 
 Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.md` (`combat.ts`, `combatStats.ts`, `weapons.ts`, `experience.ts`, `skills.ts`).
 
@@ -104,6 +105,7 @@ The spear-and-shield infantry: the enemy in the demo battle, and a choice in Tra
 
 | Skill        | Learned at | Mana | Range | Damage                      |
 | ------------ | ---------- | ---- | ----- | --------------------------- |
+| Shove        | 1          | 1    | 1     | None; pushes the foe a tile |
 | Power Strike | 2          | 2    | 1     | The regular hit with +3 STR |
 
 Carries an Iron Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
@@ -185,6 +187,7 @@ The armored infantry behind a tower shield: a soldier's strength and spear with 
 
 | Skill       | Learned at | Mana | Range | Damage                      |
 | ----------- | ---------- | ---- | ----- | --------------------------- |
+| Shove       | 1          | 1    | 1     | None; pushes the foe a tile |
 | Shield Bash | 2          | 2    | 1     | The regular hit with +1 STR |
 
 Carries an Iron Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
@@ -320,6 +323,7 @@ Promoted from the Soldier. Heavy armor over the spear: holds the line and shrugs
 
 | Skill        | Learned at | Mana | Range | Damage                        |
 | ------------ | ---------- | ---- | ----- | ----------------------------- |
+| Shove        | 1          | 1    | 1     | None; pushes the foe a tile   |
 | Power Strike | 2          | 2    | 1     | The regular hit with +3 power |
 | Impale       | 1          | 3    | 1     | The regular hit with +5 power |
 
@@ -348,6 +352,7 @@ Promoted from the Soldier. A long polearm and a sure aim: strikes from two tiles
 
 | Skill        | Learned at | Mana | Range | Damage                        |
 | ------------ | ---------- | ---- | ----- | ----------------------------- |
+| Shove        | 1          | 1    | 1     | None; pushes the foe a tile   |
 | Power Strike | 2          | 2    | 1     | The regular hit with +3 power |
 | Lunge        | 1          | 3    | 1–2   | The regular hit with +2 power |
 
@@ -488,6 +493,7 @@ Promoted from the Guard. A living wall: harder to hurt with weapons or magic. Pr
 
 | Skill        | Learned at | Mana | Range | Damage                        |
 | ------------ | ---------- | ---- | ----- | ----------------------------- |
+| Shove        | 1          | 1    | 1     | None; pushes the foe a tile   |
 | Shield Bash  | 2          | 2    | 1     | The regular hit with +1 power |
 | Bulwark Bash | 1          | 3    | 1     | The regular hit with +3 power |
 
@@ -516,6 +522,7 @@ Promoted from the Guard. Spear and spell: learns magic and gets Light on promoti
 
 | Skill       | Learned at | Mana | Range | Damage                        |
 | ----------- | ---------- | ---- | ----- | ----------------------------- |
+| Shove       | 1          | 1    | 1     | None; pushes the foe a tile   |
 | Shield Bash | 2          | 2    | 1     | The regular hit with +1 power |
 | Holy Strike | 1          | 3    | 1     | The regular hit with +3 power |
 
@@ -747,7 +754,7 @@ Warrior and Soldier differ by a point of strength and their weapons: the wooden 
 | Soldier  | Guard   | Iron Spear   | 0      | 84% | 0%   | 1       |
 | Acolyte  | Soldier | Light        | 3      | 88% | 0%   | 1       |
 
-Every class learns its skill at level 2, its first level up; the skill rows use level-1 stats.
+Every class learns its skill at level 2, its first level up (the Soldier's and Guard's Shove, which deals no damage, is known from level 1); the skill rows use level-1 stats.
 
 | Skill        | User     | Target  | Damage | Hit    | Crit  | Strikes       |
 | ------------ | -------- | ------- | ------ | ------ | ----- | ------------- |
