@@ -17,7 +17,12 @@ const CONTROLS = [
 // Header icon button (a keyboard) that drops down the key reference.
 export function ControlsButton() {
   return (
-    <HeaderPopover button={<KeyboardIcon />} label="Controls" title="Controls" className="header-button--icon">
+    <HeaderPopover
+      button={<KeyboardIcon />}
+      label="Controls"
+      title="Controls"
+      className="header-button--icon controls-button"
+    >
       <dl className="controls-list">
         {CONTROLS.map(({ keys, action }) => (
           <div key={`${keys.join(' ')}: ${action}`} className="controls-list__row">

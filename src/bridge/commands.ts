@@ -23,6 +23,7 @@ import type { RosterTarget } from '../game/warband/rosterScreen.ts';
 //   { type: 'toggle-danger-zone' }       — show or hide every enemy's reach, same as pressing D
 //   { type: 'toggle-auto-play' }         — turn auto play on or off, same as pressing A
 //   { type: 'change-auto-speed', direction } — move between 1x, 2x, 4x and 8x
+//   { type: 'cycle-auto-speed' }         — step up a speed, from 8x back to 1x
 
 // Store fields holding a menu React can point at.
 export type MenuField =
@@ -52,7 +53,8 @@ export type Command =
   | { type: 'main-menu' }
   | { type: 'toggle-danger-zone' }
   | { type: 'toggle-auto-play' }
-  | { type: 'change-auto-speed'; direction: -1 | 1 };
+  | { type: 'change-auto-speed'; direction: -1 | 1 }
+  | { type: 'cycle-auto-speed' };
 
 export type CommandHandler<C> = (command: C) => void;
 

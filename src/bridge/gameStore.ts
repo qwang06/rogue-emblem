@@ -4,6 +4,7 @@ import type { SkillAction } from '../game/skills.ts';
 import type { WeaponAction } from '../game/weapons.ts';
 import type { BattleSetup } from '../game/battleSetup.ts';
 import type { BattleOutcome } from '../game/turns.ts';
+import type { ObjectiveStatus } from '../game/objectives.ts';
 import type { BoonPickView } from './boonPickView.ts';
 import type { MentorScreenView } from './mentorView.ts';
 import type { BossBarView, BossIntroView } from './bossView.ts';
@@ -77,7 +78,7 @@ export interface BattleState {
   dialog: DialogView | null;
   objective: ObjectiveView | null;
   deploymentObjective: ObjectiveView | null;
-  objectiveStatus: string | null;
+  objectiveStatus: ObjectiveStatus | null;
   nextBattle: string | null;
   runOver: RunOverView | null;
   runSummary: RunSummaryView | null;
