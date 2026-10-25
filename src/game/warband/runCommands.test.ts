@@ -7,6 +7,7 @@ import { DEFAULT_CONTENT } from '../battleSetup.ts';
 import { REST_COST } from './camp.ts';
 import { generateRealm, getNextSites, type Realm } from './realm/realm.ts';
 import { getItemPrice } from './merchant.ts';
+import { MENTOR_FEE } from './mentors.ts';
 import { getRerollCost, getSkipGold, getStageClearGold, rollStageRewards } from './rewards.ts';
 import { advanceStage, createRun, restoreRoster, type RunState } from './run.ts';
 import {
@@ -133,7 +134,8 @@ describe('the reward pick', () => {
 
   it('takes an offer and goes to camp', () => {
     const session = won(newRun());
-    const after = apply(session, { type: 'pick-reward', index: 0 });
+    const index = getRewardOffers(session).findIndex((reward) => reward.kind !== 'draft');
+    const after = apply(session, { type: 'pick-reward', index });
     expect(after.phase).toBe('camp');
     expect(after.run.pendingReward).toBeUndefined();
   });
@@ -229,6 +231,23 @@ describe('camp', () => {
   it("doesn't take a reward command", () => {
     expect(() => apply(campWith(newRun()), { type: 'skip-reward' })).toThrow(/camp/);
   });
+
+  it('learns a secondary skill set from a mentor for the fee, or with a scroll', () => {
+    const run = newRun();
+    const veteran = { ...run.roster[1], level: 2 };
+    const camped = campWith({ ...run, gold: 100, roster: [run.roster[0], veteran] });
+    const taught = apply(camped, { type: 'learn-secondary', unitId: 'alden', classId: 'warrior' });
+    expect(taught.run.gold).toBe(100 - MENTOR_FEE);
+    expect(taught.run.roster[0].secondaryClass).toBe('warrior');
+    expect(() => apply(camped, { type: 'learn-secondary', unitId: 'alden', classId: 'archer' })).toThrow(/archer/);
+    const scrolled = apply(campWith({ ...run, scrolls: 1 }), {
+      type: 'learn-secondary',
+      unitId: 'alden',
+      classId: 'archer',
+    });
+    expect(scrolled.run.roster[0].secondaryClass).toBe('archer');
+    expect(scrolled.run).not.toHaveProperty('scrolls');
+  });
 });
 
 it('takes no command during a battle or once the run is over', () => {
@@ -257,6 +276,16 @@ describe('getLegalRunCommands', () => {
       new Set(['rest', 'buy', 'sell', 'give', 'store', 'equip', 'march']),
     );
     for (const command of commands) expect(() => applyRunCommand(session, command)).not.toThrow();
+  });
+
+  it('lists the skill sets each unit could learn at camp', () => {
+    const session = campWith({ ...newRun(), scrolls: 1 });
+    const lessons = getLegalRunCommands(session).filter((command) => command.type === 'learn-secondary');
+    // Each unit can learn every other class's set with the scroll.
+    expect(lessons).toHaveLength(10);
+    expect(lessons).toContainEqual({ type: 'learn-secondary', unitId: 'alden', classId: 'acolyte' });
+    expect(lessons).not.toContainEqual({ type: 'learn-secondary', unitId: 'alden', classId: 'soldier' });
+    for (const command of lessons) expect(() => applyRunCommand(session, command)).not.toThrow();
   });
 
   it('lists nothing during a battle', () => {
@@ -431,5 +460,38 @@ describe('relics in the run rules', () => {
   it('offers four rewards with the Four-Leaf Clover', () => {
     const run = { ...newRun(), relics: ['four-leaf-clover'] };
     expect(getRewardOffers(won(run))).toHaveLength(4);
+  });
+});
+
+describe('wayside events', () => {
+  const atEvent = (id: string): RunState => ({
+    ...startRoute(newRun(3)),
+    route: {
+      visited: ['0-0', '3-0'],
+      at: { id: '3-0', name: 'Ash Wayside', kind: 'event', depth: 3, region: 2, levelOffset: 0 },
+    },
+    pendingEvent: { id, depth: 3 },
+  });
+
+  it('opens on the event, takes a choice, reports it and goes back to travelling', () => {
+    const hurt = atEvent('healing-spring');
+    const session = resumeRunSession({ ...hurt, roster: hurt.roster.map((u) => ({ ...u, health: 1 })) });
+    expect(session.phase).toBe('event');
+    expect(getLegalRunCommands(session)).toEqual([
+      { type: 'pick-event', index: 0 },
+      { type: 'pick-event', index: 1 },
+    ]);
+    const result = applyRunCommand(session, { type: 'pick-event', index: 1 });
+    expect(result.session.phase).toBe('travel');
+    expect(result.session.run.pendingEvent).toBeUndefined();
+    expect(result.events[0]).toMatchObject({ type: 'event-outcome' });
+  });
+
+  it('refuses anything else at an event, a blocked choice, and an event choice elsewhere', () => {
+    const session = resumeRunSession({ ...atEvent('gambler'), gold: 0 });
+    expect(() => applyRunCommand(session, { type: 'march' })).toThrow(RunCommandError);
+    expect(() => applyRunCommand(session, { type: 'pick-event', index: 0 })).toThrow(/gold/);
+    expect(getLegalRunCommands(session)).toEqual([{ type: 'pick-event', index: 1 }]);
+    expect(() => applyRunCommand(campWith(newRun()), { type: 'pick-event', index: 0 })).toThrow(RunCommandError);
   });
 });

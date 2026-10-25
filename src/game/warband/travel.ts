@@ -11,6 +11,7 @@
 // stage on past the site, which is how a finished site is told apart from
 // one still to fight. Pure: each function returns a new frozen run.
 
+import { rollEvent } from './events.ts';
 import { getStageClearGold, markRewardPending, rollStageRewards } from './rewards.ts';
 import type { RegionConfig, RegionSettings } from './regions.ts';
 import { BATTLE_SITES, getNextSites, getSite, type Realm, type Site, type SiteKind } from './realm/realm.ts';
@@ -59,13 +60,15 @@ export function getRunSite(run: Pick<RunState, 'route'>): RunSite | undefined {
 }
 
 // Whether the run has done what its site is for: a battle won (the stage
-// has moved past it), a shrine's blessing picked, home. A town is never
+// has moved past it), a shrine's blessing picked, a wayside's event
+// settled, home. A town is never
 // done: the warband can shop and rest until it leaves.
 export function isSiteDone(run: RunState): boolean {
   const at = getRunSite(run);
   if (!at) return true;
   if (BATTLE_SITES.has(at.kind)) return run.stage > at.depth;
   if (at.kind === 'shrine') return !run.pendingReward;
+  if (at.kind === 'event') return !run.pendingEvent;
   return at.kind !== 'town';
 }
 
@@ -84,7 +87,8 @@ export function canTravel(run: RunState, realm: Realm, siteId: string): boolean 
 
 // `run` arrived at site `siteId` of `realm`: the site added to its route,
 // the stage set to its depth, and at a shrine its blessing owed (a reward
-// pick with no gold for a clear, see rewards.ts). Throws when the roads
+// pick with no gold for a clear, see rewards.ts) and at a wayside its
+// event owed (events.ts). Throws when the roads
 // don't lead there from where the run is.
 export function travelTo(run: RunState, realm: Realm, siteId: string): RunState {
   if (!canTravel(run, realm, siteId)) throw new Error(`Can't travel to ${siteId} from ${getCurrentSiteId(run)}`);
@@ -99,6 +103,10 @@ export function travelTo(run: RunState, realm: Realm, siteId: string): RunState 
   });
   const visited = Object.freeze([...(run.route?.visited ?? [HOME_SITE_ID]), site.id]);
   const arrived: RunState = Object.freeze({ ...run, stage: site.depth, route: Object.freeze({ visited, at }) });
+  if (site.kind === 'event') {
+    const event = rollEvent(run.seed, site.depth, run.seenEvents);
+    return Object.freeze({ ...arrived, pendingEvent: Object.freeze({ id: event.id, depth: site.depth }) });
+  }
   if (site.kind !== 'shrine' || rollStageRewards(arrived, site.depth).length === 0) return arrived;
   return markRewardPending(arrived, { stage: site.depth, rerolls: 0, clearGold: 0, flawless: false });
 }

@@ -22,6 +22,9 @@ export type SoundCue =
   | 'playerPhase'
   | 'enemyPhase'
   | 'guestPhase'
+  | 'bossIntro'
+  | 'warHorn'
+  | 'enrage'
   | 'victory'
   | 'gameOver'
   | 'menuOpen'
@@ -36,6 +39,7 @@ export type SoundState = Pick<
   | 'experienceGain'
   | 'levelUp'
   | 'phaseBanner'
+  | 'bossIntro'
   | 'battleOutcome'
   | 'dialog'
   | 'deploymentMenu'
@@ -59,6 +63,10 @@ const POPUP_CUES: Readonly<Record<PopupKind, SoundCue>> = Object.freeze({
   loot: 'loot',
   stored: 'loot',
   learned: 'learn',
+  horn: 'warHorn',
+  arrived: 'hit',
+  blocked: 'miss',
+  enraged: 'enrage',
   drowned: 'miss',
   steadfast: 'miss',
 });
@@ -97,6 +105,7 @@ export function getSoundCues(prev: SoundState, next: SoundState): SoundCue[] {
   if (next.experienceGain && next.experienceGain.id !== prev.experienceGain?.id) cues.add('experience');
   if (next.levelUp && next.levelUp.id !== prev.levelUp?.id) cues.add('levelUp');
   if (next.phaseBanner && next.phaseBanner.id !== prev.phaseBanner?.id) cues.add(PHASE_CUES[next.phaseBanner.team]);
+  if (next.bossIntro && next.bossIntro.id !== prev.bossIntro?.id) cues.add('bossIntro');
   if (next.battleOutcome && next.battleOutcome !== prev.battleOutcome)
     cues.add(next.battleOutcome === 'victory' ? 'victory' : 'gameOver');
   if (next.dialog && next.dialog.id !== prev.dialog?.id) cues.add('dialog');

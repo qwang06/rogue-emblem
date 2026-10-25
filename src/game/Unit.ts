@@ -7,11 +7,12 @@
 // and set their own class, stats, growth rates, stat caps and XP rate
 // (see experience.ts), which decide what a level up raises, and the weapon
 // types they master; the skills a unit knows come from its class's skill
-// tree and its level (see skills.ts). Items it carries — consumables and
-// weapons — are an inventory from items.ts; the first weapon in it the
-// unit can wield is the one it fights with (see weapons.ts), which sets
-// its range and the kind of damage it deals, and it wears the first armor
-// of each slot it carries, which adds to its defense (see items.ts).
+// tree and its level, and from its secondary class's (see skills.ts).
+// Items it carries — consumables and weapons — are an inventory from
+// items.ts; the first weapon in it the unit can wield is the one it fights
+// with (see weapons.ts), which sets its range and the kind of damage it
+// deals, and it wears the first armor of each slot it carries, which adds
+// to its defense (see items.ts).
 // Striking with a tome often enough teaches its spell (see tomes.ts).
 
 import type { Rng } from './combatStats.ts';
@@ -131,6 +132,15 @@ export class Unit {
   // The level-up boons it has taken in a Warband run (warband/boons.ts),
   // by id, in the order taken.
   boons: readonly string[] = Object.freeze([]);
+  // The elite affixes it fights with at an elite lair (warband/elites.ts),
+  // by id.
+  eliteAffixes: readonly string[] = Object.freeze([]);
+  // The class whose skill set it has learned on top of its own (see
+  // skills.ts and warband/mentors.ts), or null.
+  secondaryClass: string | null = null;
+  // The quirk it joined a Warband run with (warband/quirks.ts), by id, or
+  // null.
+  quirk: string | null = null;
 
   constructor({
     name,

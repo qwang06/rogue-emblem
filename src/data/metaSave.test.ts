@@ -4,7 +4,7 @@ import { createStoredText } from './customStorage.ts';
 import { loadMeta, saveMeta } from './metaSave.ts';
 import { memoryStorage, throwingStorage } from './testStorage.ts';
 
-const meta = { renown: 60, runs: 2, wins: 0, bestStage: 6 };
+const meta = { renown: 60, runs: 2, wins: 0, bestStage: 6, heat: 0 };
 
 describe('the saved meta-progression', () => {
   it('is a fresh start until something is saved', () => {

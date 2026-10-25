@@ -5,11 +5,19 @@ import { HEAL_STAFF, staffEntry } from '../healing.ts';
 import { HEALTH_POTION } from '../items.ts';
 import { TURN_LIMIT } from '../objectives.ts';
 import { IRON_SPEAR, weaponEntry, FISTS } from '../weapons.ts';
-import { applyCommand, BattleCommandError, findEvent, type BattleCommand, type BattleEvent } from './commands.ts';
+import {
+  applyCommand,
+  BattleCommandError,
+  findEvent,
+  getSkillTargets,
+  type BattleCommand,
+  type BattleEvent,
+} from './commands.ts';
 import { createBattleState, getDeployedUnits, getRunBattleResult, type BattleState } from './state.ts';
 import { createTestBattle, makeTestUnit } from './testLevel.ts';
 import type { Modifier } from '../modifiers.ts';
-import { POWER_STRIKE, SHOVE } from '../skills.ts';
+import { MEND, POWER_STRIKE, SHOVE, type Skill } from '../skills.ts';
+import { isDone } from '../turns.ts';
 import { setTerrain } from '../grid.ts';
 import { BUMP_DAMAGE } from '../push.ts';
 import { HAZARDS, SPIKES } from '../hazards.ts';
@@ -333,6 +341,59 @@ describe('shove', () => {
     const { state } = run(start, shove);
     expect(findUnit(state.grid, 'foe')).toEqual({ x: 2, y: 0 });
     expect(state.units.get('foe')!.health).toBe(20);
+  });
+});
+
+describe('secondary skill sets', () => {
+  // An archer that has learned the acolyte's skill set, next to a wounded
+  // ally, with a foe in reach of its bow.
+  function mender({ mana = 5, allyHealth = 8 } = {}) {
+    const hero = makeTestUnit({ team: 'player', unitClass: 'archer', level: 2, magic: 1, mana });
+    hero.secondaryClass = 'acolyte';
+    const ally = makeTestUnit({ team: 'player' });
+    ally.health = allyHealth;
+    return createTestBattle({
+      hero: { unit: hero, at: { x: 1, y: 0 } },
+      ally: { unit: ally, at: { x: 0, y: 0 } },
+      foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 2, y: 0 } },
+    });
+  }
+  const mend = { type: 'skill', unitId: 'hero', skillId: 'mend', target: { x: 0, y: 0 } } as const;
+
+  it("mends a wounded ally with its secondary class's Mend: mana spent, power + MAG healed, heal XP", () => {
+    const { state, events } = run(mender(), mend);
+    expect(events[0]).toEqual({ type: 'healed', unitId: 'hero', targetId: 'ally', amount: 3, skill: MEND });
+    expect(events).toContainEqual(expect.objectContaining({ type: 'experience', unitId: 'hero' }));
+    expect(state.units.get('ally')!.health).toBe(11);
+    expect(state.units.get('hero')!.mana).toBe(2);
+    expect(isDone(state.turnState!, 'hero')).toBe(true);
+  });
+
+  it('heals no more than the ally is missing', () => {
+    const { events } = run(mender({ allyHealth: 19 }), mend);
+    expect(events[0]).toMatchObject({ type: 'healed', amount: 1 });
+  });
+
+  it("won't mend a foe, an unhurt ally, or without the mana", () => {
+    expect(() => applyCommand(mender(), { ...mend, target: { x: 2, y: 0 } })).toThrow(/wounded ally/);
+    expect(() => applyCommand(mender({ allyHealth: 20 }), mend)).toThrow(/wounded ally/);
+    expect(() => applyCommand(mender({ mana: 2 }), mend)).toThrow(/afford/);
+  });
+
+  it('knows nothing of a set it has not learned', () => {
+    const start = mender();
+    start.units.get('hero')!.secondaryClass = null;
+    expect(() => applyCommand(start, mend)).toThrow(/doesn't know/);
+  });
+
+  it('lists foes for a striking skill and wounded allies for a healing one', () => {
+    const start = mender();
+    const from = { x: 1, y: 0 };
+    const targets = (skill: Skill) =>
+      getSkillTargets(start.grid, start.units, 'hero', from, skill).map((tile) => tile.unitId);
+    expect(targets(MEND)).toEqual(['ally']);
+    expect(targets(POWER_STRIKE)).toEqual(['foe']);
+    expect(getSkillTargets(start.grid, start.units, 'nobody', from, MEND)).toEqual([]);
   });
 });
 

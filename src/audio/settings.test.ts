@@ -5,11 +5,19 @@ import {
   clampVolume,
   cycleVolume,
   DEFAULT_AUDIO_SETTINGS,
-  getMasterGain,
+  getChannelGain,
   loadAudioSettings,
   saveAudioSettings,
   toggleMute,
+  type AudioSettings,
 } from './settings.ts';
+
+const settings = (overrides: Partial<AudioSettings> = {}): AudioSettings => ({
+  muted: false,
+  volume: 0.5,
+  musicVolume: 0.5,
+  ...overrides,
+});
 
 describe('clampVolume', () => {
   it('snaps to the nearest step', () => {
@@ -29,53 +37,68 @@ describe('clampVolume', () => {
 
 describe('changeVolume', () => {
   it('steps up and down without float drift', () => {
-    let settings = { muted: false, volume: 0 };
-    for (let i = 0; i < 3; i++) settings = changeVolume(settings, 1);
-    expect(settings.volume).toBe(0.3);
-    expect(changeVolume(settings, -1).volume).toBe(0.2);
+    let current = settings({ volume: 0 });
+    for (let i = 0; i < 3; i++) current = changeVolume(current, 1);
+    expect(current.volume).toBe(0.3);
+    expect(changeVolume(current, -1).volume).toBe(0.2);
   });
 
   it('stops at the ends', () => {
-    expect(changeVolume({ muted: false, volume: 1 }, 1).volume).toBe(1);
-    expect(changeVolume({ muted: false, volume: 0 }, -1).volume).toBe(0);
+    expect(changeVolume(settings({ volume: 1 }), 1).volume).toBe(1);
+    expect(changeVolume(settings({ volume: 0 }), -1).volume).toBe(0);
   });
 
   it('unmutes', () => {
-    expect(changeVolume({ muted: true, volume: 0.5 }, 1).muted).toBe(false);
+    expect(changeVolume(settings({ muted: true }), 1).muted).toBe(false);
+  });
+
+  it('changes only the channel asked for', () => {
+    expect(changeVolume(settings(), 1, 'musicVolume')).toEqual(settings({ musicVolume: 0.6 }));
+    expect(changeVolume(settings(), -1)).toEqual(settings({ volume: 0.4 }));
   });
 });
 
 describe('cycleVolume', () => {
   it('steps up, and wraps from full to silent', () => {
-    expect(cycleVolume({ muted: false, volume: 0.5 })).toEqual({ muted: false, volume: 0.6 });
-    expect(cycleVolume({ muted: true, volume: 1 })).toEqual({ muted: false, volume: 0 });
+    expect(cycleVolume(settings())).toEqual(settings({ volume: 0.6 }));
+    expect(cycleVolume(settings({ muted: true, volume: 1 }))).toEqual(settings({ volume: 0 }));
+  });
+
+  it('cycles the music volume on its own', () => {
+    expect(cycleVolume(settings({ musicVolume: 1 }), 'musicVolume')).toEqual(settings({ musicVolume: 0 }));
   });
 });
 
 describe('toggleMute', () => {
-  it('flips mute and keeps the volume', () => {
-    expect(toggleMute({ muted: false, volume: 0.7 })).toEqual({ muted: true, volume: 0.7 });
-    expect(toggleMute({ muted: true, volume: 0.7 })).toEqual({ muted: false, volume: 0.7 });
+  it('flips mute and keeps the volumes', () => {
+    expect(toggleMute(settings({ volume: 0.7 }))).toEqual(settings({ muted: true, volume: 0.7 }));
+    expect(toggleMute(settings({ muted: true }))).toEqual(settings());
   });
 });
 
-describe('getMasterGain', () => {
+describe('getChannelGain', () => {
   it('is silent when muted or at zero', () => {
-    expect(getMasterGain({ muted: true, volume: 1 })).toBe(0);
-    expect(getMasterGain({ muted: false, volume: 0 })).toBe(0);
+    expect(getChannelGain(settings({ muted: true, volume: 1, musicVolume: 1 }))).toBe(0);
+    expect(getChannelGain(settings({ muted: true, musicVolume: 1 }), 'musicVolume')).toBe(0);
+    expect(getChannelGain(settings({ volume: 0 }))).toBe(0);
   });
 
   it('is full at full volume and quieter than linear in between', () => {
-    expect(getMasterGain({ muted: false, volume: 1 })).toBe(1);
-    expect(getMasterGain({ muted: false, volume: 0.5 })).toBeLessThan(0.5);
+    expect(getChannelGain(settings({ volume: 1 }))).toBe(1);
+    expect(getChannelGain(settings({ volume: 0.5 }))).toBeLessThan(0.5);
+  });
+
+  it('reads the channel asked for', () => {
+    expect(getChannelGain(settings({ volume: 1, musicVolume: 0 }), 'musicVolume')).toBe(0);
   });
 });
 
 describe('loadAudioSettings / saveAudioSettings', () => {
   it('round-trips through storage', () => {
     const storage = memoryStorage();
-    expect(saveAudioSettings(storage, { muted: true, volume: 0.3 })).toBe(true);
-    expect(loadAudioSettings(storage)).toEqual({ muted: true, volume: 0.3 });
+    const saved = settings({ muted: true, volume: 0.3, musicVolume: 0.8 });
+    expect(saveAudioSettings(storage, saved)).toBe(true);
+    expect(loadAudioSettings(storage)).toEqual(saved);
   });
 
   it('gives the defaults with nothing saved or no storage', () => {
@@ -93,12 +116,21 @@ describe('loadAudioSettings / saveAudioSettings', () => {
     expect(loadAudioSettings(memoryStorage({ 'rogue-emblem:audio': 'not json' }))).toEqual(DEFAULT_AUDIO_SETTINGS);
     expect(loadAudioSettings(memoryStorage({ 'rogue-emblem:audio': '"loud"' }))).toEqual(DEFAULT_AUDIO_SETTINGS);
     expect(loadAudioSettings(memoryStorage({ 'rogue-emblem:audio': '{"muted":true,"volume":"max"}' }))).toEqual({
+      ...DEFAULT_AUDIO_SETTINGS,
       muted: true,
-      volume: DEFAULT_AUDIO_SETTINGS.volume,
     });
-    expect(loadAudioSettings(memoryStorage({ 'rogue-emblem:audio': '{"volume":4}' }))).toEqual({
+    expect(loadAudioSettings(memoryStorage({ 'rogue-emblem:audio': '{"volume":4,"musicVolume":-1}' }))).toEqual({
       muted: false,
       volume: 1,
+      musicVolume: 0,
+    });
+  });
+
+  it('gives saves from before music the default music volume', () => {
+    expect(loadAudioSettings(memoryStorage({ 'rogue-emblem:audio': '{"muted":false,"volume":0.3}' }))).toEqual({
+      muted: false,
+      volume: 0.3,
+      musicVolume: DEFAULT_AUDIO_SETTINGS.musicVolume,
     });
   });
 });

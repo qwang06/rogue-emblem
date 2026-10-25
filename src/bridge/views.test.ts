@@ -262,6 +262,13 @@ describe('toUnitDetailView', () => {
     expect(toUnitDetailView(makeUnit())!.skills).toEqual([]);
   });
 
+  it('names the quirk the unit joined with, if any', () => {
+    const unit = new Soldier({ team: 'player' });
+    expect(toUnitDetailView(unit)!.quirk).toBeNull();
+    unit.quirk = 'lucky';
+    expect(toUnitDetailView(unit)!.quirk).toEqual({ label: 'Lucky', description: '+10 avoid.' });
+  });
+
   it('says when the unit has reached the top level', () => {
     expect(toUnitDetailView(makeUnit())!.maxLevel).toBe(false);
     expect(toUnitDetailView(new Soldier({ team: 'player', level: MAX_LEVEL }))!.maxLevel).toBe(true);

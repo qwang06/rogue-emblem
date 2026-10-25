@@ -57,7 +57,7 @@ import {
   type CarriedStaff,
   type Staff,
 } from '../game/healing.ts';
-import { findUnitSkill, getSkillActions, getUnitSkills } from '../game/skills.ts';
+import { findUnitSkill, getSkillActions, getUnitSkills, isHealingSkill } from '../game/skills.ts';
 import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange } from '../game/combat.ts';
 import { getFitZoom } from '../game/camera.ts';
 import { createCursor, moveCursor } from '../game/cursor.ts';
@@ -95,6 +95,7 @@ import { enterRun } from '../bridge/warbandFlow.ts';
 import { loadMeta, saveMeta } from '../data/metaSave.ts';
 import { addPlayTime, EMPTY_CHRONICLE } from '../game/warband/chronicle.ts';
 import { recordRun } from '../game/warband/meta.ts';
+import { getRunHeat } from '../game/warband/heat.ts';
 import { summarizeRun } from '../game/warband/runSummary.ts';
 import { toRunSummaryView, type RunSummaryView } from '../bridge/runSummaryView.ts';
 import { pickBoonOffer, pickReward, planCamp } from '../game/warband/runPolicy.ts';
@@ -109,6 +110,15 @@ import {
   type MerchantScreenState,
 } from '../game/warband/merchantScreen.ts';
 import { toMerchantScreenView } from '../bridge/merchantView.ts';
+import {
+  cancelMentor,
+  confirmMentor,
+  moveMentorCursor,
+  openMentorScreen,
+  pointMentorCursor,
+  type MentorScreenState,
+} from '../game/warband/mentorScreen.ts';
+import { toMentorScreenView } from '../bridge/mentorView.ts';
 import {
   cancelRoster,
   confirmRoster,
@@ -157,7 +167,13 @@ import { planNextTurn } from '../game/battle/ai.ts';
 import { getEnemyIntents, getIntentThreats, type EnemyIntent } from '../game/battle/intents.ts';
 import { getPushDirection, getPushResult } from '../game/push.ts';
 import { toIntentTagView, toPushTagView } from '../bridge/mapTagView.ts';
-import { findEvent, type BattleCommand, type BattleEvent, type BattleEventOf } from '../game/battle/commands.ts';
+import {
+  findEvent,
+  getSkillTargets,
+  type BattleCommand,
+  type BattleEvent,
+  type BattleEventOf,
+} from '../game/battle/commands.ts';
 import {
   createHistory,
   dispatch,
@@ -216,6 +232,7 @@ import type { StructurePlacement, TreePlacement } from '../game/demoLevel.ts';
 import type { Facing } from '../game/facing.ts';
 import type { UnitAnimation } from '../game/tileset.ts';
 import type { PopupKind } from '../bridge/views.ts';
+import { isSameBossBar, toBossBarView, toBossIntroView } from '../bridge/bossView.ts';
 import type { Skill } from '../game/skills.ts';
 import type { BattleOutcome, Team, TurnState } from '../game/turns.ts';
 import type { Unit } from '../game/Unit.ts';
@@ -259,6 +276,15 @@ const DEPLOYMENT_ZONE_ALPHA = 0.4;
 const SEIZE_TILE_COLOR = 0xfbbf24;
 const SEIZE_TILE_ALPHA = 0.3;
 const SEIZE_TILE_PULSE_MS = 700;
+// The tile a boss's war horn marked for its next arrival (see bosses.ts):
+// a red outline over a faint fill that pulses faster than a seize tile's.
+const INCOMING_TILE_COLOR = 0xef4444;
+const INCOMING_TILE_ALPHA = 0.35;
+const INCOMING_TILE_PULSE_MS = 450;
+// How long a boss's name card holds the screen as its stage opens.
+const BOSS_INTRO_DURATION_MS = 3200;
+// How long a boss's rage holds before the battle goes on.
+const ENRAGE_PAUSE_MS = 600;
 // Deployment menu entries, by index, for re-opening it on a given one.
 const PLACE_UNITS_INDEX = 0;
 const START_INDEX = 1;
@@ -346,7 +372,8 @@ export class GridScene extends Phaser.Scene {
   // After a won Warband stage: the run as it stands (the battle written
   // back, the clear's gold paid) and the rewards it offers to pick from.
   rewardOffer: { run: RunState; stage: number; rewards: readonly Reward[]; rerolls: number } | null = null;
-  recruitOffer: { run: RunState; stage: number; recruits: readonly Reward[] } | null = null;
+  // The guest's recruitment, or a Recruit reward's draft (`draft`).
+  recruitOffer: { run: RunState; stage: number; recruits: readonly Reward[]; draft: boolean } | null = null;
   // While the run owes level-up boon picks (see levelUpPicks.ts): the run
   // as it stands. They come before the recruit and reward picks.
   boonRun: RunState | null = null;
@@ -359,6 +386,7 @@ export class GridScene extends Phaser.Scene {
   campAfterOutcome: RunState | null = null;
   rosterScreen: RosterScreenState | null = null;
   merchantScreen: MerchantScreenState | null = null;
+  mentorScreen: MentorScreenState | null = null;
   pauseMenu: Menu | null = null;
   placingUnitId: string | null = null;
   zoneTiles: Phaser.GameObjects.Rectangle[] | null = null;
@@ -399,6 +427,9 @@ export class GridScene extends Phaser.Scene {
   cursor!: Point;
   cursorSprite!: Sprite;
   unitSprites!: Map<string, Sprite>;
+  // The marker on the tile a boss's horn marked, and that tile as "x,y".
+  incomingMarker: Phaser.GameObjects.Rectangle | null = null;
+  incomingMarkerKey: string | null = null;
 
   constructor() {
     super('Grid');
@@ -503,6 +534,8 @@ export class GridScene extends Phaser.Scene {
   syncShown() {
     this.shown = this.battle;
     this.shownStats.clear();
+    this.publishBossBar();
+    this.refreshIncomingMarker();
   }
 
   preload() {
@@ -536,6 +569,7 @@ export class GridScene extends Phaser.Scene {
     this.campAfterOutcome = null; // a won realm stage's run when its result leads straight to camp
     this.rosterScreen = null; // the roster screen's state while it's open
     this.merchantScreen = null; // the merchant screen's state while it's open
+    this.mentorScreen = null; // the mentor screen's state while it's open
     // Configs uploaded in the config editor replace the built-in ones.
     this.content = getActiveContent();
     const level = createBattleLevel(setup, this.content);
@@ -545,6 +579,8 @@ export class GridScene extends Phaser.Scene {
     this.history = createHistory(createBattleState(level, getBattleDiceSeed(setup) ?? randomSeed()));
     this.shown = this.battle;
     this.shownStats = new Map();
+    this.incomingMarker = null; // the last battle's marker went with its scene
+    this.incomingMarkerKey = null;
     this.dialogs = level.dialogs; // the level's conversations by trigger (src/game/dialogScript.ts)
 
     const paletteName = level.palette ?? DEFAULT_BUILDING_PALETTE;
@@ -644,7 +680,7 @@ export class GridScene extends Phaser.Scene {
       gameStore.setState({ mapLoadProgress: 1, mapReady: true });
       return;
     }
-    if (savedRun?.pendingRecruitment) {
+    if (savedRun && (savedRun.pendingRecruitment || savedRun.pendingDraft !== undefined)) {
       this.resumeRecruitment(savedRun);
       gameStore.setState({ mapLoadProgress: 1, mapReady: true });
       return;
@@ -663,14 +699,18 @@ export class GridScene extends Phaser.Scene {
       return;
     }
     this.updateHoveredUnit();
+    this.publishBossBar();
     // Levels with units to place open on deployment, with the objective on
     // its menu; others (e.g. training, where everyone starts on the map)
     // show the Objective screen and go straight to the battle. Either waits
-    // for the level's opening dialog, if it has one.
-    this.playTriggeredDialog('opening', () => {
-      if (this.deploymentZone.length > 0) this.startDeployment();
-      else this.showObjective(() => this.startBattle());
-    });
+    // for the level's opening dialog, if it has one, and a boss stage's
+    // name card after it.
+    this.playTriggeredDialog('opening', () =>
+      this.showBossIntro(() => {
+        if (this.deploymentZone.length > 0) this.startDeployment();
+        else this.showObjective(() => this.startBattle());
+      }),
+    );
     gameStore.setState({ mapLoadProgress: 1, mapReady: true });
   }
 
@@ -731,6 +771,11 @@ export class GridScene extends Phaser.Scene {
 
     if (this.merchantScreen) {
       this.updateMerchantScreen(dx, dy, confirm, cancel);
+      return;
+    }
+
+    if (this.mentorScreen) {
+      this.updateMentorScreen(dx, dy, confirm, cancel);
       return;
     }
 
@@ -1021,11 +1066,13 @@ export class GridScene extends Phaser.Scene {
       const { unit, x, y } = this.activeUnit!;
       this.activeSkill = findUnitSkill(unit, skill.id);
       this.setCursor(x, y);
+      // A healing skill's reach shows in green, like a staff's.
+      const healing = isHealingSkill(this.activeSkill!);
       this.showRange(
         'skill',
         getAttackRange(this.grid, { x, y }, this.activeSkill!.range),
-        SKILL_RANGE_COLOR,
-        SKILL_RANGE_ALPHA,
+        healing ? HEAL_RANGE_COLOR : SKILL_RANGE_COLOR,
+        healing ? HEAL_RANGE_ALPHA : SKILL_RANGE_ALPHA,
       );
       this.updatePushPreview();
       return;
@@ -1193,11 +1240,14 @@ export class GridScene extends Phaser.Scene {
     this.openRewardMenu();
   }
 
+  // Opens the guest's recruitment, or with no guest owed, the draft a
+  // Recruit reward opened (see warband/recruitment.ts).
   resumeRecruitment(run: RunState) {
     this.setCursorVisible(false);
-    const stage = run.pendingRecruitment!;
+    const draft = !run.pendingGuest;
+    const stage = draft ? run.pendingDraft! : run.pendingRecruitment!;
     const session = { run, phase: 'recruit' as const };
-    this.recruitOffer = { run, stage, recruits: getRecruitOffers(session) };
+    this.recruitOffer = { run, stage, recruits: getRecruitOffers(session), draft };
     const pending = run.pendingReward;
     if (pending) {
       this.rewardOffer = {
@@ -1214,8 +1264,8 @@ export class GridScene extends Phaser.Scene {
   }
 
   openRecruitMenu() {
-    const { run, stage, recruits } = this.recruitOffer!;
-    gameStore.setState({ recruitmentStage: stage, rewardTeam: toTeamView(run.roster) });
+    const { run, stage, recruits, draft } = this.recruitOffer!;
+    gameStore.setState({ recruitmentStage: stage, recruitDraft: draft, rewardTeam: toTeamView(run.roster) });
     this.publishMenu(
       'rewardMenu',
       createActionMenu([
@@ -1224,7 +1274,7 @@ export class GridScene extends Phaser.Scene {
           id: 'decline',
           kind: 'decline',
           label: 'Decline',
-          description: 'Continue without recruiting the guest.',
+          description: draft ? 'Continue without recruiting anyone.' : 'Continue without recruiting the guest.',
           stats: null,
           healthAfter: null,
         },
@@ -1260,7 +1310,7 @@ export class GridScene extends Phaser.Scene {
         if (!result) return;
         saveRun(result.session.run);
         this.recruitOffer = null;
-        gameStore.setState({ recruitmentStage: null });
+        gameStore.setState({ recruitmentStage: null, recruitDraft: false });
         if (result.session.phase === 'reward') {
           const pending = result.session.run.pendingReward!;
           this.rewardOffer = {
@@ -1306,6 +1356,12 @@ export class GridScene extends Phaser.Scene {
       this.rewardOffer = null;
       this.inputLocked = true;
       this.showLevelUps(levelUps, () => {
+        // A Recruit reward opens its draft.
+        if (result.session.phase === 'recruit') {
+          this.inputLocked = false;
+          this.resumeRecruitment(after);
+          return;
+        }
         if (result.session.phase !== 'boon') {
           this.openCamp(after);
           return;
@@ -1325,8 +1381,9 @@ export class GridScene extends Phaser.Scene {
   // screen (src/game/warband/rosterScreen.ts) to equip units and move items
   // to and from the convoy; Merchant, which opens the merchant screen
   // (src/game/warband/merchantScreen.ts) to buy into and sell from the
-  // convoy; Rest, a full heal for gold; and Next Stage. Every change at
-  // camp is saved straight away.
+  // convoy; Rest, a full heal for gold; Mentors, which opens the mentor
+  // screen (src/game/warband/mentorScreen.ts) to learn secondary skill
+  // sets; and Next Stage. Every change at camp is saved straight away.
 
   openCamp(run: RunState) {
     this.inputLocked = false;
@@ -1356,6 +1413,8 @@ export class GridScene extends Phaser.Scene {
         this.publishRosterScreen(openRosterScreen(this.campRun!));
       } else if (action.id === 'merchant') {
         this.publishMerchantScreen(openMerchantScreen(this.campRun!));
+      } else if (action.id === 'mentors') {
+        this.publishMentorScreen(openMentorScreen(this.campRun!));
       } else if (action.id === 'rest') {
         const rested = tryRunCommand({ run: this.campRun!, phase: 'camp' }, { type: 'rest' });
         if (rested) this.setCampRun(rested.session.run);
@@ -1433,6 +1492,26 @@ export class GridScene extends Phaser.Scene {
     if (state && state.run !== this.campRun) this.setCampRun(state.run);
     this.merchantScreen = state;
     gameStore.setState({ merchantScreen: state && toMerchantScreenView(state) });
+  }
+
+  updateMentorScreen(dx: number, dy: number, confirm: boolean, cancel: boolean) {
+    const state = this.mentorScreen!;
+    if (cancel) {
+      this.publishMentorScreen(cancelMentor(state));
+    } else if (confirm) {
+      this.publishMentorScreen(confirmMentor(state));
+    } else if (dx !== 0 || dy !== 0) {
+      this.publishMentorScreen(moveMentorCursor(state, dx, dy));
+    }
+  }
+
+  // Shows the mentor screen in `state` (or closes it, back to the camp, for
+  // null), saving the run whenever a lesson changed it.
+  publishMentorScreen(state: MentorScreenState | null) {
+    if (state === this.mentorScreen) return;
+    if (state && state.run !== this.campRun) this.setCampRun(state.run);
+    this.mentorScreen = state;
+    gameStore.setState({ mentorScreen: state && toMentorScreenView(state) });
   }
 
   // After the result: on to the next battle if the victory leads to one,
@@ -1838,6 +1917,7 @@ export class GridScene extends Phaser.Scene {
     if (this.onObjectiveDone) return () => this.hideObjective();
     if (this.rosterScreen) return () => this.publishRosterScreen(null);
     if (this.merchantScreen) return () => this.publishMerchantScreen(null);
+    if (this.mentorScreen) return () => this.publishMentorScreen(null);
     if (this.campMenu) return () => this.autoCamp();
     if (this.rewardMenu) return () => this.autoReward();
     if (this.battleOutcome) return () => this.openStagePick();
@@ -1932,12 +2012,94 @@ export class GridScene extends Phaser.Scene {
       this.showOutcome(outcome);
       return;
     }
+    this.showBossCalls(events);
     if (findEvent(events, 'phase-started')) {
       this.showPhaseRecoveries(events);
       this.startPhase();
       return;
     }
     otherwise();
+  }
+
+  // Shows what a boss's horn did as the enemy phase started (see
+  // bosses.ts), over the map as it now stands: the horn over the boss, a
+  // goblin arriving on its marked tile, or whoever stood there blocking it.
+  showBossCalls(events: readonly BattleEvent[]) {
+    for (const event of events) {
+      if (event.type === 'reinforced' && !this.unitSprites.has(event.unitId)) {
+        this.addUnitSprite(event.unitId, event.at.x, event.at.y);
+        this.showDamagePopup(this.unitSprites.get(event.unitId)!, 0, 'arrived');
+      }
+      if (event.type === 'reinforcement-blocked' && event.blockerId) {
+        const sprite = this.unitSprites.get(event.blockerId);
+        if (sprite) this.showDamagePopup(sprite, 0, 'blocked');
+      }
+      if (event.type === 'war-horn') {
+        const sprite = this.unitSprites.get(event.unitId);
+        if (sprite) this.showDamagePopup(sprite, 0, 'horn');
+      }
+    }
+  }
+
+  // The boss's name card (see toBossIntroView) on a boss stage, input
+  // locked until it's gone or confirm cuts it short; then `onDone`. Any
+  // other stage goes straight on.
+  showBossIntro(onDone: () => void) {
+    const intro = toBossIntroView({
+      id: this.nextBannerId++,
+      objective: this.objective,
+      durationMs: this.playbackDuration(BOSS_INTRO_DURATION_MS),
+    });
+    if (!intro) {
+      onDone();
+      return;
+    }
+    this.inputLocked = true;
+    gameStore.setState({ bossIntro: intro });
+    this.waitSkippably(BOSS_INTRO_DURATION_MS, () => {
+      gameStore.setState({ bossIntro: null });
+      this.inputLocked = false;
+      onDone();
+    });
+  }
+
+  // Publishes the boss's HP bar (see toBossBarView) as the map shows it,
+  // a hit ahead of the battle included; nothing in a preview.
+  publishBossBar() {
+    const { objective, boss } = this.shown;
+    const bossId = objective.kind === 'boss' ? objective.unitId : null;
+    const unit = bossId ? this.units.get(bossId) : undefined;
+    const health = (bossId ? this.shownStats.get(bossId)?.health : undefined) ?? unit?.health;
+    const bar = this.preview ? null : toBossBarView(objective, boss, unit, health);
+    if (!isSameBossBar(bar, gameStore.getState().bossBar)) gameStore.setState({ bossBar: bar });
+  }
+
+  // Marks the tile the boss's horn marked for its next arrival, as the map
+  // shows the battle, and takes the marker down once it's spent.
+  refreshIncomingMarker() {
+    const tile = this.shown.boss?.incoming ?? null;
+    const key = tile ? `${tile.x},${tile.y}` : null;
+    if (key === this.incomingMarkerKey) return;
+    if (this.incomingMarker) {
+      this.tweens.killTweensOf(this.incomingMarker);
+      this.incomingMarker.destroy();
+    }
+    this.incomingMarker = null;
+    this.incomingMarkerKey = key;
+    if (!tile) return;
+    const { x, y } = gridToWorld(tile.x, tile.y, TILE_SIZE);
+    this.incomingMarker = this.add
+      .rectangle(x, y, TILE_SIZE, TILE_SIZE, INCOMING_TILE_COLOR, INCOMING_TILE_ALPHA)
+      .setOrigin(0, 0)
+      .setStrokeStyle(2, INCOMING_TILE_COLOR)
+      .setDepth(0.42);
+    this.tweens.add({
+      targets: this.incomingMarker,
+      alpha: { from: 1, to: 0.35 },
+      duration: INCOMING_TILE_PULSE_MS,
+      yoyo: true,
+      repeat: -1,
+    });
   }
 
   // Pops up the HP and MP units recovered as the phase started (a Mending
@@ -2082,6 +2244,7 @@ export class GridScene extends Phaser.Scene {
         const clear = getClearGold(before, run.fallen.length - before.fallen.length, {
           kills: countWarbandKills(before, result),
           relics: before.relics,
+          heat: getRunHeat(before),
         });
         stageClear = toStageClearView(before.stage, clear, run.gold);
         // The run is saved owing the pick, so a reload reopens the reward
@@ -2093,8 +2256,8 @@ export class GridScene extends Phaser.Scene {
           this.rewardOffer = { run, stage: before.stage, rewards: getRewardOffers(finished), rerolls: 0 };
         }
         if (finished.phase === 'recruit') {
-          this.recruitOffer = { run, stage: before.stage, recruits: getRecruitOffers(finished) };
-          gameStore.setState({ recruitmentStage: before.stage });
+          this.recruitOffer = { run, stage: before.stage, recruits: getRecruitOffers(finished), draft: false };
+          gameStore.setState({ recruitmentStage: before.stage, recruitDraft: false });
         }
         saveRun(run);
       }
@@ -2520,6 +2683,9 @@ export class GridScene extends Phaser.Scene {
         this.playPush(event, next);
         return;
       case 'healed':
+        // A healing skill's mana goes as the heal lands.
+        if (event.skill)
+          this.showStats(event.unitId, { mana: this.units.get(event.unitId)!.mana - event.skill.manaCost });
         this.playRecovery(event.targetId, 'health', event.amount, next);
         return;
       case 'item-used':
@@ -2546,6 +2712,13 @@ export class GridScene extends Phaser.Scene {
       case 'experience':
         this.showExperienceGain(event, next);
         return;
+      // A boss's rage: it roars over the map before the battle goes on.
+      case 'boss-enraged': {
+        const sprite = this.unitSprites.get(event.unitId);
+        if (sprite) this.showDamagePopup(sprite, event.strength, 'enraged');
+        this.time.delayedCall(this.playbackDuration(ENRAGE_PAUSE_MS), next);
+        return;
+      }
       default:
         next();
     }
@@ -2715,6 +2888,7 @@ export class GridScene extends Phaser.Scene {
   showStats(unitId: string, stats: { health?: number; mana?: number }) {
     this.shownStats.set(unitId, { ...this.shownStats.get(unitId), ...stats });
     this.publishHoveredUnit();
+    this.publishBossBar();
   }
 
   // Waits `durationMs` (at the game speed) and then runs `onDone`, unless
@@ -2783,7 +2957,7 @@ export class GridScene extends Phaser.Scene {
   }
 
   // Uses the aimed skill on the unit under the cursor, if it's a hostile
-  // unit in the skill's range.
+  // unit in the skill's range (a wounded ally, for a healing skill).
   tryUseSkill() {
     const { unitId } = this.activeUnit!;
     const skill = this.activeSkill!;
@@ -2795,11 +2969,12 @@ export class GridScene extends Phaser.Scene {
     this.playPlayerAction({ type: 'skill', unitId, skillId: skill.id, target: { x: target.x, y: target.y } });
   }
 
-  // The hostile unit under the cursor that the aimed skill reaches from the
-  // active unit's tile, as { x, y, unitId }, or null.
+  // The unit under the cursor that the aimed skill can be used on from the
+  // active unit's tile (a foe, or a wounded ally for a healing skill), as
+  // { x, y, unitId }, or null.
   getSkillTargetUnderCursor() {
-    const { unit, x, y } = this.activeUnit!;
-    const targets = getAttackTargets(this.grid, { x, y }, this.activeSkill!.range, this.isHostileTo(unit));
+    const { unitId, x, y } = this.activeUnit!;
+    const targets = getSkillTargets(this.grid, this.units, unitId, { x, y }, this.activeSkill!);
     return findTileAt(targets, this.cursor);
   }
 
@@ -3013,7 +3188,7 @@ export class GridScene extends Phaser.Scene {
           break;
         case 'click-tile':
           // The reward screen and the camp are picked from, not clicked through.
-          if (this.rewardMenu || this.campMenu || this.rosterScreen || this.merchantScreen) break;
+          if (this.rewardMenu || this.campMenu || this.rosterScreen || this.merchantScreen || this.mentorScreen) break;
           if (this.battleOutcome) {
             result.confirm = true;
           } else if (this.canRoamCursor()) {
@@ -3039,6 +3214,12 @@ export class GridScene extends Phaser.Scene {
           if (!this.merchantScreen) break;
           this.publishMerchantScreen(pointMerchantCursor(this.merchantScreen, command.column, command.index));
           if (command.type === 'select-merchant') result.confirm = true;
+          break;
+        case 'hover-mentor':
+        case 'select-mentor':
+          if (!this.mentorScreen) break;
+          this.publishMentorScreen(pointMentorCursor(this.mentorScreen, command.column, command.index));
+          if (command.type === 'select-mentor') result.confirm = true;
           break;
         case 'confirm':
           result.confirm = true;

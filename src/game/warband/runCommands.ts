@@ -1,10 +1,10 @@
 // Everything a player does in a Warband run between battles, as plain JSON
 // commands applied by one dispatcher, the way battle/commands.ts does it for
 // a battle: pick the relic a run starts with, take each level up's boon,
-// pick, skip or reroll the stage's reward, then at camp rest, buy,
-// sell, move items between units and the convoy, and march on. The game's
-// screens send these, and so can a script or an AI (see runner.ts), so both
-// take the same path. Pure: each command takes a session to a new one and
+// pick, skip or reroll the stage's reward, then at camp rest, buy, sell,
+// move items between units and the convoy, learn a secondary skill set,
+// and march on. The game's screens send these, and so can a script or an
+// AI (see runner.ts), so both take the same path. Pure: each command takes a session to a new one and
 // leaves the old one alone.
 
 import type { BattleOutcome } from '../turns.ts';
@@ -31,11 +31,16 @@ import {
   type Reward,
 } from './rewards.ts';
 import { getBoonOffer, pickBoon, queueLevelUpBoons } from './levelUpPicks.ts';
-import { rollStartingRelics, type Relic } from './relics.ts';
+import { canLearnSecondary, getLessons, learnSecondary } from './mentors.ts';
+import { rollRelics, rollStartingRelics, STARTING_RELIC_CHOICES, type Relic } from './relics.ts';
+import { getRelicPicks } from './origins.ts';
+import { getRunHeat } from './heat.ts';
+import { createSeededRng } from '../rng.ts';
 import { finishStage, snapshotUnit, type BattleResult, type RunState } from './run.ts';
-import { GUEST_UNIT_ID, rollGuest, settleGuest } from './recruitment.ts';
+import { GUEST_UNIT_ID, rollDraft, rollGuest, settleDraft, settleGuest } from './recruitment.ts';
 import { MAX_ROSTER_SIZE } from './rewards.ts';
 import { applyStageClearExperience } from './stageClearExperience.ts';
+import { getEventChoices, resolveEvent } from './events.ts';
 import type { Realm } from './realm/realm.ts';
 import { BATTLE_SITES } from './realm/realm.ts';
 import {
@@ -51,9 +56,11 @@ import {
 
 // Where a run stands: picking the relic it starts with, fighting its
 // stage's battle, taking the boons its level ups owe, recruiting a guest,
-// picking the reward a won stage owes, at camp, choosing where to travel on
-// the realm (travel.ts), or over (the warband fell, or won).
-export type RunPhase = 'relic' | 'battle' | 'boon' | 'recruit' | 'reward' | 'camp' | 'travel' | 'over' | 'won';
+// picking the reward a won stage owes (or the draft a Recruit reward opens),
+// at camp, choosing where to travel on the realm (travel.ts), choosing at a
+// wayside event (events.ts), or over (the warband fell, or won).
+export type RunPhase =
+  'relic' | 'battle' | 'boon' | 'recruit' | 'reward' | 'camp' | 'travel' | 'event' | 'over' | 'won';
 
 export interface RunSession {
   readonly run: RunState;
@@ -65,7 +72,10 @@ export type RunCommand =
   | { type: 'pick-relic'; index: number }
   // Takes boon `index` of the first level-up pick owed (see getBoonOffer).
   | { type: 'pick-boon'; index: number }
+  // Takes recruit `index` of the guest's or the draft's offers (see
+  // getRecruitOffers).
   | { type: 'pick-recruit'; index: number }
+  // Turns the guest or the whole draft down.
   | { type: 'decline-recruit' }
   // Takes offer `index` of the reward pick.
   | { type: 'pick-reward'; index: number }
@@ -86,18 +96,25 @@ export type RunCommand =
   | { type: 'store'; unitId: string; itemIndex: number }
   // Camp: equips (or wears) a unit's item at `itemIndex`.
   | { type: 'equip'; unitId: string; itemIndex: number }
+  // Camp: the unit `unitId` learns `classId`'s skill set as its secondary,
+  // from a mentor or with a scroll (see mentors.ts).
+  | { type: 'learn-secondary'; unitId: string; classId: string }
   // Camp: leaves for the next stage's battle, or on the realm, to choose
   // where to travel.
   | { type: 'march' }
   // Travel: goes to the realm site `siteId`, one the roads lead to.
-  | { type: 'travel'; siteId: string };
+  | { type: 'travel'; siteId: string }
+  // Takes choice `index` of the wayside event the run stands at (events.ts).
+  | { type: 'pick-event'; index: number };
 
 export type RunCommandType = RunCommand['type'];
 
 // What a command did that a screen may want to show beyond the new run.
 export type RunEvent =
   // A lesson reward's or a stage clear's level ups, in roster order.
-  { type: 'level-ups'; levelUps: readonly RewardLevelUp[] };
+  | { type: 'level-ups'; levelUps: readonly RewardLevelUp[] }
+  // What came of a wayside event's choice.
+  | { type: 'event-outcome'; text: string };
 
 export interface RunCommandResult {
   session: RunSession;
@@ -116,7 +133,16 @@ export class RunCommandError extends Error {
 }
 
 // The commands camp accepts; the reward pick accepts the rest but march.
-const CAMP_COMMANDS: ReadonlySet<RunCommandType> = new Set(['rest', 'buy', 'sell', 'give', 'store', 'equip', 'march']);
+const CAMP_COMMANDS: ReadonlySet<RunCommandType> = new Set([
+  'rest',
+  'buy',
+  'sell',
+  'give',
+  'store',
+  'equip',
+  'learn-secondary',
+  'march',
+]);
 const REWARD_COMMANDS: ReadonlySet<RunCommandType> = new Set(['pick-reward', 'skip-reward', 'reroll-rewards']);
 const RECRUIT_COMMANDS: ReadonlySet<RunCommandType> = new Set(['pick-recruit', 'decline-recruit']);
 
@@ -126,7 +152,8 @@ export interface RunCommandContext {
   realm?: Realm;
 }
 
-// A new run's session, about to pick the relic it starts with.
+// A new run's session, about to pick the relic (or relics, see
+// getRelicPicks) it starts with.
 export function startRunSession(run: RunState): RunSession {
   return freeze({ run, phase: 'relic' });
 }
@@ -138,16 +165,18 @@ export function startRunSession(run: RunState): RunSession {
 export function resumeRunSession(run: RunState): RunSession {
   const phase = getPickPhase(run);
   if (phase !== 'camp') return freeze({ run, phase });
+  if (run.pendingEvent) return freeze({ run, phase: 'event' });
   if (!isRealmRun(run)) return freeze({ run, phase: 'battle' });
   if (getRunSite(run)?.kind === 'town') return freeze({ run, phase: 'camp' });
   return freeze({ run, phase: isSiteDone(run) ? 'travel' : 'battle' });
 }
 
 // Where a won stage goes next: the boon picks its level ups owe, then the
-// guest's recruitment, then the reward pick, then camp.
+// guest's recruitment, then the reward pick, then a Recruit reward's
+// draft, then camp.
 function getPickPhase(run: RunState): RunPhase {
   if (getBoonOffer(run)) return 'boon';
-  if (run.pendingRecruitment) return 'recruit';
+  if (run.pendingRecruitment || run.pendingDraft !== undefined) return 'recruit';
   if (getPendingRewardOffer(run)) return 'reward';
   return 'camp';
 }
@@ -193,6 +222,7 @@ export function finishBattleWithEvents(
   const clear = getClearGold(before, finished.run.fallen.length - before.fallen.length, {
     kills: countWarbandKills(before, result),
     relics: before.relics,
+    heat: getRunHeat(before),
   });
   const paid = addGold(queueLevelUpBoons(before, leveled.run), clear.gold);
   const guest = result.units.get(GUEST_UNIT_ID);
@@ -213,15 +243,25 @@ export function finishBattleWithEvents(
 }
 
 // The relics a new run's session offers to start with, or none once it's
-// past that pick.
+// past that pick: rollStartingRelics' for the first pick, and for each
+// further one its origin gives (getRelicPicks), three it doesn't hold yet,
+// drawn from the seed and the pick.
 export function getRelicOffers(session: RunSession): readonly Relic[] {
-  return session.phase === 'relic' ? rollStartingRelics(session.run.seed) : [];
+  if (session.phase !== 'relic') return [];
+  const { run } = session;
+  if (run.relics.length === 0) return rollStartingRelics(run.seed);
+  const rng = createSeededRng((run.seed ^ Math.imul(run.relics.length, 0x27d4eb2f) ^ 0x7f4a7c15) >>> 0);
+  return rollRelics(rng, run.relics, STARTING_RELIC_CHOICES);
 }
 
+// The recruits the session's recruit pick offers: the guest who survived,
+// else the draft's (rollDraft), or none when it isn't on one.
 export function getRecruitOffers(session: RunSession): readonly Reward[] {
-  return session.phase === 'recruit' && session.run.pendingGuest
-    ? [{ kind: 'recruit', unit: session.run.pendingGuest }]
-    : [];
+  if (session.phase !== 'recruit') return [];
+  const { run } = session;
+  if (run.pendingGuest) return [{ kind: 'recruit', unit: run.pendingGuest }];
+  if (run.pendingDraft === undefined) return [];
+  return rollDraft(run, run.pendingDraft).map((unit) => Object.freeze({ kind: 'recruit' as const, unit }));
 }
 
 // The reward offers the session's pick shows, or none when it isn't on one.
@@ -249,6 +289,8 @@ export function applyRunCommand(
   if (session.phase !== 'relic' && command.type === 'pick-relic') fail('The starting relic is already picked');
   if (session.phase !== 'boon' && command.type === 'pick-boon') fail('No boon pick is owed');
   if (session.phase === 'travel' && command.type !== 'travel') fail(`${command.type} isn't done while travelling`);
+  if (session.phase === 'event' && command.type !== 'pick-event') fail(`${command.type} isn't an event choice`);
+  if (session.phase !== 'event' && command.type === 'pick-event') fail('No event is owed');
   if (session.phase !== 'travel' && command.type === 'travel')
     fail(`Travel is chosen from the realm, not ${session.phase}`);
   if (session.phase === 'battle' || session.phase === 'over' || session.phase === 'won')
@@ -265,11 +307,10 @@ export function applyRunCommand(
     case 'pick-relic': {
       const relic = getRelicOffers(session)[command.index];
       if (!relic) return fail(`No relic offer ${command.index}`);
+      const next = Object.freeze({ ...run, relics: [...run.relics, relic.id] });
+      const more = next.relics.length < getRelicPicks(next);
       return {
-        session: freeze({
-          run: Object.freeze({ ...run, relics: [...run.relics, relic.id] }),
-          phase: isRealmRun(run) ? 'travel' : 'battle',
-        }),
+        session: freeze({ run: next, phase: more ? 'relic' : isRealmRun(run) ? 'travel' : 'battle' }),
         events: [],
       };
     }
@@ -281,14 +322,14 @@ export function applyRunCommand(
     case 'pick-recruit': {
       const offer = getRecruitOffers(session)[command.index];
       if (!offer || offer.kind !== 'recruit') return fail(`No recruit offer ${command.index}`);
-      return onward(settleGuest(run, true));
+      return onward(run.pendingGuest ? settleGuest(run, true) : settleDraft(run, command.index));
     }
     case 'decline-recruit':
-      return onward(settleGuest(run, false));
+      return onward(run.pendingGuest ? settleGuest(run, false) : settleDraft(run, null));
     case 'pick-reward': {
       const reward = getRewardOffers(session)[command.index];
       if (!reward) return fail(`No reward offer ${command.index}`);
-      if (reward.kind !== 'lesson') return camp(applyReward(run, reward));
+      if (reward.kind !== 'lesson') return onward(applyReward(run, reward));
       const { run: next, levelUps } = applyLessonReward(run, reward);
       return onward(queueLevelUpBoons(run, next), [{ type: 'level-ups', levelUps }]);
     }
@@ -303,6 +344,11 @@ export function applyRunCommand(
     case 'rest':
       if (!canRest(run)) return fail('Resting needs someone hurt and the gold for it');
       return camp(restAtCamp(run));
+    case 'learn-secondary':
+      if (!canLearnSecondary(run, command.unitId, command.classId)) {
+        return fail(`${command.unitId} can't learn the ${command.classId} skill set`);
+      }
+      return camp(learnSecondary(run, command.unitId, command.classId));
     case 'buy': {
       if (!hasMerchant(run)) return fail('No merchant here');
       const unitId = command.unitId ?? null;
@@ -336,8 +382,15 @@ export function applyRunCommand(
       if (!canTravel(run, realm, command.siteId)) return fail(`No road to ${command.siteId}`);
       const next = travelTo(run, realm, command.siteId);
       const kind = getRunSite(next)!.kind;
-      const phase: RunPhase = BATTLE_SITES.has(kind) ? 'battle' : getPickPhase(next);
+      const phase: RunPhase = BATTLE_SITES.has(kind) ? 'battle' : next.pendingEvent ? 'event' : getPickPhase(next);
       return { session: freeze({ run: next, phase }), events: [] };
+    }
+    case 'pick-event': {
+      const choice = getEventChoices(run)[command.index];
+      if (!choice) return fail(`No event choice ${command.index}`);
+      if (choice.blocked) return fail(choice.blocked);
+      const { run: next, text } = resolveEvent(run, command.index);
+      return { session: resumeRunSession(next), events: [{ type: 'event-outcome', text }] };
     }
   }
 }
@@ -359,6 +412,12 @@ export function getLegalRunCommands(
   }
   if (session.phase === 'boon') {
     getBoonOffer(session.run)?.boons.forEach((_, index) => commands.push({ type: 'pick-boon', index }));
+    return commands;
+  }
+  if (session.phase === 'event') {
+    getEventChoices(session.run).forEach((choice, index) => {
+      if (!choice.blocked) commands.push({ type: 'pick-event', index });
+    });
     return commands;
   }
   if (session.phase === 'travel') {
@@ -395,6 +454,9 @@ export function getLegalRunCommands(
       if (canStoreInConvoy(run, unitId, itemIndex)) commands.push({ type: 'store', unitId, itemIndex });
       if (canEquipInRoster(run, unitId, itemIndex)) commands.push({ type: 'equip', unitId, itemIndex });
     });
+    for (const { classId, source } of getLessons(run, unitId)) {
+      if (source) commands.push({ type: 'learn-secondary', unitId, classId });
+    }
   }
   commands.push({ type: 'march' });
   return commands;

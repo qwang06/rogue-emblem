@@ -1,8 +1,11 @@
 // Pure rules for unit skills. Each unit class has a skill tree: a list of
 // { level, skill } entries, and a unit knows every skill in its class's
 // tree whose level it has reached — so skills are gained by leveling up —
-// plus any its modifiers teach it (a level-up boon, see modifiers.ts).
-// Using a skill costs mana. No Phaser, no rendering, no hidden state.
+// then those of its secondary class's tree it has reached the same way (a
+// second skill set taught at camp, Final Fantasy Tactics style, see
+// warband/mentors.ts), plus any its modifiers teach it (a level-up boon,
+// see modifiers.ts). Using a skill costs mana. No Phaser, no rendering, no
+// hidden state.
 
 import type { MenuAction } from './actionMenu.ts';
 import {
@@ -16,12 +19,15 @@ import {
 import { getModifierSkills, type Modifier } from './modifiers.ts';
 
 // A skill: { id, label, manaCost, range, animation, might?, damageScale?,
-// push? }. Its damage is a variant of the user's regular hit: `might`
-// (default 0) is added to the user's attack power, and the resulting
-// damage is multiplied by `damageScale` (default 1). `range` is how far
-// away (orthogonal steps) the target can be, and `animation` names the
-// effect the presentation layer plays for it. A `push` skill also shoves a
-// target it leaves standing one tile away from the user (see push.ts).
+// push?, effect?, power? }. Its damage is a variant of the user's regular
+// hit: `might` (default 0) is added to the user's attack power, and the
+// resulting damage is multiplied by `damageScale` (default 1). `range` is
+// how far away (orthogonal steps) the target can be, and `animation` names
+// the effect the presentation layer plays for it. A `push` skill also
+// shoves a target it leaves standing one tile away from the user (see
+// push.ts). A skill whose `effect` is 'heal' deals no damage: it mends a
+// wounded ally instead, restoring its `power` plus the user's magic (like
+// a staff, see healing.ts).
 
 export interface Skill {
   id: string;
@@ -32,6 +38,8 @@ export interface Skill {
   might?: number;
   damageScale?: number;
   push?: boolean;
+  effect?: 'heal';
+  power?: number;
 }
 
 export interface SkillTreeEntry {
@@ -119,6 +127,18 @@ export const SHOVE: Skill = Object.freeze({
   animation: 'strike',
 });
 
+// A prayer that closes an adjacent ally's wounds without a staff: it
+// restores 2 plus the user's magic, like the Heal staff.
+export const MEND: Skill = Object.freeze({
+  id: 'mend',
+  label: 'Mend',
+  manaCost: 3,
+  range: 1,
+  effect: 'heal',
+  power: 2,
+  animation: 'mend',
+});
+
 // The level each class's first skill unlocks at: a new unit starts with
 // none (bar a Shove) and learns it on its first level up.
 export const SKILL_UNLOCK_LEVEL = 2;
@@ -136,7 +156,13 @@ export const SKILL_TREES: SkillTrees = Object.freeze({
     Object.freeze({ level: 1, skill: SHOVE }),
     Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: SHIELD_BASH }),
   ]),
+  acolyte: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: MEND })]),
 });
+
+// Whether `unitClass` has any skills to teach, e.g. as a secondary class.
+export function hasSkillTree(unitClass: string, trees: SkillTrees = SKILL_TREES): boolean {
+  return treeOf(unitClass, trees).length > 0;
+}
 
 // Every skill a unit of unitClass knows at the given level, in tree order.
 export function getLearnedSkills(unitClass: string | null, level: number, trees: SkillTrees = SKILL_TREES): Skill[] {
@@ -156,19 +182,36 @@ export function getSkillsLearnedBetween(
   return tree.filter((entry) => entry.level > fromLevel && entry.level <= toLevel).map((entry) => entry.skill);
 }
 
-// What getUnitSkills reads off a unit.
+// What getUnitSkills reads off a unit. `secondaryClass` is the class whose
+// skill set it has learned on top of its own, if any.
 export interface SkillUser {
   unitClass: string | null;
   level: number;
+  secondaryClass?: string | null;
   modifiers?: readonly Modifier[];
 }
 
+// The skills `unit` knows from its secondary class: that class's tree at
+// the unit's own level, as if it were its own. None without one, or when
+// the secondary is its own class.
+export function getSecondarySkills(unit: SkillUser, trees: SkillTrees = SKILL_TREES): Skill[] {
+  const { secondaryClass } = unit;
+  if (!secondaryClass || secondaryClass === unit.unitClass) return [];
+  return getLearnedSkills(secondaryClass, unit.level, trees);
+}
+
 // Every skill `unit` knows: its class's at its level (getLearnedSkills),
-// then those its modifiers teach that the class doesn't.
+// then its secondary class's (getSecondarySkills), then those its
+// modifiers teach, each only once.
 export function getUnitSkills(unit: SkillUser, trees: SkillTrees = SKILL_TREES): Skill[] {
-  const learned = getLearnedSkills(unit.unitClass, unit.level, trees);
-  const taught = getModifierSkills(unit.modifiers).filter((skill) => !learned.some(({ id }) => id === skill.id));
-  return [...learned, ...taught];
+  const skills: Skill[] = [];
+  const all = [
+    ...getLearnedSkills(unit.unitClass, unit.level, trees),
+    ...getSecondarySkills(unit, trees),
+    ...getModifierSkills(unit.modifiers),
+  ];
+  for (const skill of all) if (!skills.some(({ id }) => id === skill.id)) skills.push(skill);
+  return skills;
 }
 
 // Finds a skill `unit` knows (getUnitSkills) by id, or null.
@@ -211,6 +254,32 @@ export function calculateSkillDamage(skill: Skill, user: SkillFighter, defender:
     bonus: getFighterBonus(defender, user, false),
   };
   return Math.ceil(calculateDamage(boosted, guarded) * (skill.damageScale ?? 1));
+}
+
+// Whether `skill` mends an ally rather than striking a foe.
+export function isHealingSkill(skill: Skill): boolean {
+  return skill.effect === 'heal';
+}
+
+// HP a healing skill restores to `patient`: its power plus the user's
+// magic, capped at what the patient is missing (never below 0).
+export function getSkillHealAmount(
+  skill: Skill,
+  user: { magic: number },
+  patient: { health: number; maxHealth: number },
+): number {
+  const missing = Math.max(0, patient.maxHealth - patient.health);
+  return Math.max(0, Math.min((skill.power ?? 0) + user.magic, missing));
+}
+
+// One line on what `skill` does, e.g. for a lesson's or a boon's offer.
+export function describeSkill(skill: Skill): string {
+  const reach = skill.range === 1 ? 'next to it' : `up to ${skill.range} tiles away`;
+  if (isHealingSkill(skill)) return `Heals an ally ${reach} for ${skill.power ?? 0} + MAG.`;
+  const scale = skill.damageScale ?? 1;
+  const hit = scale === 1 ? 'Its regular hit' : scale === 0.5 ? 'Half its regular hit' : `${scale}× its regular hit`;
+  const might = skill.might ? ` with +${skill.might} power` : '';
+  return `${hit}${might} on a foe ${reach}.`;
 }
 
 export function canUseSkill(unit: { mana: number }, skill: Skill): boolean {

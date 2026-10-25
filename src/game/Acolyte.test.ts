@@ -3,7 +3,7 @@ import { ACOLYTE_CAPS, ACOLYTE_GROWTHS, ACOLYTE_ITEMS, ACOLYTE_STATS, Acolyte } 
 import { getCombatForecast } from './combat.ts';
 import { getHealAmount, HEAL_STAFF, staffEntry } from './healing.ts';
 import { HEALTH_POTION, MANA_POTION } from './items.ts';
-import { getLearnedSkills } from './skills.ts';
+import { getLearnedSkills, MEND } from './skills.ts';
 import { Soldier } from './Soldier.ts';
 import { Unit } from './Unit.ts';
 import { FIRE, IRON_SPEAR, LIGHT, NATURAL_WEAPON_IDS, weaponEntry } from './weapons.ts';
@@ -80,8 +80,9 @@ describe('Acolyte', () => {
     expect(getHealAmount(new Acolyte({ team: 'player' }), HEAL_STAFF, { health: 1, maxHealth: 10 })).toBe(5);
   });
 
-  it('knows no skills yet', () => {
-    expect(getLearnedSkills('acolyte', 20)).toEqual([]);
+  it('learns Mend at level 2', () => {
+    expect(getLearnedSkills('acolyte', 1)).toEqual([]);
+    expect(getLearnedSkills('acolyte', 2)).toEqual([MEND]);
   });
 
   it('accepts a custom name and level', () => {

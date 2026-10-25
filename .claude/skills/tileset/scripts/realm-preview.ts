@@ -47,6 +47,8 @@ const COLORS: Record<string, number[]> = {
   fort: [140, 0, 0],
   town: [40, 120, 240],
   shrine: [240, 240, 240],
+  elite: [160, 40, 200],
+  event: [240, 230, 40],
   home: [40, 200, 80],
   hold: [0, 0, 0],
 };

@@ -17,7 +17,8 @@ Reference for every unit class: base stats, growth rates, caps, weapons and skil
 - **Tomes:** a tome is a magical weapon that teaches its spell. Each strike with it counts towards learning the spell (Fire Tome: 5); on the strike that reaches the count the spell takes the tome's slot and never breaks, and the tome keeps its remaining uses in the next free slot (or goes to the convoy when there's none) so another unit can learn from it. A unit that already knows the spell just uses the tome up. Progress is kept per unit, per tome, between stages.
 - **Growths** are the % chance a stat rises by 1 on each level up. A stat never grows past its cap. Max level is 20. Level 1 to 2 takes 50 XP, every level after 100 XP.
 - **XP rate** scales every XP gain (combat, skills, healing): a unit with a 150% rate earns 15 XP where others earn 10, rounded to the nearest point and never below 1.
-- **Skills** always hit, never crit, and the target can't counter. Their damage is the user's regular hit (weapon might included) with any bonus `STR` added, then scaled; scaled damage rounds up. Using one costs mana, earns XP like a landed hit, and spends no weapon uses.
+- **Skills** always hit, never crit, and the target can't counter. Their damage is the user's regular hit (weapon might included) with any bonus `STR` added, then scaled; scaled damage rounds up. Using one costs mana, earns XP like a landed hit, and spends no weapon uses. A healing skill (Mend) instead restores its power + the user's `MAG` to a wounded ally in range, capped at the ally's missing HP, and earns 10 XP like a staff heal.
+- **Secondary skill sets** (Warband Mode): a unit can learn one other class's skill set at camp and knows that class's skills as it reaches their levels, as if they were its own. A mentor (a roster unit of that class that knows its skills) teaches it for 20 gold; a Mentor's Scroll, a stage reward, teaches any class's set for free. A new set replaces the old one.
 - **Shove** (Soldier and Guard, from level 1) deals no damage of its own: it pushes the adjacent foe one tile straight away from the user. Onto open ground it just slides; onto a spike trap it takes 5 damage; into deep water (not a ford) it drowns. If the map's edge, a wall, a mountain or another unit is in the way it stays put and takes 2 damage, and a unit it slams into takes 2 too. A boss holds its ground and can't be shoved. A unit knocked out by a shove is the shover's kill. Walking over a spike trap is safe.
 
 Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.md` (`combat.ts`, `combatStats.ts`, `weapons.ts`, `experience.ts`, `skills.ts`).
@@ -216,10 +217,11 @@ The healer and the warband's magic user: it mends a wounded ally next to it with
 | ----- | ----- | --- | ---- | ---------------- |
 | Heal  | 2     | 1   | 20   | 5 HP             |
 
-| Skill | Learned at | Mana | Range | Damage |
-| ----- | ---------- | ---- | ----- | ------ |
+| Skill | Learned at | Mana | Range | Damage                        |
+| ----- | ---------- | ---- | ----- | ----------------------------- |
+| Mend  | 2          | 3    | 1     | None: heals an ally 2 + `MAG` |
 
-It learns no skills yet. Knows Light, and carries a Heal staff, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
+Mend heals like the Heal staff without needing one, so another class that learns the Acolyte's skill set can heal too. Knows Light, and carries a Heal staff, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
 ## Slime
 

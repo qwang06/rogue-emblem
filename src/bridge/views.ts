@@ -29,6 +29,8 @@ import type { MenuAction } from '../game/actionMenu.ts';
 import { getUnitSkills } from '../game/skills.ts';
 import { getStandingCombatBonus } from '../game/modifiers.ts';
 import { findBoon, type BoonKind } from '../game/warband/boons.ts';
+import { findEliteAffix } from '../game/warband/elites.ts';
+import { findQuirk } from '../game/warband/quirks.ts';
 import type { BoonOffer } from '../game/warband/levelUpPicks.ts';
 import { findRelic, type Relic } from '../game/warband/relics.ts';
 import type { Unit } from '../game/Unit.ts';
@@ -107,7 +109,8 @@ export interface SkillView {
 // The unit info screen's full stat sheet: everything the hover panel shows
 // plus the class name, stat caps, the rates it fights with, its equipped
 // weapon's numbers, the weapon types it can wield, the skills it knows and
-// the passive boons it has taken (see warband/boons.ts).
+// the passive boons it has taken (see warband/boons.ts) and the quirk it
+// joined with (warband/quirks.ts).
 export interface UnitDetailView extends UnitView {
   maxLevel: boolean;
   stats: readonly StatLineView[];
@@ -120,7 +123,11 @@ export interface UnitDetailView extends UnitView {
   equippedWeapon: WeaponDetailView | null;
   weaponTypes: readonly WeaponType[];
   skills: readonly SkillView[];
+  // The class whose skill set it learned on top of its own (see
+  // warband/mentors.ts), by label, or null.
+  secondaryClass: string | null;
   passives: readonly { id: string; label: string; description: string }[];
+  quirk: { label: string; description: string } | null;
 }
 
 // The visible world rectangle's top-left plus the zoom.
@@ -161,7 +168,24 @@ export interface CombatForecastView {
 }
 
 export type PopupKind =
-  'damage' | 'crit' | 'miss' | 'health' | 'mana' | 'broke' | 'loot' | 'stored' | 'learned' | 'drowned' | 'steadfast';
+  | 'damage'
+  | 'crit'
+  | 'miss'
+  | 'health'
+  | 'mana'
+  | 'broke'
+  | 'loot'
+  | 'stored'
+  | 'learned'
+  // A boss's rules (src/game/bosses.ts): its war horn, a goblin arriving
+  // or blocked, its rage.
+  | 'horn'
+  | 'arrived'
+  | 'blocked'
+  | 'enraged'
+  // A shove (src/game/push.ts): its unit drowned, or wouldn't budge.
+  | 'drowned'
+  | 'steadfast';
 
 export interface DamagePopupView {
   id: number;
@@ -379,6 +403,7 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
   const damageType = getDamageType(unit);
   // The rates count the modifiers that hold in any exchange.
   const bonus = getStandingCombatBonus(unit.modifiers);
+  const quirk = unit.quirk ? findQuirk(unit.quirk) : null;
   const rates = {
     skill: unit.skill,
     luck: unit.luck,
@@ -416,12 +441,18 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
     skills: Object.freeze(
       getUnitSkills(unit).map(({ id, label, manaCost, range }) => Object.freeze({ id, label, manaCost, range })),
     ),
-    passives: Object.freeze(
-      unit.boons
+    secondaryClass: unit.secondaryClass && getClassLabel(unit.secondaryClass),
+    passives: Object.freeze([
+      ...unit.boons
         .map(findBoon)
         .filter((boon) => boon?.kind === 'passive')
         .map((boon) => Object.freeze({ id: boon!.id, label: boon!.name, description: boon!.description })),
-    ),
+      ...unit.eliteAffixes
+        .map(findEliteAffix)
+        .filter((affix) => affix !== null)
+        .map((affix) => Object.freeze({ id: affix.id, label: affix.name, description: affix.description })),
+    ]),
+    quirk: quirk && Object.freeze({ label: quirk.name, description: quirk.description }),
   });
 }
 
@@ -517,6 +548,10 @@ const POPUP_TEXT: Readonly<Record<PopupKind, (amount: number, label: string) => 
   loot: (_, label) => `Got ${label}`,
   stored: (_, label) => `${label} to convoy`,
   learned: (_, label) => `Learned ${label}!`,
+  horn: () => 'War Horn!',
+  arrived: () => 'Reinforcement!',
+  blocked: () => 'Blocked!',
+  enraged: (amount) => `Enraged! +${amount} STR`,
   drowned: () => 'Drowned!',
   steadfast: () => 'Steadfast',
 });

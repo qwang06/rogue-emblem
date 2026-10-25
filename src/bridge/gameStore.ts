@@ -4,6 +4,8 @@ import type { SkillAction } from '../game/skills.ts';
 import type { WeaponAction } from '../game/weapons.ts';
 import type { BattleSetup } from '../game/battleSetup.ts';
 import type { BattleOutcome } from '../game/turns.ts';
+import type { MentorScreenView } from './mentorView.ts';
+import type { BossBarView, BossIntroView } from './bossView.ts';
 import type { MapTagView } from './mapTagView.ts';
 import type { MerchantScreenView } from './merchantView.ts';
 import type { RosterScreenView } from './rosterView.ts';
@@ -68,6 +70,8 @@ export interface BattleState {
   defeats: number;
   turn: TurnView | null;
   phaseBanner: PhaseBannerView | null;
+  bossIntro: BossIntroView | null;
+  bossBar: BossBarView | null;
   battleOutcome: BattleOutcome | null;
   dialog: DialogView | null;
   objective: ObjectiveView | null;
@@ -80,12 +84,16 @@ export interface BattleState {
   rewardMenu: Menu<RewardAction> | null;
   rewardTeam: readonly TeamUnitView[] | null;
   recruitmentStage: number | null;
+  // Whether the recruit pick is a Recruit reward's draft rather than a
+  // guest's recruitment.
+  recruitDraft: boolean;
   boonPick: BoonPickView | null;
   campMenu: Menu | null;
   campGold: number | null;
   campRelics: readonly RelicView[] | null;
   rosterScreen: RosterScreenView | null;
   merchantScreen: MerchantScreenView | null;
+  mentorScreen: MentorScreenView | null;
 }
 
 export interface GameState extends BattleState {
@@ -126,6 +134,8 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   defeats: 0, // how many units have fallen this battle (each one plays the defeat sound)
   turn: null, // TurnView from toTurnView() once the battle starts, else null
   phaseBanner: null, // PhaseBannerView from toPhaseBannerView() while a phase is being announced, or null
+  bossIntro: null, // BossIntroView from toBossIntroView(), the boss's name card as a boss stage opens, or null
+  bossBar: null, // BossBarView from toBossBarView(), the boss's HP bar while it lives in a boss battle, or null
   battleOutcome: null, // 'victory' | 'defeat' once the battle is decided, else null
   dialog: null, // DialogView from toDialogView() of the line being spoken, or null
   objective: null, // ObjectiveView from toObjectiveView() while the Objective screen is up, or null
@@ -138,12 +148,14 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   rewardMenu: null, // frozen menu of RewardActions (toRewardAction) while the reward screen is up after a won stage, or null
   rewardTeam: null, // TeamUnitViews from toTeamView() of the warband while the reward screen is up, or null
   recruitmentStage: null,
+  recruitDraft: false,
   boonPick: null, // BoonPickView from toBoonPickView() while the reward screen shows a level up's boon pick (its cards are rewardMenu's), or null
-  campMenu: null, // frozen camp menu (getCampActions: Manage Roster / Merchant / Rest / Next Stage) once a won stage's reward is taken, or null
+  campMenu: null, // frozen camp menu (getCampActions: Manage Roster / Merchant / Rest / Mentors / Next Stage) once a won stage's reward is taken, or null
   campGold: null, // the warband's gold while at camp (shown on the camp menu), or null
   campRelics: null, // RelicViews from toRelicViews() of the warband's relics while at camp (listed on the camp menu), or null
   rosterScreen: null, // RosterScreenView from toRosterScreenView() while the roster screen is open between stages, or null
   merchantScreen: null, // MerchantScreenView from toMerchantScreenView() while the camp's merchant screen is open, or null
+  mentorScreen: null, // MentorScreenView from toMentorScreenView() while the camp's mentor screen is open, or null
 });
 
 // The single app-wide store shared by Phaser (writer) and React (reader).

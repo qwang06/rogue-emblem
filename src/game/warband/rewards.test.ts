@@ -40,8 +40,11 @@ import {
   STAGE_CLEAR_GOLD,
   STAGE_CLEAR_GOLD_PER_STAGE,
   getRewardChoices,
+  getRecruitTarget,
   type Reward,
+  isEliteClear,
 } from './rewards.ts';
+import { findQuirk, QUIRKS } from './quirks.ts';
 import { WARBAND_NAMES } from './names.ts';
 import { STARTING_CLASSES } from './startingClasses.ts';
 import { BOUNTY_GOLD_PER_KILL, CLOVER_REWARD_CHOICES, RELICS } from './relics.ts';
@@ -141,13 +144,34 @@ describe('rollRewards', () => {
     const roster = Array.from({ length: MAX_ROSTER_SIZE }, (_, i) => ({ ...run.roster[0], id: `u${i}` }));
     const full = withRoster(run, roster);
     for (let seed = 0; seed < 30; seed++) {
-      expect(kinds(rollRewards(full, 2, createSeededRng(seed)))).not.toContain('recruit');
+      expect(kinds(rollRewards(full, 2, createSeededRng(seed)))).not.toContain('draft');
     }
+  });
+
+  it('always offers a draft while the roster is below its target', () => {
+    const run = fullRun();
+    for (let seed = 0; seed < 30; seed++) {
+      // Three units after stage 4 is one short of the 4 it should have.
+      const rewards = rollRewards(run, 4, createSeededRng(seed));
+      expect(rewards).toHaveLength(REWARD_CHOICES);
+      expect(rewards).toContainEqual({ kind: 'draft', stage: 4 });
+    }
+  });
+
+  it('only sometimes offers a draft once the roster is at its target', () => {
+    const run = fullRun();
+    const offered = Array.from({ length: 30 }, (_, seed) => kinds(rollRewards(run, 2, createSeededRng(seed))));
+    expect(offered.some((offer) => offer.includes('draft'))).toBe(true);
+    expect(offered.some((offer) => !offer.includes('draft'))).toBe(true);
+  });
+
+  it('offers just the draft when only one reward is offered and a recruit is needed', () => {
+    expect(rollRewards(fullRun(), 8, createSeededRng(1), 1)).toEqual([{ kind: 'draft', stage: 8 }]);
   });
 
   it('offers fewer when the pools run dry', () => {
     const rewards = rollRewards(withRoster(fullRun(), []), 2, createSeededRng(1), 10);
-    expect(kinds(rewards).sort()).toEqual(['gold', 'relic']);
+    expect(kinds(rewards).sort()).toEqual(['draft', 'gold', 'relic']);
   });
 
   it('only offers useful weapons, unheld relics and lessons', () => {
@@ -169,6 +193,13 @@ describe('rollRewards', () => {
     ).not.toContainEqual(expect.objectContaining({ kind: 'lesson' }));
   });
 
+  it("offers a Mentor's Scroll after stage 1, never on it", () => {
+    const offers = (stage: number) =>
+      Array.from({ length: 60 }, (_, seed) => rollRewards(fullRun(), stage, createSeededRng(seed))).flat();
+    expect(kinds(offers(2))).toContain('scroll');
+    expect(kinds(offers(1))).not.toContain('scroll');
+  });
+
   it('offers nothing when asked for none', () => {
     expect(rollRewards(fullRun(), 1, createSeededRng(1), 0)).toEqual([]);
   });
@@ -179,6 +210,16 @@ describe('rollRewards', () => {
       .flat()
       .find((reward) => reward.kind === 'gold');
     expect(gold).toEqual({ kind: 'gold', amount: PURSE_GOLD + PURSE_GOLD_PER_STAGE * 3 });
+  });
+});
+
+describe('getRecruitTarget', () => {
+  it('wants 2 after stage 1, 4 by stage 4 and 6 by stage 8, up to the roster limit', () => {
+    expect(getRecruitTarget(1)).toBe(2);
+    expect(getRecruitTarget(4)).toBe(4);
+    expect(getRecruitTarget(8)).toBe(6);
+    expect(getRecruitTarget(10)).toBe(7);
+    expect(getRecruitTarget(100)).toBe(MAX_ROSTER_SIZE);
   });
 });
 
@@ -228,12 +269,51 @@ describe('rollRecruit', () => {
     expect(rollRecruit({ ...run, fallen }, 2, createSeededRng(3)).name).toBe('Recruit');
   });
 
+  it('comes with a quirk, whose max HP is in its stats', () => {
+    const run = fullRun();
+    for (let seed = 0; seed < 30; seed++) {
+      const recruit = rollRecruit(run, 2, createSeededRng(seed));
+      const quirk = findQuirk(recruit.quirk!)!;
+      expect(quirk).not.toBeNull();
+      const base = createUnitOfClass(recruit.classId, { name: 'x', team: 'player' });
+      expect(recruit.maxHealth).toBe(base.maxHealth + quirk.maxHealth);
+      expect(recruit.health).toBe(recruit.maxHealth);
+    }
+  });
+
+  it('avoids taken names, ids and quirks', () => {
+    const run = fullRun();
+    const first = rollRecruit(run, 2, createSeededRng(3));
+    const takenQuirks = QUIRKS.map((quirk) => quirk.id).filter((id) => id !== 'lucky');
+    const second = rollRecruit(run, 2, createSeededRng(3), undefined, {
+      takenNames: [first.name],
+      takenIds: [first.id],
+      takenQuirks,
+    });
+    expect(second.name).not.toBe(first.name);
+    expect(second.id).not.toBe(first.id);
+    expect(second.quirk).toBe('lucky');
+  });
+
   it('comes out at level 1 for an empty roster', () => {
     expect(rollRecruit(withRoster(fullRun(), []), 1, createSeededRng(1)).level).toBe(1);
   });
 });
 
 describe('applyReward', () => {
+  it('owes a draft pick for a draft, unless the roster is full', () => {
+    const run = fullRun();
+    const after = applyReward(markRewardPending(run, { stage: 2, rerolls: 0, clearGold: 0, flawless: false }), {
+      kind: 'draft',
+      stage: 2,
+    });
+    expect(after.pendingDraft).toBe(2);
+    expect(after.pendingReward).toBeUndefined();
+    expect(after.roster).toEqual(run.roster);
+    const roster = Array.from({ length: MAX_ROSTER_SIZE }, (_, i) => ({ ...run.roster[0], id: `u${i}` }));
+    expect(applyReward(withRoster(run, roster), { kind: 'draft', stage: 2 }).pendingDraft).toBeUndefined();
+  });
+
   it('adds a recruit to the end of the roster', () => {
     const run = fullRun();
     const unit = rollRecruit(run, 1, createSeededRng(1));
@@ -294,6 +374,13 @@ describe('applyReward', () => {
     expect(applyReward(fullRun(), { kind: 'gold', amount: 40 }).gold).toBe(40);
   });
 
+  it("adds a Mentor's Scroll, kept through a save", () => {
+    const once = applyReward(fullRun(), { kind: 'scroll' });
+    expect(once.scrolls).toBe(1);
+    expect(applyReward(once, { kind: 'scroll' }).scrolls).toBe(2);
+    expect(parseRun(serializeRun(once))?.scrolls).toBe(1);
+  });
+
   it('puts a fresh weapon in the convoy and leaves the original run alone', () => {
     const run = fullRun();
     const after = applyReward(run, { kind: 'arms', itemId: FIRE.id, label: FIRE.label, uses: FIRE.uses! });
@@ -342,10 +429,20 @@ describe('addGold', () => {
 describe('describeReward', () => {
   it('names each reward with a line of description', () => {
     const run = fullRun();
-    const unit = { ...rollRecruit(run, 1, createSeededRng(1)), name: 'Dara', classId: 'acolyte', level: 2 };
+    const unit = {
+      ...rollRecruit(run, 1, createSeededRng(1)),
+      name: 'Dara',
+      classId: 'acolyte',
+      level: 2,
+      quirk: 'keen',
+    };
     expect(describeReward({ kind: 'recruit', unit })).toEqual({
       label: 'Recruit Dara',
-      description: 'A level 2 Acolyte joins the warband.',
+      description: 'A level 2 Acolyte joins the warband. Keen: +10 hit.',
+    });
+    expect(describeReward({ kind: 'draft', stage: 2 })).toEqual({
+      label: 'Recruit',
+      description: 'Choose one of 3 recruits, each with a quirk, to join the warband.',
     });
     expect(describeReward({ kind: 'rest' }).label).toBe('Rest');
     expect(
@@ -356,6 +453,7 @@ describe('describeReward', () => {
       description: RELICS[0].description,
     });
     expect(describeReward({ kind: 'gold', amount: 40 }).label).toBe('40 Gold');
+    expect(describeReward({ kind: 'scroll' }).label).toBe("Mentor's Scroll");
     expect(describeReward({ kind: 'arms', itemId: FIRE.id, label: FIRE.label, uses: 30 }).description).toContain(
       'Fire Tome',
     );
@@ -537,5 +635,32 @@ describe('a reward pick owed across a reload', () => {
   it('leaves a run that owes nothing as it is', () => {
     const run = fullRun();
     expect(clearPendingReward(run)).toBe(run);
+  });
+});
+
+describe("an elite lair's reward pick", () => {
+  const lair = (run: RunState, depth = 5): RunState => ({
+    ...run,
+    route: {
+      visited: ['0-0', `${depth}-0`],
+      at: { id: `${depth}-0`, name: 'Rook Lair', kind: 'elite', depth, region: 3, levelOffset: 0 },
+    },
+  });
+  const run = () => createRun(4, new Map([['alden', new Soldier({ name: 'Alden', team: 'player' })]]));
+
+  it('offers relics the run does not hold, the same on a reload and new on a reroll', () => {
+    const at = lair({ ...run(), relics: ['hawk-lens'] });
+    expect(isEliteClear(at, 5)).toBe(true);
+    const offers = rollStageRewards(at, 5);
+    expect(offers).toHaveLength(3);
+    expect(offers.every((offer) => offer.kind === 'relic' && offer.relicId !== 'hawk-lens')).toBe(true);
+    expect(rollStageRewards(at, 5)).toEqual(offers);
+    expect(rollStageRewards(at, 5, 1)).not.toEqual(offers);
+  });
+
+  it('is an ordinary pick for any other stage or site', () => {
+    expect(isEliteClear(lair(run()), 4)).toBe(false);
+    expect(isEliteClear(run(), 5)).toBe(false);
+    expect(rollStageRewards(lair(run()), 4).every((offer) => offer.kind === 'relic')).toBe(false);
   });
 });
