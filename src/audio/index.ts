@@ -1,9 +1,10 @@
 // Starts the game's sound: loads the player's sound settings into the
 // store, keeps them saved, plays a sound for every cue a store change
 // raises (getSoundCues) and keeps the music on the track that fits
-// (getMusicTrack).
+// (getMusicTrack) when the music feature flag is on.
 
 import { gameStore, type GameState } from '../bridge/gameStore.ts';
+import { FEATURE_FLAGS } from '../featureFlags.ts';
 import { browserStorage } from '../data/customStorage.ts';
 import { getSoundCues } from './cues.ts';
 import { createMusicPlayer, type MusicPlayer } from './musicPlayer.ts';
@@ -30,10 +31,10 @@ export function startAudio(): void {
     if (!AudioContextClass) return;
     const context = new AudioContextClass();
     sounds = createSoundPlayer(context, context.destination);
-    music = createMusicPlayer(context, context.destination);
+    music = FEATURE_FLAGS.music ? createMusicPlayer(context, context.destination) : null;
     const state = gameStore.getState();
     applyVolumes(state.audio);
-    music.play(getMusicTrack(state));
+    music?.play(getMusicTrack(state));
   };
   window.addEventListener('pointerdown', unlock);
   window.addEventListener('keydown', unlock);
