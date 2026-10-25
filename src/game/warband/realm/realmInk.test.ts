@@ -40,8 +40,8 @@ function tinyRealm(terrain: string[]): Realm {
 }
 
 describe('getRealmInk', () => {
-  it('is the same map every time for a realm', () => {
-    expect(getRealmInk(REALMS[0])).toEqual(getRealmInk(REALMS[0]));
+  it('is the same map every time for a realm, cached by realm', () => {
+    expect(getRealmInk(REALMS[0])).toBe(getRealmInk(REALMS[0]));
   });
 
   it('covers the realm at a tile per 32 pixels, marking its water cells', () => {

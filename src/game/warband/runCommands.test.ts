@@ -347,10 +347,25 @@ describe('travel', () => {
     expect(() => applyRunCommand(home(), { type: 'travel', siteId: first.id })).toThrow(RunCommandError);
   });
 
-  it('marches from camp to the overworld on the realm', () => {
+  it('marches from camp to the overworld on the realm, including out of a town', () => {
     const [first] = getNextSites(realm, '0-0');
     const run = { ...travelTo(startRoute(newRun(1)), realm, first.id), stage: 2 };
     expect(applyRunCommand(campWith(run), { type: 'march' }, { realm }).session.phase).toBe('travel');
+
+    const beforeTown = arrivedBefore('town')!;
+    const town = getNextSites(realm, getCurrentSiteId(beforeTown)).find((site) => site.kind === 'town')!;
+    const inTown = applyRunCommand(
+      { run: beforeTown, phase: 'travel' },
+      { type: 'travel', siteId: town.id },
+      { realm },
+    ).session;
+    expect(resumeRunSession(inTown.run).phase).toBe('camp');
+    const marched = applyRunCommand(inTown, { type: 'march' }, { realm }).session;
+    expect(marched.phase).toBe('travel');
+    expect(resumeRunSession(marched.run).phase).toBe('travel');
+    const onward = getNextSites(realm, town.id)[0];
+    const next = applyRunCommand(resumeRunSession(marched.run), { type: 'travel', siteId: onward.id }, { realm });
+    expect(getCurrentSiteId(next.session.run)).toBe(onward.id);
   });
 
   it('resumes a saved realm run where it stands', () => {

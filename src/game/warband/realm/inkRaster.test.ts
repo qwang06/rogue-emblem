@@ -35,7 +35,7 @@ describe('paintRealmInk', () => {
     expect(image.height).toBe(64);
     expect(image.data.length).toBe(96 * 64 * 4);
     for (let i = 3; i < image.data.length; i += 4) expect(image.data[i]).toBe(255);
-    expect(paintRealmInk(ink, 4, STAMPS).data).toEqual(image.data);
+    expect(paintRealmInk(ink, 4, STAMPS)).toBe(image);
   });
 
   it('paints dry land as parchment', () => {

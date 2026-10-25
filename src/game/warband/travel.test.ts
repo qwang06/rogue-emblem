@@ -51,7 +51,7 @@ function standingAt(run: RunState, site: Site, done = true): RunState {
     region: site.region,
     levelOffset: site.levelOffset,
   };
-  const stage = done && site.kind !== 'town' && site.kind !== 'shrine' ? site.depth + 1 : site.depth;
+  const stage = done && site.kind !== 'shrine' ? site.depth + 1 : site.depth;
   return { ...run, stage, route: { visited: [HOME_SITE_ID, site.id], at } };
 }
 
@@ -106,12 +106,13 @@ describe('travelTo', () => {
     expect(isSiteDone({ ...run, pendingReward: undefined })).toBe(true);
   });
 
-  it('can leave a town at any time', () => {
+  it('can leave a town at any time, and is done once the warband marches on', () => {
     const { realm: townRealm, from, to } = findRoadTo('town');
     const run = travelTo(standingAt(startRoute(linearRun()), from), townRealm, to.id);
     expect(isInTown(run)).toBe(true);
     expect(isSiteDone(run)).toBe(false);
     expect(getTravelChoices(run, townRealm).length).toBeGreaterThan(0);
+    expect(isSiteDone({ ...run, stage: to.depth + 1 })).toBe(true);
   });
 });
 
