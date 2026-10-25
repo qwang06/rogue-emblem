@@ -51,9 +51,9 @@
   --red-bg: rgb(192 52 42 / 14%);
   --blue-bg: rgb(47 95 200 / 12%);
   --green-bg: rgb(46 154 58 / 14%);
-  /* The game's bars, as in the reference: green HP, blue EXP. */
+  /* The game's bars: green HP, gold EXP (kept clear of the cyan MP). */
   --hp: #48c048;
-  --exp: #3c9ce0;
+  --exp: #e8b830;
   /* The blue selection bar for item rows, with its light text. */
   --bar: #3858b0;
   --bar-fg: #fff8e8;
@@ -642,7 +642,7 @@ a.header-button {
 }
 
 .meter--exp .meter__label {
-  color: var(--blue);
+  color: var(--yellow);
 }
 
 /* A dark trough in a dark brown outline, as the GBA's bars are. The
@@ -1163,7 +1163,7 @@ kbd {
 }
 
 /* The icons' colors (see PixelIcon and GlyphIcon): text, ink, dim, blade,
-   light, gold, pale gold, steel, white, red, blue, green and EXP blue. */
+   light, gold, pale gold, steel, white, red, blue, green and EXP gold. */
 .pixel-icon__c {
   fill: currentColor;
 }
@@ -1233,7 +1233,7 @@ kbd {
 
 /* The XP bar sits at the bottom center of the map; ExperienceBar sets the
    fill's start, end, and duration as custom properties. The bar is the
-   blue EXP bar of the unit panel. */
+   gold EXP bar of the unit panel. */
 .experience-bar {
   position: absolute;
   left: 50%;
@@ -1254,7 +1254,7 @@ kbd {
 
 .experience-bar__name {
   font-weight: 700;
-  color: var(--blue);
+  color: var(--yellow);
 }
 
 .experience-bar__level {
@@ -1265,7 +1265,7 @@ kbd {
 .experience-bar__gain {
   margin-left: auto;
   font-weight: 700;
-  color: var(--blue);
+  color: var(--yellow);
 }
 
 .experience-bar__track {
