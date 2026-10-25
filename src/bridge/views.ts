@@ -514,13 +514,20 @@ export function mergeTileAnchors(a: TileAnchorView, b: TileAnchorView): TileAnch
   });
 }
 
-// Snapshot of the combat forecast shown while aiming an attack, from
-// getCombatForecast (src/game/combat.ts): per side, the unit's name and
-// team, the name of the weapon it fights with (null for none), plus its
-// forecast numbers (damage / hit / crit are null for a defender that
-// can't counter, which the UI shows as "–") and the health it's left on
-// if every strike lands (getForecastHealthAfter). `anchor` is a TileAnchorView
-// covering both units, which the panel opens beside.
+export interface ForecastFighter {
+  name: string;
+  team: Team;
+  weapon: { label: string; id?: string | null } | null;
+}
+
+// Snapshot of the combat forecast shown while aiming an attack or skill, from
+// getCombatForecast (src/game/combat.ts) or getSkillForecast
+// (src/game/skills.ts): per side, the unit's name and team, the name of the
+// weapon or skill it fights with (null for none), plus its forecast numbers
+// (damage / hit / crit are null for a defender that can't counter, which the
+// UI shows as "–") and the health it's left on if every strike lands
+// (getForecastHealthAfter). `anchor` is a TileAnchorView covering both units,
+// which the panel opens beside.
 export function toCombatForecastView({
   forecast,
   attacker,
@@ -528,12 +535,12 @@ export function toCombatForecastView({
   anchor,
 }: {
   forecast: Record<CombatSide, ForecastSide>;
-  attacker: Pick<Unit, 'name' | 'team' | 'weapon'>;
-  defender: Pick<Unit, 'name' | 'team' | 'weapon'>;
+  attacker: ForecastFighter;
+  defender: ForecastFighter;
   anchor: TileAnchorView;
 }): CombatForecastView {
   const healthAfter = getForecastHealthAfter(forecast);
-  const side = (unit: Pick<Unit, 'name' | 'team' | 'weapon'>, role: CombatSide) =>
+  const side = (unit: ForecastFighter, role: CombatSide) =>
     Object.freeze({
       name: unit.name,
       team: unit.team,

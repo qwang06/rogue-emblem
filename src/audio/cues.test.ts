@@ -101,6 +101,19 @@ describe('getSoundCues', () => {
     const levelUp = { id: 5, name: 'Ada', unitClass: null, level: 2, stats: [], skills: [], durationMs: 2000 };
     expect(getSoundCues(base, { ...base, levelUp })).toEqual(['levelUp']);
 
+    const boonPick = {
+      key: 'ada-2',
+      name: 'Ada',
+      classLabel: 'Soldier',
+      sprite: 'Soldier_03',
+      level: 2,
+      stats: [],
+      skills: [],
+      boons: [],
+    };
+    expect(getSoundCues(base, { ...base, boonPick })).toEqual(['levelUp']);
+    expect(getSoundCues({ ...base, boonPick }, { ...base, boonPick: { ...boonPick } })).toEqual([]);
+
     const line = {
       id: 1,
       speaker: 'Ada',

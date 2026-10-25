@@ -5,6 +5,7 @@
 // views.ts); `boons` lines up with its entries. Plain frozen data.
 
 import type { GrowthStat } from '../game/experience.ts';
+import { getSkillsLearnedBetween } from '../game/skills.ts';
 import { getUnitSprite } from '../game/tileset.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
 import { getStatBoonGain, type BoonKind } from '../game/warband/boons.ts';
@@ -16,6 +17,8 @@ export interface BoonStatView {
   stat: GrowthStat;
   label: string;
   value: number;
+  // What this level up's growth roll added to the stat (0 when it didn't rise).
+  gain: number;
 }
 
 export interface BoonChoiceView {
@@ -39,12 +42,16 @@ export interface BoonPickView {
   sprite: string;
   level: number;
   stats: readonly BoonStatView[];
+  // Labels of the skills this level up taught the unit.
+  skills: readonly string[];
   boons: readonly BoonChoiceView[];
 }
 
-// The stats the screen lists, in the GBA's order; health is max HP.
+// The stats the screen lists, in the GBA's order; health is max HP and mana
+// is max MP.
 const STATS: readonly (readonly [GrowthStat, string])[] = [
   ['health', 'HP'],
+  ['mana', 'MP'],
   ['strength', 'STR'],
   ['magic', 'MAG'],
   ['skill', 'SKL'],
@@ -59,6 +66,14 @@ const STATS: readonly (readonly [GrowthStat, string])[] = [
 export function toBoonPickView(offer: BoonOffer, relics: readonly string[] = []): BoonPickView {
   const { unit: snapshot, level } = offer;
   const unit = restoreUnit(snapshot);
+  const learned = [
+    ...getSkillsLearnedBetween(snapshot.classId, level - 1, level),
+    ...(snapshot.secondaryClass && snapshot.secondaryClass !== snapshot.classId
+      ? getSkillsLearnedBetween(snapshot.secondaryClass, level - 1, level)
+      : []),
+  ];
+  const skills: string[] = [];
+  for (const skill of learned) if (!skills.includes(skill.label)) skills.push(skill.label);
   return Object.freeze({
     key: `${snapshot.id}-${level}`,
     name: snapshot.name,
@@ -67,9 +82,15 @@ export function toBoonPickView(offer: BoonOffer, relics: readonly string[] = [])
     level,
     stats: Object.freeze(
       STATS.map(([stat, label]) =>
-        Object.freeze({ stat, label, value: stat === 'health' ? snapshot.maxHealth : snapshot[stat] }),
+        Object.freeze({
+          stat,
+          label,
+          value: stat === 'health' ? snapshot.maxHealth : stat === 'mana' ? snapshot.maxMana : snapshot[stat],
+          gain: offer.gains?.[stat] ?? 0,
+        }),
       ),
     ),
+    skills: Object.freeze(skills),
     boons: Object.freeze(
       offer.boons.map((boon) => {
         const amount = getStatBoonGain(unit, boon);

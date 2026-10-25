@@ -38,6 +38,7 @@ export type SoundState = Pick<
   | 'defeats'
   | 'experienceGain'
   | 'levelUp'
+  | 'boonPick'
   | 'phaseBanner'
   | 'bossIntro'
   | 'battleOutcome'
@@ -103,7 +104,11 @@ export function getSoundCues(prev: SoundState, next: SoundState): SoundCue[] {
 
   if (next.defeats > prev.defeats) cues.add('defeat');
   if (next.experienceGain && next.experienceGain.id !== prev.experienceGain?.id) cues.add('experience');
-  if (next.levelUp && next.levelUp.id !== prev.levelUp?.id) cues.add('levelUp');
+  if (
+    (next.levelUp && next.levelUp.id !== prev.levelUp?.id) ||
+    (next.boonPick && next.boonPick.key !== prev.boonPick?.key)
+  )
+    cues.add('levelUp');
   if (next.phaseBanner && next.phaseBanner.id !== prev.phaseBanner?.id) cues.add(PHASE_CUES[next.phaseBanner.team]);
   if (next.bossIntro && next.bossIntro.id !== prev.bossIntro?.id) cues.add('bossIntro');
   if (next.battleOutcome && next.battleOutcome !== prev.battleOutcome)

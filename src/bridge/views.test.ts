@@ -521,6 +521,28 @@ describe('toCombatForecastView', () => {
     expect(Object.isFrozen(view.attacker)).toBe(true);
     expect(Object.isFrozen(view.defender)).toBe(true);
   });
+
+  it('labels a skill forecast with the skill name and no weapon icon id', () => {
+    const defender = new Unit({ name: 'Bandit', health: 10, strength: 4, defense: 2, movement: 5, team: 'enemy' });
+    const view = toCombatForecastView({
+      forecast: {
+        attacker: { health: 10, maxHealth: 10, damage: 5, hit: 100, crit: 0, strikes: 1, counters: true },
+        defender: forecast.defender,
+      },
+      attacker: { name: 'Soldier', team: 'player', weapon: { label: 'Power Strike', id: null } },
+      defender,
+      anchor,
+    });
+    expect(view.attacker).toMatchObject({
+      name: 'Soldier',
+      weapon: 'Power Strike',
+      weaponId: null,
+      damage: 5,
+      hit: 100,
+      healthAfter: 10,
+    });
+    expect(view.defender.healthAfter).toBe(1);
+  });
 });
 
 describe('toExperienceGainView', () => {

@@ -70,17 +70,22 @@ export function BoonPickScreen() {
           <dl className="boon-pick__stats">
             {pick.stats.map((stat) => {
               const up = gain?.stat === stat.stat ? gain.amount : 0;
+              const classes = ['boon-pick__stat'];
+              if (stat.gain > 0) classes.push('boon-pick__stat--grew');
+              if (up > 0) classes.push('boon-pick__stat--up');
               return (
-                <div key={stat.stat} className={`boon-pick__stat${up > 0 ? ' boon-pick__stat--up' : ''}`}>
+                <div key={stat.stat} className={classes.join(' ')}>
                   <dt>{stat.label}</dt>
                   <dd>
                     {stat.value}
+                    <span className="boon-pick__stat-gain">{stat.gain > 0 ? `+${stat.gain}` : ''}</span>
                     <span className="boon-pick__stat-after">▸{stat.value + up}</span>
                   </dd>
                 </div>
               );
             })}
           </dl>
+          {pick.skills.length > 0 && <p className="boon-pick__skills">Learned {pick.skills.join(', ')}</p>}
         </Frame>
         <Frame as="div" className="boon-pick__choices">
           <h3 className="boon-pick__choices-title">Choose a Boon</h3>

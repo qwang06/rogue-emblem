@@ -63,6 +63,20 @@ describe('queueLevelUpBoons', () => {
     const after = queueLevelUpBoons(run, { ...run, roster: [...run.roster, recruit] });
     expect(after.pendingBoons).toBeUndefined();
   });
+
+  it('records the stat gains from the level up on the pending pick and offer', () => {
+    const run = newRun();
+    const before = run.roster[0];
+    const after = {
+      ...run,
+      roster: [{ ...before, level: 2, maxHealth: before.maxHealth + 1, strength: before.strength + 1 }, run.roster[1]],
+    };
+    const queued = queueLevelUpBoons(run, after);
+    expect(queued.pendingBoons).toEqual([{ unitId: 'alden', level: 2, gains: { health: 1, strength: 1 } }]);
+    const offer = getBoonOffer(queued)!;
+    expect(offer.gains).toEqual({ health: 1, strength: 1 });
+    expect(getBoonOffer(parseRun(serializeRun(queued))!)).toEqual(offer);
+  });
 });
 
 describe('getBoonOffer', () => {
