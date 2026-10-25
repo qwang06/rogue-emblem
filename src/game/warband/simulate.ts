@@ -22,10 +22,20 @@ export interface SimSummary {
   losses: number;
 }
 
-// `count` starts per starting class, seeded 1..count, named "Lead".
-export function getSimStarts(count: number, classIds: readonly string[] = STARTING_CLASSES.map(({ id }) => id)) {
+// `count` starts per starting class (or origin, see origins.ts), seeded
+// 1..count, named "Lead", at Heat `heat`.
+export function getSimStarts(
+  count: number,
+  classIds: readonly string[] = STARTING_CLASSES.map(({ id }) => id),
+  heat = 0,
+) {
   return classIds.flatMap((classId) =>
-    Array.from({ length: count }, (_, index): RunStart => ({ seed: index + 1, classId, name: 'Lead' })),
+    Array.from({ length: count }, (_, index): RunStart => ({
+      seed: index + 1,
+      classId,
+      name: 'Lead',
+      ...(heat > 0 && { heat }),
+    })),
   );
 }
 

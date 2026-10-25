@@ -16,7 +16,8 @@ import { createStageLevel, pickStageArchetype, withArchetype } from './warband/s
 import { pickStageObjective, placeObjective } from './warband/stageObjective.ts';
 import { getStageLootCount } from './loot.ts';
 import { applyEliteAffixes, rollEliteAffixes } from './warband/elites.ts';
-import { getRunSite, getSiteRegion } from './warband/travel.ts';
+import { getRunSite, getSiteRegion, shiftEnemyLevels } from './warband/travel.ts';
+import { getRunHeatRules } from './warband/heat.ts';
 import type { RegionConfig } from './warband/regions.ts';
 import { createDemoLevel, type DemoLevel } from './demoLevel.ts';
 import { createTrainingLevel, type Level } from './trainingLevel.ts';
@@ -91,8 +92,10 @@ export function createBattleLevel(
     case 'training':
       return createTrainingLevel(setup.unitClass, content.dialogs.training);
     case 'warband': {
-      const baseRegion =
+      const unheated =
         (setup.run && getSiteRegion(setup.run, content.regions)) ?? getStageRegion(setup.stage, content.regions);
+      // The run's Heat raises every enemy's level (see heat.ts).
+      const baseRegion = setup.run ? shiftEnemyLevels(unheated, getRunHeatRules(setup.run).enemyLevels) : unheated;
       if (setup.run && isVisit(setup.run)) return createVisitLevel(setup, setup.run, baseRegion);
       const spec = pickStageObjective(setup.stage, baseRegion, setup.seed);
       const region = withArchetype(baseRegion, pickStageArchetype(setup.stage, baseRegion, setup.seed, spec.kind));

@@ -31,7 +31,10 @@ import {
   type Reward,
 } from './rewards.ts';
 import { getBoonOffer, pickBoon, queueLevelUpBoons } from './levelUpPicks.ts';
-import { rollStartingRelics, type Relic } from './relics.ts';
+import { rollRelics, rollStartingRelics, STARTING_RELIC_CHOICES, type Relic } from './relics.ts';
+import { getRelicPicks } from './origins.ts';
+import { getRunHeat } from './heat.ts';
+import { createSeededRng } from '../rng.ts';
 import { finishStage, snapshotUnit, type BattleResult, type RunState } from './run.ts';
 import { GUEST_UNIT_ID, rollGuest, settleGuest } from './recruitment.ts';
 import { MAX_ROSTER_SIZE } from './rewards.ts';
@@ -133,7 +136,8 @@ export interface RunCommandContext {
   realm?: Realm;
 }
 
-// A new run's session, about to pick the relic it starts with.
+// A new run's session, about to pick the relic (or relics, see
+// getRelicPicks) it starts with.
 export function startRunSession(run: RunState): RunSession {
   return freeze({ run, phase: 'relic' });
 }
@@ -201,6 +205,7 @@ export function finishBattleWithEvents(
   const clear = getClearGold(before, finished.run.fallen.length - before.fallen.length, {
     kills: countWarbandKills(before, result),
     relics: before.relics,
+    heat: getRunHeat(before),
   });
   const paid = addGold(queueLevelUpBoons(before, leveled.run), clear.gold);
   const guest = result.units.get(GUEST_UNIT_ID);
@@ -221,9 +226,15 @@ export function finishBattleWithEvents(
 }
 
 // The relics a new run's session offers to start with, or none once it's
-// past that pick.
+// past that pick: rollStartingRelics' for the first pick, and for each
+// further one its origin gives (getRelicPicks), three it doesn't hold yet,
+// drawn from the seed and the pick.
 export function getRelicOffers(session: RunSession): readonly Relic[] {
-  return session.phase === 'relic' ? rollStartingRelics(session.run.seed) : [];
+  if (session.phase !== 'relic') return [];
+  const { run } = session;
+  if (run.relics.length === 0) return rollStartingRelics(run.seed);
+  const rng = createSeededRng((run.seed ^ Math.imul(run.relics.length, 0x27d4eb2f) ^ 0x7f4a7c15) >>> 0);
+  return rollRelics(rng, run.relics, STARTING_RELIC_CHOICES);
 }
 
 export function getRecruitOffers(session: RunSession): readonly Reward[] {
@@ -275,11 +286,10 @@ export function applyRunCommand(
     case 'pick-relic': {
       const relic = getRelicOffers(session)[command.index];
       if (!relic) return fail(`No relic offer ${command.index}`);
+      const next = Object.freeze({ ...run, relics: [...run.relics, relic.id] });
+      const more = next.relics.length < getRelicPicks(next);
       return {
-        session: freeze({
-          run: Object.freeze({ ...run, relics: [...run.relics, relic.id] }),
-          phase: isRealmRun(run) ? 'travel' : 'battle',
-        }),
+        session: freeze({ run: next, phase: more ? 'relic' : isRealmRun(run) ? 'travel' : 'battle' }),
         events: [],
       };
     }

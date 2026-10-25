@@ -13,6 +13,7 @@ import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from '../unitClasses.
 import { FIRE, IRON_AXE, IRON_BOW, IRON_SPEAR, canWield, type Weapon } from '../weapons.ts';
 import { WARBAND_NAMES } from './names.ts';
 import { ALL_STARTING_CLASSES } from './startingClasses.ts';
+import { applyHeatToClearGold } from './heat.ts';
 import {
   BOUNTY_GOLD_PER_KILL,
   BOUNTY_LEDGER,
@@ -88,18 +89,17 @@ export type Reward =
 // The gold a cleared stage pays: STAGE_CLEAR_GOLD, STAGE_CLEAR_GOLD_PER_STAGE
 // for each stage, FLAWLESS_BONUS_GOLD when `losses` (units that died in
 // it) is 0, and with the Bounty Ledger among `relics`,
-// BOUNTY_GOLD_PER_KILL for each of the `kills` enemies it defeated.
+// BOUNTY_GOLD_PER_KILL for each of the `kills` enemies it defeated; all of
+// it cut as the run's `heat` says (applyHeatToClearGold).
 export function getStageClearGold(
   stage: number,
   losses: number,
-  { kills = 0, relics = [] }: { kills?: number; relics?: readonly string[] } = {},
+  { kills = 0, relics = [], heat = 0 }: { kills?: number; relics?: readonly string[]; heat?: number } = {},
 ): { gold: number; flawless: boolean } {
   const flawless = losses === 0;
   const bounty = hasRelic({ relics }, BOUNTY_LEDGER) ? BOUNTY_GOLD_PER_KILL * kills : 0;
-  return {
-    gold: STAGE_CLEAR_GOLD + STAGE_CLEAR_GOLD_PER_STAGE * stage + (flawless ? FLAWLESS_BONUS_GOLD : 0) + bounty,
-    flawless,
-  };
+  const gold = STAGE_CLEAR_GOLD + STAGE_CLEAR_GOLD_PER_STAGE * stage + (flawless ? FLAWLESS_BONUS_GOLD : 0) + bounty;
+  return { gold: applyHeatToClearGold(gold, heat), flawless };
 }
 
 // How many rewards a pick offers the run: REWARD_CHOICES, or

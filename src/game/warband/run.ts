@@ -10,6 +10,7 @@ import { HEAL_STAFF } from '../healing.ts';
 import { applyModifiers } from '../modifiers.ts';
 import { getBoonModifiers } from './boons.ts';
 import { getRelicModifiers, hasRelic, PHOENIX_FEATHER } from './relics.ts';
+import { MAX_HEAT } from './heat.ts';
 import { EMPTY_CHRONICLE, parseChronicle, recordBattle, type RunChronicle } from './chronicle.ts';
 import { ARMORS, HEALTH_POTION, MANA_POTION, type Inventory, type Item } from '../items.ts';
 import { createSeededRng } from '../rng.ts';
@@ -117,6 +118,11 @@ export interface RunState {
   // What has happened over the run, for its recap (chronicle.ts). Absent
   // in runs saved before it was kept, which read as an empty one.
   chronicle?: RunChronicle;
+  // The origin the run started as (see origins.ts); absent in runs saved
+  // before origins, which started as a lone unit of their class.
+  origin?: string;
+  // The Heat level it's played at (see heat.ts); absent at no Heat.
+  heat?: number;
 }
 
 // A reward pick still owed after a won stage: the stage cleared, how many
@@ -359,6 +365,8 @@ export function parseRun(
     seenEvents,
     pendingBoons,
     chronicle,
+    origin,
+    heat,
   } = data;
   const itemIds = new Set(items.map((item) => item.id));
   const classIds = new Set(classes.map((unitClass) => unitClass.id));
@@ -386,7 +394,9 @@ export function parseRun(
     (pendingEvent !== undefined && !isPendingEvent(pendingEvent)) ||
     (seenEvents !== undefined && !(Array.isArray(seenEvents) && seenEvents.every((id) => typeof id === 'string'))) ||
     (pendingBoons !== undefined && !isPendingBoons(pendingBoons)) ||
-    (chronicle !== undefined && parseChronicle(chronicle) === null)
+    (chronicle !== undefined && parseChronicle(chronicle) === null) ||
+    (origin !== undefined && typeof origin !== 'string') ||
+    (heat !== undefined && (!isWholeNumber(heat) || heat < 1 || heat > MAX_HEAT))
   ) {
     return null;
   }
@@ -408,6 +418,8 @@ export function parseRun(
     ...(route !== undefined && { route }),
     ...(pendingEvent !== undefined && { pendingEvent }),
     ...(seenEvents !== undefined && { seenEvents }),
+    ...(origin !== undefined && { origin }),
+    ...(heat !== undefined && { heat }),
   });
 }
 
