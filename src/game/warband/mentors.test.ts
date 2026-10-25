@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Acolyte } from '../Acolyte.ts';
 import { Archer } from '../Archer.ts';
-import { Guard } from '../Guard.ts';
-import { CLEAVE, MEND, SHIELD_BASH, getUnitSkills } from '../skills.ts';
+import { Vanguard } from '../Vanguard.ts';
+import { CLEAVE, MEND, THROW_STONES, getUnitSkills } from '../skills.ts';
 import type { Unit } from '../Unit.ts';
 import {
   addScrolls,
@@ -17,14 +17,14 @@ import {
 } from './mentors.ts';
 import { createRun, parseRun, restoreUnit, serializeRun, type RunState } from './run.ts';
 
-// Wren the archer, Iris the acolyte and Bram the guard, at `levels`.
+// Wren the archer, Iris the acolyte and Bram the vanguard, at `levels`.
 function campRun({ gold = 50, levels = [2, 2, 1] } = {}): RunState {
   const run = createRun(
     7,
     new Map<string, Unit>([
       ['wren', new Archer({ name: 'Wren', team: 'player', level: levels[0] })],
       ['iris', new Acolyte({ name: 'Iris', team: 'player', level: levels[1] })],
-      ['bram', new Guard({ name: 'Bram', team: 'player', level: levels[2] })],
+      ['bram', new Vanguard({ name: 'Bram', team: 'player', level: levels[2] })],
     ]),
   );
   return { ...run, gold };
@@ -50,6 +50,7 @@ describe('findMentor', () => {
   });
 
   it("is nobody below the set's first level, for the learner itself, or for a class nobody has", () => {
+    expect(findMentor(campRun(), 'wren', 'vanguard')).toBeNull();
     expect(findMentor(campRun(), 'wren', 'guard')).toBeNull();
     expect(findMentor(campRun(), 'wren', 'archer')).toBeNull();
     expect(findMentor(campRun(), 'wren', 'soldier')).toBeNull();
@@ -127,10 +128,10 @@ describe('learnSecondary', () => {
   });
 
   it("waits for the unit's level like its own skills do", () => {
-    const run = learnSecondary(addScrolls(campRun({ levels: [2, 2, 1] })), 'bram', 'vanguard');
+    const run = learnSecondary(addScrolls(campRun({ levels: [2, 2, 1] })), 'bram', 'warrior');
     expect(getUnitSkills(restoreUnit(unit(run, 'bram')))).toEqual([]);
     const levelled = { ...unit(run, 'bram'), level: 2 };
-    expect(getUnitSkills(restoreUnit(levelled))).toEqual([SHIELD_BASH, CLEAVE]);
+    expect(getUnitSkills(restoreUnit(levelled))).toEqual([CLEAVE, THROW_STONES]);
   });
 });
 

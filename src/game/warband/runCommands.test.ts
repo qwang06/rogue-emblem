@@ -273,7 +273,7 @@ describe('getLegalRunCommands', () => {
     const commands = getLegalRunCommands(session);
     expect(commands.at(-1)).toEqual({ type: 'march' });
     expect(new Set(commands.map((command) => command.type))).toEqual(
-      new Set(['rest', 'buy', 'sell', 'give', 'store', 'equip', 'march']),
+      new Set(['rest', 'buy', 'sell', 'give', 'store', 'equip', 'learn-secondary', 'march']),
     );
     for (const command of commands) expect(() => applyRunCommand(session, command)).not.toThrow();
   });

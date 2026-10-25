@@ -307,9 +307,9 @@ describe('getSecondarySkills', () => {
 
   it("joins getUnitSkills after the class's own and before taught ones, without repeats", () => {
     const guard = { unitClass: 'guard', level: 2, secondaryClass: 'vanguard' };
-    expect(getUnitSkills(guard)).toEqual([SHIELD_BASH, CLEAVE]);
+    expect(getUnitSkills(guard)).toEqual([SHOVE, SHIELD_BASH, CLEAVE]);
     const taught = { ...guard, modifiers: [{ kind: 'skill', skill: CLEAVE } as const] };
-    expect(getUnitSkills(taught)).toEqual([SHIELD_BASH, CLEAVE]);
+    expect(getUnitSkills(taught)).toEqual([SHOVE, SHIELD_BASH, CLEAVE]);
     expect(findUnitSkill(guard, 'cleave')).toBe(CLEAVE);
   });
 });

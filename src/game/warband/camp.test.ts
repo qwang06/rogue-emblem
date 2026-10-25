@@ -30,13 +30,14 @@ describe('getCampActions', () => {
   });
 
   it('disables Mentors while nobody can take a lesson', () => {
+    // Alden the soldier knows Shove from level 1, so he can teach Cato the
+    // soldier's set for the fee.
     const run = campRun(100);
-    expect(getCampActions(run)[3]).toMatchObject({ id: 'mentors', disabled: true });
-    expect(canTakeLesson(run)).toBe(false);
-    expect(getCampActions({ ...run, scrolls: 1 })[3].disabled).toBe(false);
-    const veteran = { ...run, roster: [run.roster[0], { ...run.roster[1], level: 2 }] };
-    expect(canTakeLesson(veteran)).toBe(true);
-    expect(canTakeLesson({ ...veteran, gold: 0 })).toBe(false);
+    expect(canTakeLesson(run)).toBe(true);
+    const broke = { ...run, gold: 0 };
+    expect(getCampActions(broke)[3]).toMatchObject({ id: 'mentors', disabled: true });
+    expect(canTakeLesson(broke)).toBe(false);
+    expect(getCampActions({ ...broke, scrolls: 1 })[3].disabled).toBe(false);
   });
 
   it('names the cost of resting', () => {
