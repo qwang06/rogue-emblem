@@ -55,6 +55,9 @@ export interface RunPolicy {
   boon?: (session: RunSession) => RunCommand;
   // The reward pick: one of getLegalRunCommands' reward commands.
   reward: (session: RunSession) => RunCommand;
+  // The guest's or a draft's recruit pick: a pick-recruit or
+  // decline-recruit command. The first offer when left out.
+  recruit?: (session: RunSession) => RunCommand;
   // Camp, one command at a time until it marches.
   camp: (session: RunSession) => RunCommand;
   // Where to travel on the realm: one of getLegalRunCommands' travel
@@ -104,7 +107,7 @@ export const BASELINE_POLICY: RunPolicy = Object.freeze({
   battle: (state: BattleState) => (state.stage === 'deployment' ? planDeployment(state) : planNextTurn(state)),
   reward: (session: RunSession): RunCommand => {
     const offers = getRewardOffers(session);
-    const pick = [offers.findIndex((r) => r.kind === 'recruit'), offers.findIndex((r) => r.kind === 'rest'), 0].find(
+    const pick = [offers.findIndex((r) => r.kind === 'draft'), offers.findIndex((r) => r.kind === 'rest'), 0].find(
       (index) => index >= 0,
     )!;
     return offers.length > 0 ? { type: 'pick-reward', index: pick } : { type: 'skip-reward' };
@@ -162,7 +165,10 @@ export function playRun(start: RunStart, policy: RunPolicy, options: AutoRunOpti
         give(policy.reward(session));
         break;
       case 'recruit':
-        give({ type: 'pick-recruit', index: getRecruitOffers(session).length > 0 ? 0 : -1 });
+        give(
+          policy.recruit?.(session) ??
+            (getRecruitOffers(session).length > 0 ? { type: 'pick-recruit', index: 0 } : { type: 'decline-recruit' }),
+        );
         break;
       case 'camp':
         give(campCommands++ < maxCampCommands ? policy.camp(session) : { type: 'march' });

@@ -131,6 +131,9 @@ export class Unit {
   // The level-up boons it has taken in a Warband run (warband/boons.ts),
   // by id, in the order taken.
   boons: readonly string[] = Object.freeze([]);
+  // The quirk it joined a Warband run with (warband/quirks.ts), by id, or
+  // null.
+  quirk: string | null = null;
 
   constructor({
     name,
