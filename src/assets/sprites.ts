@@ -8,8 +8,8 @@ import acolyte02Idle from './units/Acolyte_02_Idle.png';
 import acolyte02Move from './units/Acolyte_02_Move.png';
 import acolyte03Idle from './units/Acolyte_03_Idle.png';
 import acolyte03Move from './units/Acolyte_03_Move.png';
-import archer02Idle from './units/Archer_02_Idle.png';
-import archer02Move from './units/Archer_02_Move.png';
+import amazon01Idle from './units/Amazon_01_Idle.png';
+import amazon01Move from './units/Amazon_01_Move.png';
 import archer03Idle from './units/Archer_03_Idle.png';
 import archer03Move from './units/Archer_03_Move.png';
 import bat01Idle from './units/Bat_01_Idle.png';
@@ -50,8 +50,8 @@ import vanguard04Idle from './units/Vanguard_04_Idle.png';
 import vanguard04Move from './units/Vanguard_04_Move.png';
 import vanguard06Idle from './units/Vanguard_06_Idle.png';
 import vanguard06Move from './units/Vanguard_06_Move.png';
-import warrior01Idle from './units/Warrior_01_Idle.png';
-import warrior01Move from './units/Warrior_01_Move.png';
+import warrior02Idle from './units/Warrior_02_Idle.png';
+import warrior02Move from './units/Warrior_02_Move.png';
 import wolf01Idle from './units/Wolf_01_Idle.png';
 import wolf01Move from './units/Wolf_01_Move.png';
 import ballistaIcon from './items/ballista.png';
@@ -86,8 +86,8 @@ export const SPRITE_URLS: Readonly<Record<string, string>> = {
   Acolyte_02_Move: acolyte02Move,
   Acolyte_03_Idle: acolyte03Idle,
   Acolyte_03_Move: acolyte03Move,
-  Archer_02_Idle: archer02Idle,
-  Archer_02_Move: archer02Move,
+  Amazon_01_Idle: amazon01Idle,
+  Amazon_01_Move: amazon01Move,
   Archer_03_Idle: archer03Idle,
   Archer_03_Move: archer03Move,
   Bat_01_Idle: bat01Idle,
@@ -128,8 +128,8 @@ export const SPRITE_URLS: Readonly<Record<string, string>> = {
   Vanguard_04_Move: vanguard04Move,
   Vanguard_06_Idle: vanguard06Idle,
   Vanguard_06_Move: vanguard06Move,
-  Warrior_01_Idle: warrior01Idle,
-  Warrior_01_Move: warrior01Move,
+  Warrior_02_Idle: warrior02Idle,
+  Warrior_02_Move: warrior02Move,
   Wolf_01_Idle: wolf01Idle,
   Wolf_01_Move: wolf01Move,
   'ballista': ballistaIcon,
