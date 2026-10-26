@@ -1,27 +1,53 @@
 # Unit sprite catalog
 
 What's in `src/assets/units/`: every unit sheet from the source pack, read
-from the pixels. `Soldier_03`, `Archer_02`, `Vanguard_04`, `Soldier_04` and
+from the pixels. `Soldier_03`, `Vanguard_04`, `Soldier_04` and
 `Acolyte_02` (the base classes) and the promoted classes' twelve variants
 (listed under "Variants are team colors and races" below) are wired into the
 game (`UNIT_SPRITES` in `src/game/tileset.ts`); everything else is ready to import
 in `src/assets/sprites.ts` when a class needs art.
 
-## Warrior (generated, not from the pack)
+## Warrior and Amazon (generated, not from the pack)
 
-`Warrior_01` is the warrior class's art (`UNIT_SPRITES.warrior`, also
-`DEFAULT_UNIT_SPRITE`). It replaced `Villager_01`, which stays in the folder
-with the rest of the pack but is no longer loaded. Unlike everything else
-here it is **true 32px art, not 16px doubled**: a mercenary-looking fighter
-with dark spiky hair and a deep red headband whose tails trail behind (the
-most readable feature from every side), a cream tunic with dark leather
-straps and a left pauldron (faint at this size), belt, tan trousers, dark
-boots, and an iron sword held low at the side (a short stub in the left
-facing). Thick dark outline. Made with PixelLab's `create_character_pro_flash`
-at 32x32, low top-down (version 5, styled on version 4), then cut to one
-shared 16-color palette across the four facings (median-cut max-coverage, no
-dithering; that keeps the grey blade). The prompts and source
-PNGs are in the project's `art/warrior/` folder. Frame 0 of every row is the still. The rest are PixelLab v3 animations (`animate_character`) with the end frame pinned to the still so they loop: Idle is frames 0–3 of a 4-frame breathing idle, Move is frames 0, 2, 4, 6 of an 8-frame in-place walk. All frames are snapped to the same palette. Same layout as the pack (128x128, rows down/left/right/up, RGBA). Footprint: x 1–30, y 1–30; feet on y 30 in every frame, a row lower than the pack's.
+Two PixelLab recreations of Tactics Ogre's Warrior and Amazon, made from the
+original sprites (cut out at 1:1 into 32x32 frames as the reference). Like the
+pack they are 128x128 sheets (rows down/left/right/up, 4 frames, RGBA, alpha
+fully on or off), but they are **true 32px art, not 16px doubled**, with the
+originals' dark brown outline and their palettes. Footprint about x 8–24,
+y 3–30; feet on y 30 (29–30 in the walks' passing frames), a row lower than
+the pack's.
+
+- `Warrior_02` is the warrior class's art (`UNIT_SPRITES.warrior`, also
+  `DEFAULT_UNIT_SPRITE`): a foot soldier in a big round pale-blue steel kettle
+  helmet, blue tunic with a belt, grey mail collar (seen from behind), tan
+  gloves and boots, small face in the helmet's shadow. No weapon shows.
+- `Amazon_01` is the archer class's art (`UNIT_SPRITES.archer`, replacing
+  `Archer_02`): a woman with a big blonde mane and a green headband, light
+  blue top, white short skirt, bare tan arms and legs, green boots. No weapon
+  shows.
+
+Made with PixelLab `create_character_pro_flash` / `create_image_pro` at 32x32
+with the original sprite as the style image and its palette, 6 attempts each,
+scored by a separate judging agent (likeness: Amazon 7/10, Warrior 6.5/10;
+the warrior's body reads leaner and his face darker than the original's).
+Animations are PixelLab skeleton-v3 (`animate_character`), which poses the
+still without redrawing it: Idle is a 4-frame breathing idle; Move picks 4 of
+an 8-frame walk, and the Amazon's side and back walks are rebuilt as still,
+stride, still, stride (her back stride mirrored for the other leg) because the
+generated ones thinned and leaned. The judge scored the finished animations
+7–7.5/10. The left and right rows are true side profiles at the same scale as the
+down and up rows, the right row a mirror of the left (round 2: the Warrior's
+from PixelLab, the Amazon's hand-drawn pixel by pixel in her palette because
+PixelLab kept turning her toward the camera; their idles are a 1px bob of the
+still, their walks skeleton-v3 legs under the still's upper body). The
+Amazon's hair is recolored to one bright blonde ramp in every row (the
+generated dark brown side was only shading). Sources,
+attempts, judge logs and the sheet build script are in the project files under
+`art/to-sprites/`, and on the art machine under `pixellab/to-sprites/`.
+
+`Warrior_01` (the earlier generated warrior: dark spiky hair, red headband,
+cream tunic, iron sword; `art/warrior/` in the project files) and
+`Villager_01` before it stay in the folder but are no longer loaded.
 
 ## Monsters (not from the pack)
 
@@ -94,9 +120,9 @@ share a design, and `01` and `02` are each unique. Units with no team design
 (acolytes, boats, rams) are only recolored.
 
 The game currently gives a class the same art on both teams, so the variant is
-a look rather than a team marker. `Villager_01` (blue), `Soldier_03` (pink), `Archer_02` (orange),
+a look rather than a team marker. `Soldier_03` (pink),
 `Vanguard_04` (brown, axe), `Soldier_04` (brown tower shield, the guard class) and `Acolyte_02` (orange
-robe, the acolyte class) are what's in use for the base classes.
+robe, the acolyte class) are what's in use for the base classes; the warrior and archer wear the generated `Warrior_02` and `Amazon_01`.
 
 The promoted classes (`src/game/promotions.ts`) each wear another variant, close to their base
 class's look: Hero `Vanguard_02` (gold spear), Berserker `Vanguard_06` (red, axe, ginger beard),

@@ -205,9 +205,9 @@ export const SPIKES_ART: SheetTile = [10, 1];
 // whichever side it's on. Each names a set of sheets, one per animation in
 // UNIT_ANIMATIONS (see unitSheetKey).
 export const UNIT_SPRITES: Record<string, string> = {
-  warrior: 'Warrior_01',
+  warrior: 'Warrior_02',
   soldier: 'Soldier_03',
-  archer: 'Archer_02',
+  archer: 'Amazon_01',
   vanguard: 'Vanguard_04',
   guard: 'Soldier_04',
   acolyte: 'Acolyte_02',
@@ -303,7 +303,7 @@ export const UNIT_ANIMATIONS: Record<UnitAnimation, { sheet: string; frameMs: nu
 };
 
 // The texture key of a unit's sheet for an animation, e.g.
-// ('Warrior_01', 'move') -> 'Warrior_01_Move'.
+// ('Warrior_02', 'move') -> 'Warrior_02_Move'.
 export function unitSheetKey(sprite: string, animation: UnitAnimation): string {
   return `${sprite}_${UNIT_ANIMATIONS[animation].sheet}`;
 }

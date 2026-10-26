@@ -61,7 +61,7 @@ if (!palette) throw new Error(`Unknown palette ${paletteName}`);
 const sheet = decode('src/assets/overworld.png');
 const props = decode('src/assets/map-props.png');
 const units = {
-  player: decode('src/assets/units/Warrior_01_Idle.png'),
+  player: decode('src/assets/units/Warrior_02_Idle.png'),
   enemy: decode('src/assets/units/Skeleton_01_Idle.png'),
 };
 const columns = TERRAIN_SHEET.columns;
