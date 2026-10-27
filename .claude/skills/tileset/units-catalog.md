@@ -41,7 +41,10 @@ from PixelLab, the Amazon's hand-drawn pixel by pixel in her palette because
 PixelLab kept turning her toward the camera; their idles are a 1px bob of the
 still, their walks skeleton-v3 legs under the still's upper body). The
 Amazon's hair is recolored to one bright blonde ramp in every row (the
-generated dark brown side was only shading). Sources,
+generated dark brown side was only shading). The Warrior's front view was hand-edited to
+look straight ahead with two eyes, the Amazon's profile eye is a white pixel
+with the pupil in front, and her front walk widens her hair 1px to one side on
+the first stride and to the other on the second, so it sways. Sources,
 attempts, judge logs and the sheet build script are in the project files under
 `art/to-sprites/`, and on the art machine under `pixellab/to-sprites/`.
 
