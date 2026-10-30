@@ -88,7 +88,8 @@ export function getHazardSprites(grid: Grid, spikesTile: SheetTile, propsSheet: 
 }
 
 // Overlays for crossings: a bridge on each bridge cell (running north–south
-// when water or a ford lies west or east of it, else west–east), stepping stones on
+// when water or a ford lies west or east of it, else west–east, with an
+// end on each bank cell it runs onto), stepping stones on
 // each ford cell, and a gateway on each gate cell (its posts under units,
 // its lintel over them, in the map's palette). Props come off `propsSheet`.
 export function getCrossingSprites(
@@ -100,10 +101,30 @@ export function getCrossingSprites(
 ): MapSprite[] {
   const sprites: MapSprite[] = [];
   const isWater = (x: number, y: number) => ['water', 'ford'].includes(getCell(grid, x, y)?.terrain ?? '');
+  // A bank cell a bridge runs onto: on the map, and not water or bridge.
+  const isBank = (x: number, y: number) => {
+    const terrain = getCell(grid, x, y)?.terrain;
+    return terrain !== undefined && terrain !== 'bridge' && !isWater(x, y);
+  };
   for (const { x, y, terrain } of grid.cells) {
     if (terrain === 'bridge') {
-      const tile = isWater(x - 1, y) || isWater(x + 1, y) ? bridgeArt.vertical : bridgeArt.horizontal;
-      sprites.push({ x, y, tile, layer: 'ground', sheet: bridgeArt.sheet });
+      const vertical = isWater(x - 1, y) || isWater(x + 1, y);
+      const sheet = bridgeArt.sheet;
+      sprites.push({ x, y, tile: vertical ? bridgeArt.vertical : bridgeArt.horizontal, layer: 'ground', sheet });
+      const ends = vertical
+        ? ([
+            ['north', 0, -1],
+            ['south', 0, 1],
+          ] as const)
+        : ([
+            ['west', -1, 0],
+            ['east', 1, 0],
+          ] as const);
+      for (const [side, dx, dy] of ends) {
+        if (isBank(x + dx, y + dy)) {
+          sprites.push({ x: x + dx, y: y + dy, tile: bridgeArt.ends[side], layer: 'ground', sheet });
+        }
+      }
     } else if (terrain === 'ford') {
       sprites.push({ x, y, tile: fordTile, layer: 'ground', sheet: propsSheet });
     } else if (terrain === 'gate') {

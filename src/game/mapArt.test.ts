@@ -190,11 +190,31 @@ describe('getCrossingSprites', () => {
       { x: 1, y: 0, tile: BRIDGE_ART.vertical, layer: 'ground', sheet: BRIDGE_ART.sheet },
       { x: 1, y: 1, tile: BRIDGE_ART.vertical, layer: 'ground', sheet: BRIDGE_ART.sheet },
     ]);
-    expect(sprites(['.~.', '.=.', '.~.'])).toEqual([
+    expect(sprites(['.~.', '.=.', '.~.']).filter((s) => s.x === 1)).toEqual([
       { x: 1, y: 1, tile: BRIDGE_ART.horizontal, layer: 'ground', sheet: BRIDGE_ART.sheet },
     ]);
     // Bridge beside bridge (a two-wide channel's) isn't water either side.
-    expect(sprites(['.~~.', '.==.']).map((s) => s.tile)).toEqual([BRIDGE_ART.horizontal, BRIDGE_ART.horizontal]);
+    expect(
+      sprites(['.~~.', '.==.'])
+        .filter((s) => s.y === 1 && s.x > 0 && s.x < 3)
+        .map((s) => s.tile),
+    ).toEqual([BRIDGE_ART.horizontal, BRIDGE_ART.horizontal]);
+  });
+
+  it('runs a bridge onto the bank at each end, not onto water or the map edge', () => {
+    const sheet = BRIDGE_ART.sheet;
+    expect(sprites(['.', '=', '='], 'a-stone').length).toBe(2);
+    expect(sprites(['.', '~=~', '.'].map((r) => r.padEnd(3, '.')))).toEqual([
+      { x: 1, y: 1, tile: BRIDGE_ART.vertical, layer: 'ground', sheet },
+      { x: 1, y: 0, tile: BRIDGE_ART.ends.north, layer: 'ground', sheet },
+      { x: 1, y: 2, tile: BRIDGE_ART.ends.south, layer: 'ground', sheet },
+    ]);
+    expect(sprites(['.~~.', '.==.'])).toEqual([
+      { x: 1, y: 1, tile: BRIDGE_ART.horizontal, layer: 'ground', sheet },
+      { x: 0, y: 1, tile: BRIDGE_ART.ends.west, layer: 'ground', sheet },
+      { x: 2, y: 1, tile: BRIDGE_ART.horizontal, layer: 'ground', sheet },
+      { x: 3, y: 1, tile: BRIDGE_ART.ends.east, layer: 'ground', sheet },
+    ]);
   });
 
   it('lays stepping stones on a ford, off the props sheet', () => {
