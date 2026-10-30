@@ -15,7 +15,7 @@
 //
 // The art for each shape comes from the same quarter of a tile in the set's
 // plain 3x3 block (or its inside-corner tile), so textures keep lining up.
-// TERRAIN_AUTOTILES in tileset.ts says where those tiles are.
+// getWallAutotile in mapArt.ts says where the wall's tiles are.
 
 import { getCell, type Grid, type Terrain } from './grid.ts';
 
@@ -24,7 +24,7 @@ export type QuarterShape = 'outer' | 'horizontal' | 'vertical' | 'inner' | 'full
 // A tile on the sheet, as [column, row].
 export type SheetTile = readonly [number, number];
 
-// Where a terrain's autotile pieces sit on the sheet (see TERRAIN_AUTOTILES
+// Where a terrain's autotile pieces sit on the sheet (see getWallAutotile
 // in tileset.ts).
 export interface Autotile {
   block: SheetTile;

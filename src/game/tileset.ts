@@ -1,15 +1,19 @@
 // Art config: which image each piece of the map draws with.
 //
-// Terrain comes from the overworld sheet (src/assets/overworld.png, 32px
-// tiles, 42 columns x 63 rows; see .claude/skills/tileset/overworld-catalog.md
-// for what's where) and is picked by position on it. The tile cursor and the
+// The ground (grass, dirt and water) comes from 64px corner tilesets
+// (src/assets/terrain64.png, see WANG_SHEET), and trees, mountains and
+// bridges from the 64px props beside it. Other terrain comes from the
+// overworld sheet (src/assets/overworld.png, 32px tiles, 42 columns x 63
+// rows; see .claude/skills/tileset/overworld-catalog.md for what's where)
+// and is picked by position on it. The tile cursor and the
 // movement arrow are tiles of the same sheet. Units are standalone sprite
 // sheets, one per animation, named here by texture key (src/assets/sprites.ts
 // maps keys to files and gives each its frame size), cut into one-tile
 // frames. Every image declares its own pixel size and is drawn one map tile
 // (TILE_SIZE) big, so art of different sizes mixes on the map.
 
-import type { Autotile, SheetTile } from './autotile.ts';
+import type { SheetTile } from './autotile.ts';
+import type { WangSet } from './wangTiles.ts';
 import type { BuildingKind } from './buildings.ts';
 import type { Facing } from './facing.ts';
 import type { ArrowPiece } from './moveArrow.ts';
@@ -47,82 +51,53 @@ export const TERRAIN_SHEET = {
   tileSize: 32,
 };
 
-// Plain grass fills every cell under the other terrain, as a [column, row]
-// tile on the terrain sheet.
-export const TERRAIN_BASE_TILE: SheetTile = [0, 0];
+// The 64px ground: PixelLab corner (Wang) tilesets drawn by
+// src/game/wangTiles.ts, one row of 16 tiles per set in index order, built
+// by .claude/skills/tileset/scripts/build-terrain64.js. Both sets share one
+// grass tile.
+export const WANG_SHEET = { key: 'terrain64', columns: 16 };
 
-// Blob autotiles drawn over the grass, keyed by terrain (see
-// src/game/autotile.ts). `block` is the top-left tile of the terrain's plain
-// 3x3 block (outer corners, edges, and the full middle); `inner` is the tile
-// with an inside corner in each of its four corners. `animation` steps
-// through `frames` copies of the set laid out `columnStride` tiles apart.
-export const TERRAIN_AUTOTILES: Record<string, Autotile> = {
-  // Water runs on under bridges and fords, which draw over it (see
-  // getCrossingSprites in src/game/mapArt.ts).
-  water: {
-    block: [4, 8],
-    inner: [2, 9],
-    animation: { frames: 6, columnStride: 7, frameMs: 180 },
-    joins: ['bridge', 'ford'],
-  },
-  // The sand-patch set, used as a dirt path. It has no plain 3x3, only the
-  // notched one, so `block` is the notched 3x3: its outer corners and edges
-  // are clean, but its middle has a notch in every corner, so a dirt patch
-  // two or more tiles wide shows small grass holes where its 'full' quarters
-  // meet. One-tile-wide paths only use the clean pieces. It runs on under a
-  // gate, whose art leaves its floor's south edge open to it.
-  dirt: {
-    block: [1, 3],
-    inner: [2, 4],
-    joins: ['gate'],
-  },
-  // Dark grass: the one patch set with a plain 3x3, so it's clean at any
-  // size. A meadow is walkable like grass.
-  meadow: {
-    block: [12, 3],
-    inner: [10, 4],
-  },
+// The ground sets, drawn in this order. Grass and dirt is the base under
+// every cell (dirt runs on under a gate); the river set then draws over
+// any quarter touching water, with a rocky cut bank between water and
+// grass. Water runs on under bridges and fords, which draw over it.
+export const WANG_SETS: Record<string, WangSet> = {
+  dirt: { row: 0, terrains: ['dirt', 'gate'], terrainIs: 'upper', base: true },
+  water: { row: 1, terrains: ['water', 'bridge', 'ford'], terrainIs: 'lower' },
 };
 
-// One-tile overlays drawn over the grass on forest cells (see
-// getFeatureSprites in src/game/mapArt.ts). `tiles` are the variants (dense
-// pine, sparse pine, broadleaf); `peakBelow[i]` is `tiles[i]` with the
-// mountain peak of the cell south of it baked into its bottom, for a forest
-// just north of a mountain.
-export const FOREST_ART: { tiles: SheetTile[]; peakBelow: SheetTile[] } = {
+// Meadow cells draw as plain grass until a 64px meadow set is made; walls
+// are still the overworld sheet's blob autotile (getWallAutotile in
+// src/game/mapArt.ts, src/game/autotile.ts).
+
+// 64px props on the ground's own sheet (src/assets/terrain64-props.png,
+// laid out by build-terrain64.js): row 0 pine, pine cluster, broadleaf
+// tree, mountain peak, twin peaks, bridge west–east, bridge north–south,
+// boulders; row 1 red, blue and orange houses, watchtower, castle wall,
+// castle tower, gatehouse, village wall.
+export const TERRAIN64_PROPS_SHEET = { key: 'terrain64-props', columns: 8 };
+
+// One-tile overlays on forest and mountain cells, a variant per cell (see
+// getFeatureSprites in src/game/mapArt.ts), off `sheet`.
+export interface FeatureArt {
+  sheet: { key: string; columns: number };
+  tiles: SheetTile[];
+}
+
+export const FOREST_ART: FeatureArt = {
+  sheet: TERRAIN64_PROPS_SHEET,
   tiles: [
-    [0, 1],
-    [1, 1],
-    [2, 1],
-  ],
-  peakBelow: [
-    [8, 1],
-    [9, 1],
-    [10, 1],
+    [0, 0],
+    [1, 0],
+    [2, 0],
   ],
 };
 
-// Mountain overlays, stacked a column at a time: a mountain cell draws a
-// `body` variant, or a `peakBelow` one (the same body with the next
-// mountain's peak in its bottom) when the cell south of it is a mountain
-// too. The top mountain of a column pokes its peak into the cell north of it
-// with a `cap`, drawn over that cell.
-export const MOUNTAIN_ART: { body: SheetTile[]; peakBelow: SheetTile[]; cap: SheetTile[] } = {
-  body: [
-    [4, 1],
-    [6, 1],
-    [5, 2],
-    [8, 2],
-    [9, 2],
-    [10, 2],
-  ],
-  peakBelow: [
-    [5, 1],
-    [7, 1],
-  ],
-  cap: [
+export const MOUNTAIN_ART: FeatureArt = {
+  sheet: TERRAIN64_PROPS_SHEET,
+  tiles: [
+    [3, 0],
     [4, 0],
-    [5, 0],
   ],
 };
 
@@ -178,11 +153,12 @@ export type BuildingPaletteName = keyof typeof BUILDING_PALETTES;
 // The palette for a level that doesn't pick one.
 export const DEFAULT_BUILDING_PALETTE: BuildingPaletteName = 'a-stone';
 
-// Bridges on the terrain sheet, over water: `vertical` runs north–south
-// (rails on its west and east sides), `horizontal` west–east.
-export const BRIDGE_ART: { vertical: SheetTile; horizontal: SheetTile } = {
-  vertical: [11, 2],
-  horizontal: [11, 1],
+// Bridges over water on TERRAIN64_PROPS_SHEET: `vertical` runs
+// north–south, `horizontal` west–east.
+export const BRIDGE_ART: { sheet: typeof TERRAIN64_PROPS_SHEET; vertical: SheetTile; horizontal: SheetTile } = {
+  sheet: TERRAIN64_PROPS_SHEET,
+  vertical: [6, 0],
+  horizontal: [5, 0],
 };
 
 // Map props the terrain sheet doesn't have, drawn to match it by

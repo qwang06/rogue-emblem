@@ -28,6 +28,8 @@ import siege03Idle from './units/Siege_03_Idle.png';
 import siege03Move from './units/Siege_03_Move.png';
 import skeleton01Idle from './units/Skeleton_01_Idle.png';
 import skeleton01Move from './units/Skeleton_01_Move.png';
+import terrain64 from './terrain64.png';
+import terrain64Props from './terrain64-props.png';
 import slime01Idle from './units/Slime_01_Idle.png';
 import slime01Move from './units/Slime_01_Move.png';
 import soldier02Idle from './units/Soldier_02_Idle.png';
@@ -107,6 +109,8 @@ export const SPRITES: Readonly<Record<string, SpriteSheet>> = {
   Goblin_01_Move: { url: goblin01Move, frame: 32 },
   gold_ginkgo_tree: { url: goldGinkgoTree, frame: 32 },
   'map-props': { url: mapProps, frame: 32 },
+  terrain64: { url: terrain64, frame: 64 },
+  'terrain64-props': { url: terrain64Props, frame: 64 },
   Orc_01_Idle: { url: orc01Idle, frame: 32 },
   Orc_01_Move: { url: orc01Move, frame: 32 },
   Sapper_04_Idle: { url: sapper04Idle, frame: 32 },

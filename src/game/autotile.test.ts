@@ -9,7 +9,8 @@ import {
   type QuarterShape,
 } from './autotile.ts';
 import { parseTerrainMap } from './terrainMap.ts';
-import { TERRAIN_AUTOTILES, TERRAIN_BASE_TILE, TERRAIN_SHEET } from './tileset.ts';
+import { getWallAutotile } from './mapArt.ts';
+import { BUILDING_PALETTES, TERRAIN_SHEET } from './tileset.ts';
 
 const shapes = (tl: QuarterShape, tr: QuarterShape, bl: QuarterShape, br: QuarterShape) => ({
   'top-left': tl,
@@ -105,12 +106,13 @@ describe('getQuarterFrames', () => {
     expect(getQuarterFrames(grid, 0, 0, 'water', autotile, 4, 1)).toEqual(first!.map((frame) => frame + 8));
   });
 
-  it('maps water onto the overworld sheet', () => {
+  it("maps the overworld sheet's water set onto the sheet", () => {
     const grid = parseTerrainMap(['.~', '~~']);
     const quarterColumns = TERRAIN_SHEET.columns * 2;
     // Open-water quarters come from middle tile (5, 9); the inside corner
     // from tile (2, 9)'s top-left quarter.
-    expect(getQuarterFrames(grid, 1, 1, 'water', TERRAIN_AUTOTILES.water, TERRAIN_SHEET.columns)).toEqual([
+    const water: Autotile = { block: [4, 8], inner: [2, 9] };
+    expect(getQuarterFrames(grid, 1, 1, 'water', water, TERRAIN_SHEET.columns)).toEqual([
       18 * quarterColumns + 4,
       18 * quarterColumns + 11,
       19 * quarterColumns + 10,
@@ -123,12 +125,6 @@ describe('getTileFrame', () => {
   it('numbers sheet tiles row by row', () => {
     expect(getTileFrame([0, 0], 42)).toBe(0);
     expect(getTileFrame([3, 2], 42)).toBe(87);
-  });
-
-  it('points grass at a tile on the sheet', () => {
-    const frame = getTileFrame(TERRAIN_BASE_TILE, TERRAIN_SHEET.columns);
-    expect(frame).toBeGreaterThanOrEqual(0);
-    expect(frame).toBeLessThan(TERRAIN_SHEET.columns * TERRAIN_SHEET.rows);
   });
 });
 
@@ -196,9 +192,9 @@ describe('joined terrains', () => {
   });
 
   it('takes its joins from the autotile', () => {
-    const water = TERRAIN_AUTOTILES.water;
-    expect(water.joins).toEqual(['bridge', 'ford']);
-    expect(getQuarterFrames(grid, 1, 0, 'water', water, TERRAIN_SHEET.columns)).not.toBeNull();
-    expect(TERRAIN_AUTOTILES.dirt.joins).toEqual(['gate']);
+    const wall = getWallAutotile(BUILDING_PALETTES['a-stone']);
+    expect(wall.joins).toEqual(['gate']);
+    const walls = parseTerrainMap(['#+#']);
+    expect(getQuarterFrames(walls, 1, 0, 'wall', wall, TERRAIN_SHEET.columns)).not.toBeNull();
   });
 });
