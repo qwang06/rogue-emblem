@@ -21,6 +21,7 @@ import { getRunHeatRules } from './warband/heat.ts';
 import type { RegionConfig } from './warband/regions.ts';
 import { createDemoLevel, type DemoLevel } from './demoLevel.ts';
 import { createTrainingLevel, type Level } from './trainingLevel.ts';
+import { createSeededRng, randomInt } from './rng.ts';
 
 export type BattleSetup =
   | { mode: 'story'; chapter: number }
@@ -205,4 +206,12 @@ export function regionPreview(index: number, seed: number, settings: RegionSetti
   if (!Number.isInteger(index) || index < 0 || index >= settings.regions.length) return null;
   const { first } = getRegionStages(index, settings.regions.length, settings.stagesPerRegion);
   return { mode: 'warband', seed, stage: first };
+}
+
+// The battle the Map Generator shows for `seed`: a region of `settings`
+// picked from the seed, previewed as regionPreview does, so one seed is
+// always the same map and a new seed may land in any region.
+export function generatedMap(seed: number, settings: RegionSettings): BattleSetup {
+  const index = randomInt(createSeededRng(seed), 0, settings.regions.length - 1);
+  return regionPreview(index, seed, settings)!;
 }

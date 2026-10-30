@@ -38,6 +38,17 @@ describe('parseRoute', () => {
     expect(parseRoute('#/configs/dialogs/preview/1/2')).toEqual({ page: 'game' });
   });
 
+  it("reads the Map Generator's map", () => {
+    expect(parseRoute('#/map-generator/12345')).toEqual({ page: 'map-generator', seed: 12345 });
+    expect(parseRoute('#/map-generator/0/')).toEqual({ page: 'map-generator', seed: 0 });
+  });
+
+  it('rejects malformed Map Generator routes', () => {
+    expect(parseRoute('#/map-generator')).toEqual({ page: 'game' });
+    expect(parseRoute('#/map-generator/x')).toEqual({ page: 'game' });
+    expect(parseRoute('#/map-generator/1/2')).toEqual({ page: 'game' });
+  });
+
   it('falls back to the game for unknown routes', () => {
     expect(parseRoute('#/nowhere')).toEqual({ page: 'game' });
     expect(parseRoute('#/configs/dialogs/extra')).toEqual({ page: 'game' });
@@ -52,6 +63,7 @@ describe('routeHash', () => {
       { page: 'configs' },
       { page: 'config', id: 'dialogs' },
       { page: 'region-preview', index: 0, seed: 4294967295 },
+      { page: 'map-generator', seed: 4294967295 },
     ];
     for (const route of routes) expect(parseRoute(routeHash(route))).toEqual(route);
   });
