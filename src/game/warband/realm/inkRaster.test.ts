@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createGrid } from '../../grid.ts';
-import { TILE_SIZE } from '../../tileset.ts';
 import { INK_COLORS, paintRealmInk, type RgbaImage } from './inkRaster.ts';
-import { INK_STAMPS, type InkStamp, type RealmInk } from './realmInk.ts';
+import { INK_STAMPS, REALM_CELL, type InkStamp, type RealmInk } from './realmInk.ts';
 
 // Every stamp a 2x2 block of solid red in its top-left corner.
 const RED: RgbaImage = { width: 2, height: 2, data: new Uint8ClampedArray(Array(4).fill([255, 0, 0, 255]).flat()) };
@@ -12,8 +11,8 @@ const STAMPS = Object.fromEntries(INK_STAMPS.map((id) => [id, RED])) as Record<I
 function inkOf(columns: number, rows: number, water: number[] = [], extra: Partial<RealmInk> = {}): RealmInk {
   const grid = createGrid(columns, rows);
   return {
-    width: columns * TILE_SIZE,
-    height: rows * TILE_SIZE,
+    width: columns * REALM_CELL,
+    height: rows * REALM_CELL,
     water: grid.cells.map((_, i) => water.includes(i)),
     placements: [],
     roads: [],

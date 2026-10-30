@@ -9,10 +9,14 @@
 import type { Rng } from '../../combatStats.ts';
 import type { Point } from '../../grid.ts';
 import { createSeededRng, randomItem } from '../../rng.ts';
-import { TILE_SIZE } from '../../tileset.ts';
 import type { Realm } from './realm.ts';
 import { getRoadNetwork } from './realmRoutes.ts';
 import type { RealmTerrain } from './realmTerrain.ts';
+
+// The size of one realm cell in map pixels. The realm has its own cell
+// size, apart from the battle map's TILE_SIZE, so the overworld doesn't
+// change when the battle art does.
+export const REALM_CELL = 32;
 
 // The map symbols, each a 32x32 image in src/assets/realm/ink/ named by id.
 export const INK_STAMPS = [
@@ -109,13 +113,13 @@ export function getRealmInk(realm: Realm): RealmInk {
       : (grid.cells[y * grid.width + x].terrain as RealmTerrain);
   const siteTiles = new Set(realm.sites.map((site) => `${site.x},${site.y}`));
   const placements: InkPlacement[] = [];
-  const half = TILE_SIZE / 2;
+  const half = REALM_CELL / 2;
 
   for (const cell of grid.cells) {
     const { x, y } = cell;
     const terrain = cell.terrain as RealmTerrain;
-    const left = x * TILE_SIZE;
-    const top = y * TILE_SIZE;
+    const left = x * REALM_CELL;
+    const top = y * REALM_CELL;
     const roll = (k: number) => hashCell(realm.seed, x, y, k);
     const jitter = (k: number, spread: number) => Math.round((roll(k) - 0.5) * 2 * spread);
     if (terrain === 'forest') {
@@ -158,14 +162,14 @@ export function getRealmInk(realm: Realm): RealmInk {
         smoothLine(
           wobbleLine(simplifyLine(tiles, INK_RULES.roadSimplify), realm.seed, INK_RULES.roadWobble),
           INK_RULES.roadSmoothing,
-        ).map((point) => ({ x: point.x * TILE_SIZE + half, y: point.y * TILE_SIZE + half })),
+        ).map((point) => ({ x: point.x * REALM_CELL + half, y: point.y * REALM_CELL + half })),
       ),
     }),
   );
 
   const ink: RealmInk = Object.freeze({
-    width: grid.width * TILE_SIZE,
-    height: grid.height * TILE_SIZE,
+    width: grid.width * REALM_CELL,
+    height: grid.height * REALM_CELL,
     water: Object.freeze(grid.cells.map((cell) => cell.terrain === 'water')),
     placements: Object.freeze(placements.map((placement) => Object.freeze(placement))),
     roads: Object.freeze(roads),
@@ -189,7 +193,7 @@ export function getRouteLine(ink: RealmInk, route: readonly Point[]): Point[] {
       ({ tiles }) => matchesAt(route, at, tiles, same) || matchesAt(route, at, [...tiles].reverse(), same),
     );
     if (!stretch) {
-      return route.map((p) => ({ x: p.x * TILE_SIZE + TILE_SIZE / 2, y: p.y * TILE_SIZE + TILE_SIZE / 2 }));
+      return route.map((p) => ({ x: p.x * REALM_CELL + REALM_CELL / 2, y: p.y * REALM_CELL + REALM_CELL / 2 }));
     }
     const forward = matchesAt(route, at, stretch.tiles, same);
     const points = forward ? stretch.line : [...stretch.line].reverse();
@@ -394,7 +398,7 @@ const FEATURE_PATTERNS: Readonly<Record<InkLabelKind, readonly ((prefix: string)
 function nameFeatures(realm: Realm): InkLabel[] {
   const rng: Rng = createSeededRng((realm.seed ^ 0x696e6b) >>> 0);
   const taken = new Set(realm.sites.map((site) => site.name));
-  const width = realm.grid.width * TILE_SIZE;
+  const width = realm.grid.width * REALM_CELL;
   const labels: InkLabel[] = [];
   for (const kind of ['water', 'forest', 'mountain'] as const) {
     const patches = findPatches(realm, kind)
@@ -407,14 +411,14 @@ function nameFeatures(realm: Realm): InkLabel[] {
       if (taken.has(text)) continue;
       taken.add(text);
       // Kept far enough from the map's sides that the whole name shows.
-      const reach = Math.min(width / 2, (text.length * INK_RULES.letterWidth * TILE_SIZE) / 2 + TILE_SIZE / 2);
-      const spot = pickLabelSpot(patch, reach / TILE_SIZE, realm.sites, labels);
+      const reach = Math.min(width / 2, (text.length * INK_RULES.letterWidth * REALM_CELL) / 2 + REALM_CELL / 2);
+      const spot = pickLabelSpot(patch, reach / REALM_CELL, realm.sites, labels);
       labels.push(
         Object.freeze({
           text,
           kind,
-          x: Math.min(width - reach, Math.max(reach, spot.x * TILE_SIZE + TILE_SIZE / 2)),
-          y: spot.y * TILE_SIZE + TILE_SIZE / 2,
+          x: Math.min(width - reach, Math.max(reach, spot.x * REALM_CELL + REALM_CELL / 2)),
+          y: spot.y * REALM_CELL + REALM_CELL / 2,
         }),
       );
     }
@@ -436,8 +440,8 @@ function pickLabelSpot(
   const cx = patch.reduce((sum, p) => sum + p.x, 0) / patch.length;
   const cy = patch.reduce((sum, p) => sum + p.y, 0) / patch.length;
   const others = labels.map((label) => ({
-    x: (label.x - TILE_SIZE / 2) / TILE_SIZE,
-    y: (label.y - TILE_SIZE / 2) / TILE_SIZE,
+    x: (label.x - REALM_CELL / 2) / REALM_CELL,
+    y: (label.y - REALM_CELL / 2) / REALM_CELL,
   }));
   const clearance = (p: Point) =>
     Math.min(

@@ -27,3 +27,30 @@ describe('getFitZoom', () => {
     expect(getFitZoom({ width: 100, height: 100 }, 16, CANVAS, 8)).toBe(1);
   });
 });
+
+describe('getFitZoom with half steps', () => {
+  it('rounds down to a half step', () => {
+    // 20x15 64px tiles is 1280x960, so 960x720 fits 0.75x: 0.5x.
+    expect(getFitZoom({ width: 20, height: 15 }, 64, CANVAS, 1.5, 0.5)).toBe(0.5);
+    // 10x7 is 640x448: fits 1.5x.
+    expect(getFitZoom({ width: 10, height: 7 }, 64, CANVAS, 3, 0.5)).toBe(1.5);
+  });
+
+  it('caps at maxZoom', () => {
+    expect(getFitZoom({ width: 3, height: 3 }, 64, CANVAS, 1.5, 0.5)).toBe(1.5);
+  });
+
+  it('never goes below one step', () => {
+    expect(getFitZoom({ width: 100, height: 100 }, 64, CANVAS, 1.5, 0.5)).toBe(0.5);
+  });
+
+  it('shows a map at the same screen size as at half the tile size and whole steps', () => {
+    for (const map of [
+      { width: 20, height: 15 },
+      { width: 12, height: 9 },
+      { width: 30, height: 4 },
+    ]) {
+      expect(getFitZoom(map, 64, CANVAS, 1.5, 0.5) * 64).toBe(getFitZoom(map, 32, CANVAS, 3) * 32);
+    }
+  });
+});

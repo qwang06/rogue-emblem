@@ -40,7 +40,9 @@ import {
 } from '../../../../src/game/tileset.ts';
 import { decode, encode } from './dump-png.js';
 
-const TILE = 32;
+// Drawn at the terrain sheet's own pixel size; the props sheet and the
+// warrior and skeleton sheets it stands on the map are 32px too.
+const TILE = TERRAIN_SHEET.tileSize;
 const HALF = TILE / 2;
 
 const args = process.argv.slice(2);

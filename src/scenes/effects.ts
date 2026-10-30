@@ -1,9 +1,12 @@
 // Small visual effects for sprites. Presentation only — these never change
 // game state, they just play something and report when they're done.
+// Distances and speeds are tuned in pixels of a 32px tile and scaled by
+// GRID_PX, so they keep their size relative to the map's tiles.
 
 import type Phaser from 'phaser';
 import type { Point } from '../game/grid.ts';
 import type { RestoreStat } from '../game/items.ts';
+import { GRID_PX } from '../game/tileset.ts';
 
 type Sprite = Phaser.GameObjects.Sprite;
 type Done = () => void;
@@ -31,8 +34,8 @@ export function playHitFlash(scene: Phaser.Scene, sprite: Sprite, onDone?: Done)
 const EFFECT_DEPTH = 2; // above units and the cursor
 
 const STONE_COLOR = 0x8a8a8a;
-const STONE_RADIUS = 2;
-const STONE_SPEED = 0.25; // px per ms, so farther throws take longer
+const STONE_RADIUS = 2 * GRID_PX;
+const STONE_SPEED = 0.25 * GRID_PX; // px per ms, so farther throws take longer
 const STONE_MIN_FLIGHT_MS = 240;
 const STONE_ARC_PER_PX = 0.18; // the lob rises this much per px of distance
 
@@ -92,14 +95,14 @@ const POTION_PULSE_INTERVAL_MS = 90;
 // pulse ends.
 export function playPotionGlow(scene: Phaser.Scene, sprite: Sprite, center: Point, color: number, onDone?: Done): void {
   ensureParticleTexture(scene);
-  const halfWidth = sprite.displayWidth / 2 - 2;
+  const halfWidth = sprite.displayWidth / 2 - 2 * GRID_PX;
   const emitter = scene.add
-    .particles(center.x, center.y + sprite.displayHeight / 2 - 2, PARTICLE_KEY, {
+    .particles(center.x, center.y + sprite.displayHeight / 2 - 2 * GRID_PX, PARTICLE_KEY, {
       x: { min: -halfWidth, max: halfWidth },
-      speedY: { min: -38, max: -22 },
-      speedX: { min: -4, max: 4 },
+      speedY: { min: -38 * GRID_PX, max: -22 * GRID_PX },
+      speedX: { min: -4 * GRID_PX, max: 4 * GRID_PX },
       lifespan: { min: POTION_LIFESPAN_MS * 0.6, max: POTION_LIFESPAN_MS },
-      scale: { start: 0.9, end: 0.2 },
+      scale: { start: 0.9 * GRID_PX, end: 0.2 * GRID_PX },
       alpha: { start: 1, end: 0 },
       color: [0xffffff, color],
       blendMode: 'ADD',
@@ -125,7 +128,7 @@ export function playPotionGlow(scene: Phaser.Scene, sprite: Sprite, center: Poin
   });
 }
 
-const LUNGE_DISTANCE = 12; // px the attacker steps toward its target, by default
+const LUNGE_DISTANCE = 12 * GRID_PX; // px the attacker steps toward its target, by default
 const LUNGE_MS = 110; // each way
 
 export interface LungeOptions {
@@ -227,11 +230,11 @@ export function playDeathBurst(
     ensureParticleTexture(scene);
     const emitter = scene.add
       .particles(center.x, center.y, PARTICLE_KEY, {
-        speed: { min: 40, max: 110 },
+        speed: { min: 40 * GRID_PX, max: 110 * GRID_PX },
         angle: { min: 0, max: 360 },
-        gravityY: 120,
+        gravityY: 120 * GRID_PX,
         lifespan: { min: DEATH_LIFESPAN_MS * 0.6, max: DEATH_LIFESPAN_MS },
-        scale: { start: 1.1, end: 0.2 },
+        scale: { start: 1.1 * GRID_PX, end: 0.2 * GRID_PX },
         alpha: { start: 1, end: 0 },
         color: DEATH_COLORS,
         blendMode: 'ADD',

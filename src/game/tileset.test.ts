@@ -19,6 +19,7 @@ import {
   UNIT_SHEET,
   UNIT_SPRITES,
   DEFAULT_UNIT_SPRITE,
+  GRID_PX,
   getUnitSprite,
   unitSheetKey,
   type UnitAnimation,
@@ -96,14 +97,15 @@ describe('shadows', () => {
   it('fit inside one tile and are translucent', () => {
     for (const { width, height, centerX, centerY, alpha } of [UNIT_SHADOW, TREE_SHADOW]) {
       expect(centerX - width / 2).toBeGreaterThanOrEqual(0);
-      expect(centerX + width / 2).toBeLessThanOrEqual(TILE_SIZE);
+      expect(centerX + width / 2).toBeLessThanOrEqual(1);
       expect(centerY - height / 2).toBeGreaterThanOrEqual(0);
-      expect(centerY + height / 2).toBeLessThanOrEqual(TILE_SIZE);
+      expect(centerY + height / 2).toBeLessThanOrEqual(1);
       expect(alpha).toBeGreaterThan(0);
       expect(alpha).toBeLessThan(1);
-      // Whole-pixel corners, so the pixel art stays crisp.
-      expect(Number.isInteger(centerX - width / 2)).toBe(true);
-      expect(Number.isInteger(centerY - height / 2)).toBe(true);
+      // Whole world pixels, so the pixel art stays crisp.
+      for (const size of [width, height, centerX - width / 2, centerY - height / 2]) {
+        expect(Number.isInteger(size * TILE_SIZE)).toBe(true);
+      }
     }
   });
 });
@@ -115,8 +117,10 @@ describe('RANK_BADGES', () => {
       expect(rows.every((row) => row.length === width)).toBe(true);
       expect(x).toBeGreaterThanOrEqual(0);
       expect(y).toBeGreaterThanOrEqual(0);
-      expect(x + width).toBeLessThanOrEqual(TILE_SIZE);
-      expect(y + rows.length).toBeLessThanOrEqual(TILE_SIZE);
+      expect(x * TILE_SIZE + width * GRID_PX).toBeLessThanOrEqual(TILE_SIZE);
+      expect(y * TILE_SIZE + rows.length * GRID_PX).toBeLessThanOrEqual(TILE_SIZE);
+      expect(Number.isInteger(x * TILE_SIZE)).toBe(true);
+      expect(Number.isInteger(y * TILE_SIZE)).toBe(true);
       for (const char of rows.join('')) expect(char === '.' || char in palette).toBe(true);
     }
   });

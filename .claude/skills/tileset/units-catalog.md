@@ -60,7 +60,14 @@ down/left/right/up, 4 frames, 16px art doubled), RGBA instead of color-keyed,
 colors from the pack's palette, no baked shadow, lowest pixels on y 28–29
 (the bat hovers above that).
 
-`Slime_01` and `Goblin_01` were made with PixelLab (Pro Flash at 16x16,
+`Slime_01` is 64px art (256x256 sheets, `frame: 64` in `sprites.ts`): four
+stills made from a concept painting with PixelLab `image_to_pixelart` at 64x64
+(the process is in the project files at `art/slime-64/out/notes.md`; east is
+west mirrored), assembled by `scripts/assemble-unit-sheet.js <dir> Slime_01`,
+which keeps the stills as they are and only shifts them: idle sinks 2px on
+frames 2–3, move hops 4px up on frames 1 and 3. Its feet are on y 60.
+
+`Goblin_01` (and `Slime_01` before it went 64px) were made with PixelLab (Pro Flash at 16x16,
 styled on the villager) and assembled by `scripts/build-unit-sheet.js`. Only
 the four facing stills were generated; idle sinks the body 1px onto the feet
 for frames 2–3, and move hops 1px up on frames 1 and 3. To redo one, save
@@ -78,7 +85,7 @@ west grids mirrored. Each went through up to three review passes against the pac
 
 | Art           | What it shows                                                                                                                                                                                       | Animation                                                      |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `Slime_01`    | Green jelly blob with two eyes, a mouth and a top-left highlight. Side views have a small pointed tail.                                                                                             | idle squash, move hop                                          |
+| `Slime_01`    | 64px: green jelly dome with two dark eyes, a smile and a drip on its side; glossy highlight. Side views are a lower dome.                                                                           | idle sink, move hop                                            |
 | `Goblin_01`   | Green goblin with wide pointed ears, orange eyes, a brown tunic and a club in its right hand.                                                                                                       | idle squash, move hop                                          |
 | `Skeleton_01` | Bone-white skeleton: big skull with red eye glints and a row of teeth, ribs over a spine and pelvis, thin legs, a rusty sword (orange hilt, rust flecks) held up, in front when walking left/right. | idle squash; move steps each foot in turn                      |
 | `Bat_01`      | Purple cave bat, wings spread: pointed ears, yellow eyes, open mouth with two fangs, lit leading wing edges and scalloped trailing edges. Hovers, lowest pixel y ~26.                               | idle and move flap mid, up, mid, down (lifted 1px on the down) |

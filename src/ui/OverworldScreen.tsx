@@ -6,7 +6,6 @@ import { enterRun, getRunScreen } from '../bridge/warbandFlow.ts';
 import { getActiveContent } from '../data/customContent.ts';
 import { loadSavedRun } from '../data/runSave.ts';
 import type { Point } from '../game/grid.ts';
-import { TILE_SIZE } from '../game/tileset.ts';
 import { paintRealmInk, type RgbaImage } from '../game/warband/realm/inkRaster.ts';
 import { BATTLE_SITES, getRealm, type Realm } from '../game/warband/realm/realm.ts';
 import {
@@ -14,6 +13,7 @@ import {
   getRouteLine,
   INK_STAMPS,
   pointAlong,
+  REALM_CELL,
   type InkStamp,
   type RealmInk,
 } from '../game/warband/realm/realmInk.ts';
@@ -168,8 +168,8 @@ function Overworld({ run, realm, onRun }: { run: RunState; realm: Realm; onRun: 
 
   const current = view.sites.find((site) => site.id === view.currentSiteId);
   const tileCenter = (point: Point): Point => ({
-    x: (point.x + 0.5) * TILE_SIZE,
-    y: (point.y + 0.5) * TILE_SIZE,
+    x: (point.x + 0.5) * REALM_CELL,
+    y: (point.y + 0.5) * REALM_CELL,
   });
   // Where the warband stands, in map pixels: on its site, or on the road.
   const leaderAt = walk ? pointAlong(walk.line, walk.t) : current ? tileCenter(current) : { x: 0, y: 0 };
@@ -185,7 +185,7 @@ function Overworld({ run, realm, onRun }: { run: RunState; realm: Realm; onRun: 
     viewport.scrollTo({ left, behavior: walk || prefersReducedMotion() ? 'auto' : 'smooth' });
   }, [Math.round(focusX / 8), zoom, walk !== null]);
 
-  const scale = TILE_SIZE * zoom;
+  const scale = REALM_CELL * zoom;
   const at = (point: Point): CSSProperties => ({ left: point.x * zoom, top: point.y * zoom });
 
   return (
@@ -221,7 +221,7 @@ function Overworld({ run, realm, onRun }: { run: RunState; realm: Realm; onRun: 
           ))}
           <svg
             className="overworld__routes"
-            viewBox={`0 0 ${view.width * TILE_SIZE} ${view.height * TILE_SIZE}`}
+            viewBox={`0 0 ${view.width * REALM_CELL} ${view.height * REALM_CELL}`}
             aria-hidden="true"
           >
             {routes.travelled.map((line, i) => (
@@ -461,7 +461,7 @@ function useZoom(ref: RefObject<HTMLDivElement | null>, rows: number): number {
   useLayoutEffect(() => {
     const element = ref.current;
     if (!element) return;
-    const measure = () => setZoom(getOverworldZoom(element.clientHeight, rows, TILE_SIZE));
+    const measure = () => setZoom(getOverworldZoom(element.clientHeight, rows, REALM_CELL));
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);

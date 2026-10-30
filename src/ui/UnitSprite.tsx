@@ -1,9 +1,13 @@
 import type { CSSProperties } from 'react';
 import { SPRITE_URLS } from '../assets/sprites.ts';
-import { TILE_SIZE, UNIT_ANIMATIONS, UNIT_SHEET, unitSheetKey } from '../game/tileset.ts';
+import { UNIT_ANIMATIONS, UNIT_SHEET, unitSheetKey } from '../game/tileset.ts';
 
-// A unit's idle sheet by unit art name (UNIT_SPRITES in tileset.ts), drawn at
-// the size of `scale` map tiles with crisp pixels, cropped from the sheet's
+// CSS px of a unit sprite at scale 1 in menus: the UI's own size, apart
+// from the map's TILE_SIZE, so menus don't change when the map art does.
+const UNIT_SPRITE_SIZE = 32;
+
+// A unit's idle sheet by unit art name (UNIT_SPRITES in tileset.ts), drawn
+// `scale` x UNIT_SPRITE_SIZE CSS px big with crisp pixels, cropped from the sheet's
 // row for the direction units start out facing. Shows the first idle frame, or with `animated`
 // loops the idle frames like units on the map. Used to show unit sprites in
 // menus.
@@ -16,7 +20,7 @@ export function UnitSprite({
   scale?: number;
   animated?: boolean;
 }) {
-  const size = TILE_SIZE * scale;
+  const size = UNIT_SPRITE_SIZE * scale;
   const { columns, rows, defaultFacing, frames } = UNIT_SHEET;
   const { frameMs } = UNIT_ANIMATIONS.idle;
   const row = rows[defaultFacing];

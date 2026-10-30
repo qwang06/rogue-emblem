@@ -11,9 +11,10 @@
 
 import { getQuarterShapes, getShapeTile, QUARTERS, type SheetTile } from '../../../../src/game/autotile.ts';
 import { createGrid, setTerrain, type Grid } from '../../../../src/game/grid.ts';
+import { TERRAIN_SHEET } from '../../../../src/game/tileset.ts';
 import { decode, encode } from './dump-png.js';
 
-const TILE = 32;
+const TILE = TERRAIN_SHEET.tileSize;
 const HALF = TILE / 2;
 
 const args = process.argv.slice(2);

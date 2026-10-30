@@ -7,10 +7,9 @@
 //   node .claude/skills/tileset/scripts/realm-preview.ts out.png 1 2 3
 
 import { readFileSync } from 'node:fs';
-import { TILE_SIZE } from '../../../../src/game/tileset.ts';
 import { paintRealmInk, type RgbaImage } from '../../../../src/game/warband/realm/inkRaster.ts';
 import { generateRealm } from '../../../../src/game/warband/realm/realm.ts';
-import { getRealmInk, INK_STAMPS, type InkStamp } from '../../../../src/game/warband/realm/realmInk.ts';
+import { getRealmInk, INK_STAMPS, REALM_CELL, type InkStamp } from '../../../../src/game/warband/realm/realmInk.ts';
 import { decode, encode } from './dump-png.js';
 
 const [output, ...seeds] = process.argv.slice(2);
@@ -35,8 +34,8 @@ const maps = realms.map((realm) => {
     // As on screen: the icon's 64px disc centered on the tile, its foot a
     // little below the tile's middle.
     const art = icon(site.kind);
-    const left = site.x * TILE_SIZE + TILE_SIZE / 2 - art.width / 2;
-    const top = site.y * TILE_SIZE + TILE_SIZE * 0.75 - art.height;
+    const left = site.x * REALM_CELL + REALM_CELL / 2 - art.width / 2;
+    const top = site.y * REALM_CELL + REALM_CELL * 0.75 - art.height;
     for (let y = 0; y < art.height; y++) {
       for (let x = 0; x < art.width; x++) {
         const s = (y * art.width + x) * 4;
@@ -60,7 +59,7 @@ const maps = realms.map((realm) => {
   return map;
 });
 
-const gap = TILE_SIZE;
+const gap = REALM_CELL;
 const rows: number[][][] = [];
 for (const map of maps) {
   for (let y = 0; y < map.height; y++) {
