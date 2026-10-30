@@ -74,7 +74,8 @@ export const WANG_SETS: Record<string, WangSet> = {
 // laid out by build-terrain64.js): row 0 pine, pine cluster, broadleaf
 // tree, mountain peak, twin peaks, bridge west–east, bridge north–south,
 // boulders; row 1 red, blue and orange houses, watchtower, castle wall,
-// castle tower, gatehouse, village wall.
+// castle tower, gatehouse, village wall; row 2 the bridge ends (see
+// BRIDGE_ART).
 export const TERRAIN64_PROPS_SHEET = { key: 'terrain64-props', columns: 8 };
 
 // One-tile overlays on forest and mountain cells, a variant per cell (see
@@ -154,11 +155,19 @@ export type BuildingPaletteName = keyof typeof BUILDING_PALETTES;
 export const DEFAULT_BUILDING_PALETTE: BuildingPaletteName = 'a-stone';
 
 // Bridges over water on TERRAIN64_PROPS_SHEET: `vertical` runs
-// north–south, `horizontal` west–east.
-export const BRIDGE_ART: { sheet: typeof TERRAIN64_PROPS_SHEET; vertical: SheetTile; horizontal: SheetTile } = {
+// north–south, `horizontal` west–east, each repeating along its length.
+// `ends` run the deck onto the bank cell on that side of a bridge, over
+// the cut bank.
+export const BRIDGE_ART: {
+  sheet: typeof TERRAIN64_PROPS_SHEET;
+  vertical: SheetTile;
+  horizontal: SheetTile;
+  ends: Record<'north' | 'south' | 'west' | 'east', SheetTile>;
+} = {
   sheet: TERRAIN64_PROPS_SHEET,
   vertical: [6, 0],
   horizontal: [5, 0],
+  ends: { north: [0, 2], south: [1, 2], west: [2, 2], east: [3, 2] },
 };
 
 // Map props the terrain sheet doesn't have, drawn to match it by

@@ -12,7 +12,11 @@
 // checked against the index.
 //
 // terrain64-props.png (TERRAIN64_PROPS_SHEET): the props in PROPS order,
-// 8 to a row.
+// 8 to a row, then a row of bridge ends. The bridges are redrawn from
+// PixelLab's north–south bridge so they join up (see drawBridges): [6, 0]
+// is a deck that repeats north–south, [5, 0] the same turned west–east,
+// and [0..3, 2] the ends that run a deck onto the bank cell north, south,
+// west and east of a bridge.
 
 import { readFileSync } from 'node:fs';
 import { decode, encode } from './dump-png.js';
@@ -69,8 +73,43 @@ SETS.forEach(({ name, upper }, row) => {
 });
 encode('src/assets/terrain64.png', terrain);
 
-const props = blank(8 * TILE, PROPS.length * TILE);
+const props = blank(8 * TILE, (PROPS.length + 1) * TILE);
 PROPS.forEach((names, row) =>
   names.forEach((name, column) => copy(decode(`${dir}/props/${name}.png`), 0, 0, props, column * TILE, row * TILE)),
 );
+drawBridges(decode(`${dir}/props/bridge_v.png`), props);
 encode('src/assets/terrain64-props.png', props);
+
+// The bridge pieces, from PixelLab's north–south bridge (its deck spans
+// columns 20–48 and every row, but doesn't repeat): 32 rows of it then the
+// same rows flipped make a deck whose top and bottom rows match, so
+// bridge cells stack seamlessly. An end piece is that deck's half nearest
+// the bridge with a dark lip across its far edge, laid over the bank cell
+// so the deck covers the cut bank and lands on the grass. West–east pieces
+// are the north–south ones turned a quarter.
+function drawBridges(source, sheet) {
+  const band = source.slice(16, 48);
+  const deck = [...band, ...band.toReversed()].map((row) => row.map((px) => [...px]));
+  const lip = deck[0].map((px) => (px[3] ? darkest(deck) : px));
+  const blankRow = () => deck[0].map(() => [0, 0, 0, 0]);
+  const half = TILE / 2;
+  // The bank cell north of a bridge: deck in its bottom half.
+  const north = [...Array.from({ length: half }, blankRow), lip, lip, ...deck.slice(half + 2)];
+  const south = north.toReversed();
+  const turn = (tile) => tile[0].map((_, x) => tile.map((row) => row[x]).toReversed());
+  const pieces = [
+    [deck, 6, 0],
+    [turn(deck), 5, 0],
+    [north, 0, 2],
+    [south, 1, 2],
+    [turn(south), 2, 2],
+    [turn(north), 3, 2],
+  ];
+  for (const [tile, column, row] of pieces) copy(tile, 0, 0, sheet, column * TILE, row * TILE);
+}
+
+// The darkest opaque color in a tile, for an outline.
+function darkest(tile) {
+  const opaque = tile.flat().filter((px) => px[3]);
+  return opaque.reduce((a, b) => (a[0] + a[1] + a[2] <= b[0] + b[1] + b[2] ? a : b));
+}
