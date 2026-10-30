@@ -1,0 +1,253 @@
+{
+ "tileset_id": "199620e6-b85c-4cbf-a140-0cbebc86e5fa",
+ "tile_size": 64,
+ "sheet": "sheet.png",
+ "terrains": {
+  "0": "grass",
+  "1": "dirt"
+ },
+ "index_formula": "index = NW*8 + NE*4 + SW*2 + SE*1, where a corner is 1 if it is the UPPER terrain (dirt) and 0 if LOWER (grass)",
+ "note": "Slice by rect (from metadata bounding_box). The wang_N name equals the index; it is NOT a sheet position.",
+ "tiles": {
+  "13": {
+   "file": "tiles/wang_13.png",
+   "rect": [
+    0,
+    0,
+    64,
+    64
+   ],
+   "corners": {
+    "NW": "dirt",
+    "NE": "dirt",
+    "SW": "grass",
+    "SE": "dirt"
+   }
+  },
+  "10": {
+   "file": "tiles/wang_10.png",
+   "rect": [
+    64,
+    0,
+    64,
+    64
+   ],
+   "corners": {
+    "NW": "dirt",
+    "NE": "grass",
+    "SW": "dirt",
+    "SE": "grass"
+   }
+  },
+  "4": {
+   "file": "tiles/wang_04.png",
+   "rect": [
+    128,
+    0,
+    64,
+    64
+   ],
+   "corners": {
+    "NW": "grass",
+    "NE": "dirt",
+    "SW": "grass",
+    "SE": "grass"
+   }
+  },
+  "12": {
+   "file": "tiles/wang_12.png",
+   "rect": [
+    192,
+    0,
+    64,
+    64
+   ],
+   "corners": {
+    "NW": "dirt",
+    "NE": "dirt",
+    "SW": "grass",
+    "SE": "grass"
+   }
+  },
+  "6": {
+   "file": "tiles/wang_06.png",
+   "rect": [
+    0,
+    64,
+    64,
+    64
+   ],
+   "corners": {
+    "NW": "grass",
+    "NE": "dirt",
+    "SW": "dirt",
+    "SE": "grass"
+   }
+  },
+  "8": {
+   "file": "tiles/wang_08.png",
+   "rect": [
+    64,
+    64,
+    64,
+    64
+   ],
+   "corners": {
+    "NW": "dirt",
+    "NE": "grass",
+    "SW": "grass",
+    "SE": "grass"
+   }
+  },
+  "0": {
+   "file": "tiles/wang_00.png",
+   "rect": [
+    128,
+    64,
+    64,
+    64
+   ],
+   "corners": {
+    "NW": "grass",
+    "NE": "grass",
+    "SW": "grass",
+    "SE": "grass"
+   }
+  },
+  "1": {
+   "file": "tiles/wang_01.png",
+   "rect": [
+    192,
+    64,
+    64,
+    64
+   ],
+   "corners": {
+    "NW": "grass",
+    "NE": "grass",
+    "SW": "grass",
+    "SE": "dirt"
+   }
+  },
+  "11": {
+   "file": "tiles/wang_11.png",
+   "rect": [
+    0,
+    128,
+    64,
+    64
+   ],
+   "corners": {
+    "NW": "dirt",
+    "NE": "grass",
+    "SW": "dirt",
+    "SE": "dirt"
+   }
+  },
+  "3": {
+   "file": "tiles/wang_03.png",
+   "rect": [
+    64,
+    128,
+    64,
+    64
+   ],
+   "corners": {
+    "NW": "grass",
+    "NE": "grass",
+    "SW": "dirt",
+    "SE": "dirt"
+   }
+  },
+  "2": {
+   "file": "tiles/wang_02.png",
+   "rect": [
+    128,
+    128,
+    64,
+    64
+   ],
+   "corners": {
+    "NW": "grass",
+    "NE": "grass",
+    "SW": "dirt",
+    "SE": "grass"
+   }
+  },
+  "5": {
+   "file": "tiles/wang_05.png",
+   "rect": [
+    192,
+    128,
+    64,
+    64
+   ],
+   "corners": {
+    "NW": "grass",
+    "NE": "dirt",
+    "SW": "grass",
+    "SE": "dirt"
+   }
+  },
+  "15": {
+   "file": "tiles/wang_15.png",
+   "rect": [
+    0,
+    192,
+    64,
+    64
+   ],
+   "corners": {
+    "NW": "dirt",
+    "NE": "dirt",
+    "SW": "dirt",
+    "SE": "dirt"
+   }
+  },
+  "14": {
+   "file": "tiles/wang_14.png",
+   "rect": [
+    64,
+    192,
+    64,
+    64
+   ],
+   "corners": {
+    "NW": "dirt",
+    "NE": "dirt",
+    "SW": "dirt",
+    "SE": "grass"
+   }
+  },
+  "9": {
+   "file": "tiles/wang_09.png",
+   "rect": [
+    128,
+    192,
+    64,
+    64
+   ],
+   "corners": {
+    "NW": "dirt",
+    "NE": "grass",
+    "SW": "grass",
+    "SE": "dirt"
+   }
+  },
+  "7": {
+   "file": "tiles/wang_07.png",
+   "rect": [
+    192,
+    192,
+    64,
+    64
+   ],
+   "corners": {
+    "NW": "grass",
+    "NE": "dirt",
+    "SW": "dirt",
+    "SE": "dirt"
+   }
+  }
+ }
+}
