@@ -16,7 +16,7 @@ import { DangerZoneButton } from './DangerZoneButton.tsx';
 import { DeploymentBanner } from './DeploymentBanner.tsx';
 import { DeploymentMenu } from './DeploymentMenu.tsx';
 import { DialogBox } from './DialogBox.tsx';
-import { MapGenerator, MapGeneratorActions, MapGeneratorBanner } from './MapGenerator.tsx';
+import { MapGenerator, MapGeneratorActions, MapGeneratorBanner, MapGeneratorPanel } from './MapGenerator.tsx';
 import { RegionPreview, RegionPreviewActions, RegionPreviewBanner } from './RegionPreview.tsx';
 import { ExperienceBar } from './ExperienceBar.tsx';
 import { ItemMenu } from './ItemMenu.tsx';
@@ -105,6 +105,7 @@ export function App() {
             <div className="hud">
               {/* First, so every other overlay paints over it. */}
               <UnitPanel />
+              {generator && <MapGeneratorPanel {...generator} />}
               <MapTags />
               <AutoCommandQueue />
               <DeploymentMenu />
