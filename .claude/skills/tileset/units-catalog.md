@@ -9,7 +9,8 @@ in `src/assets/sprites.ts` when a class needs art.
 
 ## Warrior and Amazon (generated, not from the pack)
 
-Two PixelLab recreations of Tactics Ogre's Warrior and Amazon, made from the
+Two PixelLab recreations of Tactics Ogre's Warrior and Amazon (the Warrior's
+since replaced by 64px art, see below), made from the
 original sprites (cut out at 1:1 into 32x32 frames as the reference). Like the
 pack they are 128x128 sheets (rows down/left/right/up, 4 frames, RGBA, alpha
 fully on or off), but they are **true 32px art, not 16px doubled**, with the
@@ -18,9 +19,17 @@ y 3–30; feet on y 30 (29–30 in the walks' passing frames), a row lower than
 the pack's.
 
 - `Warrior_02` is the warrior class's art (`UNIT_SPRITES.warrior`, also
-  `DEFAULT_UNIT_SPRITE`): a foot soldier in a big round pale-blue steel kettle
-  helmet, blue tunic with a belt, grey mail collar (seen from behind), tan
-  gloves and boots, small face in the helmet's shadow. No weapon shows.
+  `DEFAULT_UNIT_SPRITE`). It is now **64px art** (256x256 sheets, `frame: 64`),
+  replacing the 32px recreation described in this section: a foot soldier in
+  a sage-green kettle helmet, dark grey-green hood, slate-blue tunic with a
+  brown belt and silver buckle, brown gloves and boots, olive trousers. No
+  weapon shows. Four stills made from Qiang's stylized pixel turnaround with
+  PixelLab `image_to_pixelart` at 64x64 (faithful, strength 120; east from its
+  own view, not mirrored), the front's belt buckle recolored silver by hand (the face is meant to stay hidden in the helmet's shadow) (process
+  in the project files at `art/warrior-64/out-v2/notes.md`, finals in
+  `art/warrior-64/final/`). Assembled by `scripts/assemble-unit-sheet.js`;
+  footprint x 18–45, y 2–61, feet on y 61, so it has only 2px of headroom and
+  idle sinks 2px and move hops 2px (not 4).
 - `Amazon_01` is the archer class's art (`UNIT_SPRITES.archer`, replacing
   `Archer_02`): a woman with a big blonde mane and a green headband, light
   blue top, white short skirt, bare tan arms and legs, green boots. No weapon
