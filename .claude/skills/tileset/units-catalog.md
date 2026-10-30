@@ -25,7 +25,7 @@ the pack's.
   brown belt and silver buckle, brown gloves and boots, olive trousers. No
   weapon shows. Four stills made from Qiang's stylized pixel turnaround with
   PixelLab `image_to_pixelart` at 64x64 (faithful, strength 120; east from its
-  own view, not mirrored), the front's face and buckle fixed by hand (process
+  own view, not mirrored), the front's belt buckle recolored silver by hand (the face is meant to stay hidden in the helmet's shadow) (process
   in the project files at `art/warrior-64/out-v2/notes.md`, finals in
   `art/warrior-64/final/`). Assembled by `scripts/assemble-unit-sheet.js`;
   footprint x 18–45, y 2–61, feet on y 61, so it has only 2px of headroom and
