@@ -8,7 +8,9 @@
 // it keeps the stills as they are (no palette snap, crop or rescale), so
 // they should already stand where UNIT_SHADOW sits. The frames only shift
 // the still: idle sinks it one 32px-grid pixel for the middle two frames,
-// move hops it two up on the off beats. Uses only Node built-ins.
+// move hops it two up on the off beats. A tall still with less room than
+// that above or below it gets a smaller sink or hop, so it is never cut off.
+// Uses only Node built-ins.
 
 import path from 'node:path';
 import { decode, encode } from './dump-png.js';
@@ -29,9 +31,18 @@ for (const [i, still] of stills.entries()) {
 }
 // One pixel of the 32px grid the other sheets' motion was drawn on.
 const step = size / 32;
+// Clear rows above the tallest still and below the lowest one.
+const isClear = (y) => stills.every((still) => still[y].every((pixel) => pixel[3] === 0));
+let headroom = 0;
+while (headroom < size && isClear(headroom)) headroom++;
+let footroom = 0;
+while (footroom < size && isClear(size - 1 - footroom)) footroom++;
+const sink = Math.min(step, footroom);
+const hop = Math.min(2 * step, headroom);
+if (sink < step || hop < 2 * step) console.log(`tall stills: sink ${sink}px, hop ${hop}px`);
 const OFFSETS = {
-  Idle: [0, step, step, 0],
-  Move: [0, -2 * step, 0, -2 * step],
+  Idle: [0, sink, sink, 0],
+  Move: [0, -hop, 0, -hop],
 };
 
 const CLEAR = [0, 0, 0, 0];
