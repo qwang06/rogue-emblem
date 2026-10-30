@@ -3,7 +3,8 @@
 // rewrites. '#/configs' is the config editor's index, '#/configs/<id>' one
 // config's page, and '#/configs/regions/preview/<index>/<seed>' the map
 // a Warband Mode region makes from a seed, shown read-only on the battle
-// stage; '#/map-generator/<seed>' the Map Generator's map for a seed, shown
+// stage; '#/map-generator/<seed>' the Map Generator's map for a seed in
+// any region, and '#/map-generator/<index>/<seed>' in region <index>, shown
 // the same way; anything else is the game.
 
 export type Route =
@@ -11,7 +12,7 @@ export type Route =
   | { page: 'configs' }
   | { page: 'config'; id: string }
   | { page: 'region-preview'; index: number; seed: number }
-  | { page: 'map-generator'; seed: number };
+  | { page: 'map-generator'; region: number | null; seed: number };
 
 const CONFIG_ID_PATTERN = /^[a-z0-9-]+$/;
 // Config indices and seeds (seeds are below 2^32, so ten digits at most).
@@ -19,11 +20,7 @@ const NUMBER_PATTERN = /^\d{1,10}$/;
 
 export function parseRoute(hash: string): Route {
   const [first, second, ...rest] = hash.replace(/^#\/?/, '').replace(/\/+$/, '').split('/');
-  if (first === 'map-generator') {
-    return rest.length === 0 && second !== undefined && NUMBER_PATTERN.test(second)
-      ? { page: 'map-generator', seed: Number(second) }
-      : { page: 'game' };
-  }
+  if (first === 'map-generator') return parseMapGenerator([second, ...rest]);
   if (first !== 'configs') return { page: 'game' };
   if (second === 'regions' && rest.length > 0) return parseRegionPreview(rest);
   if (rest.length > 0) return { page: 'game' };
@@ -39,6 +36,15 @@ function parseRegionPreview([word, index = '', seed = '', ...rest]: string[]): R
   return { page: 'region-preview', index: Number(index), seed: Number(seed) };
 }
 
+// The '[<index>/]<seed>' after '#/map-generator/'.
+function parseMapGenerator(parts: (string | undefined)[]): Route {
+  const [region, seed] = parts.length === 1 ? [null, parts[0]] : parts;
+  if (parts.length > 2 || !NUMBER_PATTERN.test(seed ?? '') || (region !== null && !NUMBER_PATTERN.test(region ?? ''))) {
+    return { page: 'game' };
+  }
+  return { page: 'map-generator', region: region === null ? null : Number(region), seed: Number(seed) };
+}
+
 // The hash that leads to a route (usable as an href).
 export function routeHash(route: Route): string {
   switch (route.page) {
@@ -51,6 +57,6 @@ export function routeHash(route: Route): string {
     case 'region-preview':
       return `#/configs/regions/preview/${route.index}/${route.seed}`;
     case 'map-generator':
-      return `#/map-generator/${route.seed}`;
+      return route.region === null ? `#/map-generator/${route.seed}` : `#/map-generator/${route.region}/${route.seed}`;
   }
 }

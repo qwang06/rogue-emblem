@@ -233,7 +233,7 @@ describe('generatedMap', () => {
   const settings = { stagesPerRegion: 2, regions: REGION_CONFIGS.slice(0, 3) };
 
   it("previews a region's first stage on the seed", () => {
-    const setup = generatedMap(9, settings);
+    const setup = generatedMap(9, settings)!;
     expect(setup).toMatchObject({ mode: 'warband', seed: 9 });
     expect([1, 3, 5]).toContain(setup.mode === 'warband' && setup.stage);
   });
@@ -244,8 +244,19 @@ describe('generatedMap', () => {
 
   it('reaches every region across seeds', () => {
     const stages = new Set(
-      Array.from({ length: 60 }, (_, seed) => generatedMap(seed, settings)).map((s) => s.mode === 'warband' && s.stage),
+      Array.from({ length: 60 }, (_, seed) => generatedMap(seed, settings)!).map(
+        (s) => s.mode === 'warband' && s.stage,
+      ),
     );
     expect(stages).toEqual(new Set([1, 3, 5]));
+  });
+
+  it('keeps to the region it is given', () => {
+    expect(generatedMap(9, settings, 1)).toEqual(regionPreview(1, 9, settings));
+    expect(generatedMap(10, settings, 2)).toEqual({ mode: 'warband', seed: 10, stage: 5 });
+  });
+
+  it('is null for a region that does not exist', () => {
+    expect(generatedMap(9, settings, 3)).toBeNull();
   });
 });

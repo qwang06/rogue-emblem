@@ -208,10 +208,11 @@ export function regionPreview(index: number, seed: number, settings: RegionSetti
   return { mode: 'warband', seed, stage: first };
 }
 
-// The battle the Map Generator shows for `seed`: a region of `settings`
-// picked from the seed, previewed as regionPreview does, so one seed is
-// always the same map and a new seed may land in any region.
-export function generatedMap(seed: number, settings: RegionSettings): BattleSetup {
-  const index = randomInt(createSeededRng(seed), 0, settings.regions.length - 1);
-  return regionPreview(index, seed, settings)!;
+// The battle the Map Generator shows for `seed`: region `region` of
+// `settings` previewed as regionPreview does, or with no region one picked
+// from the seed, so one seed is always the same map and a new seed may land
+// in any region. Null for a region that doesn't exist.
+export function generatedMap(seed: number, settings: RegionSettings, region: number | null = null): BattleSetup | null {
+  const index = region ?? randomInt(createSeededRng(seed), 0, settings.regions.length - 1);
+  return regionPreview(index, seed, settings);
 }

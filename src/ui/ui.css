@@ -492,6 +492,7 @@ a.header-button {
 .header-popover__title,
 .objective__title,
 .deployment-menu__title,
+.map-generator__title,
 .merchant-screen__recipients-title,
 .reward-screen__title,
 .reward-team__title,
@@ -1648,6 +1649,64 @@ kbd {
   to {
     background-position-x: var(--unit-sprite-end);
   }
+}
+
+/* ---- Map Generator (the title menu's map preview) --------------------- */
+
+/* Docked in the map's bottom-left corner, clear of the unit panel up top. */
+.hud .map-generator {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 13rem;
+  box-sizing: border-box;
+  padding: 14px 8px 8px;
+  font-size: 0.8125rem;
+}
+
+.map-generator__field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-weight: 700;
+  color: var(--fg-dim);
+}
+
+.map-generator__select,
+.map-generator__button {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 3px 6px;
+  font: inherit;
+  color: var(--fg-bright);
+  background: var(--bg-light);
+  border: var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.map-generator__button {
+  font-weight: 700;
+  box-shadow: var(--lift);
+}
+
+.map-generator__select:hover,
+.map-generator__button:hover {
+  background: var(--selection);
+}
+
+.map-generator__button:active {
+  transform: translate(var(--px), var(--px));
+  box-shadow: none;
+}
+
+.map-generator__select:focus-visible,
+.map-generator__button:focus-visible {
+  outline: var(--px) solid var(--accent);
+  outline-offset: 1px;
 }
 
 /* ---- Pause menu ------------------------------------------------------ */
