@@ -4,6 +4,8 @@
 // without Phaser. Durations are at 1x; the scene clock scales them by the
 // game speed.
 
+import { GRID_PX } from '../game/tileset.ts';
+
 export interface Shake {
   durationMs: number;
   intensity: number;
@@ -41,13 +43,15 @@ export function getStrikeJuice({ hit, crit, lethal }: StrikeImpact, reducedMotio
   return { hitStopMs, shake };
 }
 
+// In pixels of a 32px tile (getLungeDistance scales them by GRID_PX).
 const MELEE_LUNGE_PX = 10;
 // A ranged attacker only leans in, since its blow lands from afar.
 const RANGED_LUNGE_PX = 4;
 const REDUCED_LUNGE_PX = 3;
 
-// How far the striker darts toward a target `tiles` away (grid distance).
+// How far, in world pixels, the striker darts toward a target `tiles` away
+// (grid distance).
 export function getLungeDistance(tiles: number, reducedMotion: boolean): number {
-  if (reducedMotion) return REDUCED_LUNGE_PX;
-  return tiles <= 1 ? MELEE_LUNGE_PX : RANGED_LUNGE_PX;
+  if (reducedMotion) return REDUCED_LUNGE_PX * GRID_PX;
+  return (tiles <= 1 ? MELEE_LUNGE_PX : RANGED_LUNGE_PX) * GRID_PX;
 }

@@ -1,11 +1,13 @@
 // Art config: which image each piece of the map draws with.
 //
-// Terrain comes from the overworld sheet (src/assets/overworld.png, 32x32
+// Terrain comes from the overworld sheet (src/assets/overworld.png, 32px
 // tiles, 42 columns x 63 rows; see .claude/skills/tileset/overworld-catalog.md
 // for what's where) and is picked by position on it. The tile cursor and the
 // movement arrow are tiles of the same sheet. Units are standalone sprite
 // sheets, one per animation, named here by texture key (src/assets/sprites.ts
-// maps keys to files), cut into one-tile frames.
+// maps keys to files and gives each its frame size), cut into one-tile
+// frames. Every image declares its own pixel size and is drawn one map tile
+// (TILE_SIZE) big, so art of different sizes mixes on the map.
 
 import type { Autotile, SheetTile } from './autotile.ts';
 import type { BuildingKind } from './buildings.ts';
@@ -17,7 +19,8 @@ import type { UnitRank } from './Unit.ts';
 
 export type UnitAnimation = 'idle' | 'move';
 
-// A blob shadow drawn under something standing on a tile (see UNIT_SHADOW).
+// A blob shadow drawn under something standing on a tile (see UNIT_SHADOW),
+// sized and placed in fractions of a tile.
 export interface Shadow {
   width: number;
   height: number;
@@ -26,13 +29,22 @@ export interface Shadow {
   alpha: number;
 }
 
-// Size of one map tile in world pixels — the terrain sheet's tile size.
-export const TILE_SIZE = 32;
+// Size of one map tile in world pixels. Art of any pixel size is scaled to
+// it: each sheet says how big its frames are (TERRAIN_SHEET.tileSize, the
+// `frame` of each entry in src/assets/sprites.ts).
+export const TILE_SIZE = 64;
+
+// World pixels per pixel of a 32px tile: the scale for sizes that were
+// tuned on the old 32px grid (stroke widths, nudges, lunges), so they keep
+// their size relative to a tile.
+export const GRID_PX = TILE_SIZE / 32;
 
 export const TERRAIN_SHEET = {
   key: 'overworld',
   columns: 42,
   rows: 63,
+  // The sheet's tile size in its own pixels.
+  tileSize: 32,
 };
 
 // Plain grass fills every cell under the other terrain, as a [column, row]
@@ -175,7 +187,8 @@ export const BRIDGE_ART: { vertical: SheetTile; horizontal: SheetTile } = {
 
 // Map props the terrain sheet doesn't have, drawn to match it by
 // .claude/skills/tileset/scripts/draw-map-props.js: a gateway per palette
-// ford stepping stones and a spike trap. A 32px sheet like the terrain one.
+// ford stepping stones and a spike trap. A 32px sheet like the terrain one
+// (its frame size is in src/assets/sprites.ts).
 export const MAP_PROPS_SHEET = { key: 'map-props', columns: 11 };
 
 // Each palette's gateway on MAP_PROPS_SHEET: `posts` (a short post either
@@ -327,33 +340,41 @@ export const STRUCTURE_SPRITES: Record<string, { key: string; width: number; hei
 
 // The blob shadow drawn under every unit, since the unit sprites have none:
 // a flat ellipse centered at (centerX, centerY) within the unit's tile, in
-// tile pixels, lined up with where the units' feet touch the ground.
+// fractions of a tile, lined up with where the units' feet touch the ground.
 export const UNIT_SHADOW: Shadow = {
-  width: 16,
-  height: 6,
-  centerX: 16,
-  centerY: 29,
+  width: 16 / 32,
+  height: 6 / 32,
+  centerX: 16 / 32,
+  centerY: 29 / 32,
   alpha: 0.35,
 };
 
 // The outline drawn around every unit on the map in its team's color, so
-// sides read at a glance without recoloring the sprite: `width` sheet
-// pixels thick, hugging the art's silhouette within each frame.
+// sides read at a glance without recoloring the sprite: `width` (a
+// fraction of a tile, see getOutlineWidth) thick, hugging the art's
+// silhouette within each frame.
 export const UNIT_OUTLINE: { width: number; colors: Readonly<Record<Team, number>> } = {
-  width: 1,
+  width: 1 / 32,
   colors: { player: 0x4a8cff, enemy: 0xff4a4a, guest: 0x4ad860 },
 };
+
+// How many of a sheet's own pixels thick the unit outline is on a sheet with
+// `frame`-pixel frames: UNIT_OUTLINE.width of a tile, at least one pixel.
+export function getOutlineWidth(frame: number): number {
+  return Math.max(1, Math.round(UNIT_OUTLINE.width * frame));
+}
 
 // The badge pinned to a boss's or an elite's tile on the map, and shown on
 // its portrait in the HUD, so the standouts read at a glance without
 // changing their sprites (boss and elite monsters look like any other of
 // their class): a white skull on a red plate for the boss, a gold star on a
 // violet plate for an elite. Each is drawn pixel by pixel (getPixelArtSpans)
-// at 1 world pixel per art pixel, its top-left corner at (x, y) within the
-// unit's tile, tucked into the top-right corner.
+// at GRID_PX world pixels per art pixel, its top-left corner at (x, y)
+// within the unit's tile in fractions of a tile, tucked into the top-right
+// corner.
 export const RANK_BADGES: Readonly<Record<UnitRank, PixelArt & { x: number; y: number }>> = {
   boss: {
-    x: 21,
+    x: 21 / 32,
     y: 0,
     palette: { O: 0x1a0d12, R: 0xc0283a, D: 0x8a1426, W: 0xf5ecd6, K: 0x2a1018 },
     rows: [
@@ -371,7 +392,7 @@ export const RANK_BADGES: Readonly<Record<UnitRank, PixelArt & { x: number; y: n
     ],
   },
   elite: {
-    x: 21,
+    x: 21 / 32,
     y: 0,
     palette: { O: 0x1a0d12, P: 0x3a2a5a, Y: 0xffd23a, L: 0xfff4a0 },
     rows: [
@@ -393,12 +414,12 @@ export const RANK_BADGES: Readonly<Record<UnitRank, PixelArt & { x: number; y: n
 // The blob shadow drawn at the foot of every tree, in the same terms as
 // UNIT_SHADOW: wider than the trunk and a bit under the canopy's spread, so
 // the tree sits on the ground, centered on the foot of the ginkgos' trunk
-// (x 12–19, y 28–29).
+// (x 12–19, y 28–29 of their 32px frame).
 export const TREE_SHADOW: Shadow = {
-  width: 20,
-  height: 6,
-  centerX: 16,
-  centerY: 29,
+  width: 20 / 32,
+  height: 6 / 32,
+  centerX: 16 / 32,
+  centerY: 29 / 32,
   alpha: 0.35,
 };
 

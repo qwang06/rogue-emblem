@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../../battleSetup.ts';
 import { createGrid } from '../../grid.ts';
-import { TILE_SIZE } from '../../tileset.ts';
 import { generateRealm, getNextSites, getRoad, type Realm } from './realm.ts';
 import {
   findPatches,
@@ -11,6 +10,7 @@ import {
   hashCell,
   INK_RULES,
   INK_STAMP_SIZE,
+  REALM_CELL,
   pointAlong,
   simplifyLine,
   smoothLine,
@@ -20,8 +20,8 @@ import {
 const SETTINGS = DEFAULT_CONTENT.regions;
 const REALMS = [3, 7922, 15841, 23760].map((seed) => generateRealm(seed, SETTINGS));
 const center = (p: { x: number; y: number }) => ({
-  x: p.x * TILE_SIZE + TILE_SIZE / 2,
-  y: p.y * TILE_SIZE + TILE_SIZE / 2,
+  x: p.x * REALM_CELL + REALM_CELL / 2,
+  y: p.y * REALM_CELL + REALM_CELL / 2,
 });
 
 // A little realm by hand: a row of land with the given terrain per cell.
@@ -47,8 +47,8 @@ describe('getRealmInk', () => {
   it('covers the realm at a tile per 32 pixels, marking its water cells', () => {
     for (const realm of REALMS) {
       const ink = getRealmInk(realm);
-      expect(ink.width).toBe(realm.grid.width * TILE_SIZE);
-      expect(ink.height).toBe(realm.grid.height * TILE_SIZE);
+      expect(ink.width).toBe(realm.grid.width * REALM_CELL);
+      expect(ink.height).toBe(realm.grid.height * REALM_CELL);
       expect(ink.water).toEqual(realm.grid.cells.map((cell) => cell.terrain === 'water'));
     }
   });
@@ -59,15 +59,15 @@ describe('getRealmInk', () => {
       expect(placements.map((p) => p.y)).toEqual([...placements.map((p) => p.y)].sort((a, b) => a - b));
       for (const site of realm.sites) {
         const onSite = placements.filter(
-          (p) => p.x === site.x * TILE_SIZE && p.y === site.y * TILE_SIZE && p.stamp.startsWith('grass'),
+          (p) => p.x === site.x * REALM_CELL && p.y === site.y * REALM_CELL && p.stamp.startsWith('grass'),
         );
         expect(onSite).toEqual([]);
       }
       for (const p of placements) {
         expect(p.x).toBeGreaterThan(-INK_STAMP_SIZE);
         expect(p.y).toBeGreaterThan(-INK_STAMP_SIZE);
-        expect(p.x).toBeLessThan(realm.grid.width * TILE_SIZE);
-        expect(p.y).toBeLessThan(realm.grid.height * TILE_SIZE);
+        expect(p.x).toBeLessThan(realm.grid.width * REALM_CELL);
+        expect(p.y).toBeLessThan(realm.grid.height * REALM_CELL);
       }
     }
   });
@@ -78,8 +78,8 @@ describe('getRealmInk', () => {
     const peaks = ink.placements.filter((p) => p.stamp.startsWith('mountain'));
     expect(trees).toHaveLength(INK_RULES.treesPerForest);
     expect(peaks).toHaveLength(1);
-    expect(peaks[0].x).toBeGreaterThanOrEqual(TILE_SIZE - 3);
-    expect(peaks[0].x).toBeLessThanOrEqual(TILE_SIZE + 3);
+    expect(peaks[0].x).toBeGreaterThanOrEqual(REALM_CELL - 3);
+    expect(peaks[0].x).toBeLessThanOrEqual(REALM_CELL + 3);
   });
 
   it('draws no waves on water that touches the shore', () => {
@@ -95,7 +95,7 @@ describe('getRealmInk', () => {
       for (const label of labels) {
         expect(realm.sites.map((site) => site.name)).not.toContain(label.text);
         expect(label.x).toBeGreaterThan(0);
-        expect(label.x).toBeLessThan(realm.grid.width * TILE_SIZE);
+        expect(label.x).toBeLessThan(realm.grid.width * REALM_CELL);
       }
       for (const kind of ['water', 'forest', 'mountain'] as const) {
         const big = findPatches(realm, kind).filter((patch) => patch.length >= INK_RULES.minNamed[kind]);

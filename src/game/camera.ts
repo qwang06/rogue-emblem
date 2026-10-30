@@ -5,14 +5,16 @@ interface Size {
   height: number;
 }
 
-// The largest whole-number zoom at which a map of `mapSize` tiles
-// ({ width, height }) fits inside a canvas of `canvasSize` pixels, capped at
-// maxZoom so small maps don't balloon. Whole numbers keep pixel art crisp.
-// Never below 1 (a map too big to fit is shown at 1x).
-export function getFitZoom(mapSize: Size, tileSize: number, canvasSize: Size, maxZoom: number): number {
-  const fit = Math.min(
-    Math.floor(canvasSize.width / (mapSize.width * tileSize)),
-    Math.floor(canvasSize.height / (mapSize.height * tileSize)),
-  );
-  return Math.max(1, Math.min(fit, maxZoom));
+// The largest zoom, a whole number of `step`s, at which a map of `mapSize`
+// tiles ({ width, height }) fits inside a canvas of `canvasSize` pixels,
+// capped at maxZoom so small maps don't balloon. Steps keep pixel art
+// crisp: with the default 1 every art pixel is a whole number of screen
+// pixels; 0.5 suits art drawn at 2x (a 32px sheet on 64px tiles), whose
+// pixels are still whole at half steps. Never below one step (a map too big
+// to fit is shown at `step`).
+export function getFitZoom(mapSize: Size, tileSize: number, canvasSize: Size, maxZoom: number, step = 1): number {
+  const fit = Math.min(canvasSize.width / (mapSize.width * tileSize), canvasSize.height / (mapSize.height * tileSize));
+  // A hair of slack so a float like 2.9999999 still counts as 3 steps.
+  const steps = Math.floor(fit / step + 1e-9);
+  return Math.max(step, Math.min(steps * step, maxZoom));
 }

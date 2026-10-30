@@ -5,10 +5,9 @@
 // overworld screen puts the buffer on a canvas; the realm preview script
 // writes it to a PNG. Pure: no DOM, the same inputs give the same pixels.
 
-import { TILE_SIZE } from '../../tileset.ts';
 import { createSeededRng } from '../../rng.ts';
 import { createValueNoise } from './realmTerrain.ts';
-import { hashCell, type InkStamp, type RealmInk } from './realmInk.ts';
+import { hashCell, REALM_CELL, type InkStamp, type RealmInk } from './realmInk.ts';
 
 export interface RgbaImage {
   width: number;
@@ -85,19 +84,19 @@ function paintParchment(image: RgbaImage, seed: number): void {
 // with noise so coasts curve, then colored by distance from the coast.
 function paintWater(image: RgbaImage, ink: RealmInk, seed: number): void {
   const { width, height, data } = image;
-  const columns = Math.round(width / TILE_SIZE);
-  const rows = Math.round(height / TILE_SIZE);
+  const columns = Math.round(width / REALM_CELL);
+  const rows = Math.round(height / REALM_CELL);
   const rng = createSeededRng((seed ^ 0x77617465) >>> 0);
   const wobble = createValueNoise(width, height, 12, rng);
   const wetAt = (cx: number, cy: number) =>
     ink.water[Math.min(rows - 1, Math.max(0, cy)) * columns + Math.min(columns - 1, Math.max(0, cx))] ? 1 : 0;
   const wet = new Uint8Array(width * height);
   for (let y = 0; y < height; y++) {
-    const gy = y / TILE_SIZE - 0.5;
+    const gy = y / REALM_CELL - 0.5;
     const cy = Math.floor(gy);
     const ty = smooth(gy - cy);
     for (let x = 0; x < width; x++) {
-      const gx = x / TILE_SIZE - 0.5;
+      const gx = x / REALM_CELL - 0.5;
       const cx = Math.floor(gx);
       const tx = smooth(gx - cx);
       const top = wetAt(cx, cy) * (1 - tx) + wetAt(cx + 1, cy) * tx;

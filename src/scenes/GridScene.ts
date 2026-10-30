@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { SPRITE_URLS } from '../assets/sprites.ts';
+import { SPRITES } from '../assets/sprites.ts';
 import terrainSheetUrl from '../assets/overworld.png';
 import { gameCommands, type Command, type MenuField } from '../bridge/commands.ts';
 import { changeAutoSpeed, cycleAutoSpeed } from '../game/autoSpeed.ts';
@@ -211,6 +211,7 @@ import {
   TERRAIN_AUTOTILES,
   TERRAIN_BASE_TILE,
   TERRAIN_SHEET,
+  GRID_PX,
   TILE_SIZE,
   TREE_SPRITES,
   UNIT_ANIMATIONS,
@@ -252,8 +253,11 @@ import type { SkillAction } from '../game/skills.ts';
 import type { RosterMenuEntry } from '../bridge/gameStore.ts';
 
 // The canvas is sized by the page (see main.ts); maps are zoomed to fit it,
-// up to MAX_ZOOM, and centered.
-const MAX_ZOOM = 3;
+// up to MAX_ZOOM, and centered. Zoom goes in steps of ZOOM_STEP, so a
+// pixel of the 32px art (drawn at GRID_PX) stays a whole number of screen
+// pixels; the cap is a tile 96 screen pixels big.
+const ZOOM_STEP = 1 / GRID_PX;
+const MAX_ZOOM = 3 / GRID_PX;
 const MOVE_RANGE_COLOR = 0x3b82f6;
 const MOVE_RANGE_ALPHA = 0.45;
 const ATTACK_RANGE_COLOR = 0xef4444;
@@ -279,7 +283,7 @@ const PUSH_PREVIEW_ALPHA = 0.5;
 // A shoved unit's slide onto its new tile, and the nudge of one that's
 // stopped (in px).
 const PUSH_SLIDE_MS = 160;
-const PUSH_BUMP_PX = 6;
+const PUSH_BUMP_PX = 6 * GRID_PX;
 const DEPLOYMENT_ZONE_COLOR = 0xfacc15;
 const DEPLOYMENT_ZONE_ALPHA = 0.4;
 // A seize objective's tile: a gold outline over a faint fill that pulses,
@@ -557,10 +561,12 @@ export class GridScene extends Phaser.Scene {
     this.load.on('progress', (progress: number) => gameStore.setState({ mapLoadProgress: progress }));
     // Spritesheets so sprites can draw single frames: the cursor and arrow
     // tiles of the terrain sheet (the tilemaps still use it whole), and each
-    // unit sheet's animation frames.
-    this.load.spritesheet(TERRAIN_SHEET.key, terrainSheetUrl, { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
-    for (const [key, url] of Object.entries(SPRITE_URLS)) {
-      this.load.spritesheet(key, url, { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
+    // unit sheet's animation frames. Each is cut at its own frame size and
+    // drawn one tile big (addTileSprite, addTileImage).
+    const { tileSize } = TERRAIN_SHEET;
+    this.load.spritesheet(TERRAIN_SHEET.key, terrainSheetUrl, { frameWidth: tileSize, frameHeight: tileSize });
+    for (const [key, { url, frame }] of Object.entries(SPRITES)) {
+      this.load.spritesheet(key, url, { frameWidth: frame, frameHeight: frame });
     }
   }
 
@@ -733,7 +739,7 @@ export class GridScene extends Phaser.Scene {
   // on create and whenever the page resizes the canvas.
   fitCamera() {
     const camera = this.cameras.main;
-    camera.setZoom(getFitZoom(this.grid, TILE_SIZE, this.scale.gameSize, MAX_ZOOM));
+    camera.setZoom(getFitZoom(this.grid, TILE_SIZE, this.scale.gameSize, MAX_ZOOM, ZOOM_STEP));
     camera.centerOn((this.grid.width * TILE_SIZE) / 2, (this.grid.height * TILE_SIZE) / 2);
     // The camera's visible area only updates when it next renders, so move
     // an open unit menu to the refitted map then.
@@ -2138,7 +2144,7 @@ export class GridScene extends Phaser.Scene {
     this.incomingMarker = this.add
       .rectangle(x, y, TILE_SIZE, TILE_SIZE, INCOMING_TILE_COLOR, INCOMING_TILE_ALPHA)
       .setOrigin(0, 0)
-      .setStrokeStyle(2, INCOMING_TILE_COLOR)
+      .setStrokeStyle(2 * GRID_PX, INCOMING_TILE_COLOR)
       .setDepth(0.42);
     this.tweens.add({
       targets: this.incomingMarker,
@@ -2436,7 +2442,7 @@ export class GridScene extends Phaser.Scene {
     this.arrowSprites = getArrowPieces(path).map(({ x, y, piece }) => {
       const pos = gridToWorld(x, y, TILE_SIZE);
       const frame = getTileFrame(ARROW_TILES[piece], TERRAIN_SHEET.columns);
-      return this.add.sprite(pos.x, pos.y, TERRAIN_SHEET.key, frame).setOrigin(0, 0).setDepth(0.6);
+      return this.addTileSprite(pos.x, pos.y, TERRAIN_SHEET.key, frame).setDepth(0.6);
     });
   }
 
@@ -2604,9 +2610,9 @@ export class GridScene extends Phaser.Scene {
     const center = ({ x, y }: Point) => new Phaser.Math.Vector2((x + 0.5) * TILE_SIZE, (y + 0.5) * TILE_SIZE);
     const end = center(path[path.length - 1]);
     if (path.length > 1) {
-      graphics.lineStyle(2, INTENT_COLOR, INTENT_ROUTE_ALPHA);
+      graphics.lineStyle(2 * GRID_PX, INTENT_COLOR, INTENT_ROUTE_ALPHA);
       graphics.strokePoints(path.map(center), false);
-      if (!target) graphics.fillStyle(INTENT_COLOR, INTENT_ROUTE_ALPHA).fillCircle(end.x, end.y, 3);
+      if (!target) graphics.fillStyle(INTENT_COLOR, INTENT_ROUTE_ALPHA).fillCircle(end.x, end.y, 3 * GRID_PX);
     }
     if (!target) return;
     // From the edge of the attacker's tile to the edge of its target's, so
@@ -2615,9 +2621,9 @@ export class GridScene extends Phaser.Scene {
     const direction = tip.clone().subtract(end).normalize();
     const from = end.clone().add(direction.clone().scale(TILE_SIZE * 0.3));
     const to = tip.clone().subtract(direction.clone().scale(TILE_SIZE * 0.4));
-    const side = new Phaser.Math.Vector2(-direction.y, direction.x).scale(4);
-    const base = to.clone().subtract(direction.clone().scale(7));
-    graphics.lineStyle(3, INTENT_COLOR, INTENT_ARROW_ALPHA).lineBetween(from.x, from.y, base.x, base.y);
+    const side = new Phaser.Math.Vector2(-direction.y, direction.x).scale(4 * GRID_PX);
+    const base = to.clone().subtract(direction.clone().scale(7 * GRID_PX));
+    graphics.lineStyle(3 * GRID_PX, INTENT_COLOR, INTENT_ARROW_ALPHA).lineBetween(from.x, from.y, base.x, base.y);
     graphics
       .fillStyle(INTENT_COLOR, INTENT_ARROW_ALPHA)
       .fillTriangle(to.x, to.y, base.x + side.x, base.y + side.y, base.x - side.x, base.y - side.y);
@@ -2894,7 +2900,7 @@ export class GridScene extends Phaser.Scene {
         this.tweens.add({
           targets: sprite,
           alpha: 0.2,
-          y: sprite.y + 6,
+          y: sprite.y + 6 * GRID_PX,
           duration: PUSH_SLIDE_MS * 2,
           onComplete: next,
         });
@@ -3387,11 +3393,7 @@ export class GridScene extends Phaser.Scene {
         repeat: -1,
       });
     }
-    this.cursorSprite = this.add
-      .sprite(x, y, key, frames[0].frame)
-      .setOrigin(0, 0)
-      .setDepth(1)
-      .play(CURSOR_ANIMATION.key);
+    this.cursorSprite = this.addTileSprite(x, y, key, frames[0].frame).setDepth(1).play(CURSOR_ANIMATION.key);
   }
 
   // A hidden cursor hovers nothing, so the unit panel clears with it.
@@ -3405,24 +3407,32 @@ export class GridScene extends Phaser.Scene {
     this.cursorSprite.setPosition(x, y);
   }
 
-  // A sprite (by texture key) covering the map tile whose top-left corner is
-  // (x, y), stretched to the tile whatever the image's own size.
-  addTileSprite(x: number, y: number, key: string) {
-    return this.add.sprite(x, y, key).setOrigin(0, 0).setDisplaySize(TILE_SIZE, TILE_SIZE);
+  // A sprite (by texture key, and frame of a sheet) covering the map tile
+  // whose top-left corner is (x, y), stretched to the tile whatever the
+  // image's own pixel size.
+  addTileSprite(x: number, y: number, key: string, frame?: number) {
+    return this.add.sprite(x, y, key, frame).setOrigin(0, 0).setDisplaySize(TILE_SIZE, TILE_SIZE);
+  }
+
+  // A still image of one tile-sized frame, placed like addTileSprite.
+  addTileImage(x: number, y: number, key: string, frame: number) {
+    return this.add.image(x, y, key, frame).setOrigin(0, 0).setDisplaySize(TILE_SIZE, TILE_SIZE);
   }
 
   // Terrain is plain grass under every cell, with each autotiled terrain
   // (`autotiles`, see src/game/autotile.ts) drawn over it as its own layer of
   // half-size tiles, four per cell. Animated sets step through their copies
-  // on a timer.
+  // on a timer. The tilemaps use the sheet's own tile size, and each layer
+  // is scaled up to the map's TILE_SIZE.
   renderTerrain(grid: Grid, autotiles: Record<string, Autotile>) {
-    const { key, columns } = TERRAIN_SHEET;
+    const { key, columns, tileSize } = TERRAIN_SHEET;
+    const scale = TILE_SIZE / tileSize;
     const grassFrame = getTileFrame(TERRAIN_BASE_TILE, columns);
     const grass = Array.from({ length: grid.height }, () => Array(grid.width).fill(grassFrame));
-    const grassMap = this.make.tilemap({ data: grass, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });
-    grassMap.createLayer(0, grassMap.addTilesetImage(key, key, TILE_SIZE, TILE_SIZE)!, 0, 0);
+    const grassMap = this.make.tilemap({ data: grass, tileWidth: tileSize, tileHeight: tileSize });
+    grassMap.createLayer(0, grassMap.addTilesetImage(key, key, tileSize, tileSize)!, 0, 0)!.setScale(scale);
 
-    const half = TILE_SIZE / 2;
+    const half = tileSize / 2;
     for (const [terrain, autotile] of Object.entries(autotiles)) {
       const frameCount = autotile.animation?.frames ?? 1;
       // One quarter-frame map per animation frame: frames[i][y][x].
@@ -3431,7 +3441,7 @@ export class GridScene extends Phaser.Scene {
       );
 
       const map = this.make.tilemap({ data: frames[0], tileWidth: half, tileHeight: half });
-      const layer = map.createLayer(0, map.addTilesetImage(key, key, half, half)!, 0, 0)!;
+      const layer = map.createLayer(0, map.addTilesetImage(key, key, half, half)!, 0, 0)!.setScale(scale);
       if (frameCount < 2) continue;
       let current = 0;
       this.time.addEvent({
@@ -3455,10 +3465,7 @@ export class GridScene extends Phaser.Scene {
     const depths = { ground: 0.4, cap: 0.45, roof: 0.8 };
     for (const { x, y, tile, layer, sheet = TERRAIN_SHEET } of sprites) {
       const pos = gridToWorld(x, y, TILE_SIZE);
-      this.add
-        .image(pos.x, pos.y, sheet.key, getTileFrame(tile, sheet.columns))
-        .setOrigin(0, 0)
-        .setDepth(depths[layer]);
+      this.addTileImage(pos.x, pos.y, sheet.key, getTileFrame(tile, sheet.columns)).setDepth(depths[layer]);
     }
   }
 
@@ -3479,7 +3486,7 @@ export class GridScene extends Phaser.Scene {
     const marker = this.add
       .rectangle(x, y, TILE_SIZE, TILE_SIZE, SEIZE_TILE_COLOR, SEIZE_TILE_ALPHA)
       .setOrigin(0, 0)
-      .setStrokeStyle(2, SEIZE_TILE_COLOR)
+      .setStrokeStyle(2 * GRID_PX, SEIZE_TILE_COLOR)
       .setDepth(0.42);
     this.tweens.add({
       targets: marker,
@@ -3499,10 +3506,7 @@ export class GridScene extends Phaser.Scene {
       const sprite = STRUCTURE_SPRITES[structure];
       for (const tile of getStructureTiles(sprite, x, y)) {
         const pos = gridToWorld(tile.x, tile.y, TILE_SIZE);
-        this.add
-          .image(pos.x, pos.y, sprite.key, tile.frame)
-          .setOrigin(0, 0)
-          .setDepth(tile.overUnits ? 0.8 : 0.4);
+        this.addTileImage(pos.x, pos.y, sprite.key, tile.frame).setDepth(tile.overUnits ? 0.8 : 0.4);
       }
     }
   }

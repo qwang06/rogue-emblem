@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { getOutlineMask } from '../game/pixelShapes.ts';
-import { UNIT_OUTLINE } from '../game/tileset.ts';
+import { getOutlineWidth } from '../game/tileset.ts';
 
 const UNIT_OUTLINE_DEPTH = 0.74; // just under units (0.75), over their shadows (0.7)
 
@@ -23,7 +23,7 @@ function ensureOutlineTexture(scene: Phaser.Scene, key: string): string {
   for (let i = 0; i < alpha.length; i++) alpha[i] = pixels.data[i * 4 + 3];
 
   const firstFrame = source.get(0);
-  const mask = getOutlineMask(alpha, width, height, firstFrame.width, UNIT_OUTLINE.width);
+  const mask = getOutlineMask(alpha, width, height, firstFrame.width, getOutlineWidth(firstFrame.width));
   const texture = scene.textures.createCanvas(outlineKey, width, height)!;
   const out = texture.context.createImageData(width, height);
   mask.forEach((on, i) => {
