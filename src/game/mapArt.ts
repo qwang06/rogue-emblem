@@ -4,25 +4,17 @@
 // layer; GridScene only draws them.
 //
 // Layers, bottom to top:
-//   'ground' — the cell's own art (a forest, a mountain body, a building),
+//   'ground' — the cell's own art (a forest, a mountain, a building),
 //              under units
-//   'cap'    — art spilling into the cell north of its owner (a mountain's
-//              peak, a flag), over that cell's ground art but under units
+//   'cap'    — art spilling into the cell north of its owner (a flag),
+//              over that cell's ground art but under units
 //   'roof'   — a tall building's top, over units, so a unit standing north
 //              of a tower passes behind it
 
 import type { Autotile, SheetTile } from './autotile.ts';
 import type { BuildingPlacement } from './buildings.ts';
 import { getCell, type Grid, type Point } from './grid.ts';
-import type {
-  BRIDGE_ART,
-  BUILDING_ART,
-  BuildingPalette,
-  FOREST_ART,
-  GATE_ART,
-  MAP_PROPS_SHEET,
-  MOUNTAIN_ART,
-} from './tileset.ts';
+import type { BRIDGE_ART, BUILDING_ART, BuildingPalette, FeatureArt, GATE_ART, MAP_PROPS_SHEET } from './tileset.ts';
 
 export type MapSpriteLayer = 'ground' | 'cap' | 'roof';
 
@@ -40,36 +32,15 @@ export function pickVariant(x: number, y: number, count: number): number {
   return (hash >>> 0) % count;
 }
 
-function isTerrain(grid: Grid, x: number, y: number, terrain: string): boolean {
-  return getCell(grid, x, y)?.terrain === terrain;
-}
-
-// Overlays for every forest and mountain cell. A mountain draws its body
-// variant, or a peak-below variant when the cell south of it is a mountain
-// too; the top mountain of a column puts a cap in the cell north of it,
-// unless that cell is off the map or a forest, which draws the
-// forest-with-peak tile instead.
-export function getFeatureSprites(
-  grid: Grid,
-  forestArt: typeof FOREST_ART,
-  mountainArt: typeof MOUNTAIN_ART,
-): MapSprite[] {
+// Overlays for every forest and mountain cell: a variant of its art per
+// cell, under units.
+export function getFeatureSprites(grid: Grid, forestArt: FeatureArt, mountainArt: FeatureArt): MapSprite[] {
   const sprites: MapSprite[] = [];
   for (const { x, y, terrain } of grid.cells) {
-    const mountainSouth = isTerrain(grid, x, y + 1, 'mountain');
-    if (terrain === 'forest') {
-      const variant = pickVariant(x, y, forestArt.tiles.length);
-      const tile = mountainSouth ? forestArt.peakBelow[variant] : forestArt.tiles[variant];
-      sprites.push({ x, y, tile, layer: 'ground' });
-    } else if (terrain === 'mountain') {
-      const variants = mountainSouth ? mountainArt.peakBelow : mountainArt.body;
-      sprites.push({ x, y, tile: variants[pickVariant(x, y, variants.length)], layer: 'ground' });
-      const north = getCell(grid, x, y - 1);
-      if (north && north.terrain !== 'mountain' && north.terrain !== 'forest') {
-        const cap = mountainArt.cap[pickVariant(x, y, mountainArt.cap.length)];
-        sprites.push({ x, y: y - 1, tile: cap, layer: 'cap' });
-      }
-    }
+    const art = terrain === 'forest' ? forestArt : terrain === 'mountain' ? mountainArt : null;
+    if (!art) continue;
+    const tile = art.tiles[pickVariant(x, y, art.tiles.length)];
+    sprites.push({ x, y, tile, layer: 'ground', sheet: art.sheet });
   }
   return sprites;
 }
@@ -132,7 +103,7 @@ export function getCrossingSprites(
   for (const { x, y, terrain } of grid.cells) {
     if (terrain === 'bridge') {
       const tile = isWater(x - 1, y) || isWater(x + 1, y) ? bridgeArt.vertical : bridgeArt.horizontal;
-      sprites.push({ x, y, tile, layer: 'ground' });
+      sprites.push({ x, y, tile, layer: 'ground', sheet: bridgeArt.sheet });
     } else if (terrain === 'ford') {
       sprites.push({ x, y, tile: fordTile, layer: 'ground', sheet: propsSheet });
     } else if (terrain === 'gate') {

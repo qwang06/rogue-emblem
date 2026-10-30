@@ -161,6 +161,7 @@ import { getPathFacings } from '../game/facing.ts';
 import { createKeyRepeat, updateKeyRepeat } from '../game/keyRepeat.ts';
 import { getArrowPieces } from '../game/moveArrow.ts';
 import { getQuarterFrameMap, getTileFrame, type Autotile } from '../game/autotile.ts';
+import { getWangFrameMap } from '../game/wangTiles.ts';
 import {
   getBuildingSprites,
   getCrossingSprites,
@@ -208,9 +209,9 @@ import {
   MAP_PROPS_SHEET,
   MOUNTAIN_ART,
   STRUCTURE_SPRITES,
-  TERRAIN_AUTOTILES,
-  TERRAIN_BASE_TILE,
   TERRAIN_SHEET,
+  WANG_SETS,
+  WANG_SHEET,
   GRID_PX,
   TILE_SIZE,
   TREE_SPRITES,
@@ -606,7 +607,7 @@ export class GridScene extends Phaser.Scene {
 
     const paletteName = level.palette ?? DEFAULT_BUILDING_PALETTE;
     const palette = BUILDING_PALETTES[paletteName];
-    this.renderTerrain(this.grid, { ...TERRAIN_AUTOTILES, wall: getWallAutotile(palette) });
+    this.renderTerrain(this.grid, { wall: getWallAutotile(palette) });
     this.renderMapSprites([
       ...getCrossingSprites(this.grid, BRIDGE_ART, GATE_ART[paletteName], FORD_ART, MAP_PROPS_SHEET),
       ...getHazardSprites(this.grid, SPIKES_ART, MAP_PROPS_SHEET),
@@ -3419,19 +3420,28 @@ export class GridScene extends Phaser.Scene {
     return this.add.image(x, y, key, frame).setOrigin(0, 0).setDisplaySize(TILE_SIZE, TILE_SIZE);
   }
 
-  // Terrain is plain grass under every cell, with each autotiled terrain
-  // (`autotiles`, see src/game/autotile.ts) drawn over it as its own layer of
-  // half-size tiles, four per cell. Animated sets step through their copies
-  // on a timer. The tilemaps use the sheet's own tile size, and each layer
-  // is scaled up to the map's TILE_SIZE.
+  // The ground is the 64px corner tilesets (WANG_SETS, see
+  // src/game/wangTiles.ts), each a layer of half-size tiles, four per cell:
+  // the grass-and-dirt base under every cell, then the river over any
+  // quarter touching water. Each blob-autotiled terrain (`autotiles`, see
+  // src/game/autotile.ts) is drawn over that as its own layer off the
+  // overworld sheet; animated sets step through their copies on a timer.
+  // The tilemaps use their sheet's own tile size, and each layer is scaled
+  // to the map's TILE_SIZE.
   renderTerrain(grid: Grid, autotiles: Record<string, Autotile>) {
+    const wangHalf = SPRITES[WANG_SHEET.key].frame / 2;
+    for (const set of Object.values(WANG_SETS)) {
+      const map = this.make.tilemap({
+        data: getWangFrameMap(grid, set, WANG_SHEET.columns),
+        tileWidth: wangHalf,
+        tileHeight: wangHalf,
+      });
+      const tiles = map.addTilesetImage(WANG_SHEET.key, WANG_SHEET.key, wangHalf, wangHalf)!;
+      map.createLayer(0, tiles, 0, 0)!.setScale(TILE_SIZE / (wangHalf * 2));
+    }
+
     const { key, columns, tileSize } = TERRAIN_SHEET;
     const scale = TILE_SIZE / tileSize;
-    const grassFrame = getTileFrame(TERRAIN_BASE_TILE, columns);
-    const grass = Array.from({ length: grid.height }, () => Array(grid.width).fill(grassFrame));
-    const grassMap = this.make.tilemap({ data: grass, tileWidth: tileSize, tileHeight: tileSize });
-    grassMap.createLayer(0, grassMap.addTilesetImage(key, key, tileSize, tileSize)!, 0, 0)!.setScale(scale);
-
     const half = tileSize / 2;
     for (const [terrain, autotile] of Object.entries(autotiles)) {
       const frameCount = autotile.animation?.frames ?? 1;
