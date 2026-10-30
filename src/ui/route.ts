@@ -3,13 +3,15 @@
 // rewrites. '#/configs' is the config editor's index, '#/configs/<id>' one
 // config's page, and '#/configs/regions/preview/<index>/<seed>' the map
 // a Warband Mode region makes from a seed, shown read-only on the battle
-// stage; anything else is the game.
+// stage; '#/map-generator/<seed>' the Map Generator's map for a seed, shown
+// the same way; anything else is the game.
 
 export type Route =
   | { page: 'game' }
   | { page: 'configs' }
   | { page: 'config'; id: string }
-  | { page: 'region-preview'; index: number; seed: number };
+  | { page: 'region-preview'; index: number; seed: number }
+  | { page: 'map-generator'; seed: number };
 
 const CONFIG_ID_PATTERN = /^[a-z0-9-]+$/;
 // Config indices and seeds (seeds are below 2^32, so ten digits at most).
@@ -17,6 +19,11 @@ const NUMBER_PATTERN = /^\d{1,10}$/;
 
 export function parseRoute(hash: string): Route {
   const [first, second, ...rest] = hash.replace(/^#\/?/, '').replace(/\/+$/, '').split('/');
+  if (first === 'map-generator') {
+    return rest.length === 0 && second !== undefined && NUMBER_PATTERN.test(second)
+      ? { page: 'map-generator', seed: Number(second) }
+      : { page: 'game' };
+  }
   if (first !== 'configs') return { page: 'game' };
   if (second === 'regions' && rest.length > 0) return parseRegionPreview(rest);
   if (rest.length > 0) return { page: 'game' };
@@ -43,5 +50,7 @@ export function routeHash(route: Route): string {
       return `#/configs/${route.id}`;
     case 'region-preview':
       return `#/configs/regions/preview/${route.index}/${route.seed}`;
+    case 'map-generator':
+      return `#/map-generator/${route.seed}`;
   }
 }

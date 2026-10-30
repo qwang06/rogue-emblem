@@ -3,6 +3,7 @@ import {
   createBattleLevel,
   DEFAULT_CONTENT,
   regionPreview,
+  generatedMap,
   describeBattle,
   FIRST_STORY_CHAPTER,
   getBattleDiceSeed,
@@ -225,5 +226,26 @@ describe('regionPreview', () => {
     expect(regionPreview(3, 9, settings)).toBeNull();
     expect(regionPreview(-1, 9, settings)).toBeNull();
     expect(regionPreview(0.5, 9, settings)).toBeNull();
+  });
+});
+
+describe('generatedMap', () => {
+  const settings = { stagesPerRegion: 2, regions: REGION_CONFIGS.slice(0, 3) };
+
+  it("previews a region's first stage on the seed", () => {
+    const setup = generatedMap(9, settings);
+    expect(setup).toMatchObject({ mode: 'warband', seed: 9 });
+    expect([1, 3, 5]).toContain(setup.mode === 'warband' && setup.stage);
+  });
+
+  it('is the same for the same seed', () => {
+    expect(generatedMap(1234, settings)).toEqual(generatedMap(1234, settings));
+  });
+
+  it('reaches every region across seeds', () => {
+    const stages = new Set(
+      Array.from({ length: 60 }, (_, seed) => generatedMap(seed, settings)).map((s) => s.mode === 'warband' && s.stage),
+    );
+    expect(stages).toEqual(new Set([1, 3, 5]));
   });
 });

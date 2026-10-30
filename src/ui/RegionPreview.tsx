@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { BATTLE_STATE_DEFAULTS, gameStore } from '../bridge/gameStore.ts';
 import { getActiveRegionSettings } from '../data/customRegions.ts';
-import { regionPreview } from '../game/battleSetup.ts';
+import { regionPreview, type BattleSetup } from '../game/battleSetup.ts';
 import { randomSeed } from '../game/rng.ts';
 import { getRegionStages } from '../game/warband/regions.ts';
 import { LoadingScreen } from './LoadingScreen.tsx';
@@ -15,26 +15,30 @@ const REGIONS_PAGE = routeHash({ page: 'config', id: 'regions' });
 const HINT = 'Click a unit to see its reach, or Esc to go back.';
 
 // #/configs/regions/preview/<index>/<seed>: region `index` (from the
-// regions Warband Mode plays, uploads included) on the map `seed` makes,
-// drawn by the map scene on the battle stage. The store's screen is
-// 'preview', so GridScene shows the map read-only (no deployment, dialog
-// or turns). A new seed in the route restarts the scene on that map;
-// leaving the route ends the preview, and the scene ending it (Esc) leaves
-// for the regions page.
+// regions Warband Mode plays, uploads included) on the map `seed` makes.
+// A new seed in the route restarts the scene on that map.
 export function RegionPreview({ index, seed }: PreviewRoute) {
   const setup = useMemo(() => regionPreview(index, seed, getActiveRegionSettings()), [index, seed]);
+  return <MapPreview setup={setup} exitHash={REGIONS_PAGE} />;
+}
+
+// Runs `setup` on the battle stage with the store's screen 'preview', so
+// GridScene shows the map read-only (no deployment, dialog or turns). A
+// new setup restarts the scene on it; leaving the page ends the preview,
+// and the scene ending it (Esc), or a null setup, leaves for `exitHash`.
+export function MapPreview({ setup, exitHash }: { setup: BattleSetup | null; exitHash: string }) {
   const screen = useGameStore((state) => state.screen);
   const started = useRef(false);
 
   useEffect(() => {
     if (screen !== 'title') started.current = true;
-    else if (started.current) window.location.hash = REGIONS_PAGE;
-  }, [screen]);
+    else if (started.current) window.location.hash = exitHash;
+  }, [screen, exitHash]);
 
   useEffect(() => {
     if (setup) gameStore.setState({ ...BATTLE_STATE_DEFAULTS, screen: 'preview', battleSetup: setup });
-    else window.location.hash = REGIONS_PAGE;
-  }, [setup]);
+    else window.location.hash = exitHash;
+  }, [setup, exitHash]);
 
   // Set straight in the store rather than sent as 'main-menu', so the
   // preview ends even if the scene is still loading and can't hear it.
