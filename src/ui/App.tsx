@@ -16,6 +16,7 @@ import { DangerZoneButton } from './DangerZoneButton.tsx';
 import { DeploymentBanner } from './DeploymentBanner.tsx';
 import { DeploymentMenu } from './DeploymentMenu.tsx';
 import { DialogBox } from './DialogBox.tsx';
+import { MapGenerator, MapGeneratorActions, MapGeneratorBanner } from './MapGenerator.tsx';
 import { RegionPreview, RegionPreviewActions, RegionPreviewBanner } from './RegionPreview.tsx';
 import { ExperienceBar } from './ExperienceBar.tsx';
 import { ItemMenu } from './ItemMenu.tsx';
@@ -49,7 +50,8 @@ import { useRoute } from './useRoute.ts';
 // `screen` is 'title', and `LoadingScreen` covers it while a battle's map
 // loads. On the #/configs routes, `ConfigEditor` covers it instead, except
 // for a Warband Mode region's preview, which runs the map on the stage read-only
-// (`RegionPreview`).
+// (`RegionPreview`). The Map Generator (#/map-generator) runs its maps the
+// same way (`MapGenerator`).
 //
 // Inside the stage, the HUD overlay sits on top of the canvas: the overlay
 // ignores pointer events so clicks fall through to the game, and
@@ -65,6 +67,7 @@ export function App() {
   const screen = useGameStore((state) => state.screen);
   const route = useRoute();
   const preview = route.page === 'region-preview' ? route : null;
+  const generator = route.page === 'map-generator' ? route : null;
 
   return (
     <div className="page">
@@ -75,12 +78,14 @@ export function App() {
             <DangerZoneButton />
             <ControlsButton />
             <SettingsButton />
-            {preview ? <RegionPreviewActions {...preview} /> : <MainMenuButton />}
+            {preview ? <RegionPreviewActions {...preview} /> : generator ? <MapGeneratorActions /> : <MainMenuButton />}
           </>
         }
       >
         {preview ? (
           <RegionPreviewBanner {...preview} />
+        ) : generator ? (
+          <MapGeneratorBanner {...generator} />
         ) : (
           <>
             <DeploymentBanner />
@@ -134,6 +139,8 @@ export function App() {
 
       {preview ? (
         <RegionPreview {...preview} />
+      ) : generator ? (
+        <MapGenerator {...generator} />
       ) : route.page !== 'game' ? (
         <ConfigEditor route={route} />
       ) : (
