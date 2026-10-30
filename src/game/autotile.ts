@@ -25,7 +25,7 @@ export type QuarterShape = 'outer' | 'horizontal' | 'vertical' | 'inner' | 'full
 export type SheetTile = readonly [number, number];
 
 // Where a terrain's autotile pieces sit on the sheet (see getWallAutotile
-// in tileset.ts).
+// in mapArt.ts).
 export interface Autotile {
   block: SheetTile;
   inner: SheetTile;
