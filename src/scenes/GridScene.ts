@@ -681,7 +681,7 @@ export class GridScene extends Phaser.Scene {
     cameraFX?.clear();
     if (level.battlefield) cameraFX?.addVignette(0.5, 0.5, VIGNETTE.radius, VIGNETTE.strength);
     if (level.battlefield) {
-      this.renderBattlefield(level.battlefield, getBackdropSeed(this.grid));
+      this.renderBattlefield(level.battlefield, getBackdropSeed(this.grid), level.obstacles ?? []);
     } else {
       this.renderBackdrop(getBackdropStyle(level.biome), getBackdropSeed(this.grid));
       this.renderTerrain(this.grid, { wall: getWallAutotile(palette) });
@@ -3642,12 +3642,18 @@ export class GridScene extends Phaser.Scene {
   // flecked floor under the backdrop, both running a floor's width past
   // either side and on below the front edge, so neither ends on screen.
   // A faint grid over the floor marks out its cells without boxing them in.
-  renderBattlefield(kind: BattlefieldKind, seed: number) {
+  renderBattlefield(kind: BattlefieldKind, seed: number, obstacles: readonly { x: number; y: number }[] = []) {
     const floor = { width: this.grid.width * CELL.width, height: this.grid.height * CELL.height };
     const kit = BATTLEFIELD_KITS[kind];
     const painting = BATTLEFIELD_PAINTINGS[kind];
     if (kit) {
-      this.renderKit(kit, floor, seed);
+      // Decals keep off the obstacles' art.
+      const clear = obstacles.map(({ x, y }) => ({
+        ...getStandingPosition(x, y),
+        width: TILE_SIZE,
+        height: TILE_SIZE,
+      }));
+      this.renderKit(kit, floor, seed, clear);
     } else if (painting) {
       const at = getPaintingPlacement(painting, floor.width);
       this.add
@@ -3673,9 +3679,14 @@ export class GridScene extends Phaser.Scene {
   // everything, washes of light, shade and haze over it, decals on it, the
   // horizon along the top, border trees and bushes sorted with the units
   // by where they stand, and the foreground out of focus over it all.
-  renderKit(kit: BattlefieldKit, floor: { width: number; height: number }, seed: number) {
+  renderKit(
+    kit: BattlefieldKit,
+    floor: { width: number; height: number },
+    seed: number,
+    clear: readonly WorldRect[] = [],
+  ) {
     ensureKitTextures(this);
-    const { scene, pieces } = layOutKit(kit, floor, seed);
+    const { scene, pieces } = layOutKit(kit, floor, seed, clear);
     this.battlefieldScene = scene;
     const depths: Record<Exclude<KitLayer, 'standing'>, number> = {
       ground: -1,

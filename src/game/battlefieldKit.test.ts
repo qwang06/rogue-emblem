@@ -107,6 +107,33 @@ describe('layOutKit', () => {
     }
   });
 
+  it('never overlaps two decals', () => {
+    for (const seed of SEEDS) {
+      const decals = layOutKit(KIT, FLOOR, seed).pieces.filter((d) => d.layer === 'decal');
+      decals.forEach((a, i) =>
+        decals.slice(i + 1).forEach((b) => {
+          const apart = a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y;
+          expect(apart).toBe(true);
+        }),
+      );
+    }
+  });
+
+  it('keeps decals off the rectangles it’s told to keep clear', () => {
+    const clear = [
+      { x: 100, y: 100, width: 64, height: 64 },
+      { x: 400, y: 250, width: 64, height: 64 },
+    ];
+    for (const seed of SEEDS) {
+      for (const p of layOutKit(KIT, FLOOR, seed, clear).pieces.filter((d) => d.layer === 'decal')) {
+        for (const r of clear) {
+          const apart = p.x + p.width <= r.x || r.x + r.width <= p.x || p.y + p.height <= r.y || r.y + r.height <= p.y;
+          expect(apart).toBe(true);
+        }
+      }
+    }
+  });
+
   it('stands border pieces off the floor’s sides, and front ones below its front row', () => {
     for (const seed of SEEDS) {
       for (const p of layOutKit(KIT, FLOOR, seed).pieces.filter((s) => s.layer === 'standing')) {
