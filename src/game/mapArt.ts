@@ -189,14 +189,15 @@ export function getObstacleSprites(obstacles: readonly ObstaclePlacement[], art:
 }
 
 // A battlefield's obstacles drawn as painted art (PAINTED_OBSTACLES): each
-// on its cell as one of its kind's images, picked and mirrored by cell so
-// the same field always draws the same.
+// on its cell as one of its kind's images, picked by cell so the same field
+// always draws the same. Never mirrored: the art's light and painted shadow
+// fall one way, the same as the rest of the scene's.
 export function getPaintedObstacles(
   obstacles: readonly ObstaclePlacement[],
   art: Readonly<Record<ObstacleKind, readonly string[]>>,
-): { x: number; y: number; key: string; flip: boolean }[] {
+): { x: number; y: number; key: string }[] {
   return obstacles.map(({ x, y, obstacle }) => {
     const keys = art[obstacle];
-    return { x, y, key: keys[pickVariant(x, y, keys.length)], flip: pickVariant(y, x, 2) === 1 };
+    return { x, y, key: keys[pickVariant(x, y, keys.length)] };
   });
 }
