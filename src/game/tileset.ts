@@ -302,11 +302,11 @@ export const SINGLE_IMAGE_UNITS: ReadonlySet<string> = new Set<string>([
 // Single-image units whose walk is drawn frame by frame: a sheet in SPRITES
 // of the same frame size as the unit's image, the character facing right
 // with its feet where the image has them, shown instead of the image (and
-// in place of the code-drawn hop) while the unit walks. A cycle of two
-// strides should take about two steps from tile to tile (GridScene's
-// MOVE_STEP_MS, 140ms), so the feet don't slide.
+// in place of the code-drawn hop) while the unit walks. `frameMs` sets the
+// pace of the legs, independent of how fast the unit crosses tiles
+// (GridScene's MOVE_STEP_MS): about a stride every 360ms, an unhurried march.
 export const SINGLE_IMAGE_WALKS: Readonly<Record<string, WalkFrames>> = {
-  Painted_Warrior: { key: 'Painted_Warrior_Walk', frames: 8, frameMs: 35 },
+  Painted_Warrior: { key: 'Painted_Warrior_Walk', frames: 8, frameMs: 90 },
 };
 
 // A single-image unit's frame-by-frame walk, or undefined when it hops in
