@@ -20,16 +20,17 @@ the pack's.
 
 - `Warrior_02` is the warrior class's art (`UNIT_SPRITES.warrior`, also
   `DEFAULT_UNIT_SPRITE`). It is now **64px art** (256x256 sheets, `frame: 64`),
-  replacing the 32px recreation described in this section: a foot soldier in
-  a sage-green kettle helmet, dark grey-green hood, slate-blue tunic with a
-  brown belt and silver buckle, brown gloves and boots, olive trousers. No
-  weapon shows. Four stills made from Qiang's stylized pixel turnaround with
-  PixelLab `image_to_pixelart` at 64x64 (faithful, strength 120; east from its
-  own view, not mirrored), the front's belt buckle recolored silver by hand (the face is meant to stay hidden in the helmet's shadow) (process
-  in the project files at `art/warrior-64/out-v2/notes.md`, finals in
-  `art/warrior-64/final/`). Assembled by `scripts/assemble-unit-sheet.js`;
-  footprint x 18–45, y 2–61, feet on y 61, so it has only 2px of headroom and
-  idle sinks 2px and move hops 2px (not 4).
+  replacing the 32px recreation described in this section: a stocky foot
+  soldier in a sage-green kettle helmet, navy hood and scarf, royal-blue tunic
+  with brown trim, brown belt with a silver buckle, brown gloves and boots,
+  blue trousers. No weapon shows; the face stays in the helmet's shadow. Four
+  stills made from Qiang's third, bulkier pixel turnaround with PixelLab
+  `image_to_pixelart` at 64x64 (faithful, strength 120; east from its own view,
+  not mirrored), helmets pulled to one sage and the buckle recolored silver
+  (process in the project files at `art/warrior-64/`, finals in `out-v3/`).
+  Assembled by `scripts/assemble-unit-sheet.js`; footprint about x 17–46,
+  y 2–61, feet on y 61, so it has only 2px of headroom and idle sinks 2px and
+  move hops 2px (not 4).
 - `Amazon_01` is the archer class's art (`UNIT_SPRITES.archer`, replacing
   `Archer_02`): a woman with a big blonde mane and a green headband, light
   blue top, white short skirt, bare tan arms and legs, green boots. No weapon
