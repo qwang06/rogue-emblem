@@ -5,6 +5,7 @@ import {
   getCrossingSprites,
   getFeatureSprites,
   getObstacleSprites,
+  getPaintedObstacles,
   getHazardSprites,
   getWallAutotile,
   pickVariant,
@@ -297,5 +298,37 @@ describe('getObstacleSprites', () => {
     expect(getObstacleSprites([{ x: 2, y: 3, obstacle: 'rock' }], OBSTACLE_ART)).toEqual([
       { x: 2, y: 3, tile: OBSTACLE_ART.rock.tile, layer: 'ground', sheet: OBSTACLE_ART.rock.sheet },
     ]);
+  });
+});
+
+describe('getPaintedObstacles', () => {
+  const art = {
+    rock: ['r1', 'r2'],
+    boulder: ['b'],
+    bush: ['s1', 's2'],
+    pine: ['p'],
+    thicket: ['t'],
+    crag: ['c'],
+    cactus: ['k'],
+  };
+
+  it('stands each obstacle on its cell as one of its kind’s images', () => {
+    const placed = getPaintedObstacles(
+      [
+        { x: 2, y: 3, obstacle: 'pine' },
+        { x: 5, y: 1, obstacle: 'rock' },
+      ],
+      art,
+    );
+    expect(placed.map(({ x, y, key }) => ({ x, y, key }))[0]).toEqual({ x: 2, y: 3, key: 'p' });
+    expect(['r1', 'r2']).toContain(placed[1].key);
+  });
+
+  it('picks the same image and mirroring for a cell every time, and varies across cells', () => {
+    const rocks = Array.from({ length: 20 }, (_, i) => ({ x: i, y: i % 7, obstacle: 'rock' as const }));
+    expect(getPaintedObstacles(rocks, art)).toEqual(getPaintedObstacles(rocks, art));
+    const placed = getPaintedObstacles(rocks, art);
+    expect(new Set(placed.map((p) => p.key)).size).toBe(2);
+    expect(new Set(placed.map((p) => p.flip)).size).toBe(2);
   });
 });

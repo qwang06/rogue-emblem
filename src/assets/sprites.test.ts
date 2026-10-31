@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getOutlineWidth,
   isSingleImageUnit,
+  PAINTED_OBSTACLES,
   SINGLE_IMAGE_UNITS,
   STRUCTURE_SPRITES,
   TERRAIN_SHEET,
@@ -42,6 +43,14 @@ describe('SPRITES', () => {
   it('gives both of a unit art’s sheets the same frame size', () => {
     for (const art of Object.values(UNIT_SPRITES).filter((art) => !isSingleImageUnit(art))) {
       expect(SPRITES[unitSheetKey(art, 'move')].frame, art).toBe(SPRITES[unitSheetKey(art, 'idle')].frame);
+    }
+  });
+
+  it('makes every painted obstacle one smooth square frame', () => {
+    for (const key of Object.values(PAINTED_OBSTACLES).flat()) {
+      const { url, frame, smooth } = SPRITES[key];
+      expect(pngSize(url), key).toEqual([frame, frame]);
+      expect(smooth, key).toBe(true);
     }
   });
 

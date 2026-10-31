@@ -194,7 +194,7 @@ import {
   getCrossingSprites,
   getHazardSprites,
   getFeatureSprites,
-  getObstacleSprites,
+  getPaintedObstacles,
   getWallAutotile,
   type MapSprite,
 } from '../game/mapArt.ts';
@@ -237,6 +237,7 @@ import {
   MAP_PROPS_SHEET,
   MOUNTAIN_ART,
   OBSTACLE_ART,
+  PAINTED_OBSTACLES,
   SOFT_UNIT_SHADOW,
   STRUCTURE_SPRITES,
   TERRAIN_SHEET,
@@ -693,14 +694,12 @@ export class GridScene extends Phaser.Scene {
       ...getCrossingSprites(this.grid, BRIDGE_ART, GATE_ART[paletteName], FORD_ART, MAP_PROPS_SHEET),
       ...getHazardSprites(this.grid, SPIKES_ART, MAP_PROPS_SHEET),
     ]);
-    this.renderStandingProps(
-      level.battlefield
-        ? getObstacleSprites(level.obstacles ?? [], OBSTACLE_ART)
-        : [
-            ...getFeatureSprites(this.grid, FOREST_ART, MOUNTAIN_ART),
-            ...getBuildingSprites(level.buildings ?? [], palette, BUILDING_ART),
-          ],
-    );
+    if (level.battlefield) this.renderPaintedObstacles(getPaintedObstacles(level.obstacles ?? [], PAINTED_OBSTACLES));
+    else
+      this.renderStandingProps([
+        ...getFeatureSprites(this.grid, FOREST_ART, MOUNTAIN_ART),
+        ...getBuildingSprites(level.buildings ?? [], palette, BUILDING_ART),
+      ]);
     this.renderDecorations(level.decorations ?? []);
     this.renderStructures(level.structures ?? []);
     this.renderObjectiveTile();
@@ -3781,6 +3780,20 @@ export class GridScene extends Phaser.Scene {
         .setOrigin(0, 0)
         .setDisplaySize(TILE_SIZE, TILE_SIZE)
         .setDepth(depth);
+    }
+  }
+
+  // A battlefield's obstacles as painted art (getPaintedObstacles), each
+  // standing on its cell like a unit, a hair behind a unit on the same row.
+  renderPaintedObstacles(obstacles: readonly { x: number; y: number; key: string; flip: boolean }[]) {
+    for (const { x, y, key, flip } of obstacles) {
+      const pos = getStandingPosition(x, y);
+      this.add
+        .image(pos.x, pos.y, key)
+        .setOrigin(0, 0)
+        .setDisplaySize(TILE_SIZE, TILE_SIZE)
+        .setFlipX(flip)
+        .setDepth(getStandingDepth(pos.y) - STANDING_DEPTH_HAIR);
     }
   }
 

@@ -69,18 +69,19 @@ Monsters (enemies)
 
 ## 2. Battlefield obstacles
 
-The things standing on the field's cells, still the old pixel sprites
-(`OBSTACLE_ART` in `src/game/tileset.ts`). One cut-out each, on magenta,
+The things standing on the field's cells (`PAINTED_OBSTACLES` in
+`src/game/tileset.ts`, art in `src/assets/obstacles/`). The framing clumps
+on forest and desert still use the old `OBSTACLE_ART`. One cut-out each, on magenta,
 seen from the same slightly-above angle, sitting on the ground with no
 cast shadow (the game adds one). Two or three variants of each helps.
 
-- [ ] Rock (small, impassable)
-- [ ] Boulder (big pile, impassable)
-- [ ] Bush (slows movement)
-- [ ] Pine (slows movement)
-- [ ] Thicket (dense brush, slows movement)
-- [ ] Crag (jagged rock, desert)
-- [ ] Cactus (desert)
+- [x] Rock (small, impassable)
+- [x] Boulder (big pile, impassable)
+- [x] Bush (slows movement)
+- [x] Pine (slows movement)
+- [x] Thicket (dense brush, slows movement)
+- [x] Crag (jagged rock, desert)
+- [x] Cactus (desert)
 
 ## 3. The other battlefields
 
