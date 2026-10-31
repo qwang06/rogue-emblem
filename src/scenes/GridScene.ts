@@ -265,7 +265,7 @@ import {
   playStoneThrow,
 } from './effects.ts';
 import { CRIT_SHAKE, getLungeDistance, getStrikeJuice, type Shake } from './hitJuice.ts';
-import { addObstacleShadow, addTreeShadow, addUnitShadow } from './unitShadow.ts';
+import { addTreeShadow, addUnitShadow } from './unitShadow.ts';
 import { addUnitOutline } from './unitOutline.ts';
 import { addUnitRig, faceRigToward, playRigAction, setRigMotion } from './unitRig.ts';
 import { addRankBadge } from './rankBadge.ts';
@@ -682,10 +682,6 @@ export class GridScene extends Phaser.Scene {
     if (level.battlefield) cameraFX?.addVignette(0.5, 0.5, VIGNETTE.radius, VIGNETTE.strength);
     if (level.battlefield) {
       this.renderBattlefield(level.battlefield, getBackdropSeed(this.grid));
-      for (const { x, y } of level.obstacles ?? []) {
-        const pos = getStandingPosition(x, y);
-        addObstacleShadow(this, pos.x, pos.y);
-      }
     } else {
       this.renderBackdrop(getBackdropStyle(level.biome), getBackdropSeed(this.grid));
       this.renderTerrain(this.grid, { wall: getWallAutotile(palette) });

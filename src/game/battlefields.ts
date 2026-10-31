@@ -36,7 +36,7 @@ export const OBSTACLE_TERRAIN: Readonly<Record<ObstacleKind, 'mountain' | 'fores
 // The obstacles each battlefield scatters, picked evenly (list one twice
 // to make it twice as common).
 export const BATTLEFIELD_OBSTACLES: Readonly<Record<BattlefieldKind, readonly ObstacleKind[]>> = Object.freeze({
-  plains: ['rock', 'boulder', 'bush', 'bush', 'pine'],
+  plains: ['rock', 'boulder', 'bush', 'bush', 'thicket'],
   forest: ['pine', 'pine', 'thicket', 'bush', 'rock'],
   desert: ['rock', 'boulder', 'crag', 'cactus', 'cactus'],
 });
