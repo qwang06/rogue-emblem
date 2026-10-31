@@ -23,6 +23,7 @@ import { randomInt, randomItem, shuffle } from './rng.ts';
 import { DEFAULT_TERRAIN_LEGEND } from './terrainMap.ts';
 import { BUILDING_ART } from './tileset.ts';
 import type { MapArchetype } from './mapArchetypes.ts';
+import type { BattlefieldKind, ObstaclePlacement } from './battlefields.ts';
 
 type Range = readonly [number, number];
 
@@ -31,8 +32,15 @@ export interface MapGenOptions {
   height: number;
   // 'classic' (the default) lays one path and grows patches anywhere off
   // it; 'planned' (mapPlan.ts) also carves side routes toward where
-  // the enemy stands and keeps them clear too.
-  generator?: 'classic' | 'planned';
+  // the enemy stands and keeps them clear too; 'battlefield'
+  // (battlefields.ts) is the side view's open field with obstacles
+  // scattered over it, and ignores every other setting but the size,
+  // `battlefield` and `obstacles`.
+  generator?: 'classic' | 'planned' | 'battlefield';
+  // For the battlefield generator: which field, and how many obstacles to
+  // scatter ([min, max]).
+  battlefield?: BattlefieldKind;
+  obstacles?: Range;
   // For the planned generator: how many routes lead north, the path
   // included.
   routes?: number;
@@ -73,6 +81,9 @@ export interface GeneratedTerrain {
   deploymentZone?: Point[];
   enemyZones?: Point[][];
   seizeTile?: Point;
+  // Set by the battlefield generator: the obstacles standing on the field
+  // (each cell's terrain already says what it does).
+  obstacles?: ObstaclePlacement[];
 }
 
 // What the lone buildings are picked from: everything but the castle, the
@@ -318,6 +329,8 @@ export const MAP_GEN_DEFAULTS = Object.freeze({
   generator: 'classic',
   routes: 3,
   archetype: 'advance',
+  battlefield: 'plains',
+  obstacles: [4, 7] as Range,
 }) satisfies Required<Omit<MapGenOptions, 'width' | 'height'>>;
 
 // `options` without its unset keys, so spreading it keeps the defaults.

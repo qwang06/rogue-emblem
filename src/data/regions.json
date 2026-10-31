@@ -5,47 +5,21 @@
     {
       "name": "Meadowlands",
       "description": "Open fields: the run's first, quick fight. A lone slime stands three steps from the start, close enough to strike on turn one.",
-      "terrain": {
-        "generator": "planned",
-        "width": 10,
-        "height": 6,
-        "lakes": 1,
-        "lakeSize": [2, 3],
-        "mountains": 0,
-        "forests": 2,
-        "forestSize": [2, 3],
-        "meadows": 2,
-        "meadowSize": [2, 4],
-        "ruins": 0,
-        "buildings": 1
-      },
+      "terrain": { "generator": "battlefield", "width": 10, "height": 6, "battlefield": "plains", "obstacles": [3, 5] },
       "enemies": [{ "count": 1, "unitClass": "slime", "minDistance": 3, "maxDistance": 3 }],
-      "treeChance": 0.05,
+      "treeChance": 0,
       "palette": "a-stone",
       "biome": "meadow"
     },
     {
       "name": "Lakeside",
       "description": "Lake country: lakes funnel the warband toward two goblins guarding the far end.",
-      "terrain": {
-        "generator": "planned",
-        "width": 10,
-        "height": 6,
-        "lakes": 1,
-        "lakeSize": [2, 3],
-        "mountains": 0,
-        "forests": 1,
-        "forestSize": [2, 3],
-        "meadows": 1,
-        "meadowSize": [2, 3],
-        "ruins": 0,
-        "buildings": 1
-      },
+      "terrain": { "generator": "battlefield", "width": 10, "height": 6, "battlefield": "plains", "obstacles": [4, 6] },
       "enemies": [
-        { "count": 1, "unitClass": "goblin", "area": { "y": [0, 0.34] } },
-        { "count": 1, "unitClass": "goblin", "area": { "y": [0, 0.34] }, "health": 5 }
+        { "count": 1, "unitClass": "goblin" },
+        { "count": 1, "unitClass": "goblin", "health": 5 }
       ],
-      "treeChance": 0.04,
+      "treeChance": 0,
       "palette": "b-blue",
       "biome": "lake"
     },
@@ -53,199 +27,106 @@
       "name": "Deep Woods",
       "description": "Thick woods and a twisting path: lots of cover, slow going, and a wolf on the prowl.",
       "terrain": {
-        "generator": "planned",
+        "generator": "battlefield",
         "width": 10,
         "height": 6,
-        "lakes": 0,
-        "mountains": 0,
-        "forests": 2,
-        "forestSize": [2, 3],
-        "meadows": 1,
-        "meadowSize": [2, 3],
-        "ruins": 0,
-        "buildings": 0
+        "battlefield": "forest",
+        "obstacles": [7, 10]
       },
       "enemies": [
-        { "count": 2, "unitClass": "slime", "area": { "y": [0, 0.34] } },
-        { "count": 1, "unitClass": "wolf", "area": { "y": [0, 0.34] } }
+        { "count": 2, "unitClass": "slime" },
+        { "count": 1, "unitClass": "wolf" }
       ],
-      "treeChance": 0.1,
+      "treeChance": 0,
       "palette": "a-brown",
       "biome": "forest"
     },
     {
       "name": "Highlands",
       "description": "Mountain passes: outcrops of impassable rock squeeze the fight onto the path, where goblins wait with a skeleton.",
-      "terrain": {
-        "generator": "planned",
-        "width": 10,
-        "height": 6,
-        "lakes": 0,
-        "mountains": 0,
-        "forests": 1,
-        "forestSize": [2, 3],
-        "meadows": 1,
-        "meadowSize": [2, 3],
-        "ruins": 0,
-        "buildings": 1
-      },
+      "terrain": { "generator": "battlefield", "width": 10, "height": 6, "battlefield": "desert", "obstacles": [5, 8] },
       "enemies": [
-        { "count": 2, "unitClass": "goblin", "area": { "y": [0, 0.34] }, "level": 2 },
-        { "count": 1, "unitClass": "skeleton", "area": { "y": [0, 0.34] } }
+        { "count": 2, "unitClass": "goblin", "level": 2 },
+        { "count": 1, "unitClass": "skeleton" }
       ],
-      "treeChance": 0.03,
+      "treeChance": 0,
       "palette": "b-white",
       "biome": "hills"
     },
     {
       "name": "Barrow Hills",
       "description": "Old burial mounds among the ruins: skeletons rise from the graves and bats circle overhead.",
-      "terrain": {
-        "generator": "planned",
-        "width": 10,
-        "height": 6,
-        "lakes": 0,
-        "mountains": 0,
-        "forests": 1,
-        "forestSize": [2, 3],
-        "meadows": 1,
-        "meadowSize": [2, 3],
-        "ruins": 0,
-        "buildings": 0
-      },
+      "terrain": { "generator": "battlefield", "width": 10, "height": 6, "battlefield": "desert", "obstacles": [4, 7] },
       "enemies": [
-        { "count": 2, "unitClass": "skeleton", "area": { "y": [0, 0.34] }, "level": 2 },
-        { "count": 2, "unitClass": "bat", "area": { "y": [0, 0.34] } }
+        { "count": 2, "unitClass": "skeleton", "level": 2 },
+        { "count": 2, "unitClass": "bat" }
       ],
-      "treeChance": 0.03,
+      "treeChance": 0,
       "palette": "a-stone",
       "biome": "meadow"
     },
     {
       "name": "Fens",
       "description": "Marshland of pools and reeds: wolves run the dry paths while bats cross the water.",
-      "terrain": {
-        "generator": "planned",
-        "width": 10,
-        "height": 6,
-        "lakes": 1,
-        "lakeSize": [2, 3],
-        "mountains": 0,
-        "forests": 1,
-        "forestSize": [2, 3],
-        "meadows": 1,
-        "meadowSize": [2, 3],
-        "ruins": 0,
-        "buildings": 1
-      },
+      "terrain": { "generator": "battlefield", "width": 10, "height": 6, "battlefield": "forest", "obstacles": [5, 8] },
       "enemies": [
-        { "count": 2, "unitClass": "wolf", "area": { "y": [0, 0.34] }, "level": 3 },
-        { "count": 2, "unitClass": "bat", "area": { "y": [0, 0.34] }, "level": 3 }
+        { "count": 2, "unitClass": "wolf", "level": 3 },
+        { "count": 2, "unitClass": "bat", "level": 3 }
       ],
-      "treeChance": 0.05,
+      "treeChance": 0,
       "palette": "b-green",
       "biome": "lake"
     },
     {
       "name": "Fortress",
       "description": "A fortified borderland: a castle on the road and a garrison of skeletons and goblins.",
-      "terrain": {
-        "generator": "planned",
-        "width": 10,
-        "height": 6,
-        "lakes": 1,
-        "lakeSize": [2, 3],
-        "mountains": 0,
-        "forests": 1,
-        "forestSize": [2, 3],
-        "meadows": 1,
-        "meadowSize": [2, 3],
-        "ruins": 0,
-        "buildings": 1
-      },
+      "terrain": { "generator": "battlefield", "width": 10, "height": 6, "battlefield": "plains", "obstacles": [4, 7] },
       "enemies": [
-        { "count": 2, "unitClass": "skeleton", "area": { "y": [0, 0.5] }, "level": 3 },
-        { "count": 2, "unitClass": "goblin", "area": { "y": [0, 0.5] }, "level": 3 }
+        { "count": 2, "unitClass": "skeleton", "level": 3 },
+        { "count": 2, "unitClass": "goblin", "level": 3 }
       ],
-      "treeChance": 0.04,
+      "treeChance": 0,
       "palette": "b-red",
       "biome": "fort"
     },
     {
       "name": "Brigand Camp",
       "description": "A brigand camp in the hills: soldiers, an archer and an axeman who fight like your own warband, with goblin lackeys.",
-      "terrain": {
-        "generator": "planned",
-        "width": 10,
-        "height": 6,
-        "lakes": 0,
-        "mountains": 0,
-        "forests": 2,
-        "forestSize": [2, 3],
-        "meadows": 1,
-        "meadowSize": [2, 3],
-        "ruins": 0,
-        "buildings": 1
-      },
+      "terrain": { "generator": "battlefield", "width": 10, "height": 6, "battlefield": "forest", "obstacles": [5, 8] },
       "enemies": [
-        { "count": 1, "unitClass": "soldier", "area": { "y": [0, 0.34] }, "level": 4 },
-        { "count": 1, "unitClass": "archer", "area": { "y": [0, 0.34] }, "level": 4 },
-        { "count": 1, "unitClass": "vanguard", "area": { "y": [0, 0.34] }, "level": 4 },
-        { "count": 2, "unitClass": "goblin", "area": { "y": [0, 0.34] }, "level": 4 }
+        { "count": 1, "unitClass": "soldier", "level": 4 },
+        { "count": 1, "unitClass": "archer", "level": 4 },
+        { "count": 1, "unitClass": "vanguard", "level": 4 },
+        { "count": 2, "unitClass": "goblin", "level": 4 }
       ],
-      "treeChance": 0.04,
+      "treeChance": 0,
       "palette": "a-orange",
       "biome": "meadow"
     },
     {
       "name": "Orc Marches",
       "description": "Burned farmland on the orcs' border: heavy orcs and their wolves, one long march from the warlord's hold.",
-      "terrain": {
-        "generator": "planned",
-        "width": 10,
-        "height": 6,
-        "lakes": 0,
-        "mountains": 0,
-        "forests": 1,
-        "forestSize": [2, 3],
-        "meadows": 2,
-        "meadowSize": [2, 3],
-        "ruins": 0,
-        "buildings": 1
-      },
+      "terrain": { "generator": "battlefield", "width": 10, "height": 6, "battlefield": "desert", "obstacles": [4, 7] },
       "enemies": [
-        { "count": 2, "unitClass": "orc", "area": { "y": [0, 0.34] }, "level": 4 },
-        { "count": 2, "unitClass": "wolf", "area": { "y": [0, 0.34] }, "level": 5 },
-        { "count": 1, "unitClass": "goblin", "area": { "y": [0, 0.34] }, "level": 5 }
+        { "count": 2, "unitClass": "orc", "level": 4 },
+        { "count": 2, "unitClass": "wolf", "level": 5 },
+        { "count": 1, "unitClass": "goblin", "level": 5 }
       ],
-      "treeChance": 0.02,
+      "treeChance": 0,
       "palette": "a-brown",
       "biome": "hills"
     },
     {
       "name": "Warlord's Hold",
       "description": "The orc warlord's stronghold, the end of the run: beat the Orc Warlord, who holds the keep with orcs, wolves and an archer.",
-      "terrain": {
-        "generator": "planned",
-        "width": 10,
-        "height": 6,
-        "lakes": 1,
-        "lakeSize": [2, 3],
-        "mountains": 0,
-        "forests": 1,
-        "forestSize": [2, 3],
-        "meadows": 1,
-        "meadowSize": [2, 3],
-        "ruins": 0,
-        "buildings": 1
-      },
+      "terrain": { "generator": "battlefield", "width": 10, "height": 6, "battlefield": "plains", "obstacles": [4, 7] },
       "enemies": [
-        { "count": 1, "unitClass": "orc", "area": { "y": [0, 0.5] }, "level": 7, "boss": "Orc Warlord" },
-        { "count": 1, "unitClass": "orc", "area": { "y": [0, 0.5] }, "level": 5 },
-        { "count": 1, "unitClass": "archer", "area": { "y": [0, 0.5] }, "level": 5 },
-        { "count": 2, "unitClass": "wolf", "area": { "y": [0, 0.5] }, "level": 5 }
+        { "count": 1, "unitClass": "orc", "level": 7, "boss": "Orc Warlord" },
+        { "count": 1, "unitClass": "orc", "level": 5 },
+        { "count": 1, "unitClass": "archer", "level": 5 },
+        { "count": 2, "unitClass": "wolf", "level": 5 }
       ],
-      "treeChance": 0.02,
+      "treeChance": 0,
       "palette": "b-red",
       "objective": { "kind": "boss" }
     }

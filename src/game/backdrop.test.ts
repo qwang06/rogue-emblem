@@ -3,12 +3,16 @@ import {
   BACKDROP_COLUMN,
   BACKDROP_HEIGHT,
   BACKDROP_STYLES,
+  BATTLEFIELD_LOOKS,
+  getFloorFlecks,
+  getPaintingPlacement,
   getBackdropSeed,
   getBackdropStyle,
   getSilhouette,
   type BackdropLayer,
   type BackdropShape,
 } from './backdrop.ts';
+import { BATTLEFIELD_KINDS } from './battlefields.ts';
 import { STANDING_OVERHANG } from './sideView.ts';
 import { parseTerrainMap } from './terrainMap.ts';
 import { REGION_BIOMES } from './warband/realm/realmRegions.ts';
@@ -75,5 +79,62 @@ describe('getBackdropSeed', () => {
 describe('BACKDROP_HEIGHT', () => {
   it('leaves room for the heads of units on the top row', () => {
     expect(BACKDROP_HEIGHT).toBeGreaterThanOrEqual(STANDING_OVERHANG);
+  });
+});
+
+describe('BATTLEFIELD_LOOKS', () => {
+  it('has a floor and backdrop for every battlefield, flecks leaving most of the floor its base', () => {
+    for (const kind of BATTLEFIELD_KINDS) {
+      const { floor, backdrop } = BATTLEFIELD_LOOKS[kind];
+      expect(backdrop.layers.length).toBeGreaterThan(0);
+      expect(floor.flecks.reduce((sum, { share }) => sum + share, 0)).toBeLessThan(0.5);
+    }
+  });
+});
+
+describe('getFloorFlecks', () => {
+  const style = {
+    base: 0,
+    flecks: [
+      { color: 1, share: 0.2 },
+      { color: 2, share: 0.1 },
+    ],
+  };
+
+  it("flecks about each color's share of the floor, on the pixel grid", () => {
+    const flecks = getFloorFlecks(style, 400, 400, 5);
+    const cells = (400 / BACKDROP_COLUMN) ** 2;
+    const share = (color: number) => flecks.filter((f) => f.color === color).length / cells;
+    expect(share(1)).toBeCloseTo(0.2, 1);
+    expect(share(2)).toBeCloseTo(0.1, 1);
+    expect(flecks.every(({ x, y }) => x % BACKDROP_COLUMN === 0 && y % BACKDROP_COLUMN === 0)).toBe(true);
+    expect(flecks.every(({ x, y }) => x < 400 && y < 400)).toBe(true);
+  });
+
+  it('is the same from the same seed', () => {
+    expect(getFloorFlecks(style, 64, 40, 2)).toEqual(getFloorFlecks(style, 64, 40, 2));
+  });
+
+  it('has none with no fleck colors', () => {
+    expect(getFloorFlecks({ base: 0, flecks: [] }, 64, 40, 2)).toEqual([]);
+  });
+});
+
+describe('getPaintingPlacement', () => {
+  it('puts the horizon on the floor’s back edge, keeping the picture’s shape', () => {
+    const at = getPaintingPlacement({ size: [1200, 896], horizon: 170 }, 640);
+    expect(at.y + (170 / 896) * at.height).toBeCloseTo(0);
+    expect(at.width / at.height).toBeCloseTo(1200 / 896);
+  });
+
+  it('stands at least BACKDROP_HEIGHT above the floor and spans its width, centered', () => {
+    const tall = getPaintingPlacement({ size: [1200, 896], horizon: 170 }, 640);
+    expect(-tall.y).toBeCloseTo(BACKDROP_HEIGHT);
+    expect(tall.width).toBeGreaterThanOrEqual(640);
+    expect(tall.x + tall.width / 2).toBeCloseTo(320);
+    const wide = getPaintingPlacement({ size: [400, 1000], horizon: 400 }, 640);
+    expect(wide.width).toBeCloseTo(640);
+    expect(wide.x).toBeCloseTo(0);
+    expect(-wide.y).toBeGreaterThanOrEqual(BACKDROP_HEIGHT);
   });
 });

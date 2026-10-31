@@ -4,6 +4,7 @@
 // silhouette, its height at each column picked from a seeded Rng, so a
 // battle's backdrop is the same every time it's drawn. Pure.
 
+import type { BattlefieldKind } from './battlefields.ts';
 import type { Grid } from './grid.ts';
 import { createSeededRng } from './rng.ts';
 import { CELL } from './tileset.ts';
@@ -156,4 +157,108 @@ export function getBackdropSeed(grid: Grid): number {
     for (const char of terrain ?? '-') hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
   }
   return hash >>> 0;
+}
+
+// A battlefield's floor, drawn in code until there's painted art: a base
+// color flecked with a few others, each covering about `share` of the
+// floor's BACKDROP_COLUMN-sized pixels.
+export interface FloorStyle {
+  base: number;
+  flecks: readonly { color: number; share: number }[];
+}
+
+export interface BattlefieldLook {
+  floor: FloorStyle;
+  backdrop: BackdropStyle;
+}
+
+export const BATTLEFIELD_LOOKS: Readonly<Record<BattlefieldKind, BattlefieldLook>> = Object.freeze({
+  plains: {
+    floor: {
+      base: 0x7aa04a,
+      flecks: [
+        { color: 0x8db556, share: 0.18 },
+        { color: 0x6a8f40, share: 0.14 },
+        { color: 0xa3c266, share: 0.04 },
+      ],
+    },
+    backdrop: BACKDROP_STYLES.meadow,
+  },
+  forest: {
+    floor: {
+      base: 0x4f7a3a,
+      flecks: [
+        { color: 0x5f8a44, share: 0.16 },
+        { color: 0x426630, share: 0.16 },
+        { color: 0x6b5a3a, share: 0.05 },
+      ],
+    },
+    backdrop: BACKDROP_STYLES.forest,
+  },
+  desert: {
+    floor: {
+      base: 0xd8b878,
+      flecks: [
+        { color: 0xe4c88a, share: 0.18 },
+        { color: 0xc4a264, share: 0.14 },
+        { color: 0xa88a58, share: 0.04 },
+      ],
+    },
+    backdrop: {
+      sky: [0x6aa0d0, 0x8cb8dc, 0xb4d0e0, 0xe0dcc8],
+      layers: [
+        { shape: 'peaks', color: 0xc9a98a, low: 0.3, high: 0.6 },
+        { shape: 'hills', color: 0xd4b07a, low: 0.08, high: 0.25 },
+      ],
+    },
+  },
+});
+
+// The flecks of a `width` x `height` floor in `style`: one entry per
+// BACKDROP_COLUMN-sized pixel that isn't the base color, its top-left
+// corner in world pixels and its color. Seeded, so a battle's floor is the
+// same every time it's drawn.
+export function getFloorFlecks(
+  style: FloorStyle,
+  width: number,
+  height: number,
+  seed: number,
+): { x: number; y: number; color: number }[] {
+  const rng = createSeededRng(seed);
+  const flecks: { x: number; y: number; color: number }[] = [];
+  for (let y = 0; y < height; y += BACKDROP_COLUMN) {
+    for (let x = 0; x < width; x += BACKDROP_COLUMN) {
+      let roll = rng();
+      for (const { color, share } of style.flecks) {
+        if (roll < share) {
+          flecks.push({ x, y, color });
+          break;
+        }
+        roll -= share;
+      }
+    }
+  }
+  return flecks;
+}
+
+// A painted battlefield: its size in its own pixels, and the row its floor
+// starts at (the foot of its far scenery).
+export interface Painting {
+  size: readonly [number, number];
+  horizon: number;
+}
+
+// Where to draw `painting` behind a floor `floorWidth` wide, in world
+// pixels, so its horizon sits on the floor's back edge (y 0) without
+// stretching it: scaled up just enough to span the floor and to stand at
+// least BACKDROP_HEIGHT above it, and centered across it (an overhang
+// either side, and any floor below the arena's front edge, is cropped by
+// the camera or left showing past it).
+export function getPaintingPlacement(
+  painting: Painting,
+  floorWidth: number,
+): { x: number; y: number; width: number; height: number } {
+  const [w, h] = painting.size;
+  const scale = Math.max(floorWidth / w, BACKDROP_HEIGHT / painting.horizon);
+  return { x: (floorWidth - w * scale) / 2, y: -painting.horizon * scale, width: w * scale, height: h * scale };
 }

@@ -15,7 +15,7 @@ import { pickZonedEnemyTiles } from '../enemySpawns.ts';
 import type { Rng } from '../combatStats.ts';
 import { growToLevel } from '../experience.ts';
 import { assignLoot } from '../loot.ts';
-import type { GeneratedTerrain } from '../mapGen.ts';
+import { MAP_GEN_DEFAULTS, type GeneratedTerrain } from '../mapGen.ts';
 import { generateMap } from '../mapPlan.ts';
 import { checkMap } from '../mapCheck.ts';
 import { getMapMetrics, scoreMap, type MapMetrics } from '../mapScore.ts';
@@ -243,6 +243,12 @@ export function createStageLevel(
     buildings,
     palette: region.palette,
     ...(region.biome ? { biome: region.biome } : {}),
+    ...(region.terrain.generator === 'battlefield'
+      ? {
+          battlefield: region.terrain.battlefield ?? MAP_GEN_DEFAULTS.battlefield,
+          obstacles: layout.terrain.obstacles ?? [],
+        }
+      : {}),
     objective: DEFAULT_OBJECTIVE,
     ...(layout.terrain.seizeTile ? { seizeTile: { ...layout.terrain.seizeTile } } : {}),
     ...(bossUnitId ? { bossUnitId } : {}),

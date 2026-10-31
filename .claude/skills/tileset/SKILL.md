@@ -86,6 +86,10 @@ Blob autotiling works on the map's own cells (not a dual grid): each set in `aut
 
 Both are built from the PixelLab export in the project files (`art/terrain-64b/out/`: `tilesets/<set>/{sheet.png,wang_map.json}`, `props/<name>.png`, `notes.md` with every setting, id and prompt) by `node .claude/skills/tileset/scripts/build-terrain64.js <dir>/out`, which checks every tile's corners against its index.
 
+## Battlefields: src/assets/battlefields/
+
+The side view's maps (`src/game/battlefields.ts`) are drawn from one **painting per field kind** (`BATTLEFIELD_PAINTINGS` in `src/assets/battlefieldArt.ts`), floor and backdrop in one picture, loaded as an image (not a spritesheet) and filtered smoothly. Each entry gives the picture's `size` and its `horizon`, the row where the floor starts (the foot of its far scenery). `getPaintingPlacement` scales it, without stretching, until it spans the arena and stands at least `BACKDROP_HEIGHT` above it, with the horizon on the floor's back edge; the rest of the floor runs on under and past the grid. `plains.webp` (1200x896, horizon 170) is a painted, not pixel-art, meadow: a soft golden-hour sky, a row of round broadleaf trees along the horizon, and an even open lawn with no paths or props, so anything can stand anywhere on it (the original PNG is in the project files under `art/battlefields/`). A kind with no painting (forest and desert for now) falls back to `BATTLEFIELD_LOOKS` in `backdrop.ts`, a code-drawn flecked floor and silhouette backdrop. Obstacles stand on the floor as `OBSTACLE_ART` tiles, placeholders off the 64px props sheet (the cactus is a crag for now). A good painting for this: wider than tall (about 4:3 or wider), the horizon in the top fifth, an even, featureless floor seen at a low slant, no strong perspective lines.
+
 ## Inspecting art
 
 Images this small are unreadable when viewed directly — dump them as ASCII:

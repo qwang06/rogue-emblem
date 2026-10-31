@@ -30,6 +30,7 @@ import {
 } from './mapGen.ts';
 import { getZones, pickZonedStart } from './mapZones.ts';
 import { randomInt, randomItem } from './rng.ts';
+import { generateBattlefield } from './battlefields.ts';
 
 export interface BattlePlan {
   // Three tiles side by side on the south row.
@@ -160,11 +161,18 @@ export function generateArchetypeTerrain(
   };
 }
 
-// The map from `options.archetype`'s plan when it names one other than
+// The map from the battlefield generator when `options.generator` names it
+// (battlefields.ts; it lays out its own arena whatever the archetype),
+// else from `options.archetype`'s plan when it names one other than
 // 'advance', else from whichever generator `options.generator` names
 // (classic when unset).
 export function generateMap(options: MapGenOptions, rng: Rng): GeneratedTerrain {
   const { archetype } = options;
+  if (options.generator === 'battlefield') {
+    const { width, height, battlefield, obstacles } = { ...MAP_GEN_DEFAULTS, ...withoutUndefined(options) };
+    const field = generateBattlefield({ width, height, battlefield, obstacles }, rng);
+    return { ...field, buildings: [] };
+  }
   if (archetype && archetype !== 'advance') return generateArchetypeTerrain(options, archetype, rng);
   return options.generator === 'planned' ? generatePlannedTerrain(options, rng) : generateTerrain(options, rng);
 }

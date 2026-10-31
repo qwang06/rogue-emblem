@@ -314,7 +314,7 @@ describe('parseRegionSettings', () => {
 describe('formatRegionSettings', () => {
   it('keeps [min, max] pairs on one line', () => {
     const text = formatRegionSettings(REGION_SETTINGS);
-    expect(text).toContain('"meadowSize": [2, 4]');
+    expect(text).toContain('"obstacles": [3, 5]');
     expect(text.endsWith('\n')).toBe(true);
   });
 });
@@ -355,6 +355,30 @@ describe('formatRegionSettings layout', () => {
       'width',
       'lakes',
     ]);
+  });
+
+  it('spreads out a list of two or more records however short, as Prettier does', () => {
+    const text = formatRegionsJson({
+      groups: [
+        { a: 1, b: 2 },
+        { a: 3, b: 4 },
+      ],
+      one: [{ a: 1, b: 2 }],
+      thin: [{ a: 1 }, { a: 2 }],
+    });
+    expect(text).toBe(
+      [
+        '{',
+        '  "groups": [',
+        '    { "a": 1, "b": 2 },',
+        '    { "a": 3, "b": 4 }',
+        '  ],',
+        '  "one": [{ "a": 1, "b": 2 }],',
+        '  "thin": [{ "a": 1 }, { "a": 2 }]',
+        '}',
+        '',
+      ].join('\n'),
+    );
   });
 
   it('puts what fits on one line and spreads out what does not', () => {
