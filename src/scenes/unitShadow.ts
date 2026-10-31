@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { getEllipseSpans } from '../game/pixelShapes.ts';
-import { OBSTACLE_SHADOW, TILE_SIZE, TREE_SHADOW, UNIT_SHADOW, type Shadow } from '../game/tileset.ts';
+import { TILE_SIZE, TREE_SHADOW, UNIT_SHADOW, type Shadow } from '../game/tileset.ts';
 
 const SOFT_SHADOW_KEY = 'shadow-soft';
 const SOFT_SHADOW_SIZE = 128; // the soft shadow texture's side, stretched to each shadow's ellipse
@@ -110,11 +110,4 @@ export function addSoftShadow(
 // top-left corner is (x, y). Trees never move, so it stays put.
 export function addTreeShadow(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Image {
   return addShadow(scene, x, y, TREE_SHADOW, TREE_SHADOW_DEPTH);
-}
-
-// Draws a soft shadow (OBSTACLE_SHADOW) at the foot of a battlefield's
-// obstacle in the tile whose top-left corner is (x, y), under the floor's
-// units like a tree's.
-export function addObstacleShadow(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Image {
-  return addSoftShadow(scene, x, y, OBSTACLE_SHADOW, TREE_SHADOW_DEPTH);
 }

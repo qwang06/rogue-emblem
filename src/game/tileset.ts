@@ -144,7 +144,8 @@ export const OBSTACLE_ART: Readonly<Record<ObstacleKind, { sheet: typeof TERRAIN
 
 // The painted art each battlefield obstacle stands as, in place of
 // OBSTACLE_ART on a battlefield: texture keys of SPRITES, each one image
-// the size of a tile with the obstacle's base where a unit's feet go. A
+// the size of a tile with the obstacle's base where a unit's feet go and
+// its own painted shadow falling to the lower right. A
 // kind with several picks one per cell (getPaintedObstacles in mapArt.ts).
 export const PAINTED_OBSTACLES: Readonly<Record<ObstacleKind, readonly string[]>> = Object.freeze({
   rock: ['Obstacle_rock_1', 'Obstacle_rock_2'],
@@ -424,13 +425,6 @@ export const SOFT_UNIT_SHADOW: Shadow = {
   centerX: 16 / 32,
   centerY: 29 / 32,
   alpha: 0.55,
-};
-export const OBSTACLE_SHADOW: Shadow = {
-  width: 34 / 32,
-  height: 12 / 32,
-  centerX: 16 / 32,
-  centerY: 29 / 32,
-  alpha: 0.5,
 };
 
 // The outline drawn around every unit on the map in its team's color, so
