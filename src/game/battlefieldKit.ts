@@ -107,18 +107,34 @@ export function getKitScene(floor: { width: number; height: number }, horizonHei
   };
 }
 
+// Something standing on the floor that decals gather around and keep off:
+// its art's rectangle, and the point (world pixels) where it meets the
+// ground.
+export interface KitStanding {
+  art: WorldRect;
+  foot: { x: number; y: number };
+}
+
+// How far either side of a standing thing's foot its art's body reaches,
+// which a gathered decal keeps clear of (world pixels).
+const STANDING_BODY = 18;
+
 const overlaps = (a: WorldRect, b: WorldRect) =>
   a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 
 // Lays `kit` out around a floor `floor` from `seed`: the scene it covers
-// and every piece in it. No decal overlaps another or a rectangle in
-// `clear` (the art of things standing on the floor, like obstacles), where
-// it would look tangled up with them.
+// and every piece in it. `standing` is the things standing on the floor
+// (obstacles): each one's art and where its foot meets the ground. A few
+// decals gather beside each one's foot, so it reads as a little scene
+// rather than a prop dropped on the grass, and the rest are scattered more
+// thinly over the open ground. No decal overlaps another, or a standing
+// thing's art apart from its own cluster's sides, where it would look
+// tangled up with it.
 export function layOutKit(
   kit: BattlefieldKit,
   floor: { width: number; height: number },
   seed: number,
-  clear: readonly WorldRect[] = [],
+  standing: readonly KitStanding[] = [],
 ): { scene: WorldRect; pieces: KitPlacement[] } {
   const rng = createSeededRng(seed);
   // The horizon spans the scene, its foot HORIZON_GAP above the floor.
@@ -191,14 +207,39 @@ export function layOutKit(
     });
   }
 
-  // Decals scattered over the ground, about one per nine cells of floor.
-  const decals = Math.round((scene.width * (bottom - groundTop)) / 22000);
+  // Decals: a few gathered beside each standing thing's foot, then more
+  // scattered over the ground, about one per eighteen cells.
   const placed: WorldRect[] = [];
+  const clear = standing.map((thing) => thing.art);
+  const free = (spot: WorldRect, except?: WorldRect) =>
+    !clear.some((rect) => rect !== except && overlaps(spot, rect)) && !placed.some((rect) => overlaps(spot, rect));
+  const place = (key: string, spot: WorldRect) => {
+    add({ layer: 'decal', key, ...spot });
+    placed.push(spot);
+  };
+  for (const { art, foot } of standing) {
+    const sides = rng() < 0.5 ? [-1, 1, -1] : [1, -1, 1];
+    const count = 2 + Math.floor(rng() * 2);
+    for (const side of sides.slice(0, count)) {
+      const piece = pick(rng, kit.decals);
+      const { width, height } = size(piece, between(rng, 0.3, 0.5));
+      const gap = STANDING_BODY + between(rng, 0, 14);
+      const spot = {
+        x: side < 0 ? foot.x - gap - width : foot.x + gap,
+        y: foot.y + between(rng, -14, 2) - height,
+        width,
+        height,
+      };
+      // Beside its own thing's foot it may share that thing's rectangle,
+      // but nothing else's.
+      if (free(spot, art)) place(piece.key, spot);
+    }
+  }
+  const decals = Math.round((scene.width * (bottom - groundTop)) / 44000);
   for (let i = 0; i < decals; i++) {
     const piece = pick(rng, kit.decals);
     const { width, height } = size(piece, between(rng, 0.45, 0.75));
-    // A few tries for a spot clear of `clear` and the decals before it;
-    // dropped if none is.
+    // A few tries for a free spot; dropped if none is.
     for (let attempt = 0; attempt < 6; attempt++) {
       const spot = {
         x: between(rng, scene.x, scene.x + scene.width - width),
@@ -206,9 +247,8 @@ export function layOutKit(
         width,
         height,
       };
-      if (clear.some((rect) => overlaps(spot, rect)) || placed.some((rect) => overlaps(spot, rect))) continue;
-      add({ layer: 'decal', key: piece.key, ...spot });
-      placed.push(spot);
+      if (!free(spot)) continue;
+      place(piece.key, spot);
       break;
     }
   }

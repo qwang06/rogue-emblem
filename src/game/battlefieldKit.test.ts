@@ -119,16 +119,26 @@ describe('layOutKit', () => {
     }
   });
 
-  it('keeps decals off the rectangles it’s told to keep clear', () => {
-    const clear = [
-      { x: 100, y: 100, width: 64, height: 64 },
-      { x: 400, y: 250, width: 64, height: 64 },
+  it('gathers decals beside each standing thing’s foot, clear of its body and of everything else', () => {
+    const standing = [
+      { art: { x: 100, y: 100, width: 64, height: 64 }, foot: { x: 132, y: 158 } },
+      { art: { x: 400, y: 250, width: 64, height: 64 }, foot: { x: 432, y: 308 } },
     ];
+    const near = (p: { x: number; y: number; width: number; height: number }, foot: { x: number; y: number }) =>
+      Math.abs(p.y + p.height - foot.y) <= 16 &&
+      Math.min(Math.abs(p.x - foot.x), Math.abs(p.x + p.width - foot.x)) <= 40;
     for (const seed of SEEDS) {
-      for (const p of layOutKit(KIT, FLOOR, seed, clear).pieces.filter((d) => d.layer === 'decal')) {
-        for (const r of clear) {
-          const apart = p.x + p.width <= r.x || r.x + r.width <= p.x || p.y + p.height <= r.y || r.y + r.height <= p.y;
-          expect(apart).toBe(true);
+      const decals = layOutKit(KIT, FLOOR, seed, standing).pieces.filter((d) => d.layer === 'decal');
+      for (const { art, foot } of standing) {
+        const gathered = decals.filter((p) => near(p, foot));
+        expect(gathered.length).toBeGreaterThanOrEqual(1);
+        for (const p of decals) {
+          const apart =
+            p.x + p.width <= art.x || art.x + art.width <= p.x || p.y + p.height <= art.y || art.y + art.height <= p.y;
+          if (apart) continue;
+          // Only its own cluster may share its rectangle, beside the body.
+          expect(near(p, foot)).toBe(true);
+          expect(p.x + p.width <= foot.x - 18 + 1e-9 || p.x >= foot.x + 18 - 1e-9).toBe(true);
         }
       }
     }
