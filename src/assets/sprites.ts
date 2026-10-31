@@ -85,9 +85,13 @@ import woodenSword from './items/wooden-sword.png';
 // sheet is 4x4 frames, a one-tile sprite is one frame, a multi-tile
 // structure one frame per tile. The game draws every frame one map tile
 // (TILE_SIZE) big whatever its pixel size, so 32px and 64px art mix.
+// `smooth` art (painted rather than pixel art, like a generated
+// single-image unit) is filtered smoothly when scaled instead of kept
+// crisp.
 export interface SpriteSheet {
   url: string;
   frame: number;
+  smooth?: boolean;
 }
 
 export const SPRITES: Readonly<Record<string, SpriteSheet>> = {

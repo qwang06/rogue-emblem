@@ -1,6 +1,15 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { getOutlineWidth, STRUCTURE_SPRITES, TERRAIN_SHEET, UNIT_SHEET, UNIT_SPRITES, unitSheetKey } from '../game/tileset.ts';
+import {
+  getOutlineWidth,
+  isSingleImageUnit,
+  SINGLE_IMAGE_UNITS,
+  STRUCTURE_SPRITES,
+  TERRAIN_SHEET,
+  UNIT_SHEET,
+  UNIT_SPRITES,
+  unitSheetKey,
+} from '../game/tileset.ts';
 import { SPRITES, SPRITE_URLS } from './sprites.ts';
 import terrainSheetUrl from './overworld.png';
 
@@ -29,8 +38,15 @@ describe('SPRITES', () => {
   });
 
   it('gives both of a unit art’s sheets the same frame size', () => {
-    for (const art of Object.values(UNIT_SPRITES)) {
+    for (const art of Object.values(UNIT_SPRITES).filter((art) => !isSingleImageUnit(art))) {
       expect(SPRITES[unitSheetKey(art, 'move')].frame, art).toBe(SPRITES[unitSheetKey(art, 'idle')].frame);
+    }
+  });
+
+  it('makes every single-image unit one square frame', () => {
+    for (const art of SINGLE_IMAGE_UNITS) {
+      const { url, frame } = SPRITES[art];
+      expect(pngSize(url), art).toEqual([frame, frame]);
     }
   });
 
