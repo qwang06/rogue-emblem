@@ -4,6 +4,7 @@ import {
   getBuildingSprites,
   getCrossingSprites,
   getFeatureSprites,
+  getObstacleSprites,
   getHazardSprites,
   getWallAutotile,
   pickVariant,
@@ -21,6 +22,7 @@ import {
   DEFAULT_BUILDING_PALETTE,
   FOREST_ART,
   MOUNTAIN_ART,
+  OBSTACLE_ART,
   SPIKES_ART,
   TERRAIN64_PROPS_SHEET,
   TERRAIN_SHEET,
@@ -287,5 +289,13 @@ describe('GATE_ART', () => {
       expect(posts[0]).toBeLessThan(MAP_PROPS_SHEET.columns);
     }
     expect(FORD_ART[0]).toBeLessThan(MAP_PROPS_SHEET.columns);
+  });
+});
+
+describe('getObstacleSprites', () => {
+  it('stands each obstacle on its cell as its art', () => {
+    expect(getObstacleSprites([{ x: 2, y: 3, obstacle: 'rock' }], OBSTACLE_ART)).toEqual([
+      { x: 2, y: 3, tile: OBSTACLE_ART.rock.tile, layer: 'ground', sheet: OBSTACLE_ART.rock.sheet },
+    ]);
   });
 });

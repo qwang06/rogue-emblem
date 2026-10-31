@@ -5,7 +5,18 @@ import { getActiveRegionSettings, readRegionsUpload } from './customRegions.ts';
 import { createStoredText } from './customStorage.ts';
 import { memoryStorage } from './testStorage.ts';
 
-const custom = { stagesPerRegion: 3, regions: [{ ...REGION_CONFIGS[2], name: 'Custom' }] };
+// With a spawn area on its first group, which old uploads called `region`.
+const base = REGION_CONFIGS[2];
+const custom = {
+  stagesPerRegion: 3,
+  regions: [
+    {
+      ...base,
+      name: 'Custom',
+      enemies: base.enemies.map((group, i) => (i === 0 ? { ...group, area: { y: [0, 0.34] as const } } : group)),
+    },
+  ],
+};
 
 describe('readRegionsUpload', () => {
   it('uses the built-in settings with no upload', () => {

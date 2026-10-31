@@ -225,12 +225,12 @@ describe('createStageLevel', () => {
     for (const unitId of level.roster) expect(findUnit(level.grid, unitId)).toBeNull();
   });
 
-  it('provides five walkable deployment tiles, with the original three along the bottom row', () => {
+  it('provides five walkable deployment tiles, with the original three down the west edge', () => {
     for (const { level } of BATTLES) {
       const { grid, deploymentZone } = level;
       expect(deploymentZone).toHaveLength(5);
-      for (const { x, y } of deploymentZone.slice(0, 3)) {
-        expect(y).toBe(grid.height - 1);
+      for (const { x } of deploymentZone.slice(0, 3)) {
+        expect(x).toBe(0);
       }
       for (const { x, y } of deploymentZone) {
         expect(['grass', 'dirt']).toContain(getCell(grid, x, y)!.terrain);
@@ -365,10 +365,12 @@ describe('createStageLevel', () => {
     }
   });
 
-  it('draws each stage in its region palette, with the generated buildings', () => {
+  it('draws each stage in its region palette, on its battlefield with the scattered obstacles', () => {
     for (const { region, level } of BATTLES) {
       expect(level.palette).toBe(region.palette);
-      expect(level.buildings!.length).toBeGreaterThan(0);
+      expect(level.battlefield).toBe(region.terrain.battlefield);
+      expect(level.obstacles!.length).toBeGreaterThan(0);
+      expect(level.buildings).toEqual([]);
     }
   });
 });

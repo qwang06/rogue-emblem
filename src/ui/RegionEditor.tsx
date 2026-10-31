@@ -26,6 +26,7 @@ import { describeEnemyGroup } from './enemyGroups.ts';
 import { InfoPopover } from './InfoPopover.tsx';
 import { getMapPreview } from './mapPreview.ts';
 import { routeHash } from './route.ts';
+import { BATTLEFIELD_KINDS } from '../game/battlefields.ts';
 
 // The terrain patches, each a count and a [min, max] size.
 const PATCHES = [
@@ -36,7 +37,7 @@ const PATCHES = [
 ] as const;
 
 const PALETTES = Object.keys(BUILDING_PALETTES);
-const GENERATORS = ['classic', 'planned'];
+const GENERATORS = ['classic', 'planned', 'battlefield'];
 const ENEMY_CLASSES = UNIT_CLASSES.map((c) => c.id);
 const [MIN_SIZE, MAX_SIZE] = REGION_LIMITS.mapSize;
 
@@ -164,6 +165,18 @@ export function RegionEditor({
             placeholder={String(MAP_GEN_DEFAULTS.routes)}
           />
           <SelectField form={form} path={at('terrain', 'archetype')} label="Map type" options={MAP_ARCHETYPES} />
+          <SelectField
+            form={form}
+            path={at('terrain', 'battlefield')}
+            label="Battlefield"
+            options={BATTLEFIELD_KINDS}
+          />
+          <PairField
+            form={form}
+            path={at('terrain', 'obstacles')}
+            label="Obstacles (battlefield only)"
+            placeholders={[String(MAP_GEN_DEFAULTS.obstacles[0]), String(MAP_GEN_DEFAULTS.obstacles[1])]}
+          />
         </div>
       </fieldset>
 

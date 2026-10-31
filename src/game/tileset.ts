@@ -14,6 +14,7 @@
 
 import type { SheetTile } from './autotile.ts';
 import type { WangSet } from './wangTiles.ts';
+import type { ObstacleKind } from './battlefields.ts';
 import type { BuildingKind } from './buildings.ts';
 import type { Facing } from './facing.ts';
 import type { ArrowPiece } from './moveArrow.ts';
@@ -126,6 +127,20 @@ export const MOUNTAIN_ART: FeatureArt = {
     [2, 3],
   ],
 };
+
+// The art each battlefield obstacle (battlefields.ts) stands as, a tile of
+// `sheet`. Placeholders off the 64px props sheet until obstacles get art
+// of their own: the desert's cactus is a crag for now.
+export const OBSTACLE_ART: Readonly<Record<ObstacleKind, { sheet: typeof TERRAIN64_PROPS_SHEET; tile: SheetTile }>> =
+  Object.freeze({
+    rock: { sheet: TERRAIN64_PROPS_SHEET, tile: [7, 0] },
+    boulder: { sheet: TERRAIN64_PROPS_SHEET, tile: [4, 2] },
+    bush: { sheet: TERRAIN64_PROPS_SHEET, tile: [2, 0] },
+    pine: { sheet: TERRAIN64_PROPS_SHEET, tile: [0, 0] },
+    thicket: { sheet: TERRAIN64_PROPS_SHEET, tile: [1, 0] },
+    crag: { sheet: TERRAIN64_PROPS_SHEET, tile: [6, 2] },
+    cactus: { sheet: TERRAIN64_PROPS_SHEET, tile: [5, 2] },
+  });
 
 // Where each building kind sits on the terrain sheet in its block's first
 // color column: `column` is that column (0 or 12; a palette's

@@ -162,11 +162,16 @@ import { getPropPlacement, getStandingDepth, getStandingPosition, STANDING_DEPTH
 import {
   BACKDROP_COLUMN,
   BACKDROP_HEIGHT,
+  BATTLEFIELD_LOOKS,
   getBackdropSeed,
   getBackdropStyle,
+  getFloorFlecks,
+  getPaintingPlacement,
   getSilhouette,
   type BackdropStyle,
 } from '../game/backdrop.ts';
+import type { BattlefieldKind } from '../game/battlefields.ts';
+import { BATTLEFIELD_PAINTINGS, battlefieldPaintingKey } from '../assets/battlefieldArt.ts';
 import { createKeyRepeat, updateKeyRepeat } from '../game/keyRepeat.ts';
 import { getArrowPieces } from '../game/moveArrow.ts';
 import { getQuarterFrameMap, getTileFrame, type Autotile } from '../game/autotile.ts';
@@ -176,6 +181,7 @@ import {
   getCrossingSprites,
   getHazardSprites,
   getFeatureSprites,
+  getObstacleSprites,
   getWallAutotile,
   type MapSprite,
 } from '../game/mapArt.ts';
@@ -217,6 +223,7 @@ import {
   GATE_ART,
   MAP_PROPS_SHEET,
   MOUNTAIN_ART,
+  OBSTACLE_ART,
   STRUCTURE_SPRITES,
   TERRAIN_SHEET,
   WANG_SETS,
@@ -582,11 +589,16 @@ export class GridScene extends Phaser.Scene {
     for (const [key, { url, frame }] of Object.entries(SPRITES)) {
       this.load.spritesheet(key, url, { frameWidth: frame, frameHeight: frame });
     }
+    const paintings = Object.keys(BATTLEFIELD_PAINTINGS) as BattlefieldKind[];
+    for (const kind of paintings) this.load.image(battlefieldPaintingKey(kind), BATTLEFIELD_PAINTINGS[kind]!.url);
     // Painted art is filtered smoothly when scaled; the rest stays crisp
     // (the game's pixelArt default).
     this.load.once(Phaser.Loader.Events.COMPLETE, () => {
       for (const [key, { smooth }] of Object.entries(SPRITES)) {
         if (smooth) this.textures.get(key).setFilter(Phaser.Textures.FilterMode.LINEAR);
+      }
+      for (const kind of paintings) {
+        this.textures.get(battlefieldPaintingKey(kind)).setFilter(Phaser.Textures.FilterMode.LINEAR);
       }
     });
   }
@@ -627,16 +639,26 @@ export class GridScene extends Phaser.Scene {
 
     const paletteName = level.palette ?? DEFAULT_BUILDING_PALETTE;
     const palette = BUILDING_PALETTES[paletteName];
-    this.renderBackdrop(getBackdropStyle(level.biome), getBackdropSeed(this.grid));
-    this.renderTerrain(this.grid, { wall: getWallAutotile(palette) });
+    // A battlefield is its field's painted (or code-drawn) look with its
+    // obstacles standing on it; any other map is drawn from its terrain.
+    if (level.battlefield) {
+      this.renderBattlefield(level.battlefield, getBackdropSeed(this.grid));
+    } else {
+      this.renderBackdrop(getBackdropStyle(level.biome), getBackdropSeed(this.grid));
+      this.renderTerrain(this.grid, { wall: getWallAutotile(palette) });
+    }
     this.renderMapSprites([
       ...getCrossingSprites(this.grid, BRIDGE_ART, GATE_ART[paletteName], FORD_ART, MAP_PROPS_SHEET),
       ...getHazardSprites(this.grid, SPIKES_ART, MAP_PROPS_SHEET),
     ]);
-    this.renderStandingProps([
-      ...getFeatureSprites(this.grid, FOREST_ART, MOUNTAIN_ART),
-      ...getBuildingSprites(level.buildings ?? [], palette, BUILDING_ART),
-    ]);
+    this.renderStandingProps(
+      level.battlefield
+        ? getObstacleSprites(level.obstacles ?? [], OBSTACLE_ART)
+        : [
+            ...getFeatureSprites(this.grid, FOREST_ART, MOUNTAIN_ART),
+            ...getBuildingSprites(level.buildings ?? [], palette, BUILDING_ART),
+          ],
+    );
     this.renderDecorations(level.decorations ?? []);
     this.renderStructures(level.structures ?? []);
     this.renderObjectiveTile();
@@ -3515,6 +3537,30 @@ export class GridScene extends Phaser.Scene {
           });
         },
       });
+    }
+  }
+
+  // A battlefield's floor and backdrop: its painting (BATTLEFIELD_PAINTINGS)
+  // with its horizon on the floor's back edge, or without one its
+  // code-drawn look (BATTLEFIELD_LOOKS): a flecked floor under the backdrop.
+  renderBattlefield(kind: BattlefieldKind, seed: number) {
+    const floor = { width: this.grid.width * CELL.width, height: this.grid.height * CELL.height };
+    const painting = BATTLEFIELD_PAINTINGS[kind];
+    if (painting) {
+      const at = getPaintingPlacement(painting, floor.width);
+      this.add
+        .image(at.x, at.y, battlefieldPaintingKey(kind))
+        .setOrigin(0, 0)
+        .setDisplaySize(at.width, at.height)
+        .setDepth(-1);
+      return;
+    }
+    const look = BATTLEFIELD_LOOKS[kind];
+    this.renderBackdrop(look.backdrop, seed);
+    const graphics = this.add.graphics().setDepth(-1);
+    graphics.fillStyle(look.floor.base).fillRect(0, 0, floor.width, floor.height);
+    for (const { x, y, color } of getFloorFlecks(look.floor, floor.width, floor.height, seed)) {
+      graphics.fillStyle(color).fillRect(x, y, BACKDROP_COLUMN, BACKDROP_COLUMN);
     }
   }
 

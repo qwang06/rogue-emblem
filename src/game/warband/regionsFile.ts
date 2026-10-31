@@ -32,6 +32,7 @@
 import { countEnemies, getGroupRoom, NORTH_THIRD, type EnemyGroup, type SpawnArea } from '../enemySpawns.ts';
 import type { Grid, Point } from '../grid.ts';
 import { MAP_ARCHETYPES } from '../mapArchetypes.ts';
+import { BATTLEFIELD_KINDS } from '../battlefields.ts';
 import type { MapGenOptions } from '../mapGen.ts';
 import { OBJECTIVE_KINDS, type ObjectiveSpec } from '../objectives.ts';
 import { REGION_BIOMES, type RegionBiome } from './realm/realmRegions.ts';
@@ -74,8 +75,10 @@ const TERRAIN_KEYS = [
   'generator',
   'routes',
   'archetype',
+  'battlefield',
+  'obstacles',
 ];
-const GENERATORS = ['classic', 'planned'];
+const GENERATORS = ['classic', 'planned', 'battlefield'];
 const REGION_KEYS = [
   'name',
   'description',
@@ -154,6 +157,13 @@ function parseTerrain(value: unknown, path: string): MapGenOptions {
     }
     terrain.archetype = json.archetype;
   }
+  if (json.battlefield !== undefined) {
+    if (typeof json.battlefield !== 'string' || !(BATTLEFIELD_KINDS as readonly string[]).includes(json.battlefield)) {
+      fail(`${path}.battlefield`, `must be one of ${BATTLEFIELD_KINDS.join(', ')}`);
+    }
+    terrain.battlefield = json.battlefield;
+  }
+  if (json.obstacles !== undefined) terrain.obstacles = sizeRange(json.obstacles, `${path}.obstacles`);
   // In the file's order, so saving it back doesn't shuffle its settings.
   const ordered = Object.keys(json).map((key) => [key, terrain[key]]);
   return Object.freeze(Object.fromEntries(ordered)) as unknown as MapGenOptions;
@@ -433,13 +443,25 @@ function inlineJson(value: unknown): string {
   return JSON.stringify(value ?? null);
 }
 
+// Whether `value` is a list Prettier always spreads out, one item a line
+// however short: two or more items, each an object with two or more keys
+// (e.g. a region's enemy groups) or each a list of two or more items.
+function isListOfRecords(value: unknown): boolean {
+  if (!Array.isArray(value) || value.length < 2) return false;
+  const size = (item: unknown) =>
+    Array.isArray(item) ? item.length : item && typeof item === 'object' ? Object.keys(item).length : 0;
+  const kind = (item: unknown) => (Array.isArray(item) ? 'list' : typeof item);
+  return value.every((item) => size(item) > 1 && kind(item) === kind(value[0]));
+}
+
 // `value` at `indent`, after `prefix` characters (its key) on the same
 // line; the top level always spreads out.
 function layoutJson(value: unknown, indent: string, prefix: number): string {
   const inline = inlineJson(value);
   if (!value || typeof value !== 'object') return inline;
   // +1 for a trailing comma.
-  if (indent !== '' && indent.length + prefix + inline.length + 1 <= LINE_WIDTH) return inline;
+  const fits = indent !== '' && indent.length + prefix + inline.length + 1 <= LINE_WIDTH;
+  if (fits && !isListOfRecords(value)) return inline;
   const inner = `${indent}  `;
   const lines = Array.isArray(value)
     ? value.map((item) => `${inner}${layoutJson(item, inner, 0)}`)
