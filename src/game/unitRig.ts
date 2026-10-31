@@ -36,9 +36,20 @@ export const BREATH_MS = 1800;
 // How far a breath stretches the unit up (and thins it by half as much).
 const BREATH_STRETCH = 0.025;
 
-// One hop of a walk: as long as a step from tile to tile (GridScene's
-// MOVE_STEP_MS), so the unit lands once per tile.
-export const HOP_MS = 140;
+// One full walk cycle, two strides (left foot, right foot), for every unit
+// whatever its number of frames: a sheet's walk shows each of its frames for
+// getWalkFrameMs(frames), and a hopping unit hops once per stride. It sets
+// the pace of the legs only; how fast a unit crosses tiles is GridScene's
+// MOVE_STEP_MS.
+export const WALK_CYCLE_MS = 720;
+
+// How long each frame of a walk cycle of `frames` frames shows.
+export function getWalkFrameMs(frames: number): number {
+  return WALK_CYCLE_MS / Math.max(1, frames);
+}
+
+// One hop of a code-drawn walk: one stride.
+export const HOP_MS = WALK_CYCLE_MS / 2;
 // How high a hop lifts the feet, in tiles.
 const HOP_HEIGHT = 0.06;
 // The rock from side to side over two hops, in degrees.
@@ -63,17 +74,16 @@ const HIT_KNOCKBACK = 0.06;
 const HIT_SQUASH = 0.1;
 
 // A walk drawn frame by frame instead of hopped in code: a sheet of
-// `frames` square frames (read left to right, top to bottom), each shown
-// `frameMs`. The picture still breathes in code while standing.
+// `frames` square frames (read left to right, top to bottom) making one walk
+// cycle (WALK_CYCLE_MS). The picture still breathes in code while standing.
 export interface WalkFrames {
   key: string;
   frames: number;
-  frameMs: number;
 }
 
 // The frame of a walk cycle `ms` into the walk, looping.
-export function getWalkFrame({ frames, frameMs }: WalkFrames, ms: number): number {
-  return ((Math.floor(ms / frameMs) % frames) + frames) % frames;
+export function getWalkFrame({ frames }: WalkFrames, ms: number): number {
+  return ((Math.floor(ms / getWalkFrameMs(frames)) % frames) + frames) % frames;
 }
 
 // The standing or walking pose `ms` into the motion. A unit whose walk is
