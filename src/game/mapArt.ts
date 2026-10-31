@@ -32,33 +32,35 @@ export function pickVariant(x: number, y: number, count: number): number {
   return (hash >>> 0) % count;
 }
 
-// Overlays for every forest and mountain cell, under units. Mountains
-// first take the art's 2x2 mountains, on 2x2 blocks of mountain cells found
+// Overlays for every forest and mountain cell, under units. Each terrain
+// first takes its art's 2x2 props (`big`), on 2x2 blocks of its cells found
 // in reading order (each cell in one block at most), drawn a tile at a
 // time; every other forest or mountain cell gets a one-tile variant.
 export function getFeatureSprites(grid: Grid, forestArt: FeatureArt, mountainArt: FeatureArt): MapSprite[] {
   const sprites: MapSprite[] = [];
   const claimed = new Set<string>();
-  const big = mountainArt.big ?? [];
-  const isFreeMountain = (x: number, y: number) =>
-    getCell(grid, x, y)?.terrain === 'mountain' && !claimed.has(`${x},${y}`);
+  const block = [
+    [0, 0],
+    [1, 0],
+    [0, 1],
+    [1, 1],
+  ] as const;
+  const artFor = (terrain: string | null) =>
+    terrain === 'forest' ? forestArt : terrain === 'mountain' ? mountainArt : null;
+  const isFree = (x: number, y: number, terrain: string) =>
+    getCell(grid, x, y)?.terrain === terrain && !claimed.has(`${x},${y}`);
   for (const { x, y, terrain } of grid.cells) {
-    if (big.length === 0 || terrain !== 'mountain') continue;
-    const block = [
-      [0, 0],
-      [1, 0],
-      [0, 1],
-      [1, 1],
-    ] as const;
-    if (!block.every(([dx, dy]) => isFreeMountain(x + dx, y + dy))) continue;
+    const big = artFor(terrain)?.big ?? [];
+    if (big.length === 0 || !block.every(([dx, dy]) => isFree(x + dx, y + dy, terrain!))) continue;
     const [column, row] = big[pickVariant(x, y, big.length)];
     for (const [dx, dy] of block) {
       claimed.add(`${x + dx},${y + dy}`);
-      sprites.push({ x: x + dx, y: y + dy, tile: [column + dx, row + dy], layer: 'ground', sheet: mountainArt.sheet });
+      const tile: SheetTile = [column + dx, row + dy];
+      sprites.push({ x: x + dx, y: y + dy, tile, layer: 'ground', sheet: artFor(terrain)!.sheet });
     }
   }
   for (const { x, y, terrain } of grid.cells) {
-    const art = terrain === 'forest' ? forestArt : terrain === 'mountain' ? mountainArt : null;
+    const art = artFor(terrain);
     if (!art || claimed.has(`${x},${y}`)) continue;
     const tile = art.tiles[pickVariant(x, y, art.tiles.length)];
     sprites.push({ x, y, tile, layer: 'ground', sheet: art.sheet });
