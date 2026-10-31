@@ -2,8 +2,7 @@ import Phaser from 'phaser';
 import { getPixelArtSpans } from '../game/pixelShapes.ts';
 import { GRID_PX, RANK_BADGES, TILE_SIZE } from '../game/tileset.ts';
 import type { UnitRank } from '../game/Unit.ts';
-
-const RANK_BADGE_DEPTH = 0.76; // just over units (0.75), under roofs (0.8)
+import { STANDING_DEPTH_HAIR } from '../game/sideView.ts';
 
 // A rank's badge texture, built once from its pixel rows (no anti-aliasing),
 // one texture pixel per art pixel; the image is scaled by GRID_PX.
@@ -36,10 +35,10 @@ export function addRankBadge(
     .image(sprite.x + x, sprite.y + y, ensureBadgeTexture(scene, rank))
     .setOrigin(0, 0)
     .setScale(GRID_PX);
-  badge.setDepth(RANK_BADGE_DEPTH);
   const follow = () =>
     badge
       .setPosition(sprite.x + x, sprite.y + y)
+      .setDepth(sprite.depth + STANDING_DEPTH_HAIR) // just over its unit
       .setAlpha(sprite.alpha)
       .setVisible(sprite.visible);
   follow();

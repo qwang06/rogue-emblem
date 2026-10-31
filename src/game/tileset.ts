@@ -38,6 +38,14 @@ export interface Shadow {
 // `frame` of each entry in src/assets/sprites.ts).
 export const TILE_SIZE = 64;
 
+// The battlefield is seen from the side at a slant, so a floor cell shows
+// TILE_SIZE wide but only TILE_HEIGHT tall, while units, trees and other
+// things standing on it keep their full TILE_SIZE square art and rise out of
+// it (see src/game/sideView.ts). CELL is that floor cell's size, for
+// gridToWorld and friends.
+export const TILE_HEIGHT = 40;
+export const CELL = Object.freeze({ width: TILE_SIZE, height: TILE_HEIGHT });
+
 // World pixels per pixel of a 32px tile: the scale for sizes that were
 // tuned on the old 32px grid (stroke widths, nudges, lunges), so they keep
 // their size relative to a tile.
@@ -311,11 +319,12 @@ export function getItemSprite(itemId: string): string | null {
 }
 
 // Every unit sheet is a grid of one-tile frames, `columns` wide: one row per
-// facing direction (`rows`, keyed by the facings in src/game/facing.ts), one
-// column per animation frame. A unit loops its facing's row, `frames` columns
-// long. Units start out facing `defaultFacing` (toward the camera), turn to
-// face the way they step while walking, and keep facing their last step once
-// they stop.
+// facing direction, one column per animation frame. The side view only uses
+// the left and right rows (`rows`, keyed by the facings in
+// src/game/facing.ts). A unit loops its facing's row, `frames` columns long.
+// Units start out facing the other side (getStartFacing), turn to face the
+// way they step sideways while walking, and keep that facing once they stop.
+// `defaultFacing` is the row shown off the map (e.g. in the roster).
 export const UNIT_SHEET: {
   columns: number;
   rows: Record<Facing, number>;
@@ -323,8 +332,8 @@ export const UNIT_SHEET: {
   frames: number;
 } = {
   columns: 4,
-  rows: { down: 0, left: 1, right: 2, up: 3 },
-  defaultFacing: 'down',
+  rows: { left: 1, right: 2 },
+  defaultFacing: 'right',
   frames: 4,
 };
 

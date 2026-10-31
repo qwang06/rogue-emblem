@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import { getEllipseSpans } from '../game/pixelShapes.ts';
 import { TILE_SIZE, TREE_SHADOW, UNIT_SHADOW, type Shadow } from '../game/tileset.ts';
 
-const UNIT_SHADOW_DEPTH = 0.7; // above range highlights and the arrow, below units
-const TREE_SHADOW_DEPTH = 0.35; // over the terrain, below trees (0.4)
+const UNIT_SHADOW_DEPTH = 0.7; // on the floor, over range highlights and the arrow, below everything standing
+const TREE_SHADOW_DEPTH = 0.35; // over the terrain, under the floor's forests and trees
 
 // A shadow's size and top-left offset within its tile, in world pixels.
 function getShadowBox({ width, height, centerX, centerY }: Shadow) {

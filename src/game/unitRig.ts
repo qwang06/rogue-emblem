@@ -147,12 +147,9 @@ export function getUnitPose(motion: RigMotion, motionMs: number, action: RigActi
 }
 
 // The side a unit's image faces after turning to `facing`: left mirrors it,
-// right draws it as is, and up or down (a single image has no back or front
-// view) keeps the side it already faced.
-export function getRigSide(current: RigSide, facing: Facing): RigSide {
-  if (facing === 'left') return -1;
-  if (facing === 'right') return 1;
-  return current;
+// right draws it as is.
+export function getRigSide(facing: Facing): RigSide {
+  return facing === 'left' ? -1 : 1;
 }
 
 // The side a unit faces to look from x `from` toward x `to` (world or grid

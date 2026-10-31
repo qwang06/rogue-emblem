@@ -137,7 +137,7 @@ export function setRigMotion(sprite: Sprite, motion: RigMotion, facing: Facing):
     rig.motion = motion;
     rig.motionMs = 0;
   }
-  turn(sprite, rig, getRigSide(rig.side, facing));
+  turn(sprite, rig, getRigSide(facing));
 }
 
 // Turns a rigged unit to look toward world x `x`.
