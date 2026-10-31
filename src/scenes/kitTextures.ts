@@ -8,12 +8,15 @@ const SIZE = 128; // each texture's side, stretched to whatever it covers
 // nothing at its edge, and HAZE, white at its top fading out downward.
 // Both are tinted to the kit's colors where they're drawn.
 export function ensureKitTextures(scene: Phaser.Scene) {
-  const make = (key: string, paint: (context: CanvasRenderingContext2D) => CanvasGradient) => {
+  // `height` is one short of a power of two for HAZE: WebGL repeats a
+  // power-of-two texture, and smooth filtering would then blend its opaque
+  // top row into its clear bottom edge, a bright line across the ground.
+  const make = (key: string, paint: (context: CanvasRenderingContext2D) => CanvasGradient, height = SIZE) => {
     if (scene.textures.exists(key)) return;
-    const texture = scene.textures.createCanvas(key, SIZE, SIZE)!;
+    const texture = scene.textures.createCanvas(key, SIZE, height)!;
     const context = texture.getContext();
     context.fillStyle = paint(context);
-    context.fillRect(0, 0, SIZE, SIZE);
+    context.fillRect(0, 0, SIZE, height);
     texture.refresh();
     texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
   };
@@ -25,12 +28,16 @@ export function ensureKitTextures(scene: Phaser.Scene) {
     gradient.addColorStop(1, 'rgba(255,255,255,0)');
     return gradient;
   });
-  make(HAZE, (context) => {
-    const gradient = context.createLinearGradient(0, 0, 0, SIZE);
-    gradient.addColorStop(0, 'rgba(255,255,255,1)');
-    gradient.addColorStop(1, 'rgba(255,255,255,0)');
-    return gradient;
-  });
+  make(
+    HAZE,
+    (context) => {
+      const gradient = context.createLinearGradient(0, 0, 0, SIZE - 1);
+      gradient.addColorStop(0, 'rgba(255,255,255,1)');
+      gradient.addColorStop(1, 'rgba(255,255,255,0)');
+      return gradient;
+    },
+    SIZE - 1,
+  );
 }
 
 // The mask's resolution per patch: coarse, and smoothed as it's stretched,
