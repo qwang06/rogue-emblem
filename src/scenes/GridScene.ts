@@ -170,6 +170,8 @@ import {
   STANDING_DEPTH_HAIR,
   STANDING_OVERHANG,
   ART_FEET_Y,
+  getScaledArtOrigin,
+  PAINTED_UNIT_SCALE,
 } from '../game/sideView.ts';
 import {
   BACKDROP_COLUMN,
@@ -266,7 +268,7 @@ import {
   playStoneThrow,
 } from './effects.ts';
 import { CRIT_SHAKE, getLungeDistance, getStrikeJuice, type Shake } from './hitJuice.ts';
-import { addTreeShadow, addUnitShadow } from './unitShadow.ts';
+import { addCastShadow, addTreeShadow, addUnitShadow } from './unitShadow.ts';
 import { addUnitOutline } from './unitOutline.ts';
 import { addUnitRig, faceRigToward, playRigAction, setRigMotion } from './unitRig.ts';
 import { addRankBadge } from './rankBadge.ts';
@@ -3307,7 +3309,7 @@ export class GridScene extends Phaser.Scene {
   showDamagePopup(sprite: Sprite, amount: number, kind: PopupKind = 'damage', label?: string) {
     const { worldView, zoom } = this.cameras.main;
     const { x, y } = toCanvasFraction(
-      worldToScreen({ x: sprite.x + sprite.displayWidth / 2, y: sprite.y }, { x: worldView.x, y: worldView.y, zoom }),
+      worldToScreen(sprite.getTopCenter(), { x: worldView.x, y: worldView.y, zoom }),
       this.scale.gameSize,
     );
     const popup = toDamagePopupView({
@@ -3886,11 +3888,20 @@ export class GridScene extends Phaser.Scene {
       .setData('art', art)
       .setData('facing', facing);
     if (!isSingleImageUnit(art)) sprite.play(this.unitAnimation(art, 'idle', facing));
+    // Painted units are drawn bigger, their feet kept on their cell.
+    if (isSingleImageUnit(art)) {
+      const origin = getScaledArtOrigin(PAINTED_UNIT_SCALE);
+      sprite
+        .setOrigin(origin.x, origin.y)
+        .setDisplaySize(TILE_SIZE * PAINTED_UNIT_SCALE, TILE_SIZE * PAINTED_UNIT_SCALE);
+    }
     const outline = addUnitOutline(this, sprite, UNIT_OUTLINE.colors[unit.team]);
     if (isSingleImageUnit(art)) addUnitRig(this, sprite, unit.team === 'enemy' ? -1 : 1, [outline]);
     // A battlefield's painted floor gets a soft shadow, a terrain map the crisp blob.
     if (this.battlefieldKind) addUnitShadow(this, sprite, SOFT_UNIT_SHADOW, true);
     else addUnitShadow(this, sprite);
+    // A painted unit on a painted floor also casts its shadow with the light.
+    if (this.battlefieldKind && isSingleImageUnit(art)) addCastShadow(this, sprite);
     if (unit.rank) addRankBadge(this, sprite, unit.rank);
     this.unitSprites.set(unitId, sprite);
   }
@@ -3956,9 +3967,10 @@ function tryRunCommand(session: Parameters<typeof applyRunCommand>[0], command: 
   }
 }
 
-// A unit sprite's center in world space (sprites are placed by their top left).
+// A unit sprite's center in world space (wherever its origin is).
 function spriteCenter(sprite: Sprite): Point {
-  return { x: sprite.x + sprite.displayWidth / 2, y: sprite.y + sprite.displayHeight / 2 };
+  const { x, y } = sprite.getCenter();
+  return { x, y };
 }
 
 // Whether the player asked their system for less motion: the map then skips

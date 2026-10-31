@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { getEllipseSpans } from '../game/pixelShapes.ts';
+import type { Point } from '../game/grid.ts';
+import { ART_FEET_Y, CAST_SHADOW, getCastShadowLayout } from '../game/sideView.ts';
 import { TILE_SIZE, TREE_SHADOW, UNIT_SHADOW, type Shadow } from '../game/tileset.ts';
 
 const SOFT_SHADOW_KEY = 'shadow-soft';
@@ -110,4 +112,58 @@ export function addSoftShadow(
 // top-left corner is (x, y). Trees never move, so it stays put.
 export function addTreeShadow(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Image {
   return addShadow(scene, x, y, TREE_SHADOW, TREE_SHADOW_DEPTH);
+}
+
+// The cast-shadow texture for a unit image `key` (mirrored when `flip`),
+// built once: its silhouette laid down by getCastShadowLayout, black and
+// blurred. Returns its key and where its feet are, to anchor it by.
+function ensureCastShadowTexture(scene: Phaser.Scene, key: string, flip: boolean): { key: string; anchor: Point } {
+  const source = scene.textures.get(key).getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+  const size = source.width;
+  const layout = getCastShadowLayout(size, (ART_FEET_Y / TILE_SIZE) * size);
+  const shadowKey = `cast-shadow-${key}${flip ? '-flip' : ''}`;
+  if (!scene.textures.exists(shadowKey)) {
+    const texture = scene.textures.createCanvas(shadowKey, layout.width, layout.height)!;
+    const context = texture.getContext();
+    context.setTransform(...layout.transform);
+    if (flip) {
+      context.translate(size, 0);
+      context.scale(-1, 1);
+    }
+    context.filter = `blur(${Math.max(1, Math.round(size / 96))}px)`;
+    context.drawImage(source, 0, 0, size, size);
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.filter = 'none';
+    context.globalCompositeOperation = 'source-in';
+    context.fillStyle = '#000';
+    context.fillRect(0, 0, layout.width, layout.height);
+    texture.refresh();
+    texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+  }
+  return { key: shadowKey, anchor: layout.anchor };
+}
+
+// A painted unit's shadow cast by light from the upper left (CAST_SHADOW):
+// its own silhouette laid down from its feet toward the lower right, soft
+// edged. Follows the sprite (placed by its tile's top-left corner) every
+// frame, mirrors with it, and is destroyed with it.
+export function addCastShadow(scene: Phaser.Scene, sprite: Phaser.GameObjects.Sprite): Phaser.GameObjects.Image {
+  const shadow = scene.add.image(sprite.x, sprite.y, '__DEFAULT').setDepth(UNIT_SHADOW_DEPTH);
+  const follow = () => {
+    const { key, anchor } = ensureCastShadowTexture(scene, sprite.texture.key, sprite.flipX);
+    if (shadow.texture.key !== key) shadow.setTexture(key).setOrigin(anchor.x, anchor.y);
+    const scale = sprite.displayWidth / scene.textures.get(sprite.texture.key).getSourceImage().width;
+    shadow
+      .setPosition(sprite.x + TILE_SIZE / 2, sprite.y + ART_FEET_Y)
+      .setScale(scale)
+      .setAlpha(sprite.alpha * CAST_SHADOW.alpha)
+      .setVisible(sprite.visible);
+  };
+  follow();
+  scene.events.on(Phaser.Scenes.Events.POST_UPDATE, follow);
+  sprite.once(Phaser.GameObjects.Events.DESTROY, () => {
+    scene.events.off(Phaser.Scenes.Events.POST_UPDATE, follow);
+    shadow.destroy();
+  });
+  return shadow;
 }
