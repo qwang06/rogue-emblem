@@ -60,6 +60,9 @@ import { findUnitSkill, getSkillActions, getSkillForecast, getUnitSkills, isHeal
 import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange } from '../game/combat.ts';
 import { getCameraView, getFitZoom } from '../game/camera.ts';
 import { getFramingClumps } from '../game/battlefieldFraming.ts';
+import { layOutKit, type BattlefieldKit, type KitLayer } from '../game/battlefieldKit.ts';
+import { BATTLEFIELD_KITS, KIT_URLS } from '../assets/battlefieldKits.ts';
+import { ensureKitTextures } from './kitTextures.ts';
 import { createCursor, moveCursor } from '../game/cursor.ts';
 import {
   createBattleLevel,
@@ -165,6 +168,7 @@ import {
   getStandingPosition,
   STANDING_DEPTH_HAIR,
   STANDING_OVERHANG,
+  ART_FEET_Y,
 } from '../game/sideView.ts';
 import {
   BACKDROP_COLUMN,
@@ -177,6 +181,7 @@ import {
   getPaintingPlacement,
   getSilhouette,
   type BackdropStyle,
+  type WorldRect,
 } from '../game/backdrop.ts';
 import type { BattlefieldKind } from '../game/battlefields.ts';
 import { BATTLEFIELD_PAINTINGS, battlefieldPaintingKey } from '../assets/battlefieldArt.ts';
@@ -487,10 +492,11 @@ export class GridScene extends Phaser.Scene {
   // The marker on the tile a boss's horn marked, and that tile as "x,y".
   incomingMarker: Phaser.GameObjects.Rectangle | null = null;
   incomingMarkerKey: string | null = null;
-  // A battlefield's kind, its painting (if it has one) and the out-of-focus
-  // clumps framing it, which fitCamera fits to the screen.
+  // A battlefield's kind, the world rectangle its painted scenery (a kit
+  // or a painting) covers, which fitCamera frames, and the out-of-focus
+  // clumps framing a code-drawn one.
   battlefieldKind: BattlefieldKind | null = null;
-  battlefieldPainting: Phaser.GameObjects.Image | null = null;
+  battlefieldScene: WorldRect | null = null;
   framingClumps: Phaser.GameObjects.Image[] = [];
 
   constructor() {
@@ -614,6 +620,7 @@ export class GridScene extends Phaser.Scene {
     }
     const paintings = Object.keys(BATTLEFIELD_PAINTINGS) as BattlefieldKind[];
     for (const kind of paintings) this.load.image(battlefieldPaintingKey(kind), BATTLEFIELD_PAINTINGS[kind]!.url);
+    for (const [key, url] of Object.entries(KIT_URLS)) this.load.image(key, url);
     // Painted art is filtered smoothly when scaled; the rest stays crisp
     // (the game's pixelArt default).
     this.load.once(Phaser.Loader.Events.COMPLETE, () => {
@@ -623,6 +630,7 @@ export class GridScene extends Phaser.Scene {
       for (const kind of paintings) {
         this.textures.get(battlefieldPaintingKey(kind)).setFilter(Phaser.Textures.FilterMode.LINEAR);
       }
+      for (const key of Object.keys(KIT_URLS)) this.textures.get(key).setFilter(Phaser.Textures.FilterMode.LINEAR);
     });
   }
 
@@ -665,7 +673,7 @@ export class GridScene extends Phaser.Scene {
     // A battlefield is its field's painted (or code-drawn) look with its
     // obstacles standing on it; any other map is drawn from its terrain.
     this.battlefieldKind = level.battlefield ?? null;
-    this.battlefieldPainting = null;
+    this.battlefieldScene = null;
     this.framingClumps = [];
     // A battlefield darkens toward the screen's edges (WebGL only).
     const cameraFX = this.cameras.main.postFX;
@@ -821,8 +829,8 @@ export class GridScene extends Phaser.Scene {
   // canvas.
   fitCamera() {
     const camera = this.cameras.main;
-    const painting = this.battlefieldPainting;
-    if (painting) {
+    const scenery = this.battlefieldScene;
+    if (scenery) {
       const canvas = this.scale.gameSize;
       const floor = {
         x: 0,
@@ -831,8 +839,7 @@ export class GridScene extends Phaser.Scene {
         height: this.grid.height * CELL.height + STANDING_OVERHANG,
       };
       const fit = Math.min(canvas.width / floor.width, canvas.height / floor.height);
-      const at = { x: painting.x, y: painting.y, width: painting.displayWidth, height: painting.displayHeight };
-      const { zoom, center } = getPaintingCamera(at, floor, canvas, fit);
+      const { zoom, center } = getPaintingCamera(scenery, floor, canvas, fit);
       camera.setZoom(zoom);
       camera.centerOn(center.x, center.y);
       this.afterCameraFit();
@@ -3642,14 +3649,18 @@ export class GridScene extends Phaser.Scene {
   // A faint grid over the floor marks out its cells without boxing them in.
   renderBattlefield(kind: BattlefieldKind, seed: number) {
     const floor = { width: this.grid.width * CELL.width, height: this.grid.height * CELL.height };
+    const kit = BATTLEFIELD_KITS[kind];
     const painting = BATTLEFIELD_PAINTINGS[kind];
-    if (painting) {
+    if (kit) {
+      this.renderKit(kit, floor, seed);
+    } else if (painting) {
       const at = getPaintingPlacement(painting, floor.width);
-      this.battlefieldPainting = this.add
+      this.add
         .image(at.x, at.y, battlefieldPaintingKey(kind))
         .setOrigin(0, 0)
         .setDisplaySize(at.width, at.height)
         .setDepth(-1);
+      this.battlefieldScene = at;
     } else {
       const look = BATTLEFIELD_LOOKS[kind];
       this.renderBackdrop(look.backdrop, seed, floor.width);
@@ -3661,6 +3672,46 @@ export class GridScene extends Phaser.Scene {
       }
     }
     this.renderFloorGrid(floor);
+  }
+
+  // A battlefield built from its kit (layOutKit): the ground tiled under
+  // everything, washes of light, shade and haze over it, decals on it, the
+  // horizon along the top, border trees and bushes sorted with the units
+  // by where they stand, and the foreground out of focus over it all.
+  renderKit(kit: BattlefieldKit, floor: { width: number; height: number }, seed: number) {
+    ensureKitTextures(this);
+    const { scene, pieces } = layOutKit(kit, floor, seed);
+    this.battlefieldScene = scene;
+    const depths: Record<Exclude<KitLayer, 'standing'>, number> = {
+      ground: -1,
+      wash: -0.95,
+      decal: -0.9,
+      horizon: -0.85,
+      foreground: FRAMING_DEPTH,
+    };
+    for (const piece of pieces) {
+      if (piece.layer === 'ground') {
+        this.add
+          .tileSprite(piece.x, piece.y, piece.width, piece.height, piece.key)
+          .setOrigin(0, 0)
+          .setTileScale(kit.scale)
+          .setDepth(depths.ground);
+        continue;
+      }
+      const image = this.add
+        .image(piece.x, piece.y, piece.key)
+        .setOrigin(0, 0)
+        .setDisplaySize(piece.width, piece.height)
+        .setFlipX(piece.flip)
+        .setAlpha(piece.alpha);
+      if (piece.tint !== undefined) image.setTint(piece.tint);
+      if (piece.layer === 'standing') {
+        image.setDepth(getStandingDepth(piece.foot! - ART_FEET_Y) - STANDING_DEPTH_HAIR);
+      } else {
+        image.setDepth(depths[piece.layer]);
+      }
+      if (piece.layer === 'foreground') image.preFX?.addBlur(0, 1, 1, 1.5);
+    }
   }
 
   // The battlefield's cells, outlined faintly: a dark line with a lighter
