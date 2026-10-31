@@ -58,11 +58,13 @@ export const TERRAIN_SHEET = {
 export const WANG_SHEET = { key: 'terrain64', columns: 16 };
 
 // The ground sets, drawn in this order. Grass and dirt is the base under
-// every cell (dirt runs on under a gate); the river set then draws over
+// every cell (dirt runs on under a gate); rocky highland then draws under
+// mountains, so a range reads as one mass; the river set then draws over
 // any quarter touching water, with a rocky cut bank between water and
 // grass. Water runs on under bridges and fords, which draw over it.
 export const WANG_SETS: Record<string, WangSet> = {
   dirt: { row: 0, terrains: ['dirt', 'gate'], terrainIs: 'upper', base: true },
+  rock: { row: 2, terrains: ['mountain'], terrainIs: 'upper' },
   water: { row: 1, terrains: ['water', 'bridge', 'ford'], terrainIs: 'lower' },
 };
 
@@ -75,14 +77,18 @@ export const WANG_SETS: Record<string, WangSet> = {
 // tree, mountain peak, twin peaks, bridge west–east, bridge north–south,
 // boulders; row 1 red, blue and orange houses, watchtower, castle wall,
 // castle tower, gatehouse, village wall; row 2 the bridge ends (see
-// BRIDGE_ART).
+// BRIDGE_ART), then two low ridges and a crag; rows 3–4 two 2x2 mountains,
+// a massif and a tall peak.
 export const TERRAIN64_PROPS_SHEET = { key: 'terrain64-props', columns: 8 };
 
 // One-tile overlays on forest and mountain cells, a variant per cell (see
 // getFeatureSprites in src/game/mapArt.ts), off `sheet`.
+// `big` (mountains only) are 2x2 props, each named by its top-left tile,
+// stood on 2x2 blocks of the terrain.
 export interface FeatureArt {
   sheet: { key: string; columns: number };
   tiles: SheetTile[];
+  big?: SheetTile[];
 }
 
 export const FOREST_ART: FeatureArt = {
@@ -99,6 +105,13 @@ export const MOUNTAIN_ART: FeatureArt = {
   tiles: [
     [3, 0],
     [4, 0],
+    [4, 2],
+    [5, 2],
+    [6, 2],
+  ],
+  big: [
+    [0, 3],
+    [2, 3],
   ],
 };
 

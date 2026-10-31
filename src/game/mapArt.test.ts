@@ -63,7 +63,7 @@ describe('getFeatureSprites', () => {
     }
   });
 
-  it('draws a mountain variant on each mountain cell, with nothing spilling north', () => {
+  it('draws a one-tile mountain on a mountain cell with no 2x2 block, with nothing spilling north', () => {
     const sprites = features(['.', '^', '^']);
     expect(sprites.map(({ x, y }) => [x, y])).toEqual([
       [0, 1],
@@ -72,20 +72,42 @@ describe('getFeatureSprites', () => {
     for (const { tile } of sprites) expect(MOUNTAIN_ART.tiles).toContainEqual(tile);
   });
 
+  it('stands a 2x2 mountain on a 2x2 block, each cell drawing its quarter', () => {
+    const sprites = features(['^^', '^^']);
+    const [column, row] = MOUNTAIN_ART.big![pickVariant(0, 0, MOUNTAIN_ART.big!.length)];
+    expect(sprites.map(({ x, y, tile }) => [x, y, tile])).toEqual([
+      [0, 0, [column, row]],
+      [1, 0, [column + 1, row]],
+      [0, 1, [column, row + 1]],
+      [1, 1, [column + 1, row + 1]],
+    ]);
+  });
+
+  it('gives each cell to one block at most, leaving the rest one-tile mountains', () => {
+    // A 3x2 range: one 2x2 block on the left, singles on the right column.
+    const sprites = features(['^^^', '^^^']);
+    expect(sprites).toHaveLength(6);
+    const singles = sprites.filter(({ tile }) => MOUNTAIN_ART.tiles.some((t) => t[0] === tile[0] && t[1] === tile[1]));
+    expect(singles.map(({ x, y }) => [x, y])).toEqual([
+      [2, 0],
+      [2, 1],
+    ]);
+  });
+
   it('pins the prop sheet tiles', () => {
     const sheet = TERRAIN64_PROPS_SHEET;
     expect(features(['T^'])).toEqual([
       { x: 0, y: 0, tile: FOREST_ART.tiles[pickVariant(0, 0, 3)], layer: 'ground', sheet },
-      { x: 1, y: 0, tile: MOUNTAIN_ART.tiles[pickVariant(1, 0, 2)], layer: 'ground', sheet },
+      { x: 1, y: 0, tile: MOUNTAIN_ART.tiles[pickVariant(1, 0, 5)], layer: 'ground', sheet },
     ]);
     expect(FOREST_ART.tiles).toEqual([
       [0, 0],
       [1, 0],
       [2, 0],
     ]);
-    expect(MOUNTAIN_ART.tiles).toEqual([
-      [3, 0],
-      [4, 0],
+    expect(MOUNTAIN_ART.big).toEqual([
+      [0, 3],
+      [2, 3],
     ]);
   });
 });
