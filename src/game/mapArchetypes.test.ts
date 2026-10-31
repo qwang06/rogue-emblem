@@ -5,6 +5,7 @@ import {
   hasBlock,
   MAP_ARCHETYPES,
   planAmbush,
+  planArena,
   planArchetype,
   planCrossroads,
   planFortress,
@@ -248,6 +249,50 @@ describe('planFortress', () => {
         expect(path.has(key({ x: g.x, y: g.y - 1 }))).toBe(true);
       }
       expect(path.has(key(fort))).toBe(false);
+    }
+  });
+});
+
+describe('planArena', () => {
+  const ARENA_SIZES: [number, number][] = [
+    [10, 6],
+    [12, 6],
+    [8, 6],
+  ];
+
+  it('deploys down the west edge and deals the enemy into the east third, north and south', () => {
+    for (const [width, height] of ARENA_SIZES) {
+      for (const seed of SEEDS) {
+        const plan = planArena(width, height, createSeededRng(seed));
+        expect(plan.deploymentZone).toHaveLength(3);
+        expect(plan.deploymentZone.every(({ x }) => x === 0)).toBe(true);
+        const east = width - Math.max(2, Math.floor(width / 3));
+        const [north, south] = plan.enemyZones;
+        expect([...north, ...south].every(({ x }) => x >= east && x < width)).toBe(true);
+        expect(Math.max(...north.map(({ y }) => y))).toBeLessThan(Math.min(...south.map(({ y }) => y)));
+      }
+    }
+  });
+
+  it('runs the road from the deployment zone to the east edge, where the tile to seize is', () => {
+    for (const [width, height] of ARENA_SIZES) {
+      for (const seed of SEEDS) {
+        const plan = planArena(width, height, createSeededRng(seed));
+        expect(plan.deploymentZone.map(key)).toContain(key(plan.path[0]));
+        expect(plan.path[plan.path.length - 1].x).toBe(width - 1);
+        expect(plan.seizeTile).toEqual(plan.path[plan.path.length - 1]);
+        expect(hasBlock(plan.path)).toBe(false);
+      }
+    }
+  });
+
+  it('keeps a second route clear on the other half, and grows no mountains', () => {
+    for (const seed of SEEDS) {
+      const plan = planArena(10, 6, createSeededRng(seed));
+      expect(plan.routes).toHaveLength(1);
+      expect(plan.routes[0][plan.routes[0].length - 1].x).toBe(9);
+      expect(plan.fill?.mountains).toBe(0);
+      expect(plan.terrain).toEqual([]);
     }
   });
 });

@@ -19,10 +19,11 @@ describe('REGION_SETTINGS', () => {
     for (const region of REGION_CONFIGS) expect(region.description).toBeTruthy();
   });
 
-  // Small maps keep a run fast: the enemy is a turn or two away.
-  it('uses 8x8 maps', () => {
+  // Small, wide arenas keep a run fast and suit the side view: the enemy
+  // is a turn or two away across the field.
+  it('uses 10x6 maps', () => {
     for (const region of REGION_CONFIGS) {
-      expect([region.terrain.width, region.terrain.height]).toEqual([8, 8]);
+      expect([region.terrain.width, region.terrain.height]).toEqual([10, 6]);
     }
   });
 

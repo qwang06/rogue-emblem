@@ -9,7 +9,6 @@ import {
   growToLevel,
   layOutStage,
   MAP_CANDIDATES,
-  OBJECTIVE_ARCHETYPES,
   pickStageArchetype,
   pickStageLayout,
   SPIKE_TRAP_COUNT,
@@ -209,8 +208,9 @@ describe('createStageLevel', () => {
   });
 
   it('builds a different map from the same seed with a different region', () => {
+    // Regions with the same dressing can share a map; most don't.
     const maps = new Set(REGION_CONFIGS.map((region) => terrainToRows(createStageLevel(7, region).grid).join('\n')));
-    expect(maps.size).toBe(REGION_CONFIGS.length);
+    expect(maps.size).toBeGreaterThan(REGION_CONFIGS.length / 2);
   });
 
   it('is sized by its region and offers the starting warband', () => {
@@ -526,32 +526,34 @@ describe('stage 1', () => {
 describe('map archetypes on stages', () => {
   const region = REGION_CONFIGS[4];
 
-  it('lays out stage 1 as advance, and later stages as a type that suits their objective', () => {
-    expect(pickStageArchetype(1, region, 7, 'seize')).toBe('advance');
-    for (const objective of OBJECTIVE_KINDS) {
-      const picked = new Set(Array.from({ length: 60 }, (_, seed) => pickStageArchetype(2, region, seed, objective)));
-      expect([...picked].sort()).toEqual([...OBJECTIVE_ARCHETYPES[objective]].sort());
-    }
+  it('lays out every stage as an arena unless the region names a map type', () => {
+    expect(region.terrain.archetype).toBeUndefined();
+    expect(pickStageArchetype(region)).toBe('arena');
   });
 
   it('keeps a region’s own map type on every stage', () => {
     const fixed = withArchetype(region, 'islands');
     expect(fixed.terrain.archetype).toBe('islands');
     expect(fixed.terrain.width).toBe(region.terrain.width);
-    expect(pickStageArchetype(1, fixed, 7, 'rout')).toBe('islands');
-    expect(pickStageArchetype(5, fixed, 7, 'boss')).toBe('islands');
+    expect(pickStageArchetype(fixed)).toBe('islands');
   });
 
-  it('every archetype appears for some objective', () => {
-    const all = new Set(Object.values(OBJECTIVE_ARCHETYPES).flat());
-    expect(all.size).toBe(6);
-  });
-
-  it.each(['crossroads', 'ambush', 'gauntlet', 'islands', 'fortress'] as const)(
-    'builds a %s stage that keeps every rule, deploying and placing enemies where the plan says',
-    (archetype) => {
+  // The top-down map types were made for square 8x8 maps; the arena for the
+  // side view's wide ones.
+  it.each([
+    ['crossroads', 8, 8],
+    ['ambush', 8, 8],
+    ['gauntlet', 8, 8],
+    ['islands', 8, 8],
+    ['fortress', 8, 8],
+    ['arena', 10, 6],
+    ['arena', 12, 6],
+    ['arena', 8, 6],
+  ] as const)(
+    'builds a %s stage %ix%i that keeps every rule, deploying and placing enemies where the plan says',
+    (archetype, width, height) => {
       for (const seed of [1, 2, 3, 4, 5]) {
-        const stageRegion = withArchetype(region, archetype);
+        const stageRegion = withArchetype({ ...region, terrain: { ...region.terrain, width, height } }, archetype);
         const layout = pickStageLayout(seed, stageRegion);
         expect(layout.problems, `${archetype} seed ${seed}`).toEqual([]);
         expect(layout.deploymentZone.slice(0, 3)).toEqual(layout.terrain.deploymentZone);

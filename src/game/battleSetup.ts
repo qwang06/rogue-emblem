@@ -81,7 +81,7 @@ function getStoryChapter(chapter: number, chapters: readonly StoryChapter[]): St
 // and deploy cap; one without a run (a region preview) the starting
 // warband. Either way the stage's enemies carry its loot (getStageLootCount),
 // it plays the objective pickStageObjective gives it, and its map is laid
-// out as the archetype pickStageArchetype picks for that objective.
+// out as the archetype pickStageArchetype picks.
 export function createBattleLevel(
   setup: BattleSetup,
   content: GameContent = DEFAULT_CONTENT,
@@ -99,7 +99,7 @@ export function createBattleLevel(
       const baseRegion = setup.run ? shiftEnemyLevels(unheated, getRunHeatRules(setup.run).enemyLevels) : unheated;
       if (setup.run && isVisit(setup.run)) return createVisitLevel(setup, setup.run, baseRegion);
       const spec = pickStageObjective(setup.stage, baseRegion, setup.seed);
-      const region = withArchetype(baseRegion, pickStageArchetype(setup.stage, baseRegion, setup.seed, spec.kind));
+      const region = withArchetype(baseRegion, pickStageArchetype(baseRegion));
       const lootCount = getStageLootCount(setup.stage);
       let level = setup.run
         ? createStageLevel(setup.seed, region, restoreRoster(setup.run), setup.run.deployCap, lootCount)
