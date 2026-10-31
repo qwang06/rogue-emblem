@@ -5,28 +5,32 @@ plains battlefield kit (`src/assets/battlefields/plains/`). This is
 everything that still has to be generated before no pixel art is left.
 Tick a box when its art is merged.
 
-Done so far: the plains battlefield kit (ground, dry grass, dirt, horizon,
-border trees, bushes, decals, foreground) and four units (warrior, archer,
-acolyte as the cleric, sage as the mage).
+**Style change:** the art is moving from the painterly look to an anime
+look (cel-shaded characters and props on anime background art). The
+painterly pieces already in the game (the plains kit, four units and the
+obstacles) stay until their anime versions replace them, so their boxes are
+unticked again.
 
 ## How to make it
 
 The full spec and prompts are in the project's shared files at
-`art/units/unit-prompts.md` (units) and `art/battlefields/plains-kit/prompts.md`
-(battlefield pieces). In short:
+`art/anime/prompts.md`. In short:
 
-- **Style:** painterly hand-painted digital illustration, soft brushwork,
-  thin dark outline, warm afternoon light from the upper left, muted earthy
-  palette.
+- **Style:** characters, obstacles and props are anime game art: clean
+  dark-brown lineart, cel shading with two flat tones and a crisp
+  highlight, bright clear colors, warm afternoon light from the upper left.
+  Battlefields are anime background art: lush saturated greens, crisp
+  painted shapes, cool blue-violet shadows falling to the lower right.
 - **Background:** solid flat magenta (#FF00FF) for anything with a cut-out
   shape; it's keyed out. Seamless ground textures have no background.
 - **Units:** one square image each, full body, facing right in
-  three-quarter side view from slightly above, about five heads tall, feet
-  about 90% of the way down. The game animates the single image in code.
+  three-quarter side view from slightly above, about five heads tall
+  (heroic anime proportions), feet about 90% of the way down. The game animates the single image in code.
   Warband units have a blue accent; monsters use their own colors.
 - **Save generations:** ask for a 2x2 grid of four on one 1:1 image (each
-  cell is still twice the size the game ships). Attach a finished piece as
-  a reference so a batch matches the set.
+  cell is still twice the size the game ships). Make the two key images
+  first (the plains scene and the warrior) and attach them as references
+  so every batch matches the set.
 - Drop finished images in `pixellab/` on the PC; Claude cuts, keys,
   compresses and wires them in.
 
@@ -36,9 +40,9 @@ Biggest win: these are on screen all the time. Grouped into batches of four.
 
 Base classes
 
-- [x] Warrior
-- [x] Archer
-- [x] Acolyte (cleric)
+- [ ] Warrior
+- [ ] Archer
+- [ ] Acolyte (cleric)
 - [ ] Soldier (spear and shield infantry)
 - [ ] Vanguard (axe-wielding front line)
 - [ ] Guard (heavy armor behind a tower shield, spear)
@@ -56,7 +60,7 @@ Promoted classes (a richer version of their base class's look)
 - [ ] Bastion (from guard)
 - [ ] Templar (from guard)
 - [ ] Bishop (from acolyte)
-- [x] Sage (from acolyte; uses the mage)
+- [ ] Sage (from acolyte; uses the mage)
 
 Monsters (enemies)
 
@@ -75,17 +79,21 @@ on forest and desert still use the old `OBSTACLE_ART`. One cut-out each, on mage
 seen from the same slightly-above angle, sitting on the ground with no
 cast shadow (the game adds one). Two or three variants of each helps.
 
-- [x] Rock (small, impassable)
-- [x] Boulder (big pile, impassable)
-- [x] Bush (slows movement)
-- [x] Pine (slows movement)
-- [x] Thicket (dense brush, slows movement)
-- [x] Crag (jagged rock, desert)
-- [x] Cactus (desert)
+- [ ] Rock (small, impassable)
+- [ ] Boulder (big pile, impassable)
+- [ ] Bush (slows movement)
+- [ ] Pine (slows movement)
+- [ ] Thicket (dense brush, slows movement)
+- [ ] Crag (jagged rock, desert)
+- [ ] Cactus (desert)
 
-## 3. The other battlefields
+## 3. Battlefields
 
-Plains has a kit; forest and desert still use the old code-drawn look.
+- [ ] Plains kit (redo in the anime style): seamless grass, dry grass and
+      dirt, horizon, left and right tree clusters, bushes, decals,
+      foreground
+
+Plains has a painterly kit; forest and desert still use the old code-drawn look.
 Each needs the same set of pieces as plains:
 
 - [ ] Forest kit: seamless ground (leaf litter and moss), 2 patch textures
