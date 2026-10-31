@@ -248,33 +248,13 @@ export function createStageLevel(
   };
 }
 
-// Which archetypes suit each objective (see mapArchetypes.ts): a seize
-// wants a tile worth fighting over, a boss a stronghold, a survive enemies
-// closing in from more than one side.
-export const OBJECTIVE_ARCHETYPES: Readonly<Record<ObjectiveKind, readonly MapArchetype[]>> = Object.freeze({
-  rout: Object.freeze(['advance', 'ambush', 'gauntlet', 'islands'] as const),
-  seize: Object.freeze(['crossroads', 'islands', 'fortress'] as const),
-  boss: Object.freeze(['fortress', 'advance', 'gauntlet'] as const),
-  survive: Object.freeze(['ambush', 'crossroads'] as const),
-});
-
-// Mixed into the stage seed so the archetype's draw doesn't follow the
-// objective's or the map's.
-const ARCHETYPE_SEED_SALT = 0x3a9e7c;
-
-// The archetype stage `stage` (1 is the first) of `region` is laid out
-// as, for an `objective` stage, seeded by the stage's `seed`: the region's
-// own if it sets one, 'advance' on stage 1, else one of
-// OBJECTIVE_ARCHETYPES[objective].
-export function pickStageArchetype(
-  stage: number,
-  region: RegionConfig,
-  seed: number,
-  objective: ObjectiveKind,
-): MapArchetype {
-  if (region.terrain.archetype) return region.terrain.archetype;
-  if (stage <= 1) return 'advance';
-  return randomItem(createSeededRng(seed ^ ARCHETYPE_SEED_SALT), OBJECTIVE_ARCHETYPES[objective]);
+// The archetype `region`'s stages are laid out as: the region's own if it
+// sets one, else 'arena', the side view's battlefield (see
+// mapArchetypes.ts). Every objective plays on an arena: its road's far end
+// is the tile to seize, and a boss is the enemy farthest from the
+// deployment zone.
+export function pickStageArchetype(region: RegionConfig): MapArchetype {
+  return region.terrain.archetype ?? 'arena';
 }
 
 // `region` with its maps laid out as `archetype`.

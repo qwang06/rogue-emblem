@@ -83,7 +83,7 @@ describe('createBattleLevel', () => {
     expect(createBattleLevel({ mode: 'training', unitClass: 'soldier' }).deploymentZone).toEqual([]);
     const stage2 = createBattleLevel({ mode: 'warband', seed: 3, stage: 2 });
     expect(terrainToRows(stage2.grid)).toEqual(
-      terrainToRows(createStageLevel(3, getStageRegion(2, REGION_SETTINGS)).grid),
+      terrainToRows(createStageLevel(3, withArchetype(getStageRegion(2, REGION_SETTINGS), 'arena')).grid),
     );
   });
 
@@ -96,7 +96,7 @@ describe('createBattleLevel', () => {
 
   it('builds Warband stages from the regions passed in', () => {
     const stage3 = createBattleLevel({ mode: 'warband', seed: 3, stage: 3 }, CUSTOM_CONTENT);
-    const expected = createStageLevel(3, CUSTOM_CONTENT.regions.regions[1]);
+    const expected = createStageLevel(3, withArchetype(CUSTOM_CONTENT.regions.regions[1], 'arena'));
     expect(terrainToRows(stage3.grid)).toEqual(terrainToRows(expected.grid));
   });
 
@@ -217,8 +217,7 @@ describe('regionPreview', () => {
     const setup = regionPreview(1, 31, settings)!;
     const level = createBattleLevel(setup, { ...DEFAULT_CONTENT, regions: settings });
     const region = settings.regions[1];
-    const objective = pickStageObjective(3, region, 31).kind;
-    const stageRegion = withArchetype(region, pickStageArchetype(3, region, 31, objective));
+    const stageRegion = withArchetype(region, pickStageArchetype(region));
     expect(terrainToRows(level.grid)).toEqual(terrainToRows(createStageLevel(31, stageRegion).grid));
   });
 
