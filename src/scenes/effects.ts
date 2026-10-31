@@ -151,7 +151,8 @@ export function playLunge(
   toward: Point,
   { distance = LUNGE_DISTANCE, holdMs = 0, onImpact, onDone }: LungeOptions = {},
 ): void {
-  const center = { x: sprite.x + sprite.displayWidth / 2, y: sprite.y + sprite.displayHeight / 2 };
+  const { x: cx, y: cy } = sprite.getCenter();
+  const center = { x: cx, y: cy };
   const dx = toward.x - center.x;
   const dy = toward.y - center.y;
   const length = Math.hypot(dx, dy) || 1;

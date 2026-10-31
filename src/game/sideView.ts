@@ -62,3 +62,58 @@ export function getStandingDepth(spriteY: number): number {
 // How far a TILE_SIZE square sprite standing on the top row pokes above
 // the floor, in world pixels: the camera leaves room for it.
 export const STANDING_OVERHANG = Math.max(0, ART_FEET_Y - CELL_FEET * CELL.height);
+
+// How much bigger than a tile painted single-image units are drawn, so
+// their detail reads on a painted battlefield. Their feet stay on their
+// cell; the extra height rises over the cells behind.
+export const PAINTED_UNIT_SCALE = 1.5;
+
+// The origin (fractions of the drawn image) to draw TILE_SIZE square art
+// `scale` times its size with, so a sprite positioned by its tile's
+// top-left corner (getStandingPosition) keeps its feet where they'd be at
+// 1x: centered across the tile, ART_FEET_Y down it. Every tween and
+// follower can then keep working with the tile-anchored position.
+export function getScaledArtOrigin(scale: number): Point {
+  const feet = ART_FEET_Y / TILE_SIZE;
+  return { x: (scale - 1) / (2 * scale), y: ((scale - 1) * feet) / scale };
+}
+
+// A painted unit's shadow cast on the ground by light from the upper left:
+// each point of its silhouette `h` above its feet lands `h * lean` to the
+// right of them and `h * drop` below, so the shadow falls from its feet
+// toward the lower right. At `alpha`.
+export const CAST_SHADOW = Object.freeze({ lean: 0.6, drop: 0.28, alpha: 0.32 });
+
+// How to draw a `size`-square image whose feet are `feetY` down it as its
+// cast shadow (CAST_SHADOW): the canvas it fits in, the 2D transform that
+// lays the image down onto it (canvas setTransform's a, b, c, d, e, f), and
+// where on that canvas the feet land, as fractions, to anchor it by.
+export function getCastShadowLayout(
+  size: number,
+  feetY: number,
+  { lean, drop }: { lean: number; drop: number } = CAST_SHADOW,
+): {
+  width: number;
+  height: number;
+  transform: [number, number, number, number, number, number];
+  anchor: Point;
+} {
+  const pad = 4;
+  // The art below its feet is pressed down the other way, back up and to
+  // the left, so leave room for it there.
+  const below = size - feetY;
+  const left = pad + below * lean;
+  const top = pad + below * drop;
+  const width = Math.ceil(left + size + feetY * lean + pad);
+  const height = Math.ceil(top + feetY * drop + pad);
+  // x' = x - (y - feetY) * lean + left, y' = -(y - feetY) * drop + top.
+  const transform: [number, number, number, number, number, number] = [
+    1,
+    0,
+    -lean,
+    -drop,
+    feetY * lean + left,
+    feetY * drop + top,
+  ];
+  return { width, height, transform, anchor: { x: (size / 2 + left) / width, y: top / height } };
+}
