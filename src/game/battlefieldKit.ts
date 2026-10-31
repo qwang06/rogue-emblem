@@ -1,6 +1,7 @@
 // A battlefield built from a kit of painted pieces instead of one painting
 // (see src/assets/battlefieldKits.ts): a seamless ground texture tiled
-// under everything, soft blotches of light and shade to break up its
+// under everything, ragged patches of other ground textures (dry grass,
+// bare dirt) over it, soft blotches of light and shade to break up its
 // repeats, small decals (tufts, pebbles) scattered over it, a far-scenery
 // strip along the top, tree clusters and bushes standing around the
 // field's edges, and big out-of-focus foreground leaves in the near
@@ -18,6 +19,15 @@ export interface KitPiece {
   size: readonly [number, number];
 }
 
+// Another seamless ground texture, laid over the ground in soft-edged
+// patches: about one per `every` square world pixels of ground, each
+// `width` (world pixels, low to high) across and about half as deep.
+export interface KitPatch {
+  texture: KitPiece;
+  every: number;
+  width: readonly [number, number];
+}
+
 export interface BattlefieldKit {
   // World pixels per art pixel: how big the kit's art is drawn.
   scale: number;
@@ -25,6 +35,7 @@ export interface BattlefieldKit {
   ground: KitPiece;
   // The far scenery, its bottom edge fading out over the ground.
   horizon: KitPiece;
+  patches: readonly KitPatch[];
   decals: readonly KitPiece[];
   // Tall clusters standing down the field's sides, drawn as they are on
   // the left and mirrored on the right.
@@ -39,10 +50,11 @@ export interface BattlefieldKit {
   haze: number;
 }
 
-// Which layer a piece is drawn in: the tiled ground, washes over it
+// Which layer a piece is drawn in: the tiled ground, patches of other
+// ground textures over it, washes over it
 // (blotches, haze), decals lying on it, the horizon, things standing on it
 // (sorted with the units by `foot`), and the foreground over everything.
-export type KitLayer = 'ground' | 'wash' | 'decal' | 'horizon' | 'standing' | 'foreground';
+export type KitLayer = 'ground' | 'patch' | 'wash' | 'decal' | 'horizon' | 'standing' | 'foreground';
 
 export interface KitPlacement {
   layer: KitLayer;
@@ -58,6 +70,8 @@ export interface KitPlacement {
   tint?: number;
   // Where a standing piece meets the ground (world y), to sort it by.
   foot?: number;
+  // A patch's outline, as the seed getPatchMask draws it from.
+  shape?: number;
 }
 
 // The generated washes' keys: a soft round blob, and a gradient fading
@@ -136,6 +150,24 @@ export function layOutKit(
     tint: kit.haze,
     alpha: 0.45,
   });
+
+  // Patches of each other ground texture, tiled at the ground's scale.
+  for (const patch of kit.patches) {
+    const count = Math.round((scene.width * (bottom - groundTop)) / patch.every);
+    for (let i = 0; i < count; i++) {
+      const w = between(rng, patch.width[0], patch.width[1]);
+      const h = w * between(rng, 0.4, 0.6);
+      add({
+        layer: 'patch',
+        key: patch.texture.key,
+        x: between(rng, scene.x - w * 0.2, scene.x + scene.width - w * 0.8),
+        y: between(rng, groundTop, bottom - h * 0.5),
+        width: w,
+        height: h,
+        shape: Math.floor(rng() * 2 ** 31),
+      });
+    }
+  }
 
   // Blotches of light and shade, a few per floor-sized area.
   const blotches = Math.round((scene.width * (bottom - groundTop)) / 60000);
@@ -255,4 +287,54 @@ export function layOutKit(
   }
 
   return { scene, pieces };
+}
+
+const smoothstep = (low: number, high: number, value: number) => {
+  const t = Math.min(1, Math.max(0, (value - low) / (high - low)));
+  return t * t * (3 - 2 * t);
+};
+
+// A patch's outline from `shape`, as an alpha mask `cols` by `rows`
+// (row-major, each 0 to 1): a few overlapping ovals roughened by noise, so
+// no two patches share an outline, solid in the middle and fading to
+// nothing well inside its edges.
+export function getPatchMask(shape: number, cols: number, rows: number): number[] {
+  const rng = createSeededRng(shape);
+  const blobs = Array.from({ length: 3 + Math.floor(rng() * 3) }, () => ({
+    x: between(rng, 0.3, 0.7),
+    y: between(rng, 0.35, 0.65),
+    rx: between(rng, 0.18, 0.3),
+    ry: between(rng, 0.18, 0.3),
+  }));
+  // Value noise: random values on a coarse lattice, smoothly interpolated.
+  const lattice = { cols: 9, rows: 6 };
+  const values = Array.from({ length: lattice.cols * lattice.rows }, () => rng());
+  const noise = (u: number, v: number) => {
+    const gx = u * (lattice.cols - 1);
+    const gy = v * (lattice.rows - 1);
+    const x0 = Math.min(lattice.cols - 2, Math.floor(gx));
+    const y0 = Math.min(lattice.rows - 2, Math.floor(gy));
+    const fx = smoothstep(0, 1, gx - x0);
+    const fy = smoothstep(0, 1, gy - y0);
+    const at = (x: number, y: number) => values[y * lattice.cols + x];
+    const top = at(x0, y0) + (at(x0 + 1, y0) - at(x0, y0)) * fx;
+    const low = at(x0, y0 + 1) + (at(x0 + 1, y0 + 1) - at(x0, y0 + 1)) * fx;
+    return top + (low - top) * fy;
+  };
+  const mask: number[] = [];
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const u = col / Math.max(1, cols - 1);
+      const v = row / Math.max(1, rows - 1);
+      let field = 0;
+      for (const b of blobs) {
+        const d = ((u - b.x) / b.rx) ** 2 + ((v - b.y) / b.ry) ** 2;
+        field = Math.max(field, 1 - d);
+      }
+      const edge = Math.min(u, 1 - u, v, 1 - v);
+      const value = field + (noise(u, v) - 0.5) * 0.7;
+      mask.push(smoothstep(0, 0.45, value) * smoothstep(0, 0.12, edge));
+    }
+  }
+  return mask;
 }

@@ -3,6 +3,7 @@ import {
   BLOB,
   FOREGROUND_REACH,
   getKitScene,
+  getPatchMask,
   HAZE,
   KIT_MARGIN,
   layOutKit,
@@ -15,6 +16,10 @@ const KIT: BattlefieldKit = {
   scale: 0.373,
   ground: piece('ground', 800, 800),
   horizon: piece('horizon', 3840, 647),
+  patches: [
+    { texture: piece('dry', 800, 800), every: 150000, width: [300, 600] },
+    { texture: piece('dirt', 800, 800), every: 250000, width: [200, 400] },
+  ],
   decals: [piece('tuft', 164, 150), piece('pebbles', 198, 122)],
   trees: [piece('trees', 950, 1535)],
   bushes: [piece('bush', 416, 305)],
@@ -60,7 +65,20 @@ describe('layOutKit', () => {
   });
 
   it('uses only the kit’s pieces and the generated washes, and keeps decals in the scene', () => {
-    const keys = new Set(['ground', 'horizon', 'tuft', 'pebbles', 'trees', 'bush', 'leaves', 'fern', BLOB, HAZE]);
+    const keys = new Set([
+      'ground',
+      'horizon',
+      'tuft',
+      'pebbles',
+      'trees',
+      'bush',
+      'leaves',
+      'fern',
+      'dry',
+      'dirt',
+      BLOB,
+      HAZE,
+    ]);
     for (const seed of SEEDS) {
       const { scene, pieces } = layOutKit(KIT, FLOOR, seed);
       for (const p of pieces) expect(keys.has(p.key)).toBe(true);
@@ -68,6 +86,23 @@ describe('layOutKit', () => {
         expect(p.x).toBeGreaterThanOrEqual(scene.x);
         expect(p.x + p.width).toBeLessThanOrEqual(scene.x + scene.width + 1e-9);
         expect(p.y + p.height).toBeLessThanOrEqual(scene.y + scene.height + 1e-9);
+      }
+    }
+  });
+
+  it('lays patches of each other ground texture, each with its own outline, over the ground', () => {
+    for (const seed of SEEDS) {
+      const { scene, pieces } = layOutKit(KIT, FLOOR, seed);
+      const [ground] = pieces.filter((p) => p.layer === 'ground');
+      const patches = pieces.filter((p) => p.layer === 'patch');
+      expect(patches.some((p) => p.key === 'dry')).toBe(true);
+      expect(patches.some((p) => p.key === 'dirt')).toBe(true);
+      expect(new Set(patches.map((p) => p.shape)).size).toBe(patches.length);
+      for (const p of patches) {
+        expect(p.x + p.width).toBeGreaterThan(scene.x);
+        expect(p.x).toBeLessThan(scene.x + scene.width);
+        expect(p.y).toBeGreaterThanOrEqual(ground.y);
+        expect(p.y).toBeLessThan(ground.y + ground.height);
       }
     }
   });
@@ -92,6 +127,34 @@ describe('layOutKit', () => {
       expect(left.x + left.width).toBeLessThanOrEqual(left.width * FOREGROUND_REACH + 1e-9);
       expect(right.x).toBeGreaterThanOrEqual(FLOOR.width - right.width * FOREGROUND_REACH - 1e-9);
       for (const p of [left, right]) expect(p.y + p.height).toBeGreaterThan(scene.y + scene.height);
+    }
+  });
+});
+
+describe('getPatchMask', () => {
+  it('is the same from the same shape, and differs between shapes', () => {
+    expect(getPatchMask(3, 32, 16)).toEqual(getPatchMask(3, 32, 16));
+    expect(getPatchMask(3, 32, 16)).not.toEqual(getPatchMask(4, 32, 16));
+  });
+
+  it('is solid somewhere in the middle and clear all around its edge', () => {
+    for (const shape of SEEDS) {
+      const [cols, rows] = [32, 16];
+      const mask = getPatchMask(shape, cols, rows);
+      expect(mask).toHaveLength(cols * rows);
+      for (const a of mask) {
+        expect(a).toBeGreaterThanOrEqual(0);
+        expect(a).toBeLessThanOrEqual(1);
+      }
+      expect(Math.max(...mask)).toBeGreaterThan(0.9);
+      for (let col = 0; col < cols; col++) {
+        expect(mask[col]).toBeLessThan(0.05);
+        expect(mask[(rows - 1) * cols + col]).toBeLessThan(0.05);
+      }
+      for (let row = 0; row < rows; row++) {
+        expect(mask[row * cols]).toBeLessThan(0.05);
+        expect(mask[row * cols + cols - 1]).toBeLessThan(0.05);
+      }
     }
   });
 });
