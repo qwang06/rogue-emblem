@@ -107,12 +107,18 @@ export function getKitScene(floor: { width: number; height: number }, horizonHei
   };
 }
 
+const overlaps = (a: WorldRect, b: WorldRect) =>
+  a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+
 // Lays `kit` out around a floor `floor` from `seed`: the scene it covers
-// and every piece in it.
+// and every piece in it. No decal overlaps another or a rectangle in
+// `clear` (the art of things standing on the floor, like obstacles), where
+// it would look tangled up with them.
 export function layOutKit(
   kit: BattlefieldKit,
   floor: { width: number; height: number },
   seed: number,
+  clear: readonly WorldRect[] = [],
 ): { scene: WorldRect; pieces: KitPlacement[] } {
   const rng = createSeededRng(seed);
   // The horizon spans the scene, its foot HORIZON_GAP above the floor.
@@ -187,17 +193,24 @@ export function layOutKit(
 
   // Decals scattered over the ground, about one per nine cells of floor.
   const decals = Math.round((scene.width * (bottom - groundTop)) / 22000);
+  const placed: WorldRect[] = [];
   for (let i = 0; i < decals; i++) {
     const piece = pick(rng, kit.decals);
     const { width, height } = size(piece, between(rng, 0.45, 0.75));
-    add({
-      layer: 'decal',
-      key: piece.key,
-      x: between(rng, scene.x, scene.x + scene.width - width),
-      y: between(rng, groundTop + 10, bottom - height),
-      width,
-      height,
-    });
+    // A few tries for a spot clear of `clear` and the decals before it;
+    // dropped if none is.
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const spot = {
+        x: between(rng, scene.x, scene.x + scene.width - width),
+        y: between(rng, groundTop + 10, bottom - height),
+        width,
+        height,
+      };
+      if (clear.some((rect) => overlaps(spot, rect)) || placed.some((rect) => overlaps(spot, rect))) continue;
+      add({ layer: 'decal', key: piece.key, ...spot });
+      placed.push(spot);
+      break;
+    }
   }
 
   // Down each side, tree clusters from the back (smaller, as they're
