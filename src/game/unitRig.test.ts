@@ -11,6 +11,7 @@ import {
   getRigSide,
   getSideToward,
   getUnitPose,
+  getWalkFrame,
 } from './unitRig.ts';
 
 describe('getMotionPose', () => {
@@ -131,5 +132,38 @@ describe('getSideToward', () => {
     expect(getSideToward(1, 5, 2)).toBe(-1);
     expect(getSideToward(-1, 2, 5)).toBe(1);
     expect(getSideToward(-1, 3, 3)).toBe(-1);
+  });
+});
+
+describe('getWalkFrame', () => {
+  const walk = { key: 'walk', frames: 8, frameMs: 80 };
+
+  it('steps through the frames in order, one per frameMs', () => {
+    expect(getWalkFrame(walk, 0)).toBe(0);
+    expect(getWalkFrame(walk, 79)).toBe(0);
+    expect(getWalkFrame(walk, 80)).toBe(1);
+    expect(getWalkFrame(walk, 7 * 80 + 10)).toBe(7);
+  });
+
+  it('loops back to the first frame', () => {
+    expect(getWalkFrame(walk, 8 * 80)).toBe(0);
+    expect(getWalkFrame(walk, 9 * 80 + 1)).toBe(1);
+  });
+
+  it('stays in range for a single frame or negative time', () => {
+    expect(getWalkFrame({ ...walk, frames: 1 }, 1000)).toBe(0);
+    expect(getWalkFrame(walk, -1)).toBe(7);
+  });
+});
+
+describe('a framed walk', () => {
+  it('walks upright, leaving the step to the frames', () => {
+    expect(getMotionPose('move', HOP_MS / 2, true)).toEqual(REST_POSE);
+    expect(getUnitPose('move', HOP_MS / 2, null, 0, true)).toEqual(REST_POSE);
+  });
+
+  it('still breathes while standing and plays actions over the walk', () => {
+    expect(getMotionPose('idle', BREATH_MS / 4, true)).toEqual(getMotionPose('idle', BREATH_MS / 4));
+    expect(getUnitPose('move', 30, 'hit', 0, true)).toEqual(combinePoses(REST_POSE, getActionPose('hit', 0)!));
   });
 });

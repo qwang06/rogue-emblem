@@ -69,6 +69,7 @@ import paintedArcher from './units/painted/archer.png';
 import paintedCleric from './units/painted/cleric.png';
 import paintedMage from './units/painted/mage.png';
 import paintedWarrior from './units/painted/warrior.png';
+import paintedWarriorWalk from './units/painted/warrior-walk.png';
 import ballistaIcon from './items/ballista.png';
 import biteIcon from './items/bite.png';
 import boneClawsIcon from './items/bone-claws.png';
@@ -174,6 +175,8 @@ export const SPRITES: Readonly<Record<string, SpriteSheet>> = {
   Obstacle_cactus: { url: obstacleCactus, frame: 256, smooth: true },
   // Painted single-image units (SINGLE_IMAGE_UNITS in tileset.ts).
   Painted_Warrior: { url: paintedWarrior, frame: 256, smooth: true },
+  // Its walk, 8 frames (SINGLE_IMAGE_WALKS in tileset.ts).
+  Painted_Warrior_Walk: { url: paintedWarriorWalk, frame: 256, smooth: true },
   Painted_Archer: { url: paintedArcher, frame: 256, smooth: true },
   Painted_Mage: { url: paintedMage, frame: 256, smooth: true },
   Painted_Cleric: { url: paintedCleric, frame: 256, smooth: true },

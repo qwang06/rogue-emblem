@@ -62,8 +62,25 @@ const HIT_ANGLE = -12;
 const HIT_KNOCKBACK = 0.06;
 const HIT_SQUASH = 0.1;
 
-// The standing or walking pose `ms` into the motion.
-export function getMotionPose(motion: RigMotion, ms: number): Pose {
+// A walk drawn frame by frame instead of hopped in code: a sheet of
+// `frames` square frames (read left to right, top to bottom), each shown
+// `frameMs`. The picture still breathes in code while standing.
+export interface WalkFrames {
+  key: string;
+  frames: number;
+  frameMs: number;
+}
+
+// The frame of a walk cycle `ms` into the walk, looping.
+export function getWalkFrame({ frames, frameMs }: WalkFrames, ms: number): number {
+  return ((Math.floor(ms / frameMs) % frames) + frames) % frames;
+}
+
+// The standing or walking pose `ms` into the motion. A unit whose walk is
+// drawn frame by frame (`framedWalk`) walks upright: the frames already
+// carry the step.
+export function getMotionPose(motion: RigMotion, ms: number, framedWalk = false): Pose {
+  if (motion === 'move' && framedWalk) return REST_POSE;
   if (motion === 'idle') {
     const breath = Math.sin((2 * Math.PI * ms) / BREATH_MS);
     return { ...REST_POSE, scaleX: 1 - (BREATH_STRETCH / 2) * breath, scaleY: 1 + BREATH_STRETCH * breath };
@@ -139,9 +156,15 @@ export function combinePoses(a: Pose, b: Pose): Pose {
 }
 
 // A unit's whole pose: its motion `motionMs` in, plus an action `actionMs`
-// in while it lasts.
-export function getUnitPose(motion: RigMotion, motionMs: number, action: RigAction | null = null, actionMs = 0): Pose {
-  const base = getMotionPose(motion, motionMs);
+// in while it lasts (`framedWalk` as for getMotionPose).
+export function getUnitPose(
+  motion: RigMotion,
+  motionMs: number,
+  action: RigAction | null = null,
+  actionMs = 0,
+  framedWalk = false,
+): Pose {
+  const base = getMotionPose(motion, motionMs, framedWalk);
   const flourish = action ? getActionPose(action, actionMs) : null;
   return flourish ? combinePoses(base, flourish) : base;
 }

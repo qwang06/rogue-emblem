@@ -6,10 +6,12 @@ import {
   getRigSide,
   getSideToward,
   getUnitPose,
+  getWalkFrame,
   type Pose,
   type RigAction,
   type RigMotion,
   type RigSide,
+  type WalkFrames,
 } from '../game/unitRig.ts';
 
 type Sprite = Phaser.GameObjects.Sprite;
@@ -24,6 +26,9 @@ interface Rig {
   action: RigAction | null;
   actionMs: number;
   side: RigSide;
+  // The unit's own image, and its frame-by-frame walk if it has one.
+  image: string;
+  walk: WalkFrames | undefined;
 }
 
 const rigs = new WeakMap<Sprite, Rig>();
@@ -78,11 +83,26 @@ function restore(part: Part, saved: Saved): void {
 // facing `side`. The pose is only applied while the frame draws, so the
 // sprite's position, size and origin stay the tile-anchored ones every
 // tween and follower (shadow, badge) works with. `parts` (its outline) are
-// posed with it. Torn down with the sprite.
-export function addUnitRig(scene: Phaser.Scene, sprite: Sprite, side: RigSide, parts: readonly Part[] = []): void {
+// posed with it. A unit with `walk` frames shows them while it walks instead
+// of hopping. Torn down with the sprite.
+export function addUnitRig(
+  scene: Phaser.Scene,
+  sprite: Sprite,
+  side: RigSide,
+  parts: readonly Part[] = [],
+  walk?: WalkFrames,
+): void {
   // Units start at different points of a breath, so a line of them doesn't
   // breathe in step.
-  const rig: Rig = { motion: 'idle', motionMs: Math.random() * BREATH_MS, action: null, actionMs: 0, side };
+  const rig: Rig = {
+    motion: 'idle',
+    motionMs: Math.random() * BREATH_MS,
+    action: null,
+    actionMs: 0,
+    side,
+    image: sprite.texture.key,
+    walk,
+  };
   rigs.set(sprite, rig);
   sprite.setFlipX(side < 0);
   const posed = [sprite, ...parts];
@@ -92,12 +112,13 @@ export function addUnitRig(scene: Phaser.Scene, sprite: Sprite, side: RigSide, p
     if (sprite.anims.isPaused) return;
     const ms = delta * scene.time.timeScale;
     rig.motionMs += ms;
+    showFrame(sprite, rig);
     if (!rig.action) return;
     rig.actionMs += ms;
     if (!getActionPose(rig.action, rig.actionMs)) rig.action = null;
   };
   const pose = () => {
-    const current = getUnitPose(rig.motion, rig.motionMs, rig.action, rig.actionMs);
+    const current = getUnitPose(rig.motion, rig.motionMs, rig.action, rig.actionMs, rig.walk !== undefined);
     saved = posed.map((part) => applyPose(part, current, rig.side));
   };
   const unpose = () => {
@@ -123,6 +144,19 @@ export function hasUnitRig(sprite: Sprite): boolean {
   return rigs.has(sprite);
 }
 
+// Shows the walk frame for the moment while a unit with walk frames walks,
+// else its own image. Run before the outline and shadows follow the sprite
+// (POST_UPDATE), so they draw the same frame.
+function showFrame(sprite: Sprite, rig: Rig): void {
+  if (!rig.walk) return;
+  if (rig.motion === 'move') {
+    const frame = getWalkFrame(rig.walk, rig.motionMs);
+    if (sprite.texture.key !== rig.walk.key || String(sprite.frame.name) !== String(frame)) {
+      sprite.setTexture(rig.walk.key, frame);
+    }
+  } else if (sprite.texture.key !== rig.image) sprite.setTexture(rig.image);
+}
+
 function turn(sprite: Sprite, rig: Rig, side: RigSide): void {
   rig.side = side;
   sprite.setFlipX(side < 0);
@@ -136,6 +170,7 @@ export function setRigMotion(sprite: Sprite, motion: RigMotion, facing: Facing):
   if (rig.motion !== motion) {
     rig.motion = motion;
     rig.motionMs = 0;
+    showFrame(sprite, rig);
   }
   turn(sprite, rig, getRigSide(facing));
 }

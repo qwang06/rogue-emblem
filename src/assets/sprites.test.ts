@@ -5,6 +5,7 @@ import {
   isSingleImageUnit,
   PAINTED_OBSTACLES,
   SINGLE_IMAGE_UNITS,
+  SINGLE_IMAGE_WALKS,
   STRUCTURE_SPRITES,
   TERRAIN_SHEET,
   UNIT_SHEET,
@@ -58,6 +59,17 @@ describe('SPRITES', () => {
     for (const art of SINGLE_IMAGE_UNITS) {
       const { url, frame } = SPRITES[art];
       expect(pngSize(url), art).toEqual([frame, frame]);
+    }
+  });
+
+  it('gives every frame-by-frame walk at least its frames, smooth and sized like its unit’s image', () => {
+    for (const [art, { key, frames }] of Object.entries(SINGLE_IMAGE_WALKS)) {
+      expect(SINGLE_IMAGE_UNITS.has(art), art).toBe(true);
+      const { url, frame, smooth } = SPRITES[key];
+      expect(frame, key).toBe(SPRITES[art].frame);
+      expect(smooth, key).toBe(SPRITES[art].smooth);
+      const [width, height] = pngSize(url);
+      expect((width / frame) * (height / frame), key).toBeGreaterThanOrEqual(frames);
     }
   });
 

@@ -21,6 +21,7 @@ import type { ArrowPiece } from './moveArrow.ts';
 import type { PixelArt } from './pixelShapes.ts';
 import type { Team } from './turns.ts';
 import type { UnitRank } from './Unit.ts';
+import type { WalkFrames } from './unitRig.ts';
 
 export type UnitAnimation = 'idle' | 'move';
 
@@ -297,6 +298,22 @@ export const SINGLE_IMAGE_UNITS: ReadonlySet<string> = new Set<string>([
   'Painted_Mage',
   'Painted_Cleric',
 ]);
+
+// Single-image units whose walk is drawn frame by frame: a sheet in SPRITES
+// of the same frame size as the unit's image, the character facing right
+// with its feet where the image has them, shown instead of the image (and
+// in place of the code-drawn hop) while the unit walks. A cycle of two
+// strides should take about two steps from tile to tile (GridScene's
+// MOVE_STEP_MS, 140ms), so the feet don't slide.
+export const SINGLE_IMAGE_WALKS: Readonly<Record<string, WalkFrames>> = {
+  Painted_Warrior: { key: 'Painted_Warrior_Walk', frames: 8, frameMs: 35 },
+};
+
+// A single-image unit's frame-by-frame walk, or undefined when it hops in
+// code.
+export function getSingleImageWalk(art: string): WalkFrames | undefined {
+  return isSingleImageUnit(art) ? SINGLE_IMAGE_WALKS[art] : undefined;
+}
 
 // Whether a unit's art (a value of UNIT_SPRITES) is one image animated in
 // code, rather than sheets of frames.
