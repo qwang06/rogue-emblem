@@ -3781,14 +3781,13 @@ export class GridScene extends Phaser.Scene {
 
   // A battlefield's obstacles as painted art (getPaintedObstacles), each
   // standing on its cell like a unit, a hair behind a unit on the same row.
-  renderPaintedObstacles(obstacles: readonly { x: number; y: number; key: string; flip: boolean }[]) {
-    for (const { x, y, key, flip } of obstacles) {
+  renderPaintedObstacles(obstacles: readonly { x: number; y: number; key: string }[]) {
+    for (const { x, y, key } of obstacles) {
       const pos = getStandingPosition(x, y);
       this.add
         .image(pos.x, pos.y, key)
         .setOrigin(0, 0)
         .setDisplaySize(TILE_SIZE, TILE_SIZE)
-        .setFlipX(flip)
         .setDepth(getStandingDepth(pos.y) - STANDING_DEPTH_HAIR);
     }
   }

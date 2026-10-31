@@ -197,7 +197,6 @@ export function layOutKit(
       y: between(rng, groundTop + 10, bottom - height),
       width,
       height,
-      flip: rng() < 0.5,
     });
   }
 
@@ -246,7 +245,6 @@ export function layOutKit(
         y: foot - height,
         width,
         height,
-        flip: rng() < 0.5,
         foot,
       });
     }
@@ -264,7 +262,6 @@ export function layOutKit(
       y: foot - height,
       width,
       height,
-      flip: rng() < 0.5,
       foot,
     });
   }

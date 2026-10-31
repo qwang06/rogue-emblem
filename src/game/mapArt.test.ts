@@ -324,11 +324,10 @@ describe('getPaintedObstacles', () => {
     expect(['r1', 'r2']).toContain(placed[1].key);
   });
 
-  it('picks the same image and mirroring for a cell every time, and varies across cells', () => {
+  it('picks the same image for a cell every time, and varies across cells', () => {
     const rocks = Array.from({ length: 20 }, (_, i) => ({ x: i, y: i % 7, obstacle: 'rock' as const }));
     expect(getPaintedObstacles(rocks, art)).toEqual(getPaintedObstacles(rocks, art));
     const placed = getPaintedObstacles(rocks, art);
     expect(new Set(placed.map((p) => p.key)).size).toBe(2);
-    expect(new Set(placed.map((p) => p.flip)).size).toBe(2);
   });
 });
