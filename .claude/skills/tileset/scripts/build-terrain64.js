@@ -81,14 +81,15 @@ drawBridges(decode(`${dir}/props/bridge_v.png`), props);
 encode('src/assets/terrain64-props.png', props);
 
 // The bridge pieces, from PixelLab's north–south bridge (its deck spans
-// columns 20–48 and every row, but doesn't repeat): 32 rows of it then the
-// same rows flipped make a deck whose top and bottom rows match, so
+// columns 20–48 and every row, but doesn't repeat): widened to nearly the
+// whole tile (see widenDeck) so a unit fits on it, then 32 rows of it and
+// the same rows flipped make a deck whose top and bottom rows match, so
 // bridge cells stack seamlessly. An end piece is that deck's half nearest
 // the bridge with a dark lip across its far edge, laid over the bank cell
 // so the deck covers the cut bank and lands on the grass. West–east pieces
 // are the north–south ones turned a quarter.
 function drawBridges(source, sheet) {
-  const band = source.slice(16, 48);
+  const band = widenDeck(source).slice(16, 48);
   const deck = [...band, ...band.toReversed()].map((row) => row.map((px) => [...px]));
   const lip = deck[0].map((px) => (px[3] ? darkest(deck) : px));
   const blankRow = () => deck[0].map(() => [0, 0, 0, 0]);
@@ -106,6 +107,28 @@ function drawBridges(source, sheet) {
     [turn(north), 3, 2],
   ];
   for (const [tile, column, row] of pieces) copy(tile, 0, 0, sheet, column * TILE, row * TILE);
+}
+
+// The bridge's deck widened to columns 2–61: its west rail (columns 20–25)
+// and east rail (44–48) moved out to the edges, and the planking between
+// (27–42, leaving out its dark edge columns) laid across the middle, every
+// other copy flipped so the seams match.
+function widenDeck(source) {
+  const [left, right] = [2, 61];
+  const planks = (x) => {
+    const i = x - (left + 6);
+    const copy = Math.floor(i / 16);
+    const offset = i % 16;
+    return 27 + (copy % 2 ? 15 - offset : offset);
+  };
+  return source.map((row) =>
+    row.map((_, x) => {
+      if (x < left || x > right) return [0, 0, 0, 0];
+      if (x < left + 6) return [...row[20 + x - left]];
+      if (x > right - 5) return [...row[48 - (right - x)]];
+      return [...row[planks(x)]];
+    }),
+  );
 }
 
 // The darkest opaque color in a tile, for an outline.
