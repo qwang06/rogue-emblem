@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BATTLEFIELD_KINDS,
   BATTLEFIELD_OBSTACLES,
+  BATTLEFIELD_SIZE,
   generateBattlefield,
   OBSTACLE_KINDS,
   OBSTACLE_TERRAIN,
@@ -15,8 +16,8 @@ import { createSeededRng } from './rng.ts';
 
 const key = ({ x, y }: Point) => `${x},${y}`;
 const SEEDS = Array.from({ length: 30 }, (_, i) => i + 1);
-const field = (battlefield: BattlefieldKind, seed: number, obstacles: [number, number] = [4, 7]) =>
-  generateBattlefield({ width: 10, height: 6, battlefield, obstacles }, createSeededRng(seed));
+const field = (battlefield: BattlefieldKind, seed: number, obstacles: [number, number] = [8, 14]) =>
+  generateBattlefield({ ...BATTLEFIELD_SIZE, battlefield, obstacles }, createSeededRng(seed));
 
 describe('battlefield tables', () => {
   it('gives every obstacle a terrain and every battlefield obstacles of its own', () => {
@@ -29,8 +30,8 @@ describe('generateBattlefield', () => {
   it.each(BATTLEFIELD_KINDS)('scatters %s obstacles within the count, of its own kinds', (kind) => {
     for (const seed of SEEDS) {
       const { grid, obstacles } = field(kind, seed);
-      expect(obstacles.length).toBeGreaterThanOrEqual(4);
-      expect(obstacles.length).toBeLessThanOrEqual(7);
+      expect(obstacles.length).toBeGreaterThanOrEqual(8);
+      expect(obstacles.length).toBeLessThanOrEqual(14);
       for (const { x, y, obstacle } of obstacles) {
         expect(BATTLEFIELD_OBSTACLES[kind]).toContain(obstacle);
         expect(getCell(grid, x, y)!.terrain).toBe(OBSTACLE_TERRAIN[obstacle]);
@@ -65,7 +66,7 @@ describe('generateBattlefield', () => {
       for (const seed of SEEDS) {
         const { grid, deploymentZone, enemyZones } = field(kind, seed);
         expect(deploymentZone.every(({ x }) => x === 0)).toBe(true);
-        expect(enemyZones.flat().every(({ x }) => x >= 6)).toBe(true);
+        expect(enemyZones.flat().every(({ x }) => x >= BATTLEFIELD_SIZE.width / 2)).toBe(true);
         expect(checkMap({ grid, buildings: [], deploymentZone, enemyTiles: [] })).toEqual([]);
       }
     }

@@ -314,7 +314,7 @@ describe('parseRegionSettings', () => {
 describe('formatRegionSettings', () => {
   it('keeps [min, max] pairs on one line', () => {
     const text = formatRegionSettings(REGION_SETTINGS);
-    expect(text).toContain('"obstacles": [3, 5]');
+    expect(text).toContain('"obstacles": [6, 10]');
     expect(text.endsWith('\n')).toBe(true);
   });
 });

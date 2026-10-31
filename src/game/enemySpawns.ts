@@ -123,8 +123,10 @@ export function pickEnemyTiles(
 // groups' areas give way to `zones`. Enemies are dealt into the zones in
 // turn, across groups (the first enemy to zones[0], the next to zones[1],
 // ...), each on a random open tile of its zone that its group's distances
-// allow; when its zone has none, any zone's; when no zone has one, any
-// allowed tile at least two steps from the deployment zone. A group comes
+// allow; when its zone has none, any zone's; when no zone has one, the
+// allowed tile at least two steps from the deployment zone that's nearest
+// a zone (so a group held close to the warband still stands toward the
+// enemy's side, not off behind the deployment zone). A group comes
 // up short only when no tile is left at all. With no zones it's
 // pickEnemyTiles.
 export function pickZonedEnemyTiles(
@@ -154,7 +156,10 @@ export function pickZonedEnemyTiles(
       const tile =
         open.find((p) => zone.has(key(p))) ??
         open.find((p) => zoneKeys.some((z) => z.has(key(p)))) ??
-        open.find((p) => distances.get(key(p))! >= 2);
+        nearestTo(
+          open.filter((p) => distances.get(key(p))! >= 2),
+          zones,
+        );
       if (!tile) break;
       tiles.push(tile);
       taken.add(key(tile));
@@ -162,6 +167,19 @@ export function pickZonedEnemyTiles(
     }
     return tiles;
   });
+}
+
+// The first of `tiles` fewest steps (ignoring terrain) from any tile of
+// `zones`, or undefined when there are none.
+function nearestTo(tiles: readonly Point[], zones: readonly (readonly Point[])[]): Point | undefined {
+  const gap = (p: Point) => Math.min(...zones.flat().map((z) => Math.abs(z.x - p.x) + Math.abs(z.y - p.y)));
+  let best: Point | undefined;
+  let bestGap = Infinity;
+  for (const p of tiles) {
+    const g = gap(p);
+    if (g < bestGap) [best, bestGap] = [p, g];
+  }
+  return best;
 }
 
 // How much room `group` has on its own (ignoring other groups), to explain

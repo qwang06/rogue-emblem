@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { BATTLEFIELD_SIZE } from '../game/battlefields.ts';
 import { parseRegionSettings } from '../game/warband/regionsFile.ts';
 import { REGION_CONFIGS, REGION_SETTINGS, REGIONS_TEXT } from './regions.ts';
 
@@ -19,11 +20,11 @@ describe('REGION_SETTINGS', () => {
     for (const region of REGION_CONFIGS) expect(region.description).toBeTruthy();
   });
 
-  // Small, wide arenas keep a run fast and suit the side view: the enemy
-  // is a turn or two away across the field.
-  it('uses 10x6 maps', () => {
+  // Every region is fought on the battlefield's size, the open ground the
+  // painted battlefields leave clear.
+  it('uses BATTLEFIELD_SIZE maps', () => {
     for (const region of REGION_CONFIGS) {
-      expect([region.terrain.width, region.terrain.height]).toEqual([10, 6]);
+      expect([region.terrain.width, region.terrain.height]).toEqual([BATTLEFIELD_SIZE.width, BATTLEFIELD_SIZE.height]);
     }
   });
 

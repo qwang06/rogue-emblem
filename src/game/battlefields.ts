@@ -5,7 +5,7 @@
 // cell its rule: a rock or cactus blocks the way, a bush or tree slows it.
 // The two sides face each other across it as on an arena (planArena in
 // mapArchetypes.ts): the player down the west edge, the enemy in the east
-// third, and the arena's road and second route (not drawn) are kept clear
+// half, and the arena's road and second route (not drawn) are kept clear
 // of anything that blocks, so every fight can be walked. Pure: the same
 // options and Rng always give the same field.
 
@@ -40,6 +40,10 @@ export const BATTLEFIELD_OBSTACLES: Readonly<Record<BattlefieldKind, readonly Ob
   forest: ['pine', 'pine', 'thicket', 'bush', 'rock'],
   desert: ['rock', 'boulder', 'crag', 'cactus', 'cactus'],
 });
+
+// The size every battlefield is fought on, in cells: the open field the
+// painted battlefields (src/assets/battlefieldArt.ts) leave clear.
+export const BATTLEFIELD_SIZE = Object.freeze({ width: 14, height: 10 });
 
 export interface ObstaclePlacement extends Point {
   obstacle: ObstacleKind;
