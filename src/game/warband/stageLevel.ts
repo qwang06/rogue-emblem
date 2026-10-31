@@ -242,6 +242,7 @@ export function createStageLevel(
     structures: [],
     buildings,
     palette: region.palette,
+    ...(region.biome ? { biome: region.biome } : {}),
     objective: DEFAULT_OBJECTIVE,
     ...(layout.terrain.seizeTile ? { seizeTile: { ...layout.terrain.seizeTile } } : {}),
     ...(bossUnitId ? { bossUnitId } : {}),

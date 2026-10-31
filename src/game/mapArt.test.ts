@@ -63,6 +63,8 @@ describe('getFeatureSprites', () => {
       [0, 1, [column, row + 1]],
       [1, 1, [column + 1, row + 1]],
     ]);
+    // The back row stands on the front row, for the side view.
+    expect(sprites.map(({ base }) => base)).toEqual([1, 1, undefined, undefined]);
   });
 
   it("doesn't mix forest and mountain cells in one block", () => {
@@ -146,15 +148,15 @@ describe('getBuildingSprites', () => {
   it('flags a colored building from the cell north of it', () => {
     expect(sprites([{ x: 3, y: 4, building: 'farm' }], 'b-red')).toEqual([
       { x: 3, y: 4, tile: [19, 50], layer: 'ground' },
-      { x: 3, y: 3, tile: [19, 49], layer: 'cap' },
+      { x: 3, y: 3, tile: [19, 49], layer: 'cap', base: 4 },
     ]);
   });
 
   it('draws a tall building with its top over units and its flag above that', () => {
     expect(sprites([{ x: 3, y: 4, building: 'castle' }], 'a-teal')).toEqual([
       { x: 3, y: 4, tile: [14, 62], layer: 'ground' },
-      { x: 3, y: 3, tile: [14, 61], layer: 'roof' },
-      { x: 3, y: 2, tile: [14, 60], layer: 'cap' },
+      { x: 3, y: 3, tile: [14, 61], layer: 'roof', base: 4 },
+      { x: 3, y: 2, tile: [14, 60], layer: 'cap', base: 4 },
     ]);
   });
 

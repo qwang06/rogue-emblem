@@ -10,6 +10,11 @@
 //              over that cell's ground art but under units
 //   'roof'   — a tall building's top, over units, so a unit standing north
 //              of a tower passes behind it
+//
+// In the side view, props stand up out of the floor (see sideView.ts): a
+// piece of a prop taller than one cell (a building's top or flag, the back
+// row of a 2x2 clump) names the row its prop stands on as `base`, so it's
+// drawn stacked a whole tile above the piece below it and sorted with it.
 
 import type { Autotile, SheetTile } from './autotile.ts';
 import type { BuildingPlacement } from './buildings.ts';
@@ -21,6 +26,9 @@ export type MapSpriteLayer = 'ground' | 'cap' | 'roof';
 export interface MapSprite extends Point {
   tile: SheetTile;
   layer: MapSpriteLayer;
+  // The row the prop this piece belongs to stands on, when that's a row
+  // in front of the piece's own (y); unset for a piece on its prop's row.
+  base?: number;
   // The sheet `tile` is on, when it isn't the terrain sheet.
   sheet?: { key: string; columns: number };
 }
@@ -56,7 +64,8 @@ export function getFeatureSprites(grid: Grid, forestArt: FeatureArt, mountainArt
     for (const [dx, dy] of block) {
       claimed.add(`${x + dx},${y + dy}`);
       const tile: SheetTile = [column + dx, row + dy];
-      sprites.push({ x: x + dx, y: y + dy, tile, layer: 'ground', sheet: artFor(terrain)!.sheet });
+      const sprite: MapSprite = { x: x + dx, y: y + dy, tile, layer: 'ground', sheet: artFor(terrain)!.sheet };
+      sprites.push(dy === 0 ? { ...sprite, base: y + 1 } : sprite);
     }
   }
   for (const { x, y, terrain } of grid.cells) {
@@ -85,10 +94,10 @@ export function getBuildingSprites(
     let top = y;
     if (tall) {
       top = y - 1;
-      if (top >= 0) sprites.push({ x, y: top, tile: [c, row - 1], layer: 'roof' });
+      if (top >= 0) sprites.push({ x, y: top, tile: [c, row - 1], layer: 'roof', base: y });
     }
     const flagRow = row - (tall ? 2 : 1);
-    if (palette.flags && top - 1 >= 0) sprites.push({ x, y: top - 1, tile: [c, flagRow], layer: 'cap' });
+    if (palette.flags && top - 1 >= 0) sprites.push({ x, y: top - 1, tile: [c, flagRow], layer: 'cap', base: y });
   }
   return sprites;
 }

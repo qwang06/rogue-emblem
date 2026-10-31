@@ -158,7 +158,15 @@ import { advanceDialog, createDialog, DIALOG_CHARS_PER_SECOND, getCurrentLine } 
 import { getTriggeredDialog, turnTrigger } from '../game/dialogScript.ts';
 import { describeObjective, getObjectiveStatus, type Objective } from '../game/objectives.ts';
 import { getFacingToward, getPathFacings, getStartFacing } from '../game/facing.ts';
-import { getStandingDepth, getStandingPosition, STANDING_DEPTH_HAIR, STANDING_OVERHANG } from '../game/sideView.ts';
+import { getPropPlacement, getStandingDepth, getStandingPosition, STANDING_DEPTH_HAIR } from '../game/sideView.ts';
+import {
+  BACKDROP_COLUMN,
+  BACKDROP_HEIGHT,
+  getBackdropSeed,
+  getBackdropStyle,
+  getSilhouette,
+  type BackdropStyle,
+} from '../game/backdrop.ts';
 import { createKeyRepeat, updateKeyRepeat } from '../game/keyRepeat.ts';
 import { getArrowPieces } from '../game/moveArrow.ts';
 import { getQuarterFrameMap, getTileFrame, type Autotile } from '../game/autotile.ts';
@@ -619,10 +627,13 @@ export class GridScene extends Phaser.Scene {
 
     const paletteName = level.palette ?? DEFAULT_BUILDING_PALETTE;
     const palette = BUILDING_PALETTES[paletteName];
+    this.renderBackdrop(getBackdropStyle(level.biome), getBackdropSeed(this.grid));
     this.renderTerrain(this.grid, { wall: getWallAutotile(palette) });
     this.renderMapSprites([
       ...getCrossingSprites(this.grid, BRIDGE_ART, GATE_ART[paletteName], FORD_ART, MAP_PROPS_SHEET),
       ...getHazardSprites(this.grid, SPIKES_ART, MAP_PROPS_SHEET),
+    ]);
+    this.renderStandingProps([
       ...getFeatureSprites(this.grid, FOREST_ART, MOUNTAIN_ART),
       ...getBuildingSprites(level.buildings ?? [], palette, BUILDING_ART),
     ]);
@@ -752,12 +763,13 @@ export class GridScene extends Phaser.Scene {
   // on create and whenever the page resizes the canvas.
   fitCamera() {
     const camera = this.cameras.main;
-    // Units on the top row stand above the floor, so leave room for them.
-    const rows = this.grid.height + STANDING_OVERHANG / CELL.height;
+    // The backdrop stands above the floor (with room for the top row's
+    // heads), so frame it too.
+    const rows = this.grid.height + BACKDROP_HEIGHT / CELL.height;
     camera.setZoom(
       getFitZoom({ width: this.grid.width, height: rows }, CELL, this.scale.gameSize, MAX_ZOOM, ZOOM_STEP),
     );
-    camera.centerOn((this.grid.width * CELL.width) / 2, (this.grid.height * CELL.height - STANDING_OVERHANG) / 2);
+    camera.centerOn((this.grid.width * CELL.width) / 2, (this.grid.height * CELL.height - BACKDROP_HEIGHT) / 2);
     // The camera's visible area only updates when it next renders, so move
     // an open unit menu to the refitted map then.
     this.events.once(Phaser.Scenes.Events.RENDER, () => {
@@ -3506,10 +3518,42 @@ export class GridScene extends Phaser.Scene {
     }
   }
 
-  // One-tile overlays from the terrain sheet, or the props sheet (forests,
-  // mountains, buildings, crossings; see src/game/mapArt.ts): ground art
-  // and caps under units, at the trees' depth (caps just above, so a peak
-  // covers the forest it pokes into), and roofs over units like the gate's.
+  // The sky and far scenery behind the arena (src/game/backdrop.ts): the
+  // sky's color bands, then each silhouette from farthest to nearest, in
+  // the BACKDROP_HEIGHT above the floor's back edge, under everything.
+  renderBackdrop(style: BackdropStyle, seed: number) {
+    const width = this.grid.width * CELL.width;
+    const graphics = this.add.graphics().setDepth(-1);
+    const band = BACKDROP_HEIGHT / style.sky.length;
+    style.sky.forEach((color, i) => graphics.fillStyle(color).fillRect(0, -BACKDROP_HEIGHT + i * band, width, band));
+    style.layers.forEach((layer, i) => {
+      graphics.fillStyle(layer.color);
+      getSilhouette(layer, width, BACKDROP_HEIGHT, seed + i).forEach((height, column) =>
+        graphics.fillRect(column * BACKDROP_COLUMN, -height, BACKDROP_COLUMN, height),
+      );
+    });
+  }
+
+  // Props that stand up out of the floor (forests, mountains, buildings;
+  // see src/game/mapArt.ts), at their full TILE_SIZE square art: each
+  // piece stacked over its prop's base row (getPropPlacement) and sorted
+  // with the units on that row, a hair behind a unit on the same cell.
+  renderStandingProps(sprites: readonly MapSprite[]) {
+    for (const sprite of sprites) {
+      const { x, y, row } = getPropPlacement(sprite);
+      const sheet = sprite.sheet ?? TERRAIN_SHEET;
+      const depth = getStandingDepth(getStandingPosition(sprite.x, row).y) - STANDING_DEPTH_HAIR;
+      this.add
+        .image(x, y, sheet.key, getTileFrame(sprite.tile, sheet.columns))
+        .setOrigin(0, 0)
+        .setDisplaySize(TILE_SIZE, TILE_SIZE)
+        .setDepth(depth);
+    }
+  }
+
+  // Overlays lying flat on the floor, from the terrain sheet or the props
+  // sheet (crossings and hazards; see src/game/mapArt.ts): ground art under
+  // units, caps just above, and roofs over units like the gate's.
   renderMapSprites(sprites: readonly MapSprite[]) {
     const depths = { ground: 0.4, cap: 0.45, roof: 0.8 };
     for (const { x, y, tile, layer, sheet = TERRAIN_SHEET } of sprites) {

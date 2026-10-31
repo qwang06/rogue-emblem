@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { worldToGrid } from './grid.ts';
 import {
   ART_FEET_Y,
+  getPropPlacement,
   getStandingDepth,
   getStandingPosition,
   STANDING_DEPTH_MAX,
@@ -65,5 +66,17 @@ describe('getStandingDepth', () => {
 describe('STANDING_OVERHANG', () => {
   it('is how far a top-row sprite pokes above the floor', () => {
     expect(STANDING_OVERHANG).toBe(-getStandingPosition(0, 0).y);
+  });
+});
+
+describe('getPropPlacement', () => {
+  it('stands a one-cell prop like a unit', () => {
+    expect(getPropPlacement({ x: 2, y: 3 })).toEqual({ ...getStandingPosition(2, 3), row: 3 });
+  });
+
+  it('stacks a piece behind its base a whole tile above per row, sorted on the base row', () => {
+    const foot = getStandingPosition(4, 5);
+    expect(getPropPlacement({ x: 4, y: 4, base: 5 })).toEqual({ x: foot.x, y: foot.y - TILE_SIZE, row: 5 });
+    expect(getPropPlacement({ x: 4, y: 3, base: 5 })).toEqual({ x: foot.x, y: foot.y - 2 * TILE_SIZE, row: 5 });
   });
 });
