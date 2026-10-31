@@ -394,6 +394,26 @@ export const UNIT_SHADOW: Shadow = {
   alpha: 0.35,
 };
 
+// The soft shadows a battlefield's painted floor gets instead (see
+// addSoftShadow in src/scenes/unitShadow.ts): a blurred pool, wider than
+// the crisp blob and darkest under the feet, so a unit or an obstacle sits
+// on the painting instead of floating over it. On the same feet line as
+// UNIT_SHADOW.
+export const SOFT_UNIT_SHADOW: Shadow = {
+  width: 26 / 32,
+  height: 9 / 32,
+  centerX: 16 / 32,
+  centerY: 29 / 32,
+  alpha: 0.55,
+};
+export const OBSTACLE_SHADOW: Shadow = {
+  width: 34 / 32,
+  height: 12 / 32,
+  centerX: 16 / 32,
+  centerY: 29 / 32,
+  alpha: 0.5,
+};
+
 // The outline drawn around every unit on the map in its team's color, so
 // sides read at a glance without recoloring the sprite: `width` (a
 // fraction of a tile, see getOutlineWidth) thick, hugging the art's

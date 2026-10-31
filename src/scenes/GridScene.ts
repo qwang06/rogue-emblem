@@ -58,7 +58,8 @@ import {
 } from '../game/healing.ts';
 import { findUnitSkill, getSkillActions, getSkillForecast, getUnitSkills, isHealingSkill } from '../game/skills.ts';
 import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange } from '../game/combat.ts';
-import { getFitZoom } from '../game/camera.ts';
+import { getCameraView, getFitZoom } from '../game/camera.ts';
+import { getFramingClumps } from '../game/battlefieldFraming.ts';
 import { createCursor, moveCursor } from '../game/cursor.ts';
 import {
   createBattleLevel,
@@ -224,6 +225,7 @@ import {
   MAP_PROPS_SHEET,
   MOUNTAIN_ART,
   OBSTACLE_ART,
+  SOFT_UNIT_SHADOW,
   STRUCTURE_SPRITES,
   TERRAIN_SHEET,
   WANG_SETS,
@@ -250,7 +252,7 @@ import {
   playStoneThrow,
 } from './effects.ts';
 import { CRIT_SHAKE, getLungeDistance, getStrikeJuice, type Shake } from './hitJuice.ts';
-import { addTreeShadow, addUnitShadow } from './unitShadow.ts';
+import { addObstacleShadow, addTreeShadow, addUnitShadow } from './unitShadow.ts';
 import { addUnitOutline } from './unitOutline.ts';
 import { addUnitRig, faceRigToward, playRigAction, setRigMotion } from './unitRig.ts';
 import { addRankBadge } from './rankBadge.ts';
@@ -279,6 +281,15 @@ import type { RosterMenuEntry } from '../bridge/gameStore.ts';
 // pixels; the cap is a tile 96 screen pixels big.
 const ZOOM_STEP = 1 / GRID_PX;
 const MAX_ZOOM = 3 / GRID_PX;
+// How dark a battlefield's floor grid is (see renderFloorGrid).
+const FLOOR_GRID_ALPHA = 0.08;
+// The framing clumps' shade: near the camera and out of the light, so dark
+// and cool, and their depth, over everything standing but under the cursor.
+const FRAMING_TINT = 0x56664a;
+const FRAMING_DEPTH = 0.85;
+// The darkening toward a battlefield's screen edges (Phaser's vignette:
+// radius and strength), drawing the eye in to the fight.
+const VIGNETTE = { radius: 0.85, strength: 0.35 };
 const MOVE_RANGE_COLOR = 0x3b82f6;
 const MOVE_RANGE_ALPHA = 0.45;
 const ATTACK_RANGE_COLOR = 0xef4444;
@@ -469,6 +480,11 @@ export class GridScene extends Phaser.Scene {
   // The marker on the tile a boss's horn marked, and that tile as "x,y".
   incomingMarker: Phaser.GameObjects.Rectangle | null = null;
   incomingMarkerKey: string | null = null;
+  // A battlefield's kind, its painting (if it has one) and the out-of-focus
+  // clumps framing it, which fitCamera fits to the screen.
+  battlefieldKind: BattlefieldKind | null = null;
+  battlefieldPainting: Phaser.GameObjects.Image | null = null;
+  framingClumps: Phaser.GameObjects.Image[] = [];
 
   constructor() {
     super('Grid');
@@ -641,8 +657,19 @@ export class GridScene extends Phaser.Scene {
     const palette = BUILDING_PALETTES[paletteName];
     // A battlefield is its field's painted (or code-drawn) look with its
     // obstacles standing on it; any other map is drawn from its terrain.
+    this.battlefieldKind = level.battlefield ?? null;
+    this.battlefieldPainting = null;
+    this.framingClumps = [];
+    // A battlefield darkens toward the screen's edges (WebGL only).
+    const cameraFX = this.cameras.main.postFX;
+    cameraFX?.clear();
+    if (level.battlefield) cameraFX?.addVignette(0.5, 0.5, VIGNETTE.radius, VIGNETTE.strength);
     if (level.battlefield) {
       this.renderBattlefield(level.battlefield, getBackdropSeed(this.grid));
+      for (const { x, y } of level.obstacles ?? []) {
+        const pos = getStandingPosition(x, y);
+        addObstacleShadow(this, pos.x, pos.y);
+      }
     } else {
       this.renderBackdrop(getBackdropStyle(level.biome), getBackdropSeed(this.grid));
       this.renderTerrain(this.grid, { wall: getWallAutotile(palette) });
@@ -788,10 +815,14 @@ export class GridScene extends Phaser.Scene {
     // The backdrop stands above the floor (with room for the top row's
     // heads), so frame it too.
     const rows = this.grid.height + BACKDROP_HEIGHT / CELL.height;
-    camera.setZoom(
-      getFitZoom({ width: this.grid.width, height: rows }, CELL, this.scale.gameSize, MAX_ZOOM, ZOOM_STEP),
-    );
-    camera.centerOn((this.grid.width * CELL.width) / 2, (this.grid.height * CELL.height - BACKDROP_HEIGHT) / 2);
+    const zoom = getFitZoom({ width: this.grid.width, height: rows }, CELL, this.scale.gameSize, MAX_ZOOM, ZOOM_STEP);
+    const center = {
+      x: (this.grid.width * CELL.width) / 2,
+      y: (this.grid.height * CELL.height - BACKDROP_HEIGHT) / 2,
+    };
+    camera.setZoom(zoom);
+    camera.centerOn(center.x, center.y);
+    if (this.battlefieldKind) this.frameBattlefield(getCameraView(center, zoom, this.scale.gameSize));
     // The camera's visible area only updates when it next renders, so move
     // an open unit menu to the refitted map then.
     this.events.once(Phaser.Scenes.Events.RENDER, () => {
@@ -799,6 +830,33 @@ export class GridScene extends Phaser.Scene {
       if (this.rangeMode === 'attack' || this.rangeMode === 'skill') this.updateCombatForecast();
       if (this.rangeMode === 'skill') this.updatePushPreview();
       this.refreshIntents();
+    });
+  }
+
+  // Fits a battlefield to the camera's `view`: its painting scaled to
+  // cover the whole screen, and the out-of-focus clumps
+  // (getFramingClumps) redrawn in its bottom corners, over everything on
+  // the floor but the cursor.
+  frameBattlefield(view: { x: number; y: number; width: number; height: number }) {
+    const kind = this.battlefieldKind!;
+    const floor = { width: this.grid.width * CELL.width, height: this.grid.height * CELL.height };
+    const painting = BATTLEFIELD_PAINTINGS[kind];
+    if (painting && this.battlefieldPainting) {
+      const at = getPaintingPlacement(painting, floor.width, view);
+      this.battlefieldPainting.setPosition(at.x, at.y).setDisplaySize(at.width, at.height);
+    }
+    for (const clump of this.framingClumps) clump.destroy();
+    this.framingClumps = getFramingClumps(kind, view, floor).map(({ kind: obstacle, x, y, size, flip }) => {
+      const { sheet, tile } = OBSTACLE_ART[obstacle];
+      const image = this.add
+        .image(x, y, sheet.key, getTileFrame(tile, sheet.columns))
+        .setOrigin(0, 0)
+        .setDisplaySize(size, size)
+        .setFlipX(flip)
+        .setTint(FRAMING_TINT)
+        .setDepth(FRAMING_DEPTH);
+      image.preFX?.addBlur(0, 1, 1, Math.max(1, size / 120));
+      return image;
     });
   }
 
@@ -3541,41 +3599,73 @@ export class GridScene extends Phaser.Scene {
   }
 
   // A battlefield's floor and backdrop: its painting (BATTLEFIELD_PAINTINGS)
-  // with its horizon on the floor's back edge, or without one its
-  // code-drawn look (BATTLEFIELD_LOOKS): a flecked floor under the backdrop.
+  // with its horizon on the floor's back edge (fitCamera scales it to cover
+  // the screen), or without one its code-drawn look (BATTLEFIELD_LOOKS): a
+  // flecked floor under the backdrop, both running a floor's width past
+  // either side and on below the front edge, so neither ends on screen.
+  // A faint grid over the floor marks out its cells without boxing them in.
   renderBattlefield(kind: BattlefieldKind, seed: number) {
     const floor = { width: this.grid.width * CELL.width, height: this.grid.height * CELL.height };
     const painting = BATTLEFIELD_PAINTINGS[kind];
     if (painting) {
       const at = getPaintingPlacement(painting, floor.width);
-      this.add
+      this.battlefieldPainting = this.add
         .image(at.x, at.y, battlefieldPaintingKey(kind))
         .setOrigin(0, 0)
         .setDisplaySize(at.width, at.height)
         .setDepth(-1);
-      return;
+    } else {
+      const look = BATTLEFIELD_LOOKS[kind];
+      this.renderBackdrop(look.backdrop, seed, floor.width);
+      const graphics = this.add.graphics().setDepth(-1);
+      const field = { x: -floor.width, width: 3 * floor.width, height: 2 * floor.height };
+      graphics.fillStyle(look.floor.base).fillRect(field.x, 0, field.width, field.height);
+      for (const { x, y, color } of getFloorFlecks(look.floor, field.width, field.height, seed)) {
+        graphics.fillStyle(color).fillRect(field.x + x, y, BACKDROP_COLUMN, BACKDROP_COLUMN);
+      }
     }
-    const look = BATTLEFIELD_LOOKS[kind];
-    this.renderBackdrop(look.backdrop, seed);
-    const graphics = this.add.graphics().setDepth(-1);
-    graphics.fillStyle(look.floor.base).fillRect(0, 0, floor.width, floor.height);
-    for (const { x, y, color } of getFloorFlecks(look.floor, floor.width, floor.height, seed)) {
-      graphics.fillStyle(color).fillRect(x, y, BACKDROP_COLUMN, BACKDROP_COLUMN);
+    this.renderFloorGrid(floor);
+  }
+
+  // The battlefield's cells, outlined faintly: a dark line with a lighter
+  // one just under it, like a groove pressed into the ground, over the
+  // floor and under everything on it.
+  renderFloorGrid(floor: { width: number; height: number }) {
+    const graphics = this.add.graphics().setDepth(-0.5);
+    const line = GRID_PX;
+    for (const [color, alpha, offset] of [
+      [0x000000, FLOOR_GRID_ALPHA, 0],
+      [0xffffff, FLOOR_GRID_ALPHA / 2, line],
+    ] as const) {
+      graphics.fillStyle(color, alpha);
+      for (let x = 0; x <= this.grid.width; x++) {
+        const at = Math.min(x * CELL.width, floor.width - line);
+        graphics.fillRect(at + offset, 0, line, floor.height);
+      }
+      for (let y = 0; y <= this.grid.height; y++) {
+        const at = Math.min(y * CELL.height, floor.height - line);
+        graphics.fillRect(0, at + offset, floor.width, line);
+      }
     }
   }
 
   // The sky and far scenery behind the arena (src/game/backdrop.ts): the
   // sky's color bands, then each silhouette from farthest to nearest, in
   // the BACKDROP_HEIGHT above the floor's back edge, under everything.
-  renderBackdrop(style: BackdropStyle, seed: number) {
-    const width = this.grid.width * CELL.width;
+  // `margin` runs it that far past either side of the floor, with the top
+  // band of sky going on up as far again, so a battlefield's backdrop fills
+  // the screen.
+  renderBackdrop(style: BackdropStyle, seed: number, margin = 0) {
+    const left = -margin;
+    const width = this.grid.width * CELL.width + 2 * margin;
     const graphics = this.add.graphics().setDepth(-1);
     const band = BACKDROP_HEIGHT / style.sky.length;
-    style.sky.forEach((color, i) => graphics.fillStyle(color).fillRect(0, -BACKDROP_HEIGHT + i * band, width, band));
+    if (margin > 0) graphics.fillStyle(style.sky[0]).fillRect(left, -BACKDROP_HEIGHT - 2 * margin, width, 2 * margin);
+    style.sky.forEach((color, i) => graphics.fillStyle(color).fillRect(left, -BACKDROP_HEIGHT + i * band, width, band));
     style.layers.forEach((layer, i) => {
       graphics.fillStyle(layer.color);
       getSilhouette(layer, width, BACKDROP_HEIGHT, seed + i).forEach((height, column) =>
-        graphics.fillRect(column * BACKDROP_COLUMN, -height, BACKDROP_COLUMN, height),
+        graphics.fillRect(left + column * BACKDROP_COLUMN, -height, BACKDROP_COLUMN, height),
       );
     });
   }
@@ -3675,7 +3765,9 @@ export class GridScene extends Phaser.Scene {
     if (!isSingleImageUnit(art)) sprite.play(this.unitAnimation(art, 'idle', facing));
     const outline = addUnitOutline(this, sprite, UNIT_OUTLINE.colors[unit.team]);
     if (isSingleImageUnit(art)) addUnitRig(this, sprite, unit.team === 'enemy' ? -1 : 1, [outline]);
-    addUnitShadow(this, sprite);
+    // A battlefield's painted floor gets a soft shadow, a terrain map the crisp blob.
+    if (this.battlefieldKind) addUnitShadow(this, sprite, SOFT_UNIT_SHADOW, true);
+    else addUnitShadow(this, sprite);
     if (unit.rank) addRankBadge(this, sprite, unit.rank);
     this.unitSprites.set(unitId, sprite);
   }
