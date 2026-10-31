@@ -841,7 +841,17 @@ export class GridScene extends Phaser.Scene {
     // The backdrop stands above the floor (with room for the top row's
     // heads), so frame it too.
     const rows = this.grid.height + BACKDROP_HEIGHT / CELL.height;
-    const zoom = getFitZoom({ width: this.grid.width, height: rows }, CELL, this.scale.gameSize, MAX_ZOOM, ZOOM_STEP);
+    // The canvas has pixelRatio canvas pixels per CSS pixel (see main.ts), so
+    // the cap grows with it to keep the map the same size on screen, and the
+    // steps stay whole canvas pixels.
+    const pixelRatio = 1 / this.scale.zoom;
+    const zoom = getFitZoom(
+      { width: this.grid.width, height: rows },
+      CELL,
+      this.scale.gameSize,
+      MAX_ZOOM * pixelRatio,
+      ZOOM_STEP,
+    );
     const center = {
       x: (this.grid.width * CELL.width) / 2,
       y: (this.grid.height * CELL.height - BACKDROP_HEIGHT) / 2,

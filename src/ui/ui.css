@@ -373,9 +373,9 @@ a.header-button {
 }
 
 /* The canvas and the HUD overlay share this box, which fills the stage
-   area. Phaser's RESIZE mode keeps the canvas the same size, and the map
-   scene centers the map in it, framed by a thin border drawn as a shadow
-   so it takes no space. */
+   area. main.ts keeps the canvas the same size (at the screen's pixel
+   density), and the map scene centers the map in it, framed by a thin
+   border drawn as a shadow so it takes no space. */
 .stage {
   position: relative;
   flex: 1;

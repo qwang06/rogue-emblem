@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getCameraView, getFitZoom } from './camera.ts';
+import { getCameraView, getFitZoom, getRenderSize, MAX_PIXEL_RATIO } from './camera.ts';
 
 const CANVAS = { width: 960, height: 720 };
 
@@ -70,5 +70,19 @@ describe('getCameraView', () => {
       width: 800,
       height: 400,
     });
+  });
+});
+
+describe('getRenderSize', () => {
+  it('draws a canvas pixel per screen pixel on a scaled display', () => {
+    expect(getRenderSize({ width: 1000, height: 600 }, 1.5)).toEqual({ width: 1500, height: 900, pixelRatio: 1.5 });
+    expect(getRenderSize({ width: 1000, height: 600 }, 1)).toEqual({ width: 1000, height: 600, pixelRatio: 1 });
+  });
+
+  it('caps the ratio, never goes below 1, and never makes an empty canvas', () => {
+    expect(getRenderSize({ width: 100, height: 100 }, 8).pixelRatio).toBe(MAX_PIXEL_RATIO);
+    expect(getRenderSize({ width: 100, height: 100 }, 0.5).pixelRatio).toBe(1);
+    expect(getRenderSize({ width: 100, height: 100 }, 0).pixelRatio).toBe(1);
+    expect(getRenderSize({ width: 0, height: 0 }, 2)).toEqual({ width: 1, height: 1, pixelRatio: 2 });
   });
 });
