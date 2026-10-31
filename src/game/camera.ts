@@ -33,3 +33,23 @@ export function getCameraView(
   const height = canvasSize.height / zoom;
   return { x: center.x - width / 2, y: center.y - height / 2, width, height };
 }
+
+// How far past one canvas pixel per CSS pixel the game draws: the
+// screen's devicePixelRatio, so a scaled display (125%, 150%, a Retina
+// screen) gets every one of its pixels instead of a stretched canvas, but
+// capped at MAX_PIXEL_RATIO to spare the GPU, and never below 1.
+export const MAX_PIXEL_RATIO = 3;
+
+// The canvas size, in canvas pixels, for a box `cssSize` CSS pixels big on
+// a screen of `devicePixelRatio`, and the pixel ratio it's drawn at.
+export function getRenderSize(
+  cssSize: Size,
+  devicePixelRatio: number,
+): { width: number; height: number; pixelRatio: number } {
+  const pixelRatio = Math.min(Math.max(devicePixelRatio || 1, 1), MAX_PIXEL_RATIO);
+  return {
+    width: Math.max(1, Math.round(cssSize.width * pixelRatio)),
+    height: Math.max(1, Math.round(cssSize.height * pixelRatio)),
+    pixelRatio,
+  };
+}
