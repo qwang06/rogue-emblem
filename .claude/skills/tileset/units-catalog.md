@@ -20,17 +20,17 @@ the pack's.
 
 - `Warrior_02` is the warrior class's art (`UNIT_SPRITES.warrior`, also
   `DEFAULT_UNIT_SPRITE`). It is now **64px art** (256x256 sheets, `frame: 64`),
-  replacing the 32px recreation described in this section: a chibi foot
-  soldier (about 2.5 heads tall) under an oversized sage-green kettle helmet,
-  chunky navy scarf, royal-blue tunic with brown trim, brown belt with a silver
-  buckle, brown gloves and ankle boots. No weapon shows. Four stills made from
-  Qiang's fourth turnaround (`ref-v4`) with PixelLab `image_to_pixelart` at
-  64x64 (faithful, strength 120), helmets pulled to one sage and the buckle
-  recolored silver; east is west mirrored (process in the project files at
-  `art/warrior-64/`, finals in `out-v4/`). Assembled by
-  `scripts/assemble-unit-sheet.js`; footprint about x 14–49, y 2–61, feet on
-  y 61, so it has only 2px of headroom and idle sinks 2px and move hops 2px
-  (not 4).
+  replacing the 32px recreation described in this section: a chibi knight
+  (about 2.5 heads tall) in a polished ridged steel kettle helmet, steel
+  breastplate over a chainmail skirt, navy hooded long coat with gold cuffs,
+  red sash with a silver buckle, brown gloves and boots, a sword carried on
+  the shoulder and another scabbarded at the hip. Four stills made from
+  Qiang's fifth turnaround (`ref-v5`) with PixelLab `image_to_pixelart` at
+  64x64 (faithful, strength 120), north's colours matched to the others and
+  the buckle recolored silver; east is west mirrored (process in the project
+  files at `art/warrior-64/`, finals in `out-v5/`). Assembled by
+  `scripts/assemble-unit-sheet.js`; the shouldered sword makes it nearly a
+  full tile wide (footprint about x 3–60, y 6–61, feet on y 61).
 - `Amazon_01` is the archer class's art (`UNIT_SPRITES.archer`, replacing
   `Archer_02`): a woman with a big blonde mane and a green headband, light
   blue top, white short skirt, bare tan arms and legs, green boots. No weapon
