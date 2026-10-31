@@ -260,13 +260,13 @@ describe('planArena', () => {
     [8, 6],
   ];
 
-  it('deploys down the west edge and deals the enemy into the east third, north and south', () => {
+  it('deploys down the west edge and deals the enemy into the east half, north and south', () => {
     for (const [width, height] of ARENA_SIZES) {
       for (const seed of SEEDS) {
         const plan = planArena(width, height, createSeededRng(seed));
         expect(plan.deploymentZone).toHaveLength(3);
         expect(plan.deploymentZone.every(({ x }) => x === 0)).toBe(true);
-        const east = width - Math.max(2, Math.floor(width / 3));
+        const east = width - Math.max(2, Math.floor(width / 2));
         const [north, south] = plan.enemyZones;
         expect([...north, ...south].every(({ x }) => x >= east && x < width)).toBe(true);
         expect(Math.max(...north.map(({ y }) => y))).toBeLessThan(Math.min(...south.map(({ y }) => y)));

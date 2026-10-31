@@ -159,7 +159,13 @@ import { advanceDialog, createDialog, DIALOG_CHARS_PER_SECOND, getCurrentLine } 
 import { getTriggeredDialog, turnTrigger } from '../game/dialogScript.ts';
 import { describeObjective, getObjectiveStatus, type Objective } from '../game/objectives.ts';
 import { getFacingToward, getPathFacings, getStartFacing } from '../game/facing.ts';
-import { getPropPlacement, getStandingDepth, getStandingPosition, STANDING_DEPTH_HAIR } from '../game/sideView.ts';
+import {
+  getPropPlacement,
+  getStandingDepth,
+  getStandingPosition,
+  STANDING_DEPTH_HAIR,
+  STANDING_OVERHANG,
+} from '../game/sideView.ts';
 import {
   BACKDROP_COLUMN,
   BACKDROP_HEIGHT,
@@ -167,6 +173,7 @@ import {
   getBackdropSeed,
   getBackdropStyle,
   getFloorFlecks,
+  getPaintingCamera,
   getPaintingPlacement,
   getSilhouette,
   type BackdropStyle,
@@ -808,10 +815,29 @@ export class GridScene extends Phaser.Scene {
     gameStore.setState({ mapLoadProgress: 1, mapReady: true });
   }
 
-  // Zooms the map to fit the canvas (up to MAX_ZOOM) and centers it. Runs
-  // on create and whenever the page resizes the canvas.
+  // Zooms the map to fit the canvas (up to MAX_ZOOM) and centers it; a
+  // painted battlefield is framed by its painting instead
+  // (getPaintingCamera). Runs on create and whenever the page resizes the
+  // canvas.
   fitCamera() {
     const camera = this.cameras.main;
+    const painting = this.battlefieldPainting;
+    if (painting) {
+      const canvas = this.scale.gameSize;
+      const floor = {
+        x: 0,
+        y: -STANDING_OVERHANG,
+        width: this.grid.width * CELL.width,
+        height: this.grid.height * CELL.height + STANDING_OVERHANG,
+      };
+      const fit = Math.min(canvas.width / floor.width, canvas.height / floor.height);
+      const at = { x: painting.x, y: painting.y, width: painting.displayWidth, height: painting.displayHeight };
+      const { zoom, center } = getPaintingCamera(at, floor, canvas, fit);
+      camera.setZoom(zoom);
+      camera.centerOn(center.x, center.y);
+      this.afterCameraFit();
+      return;
+    }
     // The backdrop stands above the floor (with room for the top row's
     // heads), so frame it too.
     const rows = this.grid.height + BACKDROP_HEIGHT / CELL.height;
@@ -823,6 +849,11 @@ export class GridScene extends Phaser.Scene {
     camera.setZoom(zoom);
     camera.centerOn(center.x, center.y);
     if (this.battlefieldKind) this.frameBattlefield(getCameraView(center, zoom, this.scale.gameSize));
+    this.afterCameraFit();
+  }
+
+  // After the camera moves: what's placed by screen position follows it.
+  afterCameraFit() {
     // The camera's visible area only updates when it next renders, so move
     // an open unit menu to the refitted map then.
     this.events.once(Phaser.Scenes.Events.RENDER, () => {
@@ -833,18 +864,13 @@ export class GridScene extends Phaser.Scene {
     });
   }
 
-  // Fits a battlefield to the camera's `view`: its painting scaled to
-  // cover the whole screen, and the out-of-focus clumps
-  // (getFramingClumps) redrawn in its bottom corners, over everything on
-  // the floor but the cursor.
+  // Fits a code-drawn battlefield to the camera's `view`: the
+  // out-of-focus clumps (getFramingClumps) redrawn in its bottom corners,
+  // over everything on the floor but the cursor. (A painting has its own
+  // foreground painted in.)
   frameBattlefield(view: { x: number; y: number; width: number; height: number }) {
     const kind = this.battlefieldKind!;
     const floor = { width: this.grid.width * CELL.width, height: this.grid.height * CELL.height };
-    const painting = BATTLEFIELD_PAINTINGS[kind];
-    if (painting && this.battlefieldPainting) {
-      const at = getPaintingPlacement(painting, floor.width, view);
-      this.battlefieldPainting.setPosition(at.x, at.y).setDisplaySize(at.width, at.height);
-    }
     for (const clump of this.framingClumps) clump.destroy();
     this.framingClumps = getFramingClumps(kind, view, floor).map(({ kind: obstacle, x, y, size, flip }) => {
       const { sheet, tile } = OBSTACLE_ART[obstacle];
@@ -3599,8 +3625,8 @@ export class GridScene extends Phaser.Scene {
   }
 
   // A battlefield's floor and backdrop: its painting (BATTLEFIELD_PAINTINGS)
-  // with its horizon on the floor's back edge (fitCamera scales it to cover
-  // the screen), or without one its code-drawn look (BATTLEFIELD_LOOKS): a
+  // with its field laid over the floor (fitCamera frames the camera on it),
+  // or without one its code-drawn look (BATTLEFIELD_LOOKS): a
   // flecked floor under the backdrop, both running a floor's width past
   // either side and on below the front edge, so neither ends on screen.
   // A faint grid over the floor marks out its cells without boxing them in.

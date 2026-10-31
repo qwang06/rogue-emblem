@@ -111,7 +111,8 @@ describe('getCandidateSeeds', () => {
   });
 });
 
-describe('pickStageLayout', () => {
+// Lays out many full-size stages, each the best of MAP_CANDIDATES maps.
+describe('pickStageLayout', { timeout: 60_000 }, () => {
   it('keeps the best-scoring candidate that keeps every rule, the earliest on a tie', () => {
     for (const region of REGION_CONFIGS) {
       for (const seed of SEEDS.slice(0, 10)) {
@@ -154,7 +155,8 @@ describe('pickStageLayout', () => {
   });
 });
 
-describe('createStageLevel', () => {
+// Lays out many full-size stages, each the best of MAP_CANDIDATES maps.
+describe('createStageLevel', { timeout: 60_000 }, () => {
   it('builds the map pickStageLayout picks, with enemies on its tiles', () => {
     for (const region of REGION_CONFIGS) {
       const layout = pickStageLayout(1234, region);

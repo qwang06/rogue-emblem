@@ -241,11 +241,13 @@ export function getFloorFlecks(
   return flecks;
 }
 
-// A painted battlefield: its size in its own pixels, and the row its floor
-// starts at (the foot of its far scenery).
+// A painted battlefield: its size in its own pixels, and `field`, the
+// rectangle of it ([x, y, width, height]) the arena's floor is laid over:
+// the open ground the picture leaves clear for the fight, its scenery
+// painted around it.
 export interface Painting {
   size: readonly [number, number];
-  horizon: number;
+  field: readonly [number, number, number, number];
 }
 
 // A rectangle of the world, in world pixels.
@@ -256,26 +258,44 @@ export interface WorldRect {
   height: number;
 }
 
-// Where to draw `painting` behind a floor `floorWidth` wide, in world
-// pixels, so its horizon sits on the floor's back edge (y 0) without
-// stretching it: scaled up just enough to span the floor and to stand at
-// least BACKDROP_HEIGHT above it, and centered across it (an overhang
-// either side, and any floor below the arena's front edge, is cropped by
-// the camera or left showing past it). Given the camera's `view`, it's
-// scaled up further to cover all of it, so the painting runs to the
-// screen's edges instead of floating in the page.
-export function getPaintingPlacement(painting: Painting, floorWidth: number, view?: WorldRect): WorldRect {
+// Where to draw `painting` so its field lies over a floor `floorWidth`
+// wide with its top-left corner at the world's origin: scaled (keeping its
+// shape) so the field spans the floor, and shifted so the field's corner
+// is the floor's.
+export function getPaintingPlacement(painting: Painting, floorWidth: number): WorldRect {
   const [w, h] = painting.size;
-  let scale = Math.max(floorWidth / w, BACKDROP_HEIGHT / painting.horizon);
-  if (view) {
-    // Centered on the floor, so it must reach the view's farther side.
-    const halfWidth = Math.max(floorWidth / 2 - view.x, view.x + view.width - floorWidth / 2);
-    scale = Math.max(
-      scale,
-      (2 * halfWidth) / w,
-      -view.y / painting.horizon,
-      (view.y + view.height) / (h - painting.horizon),
-    );
-  }
-  return { x: (floorWidth - w * scale) / 2, y: -painting.horizon * scale, width: w * scale, height: h * scale };
+  const [fx, fy, fw] = painting.field;
+  const scale = floorWidth / fw;
+  return { x: -fx * scale, y: -fy * scale, width: w * scale, height: h * scale };
+}
+
+// The camera for a painted battlefield on a canvas `canvas` pixels big:
+// zoomed so the painting (`painting`, placed in the world) fills the
+// canvas with no page showing past it, but never so far in that `floor`
+// (the arena with room for the top row's heads) stops fitting, nor past
+// `maxZoom` (the floor's fit). Centered on the painting, then nudged to
+// keep the view inside the painting and the floor inside the view.
+export function getPaintingCamera(
+  painting: WorldRect,
+  floor: WorldRect,
+  canvas: { width: number; height: number },
+  maxZoom: number,
+): { zoom: number; center: { x: number; y: number } } {
+  const cover = Math.max(canvas.width / painting.width, canvas.height / painting.height);
+  const zoom = Math.min(cover, maxZoom);
+  const view = { width: canvas.width / zoom, height: canvas.height / zoom };
+  const axis = (start: number, size: number, floorStart: number, floorSize: number, viewSize: number) => {
+    let center = start + size / 2;
+    // Inside the painting, where it's bigger than the view.
+    if (viewSize <= size) center = Math.min(Math.max(center, start + viewSize / 2), start + size - viewSize / 2);
+    // The floor inside the view, whatever that costs.
+    return Math.min(Math.max(center, floorStart + floorSize - viewSize / 2), floorStart + viewSize / 2);
+  };
+  return {
+    zoom,
+    center: {
+      x: axis(painting.x, painting.width, floor.x, floor.width, view.width),
+      y: axis(painting.y, painting.height, floor.y, floor.height, view.height),
+    },
+  };
 }

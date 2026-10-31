@@ -25,7 +25,7 @@
 //                its south wall; the enemy holds the inside, and the fort
 //                building in it is the tile to seize
 //   arena      — the side view's battlefield: deploy down the west edge,
-//                the enemy holds the east third, and a dirt road (plus a
+//                the enemy holds the east half, and a dirt road (plus a
 //                second clear route on maps 5 or more rows deep) runs
 //                between; the road's east end is the tile to seize
 // Pure: the same size and Rng always give the same plan.
@@ -452,7 +452,8 @@ export function planFortress(width: number, height: number, rng: Rng): Archetype
 // Arena: the side view's battlefield, seen from the south, so the two sides
 // face each other across it. The player deploys in three tiles down the
 // west edge, around a middle row; the enemy is dealt into the north and
-// south halves of the east third. A dirt road runs from the deployment
+// south halves of the east half, so on a big field the fight still starts
+// within a turn's walk. A dirt road runs from the deployment
 // zone to the east edge, and on maps 5 or more rows deep a second route
 // (kept clear, not dirt) runs along the other half, so there's a way
 // around whatever the fill grows.
@@ -466,7 +467,7 @@ export function planArena(width: number, height: number, rng: Rng): ArchetypePla
     const y = cy < height / 2 ? height - 1 : 0;
     routes.push(carveRoad({ x: 1, y }, { x: width - 1, y: randomInt(rng, 0, height - 1) }, rng));
   }
-  const east = width - Math.max(2, Math.floor(width / 3));
+  const east = width - Math.max(2, Math.floor(width / 2));
   const middle = Math.floor(height / 2);
   return {
     deploymentZone,

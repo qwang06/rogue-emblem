@@ -5,6 +5,7 @@ import {
   BACKDROP_STYLES,
   BATTLEFIELD_LOOKS,
   getFloorFlecks,
+  getPaintingCamera,
   getPaintingPlacement,
   getBackdropSeed,
   getBackdropStyle,
@@ -121,38 +122,43 @@ describe('getFloorFlecks', () => {
 });
 
 describe('getPaintingPlacement', () => {
-  it('puts the horizon on the floor’s back edge, keeping the picture’s shape', () => {
-    const at = getPaintingPlacement({ size: [1200, 896], horizon: 170 }, 640);
-    expect(at.y + (170 / 896) * at.height).toBeCloseTo(0);
-    expect(at.width / at.height).toBeCloseTo(1200 / 896);
+  const painting = { size: [1920, 1080], field: [360, 290, 1200, 536] } as const;
+
+  it('lays the field over the floor, keeping the picture’s shape', () => {
+    const at = getPaintingPlacement(painting, 896);
+    const scale = at.width / 1920;
+    expect(at.height / at.width).toBeCloseTo(1080 / 1920);
+    expect(at.x + 360 * scale).toBeCloseTo(0);
+    expect(at.y + 290 * scale).toBeCloseTo(0);
+    expect(1200 * scale).toBeCloseTo(896);
+  });
+});
+
+describe('getPaintingCamera', () => {
+  const painting = { x: -269, y: -217, width: 1434, height: 806 };
+  const floor = { x: 0, y: -24, width: 896, height: 424 };
+
+  it('zooms the painting to cover the canvas, centered on it', () => {
+    const canvas = { width: 1600, height: 800 };
+    const { zoom, center } = getPaintingCamera(painting, floor, canvas, 10);
+    expect(zoom).toBeCloseTo(1600 / 1434);
+    const view = { x: center.x - 800 / zoom, y: center.y - 400 / zoom };
+    expect(view.x).toBeGreaterThanOrEqual(painting.x - 1e-9);
+    expect(view.y).toBeGreaterThanOrEqual(painting.y - 1e-9);
+    expect(view.x + 1600 / zoom).toBeLessThanOrEqual(painting.x + painting.width + 1e-9);
+    expect(view.y + 800 / zoom).toBeLessThanOrEqual(painting.y + painting.height + 1e-9);
   });
 
-  it('stands at least BACKDROP_HEIGHT above the floor and spans its width, centered', () => {
-    const tall = getPaintingPlacement({ size: [1200, 896], horizon: 170 }, 640);
-    expect(-tall.y).toBeCloseTo(BACKDROP_HEIGHT);
-    expect(tall.width).toBeGreaterThanOrEqual(640);
-    expect(tall.x + tall.width / 2).toBeCloseTo(320);
-    const wide = getPaintingPlacement({ size: [400, 1000], horizon: 400 }, 640);
-    expect(wide.width).toBeCloseTo(640);
-    expect(wide.x).toBeCloseTo(0);
-    expect(-wide.y).toBeGreaterThanOrEqual(BACKDROP_HEIGHT);
-  });
-
-  it('covers the camera’s view when given one, keeping the horizon on the floor’s back edge', () => {
-    const painting = { size: [1200, 896], horizon: 170 } as const;
-    const view = { x: -205, y: -205, width: 1050, height: 530 };
-    const at = getPaintingPlacement(painting, 640, view);
-    expect(at.x).toBeLessThanOrEqual(view.x);
-    expect(at.x + at.width).toBeGreaterThanOrEqual(view.x + view.width);
-    expect(at.y).toBeLessThanOrEqual(view.y);
-    expect(at.y + at.height).toBeGreaterThanOrEqual(view.y + view.height);
-    expect(at.y + (170 / 896) * at.height).toBeCloseTo(0);
-    expect(at.x + at.width / 2).toBeCloseTo(320);
-  });
-
-  it('never shrinks below its placement without a view', () => {
-    const painting = { size: [1200, 896], horizon: 170 } as const;
-    const bare = getPaintingPlacement(painting, 640);
-    expect(getPaintingPlacement(painting, 640, { x: 100, y: -10, width: 100, height: 50 })).toEqual(bare);
+  it('never zooms past the floor’s fit, keeping the floor in view', () => {
+    // A tall, narrow canvas: covering would crop the floor's sides.
+    const canvas = { width: 600, height: 900 };
+    const fit = Math.min(600 / floor.width, 900 / floor.height);
+    const { zoom, center } = getPaintingCamera(painting, floor, canvas, fit);
+    expect(zoom).toBeCloseTo(fit);
+    const half = { width: 300 / zoom, height: 450 / zoom };
+    expect(center.x - half.width).toBeLessThanOrEqual(floor.x + 1e-9);
+    expect(center.x + half.width).toBeGreaterThanOrEqual(floor.x + floor.width - 1e-9);
+    expect(center.y - half.height).toBeLessThanOrEqual(floor.y + 1e-9);
+    expect(center.y + half.height).toBeGreaterThanOrEqual(floor.y + floor.height - 1e-9);
   });
 });
