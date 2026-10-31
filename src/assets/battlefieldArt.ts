@@ -11,7 +11,7 @@ import type { Painting } from '../game/backdrop.ts';
 
 export const BATTLEFIELD_PAINTINGS: Readonly<Partial<Record<BattlefieldKind, Painting & { url: string }>>> =
   Object.freeze({
-    plains: { url: plains, size: [1920, 1080], field: [360, 290, 1200, 536] },
+    plains: { url: plains, size: [3840, 2160], field: [720, 580, 2400, 1072] },
   });
 
 // The texture key a battlefield's painting loads under.
