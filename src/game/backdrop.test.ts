@@ -137,4 +137,22 @@ describe('getPaintingPlacement', () => {
     expect(wide.x).toBeCloseTo(0);
     expect(-wide.y).toBeGreaterThanOrEqual(BACKDROP_HEIGHT);
   });
+
+  it('covers the camera’s view when given one, keeping the horizon on the floor’s back edge', () => {
+    const painting = { size: [1200, 896], horizon: 170 } as const;
+    const view = { x: -205, y: -205, width: 1050, height: 530 };
+    const at = getPaintingPlacement(painting, 640, view);
+    expect(at.x).toBeLessThanOrEqual(view.x);
+    expect(at.x + at.width).toBeGreaterThanOrEqual(view.x + view.width);
+    expect(at.y).toBeLessThanOrEqual(view.y);
+    expect(at.y + at.height).toBeGreaterThanOrEqual(view.y + view.height);
+    expect(at.y + (170 / 896) * at.height).toBeCloseTo(0);
+    expect(at.x + at.width / 2).toBeCloseTo(320);
+  });
+
+  it('never shrinks below its placement without a view', () => {
+    const painting = { size: [1200, 896], horizon: 170 } as const;
+    const bare = getPaintingPlacement(painting, 640);
+    expect(getPaintingPlacement(painting, 640, { x: 100, y: -10, width: 100, height: 50 })).toEqual(bare);
+  });
 });

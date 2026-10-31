@@ -21,3 +21,15 @@ export function getFitZoom(mapSize: Size, cell: CellSize, canvasSize: Size, maxZ
   const steps = Math.floor(fit / step + 1e-9);
   return Math.max(step, Math.min(steps * step, maxZoom));
 }
+
+// The part of the world a camera at `zoom`, centered on `center`, shows on
+// a canvas of `canvasSize` pixels, in world pixels.
+export function getCameraView(
+  center: { x: number; y: number },
+  zoom: number,
+  canvasSize: Size,
+): { x: number; y: number; width: number; height: number } {
+  const width = canvasSize.width / zoom;
+  const height = canvasSize.height / zoom;
+  return { x: center.x - width / 2, y: center.y - height / 2, width, height };
+}

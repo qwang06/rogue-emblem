@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
 import { getEllipseSpans } from '../game/pixelShapes.ts';
-import { TILE_SIZE, TREE_SHADOW, UNIT_SHADOW, type Shadow } from '../game/tileset.ts';
+import { OBSTACLE_SHADOW, TILE_SIZE, TREE_SHADOW, UNIT_SHADOW, type Shadow } from '../game/tileset.ts';
+
+const SOFT_SHADOW_KEY = 'shadow-soft';
+const SOFT_SHADOW_SIZE = 128; // the soft shadow texture's side, stretched to each shadow's ellipse
 
 const UNIT_SHADOW_DEPTH = 0.7; // on the floor, over range highlights and the arrow, below everything standing
 const TREE_SHADOW_DEPTH = 0.35; // over the terrain, under the floor's forests and trees
@@ -42,13 +45,20 @@ function addShadow(scene: Phaser.Scene, x: number, y: number, shape: Shadow, dep
     .setDepth(depth);
 }
 
-// Draws a blob shadow (UNIT_SHADOW) under a unit sprite placed at its tile's
-// top-left corner. The shadow follows the sprite every frame, so walking,
+// Draws a blob shadow (UNIT_SHADOW, or `shape`; a soft one on a painted
+// floor) under a unit sprite placed at its tile's top-left corner. The shadow follows the sprite every frame, so walking,
 // undoing a move, or redeploying needs no extra calls, and it's destroyed
 // with the sprite.
-export function addUnitShadow(scene: Phaser.Scene, sprite: Phaser.GameObjects.Sprite): Phaser.GameObjects.Image {
-  const box = getShadowBox(UNIT_SHADOW);
-  const shadow = addShadow(scene, sprite.x, sprite.y, UNIT_SHADOW, UNIT_SHADOW_DEPTH);
+export function addUnitShadow(
+  scene: Phaser.Scene,
+  sprite: Phaser.GameObjects.Sprite,
+  shape: Shadow = UNIT_SHADOW,
+  soft = false,
+): Phaser.GameObjects.Image {
+  const box = getShadowBox(shape);
+  const shadow = soft
+    ? addSoftShadow(scene, sprite.x, sprite.y, shape, UNIT_SHADOW_DEPTH)
+    : addShadow(scene, sprite.x, sprite.y, shape, UNIT_SHADOW_DEPTH);
   const follow = () => shadow.setPosition(sprite.x + box.x, sprite.y + box.y);
 
   scene.events.on(Phaser.Scenes.Events.POST_UPDATE, follow);
@@ -59,8 +69,52 @@ export function addUnitShadow(scene: Phaser.Scene, sprite: Phaser.GameObjects.Sp
   return shadow;
 }
 
+// The soft shadow's texture, built once: a round pool, black in the middle
+// fading out to nothing at its edge, stretched to each shadow's ellipse and
+// filtered smoothly (unlike the game's crisp pixel art).
+function ensureSoftShadowTexture(scene: Phaser.Scene): string {
+  if (scene.textures.exists(SOFT_SHADOW_KEY)) return SOFT_SHADOW_KEY;
+  const texture = scene.textures.createCanvas(SOFT_SHADOW_KEY, SOFT_SHADOW_SIZE, SOFT_SHADOW_SIZE)!;
+  const context = texture.getContext();
+  const r = SOFT_SHADOW_SIZE / 2;
+  const gradient = context.createRadialGradient(r, r, 0, r, r, r);
+  gradient.addColorStop(0, 'rgba(0,0,0,1)');
+  gradient.addColorStop(0.45, 'rgba(0,0,0,0.75)');
+  gradient.addColorStop(1, 'rgba(0,0,0,0)');
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, SOFT_SHADOW_SIZE, SOFT_SHADOW_SIZE);
+  texture.refresh();
+  texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+  return SOFT_SHADOW_KEY;
+}
+
+// A soft, blurred shadow (shape like SOFT_UNIT_SHADOW) at its spot within
+// the tile whose top-left corner is (x, y), for a painted floor.
+export function addSoftShadow(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  shape: Shadow,
+  depth: number,
+): Phaser.GameObjects.Image {
+  const box = getShadowBox(shape);
+  return scene.add
+    .image(x + box.x, y + box.y, ensureSoftShadowTexture(scene))
+    .setOrigin(0, 0)
+    .setDisplaySize(box.width, box.height)
+    .setAlpha(shape.alpha)
+    .setDepth(depth);
+}
+
 // Draws a blob shadow (TREE_SHADOW) at the foot of a tree in the tile whose
 // top-left corner is (x, y). Trees never move, so it stays put.
 export function addTreeShadow(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Image {
   return addShadow(scene, x, y, TREE_SHADOW, TREE_SHADOW_DEPTH);
+}
+
+// Draws a soft shadow (OBSTACLE_SHADOW) at the foot of a battlefield's
+// obstacle in the tile whose top-left corner is (x, y), under the floor's
+// units like a tree's.
+export function addObstacleShadow(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Image {
+  return addSoftShadow(scene, x, y, OBSTACLE_SHADOW, TREE_SHADOW_DEPTH);
 }

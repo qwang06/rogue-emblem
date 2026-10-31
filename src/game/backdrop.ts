@@ -248,17 +248,34 @@ export interface Painting {
   horizon: number;
 }
 
+// A rectangle of the world, in world pixels.
+export interface WorldRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 // Where to draw `painting` behind a floor `floorWidth` wide, in world
 // pixels, so its horizon sits on the floor's back edge (y 0) without
 // stretching it: scaled up just enough to span the floor and to stand at
 // least BACKDROP_HEIGHT above it, and centered across it (an overhang
 // either side, and any floor below the arena's front edge, is cropped by
-// the camera or left showing past it).
-export function getPaintingPlacement(
-  painting: Painting,
-  floorWidth: number,
-): { x: number; y: number; width: number; height: number } {
+// the camera or left showing past it). Given the camera's `view`, it's
+// scaled up further to cover all of it, so the painting runs to the
+// screen's edges instead of floating in the page.
+export function getPaintingPlacement(painting: Painting, floorWidth: number, view?: WorldRect): WorldRect {
   const [w, h] = painting.size;
-  const scale = Math.max(floorWidth / w, BACKDROP_HEIGHT / painting.horizon);
+  let scale = Math.max(floorWidth / w, BACKDROP_HEIGHT / painting.horizon);
+  if (view) {
+    // Centered on the floor, so it must reach the view's farther side.
+    const halfWidth = Math.max(floorWidth / 2 - view.x, view.x + view.width - floorWidth / 2);
+    scale = Math.max(
+      scale,
+      (2 * halfWidth) / w,
+      -view.y / painting.horizon,
+      (view.y + view.height) / (h - painting.horizon),
+    );
+  }
   return { x: (floorWidth - w * scale) / 2, y: -painting.horizon * scale, width: w * scale, height: h * scale };
 }

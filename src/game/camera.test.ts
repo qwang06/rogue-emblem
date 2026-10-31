@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getFitZoom } from './camera.ts';
+import { getCameraView, getFitZoom } from './camera.ts';
 
 const CANVAS = { width: 960, height: 720 };
 
@@ -59,5 +59,16 @@ describe('getFitZoom with half steps', () => {
     ]) {
       expect(getFitZoom(map, 64, CANVAS, 1.5, 0.5) * 64).toBe(getFitZoom(map, 32, CANVAS, 3) * 32);
     }
+  });
+});
+
+describe('getCameraView', () => {
+  it('is the canvas shrunk by the zoom, centered on the camera', () => {
+    expect(getCameraView({ x: 320, y: 60 }, 2, { width: 1600, height: 800 })).toEqual({
+      x: -80,
+      y: -140,
+      width: 800,
+      height: 400,
+    });
   });
 });
