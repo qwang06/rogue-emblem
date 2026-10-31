@@ -35,6 +35,8 @@ A unit can instead be **one image** (`SINGLE_IMAGE_UNITS` in `tileset.ts`): the 
 2. Import it in `sprites.ts` as `Knight: { url: knight, frame: 128, smooth: true }` (`smooth` for painted art: Phaser filters it linearly and the outline matches; leave it off for pixel art).
 3. Add `'Knight'` to `SINGLE_IMAGE_UNITS` and map the class to it in `UNIT_SPRITES`. `getUnitTextureKey` then draws it from the image for every animation, and the React `UnitSprite` shows the whole image (breathing in CSS when `animated`).
 
+A single-image unit can also have a **frame-by-frame walk** (`SINGLE_IMAGE_WALKS` in `tileset.ts`): a sheet in `SPRITES` with the same frame size and `smooth` flag as its image, frames read left to right then top to bottom, the character facing right with its feet on the same line as in the image. While the unit walks, the rig shows those frames instead of the image and drops the code hop (attacks and hit recoils still play over it); the outline and cast shadow follow each frame. `Painted_Warrior_Walk` (`src/assets/units/painted/warrior-walk.png`) is 1024x512, 4x2 frames of 256px, 8 frames at 35ms: made from Qiang's 1774x887 hand-made sheet (4x2 cells of ~443.5px; the raw sheet and `prep_walk.py` are in the project files under `art/painted-units/warrior/`), faint alpha cleared, every cell scaled by the same factor so the body matches `warrior.png`'s height (218px), with the lowest foot of the cycle on y 234 and the cycle centered on the image's x 144.5, so frames keep their own bob and the switch from standing to walking doesn't jump.
+
 Player and guest units start facing right, enemies left; they turn toward each step and toward whoever they fight.
 
 ## Trees: gold ginkgo sheet

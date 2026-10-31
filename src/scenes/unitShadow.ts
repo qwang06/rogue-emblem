@@ -114,14 +114,19 @@ export function addTreeShadow(scene: Phaser.Scene, x: number, y: number): Phaser
   return addShadow(scene, x, y, TREE_SHADOW, TREE_SHADOW_DEPTH);
 }
 
-// The cast-shadow texture for a unit image `key` (mirrored when `flip`),
-// built once: its silhouette laid down by getCastShadowLayout, black and
-// blurred. Returns its key and where its feet are, to anchor it by.
-function ensureCastShadowTexture(scene: Phaser.Scene, key: string, flip: boolean): { key: string; anchor: Point } {
-  const source = scene.textures.get(key).getSourceImage() as HTMLImageElement | HTMLCanvasElement;
-  const size = source.width;
+// The cast-shadow texture for a unit sprite's square frame (mirrored when
+// `flip`), built once per frame: its silhouette laid down by
+// getCastShadowLayout, black and blurred. Returns its key and where its feet
+// are, to anchor it by.
+function ensureCastShadowTexture(
+  scene: Phaser.Scene,
+  frame: Phaser.Textures.Frame,
+  flip: boolean,
+): { key: string; anchor: Point } {
+  const source = frame.source.image as HTMLImageElement | HTMLCanvasElement;
+  const size = frame.cutWidth;
   const layout = getCastShadowLayout(size, (ART_FEET_Y / TILE_SIZE) * size);
-  const shadowKey = `cast-shadow-${key}${flip ? '-flip' : ''}`;
+  const shadowKey = `cast-shadow-${frame.texture.key}-${String(frame.name)}${flip ? '-flip' : ''}`;
   if (!scene.textures.exists(shadowKey)) {
     const texture = scene.textures.createCanvas(shadowKey, layout.width, layout.height)!;
     const context = texture.getContext();
@@ -131,7 +136,7 @@ function ensureCastShadowTexture(scene: Phaser.Scene, key: string, flip: boolean
       context.scale(-1, 1);
     }
     context.filter = `blur(${Math.max(1, Math.round(size / 96))}px)`;
-    context.drawImage(source, 0, 0, size, size);
+    context.drawImage(source, frame.cutX, frame.cutY, size, size, 0, 0, size, size);
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.filter = 'none';
     context.globalCompositeOperation = 'source-in';
@@ -150,9 +155,9 @@ function ensureCastShadowTexture(scene: Phaser.Scene, key: string, flip: boolean
 export function addCastShadow(scene: Phaser.Scene, sprite: Phaser.GameObjects.Sprite): Phaser.GameObjects.Image {
   const shadow = scene.add.image(sprite.x, sprite.y, '__DEFAULT').setDepth(UNIT_SHADOW_DEPTH);
   const follow = () => {
-    const { key, anchor } = ensureCastShadowTexture(scene, sprite.texture.key, sprite.flipX);
+    const { key, anchor } = ensureCastShadowTexture(scene, sprite.frame, sprite.flipX);
     if (shadow.texture.key !== key) shadow.setTexture(key).setOrigin(anchor.x, anchor.y);
-    const scale = sprite.displayWidth / scene.textures.get(sprite.texture.key).getSourceImage().width;
+    const scale = sprite.displayWidth / sprite.frame.cutWidth;
     shadow
       .setPosition(sprite.x + TILE_SIZE / 2, sprite.y + ART_FEET_Y)
       .setScale(scale)

@@ -256,6 +256,7 @@ import {
   getUnitSprite,
   getUnitTextureKey,
   isSingleImageUnit,
+  getSingleImageWalk,
   unitSheetKey,
 } from '../game/tileset.ts';
 import {
@@ -3896,7 +3897,9 @@ export class GridScene extends Phaser.Scene {
         .setDisplaySize(TILE_SIZE * PAINTED_UNIT_SCALE, TILE_SIZE * PAINTED_UNIT_SCALE);
     }
     const outline = addUnitOutline(this, sprite, UNIT_OUTLINE.colors[unit.team]);
-    if (isSingleImageUnit(art)) addUnitRig(this, sprite, unit.team === 'enemy' ? -1 : 1, [outline]);
+    if (isSingleImageUnit(art)) {
+      addUnitRig(this, sprite, unit.team === 'enemy' ? -1 : 1, [outline], getSingleImageWalk(art));
+    }
     // A battlefield's painted floor gets a soft shadow, a terrain map the crisp blob.
     if (this.battlefieldKind) addUnitShadow(this, sprite, SOFT_UNIT_SHADOW, true);
     else addUnitShadow(this, sprite);
