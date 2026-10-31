@@ -28,12 +28,14 @@ describe('SPRITES', () => {
     }
   });
 
-  it('makes every unit sheet a full grid of frames', () => {
+  it('makes every unit sheet wide enough for its frames and tall enough for every facing row', () => {
     const { columns, rows } = UNIT_SHEET;
-    const rowCount = Object.keys(rows).length;
+    const rowCount = Math.max(...Object.values(rows)) + 1;
     for (const key of Object.keys(SPRITES).filter((key) => /_(Idle|Move)$/.test(key))) {
       const { url, frame } = SPRITES[key];
-      expect(pngSize(url), key).toEqual([columns * frame, rowCount * frame]);
+      const [width, height] = pngSize(url);
+      expect(width, key).toBe(columns * frame);
+      expect(height, key).toBeGreaterThanOrEqual(rowCount * frame);
     }
   });
 

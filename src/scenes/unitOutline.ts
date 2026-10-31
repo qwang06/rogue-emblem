@@ -1,8 +1,7 @@
 import Phaser from 'phaser';
 import { getOutlineMask } from '../game/pixelShapes.ts';
 import { getOutlineWidth } from '../game/tileset.ts';
-
-const UNIT_OUTLINE_DEPTH = 0.74; // just under units (0.75), over their shadows (0.7)
+import { STANDING_DEPTH_HAIR } from '../game/sideView.ts';
 
 // The white outline texture of a unit sheet (getOutlineMask over its
 // pixels), cut into the same frames, built once per sheet. White, so a tint
@@ -50,12 +49,13 @@ export function addUnitOutline(
   sprite: Phaser.GameObjects.Sprite,
   color: number,
 ): Phaser.GameObjects.Image {
-  const outline = scene.add.image(sprite.x, sprite.y, '__DEFAULT').setDepth(UNIT_OUTLINE_DEPTH).setTint(color);
+  const outline = scene.add.image(sprite.x, sprite.y, '__DEFAULT').setTint(color);
   const follow = () => {
     outline
       .setTexture(ensureOutlineTexture(scene, sprite.texture.key), sprite.frame.name)
       .setOrigin(sprite.originX, sprite.originY)
       .setPosition(sprite.x, sprite.y)
+      .setDepth(sprite.depth - STANDING_DEPTH_HAIR) // just under its unit
       .setDisplaySize(sprite.displayWidth, sprite.displayHeight)
       .setFlip(sprite.flipX, sprite.flipY)
       .setAlpha(sprite.alpha)

@@ -195,6 +195,13 @@ describe('gridToWorld / worldToGrid', () => {
   it('floors to the containing tile for points inside a cell', () => {
     expect(worldToGrid(25, 9, 16)).toEqual({ x: 1, y: 0 });
   });
+
+  it('handles cells wider than tall', () => {
+    const cell = { width: 64, height: 40 };
+    expect(gridToWorld(2, 3, cell)).toEqual({ x: 128, y: 120 });
+    expect(worldToGrid(127, 120, cell)).toEqual({ x: 1, y: 3 });
+    expect(worldToGrid(128, 119, cell)).toEqual({ x: 2, y: 2 });
+  });
 });
 
 describe('findUnit', () => {
@@ -260,6 +267,12 @@ describe('worldToTile', () => {
   it('is null left of or above the grid, even within a tile of it', () => {
     expect(worldToTile(grid, -1, 0, 32)).toBeNull();
     expect(worldToTile(grid, 0, -0.5, 32)).toBeNull();
+  });
+
+  it('picks the tile under a point on a floor of wide cells', () => {
+    const cell = { width: 64, height: 40 };
+    expect(worldToTile(grid, 191, 79, cell)).toEqual({ x: 2, y: 1 });
+    expect(worldToTile(grid, 0, 80, cell)).toBeNull();
   });
 });
 

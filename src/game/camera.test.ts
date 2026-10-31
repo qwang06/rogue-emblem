@@ -8,6 +8,13 @@ describe('getFitZoom', () => {
     expect(getFitZoom({ width: 20, height: 15 }, 16, CANVAS, 8)).toBe(3);
   });
 
+  it('fits cells wider than tall by their own width and height', () => {
+    // 10x6 cells of 64x40 are 640x240: width-bound at 1.5.
+    expect(getFitZoom({ width: 10, height: 6 }, { width: 64, height: 40 }, CANVAS, 8, 0.5)).toBe(1.5);
+    // 4x12 cells of 64x40 are 256x480: height-bound at 1.5.
+    expect(getFitZoom({ width: 4, height: 12 }, { width: 64, height: 40 }, CANVAS, 8, 0.5)).toBe(1.5);
+  });
+
   it('caps small maps at maxZoom', () => {
     expect(getFitZoom({ width: 3, height: 3 }, 16, CANVAS, 8)).toBe(8);
   });

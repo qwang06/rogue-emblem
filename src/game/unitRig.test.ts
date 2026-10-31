@@ -121,13 +121,8 @@ describe('getUnitPose', () => {
 
 describe('getRigSide', () => {
   it('faces left mirrored and right as drawn', () => {
-    expect(getRigSide(1, 'left')).toBe(-1);
-    expect(getRigSide(-1, 'right')).toBe(1);
-  });
-
-  it('keeps its side turning up or down', () => {
-    expect(getRigSide(-1, 'up')).toBe(-1);
-    expect(getRigSide(1, 'down')).toBe(1);
+    expect(getRigSide('left')).toBe(-1);
+    expect(getRigSide('right')).toBe(1);
   });
 });
 

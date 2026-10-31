@@ -346,6 +346,12 @@ describe('toTileAnchorView', () => {
     const anchor = toTileAnchorView({ x: 0, y: 0 }, 32, { x: -16, y: -8, zoom: 1 }, { width: 100, height: 100 });
     expectAnchor(anchor, { left: 0.16, top: 0.08, right: 0.48, bottom: 0.4 });
   });
+
+  it('spans a cell wider than tall', () => {
+    const cell = { width: 40, height: 20 };
+    const anchor = toTileAnchorView({ x: 1, y: 2 }, cell, { x: 0, y: 0, zoom: 1 }, { width: 100, height: 100 });
+    expectAnchor(anchor, { left: 0.4, top: 0.4, right: 0.8, bottom: 0.6 });
+  });
 });
 
 describe('toDamagePopupView', () => {

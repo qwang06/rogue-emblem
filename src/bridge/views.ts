@@ -21,7 +21,7 @@ import {
   type LevelUpResult,
 } from '../game/experience.ts';
 import type { ObjectiveText } from '../game/objectives.ts';
-import type { Point } from '../game/grid.ts';
+import { gridToWorld, type CellSize, type Point } from '../game/grid.ts';
 import type { Team, TurnState } from '../game/turns.ts';
 import type { RunState, UnitSnapshot } from '../game/warband/run.ts';
 import { describeReward, previewRewardHealth, type Reward, type RewardKind } from '../game/warband/rewards.ts';
@@ -507,14 +507,11 @@ export function toCanvasFraction(point: Point, size: Size): Point {
 // Snapshot of where a map tile shows on the canvas, for UI anchored beside
 // it (e.g. a unit's menus): its edges as fractions of the canvas (see
 // toCanvasFraction), so it stays put however large the canvas is displayed.
-// `tile` is { x, y } in grid cells, `camera` as in worldToScreen, and `size`
+// `tile` is { x, y } in grid cells, `cell` the size a cell shows at, `camera` as in worldToScreen, and `size`
 // the canvas's { width, height }.
-export function toTileAnchorView(tile: Point, tileSize: number, camera: CameraView, size: Size): TileAnchorView {
-  const topLeft = toCanvasFraction(worldToScreen({ x: tile.x * tileSize, y: tile.y * tileSize }, camera), size);
-  const bottomRight = toCanvasFraction(
-    worldToScreen({ x: (tile.x + 1) * tileSize, y: (tile.y + 1) * tileSize }, camera),
-    size,
-  );
+export function toTileAnchorView(tile: Point, cell: CellSize, camera: CameraView, size: Size): TileAnchorView {
+  const topLeft = toCanvasFraction(worldToScreen(gridToWorld(tile.x, tile.y, cell), camera), size);
+  const bottomRight = toCanvasFraction(worldToScreen(gridToWorld(tile.x + 1, tile.y + 1, cell), camera), size);
   return Object.freeze({ left: topLeft.x, top: topLeft.y, right: bottomRight.x, bottom: bottomRight.y });
 }
 

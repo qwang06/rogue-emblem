@@ -157,7 +157,8 @@ import { areAllied, getTeamUnitIds, isAllyOf, isHostileTo } from '../game/teams.
 import { advanceDialog, createDialog, DIALOG_CHARS_PER_SECOND, getCurrentLine } from '../game/dialog.ts';
 import { getTriggeredDialog, turnTrigger } from '../game/dialogScript.ts';
 import { describeObjective, getObjectiveStatus, type Objective } from '../game/objectives.ts';
-import { getPathFacings } from '../game/facing.ts';
+import { getFacingToward, getPathFacings, getStartFacing } from '../game/facing.ts';
+import { getStandingDepth, getStandingPosition, STANDING_DEPTH_HAIR, STANDING_OVERHANG } from '../game/sideView.ts';
 import { createKeyRepeat, updateKeyRepeat } from '../game/keyRepeat.ts';
 import { getArrowPieces } from '../game/moveArrow.ts';
 import { getQuarterFrameMap, getTileFrame, type Autotile } from '../game/autotile.ts';
@@ -212,6 +213,7 @@ import {
   TERRAIN_SHEET,
   WANG_SETS,
   WANG_SHEET,
+  CELL,
   GRID_PX,
   TILE_SIZE,
   TREE_SPRITES,
@@ -750,8 +752,12 @@ export class GridScene extends Phaser.Scene {
   // on create and whenever the page resizes the canvas.
   fitCamera() {
     const camera = this.cameras.main;
-    camera.setZoom(getFitZoom(this.grid, TILE_SIZE, this.scale.gameSize, MAX_ZOOM, ZOOM_STEP));
-    camera.centerOn((this.grid.width * TILE_SIZE) / 2, (this.grid.height * TILE_SIZE) / 2);
+    // Units on the top row stand above the floor, so leave room for them.
+    const rows = this.grid.height + STANDING_OVERHANG / CELL.height;
+    camera.setZoom(
+      getFitZoom({ width: this.grid.width, height: rows }, CELL, this.scale.gameSize, MAX_ZOOM, ZOOM_STEP),
+    );
+    camera.centerOn((this.grid.width * CELL.width) / 2, (this.grid.height * CELL.height - STANDING_OVERHANG) / 2);
     // The camera's visible area only updates when it next renders, so move
     // an open unit menu to the refitted map then.
     this.events.once(Phaser.Scenes.Events.RENDER, () => {
@@ -763,6 +769,7 @@ export class GridScene extends Phaser.Scene {
   }
 
   override update(_time: number, delta: number) {
+    this.sortUnitSprites();
     const { JustDown } = Phaser.Input.Keyboard;
     const { dx, dy } = this.readArrowKeys(delta);
     const pointer = this.drainPointerInput();
@@ -1158,7 +1165,7 @@ export class GridScene extends Phaser.Scene {
   getTileAnchor(tile: Point) {
     const { worldView, zoom } = this.cameras.main;
     const camera = { x: worldView.x, y: worldView.y, zoom };
-    return toTileAnchorView(tile, TILE_SIZE, camera, this.scale.gameSize);
+    return toTileAnchorView(tile, CELL, camera, this.scale.gameSize);
   }
 
   // Keeps a menu on the scene and mirrors it to the store field of the same
@@ -1892,7 +1899,7 @@ export class GridScene extends Phaser.Scene {
       if (!at) {
         if (sprite) this.removeUnitSprite(id);
       } else if (sprite) {
-        const pos = gridToWorld(at.x, at.y, TILE_SIZE);
+        const pos = getStandingPosition(at.x, at.y);
         sprite.setPosition(pos.x, pos.y);
       } else {
         this.addUnitSprite(id, at.x, at.y);
@@ -2151,9 +2158,9 @@ export class GridScene extends Phaser.Scene {
     this.incomingMarker = null;
     this.incomingMarkerKey = key;
     if (!tile) return;
-    const { x, y } = gridToWorld(tile.x, tile.y, TILE_SIZE);
+    const { x, y } = gridToWorld(tile.x, tile.y, CELL);
     this.incomingMarker = this.add
-      .rectangle(x, y, TILE_SIZE, TILE_SIZE, INCOMING_TILE_COLOR, INCOMING_TILE_ALPHA)
+      .rectangle(x, y, CELL.width, CELL.height, INCOMING_TILE_COLOR, INCOMING_TILE_ALPHA)
       .setOrigin(0, 0)
       .setStrokeStyle(2 * GRID_PX, INCOMING_TILE_COLOR)
       .setDepth(0.42);
@@ -2451,7 +2458,7 @@ export class GridScene extends Phaser.Scene {
   drawMoveArrow(path: readonly Point[]) {
     this.clearMoveArrow();
     this.arrowSprites = getArrowPieces(path).map(({ x, y, piece }) => {
-      const pos = gridToWorld(x, y, TILE_SIZE);
+      const pos = gridToWorld(x, y, CELL);
       const frame = getTileFrame(ARROW_TILES[piece], TERRAIN_SHEET.columns);
       return this.addTileSprite(pos.x, pos.y, TERRAIN_SHEET.key, frame).setDepth(0.6);
     });
@@ -2538,8 +2545,8 @@ export class GridScene extends Phaser.Scene {
   // Returns the rectangles so the caller can destroy them later.
   drawTileHighlights(tiles: readonly Point[], color: number, alpha: number) {
     return tiles.map((tile) => {
-      const pos = gridToWorld(tile.x, tile.y, TILE_SIZE);
-      return this.add.rectangle(pos.x, pos.y, TILE_SIZE, TILE_SIZE, color, alpha).setOrigin(0, 0).setDepth(0.5);
+      const pos = gridToWorld(tile.x, tile.y, CELL);
+      return this.add.rectangle(pos.x, pos.y, CELL.width, CELL.height, color, alpha).setOrigin(0, 0).setDepth(0.5);
     });
   }
 
@@ -2618,7 +2625,7 @@ export class GridScene extends Phaser.Scene {
   }
 
   drawIntent(graphics: Phaser.GameObjects.Graphics, { path, target }: EnemyIntent) {
-    const center = ({ x, y }: Point) => new Phaser.Math.Vector2((x + 0.5) * TILE_SIZE, (y + 0.5) * TILE_SIZE);
+    const center = ({ x, y }: Point) => new Phaser.Math.Vector2((x + 0.5) * CELL.width, (y + 0.5) * CELL.height);
     const end = center(path[path.length - 1]);
     if (path.length > 1) {
       graphics.lineStyle(2 * GRID_PX, INTENT_COLOR, INTENT_ROUTE_ALPHA);
@@ -2711,7 +2718,7 @@ export class GridScene extends Phaser.Scene {
     this.history = rewindTo(this.history, movedAt!);
     this.syncShown();
     this.refreshIntents();
-    const pos = gridToWorld(origin!.x, origin!.y, TILE_SIZE);
+    const pos = getStandingPosition(origin!.x, origin!.y);
     this.unitSprites.get(unitId)!.setPosition(pos.x, pos.y);
     this.activeUnit = { unitId, x: origin!.x, y: origin!.y };
     this.setCursor(origin!.x, origin!.y);
@@ -2816,7 +2823,7 @@ export class GridScene extends Phaser.Scene {
     const reducedMotion = prefersReducedMotion();
     const juice = getStrikeJuice({ hit: strike.hit, crit: strike.crit, lethal: strike.health <= 0 }, reducedMotion);
     const tiles = Math.round(
-      Math.max(Math.abs(sprite.x - strikerSprite.x), Math.abs(sprite.y - strikerSprite.y)) / TILE_SIZE,
+      Math.max(Math.abs(sprite.x - strikerSprite.x) / CELL.width, Math.abs(sprite.y - strikerSprite.y) / CELL.height),
     );
 
     // Done once the target's flash (or the miss pause) and the striker's
@@ -2848,9 +2855,9 @@ export class GridScene extends Phaser.Scene {
       if (juice.shake) this.shakeCamera(juice.shake);
       playHitStop(this, sprite, [strikerSprite], juice.hitStopMs, () => playHitFlash(this, sprite, land));
     };
-    // Single-image units turn to face each other, and the striker swings.
-    faceRigToward(strikerSprite, sprite.x);
-    faceRigToward(sprite, strikerSprite.x);
+    // The two turn to face each other, and the striker swings.
+    this.faceSpriteToward(strikerSprite, sprite);
+    this.faceSpriteToward(sprite, strikerSprite);
     playRigAction(strikerSprite, 'attack');
     playLunge(this, strikerSprite, spriteCenter(sprite), {
       distance: getLungeDistance(tiles, reducedMotion),
@@ -2941,7 +2948,7 @@ export class GridScene extends Phaser.Scene {
     if (push.moved) {
       this.tweens.add({
         targets: sprite,
-        ...gridToWorld(push.to.x, push.to.y, TILE_SIZE),
+        ...getStandingPosition(push.to.x, push.to.y),
         duration: PUSH_SLIDE_MS,
         ease: 'Quad.easeOut',
         onComplete: land,
@@ -3212,7 +3219,7 @@ export class GridScene extends Phaser.Scene {
     this.tweens.chain({
       targets: sprite,
       tweens: steps.map((step, i) => ({
-        ...gridToWorld(step.x, step.y, TILE_SIZE),
+        ...getStandingPosition(step.x, step.y),
         duration: MOVE_STEP_MS,
         ease: 'Linear',
         onStart: () => this.playUnitMotion(sprite, 'move', facings[i]),
@@ -3239,7 +3246,7 @@ export class GridScene extends Phaser.Scene {
     this.pointerQueue = [];
     this.pointerTile = null; // last tile the pointer was over, so only tile changes move the cursor
 
-    const toTile = (pointer: Phaser.Input.Pointer) => worldToTile(this.grid, pointer.worldX, pointer.worldY, TILE_SIZE);
+    const toTile = (pointer: Phaser.Input.Pointer) => worldToTile(this.grid, pointer.worldX, pointer.worldY, CELL);
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       const tile = toTile(pointer);
       if (!tile || (this.pointerTile && isSameTile(tile, this.pointerTile))) return;
@@ -3403,7 +3410,7 @@ export class GridScene extends Phaser.Scene {
 
   createCursor() {
     this.cursor = createCursor(0, 0);
-    const { x, y } = gridToWorld(this.cursor.x, this.cursor.y, TILE_SIZE);
+    const { x, y } = gridToWorld(this.cursor.x, this.cursor.y, CELL);
     const { key, columns } = TERRAIN_SHEET;
     const frames = CURSOR_ANIMATION.tiles.map((tile) => ({ key, frame: getTileFrame(tile, columns) }));
     // Animations are global to the game, so a restarted scene reuses it.
@@ -3425,7 +3432,7 @@ export class GridScene extends Phaser.Scene {
   }
 
   updateCursorSprite() {
-    const { x, y } = gridToWorld(this.cursor.x, this.cursor.y, TILE_SIZE);
+    const { x, y } = gridToWorld(this.cursor.x, this.cursor.y, CELL);
     this.cursorSprite.setPosition(x, y);
   }
 
@@ -3433,12 +3440,23 @@ export class GridScene extends Phaser.Scene {
   // whose top-left corner is (x, y), stretched to the tile whatever the
   // image's own pixel size.
   addTileSprite(x: number, y: number, key: string, frame?: number) {
-    return this.add.sprite(x, y, key, frame).setOrigin(0, 0).setDisplaySize(TILE_SIZE, TILE_SIZE);
+    return this.add.sprite(x, y, key, frame).setOrigin(0, 0).setDisplaySize(CELL.width, CELL.height);
+  }
+
+  // A sprite standing on cell (gridX, gridY) (see src/game/sideView.ts): its
+  // full TILE_SIZE square art with its feet on the cell, sorted by row.
+  addStandingSprite(gridX: number, gridY: number, key: string, frame?: number) {
+    const { x, y } = getStandingPosition(gridX, gridY);
+    return this.add
+      .sprite(x, y, key, frame)
+      .setOrigin(0, 0)
+      .setDisplaySize(TILE_SIZE, TILE_SIZE)
+      .setDepth(getStandingDepth(y));
   }
 
   // A still image of one tile-sized frame, placed like addTileSprite.
   addTileImage(x: number, y: number, key: string, frame: number) {
-    return this.add.image(x, y, key, frame).setOrigin(0, 0).setDisplaySize(TILE_SIZE, TILE_SIZE);
+    return this.add.image(x, y, key, frame).setOrigin(0, 0).setDisplaySize(CELL.width, CELL.height);
   }
 
   // The ground is the 64px corner tilesets (WANG_SETS, see
@@ -3448,7 +3466,7 @@ export class GridScene extends Phaser.Scene {
   // src/game/autotile.ts) is drawn over that as its own layer off the
   // overworld sheet; animated sets step through their copies on a timer.
   // The tilemaps use their sheet's own tile size, and each layer is scaled
-  // to the map's TILE_SIZE.
+  // to the floor's CELL (squashed into the side view's slant).
   renderTerrain(grid: Grid, autotiles: Record<string, Autotile>) {
     const wangHalf = SPRITES[WANG_SHEET.key].frame / 2;
     for (const set of Object.values(WANG_SETS)) {
@@ -3458,11 +3476,11 @@ export class GridScene extends Phaser.Scene {
         tileHeight: wangHalf,
       });
       const tiles = map.addTilesetImage(WANG_SHEET.key, WANG_SHEET.key, wangHalf, wangHalf)!;
-      map.createLayer(0, tiles, 0, 0)!.setScale(TILE_SIZE / (wangHalf * 2));
+      map.createLayer(0, tiles, 0, 0)!.setScale(CELL.width / (wangHalf * 2), CELL.height / (wangHalf * 2));
     }
 
     const { key, columns, tileSize } = TERRAIN_SHEET;
-    const scale = TILE_SIZE / tileSize;
+    const scale = { x: CELL.width / tileSize, y: CELL.height / tileSize };
     const half = tileSize / 2;
     for (const [terrain, autotile] of Object.entries(autotiles)) {
       const frameCount = autotile.animation?.frames ?? 1;
@@ -3472,7 +3490,7 @@ export class GridScene extends Phaser.Scene {
       );
 
       const map = this.make.tilemap({ data: frames[0], tileWidth: half, tileHeight: half });
-      const layer = map.createLayer(0, map.addTilesetImage(key, key, half, half)!, 0, 0)!.setScale(scale);
+      const layer = map.createLayer(0, map.addTilesetImage(key, key, half, half)!, 0, 0)!.setScale(scale.x, scale.y);
       if (frameCount < 2) continue;
       let current = 0;
       this.time.addEvent({
@@ -3495,27 +3513,29 @@ export class GridScene extends Phaser.Scene {
   renderMapSprites(sprites: readonly MapSprite[]) {
     const depths = { ground: 0.4, cap: 0.45, roof: 0.8 };
     for (const { x, y, tile, layer, sheet = TERRAIN_SHEET } of sprites) {
-      const pos = gridToWorld(x, y, TILE_SIZE);
+      const pos = gridToWorld(x, y, CELL);
       this.addTileImage(pos.x, pos.y, sheet.key, getTileFrame(tile, sheet.columns)).setDepth(depths[layer]);
     }
   }
 
-  // Trees ({ x, y, tree } from the level) over the grass, below range highlights
-  // and units.
+  // Trees ({ x, y, tree } from the level) standing on the grass, sorted by
+  // row with the units: a hair behind a unit on the same cell, so it stands
+  // in front of the trunk.
   renderDecorations(decorations: readonly TreePlacement[]) {
     for (const { x, y, tree } of decorations) {
-      const pos = gridToWorld(x, y, TILE_SIZE);
+      const pos = getStandingPosition(x, y);
       addTreeShadow(this, pos.x, pos.y);
-      this.addTileSprite(pos.x, pos.y, TREE_SPRITES[tree]).setDepth(0.4);
+      const sprite = this.addStandingSprite(x, y, TREE_SPRITES[tree]);
+      sprite.setDepth(sprite.depth - STANDING_DEPTH_HAIR);
     }
   }
 
   // Marks a seize objective's tile on the map so the player can find it.
   renderObjectiveTile() {
     if (this.objective.kind !== 'seize') return;
-    const { x, y } = gridToWorld(this.objective.tile.x, this.objective.tile.y, TILE_SIZE);
+    const { x, y } = gridToWorld(this.objective.tile.x, this.objective.tile.y, CELL);
     const marker = this.add
-      .rectangle(x, y, TILE_SIZE, TILE_SIZE, SEIZE_TILE_COLOR, SEIZE_TILE_ALPHA)
+      .rectangle(x, y, CELL.width, CELL.height, SEIZE_TILE_COLOR, SEIZE_TILE_ALPHA)
       .setOrigin(0, 0)
       .setStrokeStyle(2 * GRID_PX, SEIZE_TILE_COLOR)
       .setDepth(0.42);
@@ -3536,7 +3556,7 @@ export class GridScene extends Phaser.Scene {
     for (const { x, y, structure } of structures) {
       const sprite = STRUCTURE_SPRITES[structure];
       for (const tile of getStructureTiles(sprite, x, y)) {
-        const pos = gridToWorld(tile.x, tile.y, TILE_SIZE);
+        const pos = gridToWorld(tile.x, tile.y, CELL);
         this.addTileImage(pos.x, pos.y, sprite.key, tile.frame).setDepth(tile.overUnits ? 0.8 : 0.4);
       }
     }
@@ -3552,23 +3572,41 @@ export class GridScene extends Phaser.Scene {
     }
   }
 
-  // A single-image unit (isSingleImageUnit) is animated in code by
-  // addUnitRig, starting out facing the other side: right for the player and
-  // guests, left for enemies.
+  // Units stand on their cell (addStandingSprite) facing the other side:
+  // right for the player and guests, left for enemies. A single-image unit
+  // (isSingleImageUnit) is animated in code by addUnitRig.
   addUnitSprite(unitId: string, gridX: number, gridY: number) {
     const unit = this.units.get(unitId)!;
-    const { x, y } = gridToWorld(gridX, gridY, TILE_SIZE);
     const art = getUnitSprite(unit.unitClass);
-    const sprite = this.addTileSprite(x, y, getUnitTextureKey(art, 'idle'))
-      .setDepth(0.75)
+    const facing = getStartFacing(unit.team);
+    const sprite = this.addStandingSprite(gridX, gridY, getUnitTextureKey(art, 'idle'))
       .setData('art', art)
-      .setData('facing', UNIT_SHEET.defaultFacing);
-    if (!isSingleImageUnit(art)) sprite.play(this.unitAnimation(art, 'idle', UNIT_SHEET.defaultFacing));
+      .setData('facing', facing);
+    if (!isSingleImageUnit(art)) sprite.play(this.unitAnimation(art, 'idle', facing));
     const outline = addUnitOutline(this, sprite, UNIT_OUTLINE.colors[unit.team]);
     if (isSingleImageUnit(art)) addUnitRig(this, sprite, unit.team === 'enemy' ? -1 : 1, [outline]);
     addUnitShadow(this, sprite);
     if (unit.rank) addRankBadge(this, sprite, unit.rank);
     this.unitSprites.set(unitId, sprite);
+  }
+
+  // Turns a unit sprite to face `other` (left or right; one straight ahead
+  // or behind keeps its facing): a rig turns its image, a sheet unit idles
+  // on that facing's row.
+  faceSpriteToward(sprite: Sprite, other: Sprite) {
+    if (isSingleImageUnit(sprite.getData('art'))) {
+      faceRigToward(sprite, other.x);
+      return;
+    }
+    const facing = getFacingToward(sprite, other);
+    if (facing && facing !== sprite.getData('facing')) this.playUnitMotion(sprite, 'idle', facing);
+  }
+
+  // Keeps every unit drawn in front of what stands behind it as it walks
+  // between rows (see getStandingDepth).
+  sortUnitSprites() {
+    if (!this.unitSprites) return;
+    for (const sprite of this.unitSprites.values()) sprite.setDepth(getStandingDepth(sprite.y));
   }
 
   // Sets a unit sprite standing or walking (a UNIT_ANIMATIONS name) facing

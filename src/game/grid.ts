@@ -111,17 +111,30 @@ export function getNeighbors(grid: Grid, x: number, y: number): Point[] {
   return offsets.map(([dx, dy]) => ({ x: x + dx, y: y + dy })).filter(({ x: nx, y: ny }) => isInBounds(grid, nx, ny));
 }
 
-export function gridToWorld(x: number, y: number, tileSize: number): Point {
-  return { x: x * tileSize, y: y * tileSize };
+// How big one cell shows in world pixels: a number for square cells, or
+// { width, height } for cells drawn wider than tall (the side view's
+// oblique floor, see TILE_HEIGHT in tileset.ts).
+export type CellSize = number | { readonly width: number; readonly height: number };
+
+// A CellSize as { width, height }.
+export function getCellDimensions(cell: CellSize): { width: number; height: number } {
+  return typeof cell === 'number' ? { width: cell, height: cell } : { width: cell.width, height: cell.height };
 }
 
-export function worldToGrid(px: number, py: number, tileSize: number): Point {
-  return { x: Math.floor(px / tileSize), y: Math.floor(py / tileSize) };
+// The top-left corner of cell (x, y) in world pixels.
+export function gridToWorld(x: number, y: number, cell: CellSize): Point {
+  const { width, height } = getCellDimensions(cell);
+  return { x: x * width, y: y * height };
+}
+
+export function worldToGrid(px: number, py: number, cell: CellSize): Point {
+  const { width, height } = getCellDimensions(cell);
+  return { x: Math.floor(px / width), y: Math.floor(py / height) };
 }
 
 // The tile under pixel (px, py), or null when that's off the grid.
-export function worldToTile(grid: Grid, px: number, py: number, tileSize: number): Point | null {
-  const tile = worldToGrid(px, py, tileSize);
+export function worldToTile(grid: Grid, px: number, py: number, cell: CellSize): Point | null {
+  const tile = worldToGrid(px, py, cell);
   return isInBounds(grid, tile.x, tile.y) ? tile : null;
 }
 
