@@ -89,9 +89,9 @@ cast shadow (the game adds one). Two or three variants of each helps.
 
 ## 3. Battlefields
 
-- [ ] Plains kit (redo in the anime style): seamless grass, dry grass and
-      dirt, horizon, left and right tree clusters, bushes, decals,
-      foreground
+- [x] Plains kit (redo in the anime style): seamless grass, dry grass and
+      dirt, horizon, left and right tree clusters, bushes, decals
+      (no foreground: dropped)
 
 Plains has a painterly kit; forest and desert still use the old code-drawn look.
 Each needs the same set of pieces as plains:
