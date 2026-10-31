@@ -17,8 +17,9 @@ The full spec and prompts are in the project's shared files at
 `art/anime/prompts.md`. In short:
 
 - **Style:** characters are detailed anime key art like a Japanese
-  fantasy tactics RPG: crisp ink lineart, sharp cel shading, jewel-tone
-  colors, gold-trimmed armor and flowing capes. Obstacles and props are
+  fantasy tactics RPG: crisp ink lineart, sharp cel shading, rich colors.
+  Every class is a generic unit in plain, practical gear (no gold trim or
+  ornaments); decorated outfits are kept for future unique characters. Obstacles and props are
   simpler anime game art: clean dark-brown lineart, flat cel shading.
   Battlefields are anime background art: lush saturated greens, crisp
   painted shapes, cool blue-violet shadows falling to the lower right.
