@@ -26,6 +26,18 @@ export function getStandingPosition(x: number, y: number): Point {
   };
 }
 
+// Where a piece of a standing prop is drawn (see MapSprite.base in
+// mapArt.ts): a piece on its prop's row stands like a unit; a piece
+// `base - y` rows behind it is stacked that many whole tiles above, so the
+// prop's art joins up instead of being spread over the floor's shorter
+// rows. Returns the piece's top-left corner and the row it sorts on.
+export function getPropPlacement({ x, y, base = y }: { x: number; y: number; base?: number }): Point & {
+  row: number;
+} {
+  const foot = getStandingPosition(x, base);
+  return { x: foot.x, y: foot.y - (base - y) * TILE_SIZE, row: base };
+}
+
 // The lowest and highest depth a standing sprite gets (the band between
 // the floor's highlights and arrows, and the cursor), so they never draw
 // under the floor or over the cursor.
