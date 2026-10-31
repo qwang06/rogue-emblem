@@ -60,7 +60,7 @@ import { findUnitSkill, getSkillActions, getSkillForecast, getUnitSkills, isHeal
 import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange } from '../game/combat.ts';
 import { getCameraView, getFitZoom } from '../game/camera.ts';
 import { getFramingClumps } from '../game/battlefieldFraming.ts';
-import { layOutKit, type BattlefieldKit, type KitLayer } from '../game/battlefieldKit.ts';
+import { layOutKit, type BattlefieldKit, type KitLayer, type KitStanding } from '../game/battlefieldKit.ts';
 import { BATTLEFIELD_KITS, KIT_URLS } from '../assets/battlefieldKits.ts';
 import { ensureKitTextures, makePatchTexture } from './kitTextures.ts';
 import { createCursor, moveCursor } from '../game/cursor.ts';
@@ -3647,13 +3647,12 @@ export class GridScene extends Phaser.Scene {
     const kit = BATTLEFIELD_KITS[kind];
     const painting = BATTLEFIELD_PAINTINGS[kind];
     if (kit) {
-      // Decals keep off the obstacles' art.
-      const clear = obstacles.map(({ x, y }) => ({
-        ...getStandingPosition(x, y),
-        width: TILE_SIZE,
-        height: TILE_SIZE,
-      }));
-      this.renderKit(kit, floor, seed, clear);
+      // Decals gather around the obstacles and keep off their art.
+      const standing = obstacles.map(({ x, y }) => {
+        const art = { ...getStandingPosition(x, y), width: TILE_SIZE, height: TILE_SIZE };
+        return { art, foot: { x: art.x + TILE_SIZE / 2, y: art.y + ART_FEET_Y } };
+      });
+      this.renderKit(kit, floor, seed, standing);
     } else if (painting) {
       const at = getPaintingPlacement(painting, floor.width);
       this.add
@@ -3683,10 +3682,10 @@ export class GridScene extends Phaser.Scene {
     kit: BattlefieldKit,
     floor: { width: number; height: number },
     seed: number,
-    clear: readonly WorldRect[] = [],
+    standing: readonly KitStanding[] = [],
   ) {
     ensureKitTextures(this);
-    const { scene, pieces } = layOutKit(kit, floor, seed, clear);
+    const { scene, pieces } = layOutKit(kit, floor, seed, standing);
     this.battlefieldScene = scene;
     const depths: Record<Exclude<KitLayer, 'standing'>, number> = {
       ground: -1,
