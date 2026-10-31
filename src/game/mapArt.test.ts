@@ -54,6 +54,27 @@ describe('getFeatureSprites', () => {
     expect(features(['.,~', '#".'])).toEqual([]);
   });
 
+  it('stands a 2x2 forest clump on a 2x2 block of forest', () => {
+    const sprites = features(['TT', 'TT']);
+    const [column, row] = FOREST_ART.big![pickVariant(0, 0, FOREST_ART.big!.length)];
+    expect(sprites.map(({ x, y, tile }) => [x, y, tile])).toEqual([
+      [0, 0, [column, row]],
+      [1, 0, [column + 1, row]],
+      [0, 1, [column, row + 1]],
+      [1, 1, [column + 1, row + 1]],
+    ]);
+  });
+
+  it("doesn't mix forest and mountain cells in one block", () => {
+    const sprites = features(['TT', 'T^']);
+    expect(sprites.map(({ tile }) => tile)).toEqual([
+      FOREST_ART.tiles[pickVariant(0, 0, 3)],
+      FOREST_ART.tiles[pickVariant(1, 0, 3)],
+      FOREST_ART.tiles[pickVariant(0, 1, 3)],
+      MOUNTAIN_ART.tiles[pickVariant(1, 1, MOUNTAIN_ART.tiles.length)],
+    ]);
+  });
+
   it('draws a forest variant on each forest cell', () => {
     const sprites = features(['T.', '.T']);
     expect(sprites).toHaveLength(2);

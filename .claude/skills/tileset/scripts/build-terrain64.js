@@ -17,8 +17,9 @@
 // is a deck that repeats north–south, [5, 0] the same turned west–east,
 // and [0..3, 2] the ends that run a deck onto the bank cell north, south,
 // west and east of a bridge. The rest of row 2 is two low ridges and a
-// crag, and rows 3–4 two 128px mountains (a massif and a tall peak), each
-// cut into its four tiles.
+// crag, rows 3–4 two 128px mountains (a massif and a tall peak) and rows
+// 5–6 three 128px forest clumps (pines, mixed, broadleaf), each cut into
+// its four tiles.
 
 import { readFileSync } from 'node:fs';
 import { decode, encode } from './dump-png.js';
@@ -27,7 +28,6 @@ const TILE = 64;
 const SETS = [
   { name: 'grass_dirt', upper: 'dirt' },
   { name: 'grass_water', upper: 'grass' },
-  { name: 'grass_rock', upper: 'rock' },
 ];
 export const PROPS = [
   [
@@ -76,7 +76,7 @@ SETS.forEach(({ name, upper }, row) => {
 });
 encode('src/assets/terrain64.png', terrain);
 
-const props = blank(8 * TILE, (PROPS.length + 3) * TILE);
+const props = blank(8 * TILE, (PROPS.length + 5) * TILE);
 PROPS.forEach((names, row) =>
   names.forEach((name, column) => copy(decode(`${dir}/props/${name}.png`), 0, 0, props, column * TILE, row * TILE)),
 );
@@ -84,18 +84,24 @@ drawBridges(decode(`${dir}/props/bridge_v.png`), props);
 ['mountain_ridge_1', 'mountain_ridge_2', 'mountain_crag'].forEach((name, i) =>
   copy(decode(`${dir}/props/${name}.png`), 0, 0, props, (4 + i) * TILE, 2 * TILE),
 );
-// The 128px mountains, a tile at a time.
-['mountain_big_massif', 'mountain_big_peak'].forEach((name, i) => {
-  const image = decode(`${dir}/props/${name}.png`);
-  for (const [dx, dy] of [
-    [0, 0],
-    [1, 0],
-    [0, 1],
-    [1, 1],
-  ]) {
-    copy(image, dx * TILE, dy * TILE, props, (i * 2 + dx) * TILE, (3 + dy) * TILE);
-  }
-});
+// The 128px mountains and forest clumps, a tile at a time.
+const BIG = [
+  ['mountain_big_massif', 'mountain_big_peak'],
+  ['forest_big_pines', 'forest_big_mixed', 'forest_big_broadleaf'],
+];
+BIG.forEach((names, band) =>
+  names.forEach((name, i) => {
+    const image = decode(`${dir}/props/${name}.png`);
+    for (const [dx, dy] of [
+      [0, 0],
+      [1, 0],
+      [0, 1],
+      [1, 1],
+    ]) {
+      copy(image, dx * TILE, dy * TILE, props, (i * 2 + dx) * TILE, (3 + band * 2 + dy) * TILE);
+    }
+  }),
+);
 encode('src/assets/terrain64-props.png', props);
 
 // The bridge pieces, from PixelLab's north–south bridge (its deck spans
