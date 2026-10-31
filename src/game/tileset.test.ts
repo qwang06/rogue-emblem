@@ -79,12 +79,12 @@ describe('sprite keys', () => {
 
 describe('getUnitSprite', () => {
   it('picks the art by unit class', () => {
-    expect(getUnitSprite('warrior')).toBe('Warrior_02');
+    expect(getUnitSprite('warrior')).toBe('Painted_Warrior');
     expect(getUnitSprite('soldier')).toBe('Soldier_03');
-    expect(getUnitSprite('archer')).toBe('Amazon_01');
+    expect(getUnitSprite('archer')).toBe('Painted_Archer');
     expect(getUnitSprite('vanguard')).toBe('Vanguard_04');
     expect(getUnitSprite('guard')).toBe('Soldier_04');
-    expect(getUnitSprite('acolyte')).toBe('Acolyte_02');
+    expect(getUnitSprite('acolyte')).toBe('Painted_Cleric');
     expect(getUnitSprite('slime')).toBe('Slime_01');
     expect(getUnitSprite('goblin')).toBe('Goblin_01');
     expect(getUnitSprite('skeleton')).toBe('Skeleton_01');
