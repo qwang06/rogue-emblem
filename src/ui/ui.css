@@ -1651,6 +1651,27 @@ kbd {
   }
 }
 
+/* Painted (not pixel) art, like a generated single-image unit. */
+.unit-sprite--smooth {
+  image-rendering: auto;
+}
+
+/* A single-image unit breathes about its feet, as on the map (BREATH_MS
+   and the stretch in src/game/unitRig.ts). */
+.unit-sprite--breathing {
+  animation: unit-sprite-breathe 1800ms ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+
+@keyframes unit-sprite-breathe {
+  25% {
+    transform: scale(0.9875, 1.025);
+  }
+  75% {
+    transform: scale(1.0125, 0.975);
+  }
+}
+
 /* ---- Map Generator (the title menu's map preview) --------------------- */
 
 /* Docked in the map's bottom-left corner, clear of the unit panel up top. */
@@ -3703,7 +3724,8 @@ textarea.draft-input {
   .combat-forecast__bar-lost,
   .level-up,
   .objective,
-  .unit-sprite--animated {
+  .unit-sprite--animated,
+  .unit-sprite--breathing {
     animation: none;
   }
 

@@ -35,6 +35,8 @@ function ensureOutlineTexture(scene: Phaser.Scene, key: string): string {
     const frame = source.get(name);
     texture.add(name, 0, frame.cutX, frame.cutY, frame.cutWidth, frame.cutHeight);
   }
+  // Smooth art (SPRITES' `smooth`) gets a smooth outline to match.
+  if (source.source[0].scaleMode === Phaser.ScaleModes.LINEAR) texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
   texture.refresh();
   return outlineKey;
 }

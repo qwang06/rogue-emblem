@@ -219,6 +219,8 @@ import {
   UNIT_OUTLINE,
   UNIT_SHEET,
   getUnitSprite,
+  getUnitTextureKey,
+  isSingleImageUnit,
   unitSheetKey,
 } from '../game/tileset.ts';
 import {
@@ -233,6 +235,7 @@ import {
 import { CRIT_SHAKE, getLungeDistance, getStrikeJuice, type Shake } from './hitJuice.ts';
 import { addTreeShadow, addUnitShadow } from './unitShadow.ts';
 import { addUnitOutline } from './unitOutline.ts';
+import { addUnitRig, faceRigToward, playRigAction, setRigMotion } from './unitRig.ts';
 import { addRankBadge } from './rankBadge.ts';
 import type { Menu } from '../game/actionMenu.ts';
 import type { Dialog, DialogLine } from '../game/dialog.ts';
@@ -569,6 +572,13 @@ export class GridScene extends Phaser.Scene {
     for (const [key, { url, frame }] of Object.entries(SPRITES)) {
       this.load.spritesheet(key, url, { frameWidth: frame, frameHeight: frame });
     }
+    // Painted art is filtered smoothly when scaled; the rest stays crisp
+    // (the game's pixelArt default).
+    this.load.once(Phaser.Loader.Events.COMPLETE, () => {
+      for (const [key, { smooth }] of Object.entries(SPRITES)) {
+        if (smooth) this.textures.get(key).setFilter(Phaser.Textures.FilterMode.LINEAR);
+      }
+    });
   }
 
   // `setup` is the battle to run (gameStore's battleSetup, see
@@ -2834,9 +2844,14 @@ export class GridScene extends Phaser.Scene {
       }
       this.showStats(strike.targetId, { health: strike.health });
       this.showDamagePopup(sprite, strike.damage, strike.crit ? 'crit' : 'damage');
+      playRigAction(sprite, 'hit');
       if (juice.shake) this.shakeCamera(juice.shake);
       playHitStop(this, sprite, [strikerSprite], juice.hitStopMs, () => playHitFlash(this, sprite, land));
     };
+    // Single-image units turn to face each other, and the striker swings.
+    faceRigToward(strikerSprite, sprite.x);
+    faceRigToward(sprite, strikerSprite.x);
+    playRigAction(strikerSprite, 'attack');
     playLunge(this, strikerSprite, spriteCenter(sprite), {
       distance: getLungeDistance(tiles, reducedMotion),
       holdMs: juice.hitStopMs,
@@ -2877,7 +2892,13 @@ export class GridScene extends Phaser.Scene {
       // A Shove's blow does nothing itself: the push that follows shows
       // what it cost.
       if (damage > 0 || !skill.push) this.showDamagePopup(targetSprite, damage);
+      if (damage > 0) playRigAction(targetSprite, 'hit');
     };
+    if (targetSprite !== userSprite) {
+      faceRigToward(userSprite, targetSprite.x);
+      faceRigToward(targetSprite, userSprite.x);
+    }
+    playRigAction(userSprite, 'attack');
     this.playSkillAnimation(skill.animation, userSprite, targetSprite, onImpact, next);
   }
 
@@ -2894,6 +2915,7 @@ export class GridScene extends Phaser.Scene {
         const collided = this.unitSprites.get(push.collidedId)!;
         this.showStats(push.collidedId, { health: collidedHealth });
         this.showDamagePopup(collided, push.collisionDamage);
+        playRigAction(collided, 'hit');
         playHitFlash(this, collided);
       }
       if (push.drowned) {
@@ -2913,6 +2935,7 @@ export class GridScene extends Phaser.Scene {
       }
       this.showStats(push.unitId, { health });
       this.showDamagePopup(sprite, push.damage);
+      playRigAction(sprite, 'hit');
       playHitFlash(this, sprite, next);
     };
     if (push.moved) {
@@ -3185,7 +3208,6 @@ export class GridScene extends Phaser.Scene {
       return;
     }
 
-    const art = sprite.getData('art');
     const facings = getPathFacings(path, sprite.getData('facing'));
     this.tweens.chain({
       targets: sprite,
@@ -3193,11 +3215,10 @@ export class GridScene extends Phaser.Scene {
         ...gridToWorld(step.x, step.y, TILE_SIZE),
         duration: MOVE_STEP_MS,
         ease: 'Linear',
-        onStart: () => sprite.play(this.unitAnimation(art, 'move', facings[i]), true),
+        onStart: () => this.playUnitMotion(sprite, 'move', facings[i]),
       })),
       onComplete: () => {
-        const facing = facings[facings.length - 1];
-        sprite.setData('facing', facing).play(this.unitAnimation(art, 'idle', facing));
+        this.playUnitMotion(sprite, 'idle', facings[facings.length - 1]);
         onDone();
       },
     });
@@ -3531,19 +3552,33 @@ export class GridScene extends Phaser.Scene {
     }
   }
 
+  // A single-image unit (isSingleImageUnit) is animated in code by
+  // addUnitRig, starting out facing the other side: right for the player and
+  // guests, left for enemies.
   addUnitSprite(unitId: string, gridX: number, gridY: number) {
     const unit = this.units.get(unitId)!;
     const { x, y } = gridToWorld(gridX, gridY, TILE_SIZE);
     const art = getUnitSprite(unit.unitClass);
-    const sprite = this.addTileSprite(x, y, unitSheetKey(art, 'idle'))
+    const sprite = this.addTileSprite(x, y, getUnitTextureKey(art, 'idle'))
       .setDepth(0.75)
       .setData('art', art)
-      .setData('facing', UNIT_SHEET.defaultFacing)
-      .play(this.unitAnimation(art, 'idle', UNIT_SHEET.defaultFacing));
-    addUnitOutline(this, sprite, UNIT_OUTLINE.colors[unit.team]);
+      .setData('facing', UNIT_SHEET.defaultFacing);
+    if (!isSingleImageUnit(art)) sprite.play(this.unitAnimation(art, 'idle', UNIT_SHEET.defaultFacing));
+    const outline = addUnitOutline(this, sprite, UNIT_OUTLINE.colors[unit.team]);
+    if (isSingleImageUnit(art)) addUnitRig(this, sprite, unit.team === 'enemy' ? -1 : 1, [outline]);
     addUnitShadow(this, sprite);
     if (unit.rank) addRankBadge(this, sprite, unit.rank);
     this.unitSprites.set(unitId, sprite);
+  }
+
+  // Sets a unit sprite standing or walking (a UNIT_ANIMATIONS name) facing
+  // `facing`: its sheet's animation for that facing, or for a single-image
+  // unit, its rig's motion (a walk already under way keeps going).
+  playUnitMotion(sprite: Sprite, animation: UnitAnimation, facing: Facing) {
+    const art = sprite.getData('art');
+    sprite.setData('facing', facing);
+    if (isSingleImageUnit(art)) setRigMotion(sprite, animation, facing);
+    else sprite.play(this.unitAnimation(art, animation, facing), true);
   }
 
   // The looping animation (a UNIT_ANIMATIONS name) for a unit's art facing

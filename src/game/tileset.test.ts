@@ -21,6 +21,9 @@ import {
   DEFAULT_UNIT_SPRITE,
   GRID_PX,
   getUnitSprite,
+  getUnitTextureKey,
+  isSingleImageUnit,
+  SINGLE_IMAGE_UNITS,
   unitSheetKey,
   type UnitAnimation,
 } from './tileset.ts';
@@ -32,7 +35,7 @@ describe('sprite keys', () => {
   it('names an image for every unit animation', () => {
     for (const sprite of Object.values(UNIT_SPRITES)) {
       for (const animation of Object.keys(UNIT_ANIMATIONS) as UnitAnimation[]) {
-        expect(SPRITE_URLS).toHaveProperty([unitSheetKey(sprite, animation)]);
+        expect(SPRITE_URLS).toHaveProperty([getUnitTextureKey(sprite, animation)]);
       }
     }
   });
@@ -159,6 +162,21 @@ describe('unitSheetKey', () => {
   it('names the sheet for each animation', () => {
     expect(unitSheetKey('Warrior_01', 'idle')).toBe('Warrior_01_Idle');
     expect(unitSheetKey('Warrior_01', 'move')).toBe('Warrior_01_Move');
+  });
+});
+
+describe('getUnitTextureKey', () => {
+  it('draws sheet art from its animation’s sheet', () => {
+    expect(getUnitTextureKey('Warrior_02', 'move')).toBe('Warrior_02_Move');
+    expect(isSingleImageUnit('Warrior_02')).toBe(false);
+  });
+
+  it('draws single-image art from its one image for every animation', () => {
+    for (const art of SINGLE_IMAGE_UNITS) {
+      expect(isSingleImageUnit(art)).toBe(true);
+      expect(getUnitTextureKey(art, 'idle')).toBe(art);
+      expect(getUnitTextureKey(art, 'move')).toBe(art);
+    }
   });
 });
 

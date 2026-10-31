@@ -248,6 +248,25 @@ export const UNIT_SPRITES: Record<string, string> = {
   orc: 'Orc_01',
 };
 
+// Unit art drawn from a single image instead of a set of sheets: a texture
+// key of SPRITES whose one frame is the whole picture, the character facing
+// right, mirrored to face left, and animated in code (src/game/unitRig.ts)
+// rather than frame by frame. Map a class to one in UNIT_SPRITES like any
+// other art.
+export const SINGLE_IMAGE_UNITS: ReadonlySet<string> = new Set<string>([]);
+
+// Whether a unit's art (a value of UNIT_SPRITES) is one image animated in
+// code, rather than sheets of frames.
+export function isSingleImageUnit(art: string): boolean {
+  return SINGLE_IMAGE_UNITS.has(art);
+}
+
+// The texture key to draw a unit's art with for an animation: the image
+// itself for a single-image unit, else that animation's sheet (unitSheetKey).
+export function getUnitTextureKey(art: string, animation: UnitAnimation): string {
+  return isSingleImageUnit(art) ? art : unitSheetKey(art, animation);
+}
+
 // Art for a unit whose class has none of its own (or no class).
 export const DEFAULT_UNIT_SPRITE = UNIT_SPRITES.warrior;
 
