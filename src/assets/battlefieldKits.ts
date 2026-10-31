@@ -13,6 +13,8 @@ import decalTuft2 from './battlefields/plains/decal-tuft-2.webp';
 import decalTuft3 from './battlefields/plains/decal-tuft-3.webp';
 import foreFernRight from './battlefields/plains/fore-fern-right.webp';
 import foreLeavesLeft from './battlefields/plains/fore-leaves-left.webp';
+import groundDirt from './battlefields/plains/ground-dirt.webp';
+import groundGrassDry from './battlefields/plains/ground-grass-dry.webp';
 import groundGrass from './battlefields/plains/ground-grass.webp';
 import horizon from './battlefields/plains/horizon.webp';
 import type { BattlefieldKind } from '../game/battlefields.ts';
@@ -23,6 +25,10 @@ const piece = (key: string, width: number, height: number): KitPiece => ({ key: 
 const PLAINS = {
   ground: piece('ground-grass', 800, 800),
   horizon: piece('horizon', 3840, 647),
+  patches: [
+    { texture: piece('ground-grass-dry', 800, 800), every: 120000, width: [380, 760] as const },
+    { texture: piece('ground-dirt', 800, 800), every: 260000, width: [260, 520] as const },
+  ],
   decals: [
     piece('decal-tuft-1', 164, 150),
     piece('decal-tuft-2', 223, 164),
@@ -43,6 +49,8 @@ export const BATTLEFIELD_KITS: Readonly<Partial<Record<BattlefieldKind, Battlefi
 export const KIT_URLS: Readonly<Record<string, string>> = Object.freeze({
   [PLAINS.ground.key]: groundGrass,
   [PLAINS.horizon.key]: horizon,
+  [PLAINS.patches[0].texture.key]: groundGrassDry,
+  [PLAINS.patches[1].texture.key]: groundDirt,
   [PLAINS.decals[0].key]: decalTuft1,
   [PLAINS.decals[1].key]: decalTuft2,
   [PLAINS.decals[2].key]: decalTuft3,
