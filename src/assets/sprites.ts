@@ -56,6 +56,10 @@ import warrior02Idle from './units/Warrior_02_Idle.png';
 import warrior02Move from './units/Warrior_02_Move.png';
 import wolf01Idle from './units/Wolf_01_Idle.png';
 import wolf01Move from './units/Wolf_01_Move.png';
+import paintedArcher from './units/painted/archer.png';
+import paintedCleric from './units/painted/cleric.png';
+import paintedMage from './units/painted/mage.png';
+import paintedWarrior from './units/painted/warrior.png';
 import ballistaIcon from './items/ballista.png';
 import biteIcon from './items/bite.png';
 import boneClawsIcon from './items/bone-claws.png';
@@ -149,6 +153,11 @@ export const SPRITES: Readonly<Record<string, SpriteSheet>> = {
   Warrior_02_Move: { url: warrior02Move, frame: 64 },
   Wolf_01_Idle: { url: wolf01Idle, frame: 32 },
   Wolf_01_Move: { url: wolf01Move, frame: 32 },
+  // Painted single-image units (SINGLE_IMAGE_UNITS in tileset.ts).
+  Painted_Warrior: { url: paintedWarrior, frame: 256, smooth: true },
+  Painted_Archer: { url: paintedArcher, frame: 256, smooth: true },
+  Painted_Mage: { url: paintedMage, frame: 256, smooth: true },
+  Painted_Cleric: { url: paintedCleric, frame: 256, smooth: true },
   'ballista': { url: ballistaIcon, frame: 32 },
   'bite': { url: biteIcon, frame: 32 },
   'bone-claws': { url: boneClawsIcon, frame: 32 },

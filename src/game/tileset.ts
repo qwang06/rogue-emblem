@@ -243,12 +243,12 @@ export const SPIKES_ART: SheetTile = [10, 1];
 // whichever side it's on. Each names a set of sheets, one per animation in
 // UNIT_ANIMATIONS (see unitSheetKey).
 export const UNIT_SPRITES: Record<string, string> = {
-  warrior: 'Warrior_02',
+  warrior: 'Painted_Warrior',
   soldier: 'Soldier_03',
-  archer: 'Amazon_01',
+  archer: 'Painted_Archer',
   vanguard: 'Vanguard_04',
   guard: 'Soldier_04',
-  acolyte: 'Acolyte_02',
+  acolyte: 'Painted_Cleric',
   // The promoted classes (promotions.ts) wear other variants of the pack's
   // units, close to their base class's look.
   hero: 'Vanguard_02',
@@ -262,7 +262,7 @@ export const UNIT_SPRITES: Record<string, string> = {
   bastion: 'Soldier_06',
   templar: 'Vanguard_01',
   bishop: 'Acolyte_01',
-  sage: 'Acolyte_03',
+  sage: 'Painted_Mage',
   slime: 'Slime_01',
   goblin: 'Goblin_01',
   skeleton: 'Skeleton_01',
@@ -276,7 +276,12 @@ export const UNIT_SPRITES: Record<string, string> = {
 // right, mirrored to face left, and animated in code (src/game/unitRig.ts)
 // rather than frame by frame. Map a class to one in UNIT_SPRITES like any
 // other art.
-export const SINGLE_IMAGE_UNITS: ReadonlySet<string> = new Set<string>([]);
+export const SINGLE_IMAGE_UNITS: ReadonlySet<string> = new Set<string>([
+  'Painted_Warrior',
+  'Painted_Archer',
+  'Painted_Mage',
+  'Painted_Cleric',
+]);
 
 // Whether a unit's art (a value of UNIT_SPRITES) is one image animated in
 // code, rather than sheets of frames.
