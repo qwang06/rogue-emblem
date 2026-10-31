@@ -4,8 +4,8 @@
 // bare dirt) over it, soft blotches of light and shade to break up its
 // repeats, small decals (tufts, pebbles) scattered over it, a far-scenery
 // strip along the top, tree clusters and bushes standing around the
-// field's edges, and big out-of-focus foreground leaves in the near
-// corners. Each battle lays the pieces out afresh from its seed, at any
+// field's edges, and (if the kit has them) big out-of-focus foreground
+// leaves in the near corners. Each battle lays the pieces out afresh from its seed, at any
 // field size. Pure: the same kit, floor and seed always give the same
 // layout.
 
@@ -37,12 +37,15 @@ export interface BattlefieldKit {
   horizon: KitPiece;
   patches: readonly KitPatch[];
   decals: readonly KitPiece[];
-  // Tall clusters standing down the field's sides, drawn as they are on
-  // the left and mirrored on the right.
+  // Tall clusters standing down the field's left side, open side facing
+  // right. Mirrored for the right side unless `treesRight` is given.
   trees: readonly KitPiece[];
+  // Clusters painted for the right side (open side facing left), drawn as
+  // they are so their painted light and shadows stay the right way round.
+  treesRight?: readonly KitPiece[];
   bushes: readonly KitPiece[];
-  // Rising from the near corners, close to the camera.
-  foreground: { left: KitPiece; right: KitPiece };
+  // Rising from the near corners, close to the camera. None if left out.
+  foreground?: { left: KitPiece; right: KitPiece };
   // The blotches' colors: sunlit patches and shade.
   light: number;
   shade: number;
@@ -260,8 +263,9 @@ export function layOutKit(
     const edge = side < 0 ? BORDER_OVERLAP : floor.width - BORDER_OVERLAP;
     const standOff = (width: number, push: number) => (side < 0 ? edge - width - push : edge + push);
     const rows = [-HORIZON_GAP * 0.4, floor.height * 0.35, floor.height * 0.8, floor.height + KIT_MARGIN.bottom * 0.45];
+    const own = side > 0 ? kit.treesRight : undefined;
     rows.forEach((foot, i) => {
-      const piece = pick(rng, kit.trees);
+      const piece = pick(rng, own ?? kit.trees);
       const k = 0.55 + (0.5 * i) / (rows.length - 1);
       const { width, height } = size(piece, k * between(rng, 0.92, 1.08));
       const x = standOff(width, between(rng, 0, 40));
@@ -283,7 +287,7 @@ export function layOutKit(
         y: foot - height,
         width,
         height,
-        flip: side > 0,
+        flip: side > 0 && own === undefined,
         foot,
       });
     });
@@ -321,19 +325,21 @@ export function layOutKit(
 
   // The foreground, rising from the scene's bottom corners and tucked out
   // past the floor's sides.
-  const { left, right } = kit.foreground;
-  const tall = KIT_MARGIN.bottom + floor.height * 0.3;
-  for (const [piece, side] of [
-    [left, -1],
-    [right, 1],
-  ] as const) {
-    const k = tall / (piece.size[1] * kit.scale);
-    const { width, height } = size(piece, k);
-    const x =
-      side < 0
-        ? Math.min(scene.x - 20, -width * (1 - FOREGROUND_REACH))
-        : Math.max(scene.x + scene.width + 20 - width, floor.width - width * FOREGROUND_REACH);
-    add({ layer: 'foreground', key: piece.key, x, y: bottom + 20 - height, width, height });
+  if (kit.foreground) {
+    const { left, right } = kit.foreground;
+    const tall = KIT_MARGIN.bottom + floor.height * 0.3;
+    for (const [piece, side] of [
+      [left, -1],
+      [right, 1],
+    ] as const) {
+      const k = tall / (piece.size[1] * kit.scale);
+      const { width, height } = size(piece, k);
+      const x =
+        side < 0
+          ? Math.min(scene.x - 20, -width * (1 - FOREGROUND_REACH))
+          : Math.max(scene.x + scene.width + 20 - width, floor.width - width * FOREGROUND_REACH);
+      add({ layer: 'foreground', key: piece.key, x, y: bottom + 20 - height, width, height });
+    }
   }
 
   return { scene, pieces };

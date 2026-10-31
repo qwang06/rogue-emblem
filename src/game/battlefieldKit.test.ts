@@ -166,6 +166,33 @@ describe('layOutKit', () => {
       for (const p of [left, right]) expect(p.y + p.height).toBeGreaterThan(scene.y + scene.height);
     }
   });
+
+  it('draws no foreground for a kit without one', () => {
+    const { foreground: _, ...bare } = KIT;
+    for (const seed of SEEDS) {
+      const { pieces } = layOutKit(bare, FLOOR, seed);
+      expect(pieces.some((p) => p.layer === 'foreground')).toBe(false);
+    }
+  });
+
+  it('mirrors the left trees on the right, unless the kit has its own right-side trees', () => {
+    const own = { ...KIT, treesRight: [piece('trees-right', 700, 1000)] };
+    for (const seed of SEEDS) {
+      const trees = (kit: BattlefieldKit) =>
+        layOutKit(kit, FLOOR, seed).pieces.filter((p) => p.key.startsWith('trees'));
+      const mirrored = trees(KIT);
+      expect(mirrored.filter((p) => p.x >= FLOOR.width / 2).every((p) => p.flip && p.key === 'trees')).toBe(true);
+      expect(mirrored.filter((p) => p.x < FLOOR.width / 2).every((p) => !p.flip)).toBe(true);
+      const right = trees(own).filter((p) => p.x >= FLOOR.width / 2);
+      expect(right.length).toBeGreaterThan(0);
+      expect(right.every((p) => !p.flip && p.key === 'trees-right')).toBe(true);
+      expect(
+        trees(own)
+          .filter((p) => p.x < FLOOR.width / 2)
+          .every((p) => p.key === 'trees'),
+      ).toBe(true);
+    }
+  });
 });
 
 describe('getPatchMask', () => {
