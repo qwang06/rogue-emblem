@@ -19,7 +19,7 @@
 import type { Autotile, SheetTile } from './autotile.ts';
 import type { BuildingPlacement } from './buildings.ts';
 import { getCell, type Grid, type Point } from './grid.ts';
-import type { ObstaclePlacement } from './battlefields.ts';
+import type { ObstacleKind, ObstaclePlacement } from './battlefields.ts';
 import type {
   BRIDGE_ART,
   BUILDING_ART,
@@ -186,4 +186,17 @@ export function getObstacleSprites(obstacles: readonly ObstaclePlacement[], art:
     layer: 'ground',
     sheet: art[obstacle].sheet,
   }));
+}
+
+// A battlefield's obstacles drawn as painted art (PAINTED_OBSTACLES): each
+// on its cell as one of its kind's images, picked and mirrored by cell so
+// the same field always draws the same.
+export function getPaintedObstacles(
+  obstacles: readonly ObstaclePlacement[],
+  art: Readonly<Record<ObstacleKind, readonly string[]>>,
+): { x: number; y: number; key: string; flip: boolean }[] {
+  return obstacles.map(({ x, y, obstacle }) => {
+    const keys = art[obstacle];
+    return { x, y, key: keys[pickVariant(x, y, keys.length)], flip: pickVariant(y, x, 2) === 1 };
+  });
 }

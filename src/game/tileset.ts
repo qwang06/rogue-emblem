@@ -142,6 +142,20 @@ export const OBSTACLE_ART: Readonly<Record<ObstacleKind, { sheet: typeof TERRAIN
     cactus: { sheet: TERRAIN64_PROPS_SHEET, tile: [5, 2] },
   });
 
+// The painted art each battlefield obstacle stands as, in place of
+// OBSTACLE_ART on a battlefield: texture keys of SPRITES, each one image
+// the size of a tile with the obstacle's base where a unit's feet go. A
+// kind with several picks one per cell (getPaintedObstacles in mapArt.ts).
+export const PAINTED_OBSTACLES: Readonly<Record<ObstacleKind, readonly string[]>> = Object.freeze({
+  rock: ['Obstacle_rock_1', 'Obstacle_rock_2'],
+  boulder: ['Obstacle_boulder'],
+  bush: ['Obstacle_bush_1', 'Obstacle_bush_2'],
+  pine: ['Obstacle_pine'],
+  thicket: ['Obstacle_thicket'],
+  crag: ['Obstacle_crag'],
+  cactus: ['Obstacle_cactus'],
+});
+
 // Where each building kind sits on the terrain sheet in its block's first
 // color column: `column` is that column (0 or 12; a palette's
 // `buildingColumn` is added to it) and `row` the row of the tile the

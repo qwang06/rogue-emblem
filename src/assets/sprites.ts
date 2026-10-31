@@ -56,6 +56,15 @@ import warrior02Idle from './units/Warrior_02_Idle.png';
 import warrior02Move from './units/Warrior_02_Move.png';
 import wolf01Idle from './units/Wolf_01_Idle.png';
 import wolf01Move from './units/Wolf_01_Move.png';
+import obstacleRock1 from './obstacles/rock-1.png';
+import obstacleRock2 from './obstacles/rock-2.png';
+import obstacleBoulder from './obstacles/boulder.png';
+import obstacleCrag from './obstacles/crag.png';
+import obstacleBush1 from './obstacles/bush-1.png';
+import obstacleBush2 from './obstacles/bush-2.png';
+import obstacleThicket from './obstacles/thicket.png';
+import obstaclePine from './obstacles/pine.png';
+import obstacleCactus from './obstacles/cactus.png';
 import paintedArcher from './units/painted/archer.png';
 import paintedCleric from './units/painted/cleric.png';
 import paintedMage from './units/painted/mage.png';
@@ -153,6 +162,16 @@ export const SPRITES: Readonly<Record<string, SpriteSheet>> = {
   Warrior_02_Move: { url: warrior02Move, frame: 64 },
   Wolf_01_Idle: { url: wolf01Idle, frame: 32 },
   Wolf_01_Move: { url: wolf01Move, frame: 32 },
+  // Painted battlefield obstacles (PAINTED_OBSTACLES in tileset.ts).
+  Obstacle_rock_1: { url: obstacleRock1, frame: 256, smooth: true },
+  Obstacle_rock_2: { url: obstacleRock2, frame: 256, smooth: true },
+  Obstacle_boulder: { url: obstacleBoulder, frame: 256, smooth: true },
+  Obstacle_crag: { url: obstacleCrag, frame: 256, smooth: true },
+  Obstacle_bush_1: { url: obstacleBush1, frame: 256, smooth: true },
+  Obstacle_bush_2: { url: obstacleBush2, frame: 256, smooth: true },
+  Obstacle_thicket: { url: obstacleThicket, frame: 256, smooth: true },
+  Obstacle_pine: { url: obstaclePine, frame: 256, smooth: true },
+  Obstacle_cactus: { url: obstacleCactus, frame: 256, smooth: true },
   // Painted single-image units (SINGLE_IMAGE_UNITS in tileset.ts).
   Painted_Warrior: { url: paintedWarrior, frame: 256, smooth: true },
   Painted_Archer: { url: paintedArcher, frame: 256, smooth: true },
