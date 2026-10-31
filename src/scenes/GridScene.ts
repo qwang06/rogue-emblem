@@ -60,6 +60,7 @@ import { findUnitSkill, getSkillActions, getSkillForecast, getUnitSkills, isHeal
 import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange } from '../game/combat.ts';
 import { getCameraView, getFitZoom } from '../game/camera.ts';
 import { getFramingClumps } from '../game/battlefieldFraming.ts';
+import { getCellTones } from '../game/floorTiles.ts';
 import { layOutKit, type BattlefieldKit, type KitLayer, type KitStanding } from '../game/battlefieldKit.ts';
 import { BATTLEFIELD_KITS, KIT_URLS } from '../assets/battlefieldKits.ts';
 import { ensureKitTextures, makePatchTexture } from './kitTextures.ts';
@@ -295,7 +296,7 @@ import type { RosterMenuEntry } from '../bridge/gameStore.ts';
 const ZOOM_STEP = 1 / GRID_PX;
 const MAX_ZOOM = 3 / GRID_PX;
 // How dark a battlefield's floor grid is (see renderFloorGrid).
-const FLOOR_GRID_ALPHA = 0.08;
+const FLOOR_GRID_ALPHA = 0.05;
 // The framing clumps' shade: near the camera and out of the light, so dark
 // and cool, and their depth, over everything standing but under the cursor.
 const FRAMING_TINT = 0x56664a;
@@ -3671,7 +3672,7 @@ export class GridScene extends Phaser.Scene {
         graphics.fillStyle(color).fillRect(field.x + x, y, BACKDROP_COLUMN, BACKDROP_COLUMN);
       }
     }
-    this.renderFloorGrid(floor);
+    this.renderFloorGrid(floor, seed);
   }
 
   // A battlefield built from its kit (layOutKit): the ground tiled under
@@ -3729,11 +3730,18 @@ export class GridScene extends Phaser.Scene {
     }
   }
 
-  // The battlefield's cells, outlined faintly: a dark line with a lighter
-  // one just under it, like a groove pressed into the ground, over the
-  // floor and under everything on it.
-  renderFloorGrid(floor: { width: number; height: number }) {
+  // The battlefield's cells as worn ground: each tinted a touch lighter or
+  // darker (getCellTones), then outlined faintly with a dark line and a
+  // lighter one just under it, like a groove pressed into the ground, over
+  // the floor and under everything on it.
+  renderFloorGrid(floor: { width: number; height: number }, seed: number) {
     const graphics = this.add.graphics().setDepth(-0.5);
+    for (const { x, y, light, alpha } of getCellTones(this.grid.width, this.grid.height, seed)) {
+      graphics.fillStyle(light ? 0xffffff : 0x000000, alpha);
+      // Inset with rounded corners, so the cells read as worn stones with
+      // seams between them rather than squares of a board.
+      graphics.fillRoundedRect(x * CELL.width + 3, y * CELL.height + 3, CELL.width - 6, CELL.height - 6, 8);
+    }
     const line = GRID_PX;
     for (const [color, alpha, offset] of [
       [0x000000, FLOOR_GRID_ALPHA, 0],
