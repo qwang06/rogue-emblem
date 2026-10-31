@@ -32,13 +32,34 @@ export function pickVariant(x: number, y: number, count: number): number {
   return (hash >>> 0) % count;
 }
 
-// Overlays for every forest and mountain cell: a variant of its art per
-// cell, under units.
+// Overlays for every forest and mountain cell, under units. Mountains
+// first take the art's 2x2 mountains, on 2x2 blocks of mountain cells found
+// in reading order (each cell in one block at most), drawn a tile at a
+// time; every other forest or mountain cell gets a one-tile variant.
 export function getFeatureSprites(grid: Grid, forestArt: FeatureArt, mountainArt: FeatureArt): MapSprite[] {
   const sprites: MapSprite[] = [];
+  const claimed = new Set<string>();
+  const big = mountainArt.big ?? [];
+  const isFreeMountain = (x: number, y: number) =>
+    getCell(grid, x, y)?.terrain === 'mountain' && !claimed.has(`${x},${y}`);
+  for (const { x, y, terrain } of grid.cells) {
+    if (big.length === 0 || terrain !== 'mountain') continue;
+    const block = [
+      [0, 0],
+      [1, 0],
+      [0, 1],
+      [1, 1],
+    ] as const;
+    if (!block.every(([dx, dy]) => isFreeMountain(x + dx, y + dy))) continue;
+    const [column, row] = big[pickVariant(x, y, big.length)];
+    for (const [dx, dy] of block) {
+      claimed.add(`${x + dx},${y + dy}`);
+      sprites.push({ x: x + dx, y: y + dy, tile: [column + dx, row + dy], layer: 'ground', sheet: mountainArt.sheet });
+    }
+  }
   for (const { x, y, terrain } of grid.cells) {
     const art = terrain === 'forest' ? forestArt : terrain === 'mountain' ? mountainArt : null;
-    if (!art) continue;
+    if (!art || claimed.has(`${x},${y}`)) continue;
     const tile = art.tiles[pickVariant(x, y, art.tiles.length)];
     sprites.push({ x, y, tile, layer: 'ground', sheet: art.sheet });
   }
