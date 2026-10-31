@@ -4,6 +4,7 @@ import {
   BREATH_MS,
   HIT_MS,
   HOP_MS,
+  WALK_CYCLE_MS,
   REST_POSE,
   combinePoses,
   getActionPose,
@@ -12,6 +13,7 @@ import {
   getSideToward,
   getUnitPose,
   getWalkFrame,
+  getWalkFrameMs,
 } from './unitRig.ts';
 
 describe('getMotionPose', () => {
@@ -136,18 +138,27 @@ describe('getSideToward', () => {
 });
 
 describe('getWalkFrame', () => {
-  const walk = { key: 'walk', frames: 8, frameMs: 80 };
+  const walk = { key: 'walk', frames: 8 };
+  const frameMs = WALK_CYCLE_MS / 8;
 
-  it('steps through the frames in order, one per frameMs', () => {
+  it('steps through the frames in order, one per eighth of the cycle', () => {
     expect(getWalkFrame(walk, 0)).toBe(0);
-    expect(getWalkFrame(walk, 79)).toBe(0);
-    expect(getWalkFrame(walk, 80)).toBe(1);
-    expect(getWalkFrame(walk, 7 * 80 + 10)).toBe(7);
+    expect(getWalkFrame(walk, frameMs - 1)).toBe(0);
+    expect(getWalkFrame(walk, frameMs)).toBe(1);
+    expect(getWalkFrame(walk, 7 * frameMs + 10)).toBe(7);
   });
 
   it('loops back to the first frame', () => {
-    expect(getWalkFrame(walk, 8 * 80)).toBe(0);
-    expect(getWalkFrame(walk, 9 * 80 + 1)).toBe(1);
+    expect(getWalkFrame(walk, WALK_CYCLE_MS)).toBe(0);
+    expect(getWalkFrame(walk, WALK_CYCLE_MS + frameMs + 1)).toBe(1);
+  });
+
+  it('takes the same time over a cycle whatever the number of frames', () => {
+    const four = { key: 'walk', frames: 4 };
+    expect(getWalkFrame(four, WALK_CYCLE_MS / 2)).toBe(2);
+    expect(getWalkFrame(walk, WALK_CYCLE_MS / 2)).toBe(4);
+    expect(getWalkFrame(four, WALK_CYCLE_MS - 1)).toBe(3);
+    expect(getWalkFrame(walk, WALK_CYCLE_MS - 1)).toBe(7);
   });
 
   it('stays in range for a single frame or negative time', () => {
@@ -165,5 +176,21 @@ describe('a framed walk', () => {
   it('still breathes while standing and plays actions over the walk', () => {
     expect(getMotionPose('idle', BREATH_MS / 4, true)).toEqual(getMotionPose('idle', BREATH_MS / 4));
     expect(getUnitPose('move', 30, 'hit', 0, true)).toEqual(combinePoses(REST_POSE, getActionPose('hit', 0)!));
+  });
+});
+
+describe('getWalkFrameMs', () => {
+  it('splits one walk cycle evenly over the frames', () => {
+    expect(getWalkFrameMs(8)).toBe(WALK_CYCLE_MS / 8);
+    expect(getWalkFrameMs(4)).toBe(WALK_CYCLE_MS / 4);
+    expect(getWalkFrameMs(4) * 4).toBe(getWalkFrameMs(8) * 8);
+  });
+
+  it('treats zero frames as one', () => {
+    expect(getWalkFrameMs(0)).toBe(WALK_CYCLE_MS);
+  });
+
+  it('hops once per stride, two per cycle', () => {
+    expect(HOP_MS * 2).toBe(WALK_CYCLE_MS);
   });
 });

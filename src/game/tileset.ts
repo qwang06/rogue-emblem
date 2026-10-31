@@ -21,7 +21,7 @@ import type { ArrowPiece } from './moveArrow.ts';
 import type { PixelArt } from './pixelShapes.ts';
 import type { Team } from './turns.ts';
 import type { UnitRank } from './Unit.ts';
-import type { WalkFrames } from './unitRig.ts';
+import { getWalkFrameMs, type WalkFrames } from './unitRig.ts';
 
 export type UnitAnimation = 'idle' | 'move';
 
@@ -302,11 +302,11 @@ export const SINGLE_IMAGE_UNITS: ReadonlySet<string> = new Set<string>([
 // Single-image units whose walk is drawn frame by frame: a sheet in SPRITES
 // of the same frame size as the unit's image, the character facing right
 // with its feet where the image has them, shown instead of the image (and
-// in place of the code-drawn hop) while the unit walks. `frameMs` sets the
-// pace of the legs, independent of how fast the unit crosses tiles
-// (GridScene's MOVE_STEP_MS): about a stride every 360ms, an unhurried march.
+// in place of the code-drawn hop) while the unit walks. The frames make one
+// walk cycle, played at the shared pace (WALK_CYCLE_MS in unitRig.ts), so a
+// sheet can have any number of them.
 export const SINGLE_IMAGE_WALKS: Readonly<Record<string, WalkFrames>> = {
-  Painted_Warrior: { key: 'Painted_Warrior_Walk', frames: 8, frameMs: 90 },
+  Painted_Warrior: { key: 'Painted_Warrior_Walk', frames: 8 },
 };
 
 // A single-image unit's frame-by-frame walk, or undefined when it hops in
@@ -391,10 +391,11 @@ export const UNIT_SHEET: {
 
 // Unit animations: `sheet` is the suffix of the sheet's texture key, and each
 // frame shows for frameMs. Units play `idle` standing still and `move` while
-// walking.
+// walking; a sheet's move row is one walk cycle, at the pace every unit
+// walks (getWalkFrameMs).
 export const UNIT_ANIMATIONS: Record<UnitAnimation, { sheet: string; frameMs: number }> = {
   idle: { sheet: 'Idle', frameMs: 200 },
-  move: { sheet: 'Move', frameMs: 120 },
+  move: { sheet: 'Move', frameMs: getWalkFrameMs(UNIT_SHEET.frames) },
 };
 
 // The texture key of a unit's sheet for an animation, e.g.
