@@ -41,7 +41,6 @@ export type GlyphKind =
   | 'uses'
   // The heal command and the settings panel's rows.
   | 'heal'
-  | 'sound'
   | 'music';
 
 const GLYPHS: Record<GlyphKind, readonly string[]> = {
@@ -72,7 +71,6 @@ const GLYPHS: Record<GlyphKind, readonly string[]> = {
   weight: ['..oooo..', '.o....o.', '.o....o.', '.oooooo.', 'oddddddo', 'oddddddo', 'oddddddo', '.oooooo.'],
   uses: ['........', '........', 'ooooooo.', 'onnnn.oo', 'onnnn.oo', 'ooooooo.', '........', '........'],
   heal: ['...rr...', '...rr...', '...rr...', 'rrrrrrrr', 'rrrrrrrr', '...rr...', '...rr...', '...rr...'],
-  sound: ['...o....', '..oo..o.', 'ooo.o..o', 'o.o..o.o', 'o.o..o.o', 'ooo.o..o', '..oo..o.', '...o....'],
   music: ['...ooooo', '...o...o', '...ooooo', '...o...o', '...o...o', '.ooo.ooo', 'oooooooo', '.oo..oo.'],
 };
 

@@ -24,25 +24,25 @@ To look at a region, scale it down to 1x (sample every third pixel) and crop; th
 
 ## Icons (8x8)
 
-| Col | Row A (y 709)    | Row B (y 725)    |
-| --- | ---------------- | ---------------- |
-| 0   | orange star      | red potion       |
-| 1   | grey star        | magnet           |
-| 2   | red heart        | gear             |
-| 3   | grey heart       | music note       |
-| 4   | gold coin        | speaker          |
-| 5   | skull            | floppy disk      |
-| 6   | exclamation mark | feather          |
-| 7   | question mark    | bronze key       |
-| 8   | sword            | silver key       |
-| 9   | shield           | gold key         |
-| 10  | boot             | green flask      |
-| 11  | closed book      | cyan flask       |
-| 12  | wand             | red drop         |
-| 13  | red cross        | "f" social badge |
-| 14  | pouch            | target           |
-| 15  | leaf             | dark "x" badge   |
+| Col | Row A (y 709)    | Row B (y 725)                          |
+| --- | ---------------- | -------------------------------------- |
+| 0   | orange star      | red potion                             |
+| 1   | grey star        | magnet                                 |
+| 2   | red heart        | gear                                   |
+| 3   | grey heart       | music note                             |
+| 4   | gold coin        | fast forward (half disc, motion lines) |
+| 5   | skull            | floppy disk                            |
+| 6   | exclamation mark | feather                                |
+| 7   | question mark    | bronze key                             |
+| 8   | sword            | silver key                             |
+| 9   | shield           | gold key                               |
+| 10  | boot             | green flask                            |
+| 11  | closed book      | cyan flask                             |
+| 12  | wand             | red drop                               |
+| 13  | red cross        | "f" social badge                       |
+| 14  | pouch            | target                                 |
+| 15  | leaf             | dark "x" badge                         |
 
 ## Used in the game
 
-`slice-ui-sheet.js` writes: `frame-parchment.png` (peach frame), `frame-banner.png` / `-red` / `-green` (the slate frame, recolored dark for light text), `name-plate.png` (rose gem plate, 13 rows), `hand-pointer.png` and `hand-pointer-down.png`, `bar-frame.png` (gauge frame), `arrow-down.png` / `arrow-up.png`, `button.png` / `button-hover.png` / `button-pressed.png` (the small rose button's three states, 18x13 at (151, 162), (183, 162), (215, 162), each cut with a 1px margin for the glow), `checkbox.png` / `checkbox-checked.png` (rose checkbox, empty and with its teal gem), `slider-knob.png` (the orange 8x8 bead at (436, 228)), `item-slot.png` (the empty rose item slot at (0, 112)), and 17 glyphs in `src/assets/glyphs/` (doubled to 16x16; the script lists which icon each kind uses). The bar fill strips' colors (light row over dark: green `#c8d45d`/`#63ab3f`, teal `#92e8c0`/`#4fa4b8`) are the gauges' `--hp-fill` / `--mp-fill` in ui.css. Unused so far: the wide, gold and "OK" buttons, the tab icons and the slot tiles with icons, the dividers (the plain rose one is `--rule`'s color already), the button prompts, the fonts, the books and the pennants.
+`slice-ui-sheet.js` writes: `frame-parchment.png` (peach frame), `frame-banner.png` / `-red` / `-green` (the slate frame, recolored dark for light text), `name-plate.png` (rose gem plate, 13 rows), `hand-pointer.png` and `hand-pointer-down.png`, `bar-frame.png` (gauge frame), `arrow-down.png` / `arrow-up.png`, `button.png` / `button-hover.png` / `button-pressed.png` (the small rose button's three states, 18x13 at (151, 162), (183, 162), (215, 162), each cut with a 1px margin for the glow), `checkbox.png` / `checkbox-checked.png` (rose checkbox, empty and with its teal gem), `slider-knob.png` (the orange 8x8 bead at (436, 228)), `item-slot.png` (the empty rose item slot at (0, 112)), and 16 glyphs in `src/assets/glyphs/` (doubled to 16x16; the script lists which icon each kind uses). The bar fill strips' colors (light row over dark: green `#c8d45d`/`#63ab3f`, teal `#92e8c0`/`#4fa4b8`) are the gauges' `--hp-fill` / `--mp-fill` in ui.css. Unused so far: the wide, gold and "OK" buttons, the tab icons and the slot tiles with icons, the dividers (the plain rose one is `--rule`'s color already), the button prompts, the fonts, the books and the pennants.
