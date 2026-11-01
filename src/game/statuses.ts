@@ -13,14 +13,26 @@
 // - Rooted: it can't move (getPhaseMovement in enemyAI.ts reads it).
 // - Sundered: it takes 3 more damage from every hit.
 // - Marked: it has 15 less avoid.
+// - Taunted: on its phase it goes after a Taunting foe, while one is in
+//   play (planUnitTurn in battle/ai.ts reads it).
 // Buffs:
 // - Guarded: it takes 2 less damage from every hit.
 // - Warded: it takes 4 less damage from every hit.
 // - Hastened: it moves 2 more tiles.
+// - Taunting: the foes it Taunted must come for it.
 
 import type { Modifier } from './modifiers.ts';
 
-export const STATUS_IDS = Object.freeze(['rooted', 'sundered', 'marked', 'guarded', 'warded', 'hastened'] as const);
+export const STATUS_IDS = Object.freeze([
+  'rooted',
+  'sundered',
+  'marked',
+  'taunted',
+  'guarded',
+  'warded',
+  'hastened',
+  'taunting',
+] as const);
 export type StatusId = (typeof STATUS_IDS)[number];
 
 export type StatusKind = 'buff' | 'debuff';
@@ -56,6 +68,13 @@ export const STATUSES: Readonly<Record<StatusId, Status>> = Object.freeze({
     description: '15 less avoid.',
     modifiers: Object.freeze([Object.freeze<Modifier>({ kind: 'combat', term: 'avoid', amount: -15 })]),
   }),
+  taunted: Object.freeze({
+    id: 'taunted',
+    kind: 'debuff',
+    label: 'Taunted',
+    description: 'Must go after a Taunting foe.',
+    modifiers: Object.freeze([]),
+  }),
   guarded: Object.freeze({
     id: 'guarded',
     kind: 'buff',
@@ -75,6 +94,13 @@ export const STATUSES: Readonly<Record<StatusId, Status>> = Object.freeze({
     kind: 'buff',
     label: 'Hastened',
     description: '+2 MOV.',
+    modifiers: Object.freeze([]),
+  }),
+  taunting: Object.freeze({
+    id: 'taunting',
+    kind: 'buff',
+    label: 'Taunting',
+    description: 'Foes it Taunted must come for it.',
     modifiers: Object.freeze([]),
   }),
 });
