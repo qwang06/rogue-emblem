@@ -1,6 +1,6 @@
 // The run side of promotion (promotions.ts, roadmap W.7): at camp, a roster
 // unit that has reached PROMOTION_LEVEL spends a Master Seal to promote to
-// one of its class's promotions (a villager's four). Seals are items (MASTER_SEAL), bought
+// one of its class's promotions (a villager's four, an acolyte's Mage). Seals are items (MASTER_SEAL), bought
 // from the merchant or won as a stage reward, held in the convoy or a
 // unit's inventory; a promotion spends the unit's own first, then the
 // convoy's, then another unit's. The promotion's gift weapon goes in the

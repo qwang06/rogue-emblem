@@ -21,9 +21,12 @@ const archer = findPromotion('archer')!;
 const vanguard = findPromotion('vanguard')!;
 
 describe('PROMOTIONS', () => {
-  it('gives the villager the four tier-2 classes, and nothing else any', () => {
+  it('gives the villager the four tier-2 classes, the acolyte the mage, and nothing else any', () => {
     expect(getPromotions('villager').map(({ id }) => id)).toEqual(['archer', 'soldier', 'vanguard', 'sapper']);
-    for (const { id } of UNIT_CLASSES) if (id !== 'villager') expect(getPromotions(id), id).toEqual([]);
+    expect(getPromotions('acolyte').map(({ id }) => id)).toEqual(['mage']);
+    for (const { id } of UNIT_CLASSES) {
+      if (id !== 'villager' && id !== 'acolyte') expect(getPromotions(id), id).toEqual([]);
+    }
     expect(getPromotions(null)).toEqual([]);
   });
 
@@ -34,6 +37,10 @@ describe('PROMOTIONS', () => {
   it('adds what the class starts above a villager, and MOV either way', () => {
     expect(archer.bonuses).toEqual({ skill: 2, speed: 1, resistance: 1 });
     expect(vanguard.bonuses).toEqual({ health: 2, strength: 2 });
+  });
+
+  it('adds what the mage starts above an acolyte, the class it promotes from', () => {
+    expect(findPromotion('mage')!.bonuses).toEqual({ mana: 1, intelligence: 2, skill: 1 });
   });
 
   it('keeps every growth at 0% or more', () => {

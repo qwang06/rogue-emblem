@@ -45,6 +45,7 @@ describe('getSecondaryClassIds', () => {
       'siege',
       'ram',
       'acolyte',
+      'mage',
     ]);
     expect(getSecondaryClassIds({ classId: 'acolyte' })).not.toContain('acolyte');
   });

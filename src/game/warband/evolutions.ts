@@ -54,7 +54,7 @@ function evolution(
 const ARCHERS = ['archer', 'siege'];
 // The rank a rank evolution's passive must reach: its top one.
 export const RANK_EVOLUTION_RANK = MAX_BOON_RANK;
-const CASTERS = ['acolyte'];
+const CASTERS = ['acolyte', 'mage'];
 
 // Every evolution, in the order the unit info screen lists them.
 export const EVOLUTIONS: readonly Evolution[] = Object.freeze([

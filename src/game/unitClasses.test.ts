@@ -18,6 +18,7 @@ describe('UNIT_CLASSES', () => {
       'siege',
       'ram',
       'acolyte',
+      'mage',
       'water-elemental',
       'fire-elemental',
       'air-elemental',
@@ -41,6 +42,7 @@ describe('UNIT_CLASSES', () => {
       'Siege',
       'Ram',
       'Acolyte',
+      'Mage',
       'Water Elemental',
       'Fire Elemental',
       'Air Elemental',
@@ -110,6 +112,7 @@ describe('PLAYABLE_CLASSES', () => {
       ['soldier', 'villager'],
       ['vanguard', 'villager'],
       ['sapper', 'villager'],
+      ['mage', 'acolyte'],
     ]);
   });
 

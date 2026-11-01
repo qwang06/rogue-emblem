@@ -1,6 +1,6 @@
 # UNITS.md
 
-Reference for every unit class: base stats, growth rates, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Villager.ts`, `src/game/Archer.ts`, `src/game/Soldier.ts`, `src/game/Vanguard.ts`, `src/game/Sapper.ts`, `src/game/Scout.ts`, `src/game/Beast.ts`, `src/game/BeastRider.ts`, `src/game/Siege.ts`, `src/game/Ram.ts`, `src/game/Acolyte.ts`, `src/game/Elemental.ts`, `src/game/promotions.ts`, `src/game/Slime.ts`, `src/game/Goblin.ts`, `src/game/Skeleton.ts`, `src/game/Bat.ts`, `src/game/Orc.ts`, `src/game/Dragon.ts`, `src/game/healing.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
+Reference for every unit class: base stats, growth rates, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Villager.ts`, `src/game/Archer.ts`, `src/game/Soldier.ts`, `src/game/Vanguard.ts`, `src/game/Sapper.ts`, `src/game/Scout.ts`, `src/game/Beast.ts`, `src/game/BeastRider.ts`, `src/game/Siege.ts`, `src/game/Ram.ts`, `src/game/Acolyte.ts`, `src/game/Mage.ts`, `src/game/Elemental.ts`, `src/game/promotions.ts`, `src/game/Slime.ts`, `src/game/Goblin.ts`, `src/game/Skeleton.ts`, `src/game/Bat.ts`, `src/game/Orc.ts`, `src/game/Dragon.ts`, `src/game/healing.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
 
 ## How the numbers work
 
@@ -30,7 +30,7 @@ Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.m
 
 ## Weapons
 
-One starter weapon per armed unit in the unit catalog. Fists, the Wooden Sword, the Wooden Spear, the Iron Spear, the Iron Bow, the Iron Axe, the Powder Keg and the Ballista are carried by a class; the monsters, the Beast, the Ram and the elementals fight with natural weapons (Tackle, Club, Bone Claws, Fangs, Bite, Great Axe, Fire Breath, Fire, Light), which never break; the rest of the wooden set is basic gear no class starts with; the Acolyte knows Light from the start; and the Fire Tome drops as loot for an Acolyte to learn Fire from.
+One starter weapon per armed unit in the unit catalog. Fists, the Wooden Sword, the Wooden Spear, the Iron Spear, the Iron Bow, the Iron Axe, the Powder Keg and the Ballista are carried by a class; the monsters, the Beast, the Ram and the elementals fight with natural weapons (Tackle, Club, Bone Claws, Fangs, Bite, Great Axe, Fire Breath, Fire, Light), which never break; the rest of the wooden set is basic gear no class starts with; the Acolyte knows Light from the start; the Mage knows Fire; and the Fire Tome drops as loot for an Acolyte to learn Fire from (and is the Mage's promotion gift).
 
 | Weapon       | Type     | Hands | Mt  | Hit | Crit | Wt  | Rng | Uses | For (catalog art)                                        |
 | ------------ | -------- | ----- | --- | --- | ---- | --- | --- | ---- | -------------------------------------------------------- |
@@ -39,7 +39,7 @@ One starter weapon per armed unit in the unit catalog. Fists, the Wooden Sword, 
 | Iron Axe     | physical | 1     | 3   | 65  | 0    | 5   | 1   | 40   | Vanguard (axe)                                           |
 | Iron Bow     | physical | 2     | 2   | 80  | 0    | 2   | 2   | 40   | Archer                                                   |
 | Fire Tome    | magical  | 1     | 2   | 85  | 0    | 1   | 1–2 | 30   | Loot (teaches Fire)                                      |
-| Fire         | magical  | 1     | 2   | 85  | 0    | 1   | 1–2 | ∞    | Learned from the Fire Tome; Fire Elemental               |
+| Fire         | magical  | 1     | 2   | 85  | 0    | 1   | 1–2 | ∞    | Mage; learned from the Fire Tome; Fire Elemental         |
 | Light        | magical  | 1     | 0   | 90  | 0    | 0   | 1–2 | ∞    | Acolyte (known from the start), Water and Air Elementals |
 | Powder Keg   | siege    | 2     | 5   | 70  | 0    | 6   | 1–2 | 5    | Sapper                                                   |
 | Ballista     | siege    | 2     | 6   | 70  | 0    | 8   | 2–3 | 10   | Siege                                                    |
@@ -92,18 +92,19 @@ Carries a Wooden Sword, its Fists for when the sword breaks, a Health Potion (+5
 
 ## Promotions
 
-In Warband Mode a villager that has reached **level 5** can promote at camp by spending a **Master Seal** (60 gold from the merchant, or a stage reward offered once someone is a level short of promoting and the warband holds none). It picks one of four classes, defined in `src/game/promotions.ts`. A promotion:
+In Warband Mode a villager or an acolyte that has reached **level 5** can promote at camp by spending a **Master Seal** (60 gold from the merchant, or a stage reward offered once someone is a level short of promoting and the warband holds none). A villager picks one of four classes, an acolyte becomes a Mage; they're defined in `src/game/promotions.ts`. A promotion:
 
 - makes the unit that class: its growths, weapon types, XP rate and skill tree;
-- adds whatever stats the class starts above a villager, on the spot, in full (a max HP or MP gain raises the current value too), and changes MOV by the difference;
+- adds whatever stats the class starts above the class it promotes from, on the spot, in full (a max HP or MP gain raises the current value too), and changes MOV by the difference;
 - carries the class's passive into every battle;
 - hands over the class's weapon (in its inventory, or the convoy when it's full).
 
-Level, XP, items, boons and tome progress carry over. The promoted classes are never recruits, starting picks or Training choices; the specialized units (Scout, Beast, Beast Rider, Siege, Ram, Acolyte) don't promote.
+Level, XP, items, boons and tome progress carry over. The promoted classes are never recruits, starting picks or Training choices; the other specialized units (Scout, Beast, Beast Rider, Siege, Ram) don't promote.
 
 | Base class | Promotes to                       | Gift                                       |
 | ---------- | --------------------------------- | ------------------------------------------ |
 | Villager   | Archer, Soldier, Vanguard, Sapper | Iron Bow, Iron Spear, Iron Axe, Powder Keg |
+| Acolyte    | Mage                              | Fire Tome                                  |
 
 ## Archer
 
@@ -373,7 +374,7 @@ It fights with its Tackle and carries nothing else.
 
 ## Acolyte
 
-A specialized unit that doesn't promote. The healer and the warband's magic user: it mends a wounded ally next to it with its Heal staff, and fights with Light, a weak spell it knows from the start that strikes from one or two tiles away and never runs out. At level 1 a heal restores 5 HP (the staff's 2 power + 3 INT) and Light hits a soldier for 3 (2 through its Shield Wall). A tome it finds (see Tomes above) teaches it a stronger spell. Frail, but its RES and LCK make it hard to hurt with magic or crit.
+A specialized unit that promotes into a Mage at level 5 (see Promotions). The healer and the warband's magic user: it mends a wounded ally next to it with its Heal staff, and fights with Light, a weak spell it knows from the start that strikes from one or two tiles away and never runs out. At level 1 a heal restores 5 HP (the staff's 2 power + 3 INT) and Light hits a soldier for 3 (2 through its Shield Wall). A tome it finds (see Tomes above) teaches it a stronger spell. Frail, but its RES and LCK make it hard to hurt with magic or crit.
 
 | Stat | Base | Growth |
 | ---- | ---- | ------ |
@@ -403,6 +404,36 @@ A specialized unit that doesn't promote. The healer and the warband's magic user
 Level-up skill picks: **Smite** (3 MP, range 1–2, the regular hit with +3 `INT`, +3 more against a monster), **Prayer** (5 MP, aimed at itself: heals every wounded ally next to it for 1 + half its `INT`, rounded down) and **Ward** (2 MP, range 1–2, an ally is left Warded).
 
 Mend heals like the Heal staff without needing one. Knows Light, and carries a Heal staff, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
+
+## Mage
+
+The acolyte's promotion: the battle caster. It trades nothing for more INT, MP and SKL than an acolyte and a flat damage bonus, so its spells hit hardest of any unit from one or two tiles away, but it's just as frail. A promoted acolyte keeps its Heal staff and Mend, and is handed a Fire Tome; a fresh one (an enemy) knows Fire and starts on the stat line below.
+
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 8    | 50%    |
+| MP   | 7    | 100%   |
+| STR  | 1    | 0%     |
+| INT  | 5    | 100%   |
+| SKL  | 3    | 50%    |
+| SPD  | 3    | 25%    |
+| LCK  | 4    | 25%    |
+| DEF  | 1    | 25%    |
+| RES  | 4    | 50%    |
+| MOV  | 5    | –      |
+
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| magical      | Fire            | 100%    |
+
+| Skill | Learned at | Mana | Range | Damage                        |
+| ----- | ---------- | ---- | ----- | ----------------------------- |
+| Mend  | 2          | 3    | 1     | None: heals an ally 2 + `INT` |
+| Flare | 2          | 3    | 1–2   | The regular hit with +4 `INT` |
+
+Level-up skill picks: **Fireball** (4 MP, range 1–3, the regular hit with +1 `INT`, on the target and every foe on the four tiles around it), **Frost Lance** (3 MP, range 1–2, the regular hit, and on a foe right behind the target, leaving both Rooted) and **Siphon** (2 MP, range 1–2, the regular hit, healing the mage for half the damage dealt, rounded up).
+
+Passive, **Arcane Might**: +2 damage. Knows Fire, and carries a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
 ## Water Elemental
 

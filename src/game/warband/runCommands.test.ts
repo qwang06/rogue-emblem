@@ -320,7 +320,7 @@ describe('getLegalRunCommands', () => {
     const session = campWith({ ...newRun(), scrolls: 1 });
     const lessons = getLegalRunCommands(session).filter((command) => command.type === 'learn-secondary');
     // Each unit can learn every other class's set with the scroll.
-    expect(lessons).toHaveLength(20);
+    expect(lessons).toHaveLength(22);
     expect(lessons).toContainEqual({ type: 'learn-secondary', unitId: 'alden', classId: 'acolyte' });
     expect(lessons).not.toContainEqual({ type: 'learn-secondary', unitId: 'alden', classId: 'soldier' });
     for (const command of lessons) expect(() => applyRunCommand(session, command)).not.toThrow();
