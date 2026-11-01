@@ -38,6 +38,7 @@ import {
   TERRAIN_SHEET,
   type BuildingPaletteName,
 } from '../../../../src/game/tileset.ts';
+import fs from 'node:fs';
 import { decode, encode } from './dump-png.js';
 
 const TILE = 32;
@@ -61,7 +62,11 @@ const palette = BUILDING_PALETTES[paletteName];
 if (!palette) throw new Error(`Unknown palette ${paletteName}`);
 
 const sheet = decode(season === 'summer' ? 'src/assets/overworld.png' : `src/assets/overworld-${season}.png`);
-const props = decode('src/assets/map-props.png');
+const props = decode(
+  fs.existsSync(`src/assets/map-props-${season}.png`)
+    ? `src/assets/map-props-${season}.png`
+    : 'src/assets/map-props.png',
+);
 const units = {
   player: decode('src/assets/units/Soldier_01_Idle.png'),
   enemy: decode('src/assets/units/Soldier_05_Idle.png'),

@@ -218,6 +218,17 @@ export const BRIDGE_ART: { vertical: SheetTile; horizontal: SheetTile } = {
 // ford stepping stones and a spike trap. A 32px sheet like the terrain one.
 export const MAP_PROPS_SHEET = { key: 'map-props', columns: 11 };
 
+// The props sheet a map in each season draws its gateways, ford and spikes
+// from: the starship's has its own sci-fi gateways (same layout, made by
+// recolor-season.js); the rest share MAP_PROPS_SHEET.
+export const SEASON_PROPS_SHEETS: Readonly<Record<Season, typeof MAP_PROPS_SHEET>> = {
+  summer: MAP_PROPS_SHEET,
+  autumn: MAP_PROPS_SHEET,
+  winter: MAP_PROPS_SHEET,
+  underworld: MAP_PROPS_SHEET,
+  starship: { ...MAP_PROPS_SHEET, key: 'map-props-starship' },
+};
+
 // Each palette's gateway on MAP_PROPS_SHEET: `posts` (a short post either
 // side of the opening, carrying on the wall's line) under units, `lintel`
 // (the beam across the top) over them.

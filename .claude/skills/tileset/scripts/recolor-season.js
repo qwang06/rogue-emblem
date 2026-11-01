@@ -9,9 +9,10 @@
 //   node .claude/skills/tileset/scripts/recolor-season.js autumn src/assets/overworld.png src/assets/overworld-autumn.png
 //   node .claude/skills/tileset/scripts/recolor-season.js underworld src/assets/overworld.png src/assets/overworld-underworld.png
 //   node .claude/skills/tileset/scripts/recolor-season.js starship src/assets/overworld.png src/assets/overworld-starship.png
+//   (the starship also writes map-props-starship.png beside it)
 
 import { decode, encode } from './dump-png.js';
-import { BUILDING_ART, BUILDING_PALETTES } from '../../../../src/game/tileset.ts';
+import { BUILDING_ART, BUILDING_PALETTES, GATE_ART } from '../../../../src/game/tileset.ts';
 
 const [season, input, output] = process.argv.slice(2);
 
@@ -538,6 +539,73 @@ const SHIP_ACCENTS = {
   'b-orange': ['ffb03a', 'c27410'],
 };
 
+// The starship's gateway through a wall (GATE_ART on MAP_PROPS_SHEET), for
+// map-props-starship.png: steel piers with the palette's accent light and
+// a lit walkway floor (posts, under units), and an energy beam across the
+// top (lintel, over units). Clear pixels show the wall running on under it.
+const SHIP_GATE_POSTS = [
+  'OOOOO......OOOOO',
+  'OHHSO......OHHSO',
+  'OHMSOKKKKKKOHMSO',
+  'OHASOgGGGGgOHASO',
+  'OHMSOKKKKKKOHMSO',
+  'OOOOOPPPPPPOOOOO',
+  'OHMSOPPPPPPOHMSO',
+  'OHMSOPYPPYPOHMSO',
+  'OHASOPPPPPPOHASO',
+  'OHMSOPPPPPPOHMSO',
+  'OHMSOPYPPYPOHMSO',
+  'OHMSOPPPPPPOHMSO',
+  'OOOOOPPPPPPOOOOO',
+  'DDDDDPPPPPPDDDDD',
+  '.....PPPPPP.....',
+  '................',
+];
+const SHIP_GATE_LINTEL = [
+  '................',
+  '................',
+  '....OOOOOOOO....',
+  '....OgGGGGgO....',
+  '....OOOOOOOO....',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+];
+const SHIP_GATE_COLORS = {
+  O: '262b38',
+  H: 'c3ccd9',
+  M: '8b96a9',
+  S: '5c6578',
+  D: '6b7486',
+  K: '3a4152',
+  G: '6ff3ff',
+  g: '23a9cf',
+  P: 'c9ced6',
+  Y: 'f2c84b',
+};
+
+// The starship walls' colors, by the summer a-stone rampart's color in the
+// same spot: outline, steel top, dark face, shadow on the deck, and the
+// tower pieces' sand, orange and gold; its highlight (#f5ffe8) and door
+// (#633d4c) take the palette's accent, as does any other color.
+const SHIP_WALL_ROLES = {
+  '8f4d57': '262b38',
+  d7d3bd: '8b96a9',
+  '9d9387': '5c6578',
+  '84b14d': '6b7486',
+  ffc2a1: 'c3ccd9',
+  cf752b: '8b96a9',
+  f0b541: '5c6578',
+};
+
 const SEASONS = {
   // Golden grass and rust meadows; the green building palette keeps its
   // greens (tree shade #3b7d4f is one of them, so it only changes above).
@@ -732,8 +800,7 @@ if (machines) {
 }
 
 // The starship's buildings, every kind in every palette (their flag tiles
-// cleared: the accent marks the team), and its walls: every rampart group
-// redrawn in steel by brightness, keeping a little of its color.
+// cleared: the accent marks the team), and its walls.
 if (config.structures) {
   const colors = { ...config.machines.colors, W: 'e6fdff', F: '9ccc5a', f: '5d9a45' };
   for (const [name, palette] of Object.entries(BUILDING_PALETTES)) {
@@ -745,18 +812,18 @@ if (config.structures) {
       if (tall) paint(c, row - 1, SHIP_BUILDINGS[`${kind}Top`], tinted);
       paint(c, row - (tall ? 2 : 1), Array(16).fill('................'), tinted);
     }
+    // The walls: every palette's rampart group has the same shapes, so the
+    // a-stone group's colors in the summer sheet name each pixel's role,
+    // redrawn as a steel bulkhead trimmed in the palette's accent.
     const [wc, wr] = palette.wall;
-    const steel = ['262b38', '3a4152', '5c6578', '8b96a9', 'c3ccd9', 'e8eef5'].map(rgb);
-    for (let y = wr * TILE; y < (wr + 5) * TILE; y++) {
-      for (let x = wc * TILE; x < (wc + 6) * TILE; x++) {
-        const px = rows[y][x];
+    const [sc, sr] = BUILDING_PALETTES['a-stone'].wall;
+    const roles = { ...SHIP_WALL_ROLES, f5ffe8: A, '633d4c': a };
+    for (let y = 0; y < 5 * TILE; y++) {
+      for (let x = 0; x < 6 * TILE; x++) {
+        const px = rows[wr * TILE + y][wc * TILE + x];
         if (px[3] === 0) continue;
-        const lum = (0.3 * px[0] + 0.59 * px[1] + 0.11 * px[2]) / 255;
-        const t = Math.min(0.999, 0.15 + lum * 0.7) * (steel.length - 1);
-        const [lo, hi, f] = [steel[Math.floor(t)], steel[Math.floor(t) + 1], t % 1];
-        rows[y][x] = [0, 1, 2]
-          .map((i) => Math.round((lo[i] + (hi[i] - lo[i]) * f) * 0.85 + px[i] * 0.15))
-          .concat(px[3]);
+        const role = roles[hex(summer[sr * TILE + y][sc * TILE + x])] ?? A;
+        rows[wr * TILE + y][wc * TILE + x] = [...rgb(role), px[3]];
       }
     }
   }
@@ -764,3 +831,26 @@ if (config.structures) {
 
 encode(output, rows);
 console.log(`${input} -> ${output}`);
+
+// The starship's own props sheet: map-props.png beside `input` with each
+// palette's gateway redrawn, written beside `output` as map-props-starship.png.
+if (config.structures) {
+  const propsInput = input.replace(/[^/]*$/, 'map-props.png');
+  const propsOutput = output.replace(/[^/]*$/, `map-props-${season}.png`);
+  const props = decode(propsInput);
+  const stamp = (column, row, art, colors) => {
+    for (let y = 0; y < TILE; y++) {
+      for (let x = 0; x < TILE; x++) {
+        const key = art[y >> 1][x >> 1];
+        props[row * TILE + y][column * TILE + x] = key === '.' ? [0, 0, 0, 0] : [...rgb(colors[key]), 255];
+      }
+    }
+  };
+  for (const [name, { posts, lintel }] of Object.entries(GATE_ART)) {
+    const colors = { ...SHIP_GATE_COLORS, A: SHIP_ACCENTS[name][0] };
+    stamp(...posts, SHIP_GATE_POSTS, colors);
+    stamp(...lintel, SHIP_GATE_LINTEL, colors);
+  }
+  encode(propsOutput, props);
+  console.log(`${propsInput} -> ${propsOutput}`);
+}
