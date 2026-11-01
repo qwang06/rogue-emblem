@@ -41,7 +41,7 @@ One 32x32 PNG per reward kind whose card doesn't show an item or unit (`draft`, 
 
 ## Glyph icons: src/assets/glyphs/
 
-16x16 PNGs, transparent, one per `GlyphKind` and per `StatIconKind` except `health` (named by kind, e.g. `crit.png`, `rout.png`), painted with PixelLab in the item icons' style (dark outline, a few shades). Shown at 1x (16 CSS px), 12px in the reward tiles' EXP and the merchant's prices (smoothed there, since pixelated 0.75x drops rows). `glyphIcons.test.ts` checks every kind has one and each is 16x16. `range.png` (a dotted arrow) and `book.png` are the weakest and the first to repaint.
+16x16 PNGs, transparent, one per `GlyphKind` and per `StatIconKind` (named by kind, e.g. `crit.png`, `rout.png`). Most were painted with PixelLab in the item icons' style (dark outline, a few shades); `exp`, `health`, `gold`, `skull`, `danger`, `attack`, `move`, `book`, `skill`, `item`, `settings`, `avoid`, `mp` and `hit` are the UI asset sheet's 8x8 icons doubled, written by `scripts/slice-ui-sheet.js` (rerunning it overwrites them). Shown at 1x (16 CSS px), 12px in the reward tiles' EXP and the merchant's prices (smoothed there, since pixelated 0.75x drops rows). `glyphIcons.test.ts` checks every kind has one and each is 16x16. `range.png` (a dotted arrow) is the weakest and the first to repaint.
 
 ## Boon icons: src/assets/boons/
 
@@ -49,10 +49,13 @@ One 32x32 PNG per level-up boon (`BOONS` in `src/game/warband/boons.ts`), named 
 
 ## UI art: src/assets/ui/
 
-Drawn pixel by pixel by `scripts/draw-ui-art.js` (run it from the repo root after changing a color or shape there; it rewrites every file), at 1x and shown at `--px` (2 CSS px) per art pixel with `image-rendering: pixelated`:
+Cut from the UI asset sheet `ui-sheet-3x.png` (drawn at 3x; its layout is in **[ui-sheet-catalog.md](ui-sheet-catalog.md)**) by `scripts/slice-ui-sheet.js` (run it from the repo root after changing a coordinate or color there; it rewrites every file it owns), at 1x and shown at `--px` (2 CSS px) per art pixel with `image-rendering: pixelated`:
 
-- `frame-parchment.png`, `frame-banner.png`, `frame-banner-red.png`, `frame-banner-green.png`: 24x24 9-slices for CSS `border-image` (`8 fill`). Each edge is 8 bands, outside in: dark outline, brown (gold on the banners), light brown, brown, outline, a light bevel, then two rows of the fill, which act as built-in padding. Every corner has a 6x6 beveled gold plate (light top-left, dark bottom-right, mirrored per corner) and a 2px gold spur running from it along the edge's third band. Parchment fill is `#f0d9a8`, banner blue `#2a4fa8`, banner red `#a82a2a`, banner green `#2a8034` (the red banner with its three reds swapped for greens: outline-side dark `#0e3214`, fill, bevel `#62ba5a`).
-- `hand-pointer.png`: 10x7, a white gauntlet pointing right (index finger along rows 1–3, folded knuckles under it, a blue-grey cuff on the left), outlined `#2a170a`. The fingertip is at x 9, y 2.
+- `frame-parchment.png`, `frame-banner.png`, `frame-banner-red.png`, `frame-banner-green.png`: 36x36 9-slices for CSS `border-image` (`10 fill`). A 6px rim with cut corners and a gem in each corner, then 4px of fill as built-in padding. Parchment is the sheet's peach frame (fill `#ffc2a1`, teal gems); the banners are its slate frame recolored with a dark fill for light text (blue `#404973`, red `#781d4f` with gold gems, green `#2a5530` with gold gems).
+- `name-plate.png`: 48x13, a window title's plate (rose, pointed gem-studded ends). A 3-slice: `border-image: ... 0 8 fill`, the element exactly 13 art pixels tall.
+- `bar-frame.png`: 48x9, a gauge's trough (`--trough` in ui.css): slice `2 3 3 fill`, round a 4-pixel track.
+- `hand-pointer.png`: 11x8, a cream hand pointing right, outlined `#52333f`; the fingertip is at x 10, y 3. `hand-pointer-down.png`: 8x11, the same hand pointing down (the overworld's site marker).
+- `arrow-down.png`, `arrow-up.png`: 5x5 teal triangles (dialog "more" cue, scroll cues).
 
 ## Gate: gates.png
 

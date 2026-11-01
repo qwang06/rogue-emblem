@@ -1,0 +1,48 @@
+# UI asset sheet: src/assets/ui/ui-sheet-3x.png
+
+A 3072x3072 sheet drawn at 3x (every art pixel is a solid 3x3 block), so 1024x1024 art pixels. Coordinates below are art pixels (`x, y, w x h`), the ones `scripts/slice-ui-sheet.js` uses. Background is transparent. The palette is shared across the sheet: dark plum outline `#3d2936`, rose rims `#d09c8e` / `#bd6a62` / `#8f4d57`, peach `#ffc2a1`, slate `#686f99` / `#404973` / `#a3a7c2`, gold `#f0b541` / `#cf752b`, teal gems `#92e8c0` / `#4fa4b8`, red `#e64539`, green `#63ab3f` / `#c8d45d`.
+
+To look at a region, scale it down to 1x (sample every third pixel) and crop; the art is too small to read at the sheet's own size in a downscaled preview.
+
+## Rows, top to bottom
+
+| y        | What                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3–45     | **Window frames**, 36x36 at x 6, 54, 102, 150, 198 (y 6): peach with teal corner gems, slate with red gems, orange with a gold rim and green gems, plain orange, teal. All share one shape: a 6px rim with cut corners and a gem inset at each corner; 10px corners and uniform edges, so `border-image-slice: 10 fill`. Then 42x42 slots: an ornate gold-flourished rose frame (243, 3) and three pillow-shaped cloth panels (291, 339, 387). |
+| 49–89    | **Name plates and labels**, two heights (13 and 19 rows, y 50 and 69): pointed gem plates 48 wide at x 0 (rose, teal gems), 48 (slate, red gems), 96 (brown, green gems), 8px pointed ends; ribbon banners with feet (x 146, 194, 242: peach, slate, gold); flat beveled labels 46 wide (x 289–673: peach, peach with a yellow glow, rose, lavender, lavender glow, navy, gold, gold glow, orange).                                            |
+| 102–128  | Thin rules (y 102) and a row of 16x16 **tab icons** (y 112): bag, helmet, scroll, sword, splat, shield, pot, map, apple on rose, slate and gold tiles.                                                                                                                                                                                                                                                                                         |
+| 130–141  | **Pointers**: 5x5 triangles (left, right, down, up) and hands (left 11x8, right 11x8, down 8x11, up 8x11) and a pennant, in three sets: teal/cream from x 5, red/slate from x 149, green/gold from x 293. Cream right hand at (83, 132), down hand at (100, 131); teal down arrow (38, 134), up arrow (54, 133).                                                                                                                               |
+| 147–157  | Checkbox squares (10x11) and gem studs, in rose, slate and gold.                                                                                                                                                                                                                                                                                                                                                                               |
+| 161–208  | **Buttons**: three rows (rose, red, gold gem-ended) of wide (46), small (18) and square buttons, each normal / highlighted (gold glow) / pressed, then "OK" buttons and round toggles.                                                                                                                                                                                                                                                         |
+| 212–252  | **Bars**: a gauge frame 48x9 at (0, 212) (2-row top rim, 4-row trough, 3-row bottom with shadow) and two fancier frames below (y 227, 243); 40x2 fill strips (teal, red, orange, green, then dotted versions) at x 52 + 48n, y 215 / 231; 32x2 at y 247.                                                                                                                                                                                       |
+| 258–445  | Gamepad and keyboard **button prompts** (round and square face buttons with letters, D-pad, shoulder buttons, sticks), slate.                                                                                                                                                                                                                                                                                                                  |
+| 450–700  | **Bitmap fonts**: two large display fonts (upper case, digits, punctuation; plain and gold) and several small fonts with accented letters.                                                                                                                                                                                                                                                                                                     |
+| 704–800  | **Icons**, 8x8 in a 16px grid from x 4: row A at y 709, row B at y 725. Rows at y 740 / 756 are the same icons with a gold glow (10x10), y 772 / 788 with a dark outline (10x10).                                                                                                                                                                                                                                                              |
+| 800–960  | Two open books (parchment pages), with ribbon bookmarks.                                                                                                                                                                                                                                                                                                                                                                                       |
+| 820–940  | Pennant tabs in red, magenta, green, orange, blue (4 rows).                                                                                                                                                                                                                                                                                                                                                                                    |
+| 975–1010 | Hanging banners in the same colors.                                                                                                                                                                                                                                                                                                                                                                                                            |
+
+## Icons (8x8)
+
+| Col | Row A (y 709)    | Row B (y 725)    |
+| --- | ---------------- | ---------------- |
+| 0   | orange star      | red potion       |
+| 1   | grey star        | magnet           |
+| 2   | red heart        | gear             |
+| 3   | grey heart       | music note       |
+| 4   | gold coin        | speaker          |
+| 5   | skull            | floppy disk      |
+| 6   | exclamation mark | feather          |
+| 7   | question mark    | bronze key       |
+| 8   | sword            | silver key       |
+| 9   | shield           | gold key         |
+| 10  | boot             | green flask      |
+| 11  | closed book      | cyan flask       |
+| 12  | wand             | red drop         |
+| 13  | red cross        | "f" social badge |
+| 14  | pouch            | target           |
+| 15  | leaf             | dark "x" badge   |
+
+## Used in the game
+
+`slice-ui-sheet.js` writes: `frame-parchment.png` (peach frame), `frame-banner.png` / `-red` / `-green` (the slate frame, recolored dark for light text), `name-plate.png` (rose gem plate, 13 rows), `hand-pointer.png` and `hand-pointer-down.png`, `bar-frame.png` (gauge frame), `arrow-down.png` / `arrow-up.png`, and 14 glyphs in `src/assets/glyphs/` (doubled to 16x16; the script lists which icon each kind uses). Unused so far: the buttons, the tab icons, the button prompts, the fonts, the books and the pennants.

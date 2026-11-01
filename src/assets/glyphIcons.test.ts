@@ -3,13 +3,13 @@ import { describe, expect, it } from 'vitest';
 
 const dir = new URL('./glyphs/', import.meta.url);
 
-// Every GlyphKind and every StatIconKind but health (a stat boon icon): the
-// painted art GlyphIcon and StatIcon show over their 8x8 bitmaps.
+// Every GlyphKind and every StatIconKind: the art GlyphIcon and StatIcon
+// show over their 8x8 bitmaps.
 const KINDS = [
   ...['auto', 'danger', 'settings', 'home', 'skill', 'item', 'wait', 'undo'],
   ...['roster', 'promote', 'book', 'rout', 'seize', 'boss', 'survive', 'turn'],
   ...['gold', 'lock', 'check', 'skull', 'mp', 'exp', 'move', 'range', 'weight', 'uses'],
-  ...['attack', 'avoid', 'hit', 'crit'],
+  ...['attack', 'avoid', 'hit', 'crit', 'health'],
 ];
 
 describe('glyph icons', () => {
@@ -19,7 +19,7 @@ describe('glyph icons', () => {
     expect(files.filter((file) => !KINDS.includes(file))).toEqual([]);
   });
 
-  it('paints each icon at 16x16', () => {
+  it('draws each icon at 16x16', () => {
     for (const file of readdirSync(dir)) {
       const png = readFileSync(new URL(file, dir));
       expect([png.readUInt32BE(16), png.readUInt32BE(20)], file).toEqual([16, 16]);
