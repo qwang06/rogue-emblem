@@ -773,6 +773,11 @@ function useSkill(draft: Draft, unitId: string, skillId: string, target: Point) 
       draft.events.push({ type: 'status', unitId, targetId: victim.unitId, status: skill.status });
     }
   }
+  if (skill.selfStatus) {
+    const self = draft.edit(unitId);
+    self.statuses = addStatus(self.statuses, skill.selfStatus);
+    draft.events.push({ type: 'status', unitId, targetId: unitId, status: skill.selfStatus });
+  }
 
   const [aimed] = blows;
   const shoved = skill.push && aimed?.defender.isAlive() ? push(draft, unitId, from, aimed.victim) : null;

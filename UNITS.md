@@ -162,7 +162,7 @@ The spear-and-shield infantry: the enemy in the demo battle. Villagers become on
 | Shove        | 1          | 1    | 1     | None; pushes the foe a tile                     |
 | Shield Bash  | 2          | 3    | 1     | The regular hit with +1 STR, then pushes a tile |
 
-Level-up skill picks: **Lunge** (2 MP, range 1–2, the regular hit with +2 STR) and **Phalanx** (2 MP, aimed at itself: every ally next to it is left Guarded).
+Level-up skill picks: **Lunge** (2 MP, range 1–2, the regular hit with +2 STR), **Phalanx** (2 MP, aimed at itself: every ally next to it is left Guarded) and **Taunt** (2 MP, aimed at itself: no damage, every foe within 2 tiles is left Taunted and must go after a Taunting foe on its next phase; the soldier is left Taunting until your next phase).
 
 Passive, **Shield Wall**: takes 1 less damage when attacked. Carries an Iron Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 

@@ -40,6 +40,26 @@ describe('planUnitTurn', () => {
     expect(planUnitTurn(state, 'hero')[1]).toEqual({ type: 'wait', unitId: 'hero' });
   });
 
+  it('goes after a Taunting foe while Taunted, over an easier one', () => {
+    const taunted = makeTestUnit({ team: 'enemy' });
+    const tank = makeTestUnit({ team: 'player', defense: 10 });
+    const weak = makeTestUnit({ team: 'player', health: 1 });
+    const state = createTestBattle(
+      {
+        foe: { unit: taunted, at: { x: 3, y: 0 } },
+        weak: { unit: weak, at: { x: 2, y: 0 } },
+        tank: { unit: tank, at: { x: 5, y: 0 } },
+      },
+      { width: 8 },
+    );
+    expect(planUnitTurn(state, 'foe')[1]).toEqual({ type: 'attack', unitId: 'foe', target: { x: 2, y: 0 } });
+    taunted.statuses = ['taunted'];
+    tank.statuses = ['taunting'];
+    expect(planUnitTurn(state, 'foe')[1]).toEqual({ type: 'attack', unitId: 'foe', target: { x: 5, y: 0 } });
+    tank.statuses = [];
+    expect(planUnitTurn(state, 'foe')[1]).toEqual({ type: 'attack', unitId: 'foe', target: { x: 2, y: 0 } });
+  });
+
   it('plans nothing for a unit not in play', () => {
     expect(planUnitTurn(duel(), 'nobody')).toEqual([]);
   });

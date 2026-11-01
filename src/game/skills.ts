@@ -61,6 +61,8 @@ import { getModifierSkills, type Modifier } from './modifiers.ts';
 // Some skills are aimed at a tile rather than a unit (see terrainSkills.ts):
 // a `mine` skill lays a hidden mine dealing that much on an empty tile,
 // and a `breach` skill knocks down a wall or rock.
+//
+// A `selfStatus` skill also leaves that status on its user (Taunt).
 
 export interface Skill {
   id: string;
@@ -88,9 +90,10 @@ export interface Skill {
   chargeMight?: number;
   mine?: number;
   breach?: boolean;
+  selfStatus?: StatusId;
 }
 
-export type SkillArea = 'sides' | 'line' | 'burst';
+export type SkillArea = 'sides' | 'line' | 'burst' | 'wide';
 
 export interface SkillTreeEntry {
   level: number;
@@ -399,6 +402,18 @@ export const BREACHING_SHOT = promotionSkill('breaching-shot', 'Breaching Shot',
   animation: 'stone',
 });
 
+// A challenge: no damage, but every foe within 2 tiles is left Taunted
+// (it must go after a Taunting foe on its next phase) and the user
+// Taunting until its own next phase.
+export const TAUNT = promotionSkill('taunt', 'Taunt', {
+  manaCost: 2,
+  range: 0,
+  damageScale: 0,
+  area: 'wide',
+  status: 'taunted',
+  selfStatus: 'taunting',
+});
+
 // A blow that splits armor: the user's regular attack with 2 more power on
 // an adjacent foe, which it leaves Sundered (3 more damage from every hit).
 export const SUNDER = promotionSkill('sunder', 'Sunder', { might: 2, status: 'sundered' });
@@ -507,7 +522,7 @@ export const CLASS_SKILL_PICKS: Readonly<Record<string, readonly Skill[]>> = Obj
   villager: Object.freeze([LEND_A_HAND]),
   archer: Object.freeze([PIERCING_SHOT, PINNING_SHOT, DISENGAGE]),
   vanguard: Object.freeze([SUNDER, RECKLESS_SWING, JUMP_SWING]),
-  soldier: Object.freeze([LUNGE, PHALANX]),
+  soldier: Object.freeze([LUNGE, PHALANX, TAUNT]),
   sapper: Object.freeze([SHRAPNEL, LAY_MINE, BREACH]),
   acolyte: Object.freeze([SMITE, PRAYER, WARD]),
   scout: Object.freeze([MARK, TAILWIND, AIRLIFT]),
@@ -693,6 +708,14 @@ export function getSkillAreaTiles(skill: Pick<Skill, 'area'>, from: Point, targe
         { x: target.x - 1, y: target.y },
       ];
       break;
+    case 'wide':
+      tiles = [];
+      for (let y = -2; y <= 2; y++) {
+        for (let x = -2; x <= 2; x++) {
+          if (Math.abs(x) + Math.abs(y) <= 2) tiles.push({ x: target.x + x, y: target.y + y });
+        }
+      }
+      break;
   }
   return tiles.filter(
     (tile) => (tile.x !== from.x || tile.y !== from.y) && (tile.x !== target.x || tile.y !== target.y),
@@ -743,6 +766,7 @@ const AREA_PHRASES: Readonly<Record<SkillArea, string>> = Object.freeze({
   sides: 'and those on either side of it',
   line: 'and the one behind it',
   burst: 'and the four tiles around it',
+  wide: 'and every tile within 2 of it',
 });
 
 export function describeSkill(skill: Skill): string {
@@ -767,7 +791,9 @@ export function describeSkill(skill: Skill): string {
   const scale = skill.damageScale ?? 1;
   if (scale === 0 && skill.push) return `Pushes a foe ${reach} a tile away.`;
   if (scale === 0 && status) {
-    if (skill.range === 0) return `Leaves every foe next to it ${leaves}.`;
+    const around = skill.area === 'wide' ? 'within 2 tiles' : 'next to it';
+    const self = skill.selfStatus ? `, and itself ${STATUSES[skill.selfStatus].label} until your next phase` : '';
+    if (skill.range === 0) return `Leaves every foe ${around} ${leaves}${self}.`;
     return `Leaves a foe ${reach} ${leaves}.`;
   }
   const hit = scale === 1 ? 'Its regular hit' : scale === 0.5 ? 'Half its regular hit' : `${scale}× its regular hit`;
