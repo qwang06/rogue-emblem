@@ -182,7 +182,7 @@
 .boon-pick__level {
   margin: 0 0 8px;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
   color: var(--fg);
 }
 
@@ -211,7 +211,7 @@
   padding: 6px 4px 0;
   border-top: var(--px) solid var(--muted);
   font-size: 0.875rem;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
   text-align: left;
 }
 

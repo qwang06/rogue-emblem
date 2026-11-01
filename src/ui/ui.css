@@ -1,22 +1,83 @@
 /* ---- Theme ----------------------------------------------------------- */
 
-/* Silver (Poppy Works, CC BY 4.0), cut down to Latin, punctuation, arrows
-   and the symbols the UI draws. Its capitals are under half its em, so it
-   is scaled up to Pixelify Sans's proportions (capitals 0.7em, a line
-   0.92em above the baseline and 0.28em below), which the UI's sizes and
-   line heights were set for. */
+/* The painted look's two faces, both SIL OFL 1.1, Latin subsets from
+   Fontsource. Alegreya Sans (Juan Pablo del Peral, Huerta Tipográfica) is
+   the body: a humanist sans with a calligraphic hand that reads at small
+   sizes. Cinzel (Natanael Gama) is the display face: carved Roman capitals
+   for window titles, name plates and banners. Both are adjusted to the
+   proportions the UI's sizes and line heights were set for (capitals about
+   0.7em, a line 0.92em above the baseline and 0.28em below), so swapping
+   faces changes no box. */
 @font-face {
-  font-family: 'Silver';
-  src: url('../assets/fonts/silver.woff2') format('woff2');
+  font-family: 'Alegreya Sans';
+  src: url('../assets/fonts/alegreya-sans-latin-400-normal.woff2') format('woff2');
+  font-weight: 400;
   font-display: block;
-  size-adjust: 150%;
+  size-adjust: 108%;
   /* Percentages of the adjusted size: 0.92em and 0.28em after it. */
-  ascent-override: 61%;
-  descent-override: 19%;
+  ascent-override: 85%;
+  descent-override: 26%;
 }
 
-/* A GBA tactics look: windows are parchment in a dark brown frame with
-   gold corner plates, text is a chunky pixel font in dark brown, and the
+@font-face {
+  font-family: 'Alegreya Sans';
+  src: url('../assets/fonts/alegreya-sans-latin-400-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: block;
+  size-adjust: 108%;
+  ascent-override: 85%;
+  descent-override: 26%;
+}
+
+@font-face {
+  font-family: 'Alegreya Sans';
+  src: url('../assets/fonts/alegreya-sans-latin-500-normal.woff2') format('woff2');
+  font-weight: 500;
+  font-display: block;
+  size-adjust: 108%;
+  ascent-override: 85%;
+  descent-override: 26%;
+}
+
+@font-face {
+  font-family: 'Alegreya Sans';
+  src: url('../assets/fonts/alegreya-sans-latin-700-normal.woff2') format('woff2');
+  font-weight: 600 700;
+  font-display: block;
+  size-adjust: 108%;
+  ascent-override: 85%;
+  descent-override: 26%;
+}
+
+@font-face {
+  font-family: 'Alegreya Sans';
+  src: url('../assets/fonts/alegreya-sans-latin-800-normal.woff2') format('woff2');
+  font-weight: 800 900;
+  font-display: block;
+  size-adjust: 108%;
+  ascent-override: 85%;
+  descent-override: 26%;
+}
+
+@font-face {
+  font-family: 'Cinzel';
+  src: url('../assets/fonts/cinzel-latin-700-normal.woff2') format('woff2');
+  font-weight: 400 800;
+  font-display: block;
+  ascent-override: 92%;
+  descent-override: 28%;
+}
+
+@font-face {
+  font-family: 'Cinzel';
+  src: url('../assets/fonts/cinzel-latin-900-normal.woff2') format('woff2');
+  font-weight: 900;
+  font-display: block;
+}
+
+/* A painted tactics look: windows are parchment in a wooden frame with
+   brass corner caps, text is dark brown (Cinzel titles over Alegreya Sans), and the
    selection cue is a white gauntlet pointing at the row. The page around
    the map is dark wood, so anything drawn straight on it (the header, the
    title and config pages) uses the light text set in `.on-dark`. */
@@ -59,12 +120,14 @@
   --bar-fg: #fff8e8;
   --rule: var(--px) solid var(--muted);
   --border: var(--px) solid var(--muted);
-  /* One face for everything: a pixel font, set in caps where the GBA
-     would. */
-  --pixel: 'Silver', ui-monospace, monospace;
-  --sans: var(--pixel);
-  --display: var(--pixel);
-  --mono: var(--pixel);
+  /* Body text in Alegreya Sans, titles in Cinzel. The arrows, stars and
+     other symbols the fonts lack fall back to the system's symbol faces.
+     --mono is the body face too: numbers line up because the whole page
+     sets lining, tabular figures. */
+  --symbols: 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', sans-serif;
+  --sans: 'Alegreya Sans', 'Trebuchet MS', var(--symbols);
+  --display: 'Cinzel', Georgia, var(--symbols);
+  --mono: var(--sans);
   --radius: 0;
   --radius-sm: 0;
   /* Lifts windows that float over the map off it: a hard pixel drop. */
@@ -150,11 +213,9 @@ body {
      and the boxes sized around it: 28px from a 560px wide window up,
      shrinking with the window below that so phones still fit. */
   font-size: clamp(16px, 5vw, 28px);
-  font-variant-numeric: tabular-nums;
-  /* Pixel fonts' "fi" and "fl" ligatures can draw as other letters
-     ("Flawless" read "Aawless" in Pixelify Sans), so letters are never
-     joined. */
-  font-variant-ligatures: none;
+  /* Alegreya Sans's default figures are old-style and proportional; stats
+     and counters want them lining and all one width. */
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 /* ---- Page layout ---------------------------------------------------- */
@@ -351,7 +412,7 @@ a.header-button {
 .settings__value {
   width: 2.6rem;
   text-align: center;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 .settings__value[data-muted='true'] {
@@ -507,10 +568,13 @@ a.header-button {
   transform: translateY(-80%);
   margin: 0;
   padding: 0 8px;
+  font-family: var(--display);
   font-size: 0.8125rem;
   font-weight: 700;
   line-height: 1.5;
-  letter-spacing: 0.04em;
+  /* Cinzel's capitals are wide already: little tracking, and one line. */
+  letter-spacing: 0.02em;
+  white-space: nowrap;
   text-align: left;
   text-transform: uppercase;
   color: var(--fg-bright);
@@ -690,7 +754,7 @@ a.header-button {
 .meter__value {
   min-width: 3.5rem;
   text-align: right;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 /* A stat's icon (StatLabel), with its abbreviation beside it on the unit
@@ -1085,7 +1149,7 @@ kbd {
   font-size: 1.0625rem;
   font-weight: 700;
   line-height: 1.4;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
   color: var(--fg-bright);
 }
 
@@ -1246,7 +1310,7 @@ kbd {
   align-items: center;
   gap: 3px;
   white-space: nowrap;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 /* ---- Experience and level ups ----------------------------------------- */
@@ -1389,7 +1453,7 @@ kbd {
   padding-top: 6px;
   border-top: var(--rule);
   font-size: 0.875rem;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 .level-up__stat {
@@ -1890,7 +1954,7 @@ kbd {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 .page-header .turn-indicator__phase,
@@ -1903,10 +1967,10 @@ kbd {
   border-image-width: calc(4 * var(--px));
 }
 
-/* Bright cyan caps on the blue banner (pale on the red one), as on the
-   GBA. */
+/* Bright cyan Cinzel capitals on the blue banner (pale on the red one). */
 .turn-indicator__phase,
 .phase-banner {
+  font-family: var(--display);
   color: #7fe8ff;
 }
 
@@ -2083,7 +2147,7 @@ kbd {
   gap: 6px;
   margin: 0;
   text-align: center;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 .run-summary__stat {
@@ -2170,7 +2234,7 @@ kbd {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 .run-summary__renown-total {
@@ -2501,7 +2565,7 @@ kbd {
   justify-items: center;
   margin: 0;
   padding: 0.3em 0 0.34em;
-  font-family: 'Cinzel', Georgia, serif;
+  font-family: var(--display);
   font-size: clamp(38.5px, min(13vw, 15vh), 140px);
   font-weight: 900;
   line-height: 0.95;
@@ -2806,7 +2870,7 @@ kbd {
   line-height: 1.5;
   text-align: center;
   color: var(--fg);
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 /* In the flow (not absolutely placed) so it can never sit on the menu:
@@ -3880,7 +3944,7 @@ textarea.draft-input {
   padding-top: 6px;
   border-top: var(--rule);
   font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 .reward-card__stat {
@@ -4000,7 +4064,7 @@ textarea.draft-input {
   min-width: 0;
   font-size: 0.8125rem;
   line-height: 1.35;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 .reward-team__sprite {
@@ -4251,7 +4315,7 @@ textarea.draft-input {
 
 .roster-screen__meta {
   font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
   color: var(--fg-dim);
 }
 
@@ -4284,7 +4348,7 @@ textarea.draft-input {
   gap: 2px;
   min-width: calc(16px + 4ch);
   font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
   color: var(--fg-dim);
 }
 
@@ -4302,7 +4366,7 @@ textarea.draft-input {
   gap: 2px;
   margin-left: auto;
   font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
   color: var(--fg-dim);
 }
 
@@ -4367,7 +4431,7 @@ textarea.draft-input {
   padding: 0 8px;
   font-size: 0.8125rem;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
   line-height: 1.5;
   text-transform: uppercase;
   color: var(--yellow);
@@ -4466,7 +4530,7 @@ textarea.draft-input {
   gap: 2px;
   min-width: calc(12px + 4ch);
   font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
   text-align: right;
   color: var(--yellow);
 }
@@ -4680,7 +4744,7 @@ textarea.draft-input {
   min-width: 9ch;
   margin-left: auto;
   font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
   text-align: right;
   color: var(--yellow);
 }
