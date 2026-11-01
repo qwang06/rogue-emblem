@@ -52,12 +52,13 @@ export const SOLDIER_ITEMS: Inventory = Object.freeze([weaponEntry(IRON_SPEAR), 
 // physical weapons, and it carries an Iron Spear and the potions unless
 // given other items. Levels up with the soldier growth rates and caps.
 export class Soldier extends Unit {
-  constructor({ name = 'Soldier', team, level = 1, items = SOLDIER_ITEMS }: ClassUnitOptions) {
+  constructor({ name = 'Soldier', team, level = 1, items = SOLDIER_ITEMS, faction }: ClassUnitOptions) {
     super({
       name,
       unitClass: 'soldier',
       level,
       team,
+      faction,
       items,
       weaponTypes: SOLDIER_WEAPON_TYPES,
       growths: SOLDIER_GROWTHS,

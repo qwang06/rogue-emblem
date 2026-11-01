@@ -55,12 +55,13 @@ export const ARCHER_ITEMS: Inventory = Object.freeze([weaponEntry(IRON_BOW), ...
 // adjacent foes) and the potions unless given other items. Levels up with
 // the archer growth rates and caps.
 export class Archer extends Unit {
-  constructor({ name = 'Archer', team, level = 1, items = ARCHER_ITEMS }: ClassUnitOptions) {
+  constructor({ name = 'Archer', team, level = 1, items = ARCHER_ITEMS, faction }: ClassUnitOptions) {
     super({
       name,
       unitClass: 'archer',
       level,
       team,
+      faction,
       items,
       weaponTypes: ARCHER_WEAPON_TYPES,
       growths: ARCHER_GROWTHS,

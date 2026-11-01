@@ -4,7 +4,7 @@ import { TRAINEE_ID } from '../trainingLevel.ts';
 import { getCommands } from './history.ts';
 import { createBattle, runBattle } from './runner.ts';
 
-const training: BattleSetup = { mode: 'training', unitClass: 'warrior' };
+const training: BattleSetup = { mode: 'training', unitClass: 'villager' };
 
 describe('runBattle', () => {
   it('plays the script for the player and the AI for the enemy', () => {

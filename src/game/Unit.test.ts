@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GrowthTable } from './experience.ts';
 import { HEALTH_POTION, MANA_POTION, WOODEN_ARMOR, WOODEN_SHIELD, type InventoryEntry } from './items.ts';
 import { Unit } from './Unit.ts';
-import { Warrior } from './Warrior.ts';
+import { Villager } from './Villager.ts';
 import { FIRE, FIRE_SPELL, FISTS, IRON_BOW, IRON_SPEAR, weaponEntry, type WeaponType } from './weapons.ts';
 
 function makeUnit(overrides = {}) {
@@ -188,15 +188,15 @@ describe('Unit', () => {
 
   describe('clone', () => {
     it('copies the unit, class and all, without tying the two together', () => {
-      const warrior = new Warrior({ team: 'player' });
-      const copy = warrior.clone();
-      expect(copy).toBeInstanceOf(Warrior);
-      expect(copy).not.toBe(warrior);
+      const villager = new Villager({ team: 'player' });
+      const copy = villager.clone();
+      expect(copy).toBeInstanceOf(Villager);
+      expect(copy).not.toBe(villager);
       copy.useItem(copy.items.find((entry) => entry.item.kind === 'consumable')!.item.id);
       copy.takeDamage(3);
-      expect(copy.health).toBe(warrior.maxHealth - 3);
-      expect(warrior.health).toBe(warrior.maxHealth);
-      expect(copy.items).not.toEqual(warrior.items);
+      expect(copy.health).toBe(villager.maxHealth - 3);
+      expect(villager.health).toBe(villager.maxHealth);
+      expect(copy.items).not.toEqual(villager.items);
     });
   });
 

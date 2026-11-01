@@ -52,8 +52,8 @@ export const PILGRIMS = origin({
 export const LONE_WOLF = origin({
   id: 'lone-wolf',
   label: 'Lone Wolf',
-  description: 'One Warrior alone, who picks two starting relics.',
-  units: ['warrior'],
+  description: 'One Villager alone, who picks two starting relics.',
+  units: ['villager'],
   relicPicks: 2,
 });
 

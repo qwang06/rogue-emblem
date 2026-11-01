@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Archer } from '../Archer.ts';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
-import { Warrior } from '../Warrior.ts';
+import { Villager } from '../Villager.ts';
 import { advanceStage, applyBattleResult, createRun, restoreRoster, type RunState } from './run.ts';
 import { formatPlayTime, summarizeRun } from './runSummary.ts';
 
@@ -12,7 +12,7 @@ function startingRun(): RunState {
     new Map<string, Unit>([
       ['alden', new Soldier({ name: 'Alden', team: 'player' })],
       ['bryn', new Archer({ name: 'Bryn', team: 'player' })],
-      ['cato', new Warrior({ name: 'Cato', team: 'player' })],
+      ['cato', new Villager({ name: 'Cato', team: 'player' })],
     ]),
   );
 }

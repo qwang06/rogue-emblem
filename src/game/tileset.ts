@@ -207,7 +207,7 @@ export const SPIKES_ART: SheetTile = [10, 1];
 // whichever side it's on. Each names a set of sheets, one per animation in
 // UNIT_ANIMATIONS (see unitSheetKey).
 export const UNIT_SPRITES: Record<string, string> = {
-  warrior: 'Warrior_02',
+  villager: 'Warrior_02',
   soldier: 'Soldier_03',
   archer: 'Amazon_01',
   vanguard: 'Vanguard_04',
@@ -237,7 +237,7 @@ export const UNIT_SPRITES: Record<string, string> = {
 };
 
 // Art for a unit whose class has none of its own (or no class).
-export const DEFAULT_UNIT_SPRITE = UNIT_SPRITES.warrior;
+export const DEFAULT_UNIT_SPRITE = UNIT_SPRITES.villager;
 
 // The unit art for a unit class (a key of UNIT_SPRITES), falling back to
 // DEFAULT_UNIT_SPRITE.

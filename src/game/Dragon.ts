@@ -63,6 +63,7 @@ export class Dragon extends Unit {
       unitClass: 'dragon',
       level,
       team,
+      faction: null,
       items,
       weaponTypes: DRAGON_WEAPON_TYPES,
       growths: DRAGON_GROWTHS,

@@ -3,7 +3,7 @@ import { Archer } from '../Archer.ts';
 import { MASTER_SEAL, MAX_INVENTORY_SLOTS } from '../items.ts';
 import { PROMOTION_LEVEL } from '../promotions.ts';
 import type { Unit } from '../Unit.ts';
-import { Warrior } from '../Warrior.ts';
+import { Villager } from '../Villager.ts';
 import { BALLISTA } from '../weapons.ts';
 import { canPromoteInRun, countSeals, getPromotionCandidates, promoteInRun } from './promotion.ts';
 import { createRun, restoreUnit, type ItemSnapshot, type RunState } from './run.ts';
@@ -14,7 +14,7 @@ function campRun({ convoy = [SEAL], level = PROMOTION_LEVEL } = {}): RunState {
   const run = createRun(
     3,
     new Map<string, Unit>([
-      ['ada', new Warrior({ name: 'Ada', team: 'player' })],
+      ['ada', new Villager({ name: 'Ada', team: 'player' })],
       ['bryn', new Archer({ name: 'Bryn', team: 'player' })],
     ]),
   );

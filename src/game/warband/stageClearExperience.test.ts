@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
-import { Warrior } from '../Warrior.ts';
+import { Villager } from '../Villager.ts';
 import { createRun, type RunState, type UnitSnapshot } from './run.ts';
 import { applyStageClearExperience, getStageClearLevel } from './stageClearExperience.ts';
 
@@ -10,7 +10,7 @@ function newRun(): RunState {
     7,
     new Map<string, Unit>([
       ['alden', new Soldier({ name: 'Alden', team: 'player' })],
-      ['cato', new Warrior({ name: 'Cato', team: 'player' })],
+      ['cato', new Villager({ name: 'Cato', team: 'player' })],
     ]),
   );
 }

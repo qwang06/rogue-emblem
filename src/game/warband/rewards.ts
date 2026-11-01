@@ -53,7 +53,7 @@ export const DRAFT_CHOICES = 3;
 // The most units a warband can hold.
 export const MAX_ROSTER_SIZE = 8;
 
-// The classes a recruit can be: every class but the warrior, which is
+// The classes a recruit can be: every class but the villager, which is
 // only ever a starting pick.
 export const RECRUIT_CLASS_IDS: readonly string[] = Object.freeze([
   'soldier',

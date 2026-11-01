@@ -255,7 +255,7 @@ describe('equip', () => {
 
 describe('skill', () => {
   it('spends mana, deals the damage and earns XP', () => {
-    const hero = makeTestUnit({ team: 'player', unitClass: 'warrior', level: 2, mana: 4 });
+    const hero = makeTestUnit({ team: 'player', unitClass: 'villager', level: 2, mana: 4 });
     const start = createTestBattle({
       hero: { unit: hero, at: { x: 0, y: 0 } },
       foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 4, y: 0 } },

@@ -91,7 +91,7 @@ describe('createOriginRun', () => {
 
 describe('starting relic picks', () => {
   it('picks one for most origins, and a run from before origins', () => {
-    expect(getRelicPicks(createOriginRun(1, 'warrior', 'A'))).toBe(1);
+    expect(getRelicPicks(createOriginRun(1, 'villager', 'A'))).toBe(1);
     expect(getRelicPicks({})).toBe(1);
     expect(getRelicPicks(createOriginRun(1, 'lone-wolf', 'A'))).toBe(2);
   });

@@ -41,7 +41,7 @@ import { findBoon } from '../game/warband/boons.ts';
 import { Archer } from '../game/Archer.ts';
 import { createStartingWarband } from '../game/warband/stageLevel.ts';
 import { PLAYER_ROSTER } from '../game/demoLevel.ts';
-import { Warrior } from '../game/Warrior.ts';
+import { Villager } from '../game/Villager.ts';
 
 const makeUnit = () =>
   new Unit({ name: 'Soldier', health: 10, mana: 5, strength: 4, defense: 2, movement: 5, team: 'player' });
@@ -670,13 +670,13 @@ describe('toObjectiveView', () => {
 
 describe('toRunOverView', () => {
   it('carries the stage and the names of the fallen in order, frozen', () => {
-    const warriors = Object.entries(PLAYER_ROSTER).map(
-      ([id, name]) => [id, new Warrior({ name, team: 'player' })] as const,
+    const villagers = Object.entries(PLAYER_ROSTER).map(
+      ([id, name]) => [id, new Villager({ name, team: 'player' })] as const,
     );
-    const run = createRun(1, new Map(warriors));
+    const run = createRun(1, new Map(villagers));
     const units = restoreRoster(run);
-    units.get('warrior-2')!.takeDamage(99);
-    units.get('warrior-1')!.takeDamage(99);
+    units.get('villager-2')!.takeDamage(99);
+    units.get('villager-1')!.takeDamage(99);
     const view = toRunOverView({ ...applyBattleResult(run, { units }), stage: 4 });
     expect(view).toEqual({ stage: 4, won: false, fallen: ['Alden', 'Bryn'] });
     expect(Object.isFrozen(view)).toBe(true);

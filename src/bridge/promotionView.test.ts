@@ -3,7 +3,7 @@ import { Archer } from '../game/Archer.ts';
 import { MASTER_SEAL } from '../game/items.ts';
 import { PROMOTION_LEVEL } from '../game/promotions.ts';
 import type { Unit } from '../game/Unit.ts';
-import { Warrior } from '../game/Warrior.ts';
+import { Villager } from '../game/Villager.ts';
 import { openPromotionScreen, pointPromotionCursor } from '../game/warband/promotionScreen.ts';
 import { toPromotionScreenView } from './promotionView.ts';
 import { createRun, type RunState } from '../game/warband/run.ts';
@@ -14,7 +14,7 @@ function campRun(seals = 1): RunState {
   const run = createRun(
     3,
     new Map<string, Unit>([
-      ['ada', new Warrior({ name: 'Ada', team: 'player' })],
+      ['ada', new Villager({ name: 'Ada', team: 'player' })],
       ['bryn', new Archer({ name: 'Bryn', team: 'player' })],
     ]),
   );

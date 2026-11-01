@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { HEALTH_POTION } from '../items.ts';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
-import { Warrior } from '../Warrior.ts';
+import { Villager } from '../Villager.ts';
 import { addToConvoy, EVENTS, findEvent, getEventChoices, resolveEvent, rollEvent } from './events.ts';
 import { MAX_ROSTER_SIZE } from './rewards.ts';
 import { createRun, type RunState } from './run.ts';
@@ -12,7 +12,7 @@ function baseRun(gold = 100): RunState {
     9,
     new Map<string, Unit>([
       ['alden', new Soldier({ name: 'Alden', team: 'player' })],
-      ['cato', new Warrior({ name: 'Cato', team: 'player' })],
+      ['cato', new Villager({ name: 'Cato', team: 'player' })],
     ]),
   );
   return { ...run, gold, roster: run.roster.map((u) => ({ ...u, health: u.maxHealth - 2 })) };

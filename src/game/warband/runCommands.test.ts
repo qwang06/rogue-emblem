@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
-import { Warrior } from '../Warrior.ts';
+import { Villager } from '../Villager.ts';
 import { WOODEN_SPEAR, WOODEN_SWORD } from '../weapons.ts';
 import { DEFAULT_CONTENT } from '../battleSetup.ts';
 import { MASTER_SEAL } from '../items.ts';
@@ -32,7 +32,7 @@ function newRun(stage = 2): RunState {
     7,
     new Map<string, Unit>([
       ['alden', new Soldier({ name: 'Alden', team: 'player' })],
-      ['cato', new Warrior({ name: 'Cato', team: 'player' })],
+      ['cato', new Villager({ name: 'Cato', team: 'player' })],
     ]),
   );
   let staged = run;
@@ -238,9 +238,9 @@ describe('camp', () => {
     const run = newRun();
     const veteran = { ...run.roster[1], level: 2 };
     const camped = campWith({ ...run, gold: 100, roster: [run.roster[0], veteran] });
-    const taught = apply(camped, { type: 'learn-secondary', unitId: 'alden', classId: 'warrior' });
+    const taught = apply(camped, { type: 'learn-secondary', unitId: 'alden', classId: 'villager' });
     expect(taught.run.gold).toBe(100 - MENTOR_FEE);
-    expect(taught.run.roster[0].secondaryClass).toBe('warrior');
+    expect(taught.run.roster[0].secondaryClass).toBe('villager');
     expect(() => apply(camped, { type: 'learn-secondary', unitId: 'alden', classId: 'archer' })).toThrow(/archer/);
     const scrolled = apply(campWith({ ...run, scrolls: 1 }), {
       type: 'learn-secondary',

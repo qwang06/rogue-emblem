@@ -34,7 +34,7 @@ const unit = (run: RunState, id: string) => run.roster.find((snapshot) => snapsh
 
 describe('getSecondaryClassIds', () => {
   it('is every playable class with skills but its own, in class order', () => {
-    expect(getSecondaryClassIds({ classId: 'archer' })).toEqual(['warrior', 'soldier', 'vanguard', 'guard', 'acolyte']);
+    expect(getSecondaryClassIds({ classId: 'archer' })).toEqual(['villager', 'soldier', 'vanguard', 'guard', 'acolyte']);
     expect(getSecondaryClassIds({ classId: 'acolyte' })).not.toContain('acolyte');
   });
 
@@ -114,7 +114,7 @@ describe('learnSecondary', () => {
     expect(unit(run, 'iris').secondaryClass).toBe('vanguard');
     expect(run.gold).toBe(before.gold);
     expect(getScrolls(run)).toBe(1);
-    expect(learnSecondary(run, 'bram', 'warrior')).not.toHaveProperty('scrolls');
+    expect(learnSecondary(run, 'bram', 'villager')).not.toHaveProperty('scrolls');
   });
 
   it('replaces the set the unit had', () => {
@@ -138,7 +138,7 @@ describe('learnSecondary', () => {
   });
 
   it("waits for the unit's level like its own skills do", () => {
-    const run = learnSecondary(addScrolls(campRun({ levels: [2, 2, 1] })), 'bram', 'warrior');
+    const run = learnSecondary(addScrolls(campRun({ levels: [2, 2, 1] })), 'bram', 'villager');
     expect(getUnitSkills(restoreUnit(unit(run, 'bram')))).toEqual([]);
     const levelled = { ...unit(run, 'bram'), level: 2 };
     expect(getUnitSkills(restoreUnit(levelled))).toEqual([CLEAVE, THROW_STONES]);

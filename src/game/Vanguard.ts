@@ -55,12 +55,13 @@ export const VANGUARD_ITEMS: Inventory = Object.freeze([weaponEntry(IRON_AXE), .
 // the potions unless given other items. Levels up with the vanguard growth
 // rates and caps.
 export class Vanguard extends Unit {
-  constructor({ name = 'Vanguard', team, level = 1, items = VANGUARD_ITEMS }: ClassUnitOptions) {
+  constructor({ name = 'Vanguard', team, level = 1, items = VANGUARD_ITEMS, faction }: ClassUnitOptions) {
     super({
       name,
       unitClass: 'vanguard',
       level,
       team,
+      faction,
       items,
       weaponTypes: VANGUARD_WEAPON_TYPES,
       growths: VANGUARD_GROWTHS,

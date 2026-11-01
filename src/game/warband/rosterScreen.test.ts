@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
-import { Warrior } from '../Warrior.ts';
+import { Villager } from '../Villager.ts';
 import { createRun, type ItemSnapshot, type RunState } from './run.ts';
 import {
   cancelRoster,
@@ -15,13 +15,13 @@ import {
 } from './rosterScreen.ts';
 
 // Alden the soldier carries [Iron Spear, Health Potion, Mana Potion]; Cato
-// the warrior [Fists, Health Potion, Mana Potion].
+// the villager [Fists, Health Potion, Mana Potion].
 function campRun(convoy: ItemSnapshot[] = []): RunState {
   const run = createRun(
     7,
     new Map<string, Unit>([
       ['alden', new Soldier({ name: 'Alden', team: 'player' })],
-      ['cato', new Warrior({ name: 'Cato', team: 'player' })],
+      ['cato', new Villager({ name: 'Cato', team: 'player' })],
     ]),
   );
   return { ...run, convoy };

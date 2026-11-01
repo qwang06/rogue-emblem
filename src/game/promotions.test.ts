@@ -16,7 +16,7 @@ import {
   PROMOTIONS,
 } from './promotions.ts';
 import { PLAYABLE_CLASSES, createUnitOfClass } from './unitClasses.ts';
-import { Warrior, WARRIOR_CAPS } from './Warrior.ts';
+import { Villager, VILLAGER_CAPS } from './Villager.ts';
 import { BALLISTA } from './weapons.ts';
 
 const hero = findPromotion('hero')!;
@@ -62,7 +62,7 @@ describe('PROMOTIONS', () => {
 describe('lookups', () => {
   it('finds a promotion by id', () => {
     expect(findPromotion('sage')?.from).toBe('acolyte');
-    expect(findPromotion('warrior')).toBeNull();
+    expect(findPromotion('villager')).toBeNull();
   });
 
   it('tells promoted classes apart and names their base class', () => {
@@ -76,9 +76,9 @@ describe('lookups', () => {
 
 describe('canPromote', () => {
   it('needs PROMOTION_LEVEL: one short, exact and over', () => {
-    expect(canPromote({ classId: 'warrior', level: PROMOTION_LEVEL - 1 })).toBe(false);
-    expect(canPromote({ classId: 'warrior', level: PROMOTION_LEVEL })).toBe(true);
-    expect(canPromote({ classId: 'warrior', level: 20 })).toBe(true);
+    expect(canPromote({ classId: 'villager', level: PROMOTION_LEVEL - 1 })).toBe(false);
+    expect(canPromote({ classId: 'villager', level: PROMOTION_LEVEL })).toBe(true);
+    expect(canPromote({ classId: 'villager', level: 20 })).toBe(true);
   });
 
   it('is false for a promoted class or a monster at any level', () => {
@@ -89,7 +89,7 @@ describe('canPromote', () => {
 
 describe('getPromotionGains', () => {
   it('gives each bonus in full under the new cap, leaving out stats it doesn’t raise', () => {
-    const unit = new Warrior({ team: 'player' });
+    const unit = new Villager({ team: 'player' });
     expect(getPromotionGains(unit, hero)).toEqual({
       health: 4,
       strength: 2,
@@ -101,7 +101,7 @@ describe('getPromotionGains', () => {
   });
 
   it('cuts a bonus to what the new cap leaves, and to nothing at it', () => {
-    const unit = new Warrior({ team: 'player' });
+    const unit = new Villager({ team: 'player' });
     unit.strength = hero.caps.strength! - 1;
     unit.skill = hero.caps.skill!;
     const gains = getPromotionGains(unit, hero);
@@ -112,13 +112,13 @@ describe('getPromotionGains', () => {
 
 describe('promoteUnit', () => {
   it('changes the class, growths, caps and weapon types, and adds the bonuses', () => {
-    const unit = new Warrior({ team: 'player', level: 6 });
+    const unit = new Villager({ team: 'player', level: 6 });
     unit.health = 3;
     promoteUnit(unit, hero);
     expect(unit.unitClass).toBe('hero');
     expect(unit.level).toBe(6);
     expect(unit.caps).toEqual(hero.caps);
-    expect(unit.caps.health).toBe(WARRIOR_CAPS.health + 10);
+    expect(unit.caps.health).toBe(VILLAGER_CAPS.health + 10);
     expect(unit.growths).toEqual(hero.growths);
     expect(unit.maxHealth).toBe(14);
     expect(unit.health).toBe(7);
@@ -126,7 +126,7 @@ describe('promoteUnit', () => {
   });
 
   it('carries the passive into battle', () => {
-    const unit = promoteUnit(new Warrior({ team: 'player' }), hero);
+    const unit = promoteUnit(new Villager({ team: 'player' }), hero);
     expect(getStandingCombatBonus(unit.modifiers).crit).toBe(10);
   });
 
@@ -147,7 +147,7 @@ describe('promoteUnit', () => {
   });
 
   it('keeps items and boons', () => {
-    const unit = new Warrior({ team: 'player' });
+    const unit = new Villager({ team: 'player' });
     unit.boons = ['keen-eye'];
     const items = unit.items;
     promoteUnit(unit, hero);
@@ -158,7 +158,7 @@ describe('promoteUnit', () => {
 
 describe('becomePromotedClass', () => {
   it('changes the class but leaves the stats alone', () => {
-    const unit = becomePromotedClass(new Warrior({ team: 'player' }), hero);
+    const unit = becomePromotedClass(new Villager({ team: 'player' }), hero);
     expect(unit.unitClass).toBe('hero');
     expect(unit.strength).toBe(3);
   });

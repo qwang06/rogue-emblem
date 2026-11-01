@@ -7,7 +7,7 @@ import { Soldier } from '../Soldier.ts';
 import { Unit } from '../Unit.ts';
 import { createUnitOfClass, UNIT_CLASSES } from '../unitClasses.ts';
 import { MAX_LEVEL } from '../experience.ts';
-import { Warrior } from '../Warrior.ts';
+import { Villager } from '../Villager.ts';
 import { FIRE, IRON_AXE, IRON_BOW, IRON_SPEAR } from '../weapons.ts';
 import { createRun, parseRun, serializeRun, type RunState, type UnitSnapshot } from './run.ts';
 import {
@@ -59,7 +59,7 @@ function fullRun(): RunState {
   return runOf(
     ['alden', new Soldier({ name: 'Alden', team: 'player' })],
     ['bryn', new Archer({ name: 'Bryn', team: 'player' })],
-    ['cato', new Warrior({ name: 'Cato', team: 'player' })],
+    ['cato', new Villager({ name: 'Cato', team: 'player' })],
   );
 }
 
@@ -124,7 +124,7 @@ describe('rollRewards', () => {
   });
 
   it('never mixes recruitment into rewards', () => {
-    const lone = runOf(['alden', new Warrior({ name: 'Alden', team: 'player' })]);
+    const lone = runOf(['alden', new Villager({ name: 'Alden', team: 'player' })]);
     for (let seed = 0; seed < 30; seed++) {
       expect(kinds(rollRewards(lone, 2, createSeededRng(seed)))).not.toContain('recruit');
     }
@@ -462,7 +462,7 @@ describe('describeReward', () => {
 });
 
 describe('stage 1 rewards', () => {
-  const lone = () => runOf(['alden', new Warrior({ name: 'Alden', team: 'player' })]);
+  const lone = () => runOf(['alden', new Villager({ name: 'Alden', team: 'player' })]);
   it('offers no experience or recruits, since the clear itself levels the warband', () => {
     for (let seed = 0; seed < 20; seed++) {
       const rewards = rollRewards(lone(), 1, createSeededRng(seed));
@@ -514,7 +514,7 @@ describe("the veteran's lesson reward", () => {
     soldier.gainExperience(30, () => 0);
     soldier.gainExperience(70, () => 0);
     expect(soldier).toMatchObject({ level: 2, experience: 50 });
-    const run = runOf(['alden', soldier], ['cato', new Warrior({ name: 'Cato', team: 'player' })]);
+    const run = runOf(['alden', soldier], ['cato', new Villager({ name: 'Cato', team: 'player' })]);
     const after = applyReward(run, experience());
     expect(after.roster.map((unit) => [unit.level, unit.experience])).toEqual([
       [3, 0],
@@ -523,7 +523,7 @@ describe("the veteran's lesson reward", () => {
   });
 
   it('rolls the same stat gains for the same reward', () => {
-    const run = runOf(['alden', new Warrior({ name: 'Alden', team: 'player' })]);
+    const run = runOf(['alden', new Villager({ name: 'Alden', team: 'player' })]);
     expect(applyReward(run, experience(5))).toEqual(applyReward(run, experience(5)));
   });
 

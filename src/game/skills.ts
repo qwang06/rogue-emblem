@@ -175,7 +175,7 @@ export const SKILL_UNLOCK_LEVEL = 2;
 
 // The base classes' trees, which the promoted classes build on.
 const BASE_SKILL_TREES: SkillTrees = Object.freeze({
-  warrior: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: THROW_STONES })]),
+  villager: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: THROW_STONES })]),
   soldier: Object.freeze([
     Object.freeze({ level: 1, skill: SHOVE }),
     Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: POWER_STRIKE }),
@@ -192,8 +192,8 @@ const BASE_SKILL_TREES: SkillTrees = Object.freeze({
 // unitClass -> [{ level, skill }]. Classes without an entry know no skills.
 export const SKILL_TREES: SkillTrees = Object.freeze({
   ...BASE_SKILL_TREES,
-  hero: promotedTree('warrior', SUNDER),
-  berserker: promotedTree('warrior', FRENZY),
+  hero: promotedTree('villager', SUNDER),
+  berserker: promotedTree('villager', FRENZY),
   general: promotedTree('soldier', IMPALE),
   halberdier: promotedTree('soldier', LUNGE),
   sniper: promotedTree('archer', PIERCING_SHOT),

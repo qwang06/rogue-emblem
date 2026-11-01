@@ -3,7 +3,7 @@ import { Archer } from '../Archer.ts';
 import { getStandingCombatBonus } from '../modifiers.ts';
 import { getUnitSkills, VOLLEY } from '../skills.ts';
 import type { Unit } from '../Unit.ts';
-import { Warrior } from '../Warrior.ts';
+import { Villager } from '../Villager.ts';
 import { findBoon } from './boons.ts';
 import {
   completesEvolution,
@@ -56,7 +56,7 @@ describe('hasEvolution', () => {
   });
 
   it('needs the class, a promoted one counting', () => {
-    expect(hasEvolution({ classId: 'warrior', boons: ['keen-eye', 'deadly'] }, [], volley)).toBe(false);
+    expect(hasEvolution({ classId: 'villager', boons: ['keen-eye', 'deadly'] }, [], volley)).toBe(false);
     expect(hasEvolution({ classId: 'sniper', boons: ['keen-eye', 'deadly'] }, [], volley)).toBe(true);
   });
 
@@ -97,7 +97,7 @@ describe('completesEvolution', () => {
   });
 
   it('flags a promotion that finishes a recipe', () => {
-    const unit = { classId: 'warrior', boons: ['brawler'] };
+    const unit = { classId: 'villager', boons: ['brawler'] };
     expect(completesEvolution(unit, [], { classId: 'berserker' })).toBe(true);
     expect(completesEvolution(unit, [], { classId: 'hero' })).toBe(false);
   });
@@ -116,7 +116,7 @@ describe('in a run', () => {
       1,
       new Map<string, Unit>([
         ['bryn', archer],
-        ['ada', new Warrior({ name: 'Ada', team: 'player' })],
+        ['ada', new Villager({ name: 'Ada', team: 'player' })],
       ]),
     );
     const roster = restoreRoster(run);
@@ -127,7 +127,7 @@ describe('in a run', () => {
   });
 
   it('loses an evolution with the relic it needs', () => {
-    const soldier = new Warrior({ name: 'Ada', team: 'player' });
+    const soldier = new Villager({ name: 'Ada', team: 'player' });
     soldier.boons = ['stalwart'];
     const run = createRun(1, new Map<string, Unit>([['ada', soldier]]));
     const guard = (relics: string[]) =>

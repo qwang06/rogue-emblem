@@ -6,7 +6,7 @@ import type { ClassUnitOptions, Unit } from './Unit.ts';
 describe('UNIT_CLASSES', () => {
   it('lists the six player classes, then the twelve promoted classes, then the seven monsters', () => {
     expect(UNIT_CLASSES.map((c) => c.id)).toEqual([
-      'warrior',
+      'villager',
       'soldier',
       'archer',
       'vanguard',
@@ -33,7 +33,7 @@ describe('UNIT_CLASSES', () => {
       'dragon',
     ]);
     expect(UNIT_CLASSES.map((c) => c.label)).toEqual([
-      'Warrior',
+      'Villager',
       'Soldier',
       'Archer',
       'Vanguard',
@@ -75,7 +75,7 @@ describe('UNIT_CLASSES', () => {
 
 describe('PLAYABLE_CLASSES', () => {
   it('lists the six player classes and none of the promoted classes or monsters', () => {
-    expect(PLAYABLE_CLASSES.map((c) => c.id)).toEqual(['warrior', 'soldier', 'archer', 'vanguard', 'guard', 'acolyte']);
+    expect(PLAYABLE_CLASSES.map((c) => c.id)).toEqual(['villager', 'soldier', 'archer', 'vanguard', 'guard', 'acolyte']);
   });
 
   it('marks exactly the seven monsters as monsters', () => {
@@ -92,8 +92,8 @@ describe('PLAYABLE_CLASSES', () => {
 
   it('marks each promoted class with the class it promotes from', () => {
     expect(UNIT_CLASSES.filter((c) => c.promotedFrom).map((c) => [c.id, c.promotedFrom])).toEqual([
-      ['hero', 'warrior'],
-      ['berserker', 'warrior'],
+      ['hero', 'villager'],
+      ['berserker', 'villager'],
       ['general', 'soldier'],
       ['halberdier', 'soldier'],
       ['sniper', 'archer'],

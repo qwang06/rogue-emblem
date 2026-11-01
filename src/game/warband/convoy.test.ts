@@ -4,7 +4,7 @@ import { HEAL_STAFF } from '../healing.ts';
 import { FIRE, FISTS, IRON_BOW, IRON_SPEAR, WOODEN_SPEAR, WOODEN_SWORD } from '../weapons.ts';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
-import { Warrior } from '../Warrior.ts';
+import { Villager } from '../Villager.ts';
 import {
   canCarry,
   canEquipInRoster,
@@ -24,13 +24,13 @@ import {
 import { createRun, type ItemSnapshot, type RunState } from './run.ts';
 
 // Alden the soldier carries [Iron Spear (40), Health Potion, Mana Potion];
-// Cato the warrior [Fists, Health Potion, Mana Potion].
+// Cato the villager [Fists, Health Potion, Mana Potion].
 function campRun(convoy: ItemSnapshot[] = []): RunState {
   const run = createRun(
     7,
     new Map<string, Unit>([
       ['alden', new Soldier({ name: 'Alden', team: 'player' })],
-      ['cato', new Warrior({ name: 'Cato', team: 'player' })],
+      ['cato', new Villager({ name: 'Cato', team: 'player' })],
     ]),
   );
   return { ...run, convoy };

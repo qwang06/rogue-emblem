@@ -57,12 +57,13 @@ export const ACOLYTE_ITEMS: Inventory = Object.freeze([weaponEntry(LIGHT), staff
 // and it knows Light and carries a Heal staff (see healing.ts) and the
 // potions unless given other items. Levels up with the acolyte growth rates and caps.
 export class Acolyte extends Unit {
-  constructor({ name = 'Acolyte', team, level = 1, items = ACOLYTE_ITEMS }: ClassUnitOptions) {
+  constructor({ name = 'Acolyte', team, level = 1, items = ACOLYTE_ITEMS, faction }: ClassUnitOptions) {
     super({
       name,
       unitClass: 'acolyte',
       level,
       team,
+      faction,
       items,
       weaponTypes: ACOLYTE_WEAPON_TYPES,
       growths: ACOLYTE_GROWTHS,

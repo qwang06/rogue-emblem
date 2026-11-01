@@ -3,7 +3,7 @@ import { Archer } from '../Archer.ts';
 import { MASTER_SEAL } from '../items.ts';
 import { PROMOTION_LEVEL } from '../promotions.ts';
 import type { Unit } from '../Unit.ts';
-import { Warrior } from '../Warrior.ts';
+import { Villager } from '../Villager.ts';
 import {
   cancelPromotion,
   confirmPromotion,
@@ -21,7 +21,7 @@ function campRun(seals = 1): RunState {
   const run = createRun(
     3,
     new Map<string, Unit>([
-      ['ada', new Warrior({ name: 'Ada', team: 'player' })],
+      ['ada', new Villager({ name: 'Ada', team: 'player' })],
       ['bryn', new Archer({ name: 'Bryn', team: 'player' })],
     ]),
   );
@@ -35,8 +35,8 @@ function campRun(seals = 1): RunState {
 describe('getPromotionOptions', () => {
   it('lists each unit’s two promotions, in roster order', () => {
     expect(getPromotionOptions(campRun()).map((option) => option.label)).toEqual([
-      'Ada: Warrior → Hero',
-      'Ada: Warrior → Berserker',
+      'Ada: Villager → Hero',
+      'Ada: Villager → Berserker',
       'Bryn: Archer → Sniper',
       'Bryn: Archer → Arbalest',
     ]);

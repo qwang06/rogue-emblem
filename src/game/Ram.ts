@@ -1,0 +1,69 @@
+import type { Inventory } from './items.ts';
+import { Unit, type ClassUnitOptions } from './Unit.ts';
+import { TACKLE, weaponEntry, type WeaponType } from './weapons.ts';
+
+// A specialized unit that doesn't promote: a covered battering ram. Heavy
+// and hard to dent, it slams whatever stands in front of it.
+export const RAM_STATS = Object.freeze({
+  health: 16,
+  mana: 0,
+  strength: 6,
+  magic: 0,
+  skill: 1,
+  speed: 0,
+  luck: 0,
+  defense: 5,
+  resistance: 0,
+  movement: 4,
+});
+
+// Percent chance per level up that each stat rises (see experience.ts).
+export const RAM_GROWTHS = Object.freeze({
+  health: 80,
+  mana: 0,
+  strength: 50,
+  magic: 0,
+  skill: 25,
+  speed: 5,
+  luck: 5,
+  defense: 45,
+  resistance: 10,
+});
+
+// The most each stat can reach through level ups.
+export const RAM_CAPS = Object.freeze({
+  health: 50,
+  mana: 0,
+  strength: 24,
+  magic: 20,
+  skill: 20,
+  speed: 15,
+  luck: 15,
+  defense: 25,
+  resistance: 20,
+});
+
+// The weapon types it can wield.
+export const RAM_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
+
+// What it carries into battle: only its Tackle, which never breaks.
+export const RAM_ITEMS: Inventory = Object.freeze([weaponEntry(TACKLE)]);
+
+// Starts at level 1 with the stat line above; its skills come from the
+// 'ram' skill tree. Levels up with the growth rates and caps above.
+export class Ram extends Unit {
+  constructor({ name = 'Ram', team, level = 1, items = RAM_ITEMS, faction }: ClassUnitOptions) {
+    super({
+      name,
+      unitClass: 'ram',
+      level,
+      team,
+      faction,
+      items,
+      weaponTypes: RAM_WEAPON_TYPES,
+      growths: RAM_GROWTHS,
+      caps: RAM_CAPS,
+      ...RAM_STATS,
+    });
+  }
+}

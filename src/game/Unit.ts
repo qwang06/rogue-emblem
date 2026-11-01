@@ -41,6 +41,7 @@ import {
   type Consumable,
   type Item,
 } from './items.ts';
+import { getDefaultFaction, type FactionId } from './factions.ts';
 import type { Modifier } from './modifiers.ts';
 import { getTomeSpell, isTome, knowsSpell, learnSpell, recordTomeUse, type TomeProgress } from './tomes.ts';
 import type { Team } from './turns.ts';
@@ -81,15 +82,20 @@ export interface UnitOptions {
   experienceRate?: number;
   // Strikes made with tomes not yet learned from (see tomes.ts).
   tomeProgress?: TomeProgress;
+  // Its faction (factions.ts), whose version of its class's art it wears;
+  // null for none (neutral units and monsters). Unset, its team's default.
+  faction?: FactionId | null;
 }
 
-// The options a class (Soldier, Warrior, ...) takes: the class fills in
+// The options a class (Soldier, Villager, ...) takes: the class fills in
 // everything else.
 export interface ClassUnitOptions {
   name?: string;
   team: Team;
   level?: number;
   items?: readonly InventoryEntry[];
+  // Its faction; unset, its team's default (see UnitOptions.faction).
+  faction?: FactionId | null;
 }
 
 export class Unit {
@@ -111,6 +117,8 @@ export class Unit {
   movement: number;
   weaponTypes: readonly WeaponType[];
   team: Team;
+  // Its faction (factions.ts), or null for a neutral unit or a monster.
+  faction: FactionId | null;
   items: Inventory;
   growths: GrowthTable;
   caps: GrowthTable;
@@ -173,6 +181,7 @@ export class Unit {
     caps = {},
     experienceRate = DEFAULT_EXPERIENCE_RATE,
     tomeProgress = {},
+    faction,
   }: UnitOptions) {
     this.name = name;
     this.unitClass = unitClass;
@@ -192,6 +201,7 @@ export class Unit {
     this.movement = movement;
     this.weaponTypes = Object.freeze([...weaponTypes]);
     this.team = team;
+    this.faction = faction === undefined ? getDefaultFaction(team) : faction;
     this.items = createInventory(items);
     this.growths = growths;
     this.caps = caps;

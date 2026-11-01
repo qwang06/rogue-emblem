@@ -35,7 +35,7 @@ import { Archer } from './Archer.ts';
 import { createDemoLevel, PLAYER_ROSTER } from './demoLevel.ts';
 import { parseCharacters, parseDialogScript } from './dialogScript.ts';
 import { terrainToRows } from './mapGen.ts';
-import { Warrior } from './Warrior.ts';
+import { Villager } from './Villager.ts';
 
 const CHAPTERS: readonly StoryChapter[] = [
   { name: 'One', createLevel: () => createDemoLevel() },
@@ -140,10 +140,10 @@ describe('first battles', () => {
 });
 
 describe('runStage', () => {
-  // A run that has grown past its starting unit: the demo roster's three warriors.
+  // A run that has grown past its starting unit: the demo roster's three villagers.
   const run = createRun(
     42,
-    new Map(Object.entries(PLAYER_ROSTER).map(([id, name]) => [id, new Warrior({ name, team: 'player' })])),
+    new Map(Object.entries(PLAYER_ROSTER).map(([id, name]) => [id, new Villager({ name, team: 'player' })])),
   );
 
   it("fights the run's current stage on its stage seed", () => {
@@ -153,16 +153,16 @@ describe('runStage', () => {
 
   it("fields the run's roster as it stands, with the run's deploy cap", () => {
     const units = restoreRoster(run);
-    units.get('warrior-1')!.takeDamage(3);
-    units.get('warrior-2')!.takeDamage(99);
+    units.get('villager-1')!.takeDamage(3);
+    units.get('villager-2')!.takeDamage(99);
     const after = { ...advanceStage(applyBattleResult(run, { units })), deployCap: 2 };
 
     const level = createBattleLevel(runStage(after));
-    expect(level.roster).toEqual(['warrior-1', 'warrior-3']);
+    expect(level.roster).toEqual(['villager-1', 'villager-3']);
     expect(level.maxDeployed).toBe(2);
-    const alden = level.units.get('warrior-1')!;
+    const alden = level.units.get('villager-1')!;
     expect(alden.health).toBe(alden.maxHealth - 3);
-    expect(level.units.has('warrior-2')).toBe(false);
+    expect(level.units.has('villager-2')).toBe(false);
   });
 
   it('builds the same map each time for the same run and stage', () => {
@@ -184,7 +184,7 @@ describe('runStage', () => {
 describe('getBattleDiceSeed', () => {
   it('leaves battles outside a run to roll fresh', () => {
     expect(getBattleDiceSeed(FIRST_STORY_CHAPTER)).toBeNull();
-    expect(getBattleDiceSeed({ mode: 'training', unitClass: 'warrior' })).toBeNull();
+    expect(getBattleDiceSeed({ mode: 'training', unitClass: 'villager' })).toBeNull();
     expect(getBattleDiceSeed({ mode: 'warband', seed: 3, stage: 1 })).toBeNull();
   });
 });

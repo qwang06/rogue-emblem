@@ -13,8 +13,8 @@ export interface StartingClass {
 
 export const STARTING_CLASSES: readonly StartingClass[] = Object.freeze([
   Object.freeze({
-    id: 'warrior',
-    label: 'Warrior',
+    id: 'villager',
+    label: 'Villager',
     description: 'Weakest at the start, but learns fastest and grows into the strongest unit of all.',
   }),
   Object.freeze({
@@ -29,7 +29,7 @@ export const STARTING_CLASSES: readonly StartingClass[] = Object.freeze([
   }),
 ]);
 
-export const DEFAULT_STARTING_CLASS = 'warrior';
+export const DEFAULT_STARTING_CLASS = 'villager';
 
 // The classes renown unlocks as starting classes (see meta.ts's UNLOCKS),
 // in the order they unlock. Each must still win stage 1 alone, so the
