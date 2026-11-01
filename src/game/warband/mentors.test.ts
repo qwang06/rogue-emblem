@@ -140,14 +140,14 @@ describe('learnSecondary', () => {
     expect(unit(saved, 'wren').secondaryClass).toBe('acolyte');
     const wren = restoreUnit(unit(saved, 'wren'));
     expect(wren.secondaryClass).toBe('acolyte');
-    expect(getUnitSkills(wren).map(({ id }) => id)).toEqual(['long-shot', MEND.id]);
+    expect(getUnitSkills(wren).map(({ id }) => id)).toEqual(['throw-stones', 'long-shot', MEND.id]);
   });
 
   it("waits for the unit's level like its own skills do", () => {
     const run = learnSecondary(addScrolls(campRun({ levels: [2, 2, 1] })), 'bram', 'villager');
     expect(getUnitSkills(restoreUnit(unit(run, 'bram')))).toEqual([]);
     const levelled = { ...unit(run, 'bram'), level: 2 };
-    expect(getUnitSkills(restoreUnit(levelled))).toEqual([CLEAVE, THROW_STONES]);
+    expect(getUnitSkills(restoreUnit(levelled))).toEqual([THROW_STONES, CLEAVE]);
   });
 });
 

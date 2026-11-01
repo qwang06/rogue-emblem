@@ -26,7 +26,7 @@ describe('toBoonPickView', () => {
       classLabel: 'Soldier',
       sprite: 'Soldier_02',
       level: 2,
-      skills: ['Power Strike'],
+      skills: ['Throw Stones', 'Shield Bash'],
     });
     expect(view.stats.map((stat) => [stat.label, stat.value, stat.gain])).toEqual([
       ['HP', unit.maxHealth, 1],

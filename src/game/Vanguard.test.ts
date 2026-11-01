@@ -3,7 +3,7 @@ import { VANGUARD_GROWTHS, VANGUARD_ITEMS, VANGUARD_STATS, Vanguard } from './Va
 import { calculateDamage, getCombatForecast } from './combat.ts';
 import { getAttackSpeed } from './combatStats.ts';
 import { HEALTH_POTION, MANA_POTION } from './items.ts';
-import { getLearnedSkills, CLEAVE } from './skills.ts';
+import { getLearnedSkills, CLEAVE, THROW_STONES } from './skills.ts';
 import { Soldier } from './Soldier.ts';
 import { Unit } from './Unit.ts';
 import { FIRE, IRON_AXE, weaponEntry } from './weapons.ts';
@@ -51,9 +51,9 @@ describe('Vanguard', () => {
     expect(vanguard.weaponUses).toBe(IRON_AXE.uses);
   });
 
-  it('learns Cleave at level 2', () => {
+  it("learns Cleave at level 2, keeping the villager's Throw Stones", () => {
     expect(getLearnedSkills('vanguard', 1)).toEqual([]);
-    expect(getLearnedSkills('vanguard', 2)).toEqual([CLEAVE]);
+    expect(getLearnedSkills('vanguard', 2)).toEqual([THROW_STONES, CLEAVE]);
   });
 
   it('accepts a custom name and level', () => {

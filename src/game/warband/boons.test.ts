@@ -61,8 +61,10 @@ describe('isBoonEligible', () => {
   });
 
   it("offers skills the unit doesn't know and passives below their max rank", () => {
-    expect(isBoonEligible(soldier(), boon('skill-power-strike'))).toBe(false);
-    expect(isBoonEligible(soldier(1), boon('skill-cleave'))).toBe(true);
+    expect(isBoonEligible(soldier(), boon('skill-lunge'))).toBe(true);
+    const lunged = soldier();
+    applyModifiers(lunged, boon('skill-lunge').modifiers);
+    expect(isBoonEligible(lunged, boon('skill-lunge'))).toBe(false);
     const unit = soldier();
     takeBoon(unit, boon('fleet'));
     expect(isBoonEligible(unit, boon('fleet'))).toBe(true);
@@ -73,10 +75,19 @@ describe('isBoonEligible', () => {
     expect(isBoonEligible(unit, boon('deadly'))).toBe(true);
   });
 
-  it("doesn't offer a skill a boon already taught", () => {
-    const unit = soldier();
-    applyModifiers(unit, boon('skill-cleave').modifiers);
-    expect(isBoonEligible(unit, boon('skill-cleave'))).toBe(false);
+  it("offers only the unit's own class's skill picks", () => {
+    expect(isBoonEligible(soldier(), boon('skill-smite'))).toBe(false);
+    expect(isBoonEligible(soldier(), boon('skill-deadeye'))).toBe(false);
+    const acolyte = new Acolyte({ team: 'player' });
+    expect(isBoonEligible(acolyte, boon('skill-smite'))).toBe(true);
+    expect(isBoonEligible(acolyte, boon('skill-lunge'))).toBe(false);
+  });
+
+  it('never offers a retired skill, though a unit saved with one keeps it', () => {
+    for (const id of ['skill-power-strike', 'skill-cleave', 'skill-throw-stones']) {
+      expect(isBoonEligible(soldier(), boon(id)), id).toBe(false);
+    }
+    expect(getBoonModifiers(['skill-power-strike'])).toEqual([{ kind: 'skill', skill: POWER_STRIKE }]);
   });
 });
 
@@ -93,9 +104,7 @@ describe('rollBoons', () => {
 
   it('offers a second passive when there is no skill left to learn', () => {
     const unit = soldier();
-    for (const id of ['skill-cleave', 'skill-shield-bash', 'skill-throw-stones']) {
-      applyModifiers(unit, boon(id).modifiers);
-    }
+    applyModifiers(unit, boon('skill-lunge').modifiers);
     const offers = rollBoons(unit, createSeededRng(3));
     expect(offers.map((b) => b.kind)).toEqual(['stat', 'passive', 'passive']);
   });
@@ -112,9 +121,7 @@ describe('rollBoons', () => {
     for (const stat of ['maxHealth', 'strength', 'skill', 'speed', 'luck', 'defense', 'resistance'] as const) {
       unit[stat] = 99;
     }
-    for (const id of ['skill-cleave', 'skill-shield-bash', 'skill-throw-stones']) {
-      applyModifiers(unit, boon(id).modifiers);
-    }
+    applyModifiers(unit, boon('skill-lunge').modifiers);
     const offers = rollBoons(unit, createSeededRng(1));
     expect(offers).toHaveLength(3);
     expect(offers.every((offer) => offer.kind === 'stat')).toBe(true);
@@ -146,8 +153,8 @@ describe('takeBoon', () => {
   it('records a skill or passive without changing stats', () => {
     const unit = soldier();
     const before = { ...unit };
-    takeBoon(unit, boon('skill-cleave'));
-    expect(unit.boons).toEqual(['skill-cleave']);
+    takeBoon(unit, boon('skill-lunge'));
+    expect(unit.boons).toEqual(['skill-lunge']);
     expect(unit.strength).toBe(before.strength);
     expect(boon('skill-power-strike').modifiers).toEqual([{ kind: 'skill', skill: POWER_STRIKE }]);
   });
