@@ -77,15 +77,15 @@ describe('createStartingWarband', () => {
 });
 
 describe('growToLevel', () => {
-  it('levels a unit up on its average growths, the same every time', () => {
+  it('levels a unit up on its fixed growths, the same every time', () => {
     const grow = () => {
       const unit = createUnitOfClass('soldier', { team: 'enemy' });
       growToLevel(unit, 9);
       return unit;
     };
     const unit = grow();
-    // Soldier: 10 HP 70%, 4 STR 45%, 2 DEF 30% → +5, +3, +2 over 8 level ups.
-    expect([unit.level, unit.maxHealth, unit.strength, unit.defense]).toEqual([9, 15, 7, 4]);
+    // Soldier: 10 HP 75%, 4 STR 50%, 2 DEF 100% → +6, +4, +8 over 8 level ups.
+    expect([unit.level, unit.maxHealth, unit.strength, unit.defense]).toEqual([9, 16, 8, 10]);
     expect(grow()).toEqual(unit);
   });
 

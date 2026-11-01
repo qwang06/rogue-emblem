@@ -358,7 +358,7 @@ export class Unit {
   }
 
   // Raises the level by one and adds `gains` ({ health, strength, ... },
-  // from rollLevelUp) to the stats. Health and mana gains raise both the
+  // from getLevelUpGains) to the stats. Health and mana gains raise both the
   // maximum and the current value. Returns the new level.
   levelUp(gains: Partial<StatGains> = {}): number {
     this.level += 1;
@@ -378,11 +378,11 @@ export class Unit {
   }
 
   // Gains `amount` XP (scaled by its XP rate unless `scaled` is false),
-  // leveling up (rolling growths with `rng`) for every 100 it crosses, with
+  // leveling up (on its fixed growths) for every 100 it crosses, with
   // the overflow carried. Returns the resolveExperienceGain result, whose
   // levelUps say what each level raised and which skills it taught.
-  gainExperience(amount: number, rng: Rng = Math.random, scaled = true): ExperienceGain {
-    const result = resolveExperienceGain(this, amount, rng, { scaled });
+  gainExperience(amount: number, scaled = true): ExperienceGain {
+    const result = resolveExperienceGain(this, amount, { scaled });
     for (const { gains } of result.levelUps) this.levelUp(gains);
     this.experience = result.experience;
     return result;

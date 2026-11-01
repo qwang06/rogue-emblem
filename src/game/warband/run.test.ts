@@ -36,9 +36,6 @@ function startingRun(): RunState {
   );
 }
 
-// Rolls of 0 raise every stat with a growth above 0.
-const alwaysGrow = () => 0;
-
 describe('createRun', () => {
   it('starts on stage 1 with the roster and nothing else', () => {
     const run = startingRun();
@@ -75,7 +72,7 @@ describe('snapshotUnit and restoreUnit', () => {
 
   it('round-trips a leveled, wounded unit with a worn weapon and a used potion', () => {
     const soldier = new Soldier({ name: 'Alden', team: 'player' });
-    soldier.gainExperience(200, alwaysGrow);
+    soldier.gainExperience(200);
     soldier.takeDamage(4);
     soldier.spendMana(1);
     soldier.spendWeaponUse();
@@ -151,7 +148,7 @@ describe('applyBattleResult', () => {
     const run = startingRun();
     const units = restoreRoster(run);
     const alden = units.get('alden')!;
-    alden.gainExperience(80, alwaysGrow);
+    alden.gainExperience(80);
     alden.takeDamage(3);
     alden.spendWeaponUse();
     const bryn = units.get('bryn')!;
@@ -385,7 +382,7 @@ describe('serializeRun and parseRun', () => {
   it('round-trips a run mid-way through', () => {
     const run = startingRun();
     const units = restoreRoster(run);
-    units.get('alden')!.gainExperience(150, alwaysGrow);
+    units.get('alden')!.gainExperience(150);
     units.get('cato')!.takeDamage(99);
     const played = advanceStage(applyBattleResult(run, { units }));
     const withExtras: RunState = {

@@ -17,7 +17,9 @@ export const BAT_STATS = Object.freeze({
   movement: 5,
 });
 
-// Percent chance per level up that each stat rises (see experience.ts).
+// How fast each stat grows, on a fixed schedule with no dice: 100 is a
+// point every level, 50 every second level, 25 every fourth (see
+// getLevelUpGains in experience.ts).
 export const BAT_GROWTHS = Object.freeze({
   health: 50,
   mana: 0,

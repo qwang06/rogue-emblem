@@ -147,7 +147,7 @@ describe('pickBoon', () => {
     const boon = getBoonOffer(run)!.boons[index];
     const unit = restoreUnit(pickBoon(run, index).roster[0]);
     // On top of the soldier's own passive.
-    expect(unit.modifiers).toEqual([...findPromotion('soldier')!.passive.modifiers, ...findBoon(boon.id)!.modifiers]);
+    expect(unit.modifiers).toEqual([...findPromotion('soldier')!.passive.modifiers, ...boon.modifiers]);
   });
 
   it('throws when nothing is owed or the index is off', () => {

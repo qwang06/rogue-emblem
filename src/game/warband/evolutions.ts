@@ -1,6 +1,7 @@
 // Evolutions, Vampire Survivors style: certain combinations of what a
 // Warband unit has collected unlock something stronger on top of them. A
-// recipe names the boons the unit must have taken (boons.ts), the relics
+// recipe names the boons the unit must have taken (boons.ts), some to a
+// rank (a passive taken that many times, the rank evolutions), the relics
 // the warband must hold (relics.ts) and, for some, the classes it must be
 // one of (a promoted class counts, see promotions.ts). A unit that meets
 // every part of a recipe has its evolution: more modifiers (modifiers.ts)
@@ -13,7 +14,7 @@
 
 import type { Modifier } from '../modifiers.ts';
 import { EARTHSHAKER, INFERNO, VOLLEY } from '../skills.ts';
-import { getBoonIds } from './boons.ts';
+import { getBoonIds, getBoonRank, MAX_BOON_RANK } from './boons.ts';
 
 export interface Evolution {
   id: string;
@@ -22,6 +23,8 @@ export interface Evolution {
   description: string;
   // Boon ids the unit must have taken, all of them.
   boons: readonly string[];
+  // Boon ids the unit must have taken to at least a rank, by id.
+  ranks: Readonly<Record<string, number>>;
   // Relic ids the warband must hold, all of them.
   relics: readonly string[];
   // Class ids the unit must be one of; empty for any class.
@@ -30,16 +33,18 @@ export interface Evolution {
 }
 
 function evolution(
-  fields: Omit<Evolution, 'boons' | 'relics' | 'classes'> & {
+  fields: Omit<Evolution, 'boons' | 'ranks' | 'relics' | 'classes'> & {
     boons?: readonly string[];
+    ranks?: Readonly<Record<string, number>>;
     relics?: readonly string[];
     classes?: readonly string[];
   },
 ): Evolution {
-  const { boons = [], relics = [], classes = [], modifiers, ...rest } = fields;
+  const { boons = [], ranks = {}, relics = [], classes = [], modifiers, ...rest } = fields;
   return Object.freeze({
     ...rest,
     boons: Object.freeze([...boons]),
+    ranks: Object.freeze({ ...ranks }),
     relics: Object.freeze([...relics]),
     classes: Object.freeze([...classes]),
     modifiers: Object.freeze(modifiers.map((modifier) => Object.freeze(modifier))),
@@ -47,6 +52,8 @@ function evolution(
 }
 
 const ARCHERS = ['archer', 'siege'];
+// The rank a rank evolution's passive must reach: its top one.
+export const RANK_EVOLUTION_RANK = MAX_BOON_RANK;
 const CASTERS = ['acolyte'];
 
 // Every evolution, in the order the unit info screen lists them.
@@ -131,6 +138,39 @@ export const EVOLUTIONS: readonly Evolution[] = Object.freeze([
     relics: ['scholars-quill'],
     modifiers: [{ kind: 'experience', percent: 50 }],
   }),
+  // Rank evolutions: a passive at its top rank and the relic that matches.
+  evolution({
+    id: 'berserk',
+    name: 'Berserk',
+    description: 'Strikes twice in every exchange, fast enough or not.',
+    ranks: { brawler: RANK_EVOLUTION_RANK },
+    relics: ['duelists-gauntlet'],
+    modifiers: [{ kind: 'always-double' }],
+  }),
+  evolution({
+    id: 'troll-blood',
+    name: 'Troll Blood',
+    description: 'Recovers 25% of its max HP at the start of each of your phases.',
+    ranks: { regeneration: RANK_EVOLUTION_RANK },
+    relics: ['mending-charm'],
+    modifiers: [{ kind: 'phase-heal-percent', percent: 25 }],
+  }),
+  evolution({
+    id: 'eagle-eye',
+    name: 'Eagle Eye',
+    description: 'Never misses, and its crits deal ×4 damage.',
+    ranks: { 'keen-eye': RANK_EVOLUTION_RANK },
+    relics: ['hawk-lens'],
+    modifiers: [{ kind: 'sure-hit' }, { kind: 'crit-multiplier', amount: 4 }],
+  }),
+  evolution({
+    id: 'vampire-lord',
+    name: 'Vampire Lord',
+    description: 'Heals half the damage it deals.',
+    ranks: { bloodthirst: RANK_EVOLUTION_RANK },
+    relics: ['bloodpact'],
+    modifiers: [{ kind: 'lifesteal', percent: 50 }],
+  }),
   evolution({
     id: 'evergreen',
     name: 'Evergreen',
@@ -161,6 +201,7 @@ export function hasEvolution(unit: EvolutionHolder, relics: readonly string[], e
   const boons = getBoonIds(unit.boons ?? []);
   return (
     evolution.boons.every((id) => boons.includes(id)) &&
+    Object.entries(evolution.ranks).every(([id, rank]) => getBoonRank(unit.boons ?? [], id) >= rank) &&
     evolution.relics.every((id) => relics.includes(id)) &&
     (evolution.classes.length === 0 || evolution.classes.includes(unit.classId))
   );

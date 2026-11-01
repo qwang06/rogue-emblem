@@ -1,6 +1,6 @@
 // Level-up boons, Vampire Survivors style: each level a Warband unit gains
 // (in battle, from a stage clear or from a Veteran's Lesson) also lets it
-// pick one of three boons, on top of the level's growth rolls. A boon is
+// pick one of three boons, on top of the level's growth gains. A boon is
 // one of:
 // - a stat boon: +2 to a stat (+4 max HP), taken as often as offered;
 // - a skill boon: one of the skills its own class can learn this way
@@ -93,6 +93,10 @@ export const OWNED_PASSIVE_CHANCE = 0.35;
 // Ferocity's and Thick Skin's percent per rank, before rarity.
 export const FEROCITY_PERCENT = 8;
 export const THICK_SKIN_PERCENT = 8;
+// Twin Strike's chance and Finisher's HP threshold per rank, in percent,
+// before rarity.
+export const TWIN_STRIKE_PERCENT = 10;
+export const FINISHER_PERCENT = 4;
 
 const STAT_LABELS: Readonly<Partial<Record<GrowthStat, string>>> = Object.freeze({
   health: 'HP',
@@ -236,6 +240,18 @@ const DEFINITIONS: readonly BoonDefinition[] = [
     { kind: 'combat', term: 'guard-percent', amount: THICK_SKIN_PERCENT },
     (a) => `Takes ${a}% less damage, after defense.`,
   ),
+  passive(
+    'twin-strike',
+    'Twin Strike',
+    { kind: 'twin-strike', percent: TWIN_STRIKE_PERCENT },
+    (a) => `${a}% chance for each of its strikes to strike again at once.`,
+  ),
+  passive(
+    'finisher',
+    'Finisher',
+    { kind: 'finisher', percent: FINISHER_PERCENT },
+    (a) => `A hit that leaves a foe at ${a}% of its max HP or less fells it.`,
+  ),
 ];
 
 const DEFINITION_BY_ID: ReadonlyMap<string, BoonDefinition> = new Map(DEFINITIONS.map((d) => [d.id, d]));
@@ -302,6 +318,10 @@ export function scaleModifier(modifier: Modifier, rarityPercent: number, stagePe
       return { ...modifier, amount: scaleAmount(modifier.amount, both) };
     case 'phase-mana':
       return { ...modifier, amount: scaleAmount(modifier.amount, rarityPercent) };
+    case 'twin-strike':
+    case 'finisher':
+    case 'lifesteal':
+      return { ...modifier, percent: scaleAmount(modifier.percent, rarityPercent) };
     default:
       return modifier;
   }

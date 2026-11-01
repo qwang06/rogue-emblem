@@ -1,12 +1,12 @@
 // Pure experience and growth rules, Fire Emblem style: a unit earns XP
 // from each combat it survives (more for hitting, most for killing, scaled
 // by how its level compares with its opponent's), every 100 XP is a level
-// (only 50 for the first, from level 1 to 2), with no level cap, and each level rolls the unit's growth rates to decide which stats rise.
-// No Phaser, no hidden state; randomness comes in through an injected
-// `rng` (() => [0, 1)). Applying the result to a Unit is the caller's job.
+// (only 50 for the first, from level 1 to 2), with no level cap, and each
+// level raises the stats its class's growths set out for it, the same
+// every time (no dice). No Phaser, no hidden state. Applying the result to
+// a Unit is the caller's job.
 
 import type { CombatSide, Strike } from './combat.ts';
-import type { Rng } from './combatStats.ts';
 import type { Unit } from './Unit.ts';
 import { SKILL_TREES, getSkillsLearnedBetween, type Skill, type SkillTrees } from './skills.ts';
 
@@ -193,46 +193,53 @@ export function getGrowthStatValue(unit: GrowthSource, stat: GrowthStat): number
   return unit[stat] ?? 0;
 }
 
-// The stat gains for one level up, as { health, mana, strength, ... } (every
-// GROWTH_STATS key, 0 when it didn't grow). Each stat rolls once, in
-// GROWTH_STATS order: a growth rate of g% gains floor(g / 100) for sure plus
-// one more with a (g mod 100)% chance. Stats have no caps. Missing
-// growths count as 0%.
-export function rollLevelUp(growths: GrowthTable, rng: Rng): StatGains {
-  const gains = {} as StatGains;
-  for (const stat of GROWTH_STATS) {
-    const growth = growths[stat] ?? 0;
-    const roll = Math.min(99, Math.floor(rng() * 100));
-    gains[stat] = Math.floor(growth / 100) + (roll < growth % 100 ? 1 : 0);
+// The stat gains for a unit's `step`-th level up (1 is the first, from
+// level 1 to 2), as { health, mana, strength, ... } (every GROWTH_STATS key,
+// 0 when it didn't grow). No dice: a growth of g means g/100 of a point a
+// level (25 = one point every 4 levels, 100 = one every level), and each
+// level up hands out the whole points the growth total has earned by then
+// (floor(step × total / 100) in all), one at a time to the stat furthest
+// behind its share (step × g / 100 less what it has had; ties to the higher
+// growth, then GROWTH_STATS order). So every level gives about the same
+// number of points, each stat stays within a point of its share, and the
+// same growths and step always give the same gains. Stats have no caps.
+// Missing or negative growths count as 0.
+export function getLevelUpGains(growths: GrowthTable, step: number): StatGains {
+  const rates = GROWTH_STATS.map((stat) => Math.max(0, growths[stat] ?? 0));
+  const total = rates.reduce((sum, rate) => sum + rate, 0);
+  const had = rates.map(() => 0);
+  let gains = rates.map(() => 0);
+  for (let level = 1; level <= Math.max(0, Math.floor(step)); level++) {
+    gains = rates.map(() => 0);
+    const points = Math.floor((level * total) / 100) - Math.floor(((level - 1) * total) / 100);
+    for (let point = 0; point < points; point++) {
+      let best = -1;
+      let bestOwed = 0;
+      rates.forEach((rate, i) => {
+        if (rate <= 0) return;
+        const owed = (level * rate) / 100 - had[i];
+        if (best < 0 || owed > bestOwed || (owed === bestOwed && rate > rates[best])) {
+          best = i;
+          bestOwed = owed;
+        }
+      });
+      had[best] += 1;
+      gains[best] += 1;
+    }
   }
-  return gains;
-}
-
-// The stat gains for a unit's `step`-th level up (1 is the first) on its
-// average growths instead of rolls, for enemies fielded above level 1: a
-// growth of g% adds g/100 of a point per level with the fractions carried,
-// so after `step` level ups a stat has risen floor(step × g / 100) in all.
-// Same shape as rollLevelUp, and always the same for the same inputs.
-export function getAverageLevelUp(growths: GrowthTable, step: number): StatGains {
-  const gains = {} as StatGains;
-  for (const stat of GROWTH_STATS) {
-    const growth = growths[stat] ?? 0;
-    gains[stat] = Math.floor((step * growth) / 100) - Math.floor(((step - 1) * growth) / 100);
-  }
-  return gains;
+  return Object.fromEntries(GROWTH_STATS.map((stat, i) => [stat, gains[i]])) as StatGains;
 }
 
 // Everything that happens when `unit` gains `amount` XP, scaled by its
 // experienceRate (scaleExperience) unless `scaled` is false; `amount` in
 // the result is what it actually earned: its new level and experience, and one entry per level gained, in order, as { level, gains,
-// stats, skills } — the level reached, the stat gains rolled for it (see
-// rollLevelUp, against the unit's `growths`), the growth stats'
+// stats, skills } — the level reached, the stat gains for it (see
+// getLevelUpGains, against the unit's `growths`), the growth stats'
 // values after it, and the skills its class learns at it (from `trees`).
 // Nothing is mutated. Returns { amount, level, experience, levelUps }.
 export function resolveExperienceGain(
   unit: Experienced,
   amount: number,
-  rng: Rng,
   { trees = SKILL_TREES, scaled = true }: { trees?: SkillTrees; scaled?: boolean } = {},
 ): ExperienceGain {
   const earned = scaled ? scaleExperience(amount, unit.experienceRate) : Math.max(0, amount);
@@ -240,7 +247,7 @@ export function resolveExperienceGain(
   const stats = Object.fromEntries(GROWTH_STATS.map((stat) => [stat, getGrowthStatValue(unit, stat)])) as StatGains;
   const levelUps: LevelUpResult[] = [];
   for (let level = unit.level + 1; level <= result.level; level++) {
-    const gains = rollLevelUp(unit.growths ?? {}, rng);
+    const gains = getLevelUpGains(unit.growths ?? {}, level - 1);
     for (const stat of GROWTH_STATS) stats[stat] += gains[stat];
     const skills = getSkillsLearnedBetween(unit.unitClass, level - 1, level, trees);
     levelUps.push({ level, gains, stats: { ...stats }, skills });
@@ -248,11 +255,11 @@ export function resolveExperienceGain(
   return { amount: earned, level: result.level, experience: result.experience, levelUps };
 }
 
-// Levels `unit` up to `level` on its average growths (getAverageLevelUp),
-// one level up at a time, so its stats are the same for the same class and
-// level every time. Does nothing when it's already there.
+// Levels `unit` up to `level` on its growths (getLevelUpGains), one level
+// up at a time, so its stats are the same for the same class and level
+// every time. Does nothing when it's already there.
 export function growToLevel(unit: Unit, level: number): void {
   for (let step = unit.level; step < level; step = unit.level) {
-    unit.levelUp(getAverageLevelUp(unit.growths, step));
+    unit.levelUp(getLevelUpGains(unit.growths, step));
   }
 }

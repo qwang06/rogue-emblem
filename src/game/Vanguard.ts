@@ -18,17 +18,19 @@ export const VANGUARD_STATS = Object.freeze({
   movement: 5,
 });
 
-// Percent chance per level up that each stat rises (see experience.ts).
+// How fast each stat grows, on a fixed schedule with no dice: 100 is a
+// point every level, 50 every second level, 25 every fourth (see
+// getLevelUpGains in experience.ts).
 export const VANGUARD_GROWTHS = Object.freeze({
-  health: 85,
-  mana: 30,
-  strength: 55,
+  health: 100,
+  mana: 25,
+  strength: 100,
   intelligence: 0,
-  skill: 30,
-  speed: 30,
-  luck: 25,
-  defense: 30,
-  resistance: 10,
+  skill: 50,
+  speed: 25,
+  luck: 0,
+  defense: 25,
+  resistance: 0,
 });
 
 // The weapon types a vanguard can wield.
