@@ -7,6 +7,8 @@ import {
   CLEAVE,
   SHIELD_BASH,
   CLASS_SKILL_PICKS,
+  RECKLESS_SWING,
+  SAVAGE_BITE,
   BULWARK,
   PHALANX,
   TAILWIND,
@@ -412,7 +414,7 @@ describe('getClassSkillPicks', () => {
     expect(getClassSkillPicks('beast-rider')).toEqual([SKEWER, TANDEM_STRIKE]);
     expect(getClassSkillPicks('beast')).toEqual([WING_BUFFET, ROAR]);
     expect(getClassSkillPicks('archer')).toEqual([PIERCING_SHOT, PINNING_SHOT]);
-    expect(getClassSkillPicks('vanguard')).toEqual([SUNDER]);
+    expect(getClassSkillPicks('vanguard')).toEqual([SUNDER, RECKLESS_SWING]);
     expect(getClassSkillPicks('siege')).toEqual([DEADEYE]);
     expect(getClassSkillPicks('scout')).toEqual([MARK, TAILWIND]);
     expect(getClassSkillPicks('ram')).toEqual([BULWARK]);
@@ -456,6 +458,11 @@ describe('describeSkill', () => {
       'Leaves every ally next to it Guarded (takes 2 less damage from every hit) until your next phase.',
     );
     expect(describeSkill(TAILWIND)).toBe('Leaves an ally next to it Hastened (+2 MOV) until your next phase.');
+    expect(describeSkill(SAVAGE_BITE)).toBe('Its regular hit on a foe next to it, healing it for half the damage.');
+    expect(describeSkill(RECKLESS_SWING)).toBe('Its regular hit with +6 power on a foe next to it, costing it 3 HP.');
+    expect(describeSkill(SMITE)).toBe(
+      'Its regular hit with +3 power (+3 more against monsters) on a foe up to 2 tiles away.',
+    );
     expect(describeSkill(MARK)).toBe('Leaves a foe up to 3 tiles away Marked (15 less avoid).');
     expect(describeSkill(ROAR)).toBe("Leaves every foe next to it Rooted (can't move).");
     expect(describeSkill(THROW_STONES)).toBe('Half its regular hit on a foe up to 4 tiles away.');

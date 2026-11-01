@@ -22,6 +22,9 @@ import {
   MARK,
   MEND,
   PHALANX,
+  RECKLESS_SWING,
+  SAVAGE_BITE,
+  SMITE,
   TAILWIND,
   WARD,
   PINNING_SHOT,
@@ -761,6 +764,65 @@ describe('buff skills', () => {
       { type: 'move', unitId: 'ally', to: far },
     );
     expect(findUnit(state.grid, 'ally')).toEqual(far);
+  });
+});
+
+describe('drain, recoil and monster skills', () => {
+  const user = (skill: Skill, options = {}) => {
+    const hero = makeTestUnit({ team: 'player', mana: 20, ...options });
+    hero.modifiers = [{ kind: 'skill', skill }];
+    return hero;
+  };
+  const duelWith = (hero: ReturnType<typeof user>, foe = makeTestUnit({ team: 'enemy' })) =>
+    createTestBattle({ hero: { unit: hero, at: { x: 0, y: 0 } }, foe: { unit: foe, at: { x: 1, y: 0 } } });
+
+  it('heals Savage Bite for half the damage, rounded up', () => {
+    const hero = user(SAVAGE_BITE);
+    hero.takeDamage(10);
+    const { state, events } = run(duelWith(hero), {
+      type: 'skill',
+      unitId: 'hero',
+      skillId: 'savage-bite',
+      target: { x: 1, y: 0 },
+    });
+    expect(events).toContainEqual({ type: 'recovered', unitId: 'hero', stat: 'health', amount: 3, trigger: 'drain' });
+    expect(state.units.get('hero')!.health).toBe(13);
+  });
+
+  it('costs Reckless Swing 3 HP, but never the last', () => {
+    const { state, events } = run(duelWith(user(RECKLESS_SWING)), {
+      type: 'skill',
+      unitId: 'hero',
+      skillId: 'reckless-swing',
+      target: { x: 1, y: 0 },
+    });
+    expect(events).toContainEqual(expect.objectContaining({ type: 'skill', damage: 12 }));
+    expect(events).toContainEqual({ type: 'recoil', unitId: 'hero', damage: 3, health: 17 });
+    expect(state.units.get('hero')!.health).toBe(17);
+
+    const frail = user(RECKLESS_SWING);
+    frail.takeDamage(18);
+    const last = run(duelWith(frail), {
+      type: 'skill',
+      unitId: 'hero',
+      skillId: 'reckless-swing',
+      target: { x: 1, y: 0 },
+    });
+    expect(last.state.units.get('hero')!.health).toBe(1);
+  });
+
+  it('smites a monster harder', () => {
+    const monster = makeTestUnit({ team: 'enemy', health: 40 });
+    monster.monster = true;
+    const hit = (foe: ReturnType<typeof makeTestUnit>) =>
+      run(duelWith(user(SMITE), foe), {
+        type: 'skill',
+        unitId: 'hero',
+        skillId: 'smite',
+        target: { x: 1, y: 0 },
+      }).events.find((event) => event.type === 'skill');
+    expect(hit(makeTestUnit({ team: 'enemy', health: 40 }))).toMatchObject({ damage: 9 });
+    expect(hit(monster)).toMatchObject({ damage: 12 });
   });
 });
 

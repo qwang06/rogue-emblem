@@ -190,7 +190,7 @@ The axe-wielding front line: high HP and strength, low skill, speed and luck. It
 | Throw Stones | 2          | 2    | 1–4   | Half the regular hit, rounded up                |
 | Cleave       | 2          | 3    | 1     | The regular hit, and on the foes on either side |
 
-Level-up skill pick: **Sunder** (3 MP, range 1, the regular hit with +2 STR, leaving the foe Sundered).
+Level-up skill picks: **Sunder** (3 MP, range 1, the regular hit with +2 STR, leaving the foe Sundered) and **Reckless Swing** (3 MP, range 1, the regular hit with +6 STR, costing it 3 HP, never its last).
 
 Passive, **Heavy Swing**: +1 damage. Carries an Iron Axe, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
@@ -273,8 +273,9 @@ A specialized unit, recruited on its own (or raised by the Beast Tamer origin): 
 | ------------ | --------------- | ------- |
 | physical     | Bite            | 100%    |
 
-| Skill | Learned at | Mana | Range | Damage |
-| ----- | ---------- | ---- | ----- | ------ |
+| Skill       | Learned at | Mana | Range | Damage                                            |
+| ----------- | ---------- | ---- | ----- | ------------------------------------------------- |
+| Savage Bite | 2          | 1    | 1     | The regular hit; heals for half of it, rounded up |
 
 Level-up skill picks: **Wing Buffet** (2 MP, range 1, half the regular hit, then pushes the foe a tile) and **Roar** (2 MP, aimed at itself: no damage, every foe next to it is left Rooted).
 
@@ -394,7 +395,7 @@ A specialized unit that doesn't promote. The healer and the warband's magic user
 | ----- | ---------- | ---- | ----- | ----------------------------- |
 | Mend  | 2          | 3    | 1     | None: heals an ally 2 + `INT` |
 
-Level-up skill picks: **Smite** (3 MP, range 1–2, the regular hit with +3 `INT`), **Prayer** (5 MP, aimed at itself: heals every wounded ally next to it for 1 + half its `INT`, rounded down) and **Ward** (2 MP, range 1–2, an ally is left Warded).
+Level-up skill picks: **Smite** (3 MP, range 1–2, the regular hit with +3 `INT`, +3 more against a monster), **Prayer** (5 MP, aimed at itself: heals every wounded ally next to it for 1 + half its `INT`, rounded down) and **Ward** (2 MP, range 1–2, an ally is left Warded).
 
 Mend heals like the Heal staff without needing one. Knows Light, and carries a Heal staff, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 

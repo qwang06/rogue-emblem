@@ -2852,6 +2852,13 @@ export class GridScene extends Phaser.Scene {
       case 'skill':
         this.playSkill(event, next);
         return;
+      case 'recoil': {
+        const sprite = this.unitSprites.get(event.unitId)!;
+        this.showStats(event.unitId, { health: event.health });
+        this.showDamagePopup(sprite, event.damage);
+        playHitFlash(this, sprite, next);
+        return;
+      }
       case 'status':
         this.showDamagePopup(this.unitSprites.get(event.targetId)!, 0, 'status', STATUSES[event.status].label);
         next();
@@ -2871,7 +2878,7 @@ export class GridScene extends Phaser.Scene {
       // A kill's heal plays like a potion; a phase's recoveries pop up as
       // the phase starts (see continueBattle).
       case 'recovered':
-        if (event.trigger === 'kill') this.playRecovery(event.unitId, event.stat, event.amount, next);
+        if (event.trigger !== 'phase') this.playRecovery(event.unitId, event.stat, event.amount, next);
         else next();
         return;
       case 'loot':
