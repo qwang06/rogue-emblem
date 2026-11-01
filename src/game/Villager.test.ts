@@ -1,18 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { ARCHER_CAPS, ARCHER_GROWTHS } from './Archer.ts';
+import { ARCHER_GROWTHS } from './Archer.ts';
 import { DEFAULT_EXPERIENCE_RATE, GROWTH_STATS } from './experience.ts';
 import { STARTING_ITEMS } from './items.ts';
 import { THROW_STONES, getLearnedSkills } from './skills.ts';
 import { Unit } from './Unit.ts';
-import { SOLDIER_CAPS, SOLDIER_GROWTHS, SOLDIER_STATS } from './Soldier.ts';
-import {
-  VILLAGER_CAPS,
-  VILLAGER_EXPERIENCE_RATE,
-  VILLAGER_GROWTHS,
-  VILLAGER_ITEMS,
-  VILLAGER_STATS,
-  Villager,
-} from './Villager.ts';
+import { SOLDIER_GROWTHS, SOLDIER_STATS } from './Soldier.ts';
+import { VILLAGER_EXPERIENCE_RATE, VILLAGER_GROWTHS, VILLAGER_ITEMS, VILLAGER_STATS, Villager } from './Villager.ts';
 import { FISTS, WOODEN_SWORD } from './weapons.ts';
 
 describe('Villager', () => {
@@ -25,7 +18,7 @@ describe('Villager', () => {
     expect(villager.level).toBe(1);
   });
 
-  it('uses the villager stat line, growths and caps', () => {
+  it('uses the villager stat line and growths', () => {
     const villager = new Villager({ team: 'player' });
     expect(villager.maxHealth).toBe(VILLAGER_STATS.health);
     expect(villager.maxMana).toBe(VILLAGER_STATS.mana);
@@ -33,7 +26,6 @@ describe('Villager', () => {
     expect(villager.speed).toBe(VILLAGER_STATS.speed);
     expect(villager.movement).toBe(VILLAGER_STATS.movement);
     expect(villager.growths).toBe(VILLAGER_GROWTHS);
-    expect(villager.caps).toBe(VILLAGER_CAPS);
   });
 
   it('accepts a custom name and level', () => {
@@ -69,18 +61,13 @@ describe('Villager', () => {
     expect(VILLAGER_STATS).toEqual({ ...SOLDIER_STATS, strength: SOLDIER_STATS.strength - 1 });
   });
 
-  it('out-grows the soldier and the archer: every growth and cap at least theirs, and more in total', () => {
+  it('out-grows the soldier and the archer: every growth at least theirs, and more in total', () => {
     const total = (table: Record<string, number>) => Object.values(table).reduce((sum, value) => sum + value, 0);
-    for (const [growths, caps] of [
-      [SOLDIER_GROWTHS, SOLDIER_CAPS],
-      [ARCHER_GROWTHS, ARCHER_CAPS],
-    ]) {
+    for (const growths of [SOLDIER_GROWTHS, ARCHER_GROWTHS]) {
       for (const stat of GROWTH_STATS) {
         expect(VILLAGER_GROWTHS[stat]).toBeGreaterThanOrEqual(growths[stat]);
-        expect(VILLAGER_CAPS[stat]).toBeGreaterThanOrEqual(caps[stat]);
       }
       expect(total(VILLAGER_GROWTHS)).toBeGreaterThan(total(growths));
-      expect(total(VILLAGER_CAPS)).toBeGreaterThan(total(caps));
     }
   });
 

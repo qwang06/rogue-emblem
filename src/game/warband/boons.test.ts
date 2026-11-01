@@ -37,11 +37,10 @@ describe('getBoonModifiers', () => {
 });
 
 describe('isBoonEligible', () => {
-  it('offers stat boons below the cap only', () => {
+  it('offers stat boons however high the stat is (no caps)', () => {
     const unit = soldier();
+    unit.speed = 99;
     expect(isBoonEligible(unit, boon('stat-speed'))).toBe(true);
-    unit.speed = unit.caps.speed!;
-    expect(isBoonEligible(unit, boon('stat-speed'))).toBe(false);
   });
 
   it('offers STR to physical fighters and INT to casters', () => {
@@ -91,7 +90,7 @@ describe('rollBoons', () => {
     expect(rollBoons(soldier(), createSeededRng(9))).toEqual(rollBoons(soldier(), createSeededRng(9)));
   });
 
-  it('offers fewer once nearly everything is taken', () => {
+  it('falls back on stat boons, which never run out, once every passive and skill is taken', () => {
     const unit = soldier();
     unit.boons = BOONS.filter((b) => b.kind === 'passive').map((b) => b.id);
     for (const stat of ['maxHealth', 'strength', 'skill', 'speed', 'luck', 'defense', 'resistance'] as const) {
@@ -100,20 +99,22 @@ describe('rollBoons', () => {
     for (const id of ['skill-cleave', 'skill-shield-bash', 'skill-throw-stones']) {
       applyModifiers(unit, boon(id).modifiers);
     }
-    expect(rollBoons(unit, createSeededRng(1))).toEqual([]);
+    const offers = rollBoons(unit, createSeededRng(1));
+    expect(offers).toHaveLength(3);
+    expect(offers.every((offer) => offer.kind === 'stat')).toBe(true);
   });
 });
 
 describe('takeBoon', () => {
-  it('raises the stat, up to the cap, and records the boon', () => {
+  it('raises the stat by its full amount every time, and records the boon', () => {
     const unit = soldier();
     const strength = unit.strength;
     takeBoon(unit, boon('stat-strength'));
     expect(unit.strength).toBe(strength + STAT_BOON_AMOUNT);
-    unit.strength = unit.caps.strength! - 1;
-    expect(getStatBoonGain(unit, boon('stat-strength'))).toBe(1);
+    unit.strength = 99;
+    expect(getStatBoonGain(boon('stat-strength'))).toBe(STAT_BOON_AMOUNT);
     takeBoon(unit, boon('stat-strength'));
-    expect(unit.strength).toBe(unit.caps.strength);
+    expect(unit.strength).toBe(99 + STAT_BOON_AMOUNT);
     expect(unit.boons).toEqual(['stat-strength', 'stat-strength']);
   });
 

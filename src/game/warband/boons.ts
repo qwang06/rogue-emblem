@@ -2,7 +2,7 @@
 // (in battle, from a stage clear or from a Veteran's Lesson) also lets it
 // pick one of three boons, on top of the level's growth rolls. A boon is
 // one of:
-// - a stat boon: +2 to a stat (+4 max HP), up to the class's cap;
+// - a stat boon: +2 to a stat (+4 max HP);
 // - a skill boon: a skill from another class's tree (skills.ts);
 // - a passive: a modifier (modifiers.ts) the unit carries into every
 //   battle, like a relic for one unit.
@@ -25,7 +25,7 @@ export interface Boon {
   kind: BoonKind;
   name: string;
   description: string;
-  // A stat boon's stat and how much it raises it (up to the cap).
+  // A stat boon's stat and how much it raises it.
   stat?: { stat: GrowthStat; amount: number };
   // What the unit carries into battle once it has the boon.
   modifiers: readonly Modifier[];
@@ -55,7 +55,7 @@ function statBoon(stat: GrowthStat, name: string): Boon {
     id: `stat-${stat}`,
     kind: 'stat',
     name,
-    description: `+${amount} ${stat === 'health' ? 'max HP' : label}, up to the class's cap. Can be taken again.`,
+    description: `+${amount} ${stat === 'health' ? 'max HP' : label}. Can be taken again.`,
     stat: Object.freeze({ stat, amount }),
     modifiers: Object.freeze([]),
   });
@@ -128,17 +128,13 @@ export function getBoonModifiers(boonIds: readonly string[]): Modifier[] {
   return boonIds.flatMap((id) => findBoon(id)?.modifiers ?? []);
 }
 
-// How much a stat boon would raise `unit`'s stat: its amount, cut to what
-// the class's cap leaves (health and mana read their maximums). 0 for
-// other boons.
-export function getStatBoonGain(unit: Unit, boon: Boon): number {
-  if (!boon.stat) return 0;
-  const { stat, amount } = boon.stat;
-  const value = stat === 'health' ? unit.maxHealth : stat === 'mana' ? unit.maxMana : unit[stat];
-  return Math.max(0, Math.min(amount, (unit.caps[stat] ?? Infinity) - value));
+// How much a stat boon would raise a unit's stat: its full amount, since
+// stats have no caps. 0 for other boons.
+export function getStatBoonGain(boon: Boon): number {
+  return boon.stat?.amount ?? 0;
 }
 
-// Whether `unit` could take `boon`: a stat boon that would raise something
+// Whether `unit` could take `boon`: a stat boon
 // (STR only for a unit with physical weapons, INT only for one with
 // magical ones), a skill it doesn't know, or a passive it hasn't taken.
 export function isBoonEligible(unit: Unit, boon: Boon): boolean {
@@ -147,7 +143,7 @@ export function isBoonEligible(unit: Unit, boon: Boon): boolean {
       const stat = boon.stat!.stat;
       if (stat === 'strength' && !dealsDamage(unit, 'physical')) return false;
       if (stat === 'intelligence' && !dealsDamage(unit, 'magical')) return false;
-      return getStatBoonGain(unit, boon) > 0;
+      return true;
     }
     case 'skill':
       return boon.modifiers.every(
@@ -189,7 +185,7 @@ export function rollBoons(unit: Unit, rng: Rng): Boon[] {
 // boons. Changes `unit` itself, like levelUp: use it on a unit restored to
 // be snapshotted again. The modifiers come with the unit's next restore.
 export function takeBoon(unit: Unit, boon: Boon): Unit {
-  const gain = getStatBoonGain(unit, boon);
+  const gain = getStatBoonGain(boon);
   if (boon.stat && gain > 0) {
     const { stat } = boon.stat;
     if (stat === 'health') {

@@ -31,19 +31,6 @@ export const SCOUT_GROWTHS = Object.freeze({
   resistance: 25,
 });
 
-// The most each stat can reach through level ups.
-export const SCOUT_CAPS = Object.freeze({
-  health: 35,
-  mana: 30,
-  strength: 20,
-  intelligence: 20,
-  skill: 20,
-  speed: 25,
-  luck: 25,
-  defense: 20,
-  resistance: 20,
-});
-
 // The weapon types it can wield.
 export const SCOUT_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
 
@@ -51,7 +38,7 @@ export const SCOUT_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physica
 export const SCOUT_ITEMS: Inventory = Object.freeze([weaponEntry(WOODEN_SPEAR), ...STARTING_ITEMS]);
 
 // Starts at level 1 with the stat line above; its skills come from the
-// 'scout' skill tree. Levels up with the growth rates and caps above.
+// 'scout' skill tree. Levels up with the growth rates above.
 export class Scout extends Unit {
   constructor({ name = 'Scout', team, level = 1, items = SCOUT_ITEMS, faction }: ClassUnitOptions) {
     super({
@@ -63,7 +50,6 @@ export class Scout extends Unit {
       items,
       weaponTypes: SCOUT_WEAPON_TYPES,
       growths: SCOUT_GROWTHS,
-      caps: SCOUT_CAPS,
       ...SCOUT_STATS,
     });
   }

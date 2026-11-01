@@ -5,7 +5,7 @@ import { FISTS, weaponEntry, WOODEN_SWORD, type WeaponType } from './weapons.ts'
 // The starting unit: a townsperson with a wooden sword and no armor, the
 // first tier of the class tree. A villager starts a point of strength
 // below a soldier, so early on it's the weakest unit; it makes up for that
-// with the highest growth total and caps of any class and earns XP half
+// with the highest growth total of any class and earns XP half
 // again as fast (VILLAGER_EXPERIENCE_RATE), and at PROMOTION_LEVEL it
 // becomes an Archer, Soldier, Vanguard or Sapper (promotions.ts).
 export const VILLAGER_STATS = Object.freeze({
@@ -34,19 +34,6 @@ export const VILLAGER_GROWTHS = Object.freeze({
   resistance: 25,
 });
 
-// The most each stat can reach through level ups.
-export const VILLAGER_CAPS = Object.freeze({
-  health: 50,
-  mana: 35,
-  strength: 25,
-  intelligence: 20,
-  skill: 25,
-  speed: 25,
-  luck: 25,
-  defense: 25,
-  resistance: 25,
-});
-
 // Percent of each XP gain a villager earns (see scaleExperience).
 export const VILLAGER_EXPERIENCE_RATE = 150;
 
@@ -65,7 +52,7 @@ export const VILLAGER_ITEMS: Inventory = Object.freeze([
 // skills come from the 'villager' skill tree, it wields physical weapons,
 // and it fights with a wooden sword (then its fists) and carries the
 // potions unless given other items. Levels up with the villager growth
-// rates and caps, and earns XP at the villager rate.
+// rates, and earns XP at the villager rate.
 export class Villager extends Unit {
   constructor({ name = 'Villager', team, level = 1, items = VILLAGER_ITEMS, faction }: ClassUnitOptions) {
     super({
@@ -77,7 +64,6 @@ export class Villager extends Unit {
       items,
       weaponTypes: VILLAGER_WEAPON_TYPES,
       growths: VILLAGER_GROWTHS,
-      caps: VILLAGER_CAPS,
       experienceRate: VILLAGER_EXPERIENCE_RATE,
       ...VILLAGER_STATS,
     });

@@ -45,7 +45,7 @@ export interface ItemSnapshot {
 
 // A player unit between battles. `id` is its unitId in every battle of the
 // run; `classId` is one of UNIT_CLASSES' ids, which supplies what isn't
-// stored (movement, weapon types, growths, caps). `tomeProgress` is how far
+// stored (movement, weapon types, growths). `tomeProgress` is how far
 // it is into learning each tome it has struck with (see tomes.ts), absent
 // when it's learning none; `boons` the level-up boons it has taken (see
 // boons.ts), absent when it has none; `quirk` the quirk it joined with (see

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getLearnedSkills } from './skills.ts';
-import { SKELETON_CAPS, SKELETON_GROWTHS, SKELETON_ITEMS, SKELETON_STATS, Skeleton } from './Skeleton.ts';
+import { SKELETON_GROWTHS, SKELETON_ITEMS, SKELETON_STATS, Skeleton } from './Skeleton.ts';
 import { Unit } from './Unit.ts';
 import { BONE_CLAWS } from './weapons.ts';
 
@@ -36,10 +36,9 @@ describe('Skeleton', () => {
     expect(skeleton.items).toHaveLength(1);
   });
 
-  it('levels up with the skeleton growth rates and caps', () => {
+  it('levels up with the skeleton growth rates', () => {
     const skeleton = new Skeleton({ team: 'enemy' });
     expect(skeleton.growths).toBe(SKELETON_GROWTHS);
-    expect(skeleton.caps).toBe(SKELETON_CAPS);
   });
 
   it('learns no skills', () => {

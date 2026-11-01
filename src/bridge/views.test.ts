@@ -28,7 +28,6 @@ import {
 } from './views.ts';
 import type { ExperienceGain } from '../game/experience.ts';
 import { POWER_STRIKE, SHOVE, type Skill } from '../game/skills.ts';
-import { MAX_LEVEL } from '../game/experience.ts';
 import { Soldier } from '../game/Soldier.ts';
 import { Acolyte } from '../game/Acolyte.ts';
 import { advanceDialog, createDialog } from '../game/dialog.ts';
@@ -88,7 +87,7 @@ describe('toUnitView', () => {
       classLabel: 'Soldier',
       experienceToLevel: 100,
     });
-    expect(toUnitView(new Soldier({ team: 'player', level: MAX_LEVEL }))!.experienceToLevel).toBeNull();
+    expect(toUnitView(new Soldier({ team: 'player', level: 25 }))!.experienceToLevel).toBe(100);
   });
 
   it('names the item the unit drops', () => {
@@ -184,18 +183,16 @@ describe('toUnitDetailView', () => {
     expect(toUnitDetailView(unit)).toMatchObject(toUnitView(unit)!);
   });
 
-  it("names the class and lists each stat with its class's cap", () => {
+  it('names the class and lists each stat', () => {
     const unit = new Soldier({ team: 'player' });
     const view = toUnitDetailView(unit)!;
     expect(view.classLabel).toBe('Soldier');
     expect(view.stats.map((stat) => stat.label)).toEqual(['STR', 'INT', 'SKL', 'SPD', 'LCK', 'DEF', 'RES']);
-    expect(view.stats[0]).toEqual({ id: 'strength', label: 'STR', value: unit.strength, cap: unit.caps.strength });
+    expect(view.stats[0]).toEqual({ id: 'strength', label: 'STR', value: unit.strength });
   });
 
-  it('leaves the class and caps blank for a unit without them', () => {
-    const view = toUnitDetailView(makeUnit())!;
-    expect(view.classLabel).toBeNull();
-    expect(view.stats.every((stat) => stat.cap === null)).toBe(true);
+  it('leaves the class blank for a unit without one', () => {
+    expect(toUnitDetailView(makeUnit())!.classLabel).toBeNull();
   });
 
   it('works out the rates it fights with from its stats and weapon', () => {
@@ -279,11 +276,6 @@ describe('toUnitDetailView', () => {
     expect(toUnitDetailView(unit)!.quirk).toBeNull();
     unit.quirk = 'lucky';
     expect(toUnitDetailView(unit)!.quirk).toEqual({ label: 'Lucky', description: '+10 avoid.' });
-  });
-
-  it('says when the unit has reached the top level', () => {
-    expect(toUnitDetailView(makeUnit())!.maxLevel).toBe(false);
-    expect(toUnitDetailView(new Soldier({ team: 'player', level: MAX_LEVEL }))!.maxLevel).toBe(true);
   });
 
   it('is a detached, frozen snapshot', () => {
@@ -784,7 +776,7 @@ describe('toTeamView', () => {
     const run = createRun(1, createStartingWarband());
     const roster = [
       { ...run.roster[0], level: 3, experience: 40, health: 7 },
-      { ...run.roster[1], level: MAX_LEVEL },
+      { ...run.roster[1], level: 25 },
     ];
     const view = toTeamView(roster);
     expect(view.map(({ id }) => id)).toEqual([roster[0].id, roster[1].id]);
@@ -797,7 +789,7 @@ describe('toTeamView', () => {
       maxHealth: roster[0].maxHealth,
     });
     expect(view[0].unitClass).not.toBe(roster[0].classId);
-    expect(view[1].experienceForLevel).toBeNull();
+    expect(view[1].experienceForLevel).toBe(100);
     expect(Object.isFrozen(view)).toBe(true);
     expect(Object.isFrozen(view[0])).toBe(true);
   });

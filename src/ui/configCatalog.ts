@@ -7,7 +7,7 @@ import { CHARACTERS, DIALOGS } from '../data/dialogs.ts';
 import { STORY_CHAPTERS } from '../game/battleSetup.ts';
 import { CRIT_MULTIPLIER, DOUBLE_THRESHOLD } from '../game/combatStats.ts';
 import { REGION_CONFIGS } from '../data/regions.ts';
-import { EXPERIENCE_PER_LEVEL, FIRST_LEVEL_EXPERIENCE, GROWTH_STATS, MAX_LEVEL } from '../game/experience.ts';
+import { EXPERIENCE_PER_LEVEL, FIRST_LEVEL_EXPERIENCE, GROWTH_STATS } from '../game/experience.ts';
 import { STARTING_ITEMS } from '../game/items.ts';
 import { TERRAIN_MOVE_COSTS } from '../game/movement.ts';
 import { SKILL_TREES } from '../game/skills.ts';
@@ -106,13 +106,6 @@ export function getConfigCatalog(): readonly ConfigGroup[] {
           summary: `${classCount()} · ${plural(GROWTH_STATS.length, 'stat')}`,
         },
         {
-          id: 'unit-caps',
-          title: 'Stat Caps',
-          description: 'The most each stat can reach through level ups.',
-          sources: ['src/game/Villager.ts', 'src/game/Soldier.ts'],
-          summary: classCount(),
-        },
-        {
           id: 'skills',
           title: 'Skills',
           description: 'Skills, their costs and power, and the level each class learns them at.',
@@ -148,9 +141,9 @@ export function getConfigCatalog(): readonly ConfigGroup[] {
         {
           id: 'experience',
           title: 'Experience & Leveling',
-          description: 'XP per level, the level cap, and XP for misses and kills.',
+          description: 'XP per level and XP for misses and kills (there is no level cap).',
           sources: ['src/game/experience.ts'],
-          summary: `${FIRST_LEVEL_EXPERIENCE} XP to level 2, ${EXPERIENCE_PER_LEVEL} per level after · cap ${MAX_LEVEL}`,
+          summary: `${FIRST_LEVEL_EXPERIENCE} XP to level 2, ${EXPERIENCE_PER_LEVEL} per level after · no level cap`,
         },
         {
           id: 'combat',

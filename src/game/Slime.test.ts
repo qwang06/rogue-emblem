@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getLearnedSkills } from './skills.ts';
-import { SLIME_CAPS, SLIME_GROWTHS, SLIME_ITEMS, SLIME_STATS, Slime } from './Slime.ts';
+import { SLIME_GROWTHS, SLIME_ITEMS, SLIME_STATS, Slime } from './Slime.ts';
 import { Unit } from './Unit.ts';
 import { TACKLE } from './weapons.ts';
 
@@ -36,10 +36,9 @@ describe('Slime', () => {
     expect(slime.items).toHaveLength(1);
   });
 
-  it('levels up with the slime growth rates and caps', () => {
+  it('levels up with the slime growth rates', () => {
     const slime = new Slime({ team: 'enemy' });
     expect(slime.growths).toBe(SLIME_GROWTHS);
-    expect(slime.caps).toBe(SLIME_CAPS);
   });
 
   it('learns no skills', () => {

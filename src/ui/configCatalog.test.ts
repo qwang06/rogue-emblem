@@ -20,7 +20,7 @@ describe('getConfigCatalog', () => {
 
   it('lists the configs the editor will cover', () => {
     expect(entries().map((entry) => entry.id)).toEqual(
-      expect.arrayContaining(['dialogs', 'regions', 'unit-stats', 'unit-growths', 'unit-caps', 'weapons']),
+      expect.arrayContaining(['dialogs', 'regions', 'unit-stats', 'unit-growths', 'weapons']),
     );
   });
 

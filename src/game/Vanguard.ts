@@ -31,19 +31,6 @@ export const VANGUARD_GROWTHS = Object.freeze({
   resistance: 10,
 });
 
-// The most each stat can reach through level ups.
-export const VANGUARD_CAPS = Object.freeze({
-  health: 40,
-  mana: 30,
-  strength: 20,
-  intelligence: 20,
-  skill: 20,
-  speed: 20,
-  luck: 20,
-  defense: 20,
-  resistance: 20,
-});
-
 // The weapon types a vanguard can wield.
 export const VANGUARD_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
 
@@ -62,7 +49,7 @@ export const VANGUARD_PASSIVE: { name: string; description: string; modifiers: r
 // line; its skills come from the 'vanguard' skill tree, it wields physical
 // weapons, and it carries an Iron Axe (hard-hitting but inaccurate) and
 // the potions unless given other items. Levels up with the vanguard growth
-// rates and caps.
+// rates.
 export class Vanguard extends Unit {
   constructor({ name = 'Vanguard', team, level = 1, items = VANGUARD_ITEMS, faction }: ClassUnitOptions) {
     super({
@@ -74,7 +61,6 @@ export class Vanguard extends Unit {
       items,
       weaponTypes: VANGUARD_WEAPON_TYPES,
       growths: VANGUARD_GROWTHS,
-      caps: VANGUARD_CAPS,
       ...VANGUARD_STATS,
     });
     applyModifiers(this, VANGUARD_PASSIVE.modifiers);

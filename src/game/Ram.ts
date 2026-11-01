@@ -30,19 +30,6 @@ export const RAM_GROWTHS = Object.freeze({
   resistance: 10,
 });
 
-// The most each stat can reach through level ups.
-export const RAM_CAPS = Object.freeze({
-  health: 50,
-  mana: 0,
-  strength: 24,
-  intelligence: 20,
-  skill: 20,
-  speed: 15,
-  luck: 15,
-  defense: 25,
-  resistance: 20,
-});
-
 // The weapon types it can wield.
 export const RAM_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
 
@@ -50,7 +37,7 @@ export const RAM_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical'
 export const RAM_ITEMS: Inventory = Object.freeze([weaponEntry(TACKLE)]);
 
 // Starts at level 1 with the stat line above; its skills come from the
-// 'ram' skill tree. Levels up with the growth rates and caps above.
+// 'ram' skill tree. Levels up with the growth rates above.
 export class Ram extends Unit {
   constructor({ name = 'Ram', team, level = 1, items = RAM_ITEMS, faction }: ClassUnitOptions) {
     super({
@@ -62,7 +49,6 @@ export class Ram extends Unit {
       items,
       weaponTypes: RAM_WEAPON_TYPES,
       growths: RAM_GROWTHS,
-      caps: RAM_CAPS,
       ...RAM_STATS,
     });
   }

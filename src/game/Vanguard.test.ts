@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { VANGUARD_CAPS, VANGUARD_GROWTHS, VANGUARD_ITEMS, VANGUARD_STATS, Vanguard } from './Vanguard.ts';
+import { VANGUARD_GROWTHS, VANGUARD_ITEMS, VANGUARD_STATS, Vanguard } from './Vanguard.ts';
 import { calculateDamage, getCombatForecast } from './combat.ts';
 import { getAttackSpeed } from './combatStats.ts';
 import { HEALTH_POTION, MANA_POTION } from './items.ts';
@@ -32,10 +32,9 @@ describe('Vanguard', () => {
     expect(vanguard.movement).toBe(VANGUARD_STATS.movement);
   });
 
-  it('levels up with the vanguard growth rates and caps', () => {
+  it('levels up with the vanguard growth rates', () => {
     const vanguard = new Vanguard({ team: 'player' });
     expect(vanguard.growths).toBe(VANGUARD_GROWTHS);
-    expect(vanguard.caps).toBe(VANGUARD_CAPS);
   });
 
   it('wields physical weapons only', () => {

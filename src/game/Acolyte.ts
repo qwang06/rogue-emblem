@@ -31,19 +31,6 @@ export const ACOLYTE_GROWTHS = Object.freeze({
   resistance: 45,
 });
 
-// The most each stat can reach through level ups.
-export const ACOLYTE_CAPS = Object.freeze({
-  health: 40,
-  mana: 30,
-  strength: 20,
-  intelligence: 20,
-  skill: 20,
-  speed: 20,
-  luck: 20,
-  defense: 20,
-  resistance: 20,
-});
-
 // The weapon types an acolyte can wield: magical ones, i.e. its Light
 // spell, tomes (see tomes.ts) and the spells they teach.
 export const ACOLYTE_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['magical']);
@@ -55,7 +42,7 @@ export const ACOLYTE_ITEMS: Inventory = Object.freeze([weaponEntry(LIGHT), staff
 // The healer. Starts at level 1 with the acolyte stat line; its skills come
 // from the 'acolyte' skill tree (none yet), it wields tomes and spells,
 // and it knows Light and carries a Heal staff (see healing.ts) and the
-// potions unless given other items. Levels up with the acolyte growth rates and caps.
+// potions unless given other items. Levels up with the acolyte growth rates.
 export class Acolyte extends Unit {
   constructor({ name = 'Acolyte', team, level = 1, items = ACOLYTE_ITEMS, faction }: ClassUnitOptions) {
     super({
@@ -67,7 +54,6 @@ export class Acolyte extends Unit {
       items,
       weaponTypes: ACOLYTE_WEAPON_TYPES,
       growths: ACOLYTE_GROWTHS,
-      caps: ACOLYTE_CAPS,
       ...ACOLYTE_STATS,
     });
   }

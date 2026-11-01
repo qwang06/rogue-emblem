@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { HEALTH_POTION, MANA_POTION } from './items.ts';
-import { SOLDIER_CAPS, SOLDIER_GROWTHS, SOLDIER_ITEMS, SOLDIER_STATS, Soldier } from './Soldier.ts';
+import { SOLDIER_GROWTHS, SOLDIER_ITEMS, SOLDIER_STATS, Soldier } from './Soldier.ts';
 import { Unit } from './Unit.ts';
 import { FIRE, IRON_SPEAR, weaponEntry } from './weapons.ts';
 
@@ -45,10 +45,9 @@ describe('Soldier', () => {
     expect(soldier.weaponUses).toBe(IRON_SPEAR.uses);
   });
 
-  it('levels up with the soldier growth rates and caps', () => {
+  it('levels up with the soldier growth rates', () => {
     const soldier = new Soldier({ team: 'player' });
     expect(soldier.growths).toBe(SOLDIER_GROWTHS);
-    expect(soldier.caps).toBe(SOLDIER_CAPS);
     expect(soldier.experience).toBe(0);
   });
 

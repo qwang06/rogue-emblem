@@ -6,7 +6,6 @@ import { createSeededRng } from '../rng.ts';
 import { Soldier } from '../Soldier.ts';
 import { Unit } from '../Unit.ts';
 import { createUnitOfClass, UNIT_CLASSES } from '../unitClasses.ts';
-import { MAX_LEVEL } from '../experience.ts';
 import { Villager } from '../Villager.ts';
 import { FIRE, IRON_AXE, IRON_BOW, IRON_SPEAR } from '../weapons.ts';
 import { createRun, parseRun, serializeRun, type RunState, type UnitSnapshot } from './run.ts';
@@ -186,13 +185,13 @@ describe('rollRewards', () => {
       if (reward.kind === 'arms') expect([IRON_SPEAR.id, IRON_AXE.id, IRON_BOW.id]).toContain(reward.itemId);
       if (reward.kind === 'relic') expect(reward.relicId).not.toBe(RELICS[0].id);
     }
-    const maxed = withRoster(
+    const veterans = withRoster(
       run,
-      run.roster.map((unit) => ({ ...unit, level: MAX_LEVEL })),
+      run.roster.map((unit) => ({ ...unit, level: 25 })),
     );
     expect(
-      Array.from({ length: 40 }, (_, seed) => rollRewards(maxed, 2, createSeededRng(seed))).flat(),
-    ).not.toContainEqual(expect.objectContaining({ kind: 'lesson' }));
+      Array.from({ length: 40 }, (_, seed) => rollRewards(veterans, 2, createSeededRng(seed))).flat(),
+    ).toContainEqual(expect.objectContaining({ kind: 'lesson' }));
   });
 
   it("never offers a Mentor's Scroll while the camp has no Mentors", () => {
@@ -529,13 +528,13 @@ describe("the veteran's lesson reward", () => {
     expect(applyReward(run, experience(5))).toEqual(applyReward(run, experience(5)));
   });
 
-  it("leaves a unit at the max level as it is, and doesn't touch the run's gold or the fallen", () => {
+  it("levels a unit past level 20 too (there's no cap), and doesn't touch the run's gold", () => {
     const run = fullRun();
-    const maxed = withRoster(run, [{ ...run.roster[0], level: MAX_LEVEL, experience: 0 }]);
-    const { run: after, levelUps } = applyLessonReward(maxed, experience());
-    expect(after.roster[0]).toEqual(maxed.roster[0]);
-    expect(levelUps).toEqual([]);
-    expect(after.gold).toBe(maxed.gold);
+    const veteran = withRoster(run, [{ ...run.roster[0], level: 20, experience: 0 }]);
+    const { run: after, levelUps } = applyLessonReward(veteran, experience());
+    expect(after.roster[0].level).toBe(21);
+    expect(levelUps).toHaveLength(1);
+    expect(after.gold).toBe(veteran.gold);
   });
 
   it('is described as a level for everyone', () => {

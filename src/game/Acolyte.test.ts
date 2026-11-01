@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ACOLYTE_CAPS, ACOLYTE_GROWTHS, ACOLYTE_ITEMS, ACOLYTE_STATS, Acolyte } from './Acolyte.ts';
+import { ACOLYTE_GROWTHS, ACOLYTE_ITEMS, ACOLYTE_STATS, Acolyte } from './Acolyte.ts';
 import { getCombatForecast } from './combat.ts';
 import { getHealAmount, HEAL_STAFF, staffEntry } from './healing.ts';
 import { HEALTH_POTION, MANA_POTION } from './items.ts';
@@ -32,10 +32,9 @@ describe('Acolyte', () => {
     expect(acolyte.movement).toBe(ACOLYTE_STATS.movement);
   });
 
-  it('levels up with the acolyte growth rates and caps', () => {
+  it('levels up with the acolyte growth rates', () => {
     const acolyte = new Acolyte({ team: 'player' });
     expect(acolyte.growths).toBe(ACOLYTE_GROWTHS);
-    expect(acolyte.caps).toBe(ACOLYTE_CAPS);
   });
 
   it('knows Light and carries a Heal staff, a health potion and a mana potion', () => {

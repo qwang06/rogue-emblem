@@ -71,8 +71,7 @@
   color: var(--fg-bright);
 }
 
-.unit-info__class,
-.unit-info__xp {
+.unit-info__class {
   margin: 0 0 2px;
   color: var(--fg-dim);
 }
@@ -153,18 +152,6 @@
   display: block;
   height: 100%;
   background: var(--fg);
-}
-
-.unit-info__stat--capped .unit-info__stat-fill {
-  background: var(--yellow);
-}
-
-.unit-info__stat--capped dd {
-  color: var(--yellow);
-}
-
-.unit-info__cap {
-  color: var(--fg-dim);
 }
 
 .unit-info__rates {

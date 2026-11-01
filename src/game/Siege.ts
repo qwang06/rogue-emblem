@@ -31,19 +31,6 @@ export const SIEGE_GROWTHS = Object.freeze({
   resistance: 10,
 });
 
-// The most each stat can reach through level ups.
-export const SIEGE_CAPS = Object.freeze({
-  health: 40,
-  mana: 0,
-  strength: 22,
-  intelligence: 20,
-  skill: 20,
-  speed: 15,
-  luck: 15,
-  defense: 22,
-  resistance: 20,
-});
-
 // The weapon types it can wield.
 export const SIEGE_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['siege']);
 
@@ -51,7 +38,7 @@ export const SIEGE_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['siege']
 export const SIEGE_ITEMS: Inventory = Object.freeze([weaponEntry(BALLISTA)]);
 
 // Starts at level 1 with the stat line above; its skills come from the
-// 'siege' skill tree. Levels up with the growth rates and caps above.
+// 'siege' skill tree. Levels up with the growth rates above.
 export class Siege extends Unit {
   constructor({ name = 'Siege', team, level = 1, items = SIEGE_ITEMS, faction }: ClassUnitOptions) {
     super({
@@ -63,7 +50,6 @@ export class Siege extends Unit {
       items,
       weaponTypes: SIEGE_WEAPON_TYPES,
       growths: SIEGE_GROWTHS,
-      caps: SIEGE_CAPS,
       ...SIEGE_STATS,
     });
   }

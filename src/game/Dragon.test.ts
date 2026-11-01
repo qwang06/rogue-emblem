@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getLearnedSkills } from './skills.ts';
-import { DRAGON_CAPS, DRAGON_GROWTHS, DRAGON_ITEMS, DRAGON_STATS, Dragon } from './Dragon.ts';
+import { DRAGON_GROWTHS, DRAGON_ITEMS, DRAGON_STATS, Dragon } from './Dragon.ts';
 import { Unit } from './Unit.ts';
 import { FIRE_BREATH } from './weapons.ts';
 
@@ -37,10 +37,9 @@ describe('Dragon', () => {
     expect(dragon.items).toHaveLength(1);
   });
 
-  it('levels up with the dragon growth rates and caps', () => {
+  it('levels up with the dragon growth rates', () => {
     const dragon = new Dragon({ team: 'enemy' });
     expect(dragon.growths).toBe(DRAGON_GROWTHS);
-    expect(dragon.caps).toBe(DRAGON_CAPS);
   });
 
   it('learns no skills', () => {

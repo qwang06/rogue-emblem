@@ -4,7 +4,7 @@
 // weapons). Stats follow Fire Emblem: strength / intelligence power physical /
 // magical hits, defense / resistance guard against them, and skill, speed
 // and luck feed hit, crit and doubling. Specific unit types extend this
-// and set their own class, stats, growth rates, stat caps and XP rate
+// and set their own class, stats, growth rates and XP rate
 // (see experience.ts), which decide what a level up raises, and the weapon
 // types they master; the skills a unit knows come from its class's skill
 // tree and its level, and from its secondary class's (see skills.ts).
@@ -77,7 +77,6 @@ export interface UnitOptions {
   team: Team;
   items?: readonly InventoryEntry[];
   growths?: GrowthTable;
-  caps?: GrowthTable;
   // Percent of each XP gain the unit earns (see scaleExperience).
   experienceRate?: number;
   // Strikes made with tomes not yet learned from (see tomes.ts).
@@ -121,7 +120,6 @@ export class Unit {
   faction: FactionId | null;
   items: Inventory;
   growths: GrowthTable;
-  caps: GrowthTable;
   experienceRate: number;
   tomeProgress: TomeProgress;
   // Killing this unit gives the killer exactly the XP it needs for its next
@@ -178,7 +176,6 @@ export class Unit {
     team,
     items = [],
     growths = {},
-    caps = {},
     experienceRate = DEFAULT_EXPERIENCE_RATE,
     tomeProgress = {},
     faction,
@@ -204,7 +201,6 @@ export class Unit {
     this.faction = faction === undefined ? getDefaultFaction(team) : faction;
     this.items = createInventory(items);
     this.growths = growths;
-    this.caps = caps;
     this.experienceRate = experienceRate;
     this.tomeProgress = Object.freeze({ ...tomeProgress });
   }

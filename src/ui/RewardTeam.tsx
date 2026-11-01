@@ -44,7 +44,7 @@ function TeamRow({ unit, after }: { unit: TeamUnitView; after: { health: number;
           <span className="reward-team__exp">
             <GlyphIcon kind="exp" />
             <span className="visually-hidden">EXP </span>
-            {unit.experienceForLevel === null ? '--' : unit.experience}
+            {unit.experience}
           </span>
         </span>
       </span>

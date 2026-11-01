@@ -31,19 +31,6 @@ export const ARCHER_GROWTHS = Object.freeze({
   resistance: 20,
 });
 
-// The most each stat can reach through level ups.
-export const ARCHER_CAPS = Object.freeze({
-  health: 40,
-  mana: 30,
-  strength: 20,
-  intelligence: 20,
-  skill: 20,
-  speed: 20,
-  luck: 20,
-  defense: 20,
-  resistance: 20,
-});
-
 // The weapon types an archer can wield.
 export const ARCHER_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
 
@@ -62,7 +49,7 @@ export const ARCHER_PASSIVE: { name: string; description: string; modifiers: rea
 // skills come from the 'archer' skill tree, it wields physical weapons,
 // and it carries an Iron Bow (range 2 only, so it can't strike or counter
 // adjacent foes) and the potions unless given other items. Levels up with
-// the archer growth rates and caps.
+// the archer growth rates.
 export class Archer extends Unit {
   constructor({ name = 'Archer', team, level = 1, items = ARCHER_ITEMS, faction }: ClassUnitOptions) {
     super({
@@ -74,7 +61,6 @@ export class Archer extends Unit {
       items,
       weaponTypes: ARCHER_WEAPON_TYPES,
       growths: ARCHER_GROWTHS,
-      caps: ARCHER_CAPS,
       ...ARCHER_STATS,
     });
     applyModifiers(this, ARCHER_PASSIVE.modifiers);

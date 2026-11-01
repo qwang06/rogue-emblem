@@ -60,12 +60,9 @@ function Identity({ unit }: { unit: UnitDetailView }) {
       </p>
       <Meter label="HP" value={unit.health} max={unit.maxHealth} kind="hp" />
       <Meter label="MP" value={unit.mana} max={unit.maxMana} kind="mp" />
-      {unit.team !== 'enemy' &&
-        (unit.maxLevel ? (
-          <p className="unit-info__xp">Max level</p>
-        ) : (
-          <Meter label="EXP" value={unit.experience} max={getExperienceForLevel(unit.level)} kind="exp" />
-        ))}
+      {unit.team !== 'enemy' && (
+        <Meter label="EXP" value={unit.experience} max={getExperienceForLevel(unit.level)} kind="exp" />
+      )}
       <dl className="unit-info__pairs">
         <div>
           <dt>
@@ -95,28 +92,25 @@ function Identity({ unit }: { unit: UnitDetailView }) {
   );
 }
 
-// Each stat as a label, a bar filled toward its cap and "value/cap" (just
-// the value, with a bar of its own length, when the class sets no cap).
+// Each stat as a label, its value and a bar sized against the unit's
+// highest stat (stats have no caps), so the bars show the build's shape.
 function Stats({ unit }: { unit: UnitDetailView }) {
+  const highest = Math.max(1, ...unit.stats.map((stat) => stat.value));
   return (
     <div className="unit-info__column">
       <h3 className="unit-info__heading">Stats</h3>
       <dl className="unit-info__stats">
         {unit.stats.map((stat) => {
-          const percent = stat.cap ? Math.min(100, (stat.value / stat.cap) * 100) : 100;
-          const atCap = stat.cap !== null && stat.value >= stat.cap;
+          const percent = (Math.max(0, stat.value) / highest) * 100;
           return (
-            <div key={stat.id} className={atCap ? 'unit-info__stat unit-info__stat--capped' : 'unit-info__stat'}>
+            <div key={stat.id} className="unit-info__stat">
               <dt>
                 <StatLabel label={stat.label} />
               </dt>
               <span className="unit-info__stat-track" aria-hidden="true">
                 <span className="unit-info__stat-fill" style={{ width: `${percent}%` }} />
               </span>
-              <dd>
-                {stat.value}
-                {stat.cap !== null && <span className="unit-info__cap">/{stat.cap}</span>}
-              </dd>
+              <dd>{stat.value}</dd>
             </div>
           );
         })}
