@@ -80,14 +80,14 @@ describe('sprite keys', () => {
 describe('getUnitSprite', () => {
   it('picks the art by unit class', () => {
     expect(getUnitSprite('warrior')).toBe('Painted_Warrior');
-    expect(getUnitSprite('soldier')).toBe('Soldier_03');
+    expect(getUnitSprite('soldier')).toBe('Painted_Soldier');
     expect(getUnitSprite('archer')).toBe('Painted_Archer');
-    expect(getUnitSprite('vanguard')).toBe('Vanguard_04');
-    expect(getUnitSprite('guard')).toBe('Soldier_04');
-    expect(getUnitSprite('acolyte')).toBe('Painted_Cleric');
-    expect(getUnitSprite('slime')).toBe('Slime_01');
-    expect(getUnitSprite('goblin')).toBe('Goblin_01');
-    expect(getUnitSprite('skeleton')).toBe('Skeleton_01');
+    expect(getUnitSprite('vanguard')).toBe('Painted_Vanguard');
+    expect(getUnitSprite('guard')).toBe('Painted_Guard');
+    expect(getUnitSprite('acolyte')).toBe('Painted_Acolyte');
+    expect(getUnitSprite('slime')).toBe('Painted_Slime');
+    expect(getUnitSprite('goblin')).toBe('Painted_Goblin');
+    expect(getUnitSprite('skeleton')).toBe('Painted_Skeleton');
   });
 
   it('falls back to the default art for an unknown or missing class', () => {

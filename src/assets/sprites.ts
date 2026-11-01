@@ -56,6 +56,30 @@ import warrior02Idle from './units/Warrior_02_Idle.png';
 import warrior02Move from './units/Warrior_02_Move.png';
 import wolf01Idle from './units/Wolf_01_Idle.png';
 import wolf01Move from './units/Wolf_01_Move.png';
+import paintedWarrior from './units/painted/warrior.png';
+import paintedSoldier from './units/painted/soldier.png';
+import paintedArcher from './units/painted/archer.png';
+import paintedVanguard from './units/painted/vanguard.png';
+import paintedGuard from './units/painted/guard.png';
+import paintedAcolyte from './units/painted/acolyte.png';
+import paintedHero from './units/painted/hero.png';
+import paintedBerserker from './units/painted/berserker.png';
+import paintedGeneral from './units/painted/general.png';
+import paintedHalberdier from './units/painted/halberdier.png';
+import paintedSniper from './units/painted/sniper.png';
+import paintedArbalest from './units/painted/arbalest.png';
+import paintedChampion from './units/painted/champion.png';
+import paintedBombardier from './units/painted/bombardier.png';
+import paintedBastion from './units/painted/bastion.png';
+import paintedTemplar from './units/painted/templar.png';
+import paintedBishop from './units/painted/bishop.png';
+import paintedMage from './units/painted/mage.png';
+import paintedSlime from './units/painted/slime.png';
+import paintedGoblin from './units/painted/goblin.png';
+import paintedSkeleton from './units/painted/skeleton.png';
+import paintedBat from './units/painted/bat.png';
+import paintedWolf from './units/painted/wolf.png';
+import paintedOrc from './units/painted/orc.png';
 import obstacleRock1 from './obstacles/rock-1.png';
 import obstacleRock2 from './obstacles/rock-2.png';
 import obstacleBoulder from './obstacles/boulder.png';
@@ -65,11 +89,6 @@ import obstacleBush2 from './obstacles/bush-2.png';
 import obstacleThicket from './obstacles/thicket.png';
 import obstaclePine from './obstacles/pine.png';
 import obstacleCactus from './obstacles/cactus.png';
-import paintedArcher from './units/painted/archer.png';
-import paintedCleric from './units/painted/cleric.png';
-import paintedMage from './units/painted/mage.png';
-import paintedWarrior from './units/painted/warrior.png';
-import paintedWarriorWalk from './units/painted/warrior-walk.png';
 import ballistaIcon from './items/ballista.png';
 import biteIcon from './items/bite.png';
 import boneClawsIcon from './items/bone-claws.png';
@@ -175,11 +194,29 @@ export const SPRITES: Readonly<Record<string, SpriteSheet>> = {
   Obstacle_cactus: { url: obstacleCactus, frame: 256, smooth: true },
   // Painted single-image units (SINGLE_IMAGE_UNITS in tileset.ts).
   Painted_Warrior: { url: paintedWarrior, frame: 256, smooth: true },
-  // Its walk, 8 frames (SINGLE_IMAGE_WALKS in tileset.ts).
-  Painted_Warrior_Walk: { url: paintedWarriorWalk, frame: 256, smooth: true },
+  Painted_Soldier: { url: paintedSoldier, frame: 256, smooth: true },
   Painted_Archer: { url: paintedArcher, frame: 256, smooth: true },
+  Painted_Vanguard: { url: paintedVanguard, frame: 256, smooth: true },
+  Painted_Guard: { url: paintedGuard, frame: 256, smooth: true },
+  Painted_Acolyte: { url: paintedAcolyte, frame: 256, smooth: true },
+  Painted_Hero: { url: paintedHero, frame: 256, smooth: true },
+  Painted_Berserker: { url: paintedBerserker, frame: 256, smooth: true },
+  Painted_General: { url: paintedGeneral, frame: 256, smooth: true },
+  Painted_Halberdier: { url: paintedHalberdier, frame: 256, smooth: true },
+  Painted_Sniper: { url: paintedSniper, frame: 256, smooth: true },
+  Painted_Arbalest: { url: paintedArbalest, frame: 256, smooth: true },
+  Painted_Champion: { url: paintedChampion, frame: 256, smooth: true },
+  Painted_Bombardier: { url: paintedBombardier, frame: 256, smooth: true },
+  Painted_Bastion: { url: paintedBastion, frame: 256, smooth: true },
+  Painted_Templar: { url: paintedTemplar, frame: 256, smooth: true },
+  Painted_Bishop: { url: paintedBishop, frame: 256, smooth: true },
   Painted_Mage: { url: paintedMage, frame: 256, smooth: true },
-  Painted_Cleric: { url: paintedCleric, frame: 256, smooth: true },
+  Painted_Slime: { url: paintedSlime, frame: 256, smooth: true },
+  Painted_Goblin: { url: paintedGoblin, frame: 256, smooth: true },
+  Painted_Skeleton: { url: paintedSkeleton, frame: 256, smooth: true },
+  Painted_Bat: { url: paintedBat, frame: 256, smooth: true },
+  Painted_Wolf: { url: paintedWolf, frame: 256, smooth: true },
+  Painted_Orc: { url: paintedOrc, frame: 256, smooth: true },
   'ballista': { url: ballistaIcon, frame: 32 },
   'bite': { url: biteIcon, frame: 32 },
   'bone-claws': { url: boneClawsIcon, frame: 32 },

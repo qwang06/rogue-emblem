@@ -4,7 +4,7 @@
 // bare dirt) over it, soft blotches of light and shade to break up its
 // repeats, small decals (tufts, pebbles) scattered over it, a far-scenery
 // strip along the top, tree clusters and bushes standing around the
-// field's edges, and (if the kit has them) big out-of-focus foreground
+// field's edges, props along its front and back, and (if the kit has them) big out-of-focus foreground
 // leaves in the near corners. Each battle lays the pieces out afresh from its seed, at any
 // field size. Pure: the same kit, floor and seed always give the same
 // layout.
@@ -44,6 +44,9 @@ export interface BattlefieldKit {
   // they are so their painted light and shadows stay the right way round.
   treesRight?: readonly KitPiece[];
   bushes: readonly KitPiece[];
+  // Props (fences, barrels, a cart...) dressing the front and back edges,
+  // outside the floor. None if left out.
+  props?: readonly KitPiece[];
   // Rising from the near corners, close to the camera. None if left out.
   foreground?: { left: KitPiece; right: KitPiece };
   // The blotches' colors: sunlit patches and shade.
@@ -321,6 +324,37 @@ export function layOutKit(
       height,
       foot,
     });
+  }
+
+  // Props along the front edge (low enough to clear the front row) and the
+  // back edge (standing just behind the top row), none overlapping each
+  // other or anything else standing there.
+  if (kit.props && kit.props.length > 0) {
+    const props = kit.props;
+    const taken: WorldRect[] = pieces.filter((p) => p.layer === 'standing');
+    const edges = [
+      { count: 3, foot: (height: number) => floor.height + height + between(rng, 10, 40) },
+      { count: 2, foot: () => between(rng, -HORIZON_GAP * 0.6, -12) },
+    ];
+    for (const edge of edges) {
+      for (let i = 0; i < edge.count; i++) {
+        const piece = pick(rng, props);
+        const { width, height } = size(piece, between(rng, 0.9, 1.1));
+        for (let attempt = 0; attempt < 8; attempt++) {
+          const foot = edge.foot(height);
+          const spot = {
+            x: between(rng, floor.width * 0.05, floor.width * 0.95 - width),
+            y: foot - height,
+            width,
+            height,
+          };
+          if (taken.some((rect) => overlaps(rect, spot))) continue;
+          taken.push(spot);
+          add({ layer: 'standing', key: piece.key, ...spot, foot });
+          break;
+        }
+      }
+    }
   }
 
   // The foreground, rising from the scene's bottom corners and tucked out

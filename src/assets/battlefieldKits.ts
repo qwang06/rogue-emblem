@@ -3,6 +3,15 @@
 // prompts in the project's art/anime/prompts.md. A kind
 // with a kit draws it in place of a painting (battlefieldArt.ts) or the
 // code-drawn look. `KIT_URLS` is each piece's image, loaded under its key.
+import propFence from './battlefields/plains/prop-fence.webp';
+import propFenceBroken from './battlefields/plains/prop-fence-broken.webp';
+import propSignpost from './battlefields/plains/prop-signpost.webp';
+import propBarrels from './battlefields/plains/prop-barrels.webp';
+import propCrates from './battlefields/plains/prop-crates.webp';
+import propCart from './battlefields/plains/prop-cart.webp';
+import propWheel from './battlefields/plains/prop-wheel.webp';
+import propSack from './battlefields/plains/prop-sack.webp';
+import propStump from './battlefields/plains/prop-stump.webp';
 import borderBush1 from './battlefields/plains/border-bush-1.webp';
 import borderBush2 from './battlefields/plains/border-bush-2.webp';
 import borderTreesLeft from './battlefields/plains/border-trees-left.webp';
@@ -24,7 +33,7 @@ const piece = (key: string, width: number, height: number): KitPiece => ({ key: 
 
 const PLAINS = {
   ground: piece('ground-grass', 1024, 1024),
-  horizon: piece('horizon', 1916, 516),
+  horizon: piece('horizon', 1916, 558),
   patches: [
     { texture: piece('ground-grass-dry', 1024, 1024), every: 120000, width: [380, 760] as const },
     { texture: piece('ground-dirt', 1024, 1024), every: 260000, width: [260, 520] as const },
@@ -41,6 +50,18 @@ const PLAINS = {
   // Declared at 0.85 of their pixel size, about as tall as the old ones.
   trees: [piece('border-trees-left', 403, 995)],
   treesRight: [piece('border-trees-right', 394, 1012)],
+  // Declared at 0.64 of their pixel size, about a cell or two across.
+  props: [
+    piece('prop-fence', 287, 173),
+    piece('prop-fence-broken', 260, 163),
+    piece('prop-signpost', 216, 210),
+    piece('prop-barrels', 270, 208),
+    piece('prop-crates', 262, 216),
+    piece('prop-cart', 268, 207),
+    piece('prop-wheel', 262, 192),
+    piece('prop-sack', 253, 211),
+    piece('prop-stump', 254, 227),
+  ],
   bushes: [piece('border-bush-1', 335, 280), piece('border-bush-2', 302, 206)],
 };
 
@@ -63,6 +84,15 @@ export const KIT_URLS: Readonly<Record<string, string>> = Object.freeze({
   [PLAINS.decals[5].key]: decalFlowers,
   [PLAINS.trees[0].key]: borderTreesLeft,
   [PLAINS.treesRight[0].key]: borderTreesRight,
+  [PLAINS.props[0].key]: propFence,
+  [PLAINS.props[1].key]: propFenceBroken,
+  [PLAINS.props[2].key]: propSignpost,
+  [PLAINS.props[3].key]: propBarrels,
+  [PLAINS.props[4].key]: propCrates,
+  [PLAINS.props[5].key]: propCart,
+  [PLAINS.props[6].key]: propWheel,
+  [PLAINS.props[7].key]: propSack,
+  [PLAINS.props[8].key]: propStump,
   [PLAINS.bushes[0].key]: borderBush1,
   [PLAINS.bushes[1].key]: borderBush2,
 });
