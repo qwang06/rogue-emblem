@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getRegionStages, getRegionConfig, getStageRegion, type RegionConfig } from './regions.ts';
+import { getRegionStages, getRegionConfig, getStageRegion, getStageRegionIndex, type RegionConfig } from './regions.ts';
 
 const region = (name: string): RegionConfig => ({
   name,
@@ -54,13 +54,45 @@ describe('getStageRegion', () => {
 });
 
 describe('getRegionStages', () => {
+  const spans = (count: number, stagesPerRegion?: number, finalStage?: number) => ({
+    stagesPerRegion,
+    finalStage,
+    regions: { length: count },
+  });
+
   it('gives each region its stretch of stages', () => {
-    expect(getRegionStages(0, 3, 1)).toEqual({ first: 1, last: 1 });
-    expect(getRegionStages(1, 3, 2)).toEqual({ first: 3, last: 4 });
+    expect(getRegionStages(0, spans(3, 1))).toEqual({ first: 1, last: 1 });
+    expect(getRegionStages(1, spans(3, 2))).toEqual({ first: 3, last: 4 });
+    expect(getRegionStages(1, spans(3))).toEqual({ first: 2, last: 2 });
   });
 
   it('leaves the last region open-ended', () => {
-    expect(getRegionStages(2, 3, 2)).toEqual({ first: 5, last: null });
-    expect(getRegionStages(0, 1, 1)).toEqual({ first: 1, last: null });
+    expect(getRegionStages(2, spans(3, 2))).toEqual({ first: 5, last: null });
+    expect(getRegionStages(0, spans(1, 1))).toEqual({ first: 1, last: null });
+  });
+
+  it('spreads the regions evenly up to the final stage without stagesPerRegion', () => {
+    const settings = spans(13, undefined, 30);
+    const stretches = Array.from({ length: 13 }, (_, i) => getRegionStages(i, settings));
+    expect(stretches[0]).toEqual({ first: 1, last: 2 });
+    expect(stretches[12]).toEqual({ first: 30, last: null });
+    for (let i = 1; i < 13; i++) expect(stretches[i].first).toBe(stretches[i - 1].last! + 1);
+    const lengths = stretches.slice(0, 12).map(({ first, last }) => last! - first + 1);
+    expect(Math.max(...lengths) - Math.min(...lengths)).toBeLessThanOrEqual(1);
+  });
+
+  it('keeps stagesPerRegion when set, and one stage each when the final stage leaves no room', () => {
+    expect(getRegionStages(1, spans(3, 2, 30))).toEqual({ first: 3, last: 4 });
+    expect(getRegionStages(1, spans(3, undefined, 2))).toEqual({ first: 2, last: 2 });
+  });
+});
+
+describe('getStageRegionIndex', () => {
+  it('finds the region holding a stage, the last past them all', () => {
+    const settings = { finalStage: 7, regions: [A, B, C, A] };
+    expect([1, 2, 3, 4, 5, 6, 7, 99].map((stage) => getStageRegionIndex(stage, settings))).toEqual([
+      0, 0, 1, 1, 2, 2, 3, 3,
+    ]);
+    expect(getStageRegion(4, settings)).toBe(B);
   });
 });

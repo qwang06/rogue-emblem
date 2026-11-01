@@ -16,7 +16,8 @@ import { createStageLevel, pickStageArchetype, withArchetype } from './warband/s
 import { pickStageObjective, placeObjective } from './warband/stageObjective.ts';
 import { getStageLootCount } from './loot.ts';
 import { applyEliteAffixes, rollEliteAffixes } from './warband/elites.ts';
-import { getRunSite, getSiteRegion, shiftEnemyLevels } from './warband/travel.ts';
+import { getRunSite, getSiteRegion } from './warband/travel.ts';
+import { applySurge, getSurgePercent, levelRegionForStage } from './warband/enemyCurve.ts';
 import { getRunHeatRules } from './warband/heat.ts';
 import type { RegionConfig } from './warband/regions.ts';
 import { createDemoLevel, type DemoLevel } from './demoLevel.ts';
@@ -93,10 +94,10 @@ export function createBattleLevel(
     case 'training':
       return createTrainingLevel(setup.unitClass, content.dialogs.training);
     case 'warband': {
-      const unheated =
-        (setup.run && getSiteRegion(setup.run, content.regions)) ?? getStageRegion(setup.stage, content.regions);
-      // The run's Heat raises every enemy's level (see heat.ts).
-      const baseRegion = setup.run ? shiftEnemyLevels(unheated, getRunHeatRules(setup.run).enemyLevels) : unheated;
+      // Enemies stand at the stage's level (enemyCurve.ts).
+      const baseRegion =
+        (setup.run && getSiteRegion(setup.run, content.regions)) ??
+        levelRegionForStage(getStageRegion(setup.stage, content.regions), setup.stage);
       if (setup.run && isVisit(setup.run)) return createVisitLevel(setup, setup.run, baseRegion);
       const spec = pickStageObjective(setup.stage, baseRegion, setup.seed);
       const region = withArchetype(baseRegion, pickStageArchetype(setup.stage, baseRegion, setup.seed, spec.kind));
@@ -104,6 +105,10 @@ export function createBattleLevel(
       let level = setup.run
         ? createStageLevel(setup.seed, region, restoreRoster(setup.run), setup.run.deployCap, lootCount)
         : createStageLevel(setup.seed, region, undefined, undefined, lootCount);
+      // Past the surge's start every enemy stat grows each stage, faster
+      // with the run's Heat (see enemyCurve.ts and heat.ts).
+      const surge = getSurgePercent(setup.stage, setup.run ? getRunHeatRules(setup.run).surgeRate : undefined);
+      for (const unit of level.units.values()) if (unit.team === 'enemy') applySurge(unit, surge);
       const guest = setup.run && rollGuest(setup.run);
       if (guest) {
         const zone = new Set(level.deploymentZone.map(({ x, y }) => `${x},${y}`));
@@ -204,7 +209,7 @@ export function describeBattle(
 // with createStageLevel). Null when there's no such region.
 export function regionPreview(index: number, seed: number, settings: RegionSettings): BattleSetup | null {
   if (!Number.isInteger(index) || index < 0 || index >= settings.regions.length) return null;
-  const { first } = getRegionStages(index, settings.regions.length, settings.stagesPerRegion);
+  const { first } = getRegionStages(index, settings);
   return { mode: 'warband', seed, stage: first };
 }
 

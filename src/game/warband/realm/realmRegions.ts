@@ -3,13 +3,13 @@
 // keeps difficulty rising with depth by only picking regions meant for
 // stages near the site's depth, and keeps it logical by preferring one
 // whose biome matches the land around the site: a battle by a lake plays
-// Lakeside or the Fens, one in the woods Deep Woods. When the region was
-// meant for an earlier or later stage, its enemies' levels shift by the
-// difference (`levelOffset`), so the curve holds. Pure.
+// Lakeside or the Fens, one in the woods Deep Woods. Enemy levels come from
+// the stage (enemyCurve.ts), whichever region plays it; a site's
+// `levelOffset` is only a fort's FORT_LEVELS on top. Pure.
 
 import type { Rng } from '../../combatStats.ts';
 import { randomItem } from '../../rng.ts';
-import type { RegionSettings } from '../regions.ts';
+import { getRegionStages, getStageRegionIndex, type RegionSettings } from '../regions.ts';
 import type { Biome, SiteKind } from './realm.ts';
 import { landAt, type RealmLand } from './realmTerrain.ts';
 
@@ -49,14 +49,13 @@ export function detectBiome(land: RealmLand, x: number, y: number): Biome {
 // The stages region `index` is meant for: first to last (last Infinity for
 // the last region, which every later stage falls back on).
 export function getRegionSpan(settings: RegionSettings, index: number): { first: number; last: number } {
-  const first = index * settings.stagesPerRegion + 1;
-  const last = index === settings.regions.length - 1 ? Infinity : first + settings.stagesPerRegion - 1;
-  return { first, last };
+  const { first, last } = getRegionStages(index, settings);
+  return { first, last: last ?? Infinity };
 }
 
 // The index of the region meant for `stage`.
 export function getRegionIndex(settings: RegionSettings, stage: number): number {
-  return Math.min(Math.floor((Math.max(1, stage) - 1) / settings.stagesPerRegion), settings.regions.length - 1);
+  return getStageRegionIndex(stage, settings);
 }
 
 // The region a site of `kind` at `depth` on land of `biome` plays, and how
@@ -74,11 +73,7 @@ export function pickSiteRegion(
   rng: Rng,
 ): { region: number; levelOffset: number } {
   const finalRegion = getRegionIndex(settings, finalDepth);
-  const offsetFor = (region: number) => {
-    const { first, last } = getRegionSpan(settings, region);
-    return depth - Math.min(Math.max(depth, first), last);
-  };
-  const result = (region: number) => ({ region, levelOffset: offsetFor(region) });
+  const result = (region: number) => ({ region, levelOffset: 0 });
   if (kind === 'hold' || depth >= finalDepth) return result(finalRegion);
   if (depth <= 1) return result(getRegionIndex(settings, 1));
   const inWindow = (before: number, after: number) => {
@@ -93,7 +88,7 @@ export function pickSiteRegion(
   if (kind === 'fort') {
     const forts = inWindow(FORT_WINDOW, 1).filter((index) => biomeOf(index) === 'fort');
     const region = forts.length > 0 ? closest(forts, depth, settings, rng) : getRegionIndex(settings, depth);
-    return { region, levelOffset: offsetFor(region) + FORT_LEVELS };
+    return { region, levelOffset: FORT_LEVELS };
   }
   const candidates = inWindow(REGION_WINDOW, 0);
   if (candidates.length === 0) return result(getRegionIndex(settings, depth));

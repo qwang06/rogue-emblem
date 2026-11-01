@@ -9,8 +9,9 @@ describe('REGION_SETTINGS', () => {
     expect(() => parseRegionSettings(REGIONS_TEXT)).not.toThrow();
   });
 
-  it('moves to the next region every stage', () => {
-    expect(REGION_SETTINGS.stagesPerRegion).toBe(1);
+  it('spreads the regions over a 30-stage run', () => {
+    expect(REGION_SETTINGS.stagesPerRegion).toBeUndefined();
+    expect(REGION_SETTINGS.finalStage).toBe(30);
   });
 
   it('has several uniquely named, described regions', () => {

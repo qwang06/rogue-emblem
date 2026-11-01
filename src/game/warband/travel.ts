@@ -11,6 +11,7 @@
 // stage on past the site, which is how a finished site is told apart from
 // one still to fight. Pure: each function returns a new frozen run.
 
+import { levelRegionForStage } from './enemyCurve.ts';
 import { rollEvent } from './events.ts';
 import { getStageClearGold, markRewardPending, rollStageRewards } from './rewards.ts';
 import type { RegionConfig, RegionSettings } from './regions.ts';
@@ -115,14 +116,14 @@ export function isInTown(run: Pick<RunState, 'route'>): boolean {
   return getRunSite(run)?.kind === 'town';
 }
 
-// The region the run's site plays, with its enemies' levels shifted by the
-// site's offset; null for a linear run, or when the region no longer
-// exists (the settings changed since the run set out).
+// The region the run's site plays, its enemies at the stage's level plus
+// the site's offset (levelRegionForStage); null for a linear run, or when
+// the region no longer exists (the settings changed since the run set out).
 export function getSiteRegion(run: RunState, settings: RegionSettings): RegionConfig | null {
   const at = getRunSite(run);
   const region = at && settings.regions[at.region];
   if (!at || !region) return null;
-  return shiftEnemyLevels(region, at.levelOffset);
+  return levelRegionForStage(region, run.stage, at.levelOffset);
 }
 
 // `region` with every enemy group `offset` levels up (down when negative,

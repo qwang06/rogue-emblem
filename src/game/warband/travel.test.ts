@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { FORT_LEVELS } from './realm/realmRegions.ts';
 import { DEFAULT_CONTENT } from '../battleSetup.ts';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
@@ -117,14 +118,13 @@ describe('travelTo', () => {
 });
 
 describe('getSiteRegion', () => {
-  it("is the site's region with its enemies shifted, or null off the realm", () => {
+  it("is the site's region with its enemies at the stage's level, a fort's higher, or null off the realm", () => {
     const { realm, to } = findRoadTo('fort');
     const run = standingAt(startRoute(linearRun()), to, false);
     const region = getSiteRegion(run, SETTINGS)!;
     expect(region.name).toBe(SETTINGS.regions[to.region].name);
-    expect(region.enemies[0].level).toBe(
-      Math.max(1, (SETTINGS.regions[to.region].enemies[0].level ?? 1) + to.levelOffset),
-    );
+    expect(to.levelOffset).toBe(FORT_LEVELS);
+    expect(Math.min(...region.enemies.map((group) => group.level!))).toBe(to.depth + FORT_LEVELS);
     expect(getSiteRegion(linearRun(), SETTINGS)).toBeNull();
     expect(realm).toBeDefined();
   });

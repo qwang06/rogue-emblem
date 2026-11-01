@@ -18,7 +18,7 @@ import {
   WARBAND_LEADER_NAME,
   WARBAND_MAX_DEPLOYED,
 } from './stageLevel.ts';
-import { getStageRegion } from './regions.ts';
+import { getRegionStages, getStageRegion } from './regions.ts';
 import { LOOT_ITEMS } from '../loot.ts';
 import { ALL_STARTING_CLASSES, STARTING_CLASSES } from './startingClasses.ts';
 import { createUnitOfClass } from '../unitClasses.ts';
@@ -394,8 +394,10 @@ describe('stage objectives', () => {
 });
 
 describe('the stage ramp', () => {
-  const enemyClasses = (stage: number) =>
-    getStageRegion(stage, REGION_SETTINGS).enemies.flatMap((group) =>
+  // The regions in run order, each by its first stage.
+  const firstStage = (index: number) => getRegionStages(index, REGION_SETTINGS).first;
+  const enemyClasses = (index: number) =>
+    getStageRegion(firstStage(index), REGION_SETTINGS).enemies.flatMap((group) =>
       Array.from({ length: group.count }, () => group.unitClass ?? DEFAULT_ENEMY_CLASS),
     );
 
@@ -405,18 +407,18 @@ describe('the stage ramp', () => {
     );
 
   it('goes from one slime, to two goblins, then mixes in more monsters', () => {
-    expect(enemyClasses(1)).toEqual(['slime']);
-    expect(enemyClasses(2)).toEqual(['goblin', 'goblin']);
-    expect(enemyClasses(3)).toEqual(['slime', 'slime', 'beast']);
-    expect(enemyClasses(4)).toEqual(['goblin', 'goblin', 'skeleton']);
-    expect(enemyClasses(5)).toEqual(['goblin', 'goblin', 'beast']);
-    expect(enemyClasses(6)).toEqual(['skeleton', 'skeleton', 'bat', 'bat']);
+    expect(enemyClasses(0)).toEqual(['slime']);
+    expect(enemyClasses(1)).toEqual(['goblin', 'goblin']);
+    expect(enemyClasses(2)).toEqual(['slime', 'slime', 'beast']);
+    expect(enemyClasses(3)).toEqual(['goblin', 'goblin', 'skeleton']);
+    expect(enemyClasses(4)).toEqual(['goblin', 'goblin', 'beast']);
+    expect(enemyClasses(5)).toEqual(['skeleton', 'skeleton', 'bat', 'bat']);
   });
 
-  it('brings in the brigands on stage 9 and the orcs on stage 10', () => {
-    expect(enemyClasses(9)).toEqual(['soldier', 'archer', 'vanguard', 'goblin', 'goblin']);
-    expect(enemyClasses(10)).toContain('orc');
-    expect([1, 2, 3, 4, 5, 6, 7, 8, 9].some((stage) => enemyClasses(stage).includes('orc'))).toBe(false);
+  it('brings in the brigands in the ninth region and the orcs in the tenth', () => {
+    expect(enemyClasses(8)).toEqual(['soldier', 'archer', 'vanguard', 'goblin', 'goblin']);
+    expect(enemyClasses(9)).toContain('orc');
+    expect([0, 1, 2, 3, 4, 5, 6, 7, 8].some((index) => enemyClasses(index).includes('orc'))).toBe(false);
   });
 
   it('never fields weaker enemies than the stage before', () => {
@@ -426,24 +428,24 @@ describe('the stage ramp', () => {
     }
   });
 
-  it('ends the run on stage 13, a boss fight against the Orc Warlord', () => {
-    expect(REGION_SETTINGS.finalStage).toBe(13);
-    const finale = getStageRegion(13, REGION_SETTINGS);
+  it('ends the run on stage 30, a boss fight against the Orc Warlord', () => {
+    expect(REGION_SETTINGS.finalStage).toBe(30);
+    const finale = getStageRegion(30, REGION_SETTINGS);
     expect(finale.objective).toEqual({ kind: 'boss' });
     expect(finale.enemies.filter((group) => group.boss).map((group) => group.boss)).toEqual(['Orc Warlord']);
   });
 
-  it('fights the Red Dragon on stage 12, the last battle before the Hold', () => {
-    const roost = getStageRegion(12, REGION_SETTINGS);
+  it('fights the Red Dragon on stage 29, the last battle before the Hold', () => {
+    const roost = getStageRegion(29, REGION_SETTINGS);
     expect(roost.name).toBe("Dragon's Roost");
     expect(roost.objective).toEqual({ kind: 'boss' });
     expect(roost.enemies.filter((group) => group.boss).map((group) => group.boss)).toEqual(['Red Dragon']);
-    expect(enemyClasses(12)).toContain('dragon');
+    expect(enemyClasses(11)).toContain('dragon');
   });
 
   it('never fields fewer enemies than the stage before', () => {
-    for (let stage = 2; stage <= REGION_CONFIGS.length + 1; stage++) {
-      expect(enemyClasses(stage).length).toBeGreaterThanOrEqual(enemyClasses(stage - 1).length);
+    for (let index = 1; index < REGION_CONFIGS.length; index++) {
+      expect(enemyClasses(index).length).toBeGreaterThanOrEqual(enemyClasses(index - 1).length);
     }
   });
 });
