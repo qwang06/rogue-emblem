@@ -6,9 +6,11 @@ import type { RosterTarget } from '../game/warband/rosterScreen.ts';
 import { ItemCount } from './ItemCount.tsx';
 import { ItemDetailLine } from './ItemDetailLine.tsx';
 import { KeyHint } from './KeyHint.tsx';
+import { RosterUnitSheet } from './RosterUnitSheet.tsx';
 import { ScrollList } from './ScrollList.tsx';
 import { UnitSprite } from './UnitSprite.tsx';
 import { useGameStore } from './useGameStore.ts';
+import './RosterScreen.css';
 
 // Mouse handlers for an entry of the roster screen: hovering moves the
 // cursor there and clicking acts on it, exactly as the keyboard would.
@@ -54,13 +56,16 @@ function HealthGauge({ health, maxHealth }: { health: number; maxHealth: number 
 }
 
 // Warband Mode's roster screen between stages (see
-// src/game/warband/rosterScreen.ts): the units, the picked unit's
-// inventory and the convoy side by side, items with their icons. Picking
-// an item in the inventory opens its actions (Equip for weapons and armor,
-// Store) beside it; picking one in the convoy
-// gives it to the picked unit. Every column keeps its size as the cursor
-// moves and items change hands. GridScene handles the input; the mouse is
-// forwarded to it.
+// src/game/warband/rosterScreen.ts), laid out like a tactics game's
+// formation screen: the units down the left; beside them the picked unit's
+// full status sheet (who it is, its stats, the rates it fights with, its
+// skills and passives, RosterUnitSheet), and under the sheet its inventory
+// and the convoy side by side. Moving down the unit list pages through
+// each unit's sheet. Picking an item in the inventory opens its actions
+// (Equip for weapons and armor, Store) beside it; picking one in the
+// convoy gives it to the picked unit. Every box keeps its size as the
+// cursor moves and items change hands. GridScene handles the input; the
+// mouse is forwarded to it.
 export function RosterScreen() {
   const view = useGameStore((state) => state.rosterScreen);
   if (!view) return null;
@@ -69,11 +74,13 @@ export function RosterScreen() {
 
   return (
     <div className="pause-overlay">
-      <div className="roster-screen__scroll">
-        <section className="panel roster-screen" aria-label="Roster">
+      <div className="roster-screen__scroll roster-screen__scroll--wide">
+        <section className="panel roster-screen roster-screen--sheet" aria-label="Roster">
           <h2 className="roster-screen__title">Roster</h2>
-          <div className="roster-screen__columns">
-            <section className={`roster-screen__column${focus === 'units' ? ' roster-screen__column--focused' : ''}`}>
+          <div className="roster-layout">
+            <section
+              className={`roster-screen__column roster-layout__units${focus === 'units' ? ' roster-screen__column--focused' : ''}`}
+            >
               <h3 className="roster-screen__heading">Units</h3>
               <ScrollList
                 className="action-menu__list roster-screen__list roster-screen__list--units"
@@ -102,85 +109,97 @@ export function RosterScreen() {
               </ScrollList>
             </section>
 
-            <section
-              className={`roster-screen__column${focus === 'items' || focus === 'actions' ? ' roster-screen__column--focused' : ''}`}
-            >
-              <h3 className="roster-screen__heading">{view.unitName ? `${view.unitName}'s items` : 'Items'}</h3>
-              <ul className="action-menu__list roster-screen__list roster-screen__list--items">
-                {view.items.map((item, index) => {
-                  const selected = index === view.itemIndex;
-                  const showActions = selected && view.actions;
-                  return (
-                    <li
-                      key={item.key}
-                      className={rowClass(selected, focus === 'items' || focus === 'actions')}
-                      aria-current={selected ? 'true' : undefined}
-                      {...pointerProps('items', index)}
-                    >
-                      <span className="roster-screen__equipped" aria-label={item.equipped ? 'Equipped' : undefined}>
-                        {item.equipped ? 'E' : ''}
-                      </span>
-                      <ItemIcon item={item} />
-                      <span className="roster-screen__label">{item.label}</span>
-                      <ItemCount item={item} />
-                      {showActions && (
-                        <nav className="panel action-menu roster-screen__actions" aria-label={`${item.label} actions`}>
-                          <ul className="action-menu__list">
-                            {view.actions!.actions.map((action, actionIndex) => {
-                              const picked = actionIndex === view.actions!.selectedIndex;
-                              const classes = ['action-menu__item'];
-                              if (picked) classes.push('action-menu__item--selected');
-                              if (action.disabled) classes.push('action-menu__item--disabled');
-                              return (
-                                <li
-                                  key={action.id}
-                                  className={classes.join(' ')}
-                                  aria-current={picked ? 'true' : undefined}
-                                  aria-disabled={action.disabled ? 'true' : undefined}
-                                  {...pointerProps('actions', actionIndex)}
-                                >
-                                  {action.label}
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </nav>
-                      )}
-                    </li>
-                  );
-                })}
-                {Array.from({ length: emptySlots }, (_, index) => (
-                  <li key={`empty-${index}`} className="roster-screen__row roster-screen__row--empty">
-                    —
-                  </li>
-                ))}
-              </ul>
-            </section>
+            <div className="roster-layout__main">
+              <RosterUnitSheet unit={view.unit} />
+              <div className="roster-layout__bags">
+                <section
+                  className={`roster-screen__column${focus === 'items' || focus === 'actions' ? ' roster-screen__column--focused' : ''}`}
+                >
+                  <h3 className="roster-screen__heading">{view.unitName ? `${view.unitName}'s items` : 'Items'}</h3>
+                  <ul className="action-menu__list roster-screen__list roster-screen__list--items">
+                    {view.items.map((item, index) => {
+                      const selected = index === view.itemIndex;
+                      const showActions = selected && view.actions;
+                      return (
+                        <li
+                          key={item.key}
+                          className={rowClass(selected, focus === 'items' || focus === 'actions')}
+                          aria-current={selected ? 'true' : undefined}
+                          {...pointerProps('items', index)}
+                        >
+                          <span className="roster-screen__equipped" aria-label={item.equipped ? 'Equipped' : undefined}>
+                            {item.equipped ? 'E' : ''}
+                          </span>
+                          <ItemIcon item={item} />
+                          <span className="roster-screen__label">{item.label}</span>
+                          <ItemCount item={item} />
+                          {showActions && (
+                            <nav
+                              className="panel action-menu roster-screen__actions"
+                              aria-label={`${item.label} actions`}
+                            >
+                              <ul className="action-menu__list">
+                                {view.actions!.actions.map((action, actionIndex) => {
+                                  const picked = actionIndex === view.actions!.selectedIndex;
+                                  const classes = ['action-menu__item'];
+                                  if (picked) classes.push('action-menu__item--selected');
+                                  if (action.disabled) classes.push('action-menu__item--disabled');
+                                  return (
+                                    <li
+                                      key={action.id}
+                                      className={classes.join(' ')}
+                                      aria-current={picked ? 'true' : undefined}
+                                      aria-disabled={action.disabled ? 'true' : undefined}
+                                      {...pointerProps('actions', actionIndex)}
+                                    >
+                                      {action.label}
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            </nav>
+                          )}
+                        </li>
+                      );
+                    })}
+                    {Array.from({ length: emptySlots }, (_, index) => (
+                      <li key={`empty-${index}`} className="roster-screen__row roster-screen__row--empty">
+                        —
+                      </li>
+                    ))}
+                  </ul>
+                </section>
 
-            <section className={`roster-screen__column${focus === 'convoy' ? ' roster-screen__column--focused' : ''}`}>
-              <h3 className="roster-screen__heading">Convoy</h3>
-              <ul className="action-menu__list roster-screen__list roster-screen__list--convoy">
-                {view.convoy.length === 0 && <li className="roster-screen__row roster-screen__row--empty">Empty</li>}
-                {view.convoy.map((item, index) => {
-                  const selected = index === view.convoyIndex;
-                  return (
-                    <li
-                      key={item.key}
-                      className={rowClass(selected, focus === 'convoy', item.disabled)}
-                      aria-current={selected ? 'true' : undefined}
-                      aria-disabled={item.disabled ? 'true' : undefined}
-                      title={item.disabled ? `${view.unitName ?? 'This unit'} has no room` : undefined}
-                      {...pointerProps('convoy', index)}
-                    >
-                      <span className="roster-screen__equipped" />
-                      <ItemIcon item={item} />
-                      <span className="roster-screen__label">{item.label}</span>
-                      <ItemCount item={item} />
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
+                <section
+                  className={`roster-screen__column${focus === 'convoy' ? ' roster-screen__column--focused' : ''}`}
+                >
+                  <h3 className="roster-screen__heading">Convoy</h3>
+                  <ul className="action-menu__list roster-screen__list roster-screen__list--convoy">
+                    {view.convoy.length === 0 && (
+                      <li className="roster-screen__row roster-screen__row--empty">Empty</li>
+                    )}
+                    {view.convoy.map((item, index) => {
+                      const selected = index === view.convoyIndex;
+                      return (
+                        <li
+                          key={item.key}
+                          className={rowClass(selected, focus === 'convoy', item.disabled)}
+                          aria-current={selected ? 'true' : undefined}
+                          aria-disabled={item.disabled ? 'true' : undefined}
+                          title={item.disabled ? `${view.unitName ?? 'This unit'} has no room` : undefined}
+                          {...pointerProps('convoy', index)}
+                        >
+                          <span className="roster-screen__equipped" />
+                          <ItemIcon item={item} />
+                          <span className="roster-screen__label">{item.label}</span>
+                          <ItemCount item={item} />
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              </div>
+            </div>
           </div>
 
           <ItemDetailLine

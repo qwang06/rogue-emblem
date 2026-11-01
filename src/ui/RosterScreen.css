@@ -1,0 +1,410 @@
+/* ---- Roster screen: formation layout ---------------------------------- */
+
+/* The roster screen as a tactics game's formation screen: the unit list
+   down the left, the picked unit's status sheet (RosterUnitSheet) on the
+   right with its inventory and the convoy under it. Every box has a fixed
+   size so paging through units or moving items never reflows anything
+   (see "UI layout" in AGENTS.md). The shared row, column and list styles
+   are in ui.css's "Roster screen" section. */
+.roster-screen__scroll--wide {
+  width: min(64rem, calc(100% - 32px));
+}
+
+.roster-layout {
+  display: grid;
+  grid-template-columns: clamp(8.5rem, 26%, 13rem) minmax(0, 1fr);
+  gap: 10px;
+}
+
+/* Denser rows than the shared roster rows: two lines of small text or a
+   32px item icon, so the sheet and both bags fit a 720px-tall stage. */
+.roster-screen--sheet {
+  --row: 40px;
+}
+
+/* The unit list runs the full height of the sheet and bags beside it,
+   its rows tall enough for a name over its class and level. */
+.roster-layout__units {
+  --row: 52px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.roster-layout__units .scroll-list {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.roster-screen--sheet .roster-layout__units .roster-screen__list {
+  height: 100%;
+}
+
+.roster-layout__units .roster-screen__name {
+  font-size: 0.875rem;
+}
+
+.roster-layout__units .roster-screen__meta,
+.roster-layout__units .roster-screen__hp {
+  font-size: 0.6875rem;
+}
+
+.roster-layout__bags .roster-screen__row {
+  font-size: 0.8125rem;
+}
+
+.roster-layout__main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.roster-layout__bags {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+/* Six inventory slots tall; the convoy scrolls in the same height. */
+.roster-screen--sheet .roster-layout__bags .roster-screen__list {
+  height: calc(6 * var(--row));
+}
+
+/* ---- The status sheet ---- */
+
+.roster-sheet {
+  /* Three lines of skills or passives before they scroll. */
+  --sheet-list: 3.6rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    'identity stats combat'
+    'identity skills passives';
+  gap: 6px 12px;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  border: var(--border);
+  background: var(--bg-light);
+}
+
+.roster-sheet--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* As tall as a filled sheet, so an empty roster lays out the same. */
+  min-height: 10rem;
+  color: var(--fg-dim);
+}
+
+.roster-sheet__identity {
+  grid-area: identity;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.roster-sheet__who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.roster-sheet__portrait {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  background: var(--bg);
+  box-shadow: inset 0 0 0 var(--px) var(--muted);
+}
+
+.roster-sheet__title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.roster-sheet__name,
+.roster-sheet__class {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.roster-sheet__name {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--fg-bright);
+}
+
+.roster-sheet__class {
+  color: var(--fg);
+}
+
+.roster-sheet__level {
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-dim);
+}
+
+.roster-sheet__identity .meter__value {
+  font-variant-numeric: tabular-nums;
+}
+
+.roster-sheet__pairs {
+  display: grid;
+  gap: 2px;
+  margin: 4px 0 0;
+}
+
+.roster-sheet__pairs > div {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.roster-sheet__pairs dt {
+  flex: none;
+  width: 3.4rem;
+  color: var(--fg-dim);
+}
+
+.roster-sheet__pairs dd {
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.roster-sheet__box {
+  min-width: 0;
+}
+
+.roster-sheet__stats {
+  grid-area: stats;
+}
+
+.roster-sheet__combat {
+  grid-area: combat;
+}
+
+.roster-sheet__skills {
+  grid-area: skills;
+}
+
+.roster-sheet__passives {
+  grid-area: passives;
+}
+
+.roster-sheet__heading {
+  margin: 0 0 4px;
+  padding-bottom: 2px;
+  overflow: hidden;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  color: var(--accent);
+  border-bottom: var(--rule);
+}
+
+.roster-sheet__secondary {
+  text-transform: none;
+  color: var(--fg-dim);
+}
+
+.roster-sheet__stat-list,
+.roster-sheet__rates {
+  margin: 0;
+}
+
+.roster-sheet__stat {
+  display: grid;
+  grid-template-columns: 2.6rem minmax(0, 1fr) 2.6rem;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.3;
+}
+
+.roster-sheet__stat dt {
+  font-weight: 700;
+  color: var(--fg-dim);
+}
+
+.roster-sheet__stat dd,
+.roster-sheet__rate dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-bright);
+}
+
+.roster-sheet__stat-track {
+  height: calc(3 * var(--px));
+  background: var(--bg);
+  box-shadow: inset 0 0 0 1px var(--muted);
+  overflow: hidden;
+}
+
+.roster-sheet__stat-fill {
+  display: block;
+  height: 100%;
+  background: var(--bar);
+}
+
+.roster-sheet__rates {
+  display: grid;
+}
+
+.roster-sheet__rate {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  line-height: 1.3;
+}
+
+.roster-sheet__rate dt {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--fg-dim);
+}
+
+.roster-sheet__no-icon {
+  flex: none;
+  width: 16px;
+}
+
+.roster-sheet__weapon {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0 0;
+  padding-top: 4px;
+  border-top: 1px dashed var(--muted);
+}
+
+.roster-sheet__weapon-label {
+  flex: none;
+  color: var(--fg-dim);
+}
+
+.roster-sheet__weapon-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--fg-bright);
+}
+
+/* Skills and passives scroll in a fixed height, so a unit with many never
+   grows the sheet. */
+.roster-sheet__list {
+  height: var(--sheet-list);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.roster-sheet__none {
+  height: var(--sheet-list);
+  margin: 0;
+  color: var(--fg-dim);
+}
+
+.roster-sheet__skill {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  line-height: 1.35;
+}
+
+.roster-sheet__skill-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--fg-bright);
+}
+
+.roster-sheet__skill-cost {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.roster-sheet__skill-cost .pixel-icon:last-of-type {
+  margin-left: 6px;
+}
+
+.roster-sheet__passive {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 4px;
+  line-height: 1.25;
+}
+
+.roster-sheet__passive-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg-bright);
+}
+
+.roster-sheet__passive-text {
+  font-size: 0.6875rem;
+  color: var(--fg-dim);
+}
+
+.roster-sheet__tag {
+  padding: 0 4px;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  color: var(--bg);
+  background: var(--magenta);
+}
+
+/* ---- Narrow stages ---- */
+
+/* Too narrow for the list beside the sheet: the list goes on top at its
+   full height and the sheet folds to two columns. */
+@container (max-width: 32rem) {
+  .roster-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .roster-layout__units .scroll-list {
+    flex: none;
+  }
+
+  .roster-screen--sheet .roster-layout__units .roster-screen__list {
+    height: auto;
+    max-height: calc(4 * var(--row));
+    overflow-y: auto;
+  }
+
+  .roster-sheet {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      'identity identity'
+      'stats combat'
+      'skills passives';
+  }
+}
+
+@container (max-width: 22rem) {
+  .roster-layout__bags {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .roster-sheet {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'identity' 'stats' 'combat' 'skills' 'passives';
+  }
+}

@@ -49,6 +49,24 @@ describe('toRosterScreenView', () => {
     expect(Object.isFrozen(view)).toBe(true);
   });
 
+  it('carries the picked unit’s full status sheet', () => {
+    const run = campRun();
+    const shown = toRosterScreenView(pointRosterCursor(openRosterScreen(run), 'units', 1)).unit!;
+    const cato = run.roster[1];
+    expect(shown.name).toBe('Cato');
+    expect(shown.classLabel).toBe('Villager');
+    expect(shown.stats.map((stat) => stat.label)).toEqual(['STR', 'INT', 'SKL', 'SPD', 'LCK', 'DEF', 'RES']);
+    expect(shown.stats.find((stat) => stat.label === 'STR')!.value).toBe(cato.strength);
+    expect(shown.health).toBe(cato.health);
+    expect(toRosterScreenView(openRosterScreen(run)).unit!.equippedWeapon?.label).toBe('Iron Spear');
+    expect(Array.isArray(shown.skills)).toBe(true);
+  });
+
+  it('has no status sheet with nobody on the roster', () => {
+    const run = { ...campRun(), roster: [] };
+    expect(toRosterScreenView(openRosterScreen(run)).unit).toBeNull();
+  });
+
   it('shows a weapon that never breaks without a count', () => {
     const state = pointRosterCursor(openRosterScreen(campRun()), 'units', 1);
     expect(toRosterScreenView(state).items[1]).toMatchObject({ label: 'Fists', quantity: null, equipped: false });
