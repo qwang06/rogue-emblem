@@ -41,8 +41,8 @@ export const TERRAIN_SHEET = {
 // The seasons a map can be drawn in. Each has its own copy of the terrain
 // sheet with the same layout (so every frame number below works on all of
 // them): summer is the green overworld sheet; autumn (overworld-autumn.png)
-// is it with golden grass, rust-red woods and darker water over the top 33
-// rows, buildings left as they are; winter (overworld-winter.png) is the
+// is it with its greens recolored (golden grass, rust-red woods and
+// meadows), everything else left as it is; winter (overworld-winter.png) is the
 // pack's snow sheet, snowy buildings included.
 export const SEASONS = ['summer', 'autumn', 'winter'] as const;
 export type Season = (typeof SEASONS)[number];
