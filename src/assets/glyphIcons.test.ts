@@ -19,10 +19,10 @@ describe('glyph icons', () => {
     expect(files.filter((file) => !KINDS.includes(file))).toEqual([]);
   });
 
-  it('paints each icon at 16x16', () => {
+  it('paints each icon at 64x64', () => {
     for (const file of readdirSync(dir)) {
       const png = readFileSync(new URL(file, dir));
-      expect([png.readUInt32BE(16), png.readUInt32BE(20)], file).toEqual([16, 16]);
+      expect([png.readUInt32BE(16), png.readUInt32BE(20)], file).toEqual([64, 64]);
     }
   });
 });

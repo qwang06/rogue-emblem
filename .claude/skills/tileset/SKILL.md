@@ -49,11 +49,11 @@ One 128x128 PNG per item, named by item id: painted anime-style art (dark-brown 
 
 ## Reward icons: src/assets/rewards/
 
-One 32x32 PNG per reward kind whose card doesn't show an item or unit (`draft`, `rest`, `relic`, `gold`, `lesson`, `scroll`), named by kind, made with the item icon recipe above: a stack of ribbon-tied contracts with a wax seal, a campfire, a gold amulet with a purple gem, a heap of gold coins, an open book under a glowing blue star, a sealed scroll. Weak spot: `gold` is a lumpy heap that only partly reads as coins. Only the reward screen shows them (`REWARD_ICON_URLS` in `src/assets/rewardIcons.ts`, a Vite glob); `src/assets/rewardIcons.test.ts` checks the set.
+One 128x128 painted PNG per reward kind whose card doesn't show an item or unit (`draft`, `rest`, `relic`, `gold`, `lesson`, `scroll`), named by kind, in the item icons' painted style: a rolled contract with a red wax seal, a campfire beside a bedroll, a crystal amulet on a gold chain, gold coins spilling from a pouch, an open book with a glowing page, a scroll tied with a blue ribbon. Cut from the 3x3 sheet generated from section H of `art/anime/prompts.md` with the item icons' cutter (`cut_icons.py ... 128 25 140 rewards`); the sheet is on the art machine under `pixellab/rewards-glyphs/`. Shown smoothed at 64px. Only the reward screen shows them (`REWARD_ICON_URLS` in `src/assets/rewardIcons.ts`, a Vite glob); `src/assets/rewardIcons.test.ts` checks the set.
 
 ## Glyph icons: src/assets/glyphs/
 
-16x16 PNGs, transparent, one per `GlyphKind` and per `StatIconKind` except `health` (named by kind, e.g. `crit.png`, `rout.png`), painted with PixelLab in the item icons' style (dark outline, a few shades). Shown at 1x (16 CSS px), 12px in the reward tiles' EXP and the merchant's prices (smoothed there, since pixelated 0.75x drops rows). `glyphIcons.test.ts` checks every kind has one and each is 16x16. `range.png` (a dotted arrow) and `book.png` are the weakest and the first to repaint.
+64x64 PNGs, transparent with soft alpha edges, one per `GlyphKind` and per `StatIconKind` except `health` (named by kind, e.g. `crit.png`, `rout.png`): bold painted glyphs (thick dark-brown outline, two cel tones, one highlight) cut from the two 4x4 sheets generated from section I of `art/anime/prompts.md` with the item icons' cutter (`cut_icons.py ... 64 25 140 glyphs`; sheets on the art machine under `pixellab/rewards-glyphs/`). Shown smoothed (not pixelated) at 16 CSS px, 12px in the reward tiles' EXP and the merchant's prices. `glyphIcons.test.ts` checks every kind has one and each is 64x64. `mp` is the blue droplet and `item` the leather pouch.
 
 ## Boon icons: src/assets/boons/
 

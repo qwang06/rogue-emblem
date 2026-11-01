@@ -30,7 +30,7 @@ export function StatLabel({ label, text = false }: { label: string; text?: boole
   return (
     <span className="stat-label" title={`${label}: ${stat.name}`}>
       {url ? (
-        <img className="stat-label__icon stat-label__icon--painted" src={url} alt="" width={16} height={16} />
+        <img className="stat-label__icon" src={url} alt="" width={16} height={16} />
       ) : (
         <GlyphIcon kind={stat.glyph ?? 'exp'} className="stat-label__icon" />
       )}
