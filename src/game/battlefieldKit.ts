@@ -50,6 +50,10 @@ export interface BattlefieldKit {
   // they are so their painted light and shadows stay the right way round.
   treesRight?: readonly KitPiece[];
   bushes: readonly KitPiece[];
+  // The share of battles (0 to 1) laid out open, with no tree clusters
+  // down the sides: just the bushes, and the meadow running on out of
+  // sight. 0 (always wooded) if left out.
+  openChance?: number;
   // Rising from the near corners, close to the camera. None if left out.
   foreground?: { left: KitPiece; right: KitPiece };
   // The blotches' colors: sunlit patches and shade.
@@ -102,6 +106,14 @@ export const FOREGROUND_REACH = 0.1;
 
 const between = (rng: Rng, low: number, high: number) => low + rng() * (high - low);
 const pick = <T>(rng: Rng, items: readonly T[]) => items[Math.floor(rng() * items.length)];
+
+// Whether a battle on `kit` from `seed` is laid out open (no tree
+// clusters down the sides; see BattlefieldKit.openChance). Drawn apart
+// from the rest of the layout, so the rest is the same either way.
+export function isOpenField(kit: BattlefieldKit, seed: number): boolean {
+  return createSeededRng(seed ^ OPEN_SEED_SALT)() < (kit.openChance ?? 0);
+}
+const OPEN_SEED_SALT = 0x6f70656e;
 
 // The rectangle the scenery covers around a floor `floor` (its top-left
 // at the world's origin): KIT_MARGIN past its sides and front, and up to
@@ -265,13 +277,16 @@ export function layOutKit(
 
   // Down each side, tree clusters from the back (smaller, as they're
   // farther off) to the front, with bushes between them, all standing
-  // just off the floor. Mirrored on the right.
+  // just off the floor. Mirrored on the right. An open field has only the
+  // bushes.
+  const wooded = !isOpenField(kit, seed);
   for (const side of [-1, 1] as const) {
     const edge = side < 0 ? BORDER_OVERLAP : floor.width - BORDER_OVERLAP;
     const standOff = (width: number, push: number) => (side < 0 ? edge - width - push : edge + push);
     const rows = [-HORIZON_GAP * 0.4, floor.height * 0.35, floor.height * 0.8, floor.height + KIT_MARGIN.bottom * 0.45];
     const own = side > 0 ? kit.treesRight : undefined;
     rows.forEach((foot, i) => {
+      if (!wooded) return;
       const piece = pick(rng, own ?? kit.trees);
       const k = 0.55 + (0.5 * i) / (rows.length - 1);
       const { width, height } = size(piece, k * between(rng, 0.92, 1.08));

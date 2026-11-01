@@ -29,6 +29,8 @@ const PLAINS = {
   horizon: piece('horizon', 1916, 558),
   // Where the treeline's bushes meet the meadow.
   horizonFoot: 0.75,
+  // Half the battles have no tree clusters down the sides.
+  openChance: 0.5,
   patches: [
     { texture: piece('ground-grass-dry', 1024, 1024), every: 120000, width: [380, 760] as const },
     { texture: piece('ground-dirt', 1024, 1024), every: 260000, width: [260, 520] as const },
