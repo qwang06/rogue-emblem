@@ -370,9 +370,11 @@ describe('createStageLevel', () => {
     const summer = createStageLevel(1234, region);
     const autumn = createStageLevel(1234, { ...region, season: 'autumn' });
     const winter = createStageLevel(1234, { ...region, season: 'winter' });
+    const hell = createStageLevel(1234, { ...region, season: 'hell' });
     expect(summer.decorations.length).toBeGreaterThan(0);
     expect(autumn.decorations).toEqual(summer.decorations.map((tree) => ({ ...tree, tree: 'gold_ginkgo' })));
     expect(winter.decorations).toEqual([]);
+    expect(hell.decorations).toEqual([]);
     expect(winter.grid).toEqual(summer.grid);
     expect([summer.season, autumn.season, winter.season]).toEqual(['summer', 'autumn', 'winter']);
   });
