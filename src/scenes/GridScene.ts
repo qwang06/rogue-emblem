@@ -72,7 +72,7 @@ import { getFramingClumps } from '../game/battlefieldFraming.ts';
 import { getCellTones } from '../game/floorTiles.ts';
 import { layOutKit, type BattlefieldKit, type KitLayer, type KitStanding } from '../game/battlefieldKit.ts';
 import { BATTLEFIELD_KITS, KIT_URLS } from '../assets/battlefieldKits.ts';
-import { ensureKitTextures, makePatchTexture } from './kitTextures.ts';
+import { ensureKitTextures, makeFadedTexture, makePatchTexture } from './kitTextures.ts';
 import { createCursor, moveCursor } from '../game/cursor.ts';
 import {
   createBattleLevel,
@@ -3894,8 +3894,10 @@ export class GridScene extends Phaser.Scene {
           .setDepth(depths.ground);
         continue;
       }
-      const key = piece.layer === 'patch' ? makePatchTexture(this, piece, kit.groundScale ?? kit.scale) : piece.key;
-      if (piece.layer === 'patch') patchKeys.push(key);
+      let key = piece.key;
+      if (piece.layer === 'patch') key = makePatchTexture(this, piece, kit.groundScale ?? kit.scale);
+      else if (piece.fade) key = makeFadedTexture(this, piece.key, piece.fade);
+      if (key !== piece.key) patchKeys.push(key);
       const image = this.add
         .image(piece.x, piece.y, key)
         .setOrigin(0, 0)

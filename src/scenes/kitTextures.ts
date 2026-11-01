@@ -85,3 +85,27 @@ export function makePatchTexture(scene: Phaser.Scene, patch: KitPlacement, scale
   texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
   return key;
 }
+
+// A copy of the image `key` faded out to clear down its height, from
+// `fade[0]` to `fade[1]` of the way down (and clear below that), for a
+// piece laid out with a `fade`. Returns its key.
+export function makeFadedTexture(scene: Phaser.Scene, key: string, fade: readonly [number, number]): string {
+  const fadedKey = `${key}-fade-${fade[0].toFixed(4)}-${fade[1].toFixed(4)}`;
+  if (scene.textures.exists(fadedKey)) return fadedKey;
+  const source = scene.textures.get(key).getSourceImage() as CanvasImageSource & { width: number; height: number };
+  const texture = scene.textures.createCanvas(fadedKey, source.width, source.height)!;
+  const context = texture.getContext();
+  context.drawImage(source, 0, 0);
+  const gradient = context.createLinearGradient(0, 0, 0, source.height);
+  gradient.addColorStop(0, 'rgba(255,255,255,1)');
+  gradient.addColorStop(fade[0], 'rgba(255,255,255,1)');
+  gradient.addColorStop(fade[1], 'rgba(255,255,255,0)');
+  gradient.addColorStop(1, 'rgba(255,255,255,0)');
+  context.globalCompositeOperation = 'destination-in';
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, source.width, source.height);
+  context.globalCompositeOperation = 'source-over';
+  texture.refresh();
+  texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+  return fadedKey;
+}
