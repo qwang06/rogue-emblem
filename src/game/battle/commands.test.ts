@@ -447,6 +447,25 @@ describe('modifiers', () => {
     expect(uses(run(finisher([{ kind: 'spare-weapon-on-kill' }]), strike).state)).toBe(before);
   });
 
+  it('heals a lifesteal striker its share of the HP it took, as a drain', () => {
+    const start = finisher([{ kind: 'sure-hit' }, { kind: 'lifesteal', percent: 50 }]);
+    start.units.get('hero')!.health = 10;
+    const { state, events } = run(start, strike);
+    expect(state.units.get('hero')!.health).toBe(13);
+    expect(events).toContainEqual({ type: 'recovered', unitId: 'hero', stat: 'health', amount: 3, trigger: 'drain' });
+  });
+
+  it("recovers a share of max HP as the unit's phase starts with phase-heal-percent", () => {
+    const hero = makeTestUnit({ team: 'player' });
+    hero.modifiers = [{ kind: 'phase-heal-percent', percent: 25 }];
+    hero.health = 1;
+    const start = createTestBattle({
+      hero: { unit: hero, at: { x: 0, y: 0 } },
+      foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 7, y: 0 } },
+    });
+    expect(start.units.get('hero')!.health).toBe(1 + Math.floor(hero.maxHealth / 4));
+  });
+
   it("recovers HP and MP as the unit's phase starts", () => {
     const hero = makeTestUnit({ team: 'player', mana: 5 });
     hero.modifiers = [

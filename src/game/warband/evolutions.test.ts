@@ -12,6 +12,7 @@ import {
   getEvolutions,
   getNewEvolutions,
   hasEvolution,
+  RANK_EVOLUTION_RANK,
 } from './evolutions.ts';
 import { findRelic } from './relics.ts';
 import { createRun, restoreRoster } from './run.ts';
@@ -35,8 +36,9 @@ describe('EVOLUTIONS', () => {
   });
 
   it('needs at least two parts for each, so none comes from a single pick', () => {
-    for (const { id, boons, relics, classes } of EVOLUTIONS) {
-      expect(boons.length + relics.length + (classes.length > 0 ? 1 : 0), id).toBeGreaterThanOrEqual(2);
+    for (const { id, boons, ranks, relics, classes } of EVOLUTIONS) {
+      const parts = boons.length + Object.keys(ranks).length + relics.length + (classes.length > 0 ? 1 : 0);
+      expect(parts, id).toBeGreaterThanOrEqual(2);
     }
   });
 
@@ -62,6 +64,39 @@ describe('hasEvolution', () => {
   it('needs every relic, and any class does when none is named', () => {
     expect(hasEvolution({ classId: 'soldier', boons: ['stalwart'] }, ['bulwark-crest'], juggernaut)).toBe(true);
     expect(hasEvolution({ classId: 'soldier', boons: ['stalwart'] }, [], juggernaut)).toBe(false);
+  });
+});
+
+describe('rank evolutions', () => {
+  const ranked = (id: string, rank: number) => Array.from({ length: rank }, () => id);
+
+  it('needs the passive at its top rank and the matching relic', () => {
+    const berserk = findEvolution('berserk')!;
+    expect(berserk.ranks).toEqual({ brawler: RANK_EVOLUTION_RANK });
+    const unit = (rank: number) => ({ classId: 'soldier', boons: ranked('brawler', rank) });
+    expect(hasEvolution(unit(RANK_EVOLUTION_RANK), ['duelists-gauntlet'], berserk)).toBe(true);
+    expect(hasEvolution(unit(RANK_EVOLUTION_RANK - 1), ['duelists-gauntlet'], berserk)).toBe(false);
+    expect(hasEvolution(unit(RANK_EVOLUTION_RANK), [], berserk)).toBe(false);
+  });
+
+  it('counts rarer and stage-scaled ranks of the passive', () => {
+    const boons = ['regeneration', 'regeneration|rare|100', 'regeneration|epic|120', 'regeneration', 'regeneration'];
+    expect(hasEvolution({ classId: 'acolyte', boons }, ['mending-charm'], findEvolution('troll-blood')!)).toBe(true);
+  });
+
+  it('flags the boon that takes the passive to its top rank', () => {
+    const unit = { classId: 'archer', boons: ranked('keen-eye', RANK_EVOLUTION_RANK - 1) };
+    expect(completesEvolution(unit, ['hawk-lens'], { boon: 'keen-eye' })).toBe(true);
+    expect(completesEvolution({ ...unit, boons: ['keen-eye'] }, ['hawk-lens'], { boon: 'keen-eye' })).toBe(false);
+  });
+
+  it('gives its procs', () => {
+    expect(findEvolution('eagle-eye')!.modifiers).toEqual([
+      { kind: 'sure-hit' },
+      { kind: 'crit-multiplier', amount: 4 },
+    ]);
+    expect(findEvolution('vampire-lord')!.modifiers).toEqual([{ kind: 'lifesteal', percent: 50 }]);
+    expect(findEvolution('troll-blood')!.modifiers).toEqual([{ kind: 'phase-heal-percent', percent: 25 }]);
   });
 });
 

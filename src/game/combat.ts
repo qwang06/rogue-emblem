@@ -17,7 +17,7 @@ import {
   type Rng,
 } from './combatStats.ts';
 import type { Grid, Point } from './grid.ts';
-import { getCombatBonus, isWounded, type CombatBonus, type Modifier } from './modifiers.ts';
+import { getCombatBonus, hasModifier, isWounded, sumModifiers, type CombatBonus, type Modifier } from './modifiers.ts';
 import { getStatusModifiers, type StatusId } from './statuses.ts';
 import { WEAPON_DAMAGE_TYPES, type Weapon } from './weapons.ts';
 
@@ -79,6 +79,11 @@ export interface Strike {
   hit: boolean;
   crit: boolean;
   lethal: boolean;
+  // HP the striker drained back (a `lifesteal` modifier), when any.
+  drain?: number;
+  // Whether a `finisher` modifier felled the target (its damage counts
+  // the rest of the target's HP).
+  finished?: boolean;
 }
 
 export interface CombatResult {
@@ -287,21 +292,45 @@ export function isInStrikeRange(unit: StrikeRange, distance: number): boolean {
 // its weapon has broken. A side without a weapon never strikes. Ignores
 // deaths — resolveCombat stops early on those.
 export function getStrikeOrder(
-  attacker: CombatStatLine & Pick<Fighter, 'weapon' | 'weaponUses'>,
-  defender: CombatStatLine & Pick<Fighter, 'weapon' | 'weaponUses'>,
+  attacker: CombatStatLine & Pick<Fighter, 'weapon' | 'weaponUses' | 'modifiers'>,
+  defender: CombatStatLine & Pick<Fighter, 'weapon' | 'weaponUses' | 'modifiers'>,
   distance: number,
 ): CombatSide[] {
   const counters = isInStrikeRange(defender, distance);
   const order: CombatSide[] = ['attacker'];
   if (counters) order.push('defender');
-  if (canDouble(attacker, defender)) order.push('attacker');
-  else if (counters && canDouble(defender, attacker)) order.push('defender');
+  if (doubles(attacker, defender)) order.push('attacker');
+  else if (counters && doubles(defender, attacker)) order.push('defender');
 
   const usesLeft: Record<CombatSide, number> = {
     attacker: strikesAvailable(attacker),
     defender: strikesAvailable(defender),
   };
   return order.filter((side) => usesLeft[side]-- > 0);
+}
+
+// Whether `unit` strikes twice against `opponent`: fast enough to
+// (canDouble), or with an `always-double` modifier.
+function doubles(
+  unit: CombatStatLine & Pick<Fighter, 'modifiers'>,
+  opponent: CombatStatLine & Pick<Fighter, 'modifiers'>,
+): boolean {
+  return hasModifier(unit.modifiers, 'always-double') || canDouble(unit, opponent);
+}
+
+// `striker`'s hit chance against `struck`: 100 with a `sure-hit` modifier.
+export function getStrikeHitChance(striker: Fighter, struck: Fighter): number {
+  return hasModifier(striker.modifiers, 'sure-hit') ? 100 : getHitChance(striker, struck);
+}
+
+// What `unit`'s crits multiply damage by: its highest `crit-multiplier`
+// modifier's, or CRIT_MULTIPLIER.
+export function getCritMultiplier(unit: Pick<Fighter, 'modifiers'>): number {
+  let multiplier = CRIT_MULTIPLIER;
+  for (const modifier of unit.modifiers ?? []) {
+    if (modifier.kind === 'crit-multiplier') multiplier = Math.max(multiplier, modifier.amount);
+  }
+  return multiplier;
 }
 
 // How many strikes a unit's weapon has left in it: none without a weapon,
@@ -313,9 +342,14 @@ function strikesAvailable(unit: Pick<Fighter, 'weapon' | 'weaponUses'>): number 
 
 // One full exchange when attacker strikes defender, following
 // getStrikeOrder, each side with its modifiers' bonus (withCombatBonus,
-// the attacker as `attacking`). Each strike rolls to hit (hit chance from combatStats.ts)
-// and, if it lands, to crit (×CRIT_MULTIPLIER damage); a miss deals 0.
-// Combat stops as soon as a unit dies. Nothing is mutated — returns
+// the attacker as `attacking`). Each strike rolls to hit (hit chance from combatStats.ts,
+// getStrikeHitChance) and, if it lands, to crit (×getCritMultiplier damage); a miss deals 0.
+// A side's procs (modifiers.ts) act on its strikes: a hit that leaves the
+// foe at or under its `finisher` percent of max HP fells it, `lifesteal`
+// heals the striker that share of the HP it took (up to its max HP, as the
+// strike's `drain`), and after each strike `twin-strike` rolls for one
+// more by the same side at once, while its weapon has uses left (a twin
+// strike can't chain into another). Combat stops as soon as a unit dies. Nothing is mutated — returns
 // { strikes, attackerHealth, defenderHealth }, where strikes is the ordered
 // list [{ by, target, damage, hit, crit, lethal }] with `by` / `target`
 // being 'attacker' or 'defender', for the caller to apply and animate.
@@ -333,19 +367,50 @@ export function resolveCombat(
   const health: Record<CombatSide, number> = { attacker: attacker.health, defender: defender.health };
   const units: Record<CombatSide, Fighter> = { attacker, defender };
   const strikes: Strike[] = [];
+  const order = getStrikeOrder(attacker, defender, distance);
+  const usesLeft: Record<CombatSide, number> = {
+    attacker: strikesAvailable(attacker) - order.filter((side) => side === 'attacker').length,
+    defender: strikesAvailable(defender) - order.filter((side) => side === 'defender').length,
+  };
 
-  for (const by of getStrikeOrder(attacker, defender, distance)) {
+  // The indexes in `order` of twin strikes, which can't chain.
+  const twinAt = new Set<number>();
+  for (let i = 0; i < order.length; i++) {
+    const by = order[i];
     const target: CombatSide = by === 'attacker' ? 'defender' : 'attacker';
     const striker = units[by];
     const struck = units[target];
-    const hit = rollChance(getHitChance(striker, struck), rng, { trueHit });
+    const hit = rollChance(getStrikeHitChance(striker, struck), rng, { trueHit });
     const crit = hit && rollChance(getCritChance(striker, struck), rng);
     const base = calculateDamage(striker, struck);
-    const damage = !hit ? 0 : crit ? base * CRIT_MULTIPLIER : base;
-    health[target] = Math.max(0, health[target] - damage);
+    let damage = !hit ? 0 : crit ? base * getCritMultiplier(striker) : base;
+    let finished = false;
+    const left = Math.max(0, health[target] - damage);
+    const finisher = sumModifiers(striker.modifiers, 'finisher');
+    if (hit && left > 0 && struck.maxHealth !== undefined && left <= (struck.maxHealth * finisher) / 100) {
+      damage = health[target];
+      finished = true;
+    }
+    const dealt = Math.min(damage, health[target]);
+    health[target] -= dealt;
     const lethal = health[target] === 0;
-    strikes.push({ by, target, damage, hit, crit, lethal });
+    const strike: Strike = { by, target, damage, hit, crit, lethal };
+    if (finished) strike.finished = true;
+    const drained = Math.floor((dealt * sumModifiers(striker.modifiers, 'lifesteal')) / 100);
+    const room = striker.maxHealth === undefined ? drained : striker.maxHealth - health[by];
+    const drain = Math.max(0, Math.min(drained, room));
+    if (drain > 0) {
+      health[by] += drain;
+      strike.drain = drain;
+    }
+    strikes.push(strike);
     if (lethal) break;
+    const twin = sumModifiers(striker.modifiers, 'twin-strike');
+    if (twin > 0 && !twinAt.has(i) && usesLeft[by] > 0 && rollChance(Math.min(100, twin), rng)) {
+      usesLeft[by]--;
+      order.splice(i + 1, 0, by);
+      twinAt.add(i + 1);
+    }
   }
 
   return { strikes, attackerHealth: health.attacker, defenderHealth: health.defender };
@@ -374,7 +439,7 @@ export function getCombatForecast(
       health: unit.health,
       maxHealth: unit.maxHealth,
       damage: acts ? calculateDamage(unit, opponent) : null,
-      hit: acts ? getHitChance(unit, opponent) : null,
+      hit: acts ? getStrikeHitChance(unit, opponent) : null,
       crit: acts ? getCritChance(unit, opponent) : null,
       strikes,
       counters: role === 'attacker' || acts,

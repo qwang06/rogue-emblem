@@ -194,6 +194,8 @@ describe('findTakenBoon', () => {
     ]);
     expect(findTakenBoon('keen-eye|rare|300')!.modifiers).toEqual([{ kind: 'combat', term: 'hit', amount: 23 }]);
     expect(findTakenBoon('fleet|legendary|455')!.modifiers).toEqual([{ kind: 'movement', amount: 1 }]);
+    expect(findTakenBoon('twin-strike|epic|300')!.modifiers).toEqual([{ kind: 'twin-strike', percent: 25 }]);
+    expect(findTakenBoon('finisher|rare|300')!.modifiers).toEqual([{ kind: 'finisher', percent: 6 }]);
     expect(findTakenBoon('stat-strength|rare|142')!.stat).toEqual({ stat: 'strength', amount: 4 });
   });
 
