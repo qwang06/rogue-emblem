@@ -126,7 +126,7 @@ export const BATTLEFIELD_OBSTACLES: Readonly<Record<BattlefieldKind, readonly Ob
 
 // The size every battlefield is fought on, in cells: the open field the
 // painted battlefields (src/assets/battlefieldArt.ts) leave clear.
-export const BATTLEFIELD_SIZE = Object.freeze({ width: 14, height: 10 });
+export const BATTLEFIELD_SIZE = Object.freeze({ width: 14, height: 12 });
 
 export interface ObstaclePlacement extends Point {
   obstacle: ObstacleKind;

@@ -36,6 +36,11 @@ export interface BattlefieldKit {
   ground: KitPiece;
   // The far scenery, its bottom edge fading out over the ground.
   horizon: KitPiece;
+  // How far down the horizon's art (0 to 1) its scenery meets the ground:
+  // the line that stands HORIZON_GAP above the floor. Below it the art's
+  // own near meadow hangs over the floor's back rows. 1 (the bottom edge)
+  // if left out.
+  horizonFoot?: number;
   patches: readonly KitPatch[];
   decals: readonly KitPiece[];
   // Tall clusters standing down the field's left side, open side facing
@@ -88,7 +93,7 @@ export const HAZE = 'kit-haze';
 export const KIT_MARGIN = Object.freeze({ side: 280, bottom: 200 });
 // How far above the floor's back edge the horizon's foot sits: a strip of
 // far ground between it and the top row.
-const HORIZON_GAP = 60;
+const HORIZON_GAP = 24;
 // How far into the floor a border piece may reach, in world pixels.
 const BORDER_OVERLAP = 8;
 // How much of a foreground piece's width may hang over the floor (its
@@ -100,9 +105,10 @@ const pick = <T>(rng: Rng, items: readonly T[]) => items[Math.floor(rng() * item
 
 // The rectangle the scenery covers around a floor `floor` (its top-left
 // at the world's origin): KIT_MARGIN past its sides and front, and up to
-// the top of a horizon `horizonHeight` tall standing HORIZON_GAP above it.
-export function getKitScene(floor: { width: number; height: number }, horizonHeight: number): WorldRect {
-  const top = HORIZON_GAP + horizonHeight;
+// the top of a horizon `horizonHeight` tall whose foot (`foot` of the
+// way down it) stands HORIZON_GAP above it.
+export function getKitScene(floor: { width: number; height: number }, horizonHeight: number, foot = 1): WorldRect {
+  const top = HORIZON_GAP + horizonHeight * foot;
   return {
     x: -KIT_MARGIN.side,
     y: -top,
@@ -144,7 +150,7 @@ export function layOutKit(
   // The horizon spans the scene, its foot HORIZON_GAP above the floor.
   const width = floor.width + 2 * KIT_MARGIN.side;
   const horizonHeight = (width * kit.horizon.size[1]) / kit.horizon.size[0];
-  const scene = getKitScene(floor, horizonHeight);
+  const scene = getKitScene(floor, horizonHeight, kit.horizonFoot);
   const bottom = scene.y + scene.height;
   const size = (piece: KitPiece, k = 1) => ({
     width: piece.size[0] * kit.scale * k,
@@ -156,8 +162,8 @@ export function layOutKit(
 
   add({ layer: 'horizon', key: kit.horizon.key, x: scene.x, y: scene.y, width: scene.width, height: horizonHeight });
 
-  // The ground from a little above the horizon's foot down, under it.
-  const groundTop = -HORIZON_GAP - horizonHeight * 0.2;
+  // The ground from a little above the horizon's bottom edge down, under it.
+  const groundTop = scene.y + horizonHeight * 0.8;
   add({
     layer: 'ground',
     key: kit.ground.key,

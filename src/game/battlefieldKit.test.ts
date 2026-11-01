@@ -35,10 +35,14 @@ describe('getKitScene', () => {
   it('runs KIT_MARGIN past the floor’s sides and front, and up over the horizon', () => {
     expect(getKitScene(FLOOR, 240)).toEqual({
       x: -KIT_MARGIN.side,
-      y: -300,
+      y: -264,
       width: 896 + 2 * KIT_MARGIN.side,
-      height: 300 + 400 + KIT_MARGIN.bottom,
+      height: 264 + 400 + KIT_MARGIN.bottom,
     });
+  });
+
+  it('stands a horizon whose foot is part way down it lower, its foot as far above the floor', () => {
+    expect(getKitScene(FLOOR, 240, 0.75).y).toBe(getKitScene(FLOOR, 240).y + 60);
   });
 });
 
@@ -62,6 +66,16 @@ describe('layOutKit', () => {
       expect(horizon.y + horizon.height).toBeLessThan(0);
       expect(horizon.y).toBe(scene.y);
     }
+  });
+
+  it('hangs the horizon’s near meadow over the floor’s back rows when its foot is part way down it', () => {
+    const { scene, pieces } = layOutKit({ ...KIT, horizonFoot: 0.75 }, FLOOR, 1);
+    const [horizon] = pieces.filter((p) => p.layer === 'horizon');
+    expect(horizon.y).toBe(scene.y);
+    expect(horizon.y + horizon.height * 0.75).toBeLessThan(0);
+    expect(horizon.y + horizon.height).toBeGreaterThan(0);
+    const [ground] = pieces.filter((p) => p.layer === 'ground');
+    expect(ground.y).toBeLessThan(horizon.y + horizon.height);
   });
 
   it('uses only the kit’s pieces and the generated washes, and keeps decals in the scene', () => {
