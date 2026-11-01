@@ -269,13 +269,11 @@
 
 /* The hand, pointing down at the highlighted site and bobbing. */
 .overworld__pointer {
-  --pointer-w: calc(20 * var(--px));
-  --pointer-h: calc(14 * var(--px));
   position: absolute;
   left: 0;
   top: calc(var(--tile) * -1.55);
-  width: var(--pointer-h);
-  height: var(--pointer-w);
+  width: calc(16 * var(--px));
+  height: calc(22 * var(--px));
   translate: -50% -100%;
   pointer-events: none;
   animation: overworld-bob 0.6s ease-in-out infinite alternate;
@@ -284,13 +282,9 @@
 .overworld__pointer::before {
   content: '';
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: var(--pointer-w);
-  height: var(--pointer-h);
-  background: var(--pointer) center / 100% 100% no-repeat;
+  inset: 0;
+  background: url('../assets/ui/hand-pointer-down.png') center / 100% 100% no-repeat;
   image-rendering: pixelated;
-  transform: translate(-50%, -50%) rotate(90deg);
   filter: drop-shadow(0 var(--px) 0 rgb(0 0 0 / 50%));
 }
 
@@ -400,9 +394,10 @@
 .warband-panel__bar {
   display: flex;
   height: calc(4 * var(--px));
-  margin: var(--px);
-  background: #3a3040;
-  box-shadow: 0 0 0 var(--px) var(--fg-bright);
+  border-style: solid;
+  border-width: var(--trough-width);
+  border-image: var(--trough);
+  image-rendering: pixelated;
   overflow: hidden;
 }
 
