@@ -4,12 +4,14 @@ import { findUnit } from '../grid.ts';
 import { HEAL_STAFF, staffEntry } from '../healing.ts';
 import { HEALTH_POTION } from '../items.ts';
 import { TURN_LIMIT } from '../objectives.ts';
+import { getMovementRange } from '../movement.ts';
 import { IRON_SPEAR, weaponEntry, FISTS } from '../weapons.ts';
 import {
   applyCommand,
   BattleCommandError,
   findEvent,
   getSkillTargets,
+  getMovementOptions,
   getSkillVictims,
   type BattleCommand,
   type BattleEvent,
@@ -472,6 +474,82 @@ describe('modifiers', () => {
     expect(events).toContainEqual({ type: 'recovered', unitId: 'hero', stat: 'health', amount: 3, trigger: 'drain' });
   });
 
+  it('splashes a cleave-through hit onto the foes beside its target, not onto allies', () => {
+    const hero = makeTestUnit({ team: 'player' });
+    hero.modifiers = [{ kind: 'cleave-through', percent: 50 }];
+    const start = createTestBattle(
+      {
+        hero: { unit: hero, at: { x: 0, y: 1 } },
+        foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 1, y: 1 } },
+        beside: { unit: makeTestUnit({ team: 'enemy', health: 2 }), at: { x: 2, y: 1 } },
+        above: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 1, y: 0 } },
+        friend: { unit: makeTestUnit({ team: 'player' }), at: { x: 1, y: 2 } },
+      },
+      { width: 3, height: 3 },
+    );
+    const { state, events } = run(start, { type: 'attack', unitId: 'hero', target: { x: 1, y: 1 } });
+    const firstHit = events.find((event) => event.type === 'strike')!;
+    const splash = Math.floor((firstHit.type === 'strike' ? firstHit.damage : 0) / 2);
+    expect(events).toContainEqual({ type: 'splash', unitId: 'above', damage: splash, health: 20 - splash });
+    expect(events).toContainEqual({ type: 'splash', unitId: 'beside', damage: splash, health: 0 });
+    expect(events.some((event) => event.type === 'splash' && event.unitId === 'friend')).toBe(false);
+    // A unit felled by the splash leaves the map and counts as the striker's.
+    expect(state.units.has('beside')).toBe(false);
+    expect(state.kills.get('hero')).toBe(1);
+  });
+
+  it('chains a kill into one free, uncountered strike on a foe in reach', () => {
+    const hero = makeTestUnit({ team: 'player' });
+    hero.modifiers = [{ kind: 'chain-kill', percent: 100 }];
+    const start = createTestBattle(
+      {
+        hero: { unit: hero, at: { x: 0, y: 0 } },
+        foe: { unit: makeTestUnit({ team: 'enemy', health: 6 }), at: { x: 1, y: 0 } },
+        strong: { unit: makeTestUnit({ team: 'enemy', health: 20 }), at: { x: 0, y: 1 } },
+        far: { unit: makeTestUnit({ team: 'enemy', health: 15 }), at: { x: 0, y: 2 } },
+      },
+      { width: 2, height: 3 },
+    );
+    const { events } = run(start, strike);
+    const chain = events.findIndex((event) => event.type === 'chain');
+    expect(events[chain]).toEqual({ type: 'chain', unitId: 'hero', targetId: 'strong' });
+    expect(events.slice(chain + 1).filter((event) => event.type === 'strike')).toEqual([
+      expect.objectContaining({ strikerId: 'hero', targetId: 'strong' }),
+    ]);
+  });
+
+  it('picks the weakest of the foes the chain reaches', () => {
+    const hero = makeTestUnit({ team: 'player' });
+    hero.modifiers = [{ kind: 'chain-kill', percent: 100 }];
+    const start = createTestBattle(
+      {
+        hero: { unit: hero, at: { x: 1, y: 0 } },
+        foe: { unit: makeTestUnit({ team: 'enemy', health: 6 }), at: { x: 1, y: 1 } },
+        strong: { unit: makeTestUnit({ team: 'enemy', health: 20 }), at: { x: 0, y: 0 } },
+        weak: { unit: makeTestUnit({ team: 'enemy', health: 15 }), at: { x: 2, y: 0 } },
+      },
+      { width: 3, height: 2 },
+    );
+    const { events } = run(start, { type: 'attack', unitId: 'hero', target: { x: 1, y: 1 } });
+    expect(events).toContainEqual({ type: 'chain', unitId: 'hero', targetId: 'weak' });
+  });
+
+  it('chains nothing without a kill or without the modifier', () => {
+    const hero = makeTestUnit({ team: 'player' });
+    hero.modifiers = [{ kind: 'chain-kill', percent: 100 }];
+    const units = (attacker: ReturnType<typeof makeTestUnit>, health: number) =>
+      createTestBattle(
+        {
+          hero: { unit: attacker, at: { x: 0, y: 0 } },
+          foe: { unit: makeTestUnit({ team: 'enemy', health }), at: { x: 1, y: 0 } },
+          other: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 0, y: 1 } },
+        },
+        { width: 2, height: 2 },
+      );
+    expect(types(run(units(hero, 40), strike).events)).not.toContain('chain');
+    expect(types(run(units(makeTestUnit({ team: 'player' }), 6), strike).events)).not.toContain('chain');
+  });
+
   it("recovers a share of max HP as the unit's phase starts with phase-heal-percent", () => {
     const hero = makeTestUnit({ team: 'player' });
     hero.modifiers = [{ kind: 'phase-heal-percent', percent: 25 }];
@@ -853,6 +931,31 @@ describe('drain, recoil and monster skills', () => {
       }).events.find((event) => event.type === 'skill');
     expect(hit(makeTestUnit({ team: 'enemy', health: 40 }))).toMatchObject({ damage: 9 });
     expect(hit(monster)).toMatchObject({ damage: 12 });
+  });
+});
+
+describe('blink', () => {
+  it('moves a blinking unit over water and through foes, stopping only where it can stand', () => {
+    const hero = makeTestUnit({ team: 'player' });
+    hero.modifiers = [{ kind: 'blink' }];
+    let start = createTestBattle({
+      hero: { unit: hero, at: { x: 0, y: 0 } },
+      foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 2, y: 0 } },
+      other: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 7, y: 0 } },
+    });
+    start = { ...start, grid: setTerrain(start.grid, 1, 0, 'water') };
+    const options = getMovementOptions(start.units, start.units.get('hero')!);
+    const range = getMovementRange(start.grid, { x: 0, y: 0 }, 3, options).map(({ x }) => x);
+    expect(range.sort()).toEqual([0, 3]);
+    const { state } = run(start, { type: 'move', unitId: 'hero', to: { x: 3, y: 0 } });
+    expect(findUnit(state.grid, 'hero')).toEqual({ x: 3, y: 0 });
+  });
+
+  it('leaves other units walking as usual', () => {
+    const start = duel();
+    const options = getMovementOptions(start.units, start.units.get('hero')!);
+    expect(options.canStopOn).toBeUndefined();
+    expect(options.canPassThrough?.('foe')).toBe(false);
   });
 });
 

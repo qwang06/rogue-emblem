@@ -98,6 +98,13 @@ describe('rank evolutions', () => {
     expect(findEvolution('vampire-lord')!.modifiers).toEqual([{ kind: 'lifesteal', percent: 50 }]);
     expect(findEvolution('troll-blood')!.modifiers).toEqual([{ kind: 'phase-heal-percent', percent: 25 }]);
   });
+
+  it('blinks with Fleet at its top rank and the Winged Boots', () => {
+    const blink = findEvolution('blink')!;
+    expect(blink.modifiers).toEqual([{ kind: 'blink' }]);
+    expect(hasEvolution({ classId: 'soldier', boons: ranked('fleet', 2) }, ['winged-boots'], blink)).toBe(true);
+    expect(hasEvolution({ classId: 'soldier', boons: ['fleet'] }, ['winged-boots'], blink)).toBe(false);
+  });
 });
 
 describe('getEvolutions', () => {

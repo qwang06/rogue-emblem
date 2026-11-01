@@ -198,6 +198,7 @@ import { getPushDirection, getPushResult } from '../game/push.ts';
 import { toIntentTagView, toPushTagView } from '../bridge/mapTagView.ts';
 import {
   findEvent,
+  getMovementOptions,
   getSkillTargets,
   type BattleCommand,
   type BattleEvent,
@@ -2517,9 +2518,7 @@ export class GridScene extends Phaser.Scene {
   // Options for src/game/movement.ts: allies can be walked through, anyone
   // else blocks.
   movementOptions(unit: Unit): MovementOptions {
-    return {
-      canPassThrough: (unitId: string) => isAllyOf(this.units, unit.team, unitId),
-    };
+    return getMovementOptions(this.units, unit);
   }
 
   // Units on another team are fair game to attack.
@@ -2922,6 +2921,8 @@ export class GridScene extends Phaser.Scene {
       case 'skill':
         this.playSkill(event, next);
         return;
+      // A cleave-through splash lands like a recoil: a number and a flash.
+      case 'splash':
       case 'recoil': {
         const sprite = this.unitSprites.get(event.unitId)!;
         this.showStats(event.unitId, { health: event.health });
@@ -2929,6 +2930,10 @@ export class GridScene extends Phaser.Scene {
         playHitFlash(this, sprite, next);
         return;
       }
+      case 'chain':
+        this.showDamagePopup(this.unitSprites.get(event.unitId)!, 0, 'status', 'Chain!');
+        next();
+        return;
       case 'status':
         this.showDamagePopup(this.unitSprites.get(event.targetId)!, 0, 'status', STATUSES[event.status].label);
         next();
