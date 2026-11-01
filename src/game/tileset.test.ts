@@ -14,6 +14,7 @@ import {
   SEASONS,
   SEASON_TERRAIN_SHEETS,
   SEASON_TREES,
+  SEASON_PROPS_SHEETS,
   TILE_SIZE,
   TREE_SHADOW,
   TREE_SPRITES,
@@ -68,6 +69,7 @@ describe('sprite keys', () => {
       const sheet = SEASON_TERRAIN_SHEETS[season];
       expect(TERRAIN_SHEET_URLS).toHaveProperty([sheet.key]);
       expect(sheet).toMatchObject({ columns: TERRAIN_SHEET.columns, rows: TERRAIN_SHEET.rows });
+      expect(SPRITE_URLS).toHaveProperty([SEASON_PROPS_SHEETS[season].key]);
       const tree = SEASON_TREES[season];
       if (tree) expect(TREE_SPRITES).toHaveProperty([tree]);
     }
