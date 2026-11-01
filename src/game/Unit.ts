@@ -1,7 +1,7 @@
 // Base class for all units on the tactics board. No Phaser, no rendering —
 // just stats and the state changes every unit shares (taking damage,
 // healing, dying, spending mana, leveling up, equipping and wearing out
-// weapons). Stats follow Fire Emblem: strength / magic power physical /
+// weapons). Stats follow Fire Emblem: strength / intelligence power physical /
 // magical hits, defense / resistance guard against them, and skill, speed
 // and luck feed hit, crit and doubling. Specific unit types extend this
 // and set their own class, stats, growth rates, stat caps and XP rate
@@ -66,7 +66,7 @@ export interface UnitOptions {
   health: number;
   mana?: number;
   strength: number;
-  magic?: number;
+  intelligence?: number;
   skill?: number;
   speed?: number;
   luck?: number;
@@ -108,7 +108,7 @@ export class Unit {
   maxMana: number;
   mana: number;
   strength: number;
-  magic: number;
+  intelligence: number;
   skill: number;
   speed: number;
   luck: number;
@@ -167,7 +167,7 @@ export class Unit {
     health,
     mana = 0,
     strength,
-    magic = 0,
+    intelligence = 0,
     skill = 0,
     speed = 0,
     luck = 0,
@@ -192,7 +192,7 @@ export class Unit {
     this.maxMana = mana;
     this.mana = mana;
     this.strength = strength;
-    this.magic = magic;
+    this.intelligence = intelligence;
     this.skill = skill;
     this.speed = speed;
     this.luck = luck;

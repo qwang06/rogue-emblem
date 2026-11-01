@@ -5,19 +5,19 @@ Reference for every unit class: base stats, growth rates, caps, weapons and skil
 ## How the numbers work
 
 - **Weapons:** every attack is made with the unit's equipped weapon — the first weapon in its inventory it can wield. A class masters weapon types (`physical`, `magical`, `siege`) and can only wield those. Picking a weapon in the Attack menu equips it. A unit with no weapon it can wield can't attack or counter.
-- **Damage** of a regular hit = `STR + Mt − DEF` for physical and siege weapons (`MAG + Mt − RES` for magical ones), never below 0.
+- **Damage** of a regular hit = `STR + Mt − DEF` for physical and siege weapons (`INT + Mt − RES` for magical ones), never below 0.
 - **Attack speed** = `SPD − max(0, Wt − STR)`: a weapon heavier than the wielder's strength slows it down.
 - **Hit chance** = (weapon `Hit` + `SKL × 2` + `LCK / 2`) − (attack speed `× 2` + `LCK` of the target), clamped to 0–100%.
 - **Crit chance** = (weapon `Crit` + `SKL / 2`) − target's `LCK`, clamped to 0–100%. A crit deals ×3 damage.
 - **Doubling:** a unit strikes twice in an exchange when its attack speed beats the opponent's by 4 or more.
 - **Counters:** the defender strikes back if the attacker is within its weapon's range (`Rng`). Bows and siege engines can't strike adjacent foes.
 - **Hands:** every weapon is one-handed (`1`) or two-handed (`2`); bows, the Great Axe, siege weapons and every staff take both hands. A unit wears a shield only while its equipped weapon is one-handed (bare hands count) and it carries no staff, so equipping a two-handed weapon takes its shield off until it equips a one-handed one again. Body armor is worn whatever the unit holds.
-- **Healing:** a unit carrying a staff gets a **Heal** action. It restores the staff's power + the healer's `MAG` to a wounded ally in the staff's range, capped at the ally's missing HP, spends one use of the staff (a staff with none left breaks), and earns the healer 10 XP. Staves aren't weapons: they can't attack or counter.
+- **Healing:** a unit carrying a staff gets a **Heal** action. It restores the staff's power + the healer's `INT` to a wounded ally in the staff's range, capped at the ally's missing HP, spends one use of the staff (a staff with none left breaks), and earns the healer 10 XP. Staves aren't weapons: they can't attack or counter.
 - **Uses:** every strike, hit or miss, spends one use of the striker's weapon. A weapon with no uses left breaks and is gone, and a unit whose weapon breaks mid-exchange stops striking. Fists never break (`∞`).
 - **Tomes:** a tome is a magical weapon that teaches its spell. Each strike with it counts towards learning the spell (Fire Tome: 5); on the strike that reaches the count the spell takes the tome's slot and never breaks, and the tome keeps its remaining uses in the next free slot (or goes to the convoy when there's none) so another unit can learn from it. A unit that already knows the spell just uses the tome up. Progress is kept per unit, per tome, between stages.
 - **Growths** are the % chance a stat rises by 1 on each level up. A stat never grows past its cap. Max level is 20. Level 1 to 2 takes 50 XP, every level after 100 XP.
 - **XP rate** scales every XP gain (combat, skills, healing): a unit with a 150% rate earns 15 XP where others earn 10, rounded to the nearest point and never below 1.
-- **Skills** always hit, never crit, and the target can't counter. Their damage is the user's regular hit (weapon might included) with any bonus `STR` added, then scaled; scaled damage rounds up. Using one costs mana, earns XP like a landed hit, and spends no weapon uses. A healing skill (Mend) instead restores its power + the user's `MAG` to a wounded ally in range, capped at the ally's missing HP, and earns 10 XP like a staff heal.
+- **Skills** always hit, never crit, and the target can't counter. Their damage is the user's regular hit (weapon might included) with any bonus `STR` added, then scaled; scaled damage rounds up. Using one costs mana, earns XP like a landed hit, and spends no weapon uses. A healing skill (Mend) instead restores its power + the user's `INT` to a wounded ally in range, capped at the ally's missing HP, and earns 10 XP like a staff heal.
 - **Secondary skill sets** (Warband Mode): a unit can learn one other class's skill set at camp and knows that class's skills as it reaches their levels, as if they were its own. A mentor (a roster unit of that class that knows its skills) teaches it for 20 gold; a Mentor's Scroll, a stage reward, teaches any class's set for free. A new set replaces the old one.
 - **Shove** (Soldier, from level 1) deals no damage of its own: it pushes the adjacent foe one tile straight away from the user. Onto open ground it just slides; onto a spike trap it takes 5 damage; into deep water (not a ford) it drowns. If the map's edge, a wall, a mountain or another unit is in the way it stays put and takes 2 damage, and a unit it slams into takes 2 too. A boss holds its ground and can't be shoved. A unit knocked out by a shove is the shover's kill. Walking over a spike trap is safe.
 
@@ -67,7 +67,7 @@ The starting unit, a townsperson in a plain tunic with no armor: Warband Mode's 
 | HP   | 10   | 85%    | 50  |
 | MP   | 5    | 45%    | 35  |
 | STR  | 3    | 60%    | 25  |
-| MAG  | 0    | 10%    | 20  |
+| INT  | 0    | 10%    | 20  |
 | SKL  | 3    | 55%    | 25  |
 | SPD  | 3    | 55%    | 25  |
 | LCK  | 2    | 50%    | 25  |
@@ -109,7 +109,7 @@ The ranged infantry: frail but accurate. Its bow only reaches two tiles away, so
 | HP   | 9    | 60%    | 40  |
 | MP   | 5    | 40%    | 30  |
 | STR  | 3    | 40%    | 20  |
-| MAG  | 0    | 5%     | 20  |
+| INT  | 0    | 5%     | 20  |
 | SKL  | 5    | 55%    | 20  |
 | SPD  | 4    | 45%    | 20  |
 | LCK  | 2    | 35%    | 20  |
@@ -136,7 +136,7 @@ The spear-and-shield infantry: the enemy in the demo battle. Villagers become on
 | HP   | 10   | 70%    | 40  |
 | MP   | 5    | 40%    | 30  |
 | STR  | 4    | 45%    | 20  |
-| MAG  | 0    | 5%     | 20  |
+| INT  | 0    | 5%     | 20  |
 | SKL  | 3    | 40%    | 20  |
 | SPD  | 3    | 40%    | 20  |
 | LCK  | 2    | 30%    | 20  |
@@ -164,7 +164,7 @@ The axe-wielding front line: high HP and strength, low skill, speed and luck. It
 | HP   | 12   | 85%    | 40  |
 | MP   | 5    | 30%    | 30  |
 | STR  | 5    | 55%    | 20  |
-| MAG  | 0    | 0%     | 20  |
+| INT  | 0    | 0%     | 20  |
 | SKL  | 2    | 30%    | 20  |
 | SPD  | 2    | 30%    | 20  |
 | LCK  | 1    | 25%    | 20  |
@@ -191,7 +191,7 @@ Promoted from the Villager. Hauls a powder keg on its back and throws it up to t
 | HP   | 10   | 65%    | 40  |
 | MP   | 5    | 40%    | 30  |
 | STR  | 4    | 45%    | 20  |
-| MAG  | 0    | 5%     | 20  |
+| INT  | 0    | 5%     | 20  |
 | SKL  | 3    | 40%    | 20  |
 | SPD  | 3    | 35%    | 20  |
 | LCK  | 2    | 30%    | 20  |
@@ -218,7 +218,7 @@ A specialized unit that doesn't promote, recruited or brought by the Sellswords 
 | HP   | 8    | 50%    | 35  |
 | MP   | 5    | 40%    | 30  |
 | STR  | 2    | 30%    | 20  |
-| MAG  | 0    | 10%    | 20  |
+| INT  | 0    | 10%    | 20  |
 | SKL  | 4    | 45%    | 20  |
 | SPD  | 6    | 60%    | 25  |
 | LCK  | 4    | 50%    | 25  |
@@ -244,7 +244,7 @@ A specialized unit, recruited on its own (or raised by the Beast Tamer origin): 
 | HP   | 13   | 80%    | 45  |
 | MP   | 2    | 20%    | 20  |
 | STR  | 5    | 55%    | 22  |
-| MAG  | 0    | 0%     | 20  |
+| INT  | 0    | 0%     | 20  |
 | SKL  | 2    | 35%    | 20  |
 | SPD  | 4    | 45%    | 22  |
 | LCK  | 1    | 25%    | 20  |
@@ -270,7 +270,7 @@ A special unit of its own kind: a rider on the faction's winged beast, strong, f
 | HP   | 12   | 70%    | 45  |
 | MP   | 5    | 40%    | 30  |
 | STR  | 5    | 50%    | 22  |
-| MAG  | 0    | 5%     | 20  |
+| INT  | 0    | 5%     | 20  |
 | SKL  | 4    | 45%    | 22  |
 | SPD  | 5    | 50%    | 22  |
 | LCK  | 3    | 35%    | 20  |
@@ -296,7 +296,7 @@ A specialized unit that doesn't promote: a siege engine on wheels (crystal canno
 | HP   | 12   | 60%    | 40  |
 | MP   | 0    | 0%     | 0   |
 | STR  | 5    | 45%    | 22  |
-| MAG  | 0    | 0%     | 20  |
+| INT  | 0    | 0%     | 20  |
 | SKL  | 3    | 35%    | 20  |
 | SPD  | 1    | 10%    | 15  |
 | LCK  | 0    | 10%    | 15  |
@@ -322,7 +322,7 @@ A specialized unit that doesn't promote: a covered battering ram, the most HP an
 | HP   | 16   | 80%    | 50  |
 | MP   | 0    | 0%     | 0   |
 | STR  | 6    | 50%    | 24  |
-| MAG  | 0    | 0%     | 20  |
+| INT  | 0    | 0%     | 20  |
 | SKL  | 1    | 25%    | 20  |
 | SPD  | 0    | 5%     | 15  |
 | LCK  | 0    | 5%     | 15  |
@@ -341,14 +341,14 @@ It fights with its Tackle and carries nothing else.
 
 ## Acolyte
 
-A specialized unit that doesn't promote. The healer and the warband's magic user: it mends a wounded ally next to it with its Heal staff, and fights with Light, a weak spell it knows from the start that strikes from one or two tiles away and never runs out. At level 1 a heal restores 5 HP (the staff's 2 power + 3 MAG) and Light hits a soldier for 3 (2 through its Shield Wall). A tome it finds (see Tomes above) teaches it a stronger spell. Frail, but its RES and LCK make it hard to hurt with magic or crit.
+A specialized unit that doesn't promote. The healer and the warband's magic user: it mends a wounded ally next to it with its Heal staff, and fights with Light, a weak spell it knows from the start that strikes from one or two tiles away and never runs out. At level 1 a heal restores 5 HP (the staff's 2 power + 3 INT) and Light hits a soldier for 3 (2 through its Shield Wall). A tome it finds (see Tomes above) teaches it a stronger spell. Frail, but its RES and LCK make it hard to hurt with magic or crit.
 
 | Stat | Base | Growth | Cap |
 | ---- | ---- | ------ | --- |
 | HP   | 8    | 50%    | 40  |
 | MP   | 6    | 50%    | 30  |
 | STR  | 1    | 10%    | 20  |
-| MAG  | 3    | 50%    | 20  |
+| INT  | 3    | 50%    | 20  |
 | SKL  | 2    | 30%    | 20  |
 | SPD  | 3    | 40%    | 20  |
 | LCK  | 4    | 50%    | 20  |
@@ -366,7 +366,7 @@ A specialized unit that doesn't promote. The healer and the warband's magic user
 
 | Skill | Learned at | Mana | Range | Damage                        |
 | ----- | ---------- | ---- | ----- | ----------------------------- |
-| Mend  | 2          | 3    | 1     | None: heals an ally 2 + `MAG` |
+| Mend  | 2          | 3    | 1     | None: heals an ally 2 + `INT` |
 
 Mend heals like the Heal staff without needing one, so another class that learns the Acolyte's skill set can heal too. Knows Light, and carries a Heal staff, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
@@ -379,7 +379,7 @@ A neutral unit, belonging to no faction (the pack's teal water spirit). Steady a
 | HP   | 11   | 60%    | 40  |
 | MP   | 6    | 50%    | 30  |
 | STR  | 0    | 0%     | 20  |
-| MAG  | 3    | 45%    | 20  |
+| INT  | 3    | 45%    | 20  |
 | SKL  | 3    | 35%    | 20  |
 | SPD  | 3    | 35%    | 20  |
 | LCK  | 3    | 35%    | 20  |
@@ -405,7 +405,7 @@ A neutral unit (the pack's fire spirit). The hardest-hitting elemental, with Fir
 | HP   | 9    | 50%    | 40  |
 | MP   | 6    | 50%    | 30  |
 | STR  | 0    | 0%     | 20  |
-| MAG  | 4    | 55%    | 20  |
+| INT  | 4    | 55%    | 20  |
 | SKL  | 3    | 40%    | 20  |
 | SPD  | 4    | 45%    | 20  |
 | LCK  | 2    | 25%    | 20  |
@@ -431,7 +431,7 @@ A neutral unit (the pack's white air spirit). The quickest and most elusive elem
 | HP   | 8    | 45%    | 40  |
 | MP   | 6    | 50%    | 30  |
 | STR  | 0    | 0%     | 20  |
-| MAG  | 3    | 40%    | 20  |
+| INT  | 3    | 40%    | 20  |
 | SKL  | 4    | 45%    | 20  |
 | SPD  | 6    | 60%    | 20  |
 | LCK  | 4    | 45%    | 20  |
@@ -457,7 +457,7 @@ A neutral unit (the pack's brown rock spirit). Slow and heavy, it slams a foe ne
 | HP   | 15   | 80%    | 40  |
 | MP   | 2    | 20%    | 30  |
 | STR  | 5    | 50%    | 20  |
-| MAG  | 0    | 0%     | 20  |
+| INT  | 0    | 0%     | 20  |
 | SKL  | 2    | 30%    | 20  |
 | SPD  | 1    | 10%    | 20  |
 | LCK  | 1    | 15%    | 20  |
@@ -483,7 +483,7 @@ The weakest monster and Warband Mode's first fight: a slow blob of jelly that de
 | HP   | 6    | 60%    | 40  |
 | MP   | 0    | 0%     | 0   |
 | STR  | 3    | 30%    | 20  |
-| MAG  | 0    | 0%     | 20  |
+| INT  | 0    | 0%     | 20  |
 | SKL  | 1    | 20%    | 20  |
 | SPD  | 1    | 20%    | 20  |
 | LCK  | 0    | 10%    | 20  |
@@ -509,7 +509,7 @@ A quick, scrappy monster: as fast as anything at level 1 and hits about as hard 
 | HP   | 8    | 60%    | 40  |
 | MP   | 0    | 0%     | 0   |
 | STR  | 3    | 40%    | 20  |
-| MAG  | 0    | 0%     | 20  |
+| INT  | 0    | 0%     | 20  |
 | SKL  | 4    | 45%    | 20  |
 | SPD  | 5    | 50%    | 20  |
 | LCK  | 1    | 25%    | 20  |
@@ -535,7 +535,7 @@ The sturdy monster: slow and unlucky, but its bones shrug off weak hits and its 
 | HP   | 10   | 70%    | 40  |
 | MP   | 0    | 0%     | 0   |
 | STR  | 4    | 45%    | 20  |
-| MAG  | 0    | 0%     | 20  |
+| INT  | 0    | 0%     | 20  |
 | SKL  | 3    | 35%    | 20  |
 | SPD  | 2    | 25%    | 20  |
 | LCK  | 0    | 5%     | 20  |
@@ -561,7 +561,7 @@ The nimblest monster: hard to hit and quick enough to strike twice, but frail an
 | HP   | 7    | 50%    | 40  |
 | MP   | 0    | 0%     | 0   |
 | STR  | 2    | 30%    | 20  |
-| MAG  | 0    | 0%     | 20  |
+| INT  | 0    | 0%     | 20  |
 | SKL  | 3    | 40%    | 20  |
 | SPD  | 6    | 55%    | 20  |
 | LCK  | 3    | 35%    | 20  |
@@ -587,7 +587,7 @@ The heavy monster: slow, but tough enough to take several hits, and it hits hard
 | HP   | 14   | 80%    | 40  |
 | MP   | 0    | 0%     | 0   |
 | STR  | 5    | 55%    | 20  |
-| MAG  | 0    | 0%     | 20  |
+| INT  | 0    | 0%     | 20  |
 | SKL  | 2    | 30%    | 20  |
 | SPD  | 2    | 20%    | 20  |
 | LCK  | 1    | 15%    | 20  |
@@ -613,7 +613,7 @@ The Red Dragon, boss of the Dragon's Roost (the run's stage 10, before the Hold;
 | HP   | 22   | 90%    | 60  |
 | MP   | 0    | 0%     | 0   |
 | STR  | 7    | 50%    | 25  |
-| MAG  | 0    | 0%     | 20  |
+| INT  | 0    | 0%     | 20  |
 | SKL  | 4    | 30%    | 20  |
 | SPD  | 3    | 20%    | 20  |
 | LCK  | 2    | 15%    | 20  |

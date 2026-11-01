@@ -3,13 +3,13 @@ import { STARTING_ITEMS, type Inventory } from './items.ts';
 import { Unit, type ClassUnitOptions } from './Unit.ts';
 import { LIGHT, weaponEntry, type WeaponType } from './weapons.ts';
 
-// Frail and steady: magic and resistance to heal and endure spells, high
+// Frail and steady: intelligence and resistance to heal and endure spells, high
 // luck, little strength or defense.
 export const ACOLYTE_STATS = Object.freeze({
   health: 8,
   mana: 6,
   strength: 1,
-  magic: 3,
+  intelligence: 3,
   skill: 2,
   speed: 3,
   luck: 4,
@@ -23,7 +23,7 @@ export const ACOLYTE_GROWTHS = Object.freeze({
   health: 50,
   mana: 50,
   strength: 10,
-  magic: 50,
+  intelligence: 50,
   skill: 30,
   speed: 40,
   luck: 50,
@@ -36,7 +36,7 @@ export const ACOLYTE_CAPS = Object.freeze({
   health: 40,
   mana: 30,
   strength: 20,
-  magic: 20,
+  intelligence: 20,
   skill: 20,
   speed: 20,
   luck: 20,

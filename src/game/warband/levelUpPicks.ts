@@ -26,7 +26,7 @@ const SNAPSHOT_STAT_KEYS: Readonly<Record<GrowthStat, keyof UnitSnapshot>> = Obj
   health: 'maxHealth',
   mana: 'maxMana',
   strength: 'strength',
-  magic: 'magic',
+  intelligence: 'intelligence',
   skill: 'skill',
   speed: 'speed',
   luck: 'luck',

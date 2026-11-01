@@ -348,7 +348,7 @@ describe('secondary skill sets', () => {
   // An archer that has learned the acolyte's skill set, next to a wounded
   // ally, with a foe in reach of its bow.
   function mender({ mana = 5, allyHealth = 8 } = {}) {
-    const hero = makeTestUnit({ team: 'player', unitClass: 'archer', level: 2, magic: 1, mana });
+    const hero = makeTestUnit({ team: 'player', unitClass: 'archer', level: 2, intelligence: 1, mana });
     hero.secondaryClass = 'acolyte';
     const ally = makeTestUnit({ team: 'player' });
     ally.health = allyHealth;
@@ -472,7 +472,10 @@ describe('heal and items', () => {
     const ally = makeTestUnit({ team: 'player' });
     ally.takeDamage(10);
     const start = createTestBattle({
-      healer: { unit: makeTestUnit({ team: 'player', magic: 3, items: [staffEntry(HEAL_STAFF)] }), at: { x: 0, y: 0 } },
+      healer: {
+        unit: makeTestUnit({ team: 'player', intelligence: 3, items: [staffEntry(HEAL_STAFF)] }),
+        at: { x: 0, y: 0 },
+      },
       ally: { unit: ally, at: { x: 1, y: 0 } },
       foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 7, y: 0 } },
     });

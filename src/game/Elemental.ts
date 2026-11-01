@@ -17,7 +17,7 @@ export interface ElementalLine {
     health: number;
     mana: number;
     strength: number;
-    magic: number;
+    intelligence: number;
     skill: number;
     speed: number;
     luck: number;
@@ -34,7 +34,7 @@ const CAPS: GrowthTable = Object.freeze({
   health: 40,
   mana: 30,
   strength: 20,
-  magic: 20,
+  intelligence: 20,
   skill: 20,
   speed: 20,
   luck: 20,
@@ -52,7 +52,7 @@ export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object
       health: 11,
       mana: 6,
       strength: 0,
-      magic: 3,
+      intelligence: 3,
       skill: 3,
       speed: 3,
       luck: 3,
@@ -64,7 +64,7 @@ export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object
       health: 60,
       mana: 50,
       strength: 0,
-      magic: 45,
+      intelligence: 45,
       skill: 35,
       speed: 35,
       luck: 35,
@@ -81,7 +81,7 @@ export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object
       health: 9,
       mana: 6,
       strength: 0,
-      magic: 4,
+      intelligence: 4,
       skill: 3,
       speed: 4,
       luck: 2,
@@ -93,7 +93,7 @@ export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object
       health: 50,
       mana: 50,
       strength: 0,
-      magic: 55,
+      intelligence: 55,
       skill: 40,
       speed: 45,
       luck: 25,
@@ -110,7 +110,7 @@ export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object
       health: 8,
       mana: 6,
       strength: 0,
-      magic: 3,
+      intelligence: 3,
       skill: 4,
       speed: 6,
       luck: 4,
@@ -122,7 +122,7 @@ export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object
       health: 45,
       mana: 50,
       strength: 0,
-      magic: 40,
+      intelligence: 40,
       skill: 45,
       speed: 60,
       luck: 45,
@@ -139,7 +139,7 @@ export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object
       health: 15,
       mana: 2,
       strength: 5,
-      magic: 0,
+      intelligence: 0,
       skill: 2,
       speed: 1,
       luck: 1,
@@ -151,7 +151,7 @@ export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object
       health: 80,
       mana: 20,
       strength: 50,
-      magic: 0,
+      intelligence: 0,
       skill: 30,
       speed: 10,
       luck: 15,

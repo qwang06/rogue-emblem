@@ -69,7 +69,7 @@ export interface UnitView {
   mana: number;
   maxMana: number;
   strength: number;
-  magic: number;
+  intelligence: number;
   skill: number;
   speed: number;
   luck: number;
@@ -376,7 +376,7 @@ export function toUnitView(unit: Unit | null | undefined): UnitView | null {
     mana: unit.mana,
     maxMana: unit.maxMana,
     strength: unit.strength,
-    magic: unit.magic,
+    intelligence: unit.intelligence,
     skill: unit.skill,
     speed: unit.speed,
     luck: unit.luck,
@@ -404,7 +404,7 @@ export function toUnitView(unit: Unit | null | undefined): UnitView | null {
 // The stats on the unit info screen, in display order (HP and MP show as bars).
 const DETAIL_STATS: readonly (readonly [Exclude<GrowthStat, 'health' | 'mana'>, string])[] = Object.freeze([
   ['strength', 'STR'],
-  ['magic', 'INT'],
+  ['intelligence', 'INT'],
   ['skill', 'SKL'],
   ['speed', 'SPD'],
   ['luck', 'LCK'],
@@ -675,7 +675,7 @@ const LEVEL_UP_STATS: readonly (readonly [GrowthStat, string])[] = Object.freeze
   ['health', 'HP'],
   ['mana', 'MP'],
   ['strength', 'STR'],
-  ['magic', 'INT'],
+  ['intelligence', 'INT'],
   ['skill', 'SKL'],
   ['speed', 'SPD'],
   ['luck', 'LCK'],
@@ -798,7 +798,7 @@ export function toRewardAction(reward: Reward, index: number, run: RunState | nu
           [
             ['HP', unit.maxHealth],
             ['STR', unit.strength],
-            ['INT', unit.magic],
+            ['INT', unit.intelligence],
             ['SKL', unit.skill],
             ['SPD', unit.speed],
             ['DEF', unit.defense],

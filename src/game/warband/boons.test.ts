@@ -46,9 +46,9 @@ describe('isBoonEligible', () => {
 
   it('offers STR to physical fighters and INT to casters', () => {
     expect(isBoonEligible(soldier(), boon('stat-strength'))).toBe(true);
-    expect(isBoonEligible(soldier(), boon('stat-magic'))).toBe(false);
+    expect(isBoonEligible(soldier(), boon('stat-intelligence'))).toBe(false);
     const acolyte = new Acolyte({ team: 'player' });
-    expect(isBoonEligible(acolyte, boon('stat-magic'))).toBe(true);
+    expect(isBoonEligible(acolyte, boon('stat-intelligence'))).toBe(true);
   });
 
   it("offers skills the unit doesn't know and passives it hasn't taken", () => {

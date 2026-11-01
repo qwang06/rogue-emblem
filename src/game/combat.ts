@@ -33,7 +33,7 @@ export type CombatWeapon = Pick<Weapon, 'type' | 'might' | 'hit' | 'crit' | 'wei
 // taken) for the exchange at hand.
 export interface DamageStats {
   strength?: number;
-  magic?: number;
+  intelligence?: number;
   defense?: number;
   armorDefense?: number;
   resistance?: number;
@@ -172,10 +172,10 @@ export function getAttackTargets(
 // Damage types: which attacker stat powers a hit and which defender stat
 // guards against it.
 export const DAMAGE_TYPES: Readonly<
-  Record<DamageType, { power: 'strength' | 'magic'; guard: 'defense' | 'resistance' }>
+  Record<DamageType, { power: 'strength' | 'intelligence'; guard: 'defense' | 'resistance' }>
 > = Object.freeze({
   physical: Object.freeze({ power: 'strength', guard: 'defense' }),
-  magical: Object.freeze({ power: 'magic', guard: 'resistance' }),
+  magical: Object.freeze({ power: 'intelligence', guard: 'resistance' }),
 });
 
 // The kind of hit a unit's attacks deal: its weapon type's (see
@@ -189,7 +189,7 @@ export function getDamageType(attacker: Pick<DamageStats, 'weapon'>): DamageType
 }
 
 // Damage one hit deals: strength plus weapon might minus defense (and
-// worn armor) for a physical hit, magic plus might minus resistance for a
+// worn armor) for a physical hit, intelligence plus might minus resistance for a
 // magical one, plus the attacker's damage bonus and minus the defender's
 // guard bonus, never below zero. Missing stats count as 0.
 export function calculateDamage(attacker: DamageStats, defender: DamageStats): number {
@@ -235,7 +235,7 @@ export function withCombatBonus<T extends Fighter>(unit: T, opponent: Fighter, a
     health: unit.health,
     maxHealth: unit.maxHealth,
     strength: unit.strength,
-    magic: unit.magic,
+    intelligence: unit.intelligence,
     skill: unit.skill,
     speed: unit.speed,
     luck: unit.luck,

@@ -28,7 +28,7 @@ import { getModifierSkills, type Modifier } from './modifiers.ts';
 // the effect the presentation layer plays for it. A `push` skill also
 // shoves a target it leaves standing one tile away from the user (see
 // push.ts). A skill whose `effect` is 'heal' deals no damage: it mends a
-// wounded ally instead, restoring its `power` plus the user's magic (like
+// wounded ally instead, restoring its `power` plus the user's intelligence (like
 // a staff, see healing.ts).
 
 export interface Skill {
@@ -158,7 +158,7 @@ export const VOLLEY = promotionSkill('volley', 'Volley', { range: 3, might: 3, a
 export const INFERNO = promotionSkill('inferno', 'Inferno', { manaCost: 4, range: 3, might: 5, animation: 'stone' });
 export const EARTHSHAKER = promotionSkill('earthshaker', 'Earthshaker', { manaCost: 4, might: 8 });
 // A prayer that closes an adjacent ally's wounds without a staff: it
-// restores 2 plus the user's magic, like the Heal staff.
+// restores 2 plus the user's intelligence, like the Heal staff.
 export const MEND: Skill = Object.freeze({
   id: 'mend',
   label: 'Mend',
@@ -271,7 +271,7 @@ export function calculateSkillDamage(skill: Skill, user: SkillFighter, defender:
   // spread drops.
   const boosted: DamageStats = {
     strength: user.strength,
-    magic: user.magic,
+    intelligence: user.intelligence,
     weapon: user.weapon,
     bonus: getFighterBonus(user, defender, true),
   };
@@ -332,14 +332,14 @@ export function isHealingSkill(skill: Skill): boolean {
 }
 
 // HP a healing skill restores to `patient`: its power plus the user's
-// magic, capped at what the patient is missing (never below 0).
+// intelligence, capped at what the patient is missing (never below 0).
 export function getSkillHealAmount(
   skill: Skill,
-  user: { magic: number },
+  user: { intelligence: number },
   patient: { health: number; maxHealth: number },
 ): number {
   const missing = Math.max(0, patient.maxHealth - patient.health);
-  return Math.max(0, Math.min((skill.power ?? 0) + user.magic, missing));
+  return Math.max(0, Math.min((skill.power ?? 0) + user.intelligence, missing));
 }
 
 // One line on what `skill` does, e.g. for a lesson's or a boon's offer.

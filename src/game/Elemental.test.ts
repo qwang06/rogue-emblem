@@ -22,7 +22,7 @@ describe('Elemental', () => {
       const unit = new Elemental(kind, { team: 'enemy' });
       const line = ELEMENTALS[kind];
       expect(unit.maxHealth, kind).toBe(line.stats.health);
-      expect(unit.magic, kind).toBe(line.stats.magic);
+      expect(unit.intelligence, kind).toBe(line.stats.intelligence);
       expect(unit.movement, kind).toBe(line.stats.movement);
       expect(unit.growths, kind).toBe(line.growths);
       expect(unit.caps, kind).toBe(line.caps);

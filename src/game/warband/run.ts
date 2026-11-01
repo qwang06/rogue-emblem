@@ -62,7 +62,7 @@ export interface UnitSnapshot {
   mana: number;
   maxMana: number;
   strength: number;
-  magic: number;
+  intelligence: number;
   skill: number;
   speed: number;
   luck: number;
@@ -177,7 +177,7 @@ const STAT_FIELDS = Object.freeze([
   'mana',
   'maxMana',
   'strength',
-  'magic',
+  'intelligence',
   'skill',
   'speed',
   'luck',
@@ -361,6 +361,18 @@ export function serializeRun(run: RunState): string {
   return JSON.stringify(run);
 }
 
+// Saves from before the magic stat was renamed intelligence store a
+// unit's `magic` and the `stat-magic` boon; a JSON.parse reviver that
+// reads them under their new names, so those runs still load.
+function renameMagicStat(_key: string, value: unknown): unknown {
+  if (value === 'stat-magic') return 'stat-intelligence';
+  if (isRecord(value) && 'magic' in value && !('intelligence' in value)) {
+    const { magic, ...rest } = value;
+    return { ...rest, intelligence: magic };
+  }
+  return value;
+}
+
 // The run in `text` (from serializeRun), or null if it isn't valid JSON of
 // a run, or names a class or item that doesn't exist (e.g. a save from an
 // older version).
@@ -371,7 +383,7 @@ export function parseRun(
 ): RunState | null {
   let data: unknown;
   try {
-    data = JSON.parse(text);
+    data = JSON.parse(text, renameMagicStat);
   } catch {
     return null;
   }
