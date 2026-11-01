@@ -27,7 +27,7 @@ const TEAM_NOUNS: Readonly<Record<Team, string>> = { player: 'Ally', enemy: 'Ene
 // lines (a boss or an elite wearing its map badge on the portrait's
 // corner), then HP, MP and (for player units and guests below the level
 // cap) EXP bars, a plain grid of stats (RNG is its equipped weapon's), the
-// bars and stats each led by its icon (StatLabel), and its items (up to
+// bars and stats each led by its abbreviation (StatLabel), and its items (up to
 // six, see MAX_INVENTORY_SLOTS) one per row with their icons — potions
 // with their count, weapons with their uses left (∞ if they never break)
 // and the equipped one highlighted — long names cut short with an

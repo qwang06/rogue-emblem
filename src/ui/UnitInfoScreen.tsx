@@ -22,9 +22,8 @@ const WEAPON_TYPE_LABELS = { physical: 'Physical', magical: 'Magic', siege: 'Sie
 // filled toward its class's cap, with its passive boons under them; then
 // the rates it fights with, its equipped weapon's numbers as icon chips
 // (WeaponNumbers), its items with their icons and its skills with their MP
-// and range. Stats are labelled with their icon and abbreviation
-// (StatLabel), so the icons the rest of the UI shows alone are learned
-// here. The hover UnitPanel stays the quick view. GridScene handles the
+// and range. Stats are labelled with their abbreviation (StatLabel). The
+// hover UnitPanel stays the quick view. GridScene handles the
 // input (I, confirm or cancel closes it), and a click anywhere closes it
 // too.
 export function UnitInfoScreen() {
@@ -70,7 +69,7 @@ function Identity({ unit }: { unit: UnitDetailView }) {
       <dl className="unit-info__pairs">
         <div>
           <dt>
-            <StatLabel label="MOV" text />
+            <StatLabel label="MOV" />
           </dt>
           <dd>{unit.movement}</dd>
         </div>
@@ -109,7 +108,7 @@ function Stats({ unit }: { unit: UnitDetailView }) {
           return (
             <div key={stat.id} className={atCap ? 'unit-info__stat unit-info__stat--capped' : 'unit-info__stat'}>
               <dt>
-                <StatLabel label={stat.label} text />
+                <StatLabel label={stat.label} />
               </dt>
               <span className="unit-info__stat-track" aria-hidden="true">
                 <span className="unit-info__stat-fill" style={{ width: `${percent}%` }} />
