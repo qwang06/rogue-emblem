@@ -295,7 +295,7 @@
 
 .roster-sheet__no-icon {
   flex: none;
-  width: 16px;
+  width: 20px;
 }
 
 .roster-sheet__weapon {
@@ -354,10 +354,6 @@
   align-items: center;
   gap: 2px;
   font-variant-numeric: tabular-nums;
-}
-
-.roster-sheet__skill-cost .pixel-icon:last-of-type {
-  margin-left: 6px;
 }
 
 .roster-sheet__passive {

@@ -21,6 +21,9 @@ import {
   CLEAVE,
   MARK,
   MEND,
+  PHALANX,
+  TAILWIND,
+  WARD,
   PINNING_SHOT,
   POWER_STRIKE,
   PRAYER,
@@ -687,6 +690,77 @@ describe('status skills', () => {
       [],
     ]);
     expect(roared.state.units.get('west')!.health).toBe(20);
+  });
+});
+
+describe('buff skills', () => {
+  const user = (skill: Skill) => {
+    const hero = makeTestUnit({ team: 'player', mana: 20 });
+    hero.modifiers = [{ kind: 'skill', skill }];
+    return hero;
+  };
+
+  it('guards every ally around with Phalanx through the enemy phase, until their own next phase', () => {
+    const start = createTestBattle(
+      {
+        hero: { unit: user(PHALANX), at: { x: 1, y: 1 } },
+        west: { unit: makeTestUnit({ team: 'player' }), at: { x: 0, y: 1 } },
+        far: { unit: makeTestUnit({ team: 'player' }), at: { x: 3, y: 1 } },
+        foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 0, y: 2 } },
+      },
+      { width: 4, height: 3 },
+    );
+    expect(getSkillTargets(start.grid, start.units, 'hero', { x: 1, y: 1 }, PHALANX)).toEqual([
+      { x: 1, y: 1, unitId: 'hero' },
+    ]);
+    const guarded = run(
+      start,
+      { type: 'skill', unitId: 'hero', skillId: 'phalanx', target: { x: 1, y: 1 } },
+      { type: 'wait', unitId: 'west' },
+      { type: 'wait', unitId: 'far' },
+    );
+    expect(guarded.events).toContainEqual({ type: 'status', unitId: 'hero', targetId: 'west', status: 'guarded' });
+    expect(guarded.state.turnState?.team).toBe('enemy');
+    expect(guarded.state.units.get('west')!.statuses).toEqual(['guarded']);
+    expect(guarded.state.units.get('far')!.statuses).toEqual([]);
+    // The foe's spear hits for 6, 2 less on a Guarded ally.
+    const struck = run(guarded.state, { type: 'attack', unitId: 'foe', target: { x: 0, y: 1 } });
+    const blow = struck.events.find((event) => event.type === 'strike' && event.strikerId === 'foe');
+    expect(blow).toMatchObject({ damage: 4 });
+    expect(struck.state.turnState?.team).toBe('player');
+    expect(struck.state.units.get('west')!.statuses).toEqual([]);
+  });
+
+  it('wards one ally up to 2 tiles away, never a foe', () => {
+    const start = createTestBattle({
+      hero: { unit: user(WARD), at: { x: 0, y: 0 } },
+      ally: { unit: makeTestUnit({ team: 'player' }), at: { x: 2, y: 0 } },
+      foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 1, y: 0 } },
+    });
+    expect(getSkillTargets(start.grid, start.units, 'hero', { x: 0, y: 0 }, WARD)).toEqual([
+      { x: 2, y: 0, unitId: 'ally' },
+    ]);
+    const { state } = run(start, { type: 'skill', unitId: 'hero', skillId: 'ward', target: { x: 2, y: 0 } });
+    expect(state.units.get('ally')!.statuses).toEqual(['warded']);
+  });
+
+  it('lets a Tailwind ally move 2 tiles further this turn', () => {
+    const start = createTestBattle(
+      {
+        hero: { unit: user(TAILWIND), at: { x: 0, y: 0 } },
+        ally: { unit: makeTestUnit({ team: 'player', movement: 3 }), at: { x: 1, y: 0 } },
+        foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 9, y: 0 } },
+      },
+      { width: 10 },
+    );
+    const far = { x: 6, y: 0 };
+    expect(() => applyCommand(start, { type: 'move', unitId: 'ally', to: far })).toThrow(/reach/);
+    const { state } = run(
+      start,
+      { type: 'skill', unitId: 'hero', skillId: 'tailwind', target: { x: 1, y: 0 } },
+      { type: 'move', unitId: 'ally', to: far },
+    );
+    expect(findUnit(state.grid, 'ally')).toEqual(far);
   });
 });
 
