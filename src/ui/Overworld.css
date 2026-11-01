@@ -402,7 +402,7 @@
 }
 
 .warband-panel__bar > span {
-  background: var(--hp);
+  background: var(--hp-fill);
 }
 
 /* On a phone: all eight in a row, each sprite over its bar. */

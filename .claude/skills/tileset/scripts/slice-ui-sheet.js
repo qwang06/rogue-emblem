@@ -1,6 +1,7 @@
 // Cuts the UI's pixel art out of the UI asset sheet (src/assets/ui/ui-sheet-3x.png,
 // drawn at 3x) into the 1x files the React UI shows: the window frames, the
-// title name plate, the hand pointer, and the 8x8 icons that replace painted
+// title name plate, the hand pointer, buttons, checkboxes, a slider knob, an
+// item slot, and the 8x8 icons that replace painted
 // glyphs (doubled to 16x16, so they keep the glyphs' size). Usage (from the
 // repo root):
 //   node .claude/skills/tileset/scripts/slice-ui-sheet.js
@@ -150,6 +151,26 @@ write(`${UI}/hand-pointer-down.png`, cut(100, 131, 8, 11));
 write(`${UI}/arrow-down.png`, cut(38, 134, 5, 5));
 write(`${UI}/arrow-up.png`, cut(54, 133, 5, 5));
 
+// ---- Buttons: the rose button, normal / highlighted (orange, with a gold
+// glow ring) / pressed (dark). Each is cut with a 1px margin round the
+// button so the three share one 20x15 canvas (the glow fills the margin):
+// a 9-slice, border-image-slice 4 4 5 fill, drawn with
+// border-image-outset 1 so the button itself fills the element.
+write(`${UI}/button.png`, cut(150, 161, 20, 15));
+write(`${UI}/button-hover.png`, cut(182, 161, 20, 15));
+write(`${UI}/button-pressed.png`, cut(214, 161, 20, 15));
+
+// ---- A checkbox, 10x11: the rose square, empty and with its teal gem.
+write(`${UI}/checkbox.png`, cut(3, 147, 10, 11));
+write(`${UI}/checkbox-checked.png`, cut(19, 147, 10, 11));
+
+// ---- A slider's knob, 8x8: the orange bead off the bars' middle row.
+write(`${UI}/slider-knob.png`, cut(436, 228, 8, 8));
+
+// ---- An empty item slot, 16x16: the rose tile (rounded outline, cream
+// highlight on its right and bottom), a 9-slice with 3px corners.
+write(`${UI}/item-slot.png`, cut(0, 112, 16, 16));
+
 // ---- Icons: 8x8 in a 16px grid from (4, 709) (row A) and (4, 725) (row B),
 // doubled into 16x16 glyphs. See ui-sheet-catalog.md for every icon.
 const icon = (row, col) => cut(4 + 16 * col, row === 'A' ? 709 : 725, 8, 8);
@@ -163,8 +184,11 @@ const GLYPH_ICONS = {
   move: icon('A', 10), // boot
   book: icon('A', 11), // closed book
   skill: icon('A', 12), // wand
+  heal: icon('A', 13), // red cross
   item: icon('A', 14), // pouch
   settings: icon('B', 2), // gear
+  music: icon('B', 3), // music note
+  sound: icon('B', 4), // speaker
   avoid: icon('B', 6), // feather
   mp: icon('B', 11), // cyan flask
   hit: icon('B', 14), // target

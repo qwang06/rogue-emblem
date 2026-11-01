@@ -9,6 +9,7 @@ const KINDS = [
   ...['auto', 'danger', 'settings', 'home', 'skill', 'item', 'wait', 'undo'],
   ...['roster', 'promote', 'book', 'rout', 'seize', 'boss', 'survive', 'turn'],
   ...['gold', 'lock', 'check', 'skull', 'mp', 'exp', 'move', 'range', 'weight', 'uses'],
+  ...['heal', 'sound', 'music'],
   ...['attack', 'avoid', 'hit', 'crit', 'health'],
 ];
 
