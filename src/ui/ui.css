@@ -1182,6 +1182,12 @@ kbd {
   image-rendering: pixelated;
 }
 
+/* Icons borrowed from the boons' painted art are smoothed, not pixelated. */
+.stat-label__icon--painted,
+.stat-icon--painted {
+  image-rendering: auto;
+}
+
 /* The icons' colors (see PixelIcon and GlyphIcon): text, ink, dim, blade,
    light, gold, pale gold, steel, white, red, blue, green and EXP gold. */
 .pixel-icon__c {
