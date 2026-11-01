@@ -705,7 +705,6 @@ a.header-button {
   flex: none;
   width: 16px;
   height: 16px;
-  image-rendering: pixelated;
 }
 
 /* Three columns of a stat's icon and its value, grooved off from the bars. */
@@ -1178,13 +1177,8 @@ kbd {
   vertical-align: middle;
 }
 
+/* Painted glyph art (64px PNGs) is smoothed down to its 16px or 12px box. */
 .pixel-icon--art {
-  image-rendering: pixelated;
-}
-
-/* Icons borrowed from the boons' painted art are smoothed, not pixelated. */
-.stat-label__icon--painted,
-.stat-icon--painted {
   image-rendering: auto;
 }
 
@@ -3858,12 +3852,6 @@ textarea.draft-input {
 
 .reward-card__icon {
   display: block;
-  image-rendering: pixelated;
-}
-
-/* Item icons are painted art, smoothed rather than pixelated. */
-.reward-card__icon--painted {
-  image-rendering: auto;
 }
 
 .reward-card__label {
@@ -4306,13 +4294,6 @@ textarea.draft-input {
 .merchant-screen__price .pixel-icon {
   width: 12px;
   height: 12px;
-}
-
-/* Painted 16px art shrunk to 12px drops whole rows when pixelated, so
-   these small spots smooth it instead. */
-.reward-team__exp .pixel-icon--art,
-.merchant-screen__price .pixel-icon--art {
-  image-rendering: auto;
 }
 
 /* A unit's HP: the count over a small GBA trough. */

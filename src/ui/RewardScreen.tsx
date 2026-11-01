@@ -140,13 +140,7 @@ function RewardPicture({ reward, selected }: { reward: RewardAction; selected: b
   if (!url) return null;
   return (
     <span className="reward-card__sprite" aria-hidden="true">
-      <img
-        className={reward.itemIcon ? 'reward-card__icon reward-card__icon--painted' : 'reward-card__icon'}
-        src={url}
-        alt=""
-        width={64}
-        height={64}
-      />
+      <img className="reward-card__icon" src={url} alt="" width={64} height={64} />
     </span>
   );
 }
