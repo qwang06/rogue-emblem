@@ -223,6 +223,7 @@ export interface SkillFighter extends DamageStats {
   monster?: boolean;
   modifiers?: readonly Modifier[];
   statuses?: readonly StatusId[];
+  movedTiles?: number;
 }
 
 // What `unit`'s modifiers and statuses (statuses.ts) add (getCombatBonus)

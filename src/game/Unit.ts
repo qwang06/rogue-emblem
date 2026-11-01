@@ -139,6 +139,9 @@ export class Unit {
   // Statuses a skill has left on it this battle (see statuses.ts), until
   // its team's next phase ends. Never saved.
   statuses: readonly StatusId[] = Object.freeze([]);
+  // How many tiles it walked this phase (its move's path), for skills that
+  // hit harder after a run up (a skill's `chargeMight`). Never saved.
+  movedTiles = 0;
   // Whether it's a monster (the monster classes set it), for modifiers
   // that only count against monsters.
   monster = false;

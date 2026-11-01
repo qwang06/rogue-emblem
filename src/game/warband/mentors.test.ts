@@ -39,15 +39,14 @@ describe('getSecondaryClassIds', () => {
       'soldier',
       'vanguard',
       'sapper',
+      'scout',
       'beast',
+      'beast-rider',
       'siege',
+      'ram',
       'acolyte',
     ]);
     expect(getSecondaryClassIds({ classId: 'acolyte' })).not.toContain('acolyte');
-  });
-
-  it('leaves out the specialized units, which have no skills yet', () => {
-    expect(getSecondaryClassIds({ classId: 'villager' })).not.toContain('scout');
   });
 
   it('leaves out classes with no skills to teach', () => {
