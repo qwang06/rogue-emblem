@@ -109,6 +109,15 @@ import obstacleForestThicket1 from './obstacles/forest-thicket-1.png';
 import obstacleForestThicket2 from './obstacles/forest-thicket-2.png';
 import obstacleForestStump from './obstacles/forest-stump.png';
 import obstacleForestLog from './obstacles/forest-log.png';
+import obstacleDesertRock1 from './obstacles/desert-rock-1.png';
+import obstacleDesertRock2 from './obstacles/desert-rock-2.png';
+import obstacleDesertBoulder from './obstacles/desert-boulder.png';
+import obstacleDesertCrag from './obstacles/desert-crag.png';
+import obstacleDesertBush from './obstacles/desert-bush.png';
+import obstacleDesertThicket from './obstacles/desert-thicket.png';
+import obstacleDesertCactus1 from './obstacles/desert-cactus-1.png';
+import obstacleDesertCactus2 from './obstacles/desert-cactus-2.png';
+import obstacleDesertStump from './obstacles/desert-stump.png';
 import ballistaIcon from './items/ballista.png';
 import biteIcon from './items/bite.png';
 import boneClawsIcon from './items/bone-claws.png';
@@ -233,6 +242,16 @@ export const SPRITES: Readonly<Record<string, SpriteSheet>> = {
   Obstacle_forest_thicket_2: { url: obstacleForestThicket2, frame: 256, smooth: true },
   Obstacle_forest_stump: { url: obstacleForestStump, frame: 256, smooth: true },
   Obstacle_forest_log: { url: obstacleForestLog, frame: 256, smooth: true },
+  // The desert's own, on sand.
+  Obstacle_desert_rock_1: { url: obstacleDesertRock1, frame: 256, smooth: true },
+  Obstacle_desert_rock_2: { url: obstacleDesertRock2, frame: 256, smooth: true },
+  Obstacle_desert_boulder: { url: obstacleDesertBoulder, frame: 256, smooth: true },
+  Obstacle_desert_crag: { url: obstacleDesertCrag, frame: 256, smooth: true },
+  Obstacle_desert_bush: { url: obstacleDesertBush, frame: 256, smooth: true },
+  Obstacle_desert_thicket: { url: obstacleDesertThicket, frame: 256, smooth: true },
+  Obstacle_desert_cactus_1: { url: obstacleDesertCactus1, frame: 256, smooth: true },
+  Obstacle_desert_cactus_2: { url: obstacleDesertCactus2, frame: 256, smooth: true },
+  Obstacle_desert_stump: { url: obstacleDesertStump, frame: 256, smooth: true },
   // Painted single-image units (SINGLE_IMAGE_UNITS in tileset.ts).
   Painted_Warrior: { url: paintedWarrior, frame: 256, smooth: true },
   Painted_Soldier: { url: paintedSoldier, frame: 256, smooth: true },

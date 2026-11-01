@@ -2,8 +2,7 @@
 // painted pieces a battle's scenery is laid out from, made from the
 // prompts in the project's art/anime/prompts.md. A kind
 // with a kit draws it in place of a painting (battlefieldArt.ts) or the
-// code-drawn look; the desert borrows the plains' pieces until it has its
-// own. Props (fences, a cart, supplies) stand on the field as
+// code-drawn look. Props (fences, a cart, supplies) stand on the field as
 // obstacles instead (PAINTED_OBSTACLES in src/game/tileset.ts). `KIT_URLS` is each piece's image, loaded under its key.
 import borderBush1 from './battlefields/plains/border-bush-1.webp';
 import borderBush2 from './battlefields/plains/border-bush-2.webp';
@@ -19,6 +18,18 @@ import groundDirt from './battlefields/plains/ground-dirt.webp';
 import groundGrassDry from './battlefields/plains/ground-grass-dry.webp';
 import groundGrass from './battlefields/plains/ground-grass.webp';
 import horizon from './battlefields/plains/horizon.webp';
+import desertBorderBush1 from './battlefields/desert/border-bush-1.webp';
+import desertBorderBush2 from './battlefields/desert/border-bush-2.webp';
+import desertBorderTreesLeft from './battlefields/desert/border-trees-left.webp';
+import desertBorderTreesRight from './battlefields/desert/border-trees-right.webp';
+import desertDecalAgave from './battlefields/desert/decal-agave.webp';
+import desertDecalSkull from './battlefields/desert/decal-skull.webp';
+import desertDecalStones from './battlefields/desert/decal-stones.webp';
+import desertDecalTuft from './battlefields/desert/decal-tuft.webp';
+import desertGroundCracked from './battlefields/desert/ground-cracked.webp';
+import desertGroundPebbles from './battlefields/desert/ground-pebbles.webp';
+import desertGroundSand from './battlefields/desert/ground-sand.webp';
+import desertHorizon from './battlefields/desert/horizon.webp';
 import forestBorderBush1 from './battlefields/forest/border-bush-1.webp';
 import forestBorderBush2 from './battlefields/forest/border-bush-2.webp';
 import forestBorderTreesLeft from './battlefields/forest/border-trees-left.webp';
@@ -62,7 +73,38 @@ const PLAINS = {
   bushes: [piece('border-bush-1', 335, 280), piece('border-bush-2', 302, 206)],
 };
 
-const [DRY_GRASS, DIRT] = PLAINS.patches.map((patch) => patch.texture);
+
+const desertPiece = (key: string, width: number, height: number): KitPiece => ({
+  key: `kit-desert-${key}`,
+  size: [width, height],
+});
+
+// The desert set (art/anime/prompts.md, D): rippled sand with patches of
+// pebbly ground and cracked clay, far dunes and red mesas behind, sandstone
+// pillars with dead trees down the sides, dry scrub and agave.
+const DESERT = {
+  groundScale: 0.36,
+  ground: desertPiece('ground-sand', 1024, 1024),
+  horizon: desertPiece('horizon', 1916, 541),
+  // Where the far dunes meet the open sand.
+  horizonFoot: 0.75,
+  openChance: 0.5,
+  patches: [
+    { texture: desertPiece('ground-pebbles', 1024, 1024), every: 120000, width: [380, 760] as const },
+    { texture: desertPiece('ground-cracked', 1024, 1024), every: 220000, width: [260, 560] as const },
+  ],
+  // Declared at 0.75 of their pixel size so they lie small on the ground.
+  decals: [
+    desertPiece('decal-tuft', 108, 77),
+    desertPiece('decal-stones', 104, 50),
+    desertPiece('decal-skull', 134, 68),
+    desertPiece('decal-agave', 142, 85),
+  ],
+  // Declared at 0.85 of their pixel size, like the plains' trees.
+  trees: [desertPiece('border-trees-left', 371, 1008)],
+  treesRight: [desertPiece('border-trees-right', 393, 997)],
+  bushes: [desertPiece('border-bush-1', 289, 248), desertPiece('border-bush-2', 317, 189)],
+};
 
 const forestPiece = (key: string, width: number, height: number): KitPiece => ({
   key: `kit-forest-${key}`,
@@ -106,20 +148,9 @@ export const BATTLEFIELD_KITS: Readonly<Partial<Record<BattlefieldKind, Battlefi
   // Warm golden shafts of light through the canopy, deep cool green
   // shade, a green-blue haze under the trees.
   forest: { scale: 0.56, light: 0xfff0b0, shade: 0x18343a, haze: 0xd4e8dc, ...FOREST },
-  // Until the desert has a set of its own: the plains' pieces as dry,
-  // dusty ground, bare earth with tufts of dry grass, in warm light.
-  desert: {
-    scale: 0.56,
-    light: 0xfff0c0,
-    shade: 0x6a4a34,
-    haze: 0xfff3dc,
-    ...PLAINS,
-    ground: DIRT,
-    patches: [
-      { texture: DRY_GRASS, every: 90000, width: [380, 760] },
-      { texture: PLAINS.ground, every: 400000, width: [260, 480] },
-    ],
-  },
+  // Hot bright light, warm shade tinted toward blue-violet, a pale warm
+  // haze over the far sand.
+  desert: { scale: 0.56, light: 0xfff4d0, shade: 0x5a4060, haze: 0xfff1dc, ...DESERT },
 });
 
 export const KIT_URLS: Readonly<Record<string, string>> = Object.freeze({
@@ -146,4 +177,16 @@ export const KIT_URLS: Readonly<Record<string, string>> = Object.freeze({
   [FOREST.bushes[1].key]: forestBorderBush2,
   [FOREST.trees[0].key]: forestBorderTreesLeft,
   [FOREST.treesRight[0].key]: forestBorderTreesRight,
+  [DESERT.ground.key]: desertGroundSand,
+  [DESERT.horizon.key]: desertHorizon,
+  [DESERT.patches[0].texture.key]: desertGroundPebbles,
+  [DESERT.patches[1].texture.key]: desertGroundCracked,
+  [DESERT.decals[0].key]: desertDecalTuft,
+  [DESERT.decals[1].key]: desertDecalStones,
+  [DESERT.decals[2].key]: desertDecalSkull,
+  [DESERT.decals[3].key]: desertDecalAgave,
+  [DESERT.trees[0].key]: desertBorderTreesLeft,
+  [DESERT.treesRight[0].key]: desertBorderTreesRight,
+  [DESERT.bushes[0].key]: desertBorderBush1,
+  [DESERT.bushes[1].key]: desertBorderBush2,
 });
