@@ -1,5 +1,6 @@
 // The camp between Warband Mode stages, once the reward is taken: its menu
-// (Manage Roster, Merchant, Promote, Rest, Mentors, Next Stage or Travel)
+// (Manage Roster, Merchant, Promote, Rest, Mentors while MENTORS_ENABLED is
+// on, Next Stage or Travel)
 // and the rest. Manage Roster opens the roster screen (rosterScreen.ts),
 // Merchant the merchant screen (merchantScreen.ts), Promote the promotion
 // screen (promotionScreen.ts) and Mentors the mentor screen
@@ -9,7 +10,7 @@
 
 import type { MenuAction } from '../actionMenu.ts';
 import { countSeals, getPromotionCandidates } from './promotion.ts';
-import { getLessons } from './mentors.ts';
+import { getLessons, MENTORS_ENABLED } from './mentors.ts';
 import { getRunHeatRules } from './heat.ts';
 import { FIELD_KITCHEN, hasRelic } from './relics.ts';
 import type { RunState } from './run.ts';
@@ -34,10 +35,11 @@ export interface CampAction extends MenuAction {
 // The camp menu for `run`. Promote shows once a unit could promote, and is
 // disabled while the warband holds no Master Seal. Rest names its cost and
 // is disabled when the warband can't afford it or nobody needs it; Mentors
-// is disabled while nobody can take a lesson (canTakeLesson). A run on the realm (see
+// is disabled while nobody can take a lesson (canTakeLesson), and only shows
+// when `mentors` is on (MENTORS_ENABLED, off for now). A run on the realm (see
 // travel.ts) only finds the merchant in a town, rests free there, and
 // travels on rather than marching to the next stage.
-export function getCampActions(run: RunState): readonly CampAction[] {
+export function getCampActions(run: RunState, mentors: boolean = MENTORS_ENABLED): readonly CampAction[] {
   const cost = getRestCost(run);
   return Object.freeze(
     [
@@ -47,7 +49,7 @@ export function getCampActions(run: RunState): readonly CampAction[] {
         ? [{ id: 'promote', label: 'Promote', disabled: countSeals(run) === 0 }]
         : []),
       { id: 'rest', label: cost > 0 ? `Rest (${cost} gold)` : 'Rest (free)', disabled: !canRest(run) },
-      { id: 'mentors', label: 'Mentors', disabled: !canTakeLesson(run) },
+      ...(mentors ? [{ id: 'mentors', label: 'Mentors', disabled: !canTakeLesson(run) }] : []),
       { id: 'march', label: isRealmRun(run) ? 'Travel' : 'Next Stage' },
     ].map((action) => Object.freeze(action as CampAction)),
   );
