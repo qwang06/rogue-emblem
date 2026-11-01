@@ -57,6 +57,10 @@ import { getModifierSkills, type Modifier } from './modifiers.ts';
 // 1 power for each tile the user walked this turn, up to that much. A
 // skill whose `effect` is 'swap' trades places with the ally it's aimed
 // at.
+//
+// Some skills are aimed at a tile rather than a unit (see terrainSkills.ts):
+// a `mine` skill lays a hidden mine dealing that much on an empty tile,
+// and a `breach` skill knocks down a wall or rock.
 
 export interface Skill {
   id: string;
@@ -82,6 +86,8 @@ export interface Skill {
   retreat?: number;
   strafe?: number;
   chargeMight?: number;
+  mine?: number;
+  breach?: boolean;
 }
 
 export type SkillArea = 'sides' | 'line' | 'burst';
@@ -377,6 +383,22 @@ export const AIRLIFT = promotionSkill('airlift', 'Airlift', {
   animation: 'mend',
 });
 
+// A hidden mine on an empty tile next to the sapper: the first foe to walk
+// onto it takes 6 damage (never its last HP).
+export const LAY_MINE = promotionSkill('lay-mine', 'Lay Mine', { manaCost: 2, mine: 6, animation: 'mend' });
+
+// Knocks down a wall or rock next to the user, leaving open ground.
+export const BREACH = promotionSkill('breach', 'Breach', { manaCost: 3, breach: true });
+
+// The siege's breach: a bolt that knocks down a wall or rock up to 3 tiles
+// away.
+export const BREACHING_SHOT = promotionSkill('breaching-shot', 'Breaching Shot', {
+  manaCost: 3,
+  range: 3,
+  breach: true,
+  animation: 'stone',
+});
+
 // A blow that splits armor: the user's regular attack with 2 more power on
 // an adjacent foe, which it leaves Sundered (3 more damage from every hit).
 export const SUNDER = promotionSkill('sunder', 'Sunder', { might: 2, status: 'sundered' });
@@ -486,13 +508,13 @@ export const CLASS_SKILL_PICKS: Readonly<Record<string, readonly Skill[]>> = Obj
   archer: Object.freeze([PIERCING_SHOT, PINNING_SHOT, DISENGAGE]),
   vanguard: Object.freeze([SUNDER, RECKLESS_SWING, JUMP_SWING]),
   soldier: Object.freeze([LUNGE, PHALANX]),
-  sapper: Object.freeze([SHRAPNEL]),
+  sapper: Object.freeze([SHRAPNEL, LAY_MINE, BREACH]),
   acolyte: Object.freeze([SMITE, PRAYER, WARD]),
   scout: Object.freeze([MARK, TAILWIND, AIRLIFT]),
   beast: Object.freeze([WING_BUFFET, ROAR, POUNCE]),
   'beast-rider': Object.freeze([SKEWER, TANDEM_STRIKE, STRAFING_RUN]),
-  siege: Object.freeze([DEADEYE]),
-  ram: Object.freeze([BULWARK]),
+  siege: Object.freeze([DEADEYE, BREACHING_SHOT]),
+  ram: Object.freeze([BULWARK, BREACH]),
 });
 
 // The skills a level up can offer a unit of `unitClass` (CLASS_SKILL_PICKS).
@@ -687,6 +709,12 @@ export function isSwapSkill(skill: Skill): boolean {
   return skill.effect === 'swap';
 }
 
+// Whether `skill` is aimed at a tile (a mine or a breach) rather than a
+// unit.
+export function isTileSkill(skill: Skill): boolean {
+  return skill.mine !== undefined || skill.breach === true;
+}
+
 // Whether `skill` is used on allies (a heal, a buff or a swap) rather than
 // foes.
 export function isSupportSkill(skill: Skill): boolean {
@@ -732,6 +760,10 @@ export function describeSkill(skill: Skill): string {
     return `Leaves an ally ${reach} ${leaves} until your next phase.`;
   }
   if (isSwapSkill(skill)) return `Trades places with an ally ${reach}.`;
+  if (skill.mine) {
+    return `Lays a hidden mine on an empty tile ${reach}: the first foe to step on it takes ${skill.mine} damage (never its last HP).`;
+  }
+  if (skill.breach) return `Knocks down a wall or rock ${reach}, leaving open ground.`;
   const scale = skill.damageScale ?? 1;
   if (scale === 0 && skill.push) return `Pushes a foe ${reach} a tile away.`;
   if (scale === 0 && status) {

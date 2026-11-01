@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   AIRLIFT,
+  BREACH,
+  BREACHING_SHOT,
   DISENGAGE,
   JUMP_SWING,
   LEND_A_HAND,
@@ -421,9 +423,9 @@ describe('getClassSkillPicks', () => {
     expect(getClassSkillPicks('beast')).toEqual([WING_BUFFET, ROAR, POUNCE]);
     expect(getClassSkillPicks('archer')).toEqual([PIERCING_SHOT, PINNING_SHOT, DISENGAGE]);
     expect(getClassSkillPicks('vanguard')).toEqual([SUNDER, RECKLESS_SWING, JUMP_SWING]);
-    expect(getClassSkillPicks('siege')).toEqual([DEADEYE]);
+    expect(getClassSkillPicks('siege')).toEqual([DEADEYE, BREACHING_SHOT]);
     expect(getClassSkillPicks('scout')).toEqual([MARK, TAILWIND, AIRLIFT]);
-    expect(getClassSkillPicks('ram')).toEqual([BULWARK]);
+    expect(getClassSkillPicks('ram')).toEqual([BULWARK, BREACH]);
     expect(getClassSkillPicks('villager')).toEqual([LEND_A_HAND]);
     expect(getClassSkillPicks('slime')).toEqual([]);
     expect(getClassSkillPicks(null)).toEqual([]);

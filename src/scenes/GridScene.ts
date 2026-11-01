@@ -62,6 +62,7 @@ import {
   getSkillForecast,
   getUnitSkills,
   isSupportSkill,
+  isTileSkill,
 } from '../game/skills.ts';
 import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange } from '../game/combat.ts';
 import { getFitZoom } from '../game/camera.ts';
@@ -170,6 +171,7 @@ import {
   worldToTile,
 } from '../game/grid.ts';
 import { areAllied, getTeamUnitIds, isAllyOf, isHostileTo } from '../game/teams.ts';
+import type { Mine } from '../game/terrainSkills.ts';
 import { advanceDialog, createDialog, DIALOG_CHARS_PER_SECOND, getCurrentLine } from '../game/dialog.ts';
 import { getTriggeredDialog, turnTrigger } from '../game/dialogScript.ts';
 import { describeObjective, getObjectiveStatus, type Objective } from '../game/objectives.ts';
@@ -313,6 +315,13 @@ const AREA_PREVIEW_ALPHA = 0.35;
 // A shoved unit's slide onto its new tile, and the nudge of one that's
 // stopped (in px).
 const PUSH_SLIDE_MS = 160;
+// A breach shakes the camera as the rock comes down.
+const BREACH_SHAKE_MS = 220;
+const BREACH_SHAKE_INTENSITY = 0.006;
+// The marker on a mine the player's side laid: a dark disc with a red rim.
+const MINE_MARKER_RADIUS = 6;
+const MINE_MARKER_COLOR = 0x1f2937;
+const MINE_MARKER_RIM = 0xdc2626;
 // How long a skill's leap or flight takes for each tile it covers.
 const RELOCATE_TILE_MS = 90;
 const PUSH_BUMP_PX = 6;
@@ -488,6 +497,14 @@ export class GridScene extends Phaser.Scene {
   // The marker on the tile a boss's horn marked, and that tile as "x,y".
   incomingMarker: Phaser.GameObjects.Rectangle | null = null;
   incomingMarkerKey: string | null = null;
+  // The map's terrain art (refreshTerrain): how to draw it, what's drawn,
+  // and the terrain it was drawn for.
+  drawTerrain: (grid: Grid) => void = () => {};
+  terrainArt: { destroy(): void }[] = [];
+  terrainTimers: Phaser.Time.TimerEvent[] = [];
+  terrainKey: string | null = null;
+  // Markers on the player's side's mines, by "x,y" (refreshMines).
+  mineMarkers = new Map<string, Phaser.GameObjects.Arc>();
 
   constructor() {
     super('Grid');
@@ -596,6 +613,44 @@ export class GridScene extends Phaser.Scene {
     this.shownStats.clear();
     this.publishBossBar();
     this.refreshIncomingMarker();
+    this.refreshTerrain(this.grid);
+    this.refreshMines(this.shown.mines);
+  }
+
+  // Draws the map's terrain art for `grid` (set up in create), first
+  // clearing the last drawing, unless its terrain hasn't changed since: a
+  // breach (or undoing one) redraws it.
+  refreshTerrain(grid: Grid) {
+    const key = grid.cells.map((cell) => cell.terrain).join(',');
+    if (key === this.terrainKey) return;
+    for (const art of this.terrainArt) art.destroy();
+    for (const timer of this.terrainTimers) timer.remove();
+    this.terrainArt = [];
+    this.terrainTimers = [];
+    this.drawTerrain(grid);
+    this.terrainKey = key;
+  }
+
+  // Marks the mines the player's side laid (the enemy's stay hidden),
+  // adding and removing markers to match `mines`.
+  refreshMines(mines: readonly Mine[]) {
+    const shown = new Map(
+      mines.filter((mine) => areAllied(mine.team, 'player')).map((mine) => [`${mine.x},${mine.y}`, mine]),
+    );
+    for (const [key, marker] of this.mineMarkers) {
+      if (shown.has(key)) continue;
+      marker.destroy();
+      this.mineMarkers.delete(key);
+    }
+    for (const [key, mine] of shown) {
+      if (this.mineMarkers.has(key)) continue;
+      const pos = gridToWorld(mine.x, mine.y, TILE_SIZE);
+      const marker = this.add
+        .circle(pos.x + TILE_SIZE / 2, pos.y + TILE_SIZE / 2, MINE_MARKER_RADIUS, MINE_MARKER_COLOR)
+        .setStrokeStyle(2, MINE_MARKER_RIM)
+        .setDepth(0.43);
+      this.mineMarkers.set(key, marker);
+    }
   }
 
   preload() {
@@ -674,13 +729,20 @@ export class GridScene extends Phaser.Scene {
     const palette = BUILDING_PALETTES[paletteName];
     // The map's terrain, forests, mountains and buildings in its season's art.
     const sheet = SEASON_TERRAIN_SHEETS[level.season ?? DEFAULT_SEASON];
-    this.renderTerrain(this.grid, { ...TERRAIN_AUTOTILES, wall: getWallAutotile(palette) }, sheet);
-    this.renderMapSprites(sheet, [
-      ...getCrossingSprites(this.grid, BRIDGE_ART, GATE_ART[paletteName], FORD_ART, MAP_PROPS_SHEET),
-      ...getHazardSprites(this.grid, SPIKES_ART, MAP_PROPS_SHEET),
-      ...getFeatureSprites(this.grid, FOREST_ART, MOUNTAIN_ART),
-      ...getBuildingSprites(level.buildings ?? [], palette, BUILDING_ART),
-    ]);
+    this.terrainKey = null; // the last battle's art went with its scene
+    this.terrainArt = [];
+    this.terrainTimers = [];
+    this.drawTerrain = (grid) => {
+      this.renderTerrain(grid, { ...TERRAIN_AUTOTILES, wall: getWallAutotile(palette) }, sheet);
+      this.renderMapSprites(sheet, [
+        ...getCrossingSprites(grid, BRIDGE_ART, GATE_ART[paletteName], FORD_ART, MAP_PROPS_SHEET),
+        ...getHazardSprites(grid, SPIKES_ART, MAP_PROPS_SHEET),
+        ...getFeatureSprites(grid, FOREST_ART, MOUNTAIN_ART),
+        ...getBuildingSprites(level.buildings ?? [], palette, BUILDING_ART),
+      ]);
+    };
+    this.refreshTerrain(this.grid);
+    this.mineMarkers = new Map(); // the last battle's markers went with its scene
     this.renderDecorations(level.decorations ?? []);
     this.renderStructures(level.structures ?? []);
     this.renderObjectiveTile();
@@ -1162,7 +1224,7 @@ export class GridScene extends Phaser.Scene {
       this.activeSkill = findUnitSkill(unit, skill.id);
       // A healing or buff skill's reach shows in green, like a staff's. A range-0
       // skill, aimed at the unit itself, shows the area around it.
-      const healing = isSupportSkill(this.activeSkill!);
+      const healing = isSupportSkill(this.activeSkill!) || isTileSkill(this.activeSkill!);
       const reach =
         this.activeSkill!.range === 0
           ? getSkillAreaTiles(this.activeSkill!, { x, y }, { x, y }).filter((tile) =>
@@ -2437,15 +2499,22 @@ export class GridScene extends Phaser.Scene {
   // `next` (by default the next enemy) unless that decided the battle or
   // ended the phase.
   takeEnemyAction(move: BattleCommand, act: BattleCommand, next: () => void = () => this.runEnemyPhase()) {
-    const moved = findEvent(this.dispatch(move), 'moved')!;
+    const moveEvents = this.dispatch(move);
+    const moved = findEvent(moveEvents, 'moved')!;
     this.setCursor(moved.from.x, moved.from.y);
     this.time.delayedCall(ENEMY_FOCUS_DELAY_MS, () => {
       this.walkSprite(this.unitSprites.get(moved.unitId)!, moved.path, () => {
-        this.syncShown();
-        this.setCursor(moved.to.x, moved.to.y);
-        const events = this.dispatch(act);
-        this.playEvents(events, () =>
-          this.time.delayedCall(ENEMY_ACTION_DELAY_MS, () => this.continueBattle(events, next)),
+        // Whatever the walk set off (a mine) plays where it ended.
+        this.playEvents(
+          moveEvents.filter((event) => event !== moved),
+          () => {
+            this.syncShown();
+            this.setCursor(moved.to.x, moved.to.y);
+            const events = this.dispatch(act);
+            this.playEvents(events, () =>
+              this.time.delayedCall(ENEMY_ACTION_DELAY_MS, () => this.continueBattle(events, next)),
+            );
+          },
         );
       });
     });
@@ -2587,7 +2656,12 @@ export class GridScene extends Phaser.Scene {
       gameStore.setState({ combatForecast: toCombatForecastView({ forecast, attacker: unit, defender, anchor }) });
       return;
     }
-    if (this.rangeMode === 'skill' && this.activeSkill && !isSupportSkill(this.activeSkill)) {
+    if (
+      this.rangeMode === 'skill' &&
+      this.activeSkill &&
+      !isSupportSkill(this.activeSkill) &&
+      !isTileSkill(this.activeSkill)
+    ) {
       const target = this.getSkillTargetUnderCursor();
       if (!target) {
         gameStore.setState({ combatForecast: null });
@@ -2913,6 +2987,25 @@ export class GridScene extends Phaser.Scene {
         const sprite = this.unitSprites.get(event.unitId);
         if (sprite) this.showDamagePopup(sprite, event.strength, 'enraged');
         this.time.delayedCall(this.playbackDuration(ENRAGE_PAUSE_MS), next);
+        return;
+      }
+      // A mine laid or knocked-down rock shows as it happens; the rest of
+      // the map follows once the action is over (syncShown).
+      case 'mine-laid':
+        this.refreshMines(this.battle.mines);
+        next();
+        return;
+      case 'breached':
+        this.refreshTerrain(this.battle.grid);
+        this.cameras.main.shake(BREACH_SHAKE_MS, BREACH_SHAKE_INTENSITY);
+        this.time.delayedCall(this.playbackDuration(BREACH_SHAKE_MS), next);
+        return;
+      case 'mine-tripped': {
+        const sprite = this.unitSprites.get(event.unitId)!;
+        this.refreshMines(this.battle.mines);
+        this.showStats(event.unitId, { health: event.health });
+        this.showDamagePopup(sprite, event.damage);
+        playHitFlash(this, sprite, next);
         return;
       }
       default:
@@ -3685,7 +3778,10 @@ export class GridScene extends Phaser.Scene {
     const grassFrame = getTileFrame(TERRAIN_BASE_TILE, columns);
     const grass = Array.from({ length: grid.height }, () => Array(grid.width).fill(grassFrame));
     const grassMap = this.make.tilemap({ data: grass, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });
-    grassMap.createLayer(0, grassMap.addTilesetImage(key, key, TILE_SIZE, TILE_SIZE)!, 0, 0);
+    this.terrainArt.push(grassMap);
+    // Below everything else, so a redrawn map (refreshTerrain) stays under
+    // what's on it.
+    grassMap.createLayer(0, grassMap.addTilesetImage(key, key, TILE_SIZE, TILE_SIZE)!, 0, 0)!.setDepth(-2);
 
     const half = TILE_SIZE / 2;
     for (const [terrain, autotile] of Object.entries(autotiles)) {
@@ -3696,10 +3792,11 @@ export class GridScene extends Phaser.Scene {
       );
 
       const map = this.make.tilemap({ data: frames[0], tileWidth: half, tileHeight: half });
-      const layer = map.createLayer(0, map.addTilesetImage(key, key, half, half)!, 0, 0)!;
+      this.terrainArt.push(map);
+      const layer = map.createLayer(0, map.addTilesetImage(key, key, half, half)!, 0, 0)!.setDepth(-1);
       if (frameCount < 2) continue;
       let current = 0;
-      this.time.addEvent({
+      const timer = this.time.addEvent({
         delay: autotile.animation!.frameMs,
         loop: true,
         callback: () => {
@@ -3709,6 +3806,7 @@ export class GridScene extends Phaser.Scene {
           });
         },
       });
+      this.terrainTimers.push(timer);
     }
   }
 
@@ -3720,10 +3818,11 @@ export class GridScene extends Phaser.Scene {
     const depths = { ground: 0.4, cap: 0.45, roof: 0.8 };
     for (const { x, y, tile, layer, sheet = terrainSheet } of sprites) {
       const pos = gridToWorld(x, y, TILE_SIZE);
-      this.add
+      const image = this.add
         .image(pos.x, pos.y, sheet.key, getTileFrame(tile, sheet.columns))
         .setOrigin(0, 0)
         .setDepth(depths[layer]);
+      this.terrainArt.push(image);
     }
   }
 
