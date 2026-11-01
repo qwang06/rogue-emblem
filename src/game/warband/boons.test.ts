@@ -104,7 +104,7 @@ describe('rollBoons', () => {
 
   it('offers a second passive when there is no skill left to learn', () => {
     const unit = soldier();
-    applyModifiers(unit, boon('skill-lunge').modifiers);
+    for (const id of ['skill-lunge', 'skill-phalanx']) applyModifiers(unit, boon(id).modifiers);
     const offers = rollBoons(unit, createSeededRng(3));
     expect(offers.map((b) => b.kind)).toEqual(['stat', 'passive', 'passive']);
   });
@@ -121,7 +121,7 @@ describe('rollBoons', () => {
     for (const stat of ['maxHealth', 'strength', 'skill', 'speed', 'luck', 'defense', 'resistance'] as const) {
       unit[stat] = 99;
     }
-    applyModifiers(unit, boon('skill-lunge').modifiers);
+    for (const id of ['skill-lunge', 'skill-phalanx']) applyModifiers(unit, boon(id).modifiers);
     const offers = rollBoons(unit, createSeededRng(1));
     expect(offers).toHaveLength(3);
     expect(offers.every((offer) => offer.kind === 'stat')).toBe(true);
