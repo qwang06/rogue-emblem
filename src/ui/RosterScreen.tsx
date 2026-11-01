@@ -1,7 +1,7 @@
 import type { MouseEvent } from 'react';
 import { SPRITE_URLS } from '../assets/sprites.ts';
 import { gameCommands } from '../bridge/commands.ts';
-import type { RosterItemView } from '../bridge/rosterView.ts';
+import type { RosterItemView, RosterScreenView } from '../bridge/rosterView.ts';
 import type { RosterTarget } from '../game/warband/rosterScreen.ts';
 import { ItemCount } from './ItemCount.tsx';
 import { ItemDetailLine } from './ItemDetailLine.tsx';
@@ -12,17 +12,18 @@ import { UnitSprite } from './UnitSprite.tsx';
 import { useGameStore } from './useGameStore.ts';
 import './RosterScreen.css';
 
-// Mouse handlers for an entry of the roster screen: hovering moves the
-// cursor there and clicking acts on it, exactly as the keyboard would.
-function pointerProps(target: RosterTarget, index: number) {
-  return {
-    onMouseEnter: () => gameCommands.send({ type: 'hover-roster', target, index }),
-    onClick: (event: MouseEvent) => {
-      event.stopPropagation();
-      gameCommands.send({ type: 'select-roster', target, index });
-    },
-  };
+// What the roster screen does with the mouse: hovering an entry moves
+// the cursor there and clicking acts on it, exactly as the keyboard would.
+export interface RosterPointer {
+  hover(target: RosterTarget, index: number): void;
+  select(target: RosterTarget, index: number): void;
 }
+
+// Between stages GridScene runs the screen, so the mouse is forwarded to it.
+const SCENE_POINTER: RosterPointer = {
+  hover: (target, index) => gameCommands.send({ type: 'hover-roster', target, index }),
+  select: (target, index) => gameCommands.send({ type: 'select-roster', target, index }),
+};
 
 function rowClass(selected: boolean, focused: boolean, disabled = false) {
   const classes = ['action-menu__item', 'roster-screen__row'];
@@ -65,11 +66,22 @@ function HealthGauge({ health, maxHealth }: { health: number; maxHealth: number 
 // each unit's sheet. Picking an item in the inventory opens its actions
 // (Equip for weapons and armor, Store) beside it; picking one in the
 // convoy gives it to the picked unit. Every box keeps its size as the
-// cursor moves and items change hands. GridScene handles the input; the
-// mouse is forwarded to it.
+// cursor moves and items change hands. At camp GridScene handles the
+// input; on the overworld (OverworldRoster) React does.
 export function RosterScreen() {
   const view = useGameStore((state) => state.rosterScreen);
   if (!view) return null;
+  return <RosterScreenPanel view={view} pointer={SCENE_POINTER} />;
+}
+
+export function RosterScreenPanel({ view, pointer }: { view: RosterScreenView; pointer: RosterPointer }) {
+  const pointerProps = (target: RosterTarget, index: number) => ({
+    onMouseEnter: () => pointer.hover(target, index),
+    onClick: (event: MouseEvent) => {
+      event.stopPropagation();
+      pointer.select(target, index);
+    },
+  });
   const focus = view.actions ? 'actions' : view.column;
   const emptySlots = Math.max(0, view.slots - view.items.length);
 

@@ -631,3 +631,20 @@
   display: block;
   margin-left: auto;
 }
+
+/* The roster screen opened from the map: over the whole window, above
+   the map and a wayside event's layer, with the camp's dimmed backdrop
+   and the battle HUD's type. Its panels bring their own parchment colors. */
+.overworld-roster {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  user-select: none;
+  font-family: var(--sans);
+  line-height: normal;
+  color: var(--fg-bright);
+}
+
+.overworld-roster .panel {
+  box-shadow: var(--lift);
+}
