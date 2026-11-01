@@ -1,6 +1,7 @@
-// Pure promotion rules: the class tree's second tier. A villager (the
-// starting unit) that has reached PROMOTION_LEVEL can become an Archer,
-// Soldier, Vanguard or Sapper, and an acolyte a Mage. Promoting makes the unit that class: it
+// Pure promotion rules: the class tree's upper tiers. A villager (the
+// starting unit, tier 1) that has reached PROMOTION_LEVEL can become an
+// Archer, Soldier, Vanguard or Sapper (tier 2); an acolyte can become a
+// Mage (tier 3, for now the only one). Promoting makes the unit that class: it
 // takes the class's growths, weapon types, XP rate and skill tree,
 // gains whatever stats the class starts above the class it promotes from, carries the class's passive modifier (modifiers.ts) into every
 // battle and is handed the class's weapon. The level, XP, items, boons and
@@ -34,6 +35,8 @@ export interface Promotion {
   label: string;
   // The class it promotes from: the villager, or the acolyte.
   from: string;
+  // The class tier it reaches: 2 for the villager's, 3 for the acolyte's.
+  tier: number;
   // A line on what the class is for, for the promotion screen.
   description: string;
   bonuses: PromotionBonuses;
@@ -69,16 +72,18 @@ const BASE_STATS: Readonly<Record<string, StatLine>> = Object.freeze({
 });
 
 function promotion(
-  fields: Omit<Promotion, 'bonuses' | 'passive' | 'from'> & {
+  fields: Omit<Promotion, 'bonuses' | 'passive' | 'from' | 'tier'> & {
     from?: string;
+    tier?: number;
     stats: StatLine;
     passive: Promotion['passive'];
   },
 ): Promotion {
-  const { stats, passive, from = 'villager', ...rest } = fields;
+  const { stats, passive, from = 'villager', tier = 2, ...rest } = fields;
   return Object.freeze({
     ...rest,
     from,
+    tier,
     bonuses: bonusesOver(stats, BASE_STATS[from]),
     weaponTypes: Object.freeze([...rest.weaponTypes]),
     passive: Object.freeze({ ...passive, modifiers: Object.freeze(passive.modifiers.map((m) => Object.freeze(m))) }),
@@ -136,6 +141,7 @@ export const PROMOTIONS: readonly Promotion[] = Object.freeze([
     id: 'mage',
     label: 'Mage',
     from: 'acolyte',
+    tier: 3,
     description: 'Trades prayers for fire: hits hardest from range, still frail up close.',
     stats: MAGE_STATS,
     growths: MAGE_GROWTHS,

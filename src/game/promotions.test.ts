@@ -43,6 +43,16 @@ describe('PROMOTIONS', () => {
     expect(findPromotion('mage')!.bonuses).toEqual({ mana: 1, intelligence: 2, skill: 1 });
   });
 
+  it("puts the villager's promotions at tier 2 and the acolyte's mage at tier 3", () => {
+    expect(PROMOTIONS.map(({ id, tier }) => [id, tier])).toEqual([
+      ['archer', 2],
+      ['soldier', 2],
+      ['vanguard', 2],
+      ['sapper', 2],
+      ['mage', 3],
+    ]);
+  });
+
   it('keeps every growth at 0% or more', () => {
     for (const promotion of PROMOTIONS) {
       for (const stat of GROWTH_STATS) expect(promotion.growths[stat], promotion.id).toBeGreaterThanOrEqual(0);

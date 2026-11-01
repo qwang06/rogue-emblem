@@ -27,6 +27,8 @@ export interface PromotionDetailView {
   level: number;
   fromClass: string;
   toClass: string;
+  // The tier of the class it promotes to (2 or 3).
+  tier: number;
   sprite: string;
   description: string;
   gains: readonly { label: string; value: number }[];
@@ -93,6 +95,7 @@ function toDetail(
     level: snapshot.level,
     fromClass: classes.find((unitClass) => unitClass.id === snapshot.classId)?.label ?? snapshot.classId,
     toClass: promotion.label,
+    tier: promotion.tier,
     sprite: getUnitSprite(promotion.id),
     description: promotion.description,
     gains: Object.freeze(
