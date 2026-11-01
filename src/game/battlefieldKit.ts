@@ -4,7 +4,7 @@
 // bare dirt) over it, soft blotches of light and shade to break up its
 // repeats, small decals (tufts, pebbles) scattered over it, a far-scenery
 // strip along the top, tree clusters and bushes standing around the
-// field's edges, props along its front and back, and (if the kit has them) big out-of-focus foreground
+// field's edges, props along its front, and (if the kit has them) big out-of-focus foreground
 // leaves in the near corners. Each battle lays the pieces out afresh from its seed, at any
 // field size. Pure: the same kit, floor and seed always give the same
 // layout.
@@ -44,8 +44,8 @@ export interface BattlefieldKit {
   // they are so their painted light and shadows stay the right way round.
   treesRight?: readonly KitPiece[];
   bushes: readonly KitPiece[];
-  // Props (fences, barrels, a cart...) dressing the front and back edges,
-  // outside the floor. None if left out.
+  // Props (fences, barrels, a cart...) dressing the front edge, outside
+  // the floor. None if left out.
   props?: readonly KitPiece[];
   // Rising from the near corners, close to the camera. None if left out.
   foreground?: { left: KitPiece; right: KitPiece };
@@ -326,16 +326,12 @@ export function layOutKit(
     });
   }
 
-  // Props along the front edge (low enough to clear the front row) and the
-  // back edge (standing just behind the top row), none overlapping each
-  // other or anything else standing there.
+  // Props along the front edge, low enough to clear the front row, none
+  // overlapping each other or anything else standing there.
   if (kit.props && kit.props.length > 0) {
     const props = kit.props;
     const taken: WorldRect[] = pieces.filter((p) => p.layer === 'standing');
-    const edges = [
-      { count: 3, foot: (height: number) => floor.height + height + between(rng, 10, 40) },
-      { count: 2, foot: () => between(rng, -HORIZON_GAP * 0.6, -12) },
-    ];
+    const edges = [{ count: 3, foot: (height: number) => floor.height + height + between(rng, 10, 40) }];
     for (const edge of edges) {
       for (let i = 0; i < edge.count; i++) {
         const piece = pick(rng, props);

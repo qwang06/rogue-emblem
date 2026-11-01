@@ -176,8 +176,8 @@ describe('layOutKit', () => {
       for (const p of props) {
         expect(p.layer).toBe('standing');
         expect(p.foot).toBeCloseTo(p.y + p.height);
-        // Wholly in front of the floor, or standing behind its back edge.
-        expect(p.y >= FLOOR.height || p.foot! <= 0).toBe(true);
+        // Wholly in front of the floor.
+        expect(p.y).toBeGreaterThanOrEqual(FLOOR.height);
       }
       for (const a of props)
         for (const b of props)
