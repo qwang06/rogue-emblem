@@ -309,6 +309,7 @@ describe('getPaintedObstacles', () => {
     sack: ['sa'],
     stump: ['st'],
     signpost: ['si'],
+    log: ['l'],
   };
 
   it('stands each obstacle on its cell as one of its kind’s images', () => {

@@ -98,6 +98,17 @@ import obstacleWheel from './obstacles/wheel.png';
 import obstacleSack from './obstacles/sack.png';
 import obstacleStump from './obstacles/stump.png';
 import obstacleSignpost from './obstacles/signpost.png';
+import obstacleForestRock1 from './obstacles/forest-rock-1.png';
+import obstacleForestRock2 from './obstacles/forest-rock-2.png';
+import obstacleForestBoulder from './obstacles/forest-boulder.png';
+import obstacleForestPine1 from './obstacles/forest-pine-1.png';
+import obstacleForestPine2 from './obstacles/forest-pine-2.png';
+import obstacleForestBush1 from './obstacles/forest-bush-1.png';
+import obstacleForestBush2 from './obstacles/forest-bush-2.png';
+import obstacleForestThicket1 from './obstacles/forest-thicket-1.png';
+import obstacleForestThicket2 from './obstacles/forest-thicket-2.png';
+import obstacleForestStump from './obstacles/forest-stump.png';
+import obstacleForestLog from './obstacles/forest-log.png';
 import ballistaIcon from './items/ballista.png';
 import biteIcon from './items/bite.png';
 import boneClawsIcon from './items/bone-claws.png';
@@ -210,6 +221,18 @@ export const SPRITES: Readonly<Record<string, SpriteSheet>> = {
   Obstacle_sack: { url: obstacleSack, frame: 256, smooth: true },
   Obstacle_stump: { url: obstacleStump, frame: 256, smooth: true },
   Obstacle_signpost: { url: obstacleSignpost, frame: 256, smooth: true },
+  // The forest's own (FIELD_OBSTACLES in tileset.ts), on moss and fallen leaves.
+  Obstacle_forest_rock_1: { url: obstacleForestRock1, frame: 256, smooth: true },
+  Obstacle_forest_rock_2: { url: obstacleForestRock2, frame: 256, smooth: true },
+  Obstacle_forest_boulder: { url: obstacleForestBoulder, frame: 256, smooth: true },
+  Obstacle_forest_pine_1: { url: obstacleForestPine1, frame: 256, smooth: true },
+  Obstacle_forest_pine_2: { url: obstacleForestPine2, frame: 256, smooth: true },
+  Obstacle_forest_bush_1: { url: obstacleForestBush1, frame: 256, smooth: true },
+  Obstacle_forest_bush_2: { url: obstacleForestBush2, frame: 256, smooth: true },
+  Obstacle_forest_thicket_1: { url: obstacleForestThicket1, frame: 256, smooth: true },
+  Obstacle_forest_thicket_2: { url: obstacleForestThicket2, frame: 256, smooth: true },
+  Obstacle_forest_stump: { url: obstacleForestStump, frame: 256, smooth: true },
+  Obstacle_forest_log: { url: obstacleForestLog, frame: 256, smooth: true },
   // Painted single-image units (SINGLE_IMAGE_UNITS in tileset.ts).
   Painted_Warrior: { url: paintedWarrior, frame: 256, smooth: true },
   Painted_Soldier: { url: paintedSoldier, frame: 256, smooth: true },

@@ -2,8 +2,8 @@
 // painted pieces a battle's scenery is laid out from, made from the
 // prompts in the project's art/anime/prompts.md. A kind
 // with a kit draws it in place of a painting (battlefieldArt.ts) or the
-// code-drawn look; forest and desert borrow the plains' pieces until they
-// have their own. Props (fences, a cart, supplies) stand on the field as
+// code-drawn look; the desert borrows the plains' pieces until it has its
+// own. Props (fences, a cart, supplies) stand on the field as
 // obstacles instead (PAINTED_OBSTACLES in src/game/tileset.ts). `KIT_URLS` is each piece's image, loaded under its key.
 import borderBush1 from './battlefields/plains/border-bush-1.webp';
 import borderBush2 from './battlefields/plains/border-bush-2.webp';
@@ -19,6 +19,15 @@ import groundDirt from './battlefields/plains/ground-dirt.webp';
 import groundGrassDry from './battlefields/plains/ground-grass-dry.webp';
 import groundGrass from './battlefields/plains/ground-grass.webp';
 import horizon from './battlefields/plains/horizon.webp';
+import forestBorderBush1 from './battlefields/forest/border-bush-1.webp';
+import forestBorderBush2 from './battlefields/forest/border-bush-2.webp';
+import forestBorderTreesLeft from './battlefields/forest/border-trees-left.webp';
+import forestBorderTreesRight from './battlefields/forest/border-trees-right.webp';
+import forestDecalMushrooms from './battlefields/forest/decal-mushrooms.webp';
+import forestGroundFerns from './battlefields/forest/ground-ferns.webp';
+import forestGroundMoss from './battlefields/forest/ground-moss.webp';
+import forestGroundPath from './battlefields/forest/ground-path.webp';
+import forestHorizon from './battlefields/forest/horizon.webp';
 import type { BattlefieldKind } from '../game/battlefields.ts';
 import type { BattlefieldKit, KitPiece } from '../game/battlefieldKit.ts';
 
@@ -55,23 +64,48 @@ const PLAINS = {
 
 const [DRY_GRASS, DIRT] = PLAINS.patches.map((patch) => patch.texture);
 
+const forestPiece = (key: string, width: number, height: number): KitPiece => ({
+  key: `kit-forest-${key}`,
+  size: [width, height],
+});
+const FERN_BUSH = forestPiece('border-bush-1', 360, 243);
+
+// The forest set (art/anime/prompts.md, C): a mossy floor with patches of
+// ferns and trodden bare path, a wall of old forest behind, tall mixed
+// trees down the sides (never left open: it's deep woods) and fern bushes.
+const FOREST = {
+  groundScale: 0.36,
+  ground: forestPiece('ground-moss', 1024, 1024),
+  horizon: forestPiece('horizon', 1916, 572),
+  // Just above the ferns at the forest wall's foot, so their ragged fringe
+  // fades out into the floor.
+  horizonFoot: 0.88,
+  openChance: 0,
+  patches: [
+    { texture: forestPiece('ground-ferns', 1024, 1024), every: 150000, width: [380, 760] as const },
+    { texture: forestPiece('ground-path', 1024, 1024), every: 240000, width: [260, 520] as const },
+  ],
+  // Mushrooms, small fern bushes and the plains' pebbles, lying small.
+  decals: [
+    forestPiece('decal-mushrooms', 130, 63),
+    { ...FERN_BUSH, size: [150, 101] as const },
+    { ...FERN_BUSH, size: [120, 81] as const },
+    PLAINS.decals[3],
+    PLAINS.decals[4],
+  ],
+  // Declared at 0.85 of their pixel size, like the plains' trees.
+  trees: [forestPiece('border-trees-left', 397, 1011)],
+  treesRight: [forestPiece('border-trees-right', 398, 1006)],
+  bushes: [FERN_BUSH, forestPiece('border-bush-2', 305, 209)],
+};
+
 export const BATTLEFIELD_KITS: Readonly<Partial<Record<BattlefieldKind, BattlefieldKit>>> = Object.freeze({
   // Anime style (art/anime/prompts.md): cool blue-violet shade, a clear
   // pale-blue haze into the distance.
   plains: { scale: 0.56, light: 0xf2ffc8, shade: 0x34486a, haze: 0xeaf3ff, ...PLAINS },
-  // Until the forest has a set of its own: the plains' pieces as a
-  // woodland clearing, trodden bare in places, in deeper green shade.
-  forest: {
-    scale: 0.56,
-    light: 0xe4f7b0,
-    shade: 0x1f3a3a,
-    haze: 0xdcebdc,
-    ...PLAINS,
-    patches: [
-      { texture: DIRT, every: 110000, width: [300, 600] },
-      { texture: DRY_GRASS, every: 260000, width: [300, 600] },
-    ],
-  },
+  // Warm golden shafts of light through the canopy, deep cool green
+  // shade, a green-blue haze under the trees.
+  forest: { scale: 0.56, light: 0xfff0b0, shade: 0x18343a, haze: 0xd4e8dc, ...FOREST },
   // Until the desert has a set of its own: the plains' pieces as dry,
   // dusty ground, bare earth with tufts of dry grass, in warm light.
   desert: {
@@ -103,4 +137,13 @@ export const KIT_URLS: Readonly<Record<string, string>> = Object.freeze({
   [PLAINS.treesRight[0].key]: borderTreesRight,
   [PLAINS.bushes[0].key]: borderBush1,
   [PLAINS.bushes[1].key]: borderBush2,
+  [FOREST.ground.key]: forestGroundMoss,
+  [FOREST.horizon.key]: forestHorizon,
+  [FOREST.patches[0].texture.key]: forestGroundFerns,
+  [FOREST.patches[1].texture.key]: forestGroundPath,
+  [FOREST.decals[0].key]: forestDecalMushrooms,
+  [FERN_BUSH.key]: forestBorderBush1,
+  [FOREST.bushes[1].key]: forestBorderBush2,
+  [FOREST.trees[0].key]: forestBorderTreesLeft,
+  [FOREST.treesRight[0].key]: forestBorderTreesRight,
 });

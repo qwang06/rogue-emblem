@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   isSingleImageUnit,
+  FIELD_OBSTACLES,
   PAINTED_OBSTACLES,
   SINGLE_IMAGE_UNITS,
   SINGLE_IMAGE_WALKS,
@@ -47,7 +48,7 @@ describe('SPRITES', () => {
   });
 
   it('makes every painted obstacle one smooth square frame', () => {
-    for (const key of Object.values(PAINTED_OBSTACLES).flat()) {
+    for (const key of [PAINTED_OBSTACLES, ...Object.values(FIELD_OBSTACLES)].flatMap((art) => Object.values(art).flat())) {
       const { url, frame, smooth } = SPRITES[key];
       expect(pngSize(url), key).toEqual([frame, frame]);
       expect(smooth, key).toBe(true);

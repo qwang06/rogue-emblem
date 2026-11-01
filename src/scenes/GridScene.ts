@@ -251,7 +251,7 @@ import {
   MAP_PROPS_SHEET,
   MOUNTAIN_ART,
   OBSTACLE_ART,
-  PAINTED_OBSTACLES,
+  getFieldObstacleArt,
   SOFT_UNIT_SHADOW,
   STRUCTURE_SPRITES,
   TERRAIN_SHEET,
@@ -723,7 +723,8 @@ export class GridScene extends Phaser.Scene {
       ...getCrossingSprites(this.grid, BRIDGE_ART, GATE_ART[paletteName], FORD_ART, MAP_PROPS_SHEET),
       ...getHazardSprites(this.grid, SPIKES_ART, MAP_PROPS_SHEET),
     ]);
-    if (level.battlefield) this.renderPaintedObstacles(getPaintedObstacles(level.obstacles ?? [], PAINTED_OBSTACLES));
+    if (level.battlefield)
+      this.renderPaintedObstacles(getPaintedObstacles(level.obstacles ?? [], getFieldObstacleArt(level.battlefield)));
     else
       this.renderStandingProps([
         ...getFeatureSprites(this.grid, FOREST_ART, MOUNTAIN_ART),
