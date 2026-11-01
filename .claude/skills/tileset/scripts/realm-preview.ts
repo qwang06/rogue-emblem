@@ -31,14 +31,16 @@ const maps = realms.map((realm) => {
   const ink = getRealmInk(realm);
   const map = paintRealmInk(ink, realm.seed, stamps);
   for (const site of realm.sites) {
-    // As on screen: the icon's 64px disc centered on the tile, its foot a
-    // little below the tile's middle.
+    // As on screen: the icon drawn two cells wide, centered on the tile,
+    // its foot a little below the tile's middle. The art is larger than
+    // that (128px), so it's sampled down.
     const art = icon(site.kind);
-    const left = site.x * REALM_CELL + REALM_CELL / 2 - art.width / 2;
-    const top = site.y * REALM_CELL + REALM_CELL * 0.75 - art.height;
-    for (let y = 0; y < art.height; y++) {
-      for (let x = 0; x < art.width; x++) {
-        const s = (y * art.width + x) * 4;
+    const size = REALM_CELL * 2;
+    const left = site.x * REALM_CELL + REALM_CELL / 2 - size / 2;
+    const top = site.y * REALM_CELL + REALM_CELL * 0.75 - size;
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const s = (Math.floor((y * art.height) / size) * art.width + Math.floor((x * art.width) / size)) * 4;
         const tx = left + x;
         const ty = top + y;
         const alpha = art.data[s + 3] / 255;
