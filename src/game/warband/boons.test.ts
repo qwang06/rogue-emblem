@@ -7,11 +7,21 @@ import { applyModifiers } from '../modifiers.ts';
 import {
   BOON_CHOICES,
   BOONS,
+  encodeBoonEntry,
   findBoon,
+  findTakenBoon,
+  getBoonIds,
   getBoonModifiers,
+  getBoonRank,
+  getRarityOdds,
+  getStageScalePercent,
   getStatBoonGain,
+  getTakenBoonList,
   HEALTH_BOON_AMOUNT,
   isBoonEligible,
+  MAX_BOON_RANK,
+  parseBoonEntry,
+  rollBoonRarity,
   rollBoons,
   STAT_BOON_AMOUNT,
   takeBoon,
@@ -50,13 +60,17 @@ describe('isBoonEligible', () => {
     expect(isBoonEligible(acolyte, boon('stat-intelligence'))).toBe(true);
   });
 
-  it("offers skills the unit doesn't know and passives it hasn't taken", () => {
+  it("offers skills the unit doesn't know and passives below their max rank", () => {
     expect(isBoonEligible(soldier(), boon('skill-power-strike'))).toBe(false);
     expect(isBoonEligible(soldier(1), boon('skill-cleave'))).toBe(true);
     const unit = soldier();
     takeBoon(unit, boon('fleet'));
+    expect(isBoonEligible(unit, boon('fleet'))).toBe(true);
+    takeBoon(unit, boon('fleet'));
     expect(isBoonEligible(unit, boon('fleet'))).toBe(false);
-    expect(isBoonEligible(unit, boon('nimble'))).toBe(true);
+    for (let rank = 0; rank < MAX_BOON_RANK; rank++) takeBoon(unit, boon('nimble'));
+    expect(isBoonEligible(unit, boon('nimble'))).toBe(false);
+    expect(isBoonEligible(unit, boon('deadly'))).toBe(true);
   });
 
   it("doesn't offer a skill a boon already taught", () => {
@@ -92,7 +106,9 @@ describe('rollBoons', () => {
 
   it('falls back on stat boons, which never run out, once every passive and skill is taken', () => {
     const unit = soldier();
-    unit.boons = BOONS.filter((b) => b.kind === 'passive').map((b) => b.id);
+    for (const passive of BOONS.filter((b) => b.kind === 'passive')) {
+      while (isBoonEligible(unit, passive)) takeBoon(unit, passive);
+    }
     for (const stat of ['maxHealth', 'strength', 'skill', 'speed', 'luck', 'defense', 'resistance'] as const) {
       unit[stat] = 99;
     }
@@ -134,5 +150,104 @@ describe('takeBoon', () => {
     expect(unit.boons).toEqual(['skill-cleave']);
     expect(unit.strength).toBe(before.strength);
     expect(boon('skill-power-strike').modifiers).toEqual([{ kind: 'skill', skill: POWER_STRIKE }]);
+  });
+});
+
+describe('boon entries', () => {
+  it('keeps a common boon at the base scale as its bare id, and anything else with its rarity and scale', () => {
+    expect(encodeBoonEntry({ id: 'brawler', rarity: 'common', stagePercent: 100 })).toBe('brawler');
+    expect(encodeBoonEntry({ id: 'brawler', rarity: 'epic', stagePercent: 142 })).toBe('brawler|epic|142');
+    expect(parseBoonEntry('brawler|epic|142')).toEqual({ id: 'brawler', rarity: 'epic', stagePercent: 142 });
+    expect(parseBoonEntry('brawler')).toEqual({ id: 'brawler', rarity: 'common', stagePercent: 100 });
+  });
+
+  it('reads anything unreadable after the id as common at the base scale', () => {
+    expect(parseBoonEntry('brawler|shiny|abc')).toEqual({ id: 'brawler', rarity: 'common', stagePercent: 100 });
+    expect(parseBoonEntry('brawler|rare|50')).toEqual({ id: 'brawler', rarity: 'rare', stagePercent: 100 });
+  });
+
+  it('counts ranks and ids across entries', () => {
+    const entries = ['brawler', 'brawler|rare|100', 'nimble'];
+    expect(getBoonIds(entries)).toEqual(['brawler', 'brawler', 'nimble']);
+    expect(getBoonRank(entries, 'brawler')).toBe(2);
+    expect(getBoonRank(entries, 'deadly')).toBe(0);
+  });
+});
+
+describe('getStageScalePercent', () => {
+  it('is 100 up to stage 4, then grows 6% a stage', () => {
+    expect([1, 4, 5, 10, 30].map(getStageScalePercent)).toEqual([100, 100, 106, 142, 455]);
+  });
+});
+
+describe('findTakenBoon', () => {
+  it('scales flat damage and stats by rarity and stage, rates by rarity only, and MOV not at all', () => {
+    expect(findTakenBoon('brawler|epic|200')!.modifiers).toEqual([
+      { kind: 'combat', term: 'damage', amount: 15, when: 'attacking' },
+    ]);
+    expect(findTakenBoon('keen-eye|rare|300')!.modifiers).toEqual([{ kind: 'combat', term: 'hit', amount: 23 }]);
+    expect(findTakenBoon('fleet|legendary|455')!.modifiers).toEqual([{ kind: 'movement', amount: 1 }]);
+    expect(findTakenBoon('stat-strength|rare|142')!.stat).toEqual({ stat: 'strength', amount: 4 });
+  });
+
+  it('describes the scaled numbers and names the rank', () => {
+    const brawler = findTakenBoon('brawler|legendary|100', 3)!;
+    expect(brawler.name).toBe('Brawler III');
+    expect(brawler.description).toBe('+12 damage when it attacks.');
+    expect(brawler.entry).toBe('brawler|legendary|100');
+  });
+
+  it('never scales a skill', () => {
+    expect(findTakenBoon('skill-cleave|legendary|455')).toMatchObject({ rarity: 'common', stagePercent: 100 });
+  });
+
+  it('is null for an unknown boon', () => {
+    expect(findTakenBoon('nope')).toBeNull();
+  });
+});
+
+describe('ranks', () => {
+  it('stacks every rank of a passive, each at its own rarity', () => {
+    const entries = ['brawler', 'brawler|rare|100'];
+    expect(getBoonModifiers(entries).map((modifier) => ('amount' in modifier ? modifier.amount : 0))).toEqual([3, 5]);
+    expect(getTakenBoonList(entries).map((taken) => taken.name)).toEqual(['Brawler', 'Brawler II']);
+  });
+
+  it('offers the next rank of a passive with its rank in the name', () => {
+    const unit = soldier();
+    takeBoon(unit, boon('brawler'));
+    const offers = Array.from({ length: 30 }, (_, seed) => rollBoons(unit, createSeededRng(seed))).flat();
+    const brawler = offers.find((offer) => offer.id === 'brawler');
+    expect(brawler).toMatchObject({ rank: 2, name: expect.stringMatching(/^Brawler II$/) });
+  });
+
+  it('caps a passive at MAX_BOON_RANK', () => {
+    expect(MAX_BOON_RANK).toBe(5);
+  });
+});
+
+describe('rarity', () => {
+  it('starts mostly common and ends far rarer by stage 30', () => {
+    expect(getRarityOdds(1)).toEqual({ common: 80, rare: 17, epic: 3, legendary: 0 });
+    const late = getRarityOdds(30);
+    expect(late.common).toBeCloseTo(35);
+    expect(late.legendary).toBeCloseTo(8);
+  });
+
+  it('moves odds off common with luck, always summing to 100', () => {
+    const odds = getRarityOdds(10, 20);
+    expect(odds.common).toBeLessThan(getRarityOdds(10).common);
+    expect(Object.values(odds).reduce((sum, value) => sum + value, 0)).toBeCloseTo(100);
+  });
+
+  it('rolls by the odds', () => {
+    expect(rollBoonRarity(() => 0, 1)).toBe('common');
+    expect(rollBoonRarity(() => 0.81, 1)).toBe('rare');
+    expect(rollBoonRarity(() => 0.99, 1)).toBe('epic');
+  });
+
+  it('grows the offers with the stage they are rolled at', () => {
+    const offers = rollBoons(soldier(), createSeededRng(3), 10);
+    expect(offers.filter((offer) => offer.kind !== 'skill').every((offer) => offer.stagePercent === 142)).toBe(true);
   });
 });

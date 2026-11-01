@@ -8,7 +8,7 @@ import type { GrowthStat } from '../game/experience.ts';
 import { getSkillsLearnedBetween } from '../game/skills.ts';
 import { getUnitSprite } from '../game/tileset.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
-import { getStatBoonGain, type BoonKind } from '../game/warband/boons.ts';
+import { getStatBoonGain, RARITY_LABELS, type BoonKind, type BoonRarity } from '../game/warband/boons.ts';
 import { completesEvolution } from '../game/warband/evolutions.ts';
 import type { BoonOffer } from '../game/warband/levelUpPicks.ts';
 import { restoreUnit } from '../game/warband/run.ts';
@@ -29,7 +29,10 @@ export interface BoonChoiceView {
   description: string;
   // Whether taking it completes an evolution for the unit.
   evolves: boolean;
-  // A stat boon's raise after the class's cap, else null.
+  // Its rolled rarity, and that rarity's label ('' for a common one).
+  rarity: BoonRarity;
+  rarityLabel: string;
+  // A stat boon's raise, else null.
   gain: { stat: GrowthStat; amount: number } | null;
 }
 
@@ -100,6 +103,8 @@ export function toBoonPickView(offer: BoonOffer, relics: readonly string[] = [])
           kind: boon.kind,
           description: boon.description,
           evolves: completesEvolution(snapshot, relics, { boon: boon.id }),
+          rarity: boon.rarity,
+          rarityLabel: boon.rarity === 'common' ? '' : RARITY_LABELS[boon.rarity],
           gain: boon.stat && amount > 0 ? Object.freeze({ stat: boon.stat.stat, amount }) : null,
         });
       }),

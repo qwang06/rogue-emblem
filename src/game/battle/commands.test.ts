@@ -570,8 +570,10 @@ describe('take-boon', () => {
       applyCommand(state, { type: 'take-boon', unitId: 'hero', level, boonId });
     expect(take(2, 'keen-eye')).toThrow(/level 2/);
     expect(take(1, 'nope')).toThrow(/no boon/);
-    const taken = applyCommand(state, { type: 'take-boon', unitId: 'hero', level: 1, boonId: 'keen-eye' }).state;
-    expect(() => applyCommand(taken, { type: 'take-boon', unitId: 'hero', level: 1, boonId: 'keen-eye' })).toThrow(
+    // Fleet's max rank is 2: a third time is refused.
+    const once = applyCommand(state, { type: 'take-boon', unitId: 'hero', level: 1, boonId: 'fleet' }).state;
+    const twice = applyCommand(once, { type: 'take-boon', unitId: 'hero', level: 1, boonId: 'fleet' }).state;
+    expect(() => applyCommand(twice, { type: 'take-boon', unitId: 'hero', level: 1, boonId: 'fleet' })).toThrow(
       /can't take/,
     );
   });

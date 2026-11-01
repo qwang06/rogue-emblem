@@ -4,13 +4,14 @@
 // (`pendingBoons`, oldest first) and are taken one at a time before the
 // warband moves on, so a reload reopens them with the same offers. Offers
 // are seeded from the run's seed, the unit and the level, so they never
-// change between visits. Pure: each function returns a new frozen run.
+// change between visits; they grow with the stage the level was reached
+// at (recorded on the queued pick). Pure: each function returns a new frozen run.
 
 import { GROWTH_STATS, type GrowthStat } from '../experience.ts';
 import { createSeededRng } from '../rng.ts';
 import type { UnitClass } from '../unitClasses.ts';
 import type { Unit } from '../Unit.ts';
-import { findBoon, rollBoons, takeBoon, type Boon } from './boons.ts';
+import { getTakenBoonList, rollBoons, takeBoon, type Boon } from './boons.ts';
 import { restoreUnit, snapshotUnit, type PendingBoon, type RunState, type UnitSnapshot } from './run.ts';
 
 // A boon pick as it's offered: the unit, the level it reached, the boons to
@@ -61,6 +62,7 @@ export interface TakenBoon {
 
 // `after` (a run that `before` became) owing a boon pick for each level
 // any unit on both rosters gained between them, except the `taken` ones,
+// at `before`'s stage,
 // queued after the ones it already owes, unit by unit in roster order and
 // level by level, with any stat gains from `before` to `after` recorded on
 // the last pick.
@@ -75,6 +77,7 @@ export function queueLevelUpBoons(before: RunState, after: RunState, taken: read
       queued.push({
         unitId: unit.id,
         level,
+        stage: before.stage,
         ...(level === unit.level && gains ? { gains } : {}),
       });
     }
@@ -88,13 +91,13 @@ export function queueLevelUpBoons(before: RunState, after: RunState, taken: read
 // offer it for that level after the battle (they're seeded alike), with the
 // level up's stat `gains`. Null when it has none left to take.
 export function getBattleBoonOffer(
-  run: Pick<RunState, 'seed'>,
+  run: Pick<RunState, 'seed' | 'stage'>,
   unitId: string,
   unit: Unit,
   level: number,
   gains?: Partial<Record<GrowthStat, number>>,
 ): BoonOffer | null {
-  const boons = rollBoons(unit, createSeededRng(getBoonSeed(run.seed, unitId, level)));
+  const boons = rollBoons(unit, createSeededRng(getBoonSeed(run.seed, unitId, level)), run.stage);
   if (boons.length === 0) return null;
   const grew = gains && Object.fromEntries(Object.entries(gains).filter(([, gain]) => gain > 0));
   return Object.freeze({
@@ -148,7 +151,7 @@ export function pickBoon(run: RunState, index: number, classes?: readonly UnitCl
 
 // The boons `unit` has taken, looked up, in the order taken.
 export function getTakenBoons(unit: Pick<UnitSnapshot, 'boons'>): Boon[] {
-  return (unit.boons ?? []).map(findBoon).filter((boon): boon is Boon => boon !== null);
+  return getTakenBoonList(unit.boons ?? []);
 }
 
 function rollOffer(run: RunState, pending: PendingBoon, classes?: readonly UnitClass[]): BoonOffer | null {
@@ -157,6 +160,7 @@ function rollOffer(run: RunState, pending: PendingBoon, classes?: readonly UnitC
   const boons = rollBoons(
     restoreUnit(unit, classes),
     createSeededRng(getBoonSeed(run.seed, pending.unitId, pending.level)),
+    pending.stage ?? run.stage,
   );
   return boons.length > 0
     ? Object.freeze({

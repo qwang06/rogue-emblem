@@ -5,7 +5,9 @@
 // hand a unit. A unit carries its modifiers for a battle
 // (`Unit.modifiers`), and the rules read them from there:
 // - 'combat' adds to a combat term (hit, avoid, crit, damage dealt, or
-//   `guard`, damage taken off each hit), always or only `when` a condition
+//   `guard`, damage taken off each hit, and the percent terms
+//   `damage-percent` and `guard-percent` that scale a hit's damage after
+//   defense), always or only `when` a condition
 //   holds; combat.ts sums them per exchange (getCombatBonus), so the
 //   forecast and the roll always agree.
 // - 'movement' and 'experience' change the unit's MOV and XP rate for the
@@ -20,8 +22,18 @@
 import type { Skill } from './skills.ts';
 
 // The combat terms a modifier can add to: hit, avoid and crit rates,
-// damage dealt by each hit, and `guard`, damage taken off each hit.
-export const COMBAT_TERMS = Object.freeze(['hit', 'avoid', 'crit', 'damage', 'guard'] as const);
+// damage dealt by each hit, `guard`, damage taken off each hit, and the
+// percent terms: `damage-percent` more damage dealt and `guard-percent`
+// less damage taken, both applied after defense.
+export const COMBAT_TERMS = Object.freeze([
+  'hit',
+  'avoid',
+  'crit',
+  'damage',
+  'guard',
+  'damage-percent',
+  'guard-percent',
+] as const);
 export type CombatTerm = (typeof COMBAT_TERMS)[number];
 
 // When a combat modifier applies: on the unit's own attack (`attacking`),
@@ -50,7 +62,15 @@ type Summable = Extract<Modifier, { amount: number } | { percent: number }>['kin
 
 export type CombatBonus = Readonly<Record<CombatTerm, number>>;
 
-export const NO_COMBAT_BONUS: CombatBonus = Object.freeze({ hit: 0, avoid: 0, crit: 0, damage: 0, guard: 0 });
+export const NO_COMBAT_BONUS: CombatBonus = Object.freeze({
+  hit: 0,
+  avoid: 0,
+  crit: 0,
+  damage: 0,
+  guard: 0,
+  'damage-percent': 0,
+  'guard-percent': 0,
+});
 
 // Where a unit stands as an exchange starts, for the conditions.
 export interface CombatContext {

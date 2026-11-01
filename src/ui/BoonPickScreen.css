@@ -369,13 +369,37 @@
   --boon-kind: var(--cyan);
 }
 
+/* A rarer boon's icon slot wears its rarity's color as an outline, which
+   takes no space. */
+.boon-pick__boon--rare,
+.boon-pick__detail-rarity--rare {
+  --boon-rarity: var(--green);
+}
+
+.boon-pick__boon--epic,
+.boon-pick__detail-rarity--epic {
+  --boon-rarity: var(--magenta);
+}
+
+.boon-pick__boon--legendary,
+.boon-pick__detail-rarity--legendary {
+  --boon-rarity: var(--orange);
+}
+
+.boon-pick__boon--rare .boon-pick__boon-icon,
+.boon-pick__boon--epic .boon-pick__boon-icon,
+.boon-pick__boon--legendary .boon-pick__boon-icon {
+  outline: var(--px) solid var(--boon-rarity);
+  outline-offset: var(--px);
+}
+
 /* The picked boon, big, with its whole description. Its height is set
    for the longest description, so moving the pick never resizes it. */
 .boon-pick__detail {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  min-height: 6.75rem;
+  min-height: 8.25rem;
   box-sizing: border-box;
   padding: 8px;
   border-top: var(--rule);
@@ -397,6 +421,15 @@
 .boon-pick__detail-description {
   font-size: 0.8125rem;
   line-height: 1.5;
+}
+
+.boon-pick__detail-rarity {
+  min-height: 1.5em;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--boon-rarity, var(--fg-dim));
 }
 
 .boon-pick__detail-evolves {
