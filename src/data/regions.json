@@ -287,6 +287,34 @@
       "season": "winter"
     },
     {
+      "name": "Cinder Deep",
+      "description": "Ash plains split by rivers of lava below the Roost: skeletons and slimes boiled up from the deep, with an orc to drive them.",
+      "terrain": {
+        "generator": "planned",
+        "width": 8,
+        "height": 8,
+        "lakes": 2,
+        "lakeSize": [3, 4],
+        "mountains": 1,
+        "mountainSize": [2, 3],
+        "forests": 1,
+        "forestSize": [2, 3],
+        "meadows": 2,
+        "meadowSize": [2, 3],
+        "ruins": 1,
+        "buildings": 1
+      },
+      "enemies": [
+        { "count": 1, "unitClass": "orc", "area": { "y": [0, 0.34] }, "level": 6 },
+        { "count": 2, "unitClass": "skeleton", "area": { "y": [0, 0.34] }, "level": 5 },
+        { "count": 2, "unitClass": "slime", "area": { "y": [0, 0.34] }, "level": 6 }
+      ],
+      "treeChance": 0,
+      "palette": "b-red",
+      "biome": "lake",
+      "season": "underworld"
+    },
+    {
       "name": "Dragon's Roost",
       "description": "A scorched crag on the last road to the Hold, where the Red Dragon nests with bats and skeletons: beat the dragon to go on.",
       "terrain": {

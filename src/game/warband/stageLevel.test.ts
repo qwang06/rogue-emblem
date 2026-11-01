@@ -442,7 +442,14 @@ describe('the stage ramp', () => {
     expect(roost.name).toBe("Dragon's Roost");
     expect(roost.objective).toEqual({ kind: 'boss' });
     expect(roost.enemies.filter((group) => group.boss).map((group) => group.boss)).toEqual(['Red Dragon']);
-    expect(enemyClasses(11)).toContain('dragon');
+    expect(enemyClasses(REGION_CONFIGS.indexOf(roost))).toContain('dragon');
+  });
+
+  it('crosses the Cinder Deep, drawn in the underworld, just before the Roost', () => {
+    const roost = getStageRegion(29, REGION_SETTINGS);
+    const deep = REGION_CONFIGS[REGION_CONFIGS.indexOf(roost) - 1];
+    expect(deep.name).toBe('Cinder Deep');
+    expect(deep.season).toBe('underworld');
   });
 
   it('never fields fewer enemies than the stage before', () => {

@@ -6,7 +6,7 @@
 //
 //   node .claude/skills/tileset/scripts/realm-preview.ts out.png 1 2 3
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { TILE_SIZE } from '../../../../src/game/tileset.ts';
 import { paintRealmInk, type RgbaImage } from '../../../../src/game/warband/realm/inkRaster.ts';
 import { generateRealm } from '../../../../src/game/warband/realm/realm.ts';
@@ -25,7 +25,13 @@ const stamps = Object.fromEntries(INK_STAMPS.map((id) => [id, load(`src/assets/r
   RgbaImage
 >;
 const icons: Record<string, RgbaImage> = {};
-const icon = (kind: string) => (icons[kind] ??= load(`src/assets/realm/sites/${kind}.png`));
+// A site's icon in the season of the region it plays, as on screen
+// (getSiteIconUrl): the plain one when that season has no icons.
+const icon = (kind: string, season = 'summer') => {
+  const seasonal = `src/assets/realm/sites/${season}/${kind}.png`;
+  const file = existsSync(seasonal) ? seasonal : `src/assets/realm/sites/${kind}.png`;
+  return (icons[file] ??= load(file));
+};
 
 const realms = seeds.map((seed) => generateRealm(Number(seed), settings));
 const maps = realms.map((realm) => {
@@ -34,7 +40,7 @@ const maps = realms.map((realm) => {
   for (const site of realm.sites) {
     // As on screen: the icon's 64px disc centered on the tile, its foot a
     // little below the tile's middle.
-    const art = icon(site.kind);
+    const art = icon(site.kind, settings.regions[site.region].season);
     const left = site.x * TILE_SIZE + TILE_SIZE / 2 - art.width / 2;
     const top = site.y * TILE_SIZE + TILE_SIZE * 0.75 - art.height;
     for (let y = 0; y < art.height; y++) {

@@ -6,7 +6,7 @@
 
 import type { Point } from '../game/grid.ts';
 import { SURVIVE_TURNS, type ObjectiveSpec } from '../game/objectives.ts';
-import { getUnitSprite } from '../game/tileset.ts';
+import { DEFAULT_SEASON, getUnitSprite, type Season } from '../game/tileset.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
 import { BATTLE_SITES, getRoad, getSite, type Realm, type Site, type SiteKind } from '../game/warband/realm/realm.ts';
 import { rollEliteAffixes } from '../game/warband/elites.ts';
@@ -29,6 +29,8 @@ export interface OverworldSiteView {
   x: number;
   y: number;
   state: SiteState;
+  // The season of the region it plays, which its icon is drawn in.
+  season: Season;
 }
 
 // A card for a site the warband can travel to next.
@@ -98,6 +100,7 @@ export function toOverworldView(run: RunState, realm: Realm, settings: RegionSet
       depth: site.depth,
       x: site.x,
       y: site.y,
+      season: settings.regions[site.region]?.season ?? DEFAULT_SEASON,
       state:
         site.id === currentSiteId
           ? 'current'
