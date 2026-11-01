@@ -1,10 +1,14 @@
-// The roster screen between Warband Mode stages: pick a unit, then manage
-// its items against the convoy (see convoy.ts). Three columns sit side by
-// side — the units, the picked unit's inventory, and the convoy — and the
-// cursor is in one of them. Left and right move between columns, up and
-// down move within one (wrapping), confirm acts on what's under the cursor
-// and cancel steps back:
-//   - units: confirm moves into that unit's items; cancel closes the screen
+// The roster screen between Warband Mode stages: pick a unit, then look
+// over it or manage its items against the convoy (see convoy.ts). The
+// units sit on the left; beside them one panel shows a tab of the picked
+// unit: its stats, its skills, or its items (its inventory and the convoy,
+// two more columns). The cursor is in one of the columns. Left and right
+// walk one strip — Stats, Skills, Items on the units, then into the
+// inventory and the convoy — stopping at either end; up and down move
+// within a column (wrapping); confirm acts on what's under the cursor and
+// cancel steps back:
+//   - units: confirm opens the Items tab, in that unit's items; cancel
+//     closes the screen
 //   - items: confirm opens the item's actions (Equip for weapons and
 //     armor, Store); cancel goes
 //     back to the units
@@ -32,8 +36,14 @@ import { RUN_ITEMS, type RunState } from './run.ts';
 
 export type RosterColumn = 'units' | 'items' | 'convoy';
 
-// Where the pointer can point: a column, or the open item actions.
-export type RosterTarget = RosterColumn | 'actions';
+// The tabs of the panel beside the units. Only Items has columns of its
+// own; on the others the cursor is on the units.
+export type RosterTab = 'stats' | 'skills' | 'items';
+
+export const ROSTER_TABS: readonly RosterTab[] = Object.freeze(['stats', 'skills', 'items']);
+
+// Where the pointer can point: a column, the open item actions, or a tab.
+export type RosterTarget = RosterColumn | 'actions' | 'tabs';
 
 export type RosterItemActionId = 'equip' | 'store';
 
@@ -43,6 +53,8 @@ export interface RosterItemAction extends MenuAction {
 
 export interface RosterScreenState {
   run: RunState;
+  tab: RosterTab;
+  // Items or convoy only on the Items tab.
   column: RosterColumn;
   // The picked unit, an item in its inventory, and an entry in the convoy.
   // Each stays in range of its list (0 when the list is empty).
@@ -62,11 +74,18 @@ export interface RosterRules {
 
 const DEFAULT_RULES: RosterRules = Object.freeze({ classes: UNIT_CLASSES, items: RUN_ITEMS });
 
-const COLUMNS: readonly RosterColumn[] = Object.freeze(['units', 'items', 'convoy']);
+// What left and right walk through, in order.
+const STOPS: readonly { tab: RosterTab; column: RosterColumn }[] = Object.freeze([
+  { tab: 'stats', column: 'units' },
+  { tab: 'skills', column: 'units' },
+  { tab: 'items', column: 'units' },
+  { tab: 'items', column: 'items' },
+  { tab: 'items', column: 'convoy' },
+]);
 
-// The screen opened on `run`, on its first unit.
+// The screen opened on `run`, on its first unit's stats.
 export function openRosterScreen(run: RunState): RosterScreenState {
-  return freeze({ run, column: 'units', unitIndex: 0, itemIndex: 0, convoyIndex: 0, actions: null });
+  return freeze({ run, tab: 'stats', column: 'units', unitIndex: 0, itemIndex: 0, convoyIndex: 0, actions: null });
 }
 
 // The unit the screen has picked, or null when the roster is empty.
@@ -74,16 +93,16 @@ export function getPickedUnit(state: RosterScreenState) {
   return state.run.roster[state.unitIndex] ?? null;
 }
 
-// Moves the cursor: `dx` steps between columns (stopping at either end),
-// `dy` within the column or the open actions (wrapping).
+// Moves the cursor: `dx` steps along the tabs and columns (stopping at
+// either end), `dy` within the column or the open actions (wrapping).
 export function moveRosterCursor(state: RosterScreenState, dx: number, dy: number): RosterScreenState {
   if (state.actions) {
     return dy === 0 ? state : freeze({ ...state, actions: moveSelection(state.actions, dy) });
   }
   if (dx !== 0) {
-    const at = COLUMNS.indexOf(state.column);
-    const column = COLUMNS[Math.max(0, Math.min(COLUMNS.length - 1, at + Math.sign(dx)))];
-    return column === state.column ? state : freeze({ ...state, column });
+    const at = STOPS.findIndex((stop) => stop.tab === state.tab && stop.column === state.column);
+    const stop = STOPS[Math.max(0, Math.min(STOPS.length - 1, at + Math.sign(dx)))];
+    return stop === STOPS[at] ? state : freeze({ ...state, ...stop });
   }
   if (dy === 0) return state;
   const field = INDEX_FIELDS[state.column];
@@ -93,15 +112,22 @@ export function moveRosterCursor(state: RosterScreenState, dx: number, dy: numbe
   return clampIndices(freeze({ ...state, [field]: index }));
 }
 
-// Points the cursor at entry `index` of `target` (e.g. on mouse hover).
-// Pointing at a column closes any open actions; out-of-range indices
-// change nothing.
+// Points the cursor at entry `index` of `target` (e.g. on mouse hover),
+// or opens tab `index` of ROSTER_TABS. Pointing at a column or a tab
+// closes any open actions; leaving the Items tab puts the cursor back on
+// the units. Out-of-range indices change nothing.
 export function pointRosterCursor(state: RosterScreenState, target: RosterTarget, index: number): RosterScreenState {
   if (target === 'actions') {
     return state.actions ? freeze({ ...state, actions: selectIndex(state.actions, index) }) : state;
   }
+  if (target === 'tabs') {
+    const tab = ROSTER_TABS[index];
+    if (!tab || tab === state.tab) return state;
+    return freeze({ ...state, tab, column: tab === 'items' ? state.column : 'units', actions: null });
+  }
   if (!Number.isInteger(index) || index < 0 || index >= columnLength(state, target)) return state;
-  return clampIndices(freeze({ ...state, column: target, [INDEX_FIELDS[target]]: index, actions: null }));
+  const tab = target === 'units' ? state.tab : 'items';
+  return clampIndices(freeze({ ...state, tab, column: target, [INDEX_FIELDS[target]]: index, actions: null }));
 }
 
 // Confirm on whatever's under the cursor (see the top of this file).
@@ -122,7 +148,7 @@ export function confirmRoster(state: RosterScreenState, rules: RosterRules = DEF
   }
   switch (state.column) {
     case 'units':
-      return freeze({ ...state, column: 'items' });
+      return freeze({ ...state, tab: 'items', column: 'items' });
     case 'items': {
       const actions = getItemActions(state, rules);
       return actions.length === 0 ? state : freeze({ ...state, actions: createActionMenu(actions) });

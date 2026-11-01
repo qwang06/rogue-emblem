@@ -8,28 +8,37 @@ import { UnitSprite } from './UnitSprite.tsx';
 
 const WEAPON_TYPE_LABELS = { physical: 'Physical', magical: 'Magic', siege: 'Siege' } as const;
 
-// The roster screen's status sheet for the picked unit, the way a tactics
-// game's formation screen shows one: who it is (sprite, name, class,
-// level, HP/MP/EXP, movement, what it wields) beside its stats and
-// the rates it fights with; under them its skills, and its passives and
-// quirk. The sheet keeps one size whoever it shows: the skill and passive
-// boxes have fixed heights and scroll, so paging down the roster never
-// moves the inventory under it.
-export function RosterUnitSheet({ unit }: { unit: UnitDetailView | null }) {
-  if (!unit) {
-    return (
-      <section className="roster-sheet roster-sheet--empty" aria-label="Unit">
-        <p>Nobody on the roster.</p>
-      </section>
-    );
-  }
+// The roster screen's pages for the picked unit, the way a tactics game's
+// formation screen shows one. Stats: who it is (sprite, name, class,
+// level, HP/MP/EXP, movement, what it wields) beside its stats and the
+// rates it fights with. Skills: its skills beside its passives and quirk,
+// each list scrolling in the page's fixed height, so paging down the
+// roster never resizes the panel.
+export function RosterStatsPage({ unit }: { unit: UnitDetailView | null }) {
+  if (!unit) return <EmptySheet />;
   return (
-    <section className="roster-sheet" aria-label={`${unit.name}'s status`}>
+    <section className="roster-sheet roster-sheet--stats" aria-label={`${unit.name}'s stats`}>
       <Identity unit={unit} />
       <Stats unit={unit} />
       <Combat unit={unit} />
+    </section>
+  );
+}
+
+export function RosterSkillsPage({ unit }: { unit: UnitDetailView | null }) {
+  if (!unit) return <EmptySheet />;
+  return (
+    <section className="roster-sheet roster-sheet--skills" aria-label={`${unit.name}'s skills`}>
       <Skills unit={unit} />
       <Passives unit={unit} />
+    </section>
+  );
+}
+
+function EmptySheet() {
+  return (
+    <section className="roster-sheet roster-sheet--empty" aria-label="Unit">
+      <p>Nobody on the roster.</p>
     </section>
   );
 }

@@ -52,7 +52,11 @@ export function OverworldRoster({
 
   const pointer: RosterPointer = {
     hover: (target, index) => apply(pointRosterCursor(state, target, index)),
-    select: (target, index) => apply(confirmRoster(pointRosterCursor(state, target, index))),
+    select: (target, index) => {
+      const pointed = pointRosterCursor(state, target, index);
+      // Clicking a tab only opens it.
+      apply(target === 'tabs' ? pointed : confirmRoster(pointed));
+    },
   };
 
   useEffect(() => {
