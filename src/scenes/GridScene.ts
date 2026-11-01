@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
-import { SPRITE_URLS } from '../assets/sprites.ts';
-import terrainSheetUrl from '../assets/overworld.png';
+import { SPRITE_URLS, TERRAIN_SHEET_URLS } from '../assets/sprites.ts';
 import { gameCommands, type Command, type MenuField } from '../bridge/commands.ts';
 import { changeAutoSpeed, cycleAutoSpeed } from '../game/autoSpeed.ts';
 import { getActiveContent } from '../data/customContent.ts';
@@ -213,6 +212,8 @@ import {
   TERRAIN_AUTOTILES,
   TERRAIN_BASE_TILE,
   TERRAIN_SHEET,
+  SEASON_TERRAIN_SHEETS,
+  DEFAULT_SEASON,
   TILE_SIZE,
   TREE_SPRITES,
   UNIT_ART,
@@ -579,9 +580,11 @@ export class GridScene extends Phaser.Scene {
     // Drives the loading screen's bar; the screen lifts at the end of create().
     this.load.on('progress', (progress: number) => gameStore.setState({ mapLoadProgress: progress }));
     // Spritesheets so sprites can draw single frames: the cursor and arrow
-    // tiles of the terrain sheet (the tilemaps still use it whole), and each
-    // unit sheet's animation frames.
-    this.load.spritesheet(TERRAIN_SHEET.key, terrainSheetUrl, { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
+    // tiles of the terrain sheet and each season's map art (the tilemaps
+    // still use the sheets whole), and each unit sheet's animation frames.
+    for (const [key, url] of Object.entries(TERRAIN_SHEET_URLS)) {
+      this.load.spritesheet(key, url, { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
+    }
     // Unit art cut into bigger frames (UNIT_ART) loads at its own size.
     const frameSizes = getUnitSheetFrameSizes();
     for (const [key, url] of Object.entries(SPRITE_URLS)) {
@@ -647,8 +650,10 @@ export class GridScene extends Phaser.Scene {
 
     const paletteName = level.palette ?? DEFAULT_BUILDING_PALETTE;
     const palette = BUILDING_PALETTES[paletteName];
-    this.renderTerrain(this.grid, { ...TERRAIN_AUTOTILES, wall: getWallAutotile(palette) });
-    this.renderMapSprites([
+    // The map's terrain, forests, mountains and buildings in its season's art.
+    const sheet = SEASON_TERRAIN_SHEETS[level.season ?? DEFAULT_SEASON];
+    this.renderTerrain(this.grid, { ...TERRAIN_AUTOTILES, wall: getWallAutotile(palette) }, sheet);
+    this.renderMapSprites(sheet, [
       ...getCrossingSprites(this.grid, BRIDGE_ART, GATE_ART[paletteName], FORD_ART, MAP_PROPS_SHEET),
       ...getHazardSprites(this.grid, SPIKES_ART, MAP_PROPS_SHEET),
       ...getFeatureSprites(this.grid, FOREST_ART, MOUNTAIN_ART),
@@ -3607,8 +3612,8 @@ export class GridScene extends Phaser.Scene {
   // (`autotiles`, see src/game/autotile.ts) drawn over it as its own layer of
   // half-size tiles, four per cell. Animated sets step through their copies
   // on a timer.
-  renderTerrain(grid: Grid, autotiles: Record<string, Autotile>) {
-    const { key, columns } = TERRAIN_SHEET;
+  renderTerrain(grid: Grid, autotiles: Record<string, Autotile>, terrainSheet = TERRAIN_SHEET) {
+    const { key, columns } = terrainSheet;
     const grassFrame = getTileFrame(TERRAIN_BASE_TILE, columns);
     const grass = Array.from({ length: grid.height }, () => Array(grid.width).fill(grassFrame));
     const grassMap = this.make.tilemap({ data: grass, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });
@@ -3639,13 +3644,13 @@ export class GridScene extends Phaser.Scene {
     }
   }
 
-  // One-tile overlays from the terrain sheet, or the props sheet (forests,
+  // One-tile overlays from `terrainSheet`, or the props sheet (forests,
   // mountains, buildings, crossings; see src/game/mapArt.ts): ground art
   // and caps under units, at the trees' depth (caps just above, so a peak
   // covers the forest it pokes into), and roofs over units like the gate's.
-  renderMapSprites(sprites: readonly MapSprite[]) {
+  renderMapSprites(terrainSheet: typeof TERRAIN_SHEET, sprites: readonly MapSprite[]) {
     const depths = { ground: 0.4, cap: 0.45, roof: 0.8 };
-    for (const { x, y, tile, layer, sheet = TERRAIN_SHEET } of sprites) {
+    for (const { x, y, tile, layer, sheet = terrainSheet } of sprites) {
       const pos = gridToWorld(x, y, TILE_SIZE);
       this.add
         .image(pos.x, pos.y, sheet.key, getTileFrame(tile, sheet.columns))

@@ -165,6 +165,7 @@ const SETTING_LABELS: Readonly<Record<string, string>> = Object.freeze({
   treeChance: 'Tree chance',
   palette: 'Palette',
   faction: 'Faction',
+  season: 'Season',
   objective: 'Objective',
   kind: 'Kind',
 });

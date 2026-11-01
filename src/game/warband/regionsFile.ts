@@ -35,7 +35,7 @@ import { MAP_ARCHETYPES } from '../mapArchetypes.ts';
 import type { MapGenOptions } from '../mapGen.ts';
 import { OBJECTIVE_KINDS, type ObjectiveSpec } from '../objectives.ts';
 import { REGION_BIOMES, type RegionBiome } from './realm/realmRegions.ts';
-import { BUILDING_PALETTES, type BuildingPaletteName } from '../tileset.ts';
+import { BUILDING_PALETTES, SEASONS, type BuildingPaletteName, type Season } from '../tileset.ts';
 import type { RegionConfig, RegionSettings } from './regions.ts';
 import { createStageLevel } from './stageLevel.ts';
 import { UNIT_CLASSES } from '../unitClasses.ts';
@@ -88,6 +88,7 @@ const REGION_KEYS = [
   'faction',
   'objective',
   'biome',
+  'season',
 ];
 
 type Json = Record<string, unknown>;
@@ -283,6 +284,12 @@ function parseRegion(value: unknown, path: string): RegionConfig {
       fail(`${path}.biome`, `must be one of ${REGION_BIOMES.join(', ')}`);
     }
     region.biome = json.biome as RegionBiome;
+  }
+  if (json.season !== undefined) {
+    if (typeof json.season !== 'string' || !(SEASONS as readonly string[]).includes(json.season)) {
+      fail(`${path}.season`, `must be one of ${SEASONS.join(', ')}`);
+    }
+    region.season = json.season as Season;
   }
   return Object.freeze(region);
 }

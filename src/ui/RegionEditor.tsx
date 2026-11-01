@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 import { MAP_ARCHETYPES } from '../game/mapArchetypes.ts';
 import { MAP_GEN_DEFAULTS } from '../game/mapGen.ts';
 import { FACTIONS } from '../game/factions.ts';
-import { BUILDING_PALETTES } from '../game/tileset.ts';
+import { BUILDING_PALETTES, SEASONS } from '../game/tileset.ts';
 import type { RegionConfig } from '../game/warband/regions.ts';
 import { REGION_LIMITS } from '../game/warband/regionsFile.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
@@ -38,6 +38,7 @@ const PATCHES = [
 
 const PALETTES = Object.keys(BUILDING_PALETTES);
 const FACTION_IDS = FACTIONS.map((faction) => faction.id);
+const SEASON_NAMES = [...SEASONS];
 const GENERATORS = ['classic', 'planned'];
 const ENEMY_CLASSES = UNIT_CLASSES.map((c) => c.id);
 const [MIN_SIZE, MAX_SIZE] = REGION_LIMITS.mapSize;
@@ -149,6 +150,7 @@ export function RegionEditor({
           />
           <SelectField form={form} path={at('palette')} label="Palette" options={PALETTES} />
           <SelectField form={form} path={at('faction')} label="Faction" options={FACTION_IDS} />
+          <SelectField form={form} path={at('season')} label="Season" options={SEASON_NAMES} />
           <NumberField form={form} path={at('treeChance')} label="Tree chance" hint="0–1 per free grass tile" />
           <NumberField
             form={form}

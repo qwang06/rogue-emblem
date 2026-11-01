@@ -6,6 +6,9 @@ import gates from './gates.png';
 import ginkgoTreeGreen from './ginkgo_tree_green.png';
 import goldGinkgoTree from './gold_ginkgo_tree.png';
 import mapProps from './map-props.png';
+import overworldAutumn from './overworld-autumn.png';
+import overworldWinter from './overworld-winter.png';
+import overworld from './overworld.png';
 import ballistaIcon from './items/ballista.png';
 import biteIcon from './items/bite.png';
 import boneClawsIcon from './items/bone-claws.png';
@@ -40,6 +43,14 @@ const unitSheets = import.meta.glob<string>(
 const UNIT_SHEET_URLS: Record<string, string> = Object.fromEntries(
   Object.entries(unitSheets).map(([path, url]) => [path.slice('./units/'.length, -'.png'.length), url]),
 );
+
+// Each season's terrain sheet (SEASON_TERRAIN_SHEETS in tileset.ts) by
+// texture key. GridScene loads them as 32px spritesheets and tilemap images.
+export const TERRAIN_SHEET_URLS: Readonly<Record<string, string>> = {
+  overworld,
+  'overworld-autumn': overworldAutumn,
+  'overworld-winter': overworldWinter,
+};
 
 export const SPRITE_URLS: Readonly<Record<string, string>> = {
   ...UNIT_SHEET_URLS,

@@ -31,7 +31,7 @@ import { getBuildingSprites, getFeatureSprites } from '../mapArt.ts';
 import { getReachable, terrainToRows } from '../mapGen.ts';
 import { OBJECTIVE_KINDS, ROUT } from '../objectives.ts';
 import { getCombatAward, getCombatExperience } from '../experience.ts';
-import { BUILDING_ART, BUILDING_PALETTES, FOREST_ART, MOUNTAIN_ART } from '../tileset.ts';
+import { BUILDING_ART, BUILDING_PALETTES, DEFAULT_SEASON, FOREST_ART, MOUNTAIN_ART, SEASON_TREES } from '../tileset.ts';
 
 const SEEDS = Array.from({ length: 50 }, (_, i) => i * 104729 + 3);
 const [FIRST] = REGION_CONFIGS;
@@ -356,7 +356,7 @@ describe('createStageLevel', () => {
         ...getFeatureSprites(grid, FOREST_ART, MOUNTAIN_ART),
       ];
       for (const { x, y, tree } of decorations) {
-        expect(tree).toBe('green_ginkgo');
+        expect(tree).toBe(SEASON_TREES[region.season ?? DEFAULT_SEASON]);
         expect(getCell(grid, x, y)!.terrain).toBe('grass');
         expect(getCell(grid, x, y)!.unitId).toBeNull();
         expect(deploymentZone).not.toContainEqual({ x, y });
@@ -365,9 +365,22 @@ describe('createStageLevel', () => {
     }
   });
 
-  it('draws each stage in its region palette, with the generated buildings', () => {
+  it('scatters gold ginkgos in autumn and no trees in winter, over the same map', () => {
+    const region = { ...FIRST, treeChance: 0.5 };
+    const summer = createStageLevel(1234, region);
+    const autumn = createStageLevel(1234, { ...region, season: 'autumn' });
+    const winter = createStageLevel(1234, { ...region, season: 'winter' });
+    expect(summer.decorations.length).toBeGreaterThan(0);
+    expect(autumn.decorations).toEqual(summer.decorations.map((tree) => ({ ...tree, tree: 'gold_ginkgo' })));
+    expect(winter.decorations).toEqual([]);
+    expect(winter.grid).toEqual(summer.grid);
+    expect([summer.season, autumn.season, winter.season]).toEqual(['summer', 'autumn', 'winter']);
+  });
+
+  it('draws each stage in its region palette and season, with the generated buildings', () => {
     for (const { region, level } of BATTLES) {
       expect(level.palette).toBe(region.palette);
+      expect(level.season).toBe(region.season ?? DEFAULT_SEASON);
       expect(level.buildings!.length).toBeGreaterThan(0);
     }
   });
@@ -396,13 +409,14 @@ describe('the stage ramp', () => {
     expect(enemyClasses(2)).toEqual(['goblin', 'goblin']);
     expect(enemyClasses(3)).toEqual(['slime', 'slime', 'beast']);
     expect(enemyClasses(4)).toEqual(['goblin', 'goblin', 'skeleton']);
-    expect(enemyClasses(5)).toEqual(['skeleton', 'skeleton', 'bat', 'bat']);
+    expect(enemyClasses(5)).toEqual(['goblin', 'goblin', 'beast']);
+    expect(enemyClasses(6)).toEqual(['skeleton', 'skeleton', 'bat', 'bat']);
   });
 
-  it('brings in the brigands on stage 8 and the orcs on stage 9', () => {
-    expect(enemyClasses(8)).toEqual(['soldier', 'archer', 'vanguard', 'goblin', 'goblin']);
-    expect(enemyClasses(9)).toContain('orc');
-    expect([1, 2, 3, 4, 5, 6, 7, 8].some((stage) => enemyClasses(stage).includes('orc'))).toBe(false);
+  it('brings in the brigands on stage 9 and the orcs on stage 10', () => {
+    expect(enemyClasses(9)).toEqual(['soldier', 'archer', 'vanguard', 'goblin', 'goblin']);
+    expect(enemyClasses(10)).toContain('orc');
+    expect([1, 2, 3, 4, 5, 6, 7, 8, 9].some((stage) => enemyClasses(stage).includes('orc'))).toBe(false);
   });
 
   it('never fields weaker enemies than the stage before', () => {
@@ -412,19 +426,19 @@ describe('the stage ramp', () => {
     }
   });
 
-  it('ends the run on stage 11, a boss fight against the Orc Warlord', () => {
-    expect(REGION_SETTINGS.finalStage).toBe(11);
-    const finale = getStageRegion(11, REGION_SETTINGS);
+  it('ends the run on stage 13, a boss fight against the Orc Warlord', () => {
+    expect(REGION_SETTINGS.finalStage).toBe(13);
+    const finale = getStageRegion(13, REGION_SETTINGS);
     expect(finale.objective).toEqual({ kind: 'boss' });
     expect(finale.enemies.filter((group) => group.boss).map((group) => group.boss)).toEqual(['Orc Warlord']);
   });
 
-  it('fights the Red Dragon on stage 10, the last battle before the Hold', () => {
-    const roost = getStageRegion(10, REGION_SETTINGS);
+  it('fights the Red Dragon on stage 12, the last battle before the Hold', () => {
+    const roost = getStageRegion(12, REGION_SETTINGS);
     expect(roost.name).toBe("Dragon's Roost");
     expect(roost.objective).toEqual({ kind: 'boss' });
     expect(roost.enemies.filter((group) => group.boss).map((group) => group.boss)).toEqual(['Red Dragon']);
-    expect(enemyClasses(10)).toContain('dragon');
+    expect(enemyClasses(12)).toContain('dragon');
   });
 
   it('never fields fewer enemies than the stage before', () => {
