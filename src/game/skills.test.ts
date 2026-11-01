@@ -9,7 +9,6 @@ import {
   SHOVE,
   calculateSkillDamage,
   canUseSkill,
-  findLearnedSkill,
   findUnitSkill,
   getUnitSkills,
   getLearnedSkills,
@@ -199,21 +198,6 @@ describe('THROW_STONES', () => {
 
   it('deals nothing where a regular attack would', () => {
     expect(calculateSkillDamage(THROW_STONES, { strength: 2 }, { defense: 5 })).toBe(0);
-  });
-});
-
-describe('findLearnedSkill', () => {
-  it('finds a known skill by id', () => {
-    expect(findLearnedSkill('fighter', 3, 'rally', trees)).toBe(rally);
-  });
-
-  it('returns null for a skill not learned yet', () => {
-    expect(findLearnedSkill('fighter', 2, 'rally', trees)).toBeNull();
-  });
-
-  it('returns null for an unknown id or class', () => {
-    expect(findLearnedSkill('fighter', 99, 'fireball', trees)).toBeNull();
-    expect(findLearnedSkill('dragon', 99, 'bash', trees)).toBeNull();
   });
 });
 

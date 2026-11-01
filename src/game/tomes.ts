@@ -34,11 +34,6 @@ export function knowsSpell(inventory: Inventory, tome: Tome): boolean {
   return findItem(inventory, tome.teaches.spellId) !== null;
 }
 
-// The strikes left before `tome` is learned under `progress`.
-export function getUsesToLearn(progress: TomeProgress, tome: Tome): number {
-  return Math.max(0, tome.teaches.afterUses - (progress[tome.id] ?? 0));
-}
-
 // Counts one strike with `tome` and returns { progress, learned }: learned
 // is true when that strike reaches the tome's count, and the tome then
 // drops out of progress.
