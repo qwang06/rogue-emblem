@@ -35,6 +35,7 @@ describe('toPromotionScreenView', () => {
       name: 'Ada',
       fromClass: 'Villager',
       toClass: 'Sapper',
+      tier: 2,
       movement: 0,
       weaponTypes: ['physical', 'siege'],
       skill: { label: 'Blast', manaCost: 3, range: 2 },

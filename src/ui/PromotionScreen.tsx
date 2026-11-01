@@ -41,6 +41,8 @@ function Detail({ detail }: { detail: PromotionDetailView }) {
       </div>
       <p className="promotion-screen__description">{detail.description}</p>
       <dl className="promotion-screen__facts">
+        <dt>Tier</dt>
+        <dd>{detail.tier}</dd>
         <dt>Stats</dt>
         <dd>{gains.join(', ') || '–'}</dd>
         <dt>Weapons</dt>

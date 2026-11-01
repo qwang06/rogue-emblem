@@ -92,7 +92,7 @@ Carries a Wooden Sword, its Fists for when the sword breaks, a Health Potion (+5
 
 ## Promotions
 
-In Warband Mode a villager or an acolyte that has reached **level 5** can promote at camp by spending a **Master Seal** (60 gold from the merchant, or a stage reward offered once someone is a level short of promoting and the warband holds none). A villager picks one of four classes, an acolyte becomes a Mage; they're defined in `src/game/promotions.ts`. A promotion:
+In Warband Mode a villager or an acolyte that has reached **level 5** can promote at camp by spending a **Master Seal** (60 gold from the merchant, or a stage reward offered once someone is a level short of promoting and the warband holds none). A villager picks one of four tier-2 classes; an acolyte becomes a Mage, the first tier-3 class (more to come), also with a Master Seal; they're defined in `src/game/promotions.ts`. A promotion:
 
 - makes the unit that class: its growths, weapon types, XP rate and skill tree;
 - adds whatever stats the class starts above the class it promotes from, on the spot, in full (a max HP or MP gain raises the current value too), and changes MOV by the difference;
