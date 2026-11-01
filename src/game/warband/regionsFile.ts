@@ -29,7 +29,8 @@
 // north third. "finalStage" is optional: winning that stage wins the run,
 // and without it a run goes on until the warband falls. "stagesPerRegion"
 // may be left out when there's a final stage, to spread the regions evenly
-// over the run (see getRegionStages in regions.ts).
+// over the run (see getRegionStages in regions.ts). "parkedRegions" is
+// optional too: regions checked like the rest but kept out of the run.
 
 import { countEnemies, getGroupRoom, NORTH_THIRD, type EnemyGroup, type SpawnArea } from '../enemySpawns.ts';
 import type { Grid, Point } from '../grid.ts';
@@ -387,7 +388,7 @@ export function parseRegionSettings(text: string, { checkMaps = true } = {}): Re
   }
   // An old file is read in its own terms, so its errors name its keys.
   const keys = SHAPES[isOldShape(json) ? 1 : 0];
-  const root = object(json, 'settings', [keys.perRegion, 'finalStage', keys.list]);
+  const root = object(json, 'settings', [keys.perRegion, 'finalStage', keys.list, 'parkedRegions']);
   const stagesPerRegion =
     root[keys.perRegion] === undefined && root.finalStage !== undefined
       ? undefined
@@ -400,10 +401,16 @@ export function parseRegionSettings(text: string, { checkMaps = true } = {}): Re
     fail(keys.list, `must be a list of ${minRegions} to ${maxRegions} regions`);
   }
   const regions = list.map((region, i) => parseRegion(region, `${keys.list}[${i}]`));
+  const parkedList = root.parkedRegions ?? [];
+  if (!Array.isArray(parkedList)) fail('parkedRegions', 'must be a list of regions');
+  const parkedRegions = parkedList.map((region, i) => parseRegion(region, `parkedRegions[${i}]`));
 
-  regions.forEach((region, i) => {
+  const checked = [
+    ...regions.map((region, i) => ({ region, path: `${keys.list}[${i}]` })),
+    ...parkedRegions.map((region, i) => ({ region, path: `parkedRegions[${i}]` })),
+  ];
+  checked.forEach(({ region, path }) => {
     if (!checkMaps) return;
-    const path = `${keys.list}[${i}]`;
     for (const seed of CHECK_SEEDS) {
       let level: ReturnType<typeof createStageLevel>;
       try {
@@ -420,17 +427,19 @@ export function parseRegionSettings(text: string, { checkMaps = true } = {}): Re
     ...(stagesPerRegion !== undefined ? { stagesPerRegion } : {}),
     ...(finalStage !== undefined ? { finalStage } : {}),
     regions: Object.freeze(regions),
+    ...(parkedRegions.length > 0 ? { parkedRegions: Object.freeze(parkedRegions) } : {}),
   });
 }
 
 // The settings as a regions file, readable and ready to edit (see
 // formatRegionsJson).
 export function formatRegionSettings(settings: RegionSettings): string {
-  const { stagesPerRegion, finalStage, regions } = settings;
+  const { stagesPerRegion, finalStage, regions, parkedRegions } = settings;
   return formatRegionsJson({
     ...(stagesPerRegion !== undefined ? { stagesPerRegion } : {}),
     ...(finalStage !== undefined ? { finalStage } : {}),
     regions,
+    ...(parkedRegions !== undefined ? { parkedRegions } : {}),
   });
 }
 

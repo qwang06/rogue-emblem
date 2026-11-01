@@ -55,6 +55,10 @@ export interface RegionSettings {
   // The stage whose win wins the run; a run never ends in victory when
   // unset.
   finalStage?: number;
+  // Regions kept in the file but out of the run: no stage plays them, and
+  // nothing reads them yet besides the parser and the config editor's file.
+  // Somewhere to keep a region that's still being built (e.g. Starship).
+  parkedRegions?: readonly RegionConfig[];
 }
 
 // What the stages regions cover depends on: the settings, with only the

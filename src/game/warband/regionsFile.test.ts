@@ -29,6 +29,22 @@ describe('parseRegionSettings', () => {
     expect(parseRegionSettings(formatRegionSettings(settings))).toEqual(settings);
   });
 
+  it('reads parked regions apart from the run and writes them back', () => {
+    const parked = region({ name: 'Parked' });
+    const text = JSON.stringify({ stagesPerRegion: 1, regions: [region()], parkedRegions: [parked] });
+    const settings = parseRegionSettings(text);
+    expect(settings.regions.map((r) => r.name)).not.toContain('Parked');
+    expect(settings.parkedRegions?.map((r) => r.name)).toEqual(['Parked']);
+    expect(parseRegionSettings(formatRegionSettings(settings))).toEqual(settings);
+    expect(parseRegionSettings(file([region()])).parkedRegions).toBeUndefined();
+  });
+
+  it('rejects parked regions that are not a list', () => {
+    expect(() =>
+      parseRegionSettings(JSON.stringify({ stagesPerRegion: 1, regions: [region()], parkedRegions: {} })),
+    ).toThrow(/parkedRegions must be a list of regions/);
+  });
+
   it('reads every optional terrain setting and the objective', () => {
     const terrain = {
       width: 16,

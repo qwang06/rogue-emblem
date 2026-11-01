@@ -41,7 +41,7 @@ bryn (right): Add (left) or (right) to put a speaker on the other side.
 
 ## `regions.json`
 
-Warband Mode's regions. A run fights stage after stage; every `stagesPerRegion` stages it moves on to the next entry in `regions`, and once they run out every stage uses the last one. `finalStage` (optional, 1–500) is the stage whose win wins the run; the built-in file ends the run on stage 30, the Orc Warlord's hold. Without it a run goes on until the warband falls. With a `finalStage` and no `stagesPerRegion` (as the built-in file has), the regions are spread evenly over the stages before the final one, and the last region plays the final stage. Enemy group levels are relative: in battle the weakest group stands at the stage's level and the rest keep their lead over it.
+Warband Mode's regions. A run fights stage after stage; every `stagesPerRegion` stages it moves on to the next entry in `regions`, and once they run out every stage uses the last one. `finalStage` (optional, 1–500) is the stage whose win wins the run; the built-in file ends the run on stage 30, the Orc Warlord's hold. Without it a run goes on until the warband falls. With a `finalStage` and no `stagesPerRegion` (as the built-in file has), the regions are spread evenly over the stages before the final one, and the last region plays the final stage. Enemy group levels are relative: in battle the weakest group stands at the stage's level and the rest keep their lead over it. `parkedRegions` (optional) holds regions checked like the rest but kept out of the run, for ones still being built; the built-in file parks Starship there.
 
 ```json
 {
