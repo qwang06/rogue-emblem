@@ -97,7 +97,7 @@
 /* Keeps a rate without an icon (AS, RNG) lined up with those that have one. */
 .unit-info__no-icon {
   flex: none;
-  width: 16px;
+  width: 20px;
 }
 
 .unit-info__pairs dd,
