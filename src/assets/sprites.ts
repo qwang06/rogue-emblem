@@ -6,6 +6,7 @@ import gates from './gates.png';
 import ginkgoTreeGreen from './ginkgo_tree_green.png';
 import goldGinkgoTree from './gold_ginkgo_tree.png';
 import mapProps from './map-props.png';
+import mineMarker from './mine-marker.png';
 import overworldAutumn from './overworld-autumn.png';
 import overworldUnderworld from './overworld-underworld.png';
 import overworldWinter from './overworld-winter.png';
@@ -60,6 +61,7 @@ export const SPRITE_URLS: Readonly<Record<string, string>> = {
   ginkgo_tree_green: ginkgoTreeGreen,
   gold_ginkgo_tree: goldGinkgoTree,
   'map-props': mapProps,
+  'mine-marker': mineMarker,
   'ballista': ballistaIcon,
   'bite': biteIcon,
   'bone-claws': boneClawsIcon,
