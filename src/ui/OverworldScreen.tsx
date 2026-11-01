@@ -24,6 +24,7 @@ import { planTravel } from '../game/warband/runPolicy.ts';
 import { Frame } from './Frame.tsx';
 import { GlyphIcon } from './GlyphIcon.tsx';
 import { KeyHint } from './KeyHint.tsx';
+import { OverworldRoster } from './OverworldRoster.tsx';
 import { UnitSprite } from './UnitSprite.tsx';
 import { useGameStore } from './useGameStore.ts';
 import { WarbandPanel } from './WarbandPanel.tsx';
@@ -32,6 +33,7 @@ import './Overworld.css';
 const KEYS = [
   ['←→', 'Choose'],
   ['Enter', 'Travel'],
+  ['R', 'Roster'],
 ] as const;
 
 // How long the warband takes per road tile when it travels, and how long
@@ -52,7 +54,9 @@ function prefersReducedMotion(): boolean {
 // road and carries on with what's there (warbandFlow.ts). With auto play
 // on, it picks a road itself. The map is painted on a canvas (realmInk.ts,
 // inkRaster.ts) at native size and scaled up whole, with the place names,
-// route lines and sites laid over it in layers of the same size.
+// route lines and sites laid over it in layers of the same size. Roster
+// (or R) opens the roster screen over the map to manage the warband's
+// items before choosing (OverworldRoster).
 export function OverworldScreen() {
   const [run, setRun] = useState(() => loadSavedRun());
   const realm = useMemo(() => (run ? getRealm(run.seed, getActiveContent().regions) : null), [run]);
@@ -73,15 +77,27 @@ export function OverworldScreen() {
     enterRun(next);
     if (getRunScreen(next) === 'overworld') setRun(next);
   }
-  return <Overworld key={getCurrentSiteId(run)} run={run} realm={realm} onRun={carryOn} />;
+  return <Overworld key={getCurrentSiteId(run)} run={run} realm={realm} onRun={carryOn} onRoster={setRun} />;
 }
 
-function Overworld({ run, realm, onRun }: { run: RunState; realm: Realm; onRun: (run: RunState) => void }) {
+function Overworld({
+  run,
+  realm,
+  onRun,
+  onRoster,
+}: {
+  run: RunState;
+  realm: Realm;
+  onRun: (run: RunState) => void;
+  // Takes the run after the roster screen changed it (already saved).
+  onRoster: (run: RunState) => void;
+}) {
   const view = useMemo(() => toOverworldView(run, realm, getActiveContent().regions), [run, realm]);
   const ink = useMemo(() => getRealmInk(realm), [realm]);
   const autoPlay = useGameStore((state) => state.autoPlay);
   const speed = useGameStore((state) => state.autoSpeed);
   const [selected, setSelected] = useState(0);
+  const [rosterOpen, setRosterOpen] = useState(false);
   // The road the warband is walking (as the line drawn for it, in map
   // pixels), and how far along it is, from 0 to 1.
   const [walk, setWalk] = useState<{ line: readonly Point[]; t: number; siteId: string; ms: number } | null>(null);
@@ -133,8 +149,15 @@ function Overworld({ run, realm, onRun }: { run: RunState; realm: Realm; onRun: 
   }, [walk?.siteId]);
 
   // Auto play picks the road the run policy would.
+  // The roster can open while the warband stands at a site, not on the
+  // road or in a wayside event.
+  const canOpenRoster = !walk && !run.pendingEvent;
+  function openRoster() {
+    if (canOpenRoster) setRosterOpen(true);
+  }
+
   useEffect(() => {
-    if (!autoPlay || walk || view.choices.length === 0) return;
+    if (!autoPlay || walk || rosterOpen || view.choices.length === 0) return;
     const timer = window.setTimeout(() => {
       const command = planTravel(resumeRunSession(run), realm);
       if (command.type !== 'travel') return;
@@ -150,7 +173,12 @@ function Overworld({ run, realm, onRun }: { run: RunState; realm: Realm; onRun: 
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.target instanceof HTMLInputElement || walk) return;
+      if (event.target instanceof HTMLInputElement || walk || rosterOpen || run.pendingEvent) return;
+      if (event.key === 'r' || event.key === 'R') {
+        event.preventDefault();
+        openRoster();
+        return;
+      }
       const count = view.choices.length;
       if (count === 0) return;
       if (['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(event.key)) {
@@ -201,6 +229,15 @@ function Overworld({ run, realm, onRun }: { run: RunState; realm: Realm; onRun: 
           <GlyphIcon kind="gold" />
           {view.gold}
         </p>
+        <button
+          type="button"
+          className="header-button overworld__roster-button"
+          disabled={!canOpenRoster}
+          aria-expanded={rosterOpen}
+          onClick={openRoster}
+        >
+          Roster
+        </button>
       </header>
 
       <div className="overworld__viewport" ref={viewportRef}>
@@ -295,6 +332,7 @@ function Overworld({ run, realm, onRun }: { run: RunState; realm: Realm; onRun: 
       </div>
       <KeyHint className="overworld__hint" entries={KEYS} />
       {run.pendingEvent && <EventPanel run={run} autoPlay={autoPlay} onDone={onRun} />}
+      {rosterOpen && <OverworldRoster run={run} onRun={onRoster} onClose={() => setRosterOpen(false)} />}
     </div>
   );
 }
