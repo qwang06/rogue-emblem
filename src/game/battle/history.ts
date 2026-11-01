@@ -73,7 +73,8 @@ export function replay(initial: BattleState, commands: readonly BattleCommand[])
 }
 
 // The history from before the last action a unit of `team` took (its move,
-// equips and act together, or ending the phase early), dropping
+// equips and act together, with any canto after it, or ending the phase
+// early), dropping
 // everything since, e.g. the enemy phase that followed. Null when that
 // team hasn't acted since the battle started.
 export function undoLastAction(history: BattleHistory, team: Team = 'player'): BattleHistory | null {
@@ -89,8 +90,10 @@ export function undoLastAction(history: BattleHistory, team: Team = 'player'): B
     // A level up's boon goes back with the action that leveled the unit.
     if (!('unitId' in command) || command.type === 'place' || command.type === 'take-boon') continue;
     if (before.units.get(command.unitId)?.team !== team) continue;
-    // Take the unit's move and equips before its act back with it.
+    // Take the unit's move and equips before its act back with it, and a
+    // canto's move or wait (turns.ts) the act that earned it.
     let start = index;
+    while (start > 0 && stateBefore(start).turnState?.canto?.unitId === command.unitId) start -= 1;
     while (start > 0) {
       const previous = entries[start - 1].command;
       const sameTurn = (previous.type === 'move' || previous.type === 'equip') && previous.unitId === command.unitId;

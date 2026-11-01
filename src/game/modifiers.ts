@@ -73,6 +73,9 @@ export type Modifier =
   // It moves over any terrain and through any unit (see BLINK_MOVEMENT in
   // movement.ts).
   | { kind: 'blink' }
+  // A kill in its own attack lets it move this many more tiles before it's
+  // done (a canto; see grantMomentum in battle/commands.ts).
+  | { kind: 'momentum'; amount: number }
   // It strikes twice in every exchange, fast enough or not.
   | { kind: 'always-double' }
   // Its strikes never miss.

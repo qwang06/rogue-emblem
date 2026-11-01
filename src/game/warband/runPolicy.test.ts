@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { RARITY_PERCENT } from './boons.ts';
 import { Acolyte } from '../Acolyte.ts';
 import { Archer } from '../Archer.ts';
 import { HEAL_STAFF } from '../healing.ts';
@@ -245,14 +246,15 @@ describe('pickStartingRelic and pickBoonOffer', () => {
     }
   });
 
-  it('takes the boon of the best-scoring kind', () => {
+  it('takes the best-scoring boon, its kind weighed by its rarity', () => {
     const run = makeRun({ a: soldier() });
     const owing = queueLevelUpBoons(run, { ...run, roster: [{ ...run.roster[0], level: 2 }] });
     const boons = getBoonOffer(owing)!.boons;
     const command = pickBoonOffer({ run: owing, phase: 'boon' });
     expect(command.type).toBe('pick-boon');
-    const kind = boons[(command as { index: number }).index].kind;
-    for (const boon of boons) expect(BOON_SCORES[kind]).toBeGreaterThanOrEqual(BOON_SCORES[boon.kind]);
+    const score = (boon: (typeof boons)[number]) => BOON_SCORES[boon.kind] * RARITY_PERCENT[boon.rarity ?? 'common'];
+    const picked = boons[(command as { index: number }).index];
+    for (const boon of boons) expect(score(picked)).toBeGreaterThanOrEqual(score(boon));
   });
 });
 

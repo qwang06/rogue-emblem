@@ -193,3 +193,28 @@ describe('planPlayerDeployment', () => {
     ]);
   });
 });
+
+// A battle where the hero has just felled a foe with Momentum and may move
+// on (a canto), with a friend yet to act and a foe left.
+function onCanto() {
+  const hero = makeTestUnit({ team: 'player' });
+  hero.modifiers = [{ kind: 'momentum', amount: 2 }];
+  const start = createTestBattle({
+    hero: { unit: hero, at: { x: 0, y: 0 } },
+    foe: { unit: makeTestUnit({ team: 'enemy', health: 6 }), at: { x: 1, y: 0 } },
+    friend: { unit: makeTestUnit({ team: 'player' }), at: { x: 5, y: 0 } },
+    other: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 7, y: 0 } },
+  });
+  return applyCommand(start, { type: 'attack', unitId: 'hero', target: { x: 1, y: 0 } }).state;
+}
+
+describe('a canto', () => {
+  it('is waited out, and its unit planned no more', () => {
+    const state = onCanto();
+    expect(state.turnState!.canto?.unitId).toBe('hero');
+    expect(planPlayerTurn(state)).toEqual([{ type: 'wait', unitId: 'hero' }]);
+    expect(
+      getPlayerPlans(state).every((plan) => plan.commands.every((c) => !('unitId' in c) || c.unitId !== 'hero')),
+    ).toBe(true);
+  });
+});

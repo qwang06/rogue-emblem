@@ -105,3 +105,21 @@ describe('history', () => {
     });
   });
 });
+
+describe('undoLastAction with a canto', () => {
+  it("takes a canto's move back with the attack that earned it", () => {
+    const hero = makeTestUnit({ team: 'player' });
+    hero.modifiers = [{ kind: 'momentum', amount: 2 }];
+    const start = createTestBattle({
+      hero: { unit: hero, at: { x: 0, y: 0 } },
+      foe: { unit: makeTestUnit({ team: 'enemy', health: 6 }), at: { x: 1, y: 0 } },
+      other: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 7, y: 0 } },
+    });
+    const commands: BattleCommand[] = [
+      { type: 'attack', unitId: 'hero', target: { x: 1, y: 0 } },
+      { type: 'move', unitId: 'hero', to: { x: 2, y: 0 } },
+    ];
+    const history = commands.reduce((h, command) => dispatch(h, command).history, createHistory(start));
+    expect(undoLastAction(history)!.entries).toHaveLength(0);
+  });
+});

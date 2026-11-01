@@ -74,8 +74,383 @@ const SEASONS = {
   underworld: {
     grass: ([, s, l]) => (l > 0.55 && s > 0.3 ? [18, 0.85, 0.52] : [15, 0.12, clamp(l * 0.62)]),
     earth: ([h, s, l]) => [Math.max(0, h - 14), clamp(s * 0.7), clamp(l * 0.6)],
+    damage: () => UNDERWORLD_DAMAGE,
   },
 };
+
+// Hand-placed damage, by site kind, painted over a season's recolored
+// icon in order. Each step is one of:
+//   ['erase', points]          make the pixels transparent
+//   ['paint', color, points]   set the pixels to a color
+//   ['line', color, path]      a 1px line through [x, y] corners (cracks)
+//   ['fill', color, triangle]  the opaque pixels inside a triangle
+//   ['cut', triangle]          erase a triangle and outline the cut edge
+// Points are [x, y] in the 64x64 icon.
+const OUTLINE = '2a1319';
+const HOLE = '1e1616';
+const STONE = '8a7f78';
+const STONE_LIGHT = 'b3a89e';
+// A fallen stone: two light pixels over an outline, at [x, y].
+const rubble = (x, y) => [
+  ['paint', STONE_LIGHT, [[x, y]]],
+  ['paint', STONE, [[x + 1, y]]],
+  [
+    'paint',
+    OUTLINE,
+    [
+      [x, y + 1],
+      [x + 1, y + 1],
+      [x + 2, y],
+    ],
+  ],
+];
+// The underworld's fort and Hold stand half ruined: broken battlements, a
+// breach, cracks, fallen stones, and the Hold's flags and banners torn.
+const UNDERWORLD_DAMAGE = {
+  fort: [
+    // The back tower's battlements knocked down, and the left tower's.
+    [
+      'erase',
+      [
+        [29, 5],
+        [30, 5],
+        [31, 5],
+        [32, 6],
+        [33, 6],
+      ],
+    ],
+    [
+      'paint',
+      OUTLINE,
+      [
+        [30, 6],
+        [31, 6],
+        [32, 7],
+        [33, 7],
+      ],
+    ],
+    [
+      'erase',
+      [
+        [12, 16],
+        [13, 16],
+        [14, 16],
+      ],
+    ],
+    [
+      'paint',
+      OUTLINE,
+      [
+        [12, 17],
+        [13, 17],
+        [14, 17],
+      ],
+    ],
+    // The right tower's top and the left wall's corner crumbled away.
+    [
+      'cut',
+      [
+        [49, 14],
+        [56, 14],
+        [55, 22],
+      ],
+    ],
+    [
+      'cut',
+      [
+        [5, 25],
+        [11, 25],
+        [5, 33],
+      ],
+    ],
+    // A breach in the front right wall, its rim of broken stone.
+    [
+      'fill',
+      HOLE,
+      [
+        [38, 22],
+        [47, 21],
+        [42, 32],
+      ],
+    ],
+    [
+      'line',
+      OUTLINE,
+      [
+        [38, 22],
+        [42, 32],
+        [47, 21],
+      ],
+    ],
+    [
+      'paint',
+      STONE_LIGHT,
+      [
+        [39, 25],
+        [41, 30],
+        [44, 27],
+        [45, 24],
+      ],
+    ],
+    // Cracks down both front walls.
+    [
+      'line',
+      OUTLINE,
+      [
+        [13, 22],
+        [15, 25],
+        [14, 28],
+        [16, 31],
+      ],
+    ],
+    [
+      'line',
+      OUTLINE,
+      [
+        [49, 25],
+        [48, 28],
+        [50, 31],
+      ],
+    ],
+    // Stones fallen from the breach.
+    ...rubble(40, 40),
+    ...rubble(44, 41),
+    ...rubble(37, 43),
+  ],
+  hold: [
+    // Torn flags.
+    [
+      'erase',
+      [
+        [36, 2],
+        [34, 2],
+        [35, 3],
+      ],
+    ],
+    [
+      'erase',
+      [
+        [20, 12],
+        [22, 13],
+        [21, 13],
+      ],
+    ],
+    [
+      'erase',
+      [
+        [46, 10],
+        [48, 11],
+        [47, 11],
+      ],
+    ],
+    [
+      'erase',
+      [
+        [54, 25],
+        [52, 24],
+        [53, 26],
+      ],
+    ],
+    // Tattered banners: ragged hems over the stone behind, and holes.
+    [
+      'paint',
+      '4c3f3b',
+      [
+        [29, 25],
+        [30, 24],
+        [32, 25],
+        [33, 24],
+        [33, 23],
+      ],
+    ],
+    [
+      'paint',
+      HOLE,
+      [
+        [31, 18],
+        [30, 21],
+      ],
+    ],
+    [
+      'paint',
+      '614f49',
+      [
+        [17, 35],
+        [19, 34],
+        [19, 35],
+        [24, 39],
+      ],
+    ],
+    [
+      'paint',
+      HOLE,
+      [
+        [18, 30],
+        [39, 36],
+      ],
+    ],
+    [
+      'paint',
+      '4c3f3b',
+      [
+        [38, 38],
+        [40, 37],
+        [40, 38],
+        [45, 26],
+        [43, 25],
+      ],
+    ],
+    // Ragged banner hems, a bite out of the right tower's roof and the
+    // outer walls' corners crumbled.
+    [
+      'paint',
+      '4c3f3b',
+      [
+        [29, 23],
+        [29, 24],
+        [31, 25],
+        [31, 24],
+        [33, 22],
+        [32, 24],
+      ],
+    ],
+    [
+      'paint',
+      '614f49',
+      [
+        [17, 34],
+        [17, 33],
+        [18, 35],
+        [19, 33],
+        [24, 38],
+        [23, 39],
+        [25, 39],
+      ],
+    ],
+    [
+      'cut',
+      [
+        [46, 15],
+        [50, 15],
+        [50, 21],
+      ],
+    ],
+    [
+      'cut',
+      [
+        [4, 36],
+        [11, 36],
+        [4, 43],
+      ],
+    ],
+    [
+      'cut',
+      [
+        [55, 35],
+        [61, 35],
+        [61, 42],
+      ],
+    ],
+    // Holes in the tower roofs, and cracks in the keep.
+    [
+      'paint',
+      HOLE,
+      [
+        [45, 18],
+        [46, 18],
+        [45, 19],
+        [46, 19],
+        [47, 19],
+      ],
+    ],
+    [
+      'paint',
+      HOLE,
+      [
+        [17, 20],
+        [18, 20],
+        [18, 21],
+        [19, 21],
+      ],
+    ],
+    [
+      'line',
+      OUTLINE,
+      [
+        [30, 27],
+        [31, 29],
+        [30, 31],
+      ],
+    ],
+    [
+      'line',
+      OUTLINE,
+      [
+        [9, 37],
+        [10, 39],
+        [9, 41],
+      ],
+    ],
+    // Stones fallen at its foot.
+    ...rubble(14, 45),
+    ...rubble(44, 46),
+    ...rubble(51, 44),
+  ],
+};
+
+const rgbOf = (hex) => [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16));
+
+// The pixels of a 1px line through `path`'s corners.
+function linePoints(path) {
+  const points = [];
+  for (let i = 1; i < path.length; i++) {
+    const [[x0, y0], [x1, y1]] = [path[i - 1], path[i]];
+    const steps = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+    for (let t = 0; t <= steps; t++) {
+      points.push([Math.round(x0 + ((x1 - x0) * t) / steps), Math.round(y0 + ((y1 - y0) * t) / steps)]);
+    }
+  }
+  return points;
+}
+
+// The pixels inside triangle `[a, b, c]`.
+function trianglePoints([a, b, c]) {
+  const side = (p, q, r) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
+  const points = [];
+  for (let y = 0; y < 64; y++) {
+    for (let x = 0; x < 64; x++) {
+      const signs = [side(a, b, [x, y]), side(b, c, [x, y]), side(c, a, [x, y])];
+      if (signs.every((v) => v >= 0) || signs.every((v) => v <= 0)) points.push([x, y]);
+    }
+  }
+  return points;
+}
+
+// Paints `steps` (see UNDERWORLD_DAMAGE) over `rows`, in place.
+function applyDamage(rows, steps) {
+  const set = (points, px, opaqueOnly = false) => {
+    for (const [x, y] of points) if (!opaqueOnly || rows[y][x][3] > 0) rows[y][x] = px;
+  };
+  for (const step of steps) {
+    if (step[0] === 'erase') set(step[1], [0, 0, 0, 0]);
+    else if (step[0] === 'paint') set(step[2], [...rgbOf(step[1]), 255]);
+    else if (step[0] === 'line') set(linePoints(step[2]), [...rgbOf(step[1]), 255], true);
+    else if (step[0] === 'fill') set(trianglePoints(step[2]), [...rgbOf(step[1]), 255], true);
+    else if (step[0] === 'cut') {
+      const cut = trianglePoints(step[1]).filter(([x, y]) => rows[y][x][3] > 0);
+      set(cut, [0, 0, 0, 0]);
+      const edge = cut.flatMap(([x, y]) =>
+        [
+          [x + 1, y],
+          [x - 1, y],
+          [x, y + 1],
+          [x, y - 1],
+        ].filter(([nx, ny]) => rows[ny]?.[nx]?.[3] > 0),
+      );
+      set(edge, [...rgbOf(OUTLINE), 255]);
+    }
+  }
+}
 
 const config = SEASONS[season];
 if (!config) throw new Error(`Usage: recolor-sites.js <${Object.keys(SEASONS).join('|')}>`);
@@ -91,6 +466,8 @@ for (const file of fs.readdirSync(SOURCE).filter((name) => name.endsWith('.png')
       return remap ? [...toRgb(remap(hsl)), px[3]] : px;
     }),
   );
+  const damage = config.damage?.()[file.slice(0, -'.png'.length)];
+  if (damage) applyDamage(rows, damage);
   encode(path.join(outDir, file), rows);
 }
 console.log(`${SOURCE}/*.png -> ${outDir}/`);
