@@ -41,6 +41,13 @@ const BATTLES = REGION_CONFIGS.flatMap((region) =>
   SEEDS.map((seed) => ({ region, level: createStageLevel(seed, region) })),
 );
 
+// pickStageLayout's pick for every region with every seed, laid out once
+// up front (each takes up to MAP_CANDIDATES map generations) and shared by
+// the checks on what it picks.
+const PICKS = REGION_CONFIGS.flatMap((region) =>
+  SEEDS.map((seed) => ({ region, seed, picked: pickStageLayout(seed, region) })),
+);
+
 describe('createStartingWarband', () => {
   it('starts with a single villager by default', () => {
     const warband = createStartingWarband();
@@ -114,11 +121,14 @@ describe('getCandidateSeeds', () => {
 
 describe('pickStageLayout', () => {
   it('keeps the best-scoring candidate that keeps every rule, the earliest on a tie', () => {
+    // Fewer candidates than a stage uses, so laying every one out stays
+    // quick; the rule is the same for any count.
+    const candidates = 8;
     for (const region of REGION_CONFIGS) {
       for (const seed of SEEDS.slice(0, 10)) {
-        const layouts = getCandidateSeeds(seed).map((s) => layOutStage(s, region));
+        const layouts = getCandidateSeeds(seed, candidates).map((s) => layOutStage(s, region));
         const valid = layouts.filter((l) => l.problems.length === 0);
-        const picked = pickStageLayout(seed, region);
+        const picked = pickStageLayout(seed, region, candidates);
         const best = Math.min(...valid.map((l) => l.score));
         expect(picked.problems).toEqual([]);
         expect(picked.score).toBe(best);
@@ -128,9 +138,7 @@ describe('pickStageLayout', () => {
   });
 
   it('never keeps a map that breaks a rule when another candidate keeps them all', () => {
-    for (const region of REGION_CONFIGS) {
-      for (const seed of SEEDS) expect(pickStageLayout(seed, region).problems).toEqual([]);
-    }
+    for (const { picked } of PICKS) expect(picked.problems).toEqual([]);
   });
 
   it('keeps a lone candidate whatever rules it breaks', () => {
@@ -145,12 +153,10 @@ describe('pickStageLayout', () => {
   });
 
   it('never picks a worse map than the seed alone would give', () => {
-    for (const region of REGION_CONFIGS) {
-      for (const seed of SEEDS) {
-        const own = layOutStage(seed, region);
-        if (own.problems.length > 0) continue;
-        expect(pickStageLayout(seed, region).score).toBeLessThanOrEqual(own.score);
-      }
+    for (const { region, seed, picked } of PICKS) {
+      const own = layOutStage(seed, region);
+      if (own.problems.length > 0) continue;
+      expect(picked.score).toBeLessThanOrEqual(own.score);
     }
   });
 });
@@ -169,12 +175,9 @@ describe('createStageLevel', () => {
   it('lets every built-in region fight within the first turn or two', () => {
     // Most units move 5 and strike 1 tile away, so an enemy 11 or fewer
     // steps out can be struck by turn 2.
-    for (const region of REGION_CONFIGS) {
-      for (const seed of SEEDS) {
-        const { metrics } = pickStageLayout(seed, region);
-        expect(metrics.nearestEnemy).not.toBeNull();
-        expect(metrics.nearestEnemy!).toBeLessThanOrEqual(11);
-      }
+    for (const { picked } of PICKS) {
+      expect(picked.metrics.nearestEnemy).not.toBeNull();
+      expect(picked.metrics.nearestEnemy!).toBeLessThanOrEqual(11);
     }
   });
 
