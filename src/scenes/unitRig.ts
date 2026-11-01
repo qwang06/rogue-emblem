@@ -13,6 +13,7 @@ import {
   type RigSide,
   type WalkFrames,
 } from '../game/unitRig.ts';
+import { listenUntilStopped } from './sceneListeners.ts';
 
 type Sprite = Phaser.GameObjects.Sprite;
 type Part = Phaser.GameObjects.Image | Phaser.GameObjects.Sprite;
@@ -128,13 +129,13 @@ export function addUnitRig(
     saved = [];
   };
 
-  scene.events.on(Phaser.Scenes.Events.UPDATE, tick);
-  scene.events.on(Phaser.Scenes.Events.PRE_RENDER, pose);
-  scene.events.on(Phaser.Scenes.Events.RENDER, unpose);
+  const stop = listenUntilStopped(scene.events, {
+    [Phaser.Scenes.Events.UPDATE]: tick,
+    [Phaser.Scenes.Events.PRE_RENDER]: pose,
+    [Phaser.Scenes.Events.RENDER]: unpose,
+  });
   sprite.once(Phaser.GameObjects.Events.DESTROY, () => {
-    scene.events.off(Phaser.Scenes.Events.UPDATE, tick);
-    scene.events.off(Phaser.Scenes.Events.PRE_RENDER, pose);
-    scene.events.off(Phaser.Scenes.Events.RENDER, unpose);
+    stop();
     rigs.delete(sprite);
   });
 }
