@@ -47,7 +47,7 @@ One starter weapon per armed unit in the unit catalog. Fists, the Wooden Sword, 
 | Club         | physical | 1     | 2   | 75  | 0    | 2   | 1   | ∞    | Goblin                                                   |
 | Bone Claws   | physical | 1     | 2   | 80  | 0    | 1   | 1   | ∞    | Skeleton                                                 |
 | Fangs        | physical | 1     | 1   | 85  | 0    | 0   | 1   | ∞    | Bat                                                      |
-| Bite         | physical | 1     | 2   | 75  | 5    | 1   | 1   | ∞    | Beast                                                    |
+| Bite         | physical | 1     | 2   | 75  | 5    | 1   | 1   | ∞    | Beast, Whelp                                             |
 | Great Axe    | physical | 2     | 3   | 65  | 0    | 4   | 1   | ∞    | Orc                                                      |
 | Fire Breath  | physical | 1     | 4   | 75  | 0    | 0   | 1–2 | ∞    | Dragon                                                   |
 | Wooden Sword | physical | 1     | 1   | 90  | 0    | 1   | 1   | 20   | Villager                                                 |
@@ -258,7 +258,7 @@ Carries a Wooden Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
 ## Beast
 
-A specialized unit, recruited on its own (or raised by the Beast Tamer origin): a riderless winged beast (wyvern, griffin, pegasus or drake, by faction) with lots of HP and strength. It fights with its Bite and carries nothing else.
+A specialized unit, recruited on its own (or grown from the Beast Tamer origin's Whelp): a riderless winged beast (wyvern, griffin, pegasus or drake, by faction) with lots of HP and strength. It fights with its Bite and carries nothing else.
 
 | Stat | Base | Growth |
 | ---- | ---- | ------ |
@@ -284,6 +284,32 @@ A specialized unit, recruited on its own (or raised by the Beast Tamer origin): 
 Level-up skill picks: **Wing Buffet** (2 MP, range 1, half the regular hit, then pushes the foe a tile), **Roar** (2 MP, aimed at itself: no damage, every foe next to it is left Rooted) and **Pounce** (2 MP, range 1–4, leaps up to 3 tiles to land next to the foe, then the regular hit).
 
 It carries no potions.
+
+## Whelp
+
+The Beast Tamer origin's second unit: a young winged beast that hasn't grown into its wings yet. It starts about as strong as a Villager (a point less strength, but its Bite hits harder than the wooden sword), with the Beast's growths. At level 5 it grows into a Beast on its own, no Master Seal needed: it gains the stats the Beast starts above it (+3 HP, +1 MP, +3 STR, +1 SPD, +1 DEF, +1 RES, +1 MOV), which puts it where a Beast of its level would be, and learns the Beast's skills. It's never a recruit.
+
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 10   | 100%   |
+| MP   | 1    | 25%    |
+| STR  | 2    | 100%   |
+| INT  | 0    | 0%     |
+| SKL  | 2    | 25%    |
+| SPD  | 3    | 50%    |
+| LCK  | 1    | 0%     |
+| DEF  | 1    | 25%    |
+| RES  | 0    | 25%    |
+| MOV  | 5    | –      |
+
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| physical     | Bite            | 100%    |
+
+| Skill | Learned at | Mana | Range | Damage |
+| ----- | ---------- | ---- | ----- | ------ |
+
+It learns no skills and is offered no skill picks until it grows up. It carries no potions.
 
 ## Beast Rider
 

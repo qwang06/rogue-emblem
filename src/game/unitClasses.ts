@@ -15,6 +15,7 @@ import { Archer } from './Archer.ts';
 import { Bat } from './Bat.ts';
 import { Beast } from './Beast.ts';
 import { BeastRider } from './BeastRider.ts';
+import { Whelp } from './Whelp.ts';
 import { Dragon } from './Dragon.ts';
 import { Elemental, ELEMENTAL_KINDS, ELEMENTALS, elementalClassId } from './Elemental.ts';
 import { Goblin } from './Goblin.ts';
@@ -67,6 +68,7 @@ export const UNIT_CLASSES: readonly UnitClass[] = Object.freeze([
   promotedClass('sapper', (options) => new Sapper(options)),
   baseClass('scout', 'Scout', (options) => new Scout(options)),
   baseClass('beast', 'Beast', (options) => new Beast(options)),
+  baseClass('whelp', 'Whelp', (options) => new Whelp(options)),
   baseClass('beast-rider', 'Beast Rider', (options) => new BeastRider(options)),
   baseClass('siege', 'Siege', (options) => new Siege(options)),
   baseClass('ram', 'Ram', (options) => new Ram(options)),

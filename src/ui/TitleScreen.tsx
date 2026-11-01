@@ -103,7 +103,7 @@ function mainMenu(selectedIndex = 0) {
 // origins.ts), and the name of its leader: generated, with buttons (and
 // R / E) to roll another or type one. Once a won run has opened Heat, the
 // Heat level is picked next. Then the run's starting relic is picked from
-// three (twice for an origin with two picks), and the run begins.
+// three (skipped for an origin that picks none), and the run begins.
 // Training swaps in a second menu listing the unit classes; picking one
 // starts a small practice battle with that unit. Settings swaps in the
 // settings menu, whose Game Configs opens the config editor (#/configs). Works with the keyboard
@@ -223,8 +223,13 @@ export function TitleScreen() {
     );
   }
 
-  // Shows the starting relics `run` (a new one) still picks from.
+  // Shows the starting relics `run` (a new one) still picks from, or sets
+  // out when its origin picks none.
   function startRelicPick(run: RunState) {
+    if (startRunSession(run).phase !== 'relic') {
+      playRun(run);
+      return;
+    }
     setPendingRun(run);
     setView('relic');
     setMenu(createActionMenu(relicActions(run)));

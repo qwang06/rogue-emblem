@@ -117,7 +117,7 @@ describe('getStartingClassActions', () => {
     const actions = getStartingClassActions(NEW_META);
     expect(actions.map((a) => a.id)).toEqual([...BASE_ORIGINS, ...UNLOCKABLE_ORIGINS].map((c) => c.id));
     expect(actions.slice(0, BASE_ORIGINS.length)).toEqual(STARTING_CLASS_ACTIONS);
-    expect(actions.find((a) => a.id === 'sellswords')?.units).toEqual(['villager', 'scout']);
+    expect(actions.find((a) => a.id === 'beast-tamer')?.units).toEqual(['villager', 'whelp']);
     const locked = actions.slice(BASE_ORIGINS.length);
     expect(locked.every((a) => a.disabled)).toBe(true);
     expect(locked[0].description).toBe(`Unlocks at ${UNLOCKS[0].renown} renown (0 so far).`);

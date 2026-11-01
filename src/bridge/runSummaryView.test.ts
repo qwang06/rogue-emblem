@@ -18,7 +18,7 @@ const summary: RunSummary = {
     { id: 'bryn', name: 'Bryn', classId: 'archer', level: 3, kills: 2, stage: null },
   ],
   relics: ['lucky-coin'],
-  origin: 'sellswords',
+  origin: 'beast-tamer',
   heat: 0,
 };
 
@@ -45,7 +45,7 @@ describe('toRunSummaryView', () => {
     ]);
     expect(view.survivors).toBe(0);
     expect(view.relics).toEqual(['Lucky Coin']);
-    expect(view.origin).toBe('Sellswords');
+    expect(view.origin).toBe('Beast Tamer');
     expect(view.heat).toBe(0);
     expect(Object.isFrozen(view)).toBe(true);
   });

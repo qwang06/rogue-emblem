@@ -13,7 +13,7 @@ describe('getSimStarts', () => {
   });
 
   it('plays the starts at a Heat when given one', () => {
-    expect(getSimStarts(1, ['sellswords'], 2)).toEqual([{ seed: 1, classId: 'sellswords', name: 'Lead', heat: 2 }]);
+    expect(getSimStarts(1, ['militia'], 2)).toEqual([{ seed: 1, classId: 'militia', name: 'Lead', heat: 2 }]);
   });
 });
 

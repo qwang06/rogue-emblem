@@ -171,9 +171,15 @@ export interface RunCommandContext {
 }
 
 // A new run's session, about to pick the relic (or relics, see
-// getRelicPicks) it starts with.
+// getRelicPicks) it starts with; one whose origin picks none sets out.
 export function startRunSession(run: RunState): RunSession {
+  if (run.relics.length >= getRelicPicks(run)) return freeze({ run, phase: setOutPhase(run) });
   return freeze({ run, phase: 'relic' });
+}
+
+// Where a new run goes once its starting relics are picked.
+function setOutPhase(run: RunState): RunPhase {
+  return isRealmRun(run) ? 'travel' : 'battle';
 }
 
 // A session for `run` as it was saved: on the boon, recruit or reward pick
@@ -334,7 +340,7 @@ export function applyRunCommand(
       const next = Object.freeze({ ...run, relics: [...run.relics, relic.id] });
       const more = next.relics.length < getRelicPicks(next);
       return {
-        session: freeze({ run: next, phase: more ? 'relic' : isRealmRun(run) ? 'travel' : 'battle' }),
+        session: freeze({ run: next, phase: more ? 'relic' : setOutPhase(run) }),
         events: [],
       };
     }
