@@ -80,6 +80,9 @@ export interface UnitSnapshot {
 export interface PendingBoon {
   unitId: string;
   level: number;
+  // The stage the level was reached at, which the offer grows with (the
+  // run's current stage when absent).
+  stage?: number;
   gains?: Partial<Record<GrowthStat, number>>;
 }
 
@@ -515,6 +518,7 @@ function isPendingBoons(value: unknown): value is PendingBoon[] {
         typeof entry.unitId === 'string' &&
         isWholeNumber(entry.level) &&
         entry.level >= 1 &&
+        (entry.stage === undefined || (isWholeNumber(entry.stage) && entry.stage >= 1)) &&
         (entry.gains === undefined || isStatGains(entry.gains)),
     )
   );

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   calculateDamage,
+  MAX_GUARD_PERCENT,
+  scaleDamage,
   getDamageType,
   getStrikeOrder,
   getAttackRange,
@@ -753,5 +755,26 @@ describe('combat with modifiers', () => {
     const forecast = getCombatForecast(attacker, defender, { distance: 1 });
     const { strikes } = resolveCombat(attacker, defender, { distance: 1, rng: rolls(0, 0.999, 0, 0.999, 0, 0.999) });
     for (const strike of strikes) expect(strike.damage).toBe(forecast[strike.by].damage);
+  });
+});
+
+describe('scaleDamage', () => {
+  it('leaves damage alone without percent bonuses', () => {
+    expect(scaleDamage(7, 0, 0)).toBe(7);
+  });
+
+  it('adds damage-percent and takes off guard-percent, rounded', () => {
+    expect(scaleDamage(10, 50, 0)).toBe(15);
+    expect(scaleDamage(10, 0, 25)).toBe(8);
+    expect(scaleDamage(10, 50, 50)).toBe(8);
+  });
+
+  it(`never takes off more than MAX_GUARD_PERCENT`, () => {
+    expect(scaleDamage(10, 0, 500)).toBe(Math.round((10 * (100 - MAX_GUARD_PERCENT)) / 100));
+  });
+
+  it('is applied by calculateDamage after defense', () => {
+    const attacker = { strength: 10, bonus: { 'damage-percent': 50 } };
+    expect(calculateDamage(attacker, { defense: 4 })).toBe(9);
   });
 });

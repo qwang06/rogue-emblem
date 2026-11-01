@@ -39,9 +39,9 @@ describe('queueLevelUpBoons', () => {
     const run = newRun();
     const after = queueLevelUpBoons(run, leveled(run, { alden: 2, bryn: 1 }));
     expect(after.pendingBoons).toEqual([
-      { unitId: 'alden', level: 2 },
-      { unitId: 'alden', level: 3 },
-      { unitId: 'bryn', level: 2 },
+      { unitId: 'alden', level: 2, stage: 1 },
+      { unitId: 'alden', level: 3, stage: 1 },
+      { unitId: 'bryn', level: 2, stage: 1 },
     ]);
     expect(owesBoons(after)).toBe(true);
   });
@@ -51,8 +51,8 @@ describe('queueLevelUpBoons', () => {
     const once = queueLevelUpBoons(run, leveled(run, { bryn: 1 }));
     const twice = queueLevelUpBoons(once, leveled(once, { alden: 1 }));
     expect(twice.pendingBoons).toEqual([
-      { unitId: 'bryn', level: 2 },
-      { unitId: 'alden', level: 2 },
+      { unitId: 'bryn', level: 2, stage: 1 },
+      { unitId: 'alden', level: 2, stage: 1 },
     ]);
     const none = queueLevelUpBoons(run, run);
     expect(none.pendingBoons).toBeUndefined();
@@ -65,7 +65,7 @@ describe('queueLevelUpBoons', () => {
       { unitId: 'alden', level: 2 },
       { unitId: 'bryn', level: 2 },
     ]);
-    expect(after.pendingBoons).toEqual([{ unitId: 'alden', level: 3 }]);
+    expect(after.pendingBoons).toEqual([{ unitId: 'alden', level: 3, stage: 1 }]);
   });
 
   it('skips units that only joined between the two runs', () => {
@@ -83,7 +83,7 @@ describe('queueLevelUpBoons', () => {
       roster: [{ ...before, level: 2, maxHealth: before.maxHealth + 1, strength: before.strength + 1 }, run.roster[1]],
     };
     const queued = queueLevelUpBoons(run, after);
-    expect(queued.pendingBoons).toEqual([{ unitId: 'alden', level: 2, gains: { health: 1, strength: 1 } }]);
+    expect(queued.pendingBoons).toEqual([{ unitId: 'alden', level: 2, stage: 1, gains: { health: 1, strength: 1 } }]);
     const offer = getBoonOffer(queued)!;
     expect(offer.gains).toEqual({ health: 1, strength: 1 });
     expect(getBoonOffer(parseRun(serializeRun(queued))!)).toEqual(offer);
@@ -108,7 +108,7 @@ describe('getBoonOffer', () => {
     const run = queueLevelUpBoons(newRun(), leveled(newRun(), { alden: 1, bryn: 1 }));
     const without = { ...run, roster: run.roster.filter((unit) => unit.id !== 'alden') };
     expect(getBoonOffer(without)!.unit.id).toBe('bryn');
-    expect(settleBoons(without).pendingBoons).toEqual([{ unitId: 'bryn', level: 2 }]);
+    expect(settleBoons(without).pendingBoons).toEqual([{ unitId: 'bryn', level: 2, stage: 1 }]);
   });
 });
 
@@ -128,9 +128,9 @@ describe('pickBoon', () => {
     const boon = offer.boons[2];
     const after = pickBoon(run, 2);
     const alden = after.roster.find((unit) => unit.id === 'alden')!;
-    expect(alden.boons).toEqual([boon.id]);
-    expect(getTakenBoons(alden)).toEqual([boon]);
-    expect(after.pendingBoons).toEqual([{ unitId: 'bryn', level: 2 }]);
+    expect(alden.boons).toEqual([boon.entry]);
+    expect(getTakenBoons(alden).map(({ entry }) => entry)).toEqual([boon.entry]);
+    expect(after.pendingBoons).toEqual([{ unitId: 'bryn', level: 2, stage: 1 }]);
     expect(run.roster[0].boons).toBeUndefined();
   });
 

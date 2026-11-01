@@ -191,13 +191,27 @@ export function getDamageType(attacker: Pick<DamageStats, 'weapon'>): DamageType
 // Damage one hit deals: strength plus weapon might minus defense (and
 // worn armor) for a physical hit, intelligence plus might minus resistance for a
 // magical one, plus the attacker's damage bonus and minus the defender's
-// guard bonus, never below zero. Missing stats count as 0.
+// guard bonus, never below zero, then scaled by the percent bonuses
+// (scaleDamage). Missing stats count as 0.
 export function calculateDamage(attacker: DamageStats, defender: DamageStats): number {
   const { power, guard } = DAMAGE_TYPES[getDamageType(attacker)];
   const might = attacker.weapon?.might ?? 0;
   const armor = guard === 'defense' ? (defender.armorDefense ?? 0) : 0;
   const bonus = (attacker.bonus?.damage ?? 0) - (defender.bonus?.guard ?? 0);
-  return Math.max(0, (attacker[power] ?? 0) + might + bonus - (defender[guard] ?? 0) - armor);
+  const base = Math.max(0, (attacker[power] ?? 0) + might + bonus - (defender[guard] ?? 0) - armor);
+  return scaleDamage(base, attacker.bonus?.['damage-percent'] ?? 0, defender.bonus?.['guard-percent'] ?? 0);
+}
+
+// The most damage a `guard-percent` bonus can take off a hit, in percent.
+export const MAX_GUARD_PERCENT = 80;
+
+// `damage` scaled by a `damage-percent` bonus (more dealt) and a
+// `guard-percent` one (less taken, up to MAX_GUARD_PERCENT), rounded to
+// the nearest point. No bonuses leave it as it is.
+export function scaleDamage(damage: number, damagePercent: number, guardPercent: number): number {
+  if (damagePercent === 0 && guardPercent === 0) return damage;
+  const guard = Math.min(MAX_GUARD_PERCENT, Math.max(0, guardPercent));
+  return Math.max(0, Math.round((damage * (100 + Math.max(0, damagePercent)) * (100 - guard)) / 10000));
 }
 
 // What the modifier conditions read off a side (see getFighterBonus).

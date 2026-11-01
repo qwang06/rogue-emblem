@@ -22,7 +22,7 @@ import { MAX_ROSTER_SIZE, type Reward } from './rewards.ts';
 import { restoreUnit, type RunState, type UnitSnapshot } from './run.ts';
 import type { Realm, Site } from './realm/realm.ts';
 import { getTravelChoices } from './travel.ts';
-import type { Boon, BoonKind } from './boons.ts';
+import { RARITY_PERCENT, type Boon, type BoonKind } from './boons.ts';
 import { getBoonOffer } from './levelUpPicks.ts';
 import { getRecruitOffers, getRelicOffers, getRewardOffers, type RunCommand, type RunSession } from './runCommands.ts';
 
@@ -91,12 +91,15 @@ export function pickBoonOffer(session: RunSession): RunCommand {
   return { type: 'pick-boon', index: getBestBoonIndex(getBoonOffer(session.run)?.boons ?? []) };
 }
 
-// Which of `boons` the policy takes: the one whose kind scores highest in
-// BOON_SCORES (the first of equals).
-export function getBestBoonIndex(boons: readonly Pick<Boon, 'kind'>[]): number {
+// Which of `boons` the policy takes: the one whose kind's BOON_SCORES
+// times its rarity's RARITY_PERCENT is highest (the first of equals), so a
+// rarer offer can beat a better kind.
+export function getBestBoonIndex(boons: readonly Pick<Boon, 'kind' | 'rarity'>[]): number {
+  const score = (boon: Pick<Boon, 'kind' | 'rarity'>) =>
+    BOON_SCORES[boon.kind] * RARITY_PERCENT[boon.rarity ?? 'common'];
   let best = 0;
   boons.forEach((boon, index) => {
-    if (BOON_SCORES[boon.kind] > BOON_SCORES[boons[best].kind]) best = index;
+    if (score(boon) > score(boons[best])) best = index;
   });
   return best;
 }

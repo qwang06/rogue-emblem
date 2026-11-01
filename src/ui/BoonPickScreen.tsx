@@ -98,7 +98,7 @@ export function BoonPickScreen() {
               return (
                 <li
                   key={`${boon.id}-${index}`}
-                  className={`boon-pick__boon boon-pick__boon--${boon.kind}${isSelected ? ' boon-pick__boon--selected' : ''}`}
+                  className={`boon-pick__boon boon-pick__boon--${boon.kind} boon-pick__boon--${boon.rarity}${isSelected ? ' boon-pick__boon--selected' : ''}`}
                   aria-current={isSelected ? 'true' : undefined}
                   style={{ '--i': index } as CSSProperties}
                   {...menuItemPointerProps('rewardMenu', index)}
@@ -120,6 +120,9 @@ export function BoonPickScreen() {
                 </span>
                 <div className="boon-pick__detail-text">
                   <p className="boon-pick__detail-name">{selected.name}</p>
+                  <p className={`boon-pick__detail-rarity boon-pick__detail-rarity--${selected.rarity}`}>
+                    {selected.rarityLabel}
+                  </p>
                   <p className="boon-pick__detail-description">{selected.description}</p>
                   <p className="boon-pick__detail-evolves">{selected.evolves ? '✦ Completes an evolution!' : ''}</p>
                 </div>

@@ -22,7 +22,7 @@ import { describeReward, previewRewardHealth, type Reward, type RewardKind } fro
 import type { MenuAction } from '../game/actionMenu.ts';
 import { getUnitSkills } from '../game/skills.ts';
 import { getStandingCombatBonus } from '../game/modifiers.ts';
-import { findBoon, type BoonKind } from '../game/warband/boons.ts';
+import { findBoon, getTakenBoonList, type BoonKind } from '../game/warband/boons.ts';
 import { completesEvolution, findEvolution } from '../game/warband/evolutions.ts';
 import { findPromotion } from '../game/promotions.ts';
 import { findEliteAffix } from '../game/warband/elites.ts';
@@ -462,12 +462,12 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
 // one.
 function getPassiveViews(unit: Unit): PassiveView[] {
   const classPassive = findPromotion(unit.unitClass ?? '')?.passive;
-  const boons = unit.boons.map(findBoon).filter((boon) => boon?.kind === 'passive');
+  const boons = getTakenBoonList(unit.boons).filter((boon) => boon.kind === 'passive');
   const affixes = unit.eliteAffixes.map(findEliteAffix).filter((affix) => affix !== null);
   const evolutions = unit.evolutions.map(findEvolution).filter((evolution) => evolution !== null);
   return [
     ...(classPassive ? [{ id: 'class', label: classPassive.name, description: classPassive.description }] : []),
-    ...boons.map((boon) => ({ id: boon!.id, label: boon!.name, description: boon!.description })),
+    ...boons.map((boon) => ({ id: boon.id, label: boon.name, description: boon.description })),
     ...affixes.map((affix) => ({ id: affix.id, label: affix.name, description: affix.description })),
     ...evolutions.map((evolution) => ({
       id: `evolution-${evolution.id}`,

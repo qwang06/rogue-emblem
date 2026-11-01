@@ -20,6 +20,7 @@ import {
 } from './runCommands.ts';
 import {
   BOON_SCORES,
+  getBestBoonIndex,
   getDeployingUnits,
   LOW_USES,
   pickBoonOffer,
@@ -252,5 +253,22 @@ describe('pickStartingRelic and pickBoonOffer', () => {
     expect(command.type).toBe('pick-boon');
     const kind = boons[(command as { index: number }).index].kind;
     for (const boon of boons) expect(BOON_SCORES[kind]).toBeGreaterThanOrEqual(BOON_SCORES[boon.kind]);
+  });
+});
+
+describe('getBestBoonIndex', () => {
+  it('takes the best kind, unless a rarer offer outscores it', () => {
+    expect(
+      getBestBoonIndex([
+        { kind: 'stat', rarity: 'common' },
+        { kind: 'passive', rarity: 'common' },
+      ]),
+    ).toBe(1);
+    expect(
+      getBestBoonIndex([
+        { kind: 'stat', rarity: 'epic' },
+        { kind: 'passive', rarity: 'common' },
+      ]),
+    ).toBe(0);
   });
 });

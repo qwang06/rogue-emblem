@@ -13,6 +13,7 @@
 
 import type { Modifier } from '../modifiers.ts';
 import { EARTHSHAKER, INFERNO, VOLLEY } from '../skills.ts';
+import { getBoonIds } from './boons.ts';
 
 export interface Evolution {
   id: string;
@@ -157,7 +158,7 @@ export function findEvolution(id: string): Evolution | null {
 // Whether `unit`, in a warband holding `relics`, meets every part of
 // `evolution`'s recipe.
 export function hasEvolution(unit: EvolutionHolder, relics: readonly string[], evolution: Evolution): boolean {
-  const boons = unit.boons ?? [];
+  const boons = getBoonIds(unit.boons ?? []);
   return (
     evolution.boons.every((id) => boons.includes(id)) &&
     evolution.relics.every((id) => relics.includes(id)) &&

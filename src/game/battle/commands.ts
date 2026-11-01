@@ -58,7 +58,7 @@ import {
 } from '../turns.ts';
 import type { Rng } from '../combatStats.ts';
 import type { Unit } from '../Unit.ts';
-import { findBoon, isBoonEligible, takeBoon } from '../warband/boons.ts';
+import { findTakenBoon, getBoonRank, isBoonEligible, parseBoonEntry, takeBoon } from '../warband/boons.ts';
 import type { ItemSnapshot } from '../warband/run.ts';
 import type { Weapon } from '../weapons.ts';
 import { getBattleSnapshot, type BattleStage, type BattleState } from './state.ts';
@@ -392,7 +392,8 @@ function takeLevelUpBoon(draft: Draft, unitId: string, level: number, boonId: st
   if (draft.stage !== 'battle') draft.fail('the battle has not started');
   const unit = draft.unit(unitId);
   if (level > unit.level) draft.fail(`${unitId} hasn't reached level ${level}`);
-  const boon = findBoon(boonId) ?? draft.fail(`no boon ${boonId}`);
+  const boon =
+    findTakenBoon(boonId, getBoonRank(unit.boons, parseBoonEntry(boonId).id) + 1) ?? draft.fail(`no boon ${boonId}`);
   if (!isBoonEligible(unit, boon)) draft.fail(`${unitId} can't take ${boonId}`);
   takeBoon(draft.edit(unitId), boon);
 }

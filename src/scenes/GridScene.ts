@@ -3157,7 +3157,7 @@ export class GridScene extends Phaser.Scene {
     const { offer, wasLocked, onTaken } = this.battleBoon!;
     const boon = offer.boons[index];
     if (!boon) return;
-    this.dispatch({ type: 'take-boon', unitId: offer.unit.id, level: offer.level, boonId: boon.id });
+    this.dispatch({ type: 'take-boon', unitId: offer.unit.id, level: offer.level, boonId: boon.entry });
     this.battleBoon = null;
     this.inputLocked = wasLocked;
     this.publishMenu('rewardMenu', null);
