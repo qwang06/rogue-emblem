@@ -32,7 +32,8 @@ const TEAM_NOUNS: Readonly<Record<Team, string>> = { player: 'Ally', enemy: 'Ene
 // with their count, weapons with their uses left (∞ if they never break)
 // and the equipped one highlighted — long names cut short with an
 // ellipsis; left out when it has none. An enemy carrying loot (see
-// loot.ts) shows it under a "Drops" line. The team shows as the window's
+// loot.ts) shows it under a "Drops" line, and the statuses a skill left on
+// it (statuses.ts) show above that, each with its effect as a tooltip. The team shows as the window's
 // color. It sits in the corner away from the hovered unit so it never
 // covers it, and steps aside while the combat forecast (which already
 // shows both fighters) or the unit info screen (the full sheet, see
@@ -109,6 +110,16 @@ export function UnitPanel() {
             </li>
           ))}
         </ul>
+      )}
+
+      {unit.statuses.length > 0 && (
+        <p className="unit-panel__statuses">
+          {unit.statuses.map((status) => (
+            <span key={status.id} className="unit-panel__status" title={status.description}>
+              {status.label}
+            </span>
+          ))}
+        </p>
       )}
 
       {unit.loot && (

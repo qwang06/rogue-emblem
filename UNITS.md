@@ -19,6 +19,7 @@ Reference for every unit class: base stats, growth rates, weapons and skills. Ke
 - **XP rate** scales every XP gain (combat, skills, healing): a unit with a 150% rate earns 15 XP where others earn 10, rounded to the nearest point and never below 1.
 - **Skills** always hit, never crit, and the target can't counter. Their damage is the user's regular hit (weapon might included) with any bonus `STR` added, then scaled; scaled damage rounds up. Using one costs mana, earns XP like a landed hit, and spends no weapon uses. A healing skill (Mend) instead restores its power + the user's `INT` to a wounded ally in range, capped at the ally's missing HP, and earns 10 XP like a staff heal.
 - **Area skills** reach past the foe they're aimed at: the tiles on either side of it (Cleave), the tile behind it as seen from the user (Piercing Shot, Skewer), or the four tiles around it (Shrapnel, Barrage, and Prayer around the user itself). Each foe there takes the skill's damage too, worked out against it, and the user earns XP for whichever foe gives the most. Shrapnel strikes allies in its blast as well. **Tandem Strike** strikes its target twice, the second blow for half the first's damage, rounded up.
+- **Statuses** a skill leaves on a foe last until the end of that foe's team's next phase: **Rooted** can't move, **Sundered** takes 3 more damage from every hit, **Marked** has 15 less avoid. A status doesn't stack with itself.
 - **Learning skills:** a class learns its tree's skills (the tables below) by level. A promoted villager keeps the villager's Throw Stones. On top of that, a level up in Warband Mode can offer a skill pick (a skill boon), and only from the unit's own class: the "Level-up skill pick" lines below. A class without one is offered a second passive instead.
 - **Secondary skill sets** (Warband Mode, switched off for now with the Mentors menu): a unit can learn one other class's skill set at camp and knows that class's skills as it reaches their levels, as if they were its own. A mentor (a roster unit of that class that knows its skills) teaches it for 20 gold; a Mentor's Scroll, a stage reward, teaches any class's set for free. A new set replaces the old one.
 - **Shove** (Soldier, from level 1) deals no damage of its own: it pushes the adjacent foe one tile straight away from the user. Onto open ground it just slides; onto a spike trap it takes 5 damage; into deep water (not a ford) it drowns. If the map's edge, a wall, a mountain or another unit is in the way it stays put and takes 2 damage, and a unit it slams into takes 2 too. A boss holds its ground and can't be shoved. A unit knocked out by a shove is the shover's kill. Walking over a spike trap is safe.
@@ -128,7 +129,7 @@ The ranged infantry: frail but accurate. Its bow only reaches two tiles away, so
 | Throw Stones | 2          | 2    | 1–4   | Half the regular hit, rounded up |
 | Long Shot    | 2          | 2    | 1–3   | The regular hit                  |
 
-Level-up skill pick: **Piercing Shot** (3 MP, range 1–3, the regular hit, and on a foe right behind the target).
+Level-up skill picks: **Piercing Shot** (3 MP, range 1–3, the regular hit, and on a foe right behind the target) and **Pinning Shot** (2 MP, range 1–2, the regular hit, leaving the foe Rooted).
 
 Passive, **Steady Aim**: +10 hit. Carries an Iron Bow, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
@@ -189,6 +190,8 @@ The axe-wielding front line: high HP and strength, low skill, speed and luck. It
 | Throw Stones | 2          | 2    | 1–4   | Half the regular hit, rounded up                |
 | Cleave       | 2          | 3    | 1     | The regular hit, and on the foes on either side |
 
+Level-up skill pick: **Sunder** (3 MP, range 1, the regular hit with +2 STR, leaving the foe Sundered).
+
 Passive, **Heavy Swing**: +1 damage. Carries an Iron Axe, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
 ## Sapper
@@ -245,6 +248,8 @@ A specialized unit that doesn't promote, recruited or brought by the Sellswords 
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |
 
+Level-up skill pick: **Mark** (1 MP, range 1–3, no damage, leaving the foe Marked).
+
 Carries a Wooden Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
 ## Beast
@@ -271,7 +276,7 @@ A specialized unit, recruited on its own (or raised by the Beast Tamer origin): 
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |
 
-Level-up skill pick: **Wing Buffet** (2 MP, range 1, half the regular hit, then pushes the foe a tile).
+Level-up skill picks: **Wing Buffet** (2 MP, range 1, half the regular hit, then pushes the foe a tile) and **Roar** (2 MP, aimed at itself: no damage, every foe next to it is left Rooted).
 
 It carries no potions.
 

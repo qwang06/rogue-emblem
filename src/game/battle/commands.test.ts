@@ -17,7 +17,20 @@ import {
 import { createBattleState, getDeployedUnits, getRunBattleResult, type BattleState } from './state.ts';
 import { createTestBattle, makeTestUnit } from './testLevel.ts';
 import type { Modifier } from '../modifiers.ts';
-import { CLEAVE, MEND, POWER_STRIKE, PRAYER, SHOVE, SHRAPNEL, TANDEM_STRIKE, type Skill } from '../skills.ts';
+import {
+  CLEAVE,
+  MARK,
+  MEND,
+  PINNING_SHOT,
+  POWER_STRIKE,
+  PRAYER,
+  ROAR,
+  SHOVE,
+  SHRAPNEL,
+  SUNDER,
+  TANDEM_STRIKE,
+  type Skill,
+} from '../skills.ts';
 import { isDone } from '../turns.ts';
 import { setTerrain } from '../grid.ts';
 import { BUMP_DAMAGE } from '../push.ts';
@@ -579,6 +592,101 @@ describe('area and follow-up skills', () => {
       foe: { unit: foe(), at: { x: 7, y: 0 } },
     });
     expect(getSkillTargets(start.grid, start.units, 'hero', { x: 0, y: 0 }, PRAYER)).toEqual([]);
+  });
+});
+
+describe('status skills', () => {
+  const user = (skill: Skill) => {
+    const hero = makeTestUnit({ team: 'player', mana: 20 });
+    hero.modifiers = [{ kind: 'skill', skill }];
+    return hero;
+  };
+
+  it("roots a foe with Pinning Shot until the end of the foe's next phase, so it can't move", () => {
+    const start = createTestBattle({
+      hero: { unit: user(PINNING_SHOT), at: { x: 0, y: 0 } },
+      foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 2, y: 0 } },
+    });
+    const pinned = run(start, { type: 'skill', unitId: 'hero', skillId: 'pinning-shot', target: { x: 2, y: 0 } });
+    expect(pinned.events).toContainEqual({ type: 'status', unitId: 'hero', targetId: 'foe', status: 'rooted' });
+    // The player phase ended with the hero's action: the foe stays rooted
+    // through its own phase.
+    expect(pinned.state.turnState?.team).toBe('enemy');
+    expect(pinned.state.units.get('foe')!.statuses).toEqual(['rooted']);
+    expect(() =>
+      applyCommand(pinned.state, {
+        type: 'move',
+        unitId: 'foe',
+        to: { x: 3, y: 0 },
+        path: [
+          { x: 2, y: 0 },
+          { x: 3, y: 0 },
+        ],
+      }),
+    ).toThrow();
+    const after = run(pinned.state, { type: 'wait', unitId: 'foe' });
+    expect(after.state.turnState?.team).toBe('player');
+    expect(after.state.units.get('foe')!.statuses).toEqual([]);
+  });
+
+  it('lets a Sundered foe take 3 more damage from the next hit', () => {
+    const start = createTestBattle(
+      {
+        hero: { unit: user(SUNDER), at: { x: 0, y: 0 } },
+        ally: { unit: user(POWER_STRIKE), at: { x: 2, y: 1 } },
+        foe: { unit: makeTestUnit({ team: 'enemy', health: 40 }), at: { x: 1, y: 0 } },
+      },
+      { height: 2 },
+    );
+    const { state, events } = run(
+      start,
+      { type: 'skill', unitId: 'hero', skillId: 'sunder', target: { x: 1, y: 0 } },
+      {
+        type: 'move',
+        unitId: 'ally',
+        to: { x: 1, y: 1 },
+        path: [
+          { x: 2, y: 1 },
+          { x: 1, y: 1 },
+        ],
+      },
+      { type: 'skill', unitId: 'ally', skillId: 'power-strike', target: { x: 1, y: 0 } },
+    );
+    const blows = events.filter((event) => event.type === 'skill').map((event) => event.damage);
+    // Sunder: 6 + 2; Power Strike: 6 + 3, and 3 more on a Sundered foe.
+    expect(blows).toEqual([8, 12]);
+    expect(state.units.get('foe')!.health).toBe(20);
+  });
+
+  it('marks a foe without hurting it, and roars to root every foe around', () => {
+    const marked = run(
+      createTestBattle({
+        hero: { unit: user(MARK), at: { x: 0, y: 0 } },
+        foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 3, y: 0 } },
+      }),
+      { type: 'skill', unitId: 'hero', skillId: 'mark', target: { x: 3, y: 0 } },
+    );
+    expect(marked.state.units.get('foe')!).toMatchObject({ health: 20, statuses: ['marked'] });
+
+    const start = createTestBattle(
+      {
+        hero: { unit: user(ROAR), at: { x: 1, y: 1 } },
+        west: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 0, y: 1 } },
+        north: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 1, y: 0 } },
+        ally: { unit: makeTestUnit({ team: 'player' }), at: { x: 2, y: 1 } },
+        far: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 3, y: 2 } },
+      },
+      { width: 4, height: 3 },
+    );
+    const roared = run(start, { type: 'skill', unitId: 'hero', skillId: 'roar', target: { x: 1, y: 1 } });
+    const statuses = (id: string) => roared.state.units.get(id)!.statuses;
+    expect([statuses('west'), statuses('north'), statuses('ally'), statuses('far')]).toEqual([
+      ['rooted'],
+      ['rooted'],
+      [],
+      [],
+    ]);
+    expect(roared.state.units.get('west')!.health).toBe(20);
   });
 });
 

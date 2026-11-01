@@ -70,6 +70,7 @@ const POPUP_CUES: Readonly<Record<PopupKind, SoundCue>> = Object.freeze({
   enraged: 'enrage',
   drowned: 'miss',
   steadfast: 'miss',
+  status: 'enrage',
 });
 
 const PHASE_CUES = Object.freeze({ player: 'playerPhase', enemy: 'enemyPhase', guest: 'guestPhase' } as const);

@@ -43,6 +43,7 @@ import {
 } from './items.ts';
 import { getDefaultFaction, type FactionId } from './factions.ts';
 import type { Modifier } from './modifiers.ts';
+import type { StatusId } from './statuses.ts';
 import { getTomeSpell, isTome, knowsSpell, learnSpell, recordTomeUse, type TomeProgress } from './tomes.ts';
 import type { Team } from './turns.ts';
 import {
@@ -135,6 +136,9 @@ export class Unit {
   // What its relics and boons add for the battle (see modifiers.ts), set
   // by applyModifiers when a Warband run fields it.
   modifiers: readonly Modifier[] = Object.freeze([]);
+  // Statuses a skill has left on it this battle (see statuses.ts), until
+  // its team's next phase ends. Never saved.
+  statuses: readonly StatusId[] = Object.freeze([]);
   // Whether it's a monster (the monster classes set it), for modifiers
   // that only count against monsters.
   monster = false;

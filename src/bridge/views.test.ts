@@ -78,6 +78,7 @@ describe('toUnitView', () => {
       items: [],
       loot: null,
       rank: null,
+      statuses: [],
     });
   });
 
