@@ -205,11 +205,17 @@ describe('canUseSkill', () => {
 describe('getSkillActions', () => {
   it('lists each skill with its cost, disabling the ones the unit cannot afford', () => {
     const actions = getSkillActions({ mana: 5 }, [bash, rally, cleave]);
-    expect(actions).toEqual([
+    expect(actions.map(({ description: _, ...rest }) => rest)).toEqual([
       { id: 'bash', label: 'Bash', manaCost: 2, disabled: false },
       { id: 'rally', label: 'Rally', manaCost: 4, disabled: false },
       { id: 'cleave', label: 'Cleave', manaCost: 6, disabled: true },
     ]);
+  });
+
+  it('describes what each skill does', () => {
+    const actions = getSkillActions({ mana: 5 }, [POWER_STRIKE, MEND]);
+    expect(actions.map((action) => action.description)).toEqual([describeSkill(POWER_STRIKE), describeSkill(MEND)]);
+    expect(actions[0].description).toBe('Its regular hit with +3 power on a foe next to it.');
   });
 
   it('returns frozen entries', () => {

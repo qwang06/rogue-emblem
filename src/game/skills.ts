@@ -104,6 +104,7 @@ export type SkillTrees = Readonly<Record<string, readonly SkillTreeEntry[]>>;
 
 export interface SkillAction extends MenuAction {
   manaCost: number;
+  description: string; // what the skill does (describeSkill), shown for the highlighted entry
 }
 
 // The tree for unitClass; a class without one (or no class) has none.
@@ -861,8 +862,8 @@ export function canUseSkill(unit: { mana: number }, skill: Skill): boolean {
   return unit.mana >= skill.manaCost;
 }
 
-// Entries for the skill menu: each skill with its cost, disabled if the
-// unit can't afford it.
+// Entries for the skill menu: each skill with its cost and what it does,
+// disabled if the unit can't afford it.
 export function getSkillActions(unit: { mana: number }, skills: readonly Skill[]): readonly SkillAction[] {
   return Object.freeze(
     skills.map((skill) =>
@@ -870,6 +871,7 @@ export function getSkillActions(unit: { mana: number }, skills: readonly Skill[]
         id: skill.id,
         label: skill.label,
         manaCost: skill.manaCost,
+        description: describeSkill(skill),
         disabled: !canUseSkill(unit, skill),
       }),
     ),
