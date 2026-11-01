@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getCameraView, getFitZoom, getRenderSize, MAX_PIXEL_RATIO } from './camera.ts';
+import { getCameraView, getFitZoom, getFollowCenter, getRenderSize, MAX_PIXEL_RATIO } from './camera.ts';
 
 const CANVAS = { width: 960, height: 720 };
 
@@ -84,5 +84,46 @@ describe('getRenderSize', () => {
     expect(getRenderSize({ width: 100, height: 100 }, 0.5).pixelRatio).toBe(1);
     expect(getRenderSize({ width: 100, height: 100 }, 0).pixelRatio).toBe(1);
     expect(getRenderSize({ width: 0, height: 0 }, 2)).toEqual({ width: 1, height: 1, pixelRatio: 2 });
+  });
+});
+
+describe('getFollowCenter', () => {
+  const view = { width: 400, height: 300 };
+  const bounds = { x: 0, y: 0, width: 2000, height: 1000 };
+  const margin = { width: 50, height: 40 };
+  const cell = (x: number, y: number) => ({ x, y, width: 64, height: 40 });
+
+  it('stays put while the focus is well inside the view', () => {
+    expect(getFollowCenter({ x: 500, y: 400 }, cell(480, 380), view, bounds, margin)).toEqual({ x: 500, y: 400 });
+  });
+
+  it('moves just far enough to keep the focus a margin inside the right and bottom edges', () => {
+    // The view spans 300..700 x 250..550; the cell ends at 764, 590.
+    expect(getFollowCenter({ x: 500, y: 400 }, cell(700, 550), view, bounds, margin)).toEqual({
+      x: 764 + 50 - 200,
+      y: 590 + 40 - 150,
+    });
+  });
+
+  it('moves just far enough to keep the focus a margin inside the left and top edges', () => {
+    expect(getFollowCenter({ x: 500, y: 400 }, cell(310, 260), view, bounds, margin)).toEqual({
+      x: 310 - 50 + 200,
+      y: 260 - 40 + 150,
+    });
+  });
+
+  it('never shows past the bounds', () => {
+    expect(getFollowCenter({ x: 500, y: 400 }, cell(0, 0), view, bounds, margin)).toEqual({ x: 200, y: 150 });
+    expect(getFollowCenter({ x: 500, y: 400 }, cell(1936, 960), view, bounds, margin)).toEqual({ x: 1800, y: 850 });
+  });
+
+  it('centers on the bounds along an axis the view is bigger than', () => {
+    const narrow = { x: -100, y: 0, width: 300, height: 1000 };
+    expect(getFollowCenter({ x: 500, y: 400 }, cell(700, 550), view, narrow, margin).x).toBe(50);
+  });
+
+  it('centers a focus too big for the view and its margin', () => {
+    const big = { x: 100, y: 100, width: 380, height: 40 };
+    expect(getFollowCenter({ x: 900, y: 120 }, big, view, bounds, margin).x).toBe(290);
   });
 });

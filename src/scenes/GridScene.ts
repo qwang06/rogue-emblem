@@ -58,7 +58,7 @@ import {
 } from '../game/healing.ts';
 import { findUnitSkill, getSkillActions, getSkillForecast, getUnitSkills, isHealingSkill } from '../game/skills.ts';
 import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange } from '../game/combat.ts';
-import { getCameraView, getFitZoom } from '../game/camera.ts';
+import { getCameraView, getFitZoom, getFollowCenter, SCROLL_VIEW_CELLS } from '../game/camera.ts';
 import { getFramingClumps } from '../game/battlefieldFraming.ts';
 import { getCellTones } from '../game/floorTiles.ts';
 import { layOutKit, type BattlefieldKit, type KitLayer, type KitStanding } from '../game/battlefieldKit.ts';
@@ -299,6 +299,10 @@ import type { RosterMenuEntry } from '../bridge/gameStore.ts';
 // pixels; the cap is a tile 96 screen pixels big.
 const ZOOM_STEP = 1 / GRID_PX;
 const MAX_ZOOM = 3 / GRID_PX;
+// On a field too big to show whole, how close (in cells) the cursor gets to
+// the view's edge before the camera follows it, and how long that pan takes.
+const FOLLOW_MARGIN = 2;
+const FOLLOW_PAN_MS = 140;
 // How dark a battlefield's floor grid is (see renderFloorGrid).
 const FLOOR_GRID_ALPHA = 0.05;
 // The framing clumps' shade: near the camera and out of the light, so dark
@@ -503,6 +507,10 @@ export class GridScene extends Phaser.Scene {
   // clumps framing a code-drawn one.
   battlefieldKind: BattlefieldKind | null = null;
   battlefieldScene: WorldRect | null = null;
+  // Whether the field is too big to show whole, so the camera follows the
+  // cursor (followCamera), and where it's last been sent.
+  scrollingCamera = false;
+  cameraTarget: { x: number; y: number } | null = null;
   framingClumps: Phaser.GameObjects.Image[] = [];
 
   constructor() {
@@ -680,6 +688,8 @@ export class GridScene extends Phaser.Scene {
     // obstacles standing on it; any other map is drawn from its terrain.
     this.battlefieldKind = level.battlefield ?? null;
     this.battlefieldScene = null;
+    this.scrollingCamera = false;
+    this.cameraTarget = null;
     this.framingClumps = [];
     // A battlefield darkens toward the screen's edges (WebGL only).
     const cameraFX = this.cameras.main.postFX;
@@ -839,6 +849,22 @@ export class GridScene extends Phaser.Scene {
         height: this.grid.height * CELL.height + STANDING_OVERHANG,
       };
       const fit = Math.min(canvas.width / floor.width, canvas.height / floor.height);
+      // A field bigger than SCROLL_VIEW_CELLS is shown at that size's fit
+      // (never so far out the page shows past the scenery) and the camera
+      // follows the cursor across it (followCamera).
+      const shown = {
+        width: Math.min(this.grid.width, SCROLL_VIEW_CELLS.width) * CELL.width,
+        height: Math.min(this.grid.height, SCROLL_VIEW_CELLS.height) * CELL.height + STANDING_OVERHANG,
+      };
+      const viewFit = Math.min(canvas.width / shown.width, canvas.height / shown.height);
+      this.scrollingCamera = fit < viewFit;
+      this.cameraTarget = null;
+      if (this.scrollingCamera) {
+        const cover = Math.max(canvas.width / scenery.width, canvas.height / scenery.height);
+        camera.setZoom(Math.max(viewFit, cover));
+        this.followCamera(this.cursor ?? { x: 0, y: 0 }, 0);
+        return;
+      }
       const { zoom, center } = getPaintingCamera(scenery, floor, canvas, fit);
       camera.setZoom(zoom);
       camera.centerOn(center.x, center.y);
@@ -869,12 +895,53 @@ export class GridScene extends Phaser.Scene {
     this.afterCameraFit();
   }
 
+  // On a field too big to show whole (scrollingCamera), pans the camera
+  // just far enough to keep `tiles` (one tile, or all of a route)
+  // FOLLOW_MARGIN cells inside the view (getFollowCenter), over
+  // `durationMs`, then moves what's placed by screen position. Does nothing
+  // on a field shown whole.
+  followCamera(tiles: Point | readonly Point[], durationMs = FOLLOW_PAN_MS) {
+    if (!this.scrollingCamera || !this.battlefieldScene) return;
+    const list = Array.isArray(tiles) ? tiles : [tiles as Point];
+    if (list.length === 0) return;
+    const camera = this.cameras.main;
+    const canvas = this.scale.gameSize;
+    const view = { width: canvas.width / camera.zoom, height: canvas.height / camera.zoom };
+    const xs = list.map(({ x }) => x);
+    const ys = list.map(({ y }) => y);
+    const topLeft = gridToWorld(Math.min(...xs), Math.min(...ys), CELL);
+    const bottomRight = gridToWorld(Math.max(...xs) + 1, Math.max(...ys) + 1, CELL);
+    // The cells, with room above them for the head of a unit standing there.
+    const focus = {
+      x: topLeft.x,
+      y: topLeft.y - STANDING_OVERHANG,
+      width: bottomRight.x - topLeft.x,
+      height: bottomRight.y - topLeft.y + STANDING_OVERHANG,
+    };
+    const current = { x: camera.midPoint.x, y: camera.midPoint.y };
+    if (this.cameraTarget) Object.assign(current, this.cameraTarget);
+    const margin = { width: FOLLOW_MARGIN * CELL.width, height: FOLLOW_MARGIN * CELL.height };
+    const center = getFollowCenter(current, focus, view, this.battlefieldScene, margin);
+    if (this.cameraTarget && center.x === this.cameraTarget.x && center.y === this.cameraTarget.y) return;
+    this.cameraTarget = center;
+    if (durationMs <= 0) {
+      camera.panEffect.reset();
+      camera.centerOn(center.x, center.y);
+      this.afterCameraFit();
+      return;
+    }
+    camera.pan(center.x, center.y, durationMs, 'Sine.easeOut', true, (_camera: unknown, progress: number) => {
+      if (progress === 1) this.afterCameraFit();
+    });
+  }
+
   // After the camera moves: what's placed by screen position follows it.
   afterCameraFit() {
     // The camera's visible area only updates when it next renders, so move
     // an open unit menu to the refitted map then.
     this.events.once(Phaser.Scenes.Events.RENDER, () => {
       if (this.activeUnit) this.publishMenuAnchor();
+      if (this.hoveredUnit) this.publishHoveredUnit();
       if (this.rangeMode === 'attack' || this.rangeMode === 'skill') this.updateCombatForecast();
       if (this.rangeMode === 'skill') this.updatePushPreview();
       this.refreshIntents();
@@ -2504,6 +2571,8 @@ export class GridScene extends Phaser.Scene {
   takeEnemyAction(move: BattleCommand, act: BattleCommand, next: () => void = () => this.runEnemyPhase()) {
     const moved = findEvent(this.dispatch(move), 'moved')!;
     this.setCursor(moved.from.x, moved.from.y);
+    // On a big field, bring its whole route into view before it walks.
+    this.followCamera(moved.path);
     this.time.delayedCall(ENEMY_FOCUS_DELAY_MS, () => {
       this.walkSprite(this.unitSprites.get(moved.unitId)!, moved.path, () => {
         this.syncShown();
@@ -3511,6 +3580,7 @@ export class GridScene extends Phaser.Scene {
 
   setCursor(x: number, y: number) {
     this.cursor = moveCursor(this.grid, this.cursor, x - this.cursor.x, y - this.cursor.y);
+    this.followCamera(this.cursor);
     this.updateCursorSprite();
     this.updateHoveredUnit();
     if (this.rangeMode === 'attack' || this.rangeMode === 'skill') this.updateCombatForecast();
