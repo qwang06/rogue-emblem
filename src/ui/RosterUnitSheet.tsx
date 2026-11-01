@@ -11,8 +11,7 @@ const WEAPON_TYPE_LABELS = { physical: 'Physical', magical: 'Magic', siege: 'Sie
 
 // The roster screen's status sheet for the picked unit, the way a tactics
 // game's formation screen shows one: who it is (sprite, name, class,
-// level, HP/MP/EXP, movement, what it wields) beside its stats with their
-// growth rates as bars, and
+// level, HP/MP/EXP, movement, what it wields) beside its stats as bars and
 // the rates it fights with; under them its skills, and its passives and
 // quirk. The sheet keeps one size whoever it shows: the skill and passive
 // boxes have fixed heights and scroll, so paging down the roster never
@@ -74,32 +73,26 @@ function Identity({ unit }: { unit: UnitDetailView }) {
   );
 }
 
-// Each stat's value, with a bar for its growth rate (the percent chance
-// it rises on a level up), so the bars show where the unit is headed.
+// Each stat with a bar sized against the unit's highest stat (stats have
+// no caps), so the bars show the build's shape at a glance.
 function Stats({ unit }: { unit: UnitDetailView }) {
+  const highest = Math.max(1, ...unit.stats.map((stat) => stat.value));
   return (
     <div className="roster-sheet__box roster-sheet__stats">
-      <h4 className="roster-sheet__heading roster-sheet__heading--split">
-        <span>Stats</span>
-        <span className="roster-sheet__heading-note">Growth</span>
-      </h4>
+      <h4 className="roster-sheet__heading">Stats</h4>
       <dl className="roster-sheet__stat-list">
         {unit.stats.map((stat) => (
-          <div key={stat.id} className="roster-sheet__stat" title={`${stat.growth}% chance to rise on a level up`}>
+          <div key={stat.id} className="roster-sheet__stat">
             <dt>
               <StatLabel label={stat.label} />
             </dt>
-            <dd className="roster-sheet__stat-value">{stat.value}</dd>
             <span className="roster-sheet__stat-track" aria-hidden="true">
               <span
                 className="roster-sheet__stat-fill"
-                style={{ width: `${Math.min(100, Math.max(0, stat.growth))}%` }}
+                style={{ width: `${(Math.max(0, stat.value) / highest) * 100}%` }}
               />
             </span>
-            <dd className="roster-sheet__stat-growth">
-              <span className="visually-hidden">growth </span>
-              {stat.growth}%
-            </dd>
+            <dd>{stat.value}</dd>
           </div>
         ))}
       </dl>
