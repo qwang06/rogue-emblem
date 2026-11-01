@@ -9,7 +9,6 @@ import { getCombatForecast, type TargetTile } from '../combat.ts';
 import { getCell, getDistance, moveUnit, type Point } from '../grid.ts';
 import { getTeamUnitIds } from '../teams.ts';
 import { planUnitTurn } from './ai.ts';
-import type { BattleCommand } from './commands.ts';
 import type { BattleState } from './state.ts';
 
 export interface EnemyIntent {
@@ -38,31 +37,19 @@ export function getEnemyIntents(state: BattleState): EnemyIntent[] {
     const from = path[0];
     const end = path[path.length - 1];
     planned = { ...planned, grid: moveUnit(planned.grid, from, end) };
-    intents.push(getActionIntent(planned, unitId, path, act));
+    const target = act?.type === 'attack' ? findTarget(planned, act.target) : null;
+    const intent: EnemyIntent = { unitId, path, target, damage: 0, strikes: 0, hit: 0 };
+    if (target) {
+      const forecast = getCombatForecast(state.units.get(unitId)!, state.units.get(target.unitId)!, {
+        distance: getDistance(end, target),
+      }).attacker;
+      intent.damage = forecast.damage ?? 0;
+      intent.strikes = forecast.strikes;
+      intent.hit = forecast.hit ?? 0;
+    }
+    intents.push(intent);
   }
   return intents;
-}
-
-// The intent of one unit's planned turn, as the enemy phase is about to
-// play it: `state` with the unit already at the end of its route `path`,
-// and `act` what it does from there (only an attack has a target).
-export function getActionIntent(
-  state: BattleState,
-  unitId: string,
-  path: readonly Point[],
-  act: BattleCommand | undefined,
-): EnemyIntent {
-  const target = act?.type === 'attack' ? findTarget(state, act.target) : null;
-  const intent: EnemyIntent = { unitId, path, target, damage: 0, strikes: 0, hit: 0 };
-  if (target) {
-    const forecast = getCombatForecast(state.units.get(unitId)!, state.units.get(target.unitId)!, {
-      distance: getDistance(path[path.length - 1], target),
-    }).attacker;
-    intent.damage = forecast.damage ?? 0;
-    intent.strikes = forecast.strikes;
-    intent.hit = forecast.hit ?? 0;
-  }
-  return intent;
 }
 
 function findTarget(state: BattleState, tile: Point): TargetTile | null {

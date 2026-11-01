@@ -174,7 +174,7 @@ import { pickAttackPlan } from '../game/attackMove.ts';
 import { getDangerZone } from '../game/dangerZone.ts';
 import { getPauseActions } from '../game/pauseMenu.ts';
 import { planNextTurn } from '../game/battle/ai.ts';
-import { getActionIntent, getEnemyIntents, getIntentThreats, type EnemyIntent } from '../game/battle/intents.ts';
+import { getEnemyIntents, getIntentThreats, type EnemyIntent } from '../game/battle/intents.ts';
 import { getPushDirection, getPushResult } from '../game/push.ts';
 import { toIntentTagView, toPushTagView } from '../bridge/mapTagView.ts';
 import {
@@ -277,18 +277,9 @@ const DANGER_ZONE_ALPHA = 0.35;
 // onto the unit it'll strike, over the highlights and the move arrow but
 // under units.
 const INTENT_COLOR = 0xdc2626;
-const INTENT_COLOR_BRIGHT = 0xf87171;
 const INTENT_ROUTE_ALPHA = 0.5;
 const INTENT_ARROW_ALPHA = 0.9;
 const INTENT_DEPTH = 0.65;
-// The enemy phase's lock-on before a strike: the target's tile pulses red
-// under the units, and corner brackets close in on it over them (under
-// roofs, 0.8) and keep breathing until the strike plays.
-const TARGET_TILE_ALPHA = 0.4;
-const TARGET_PULSE_MS = 260;
-const TARGET_RETICLE_DEPTH = 0.79;
-const TARGET_RETICLE_CLOSE_MS = 220;
-const TARGET_RETICLE_BREATH_MS = 320;
 // Where an aimed Shove would leave its target.
 const PUSH_PREVIEW_COLOR = 0x3858b0;
 const PUSH_PREVIEW_ALPHA = 0.5;
@@ -329,10 +320,6 @@ const PHASE_BANNER_DURATION_MS = 1200;
 // Pauses in the enemy phase: on each enemy before it moves, and between enemies.
 const ENEMY_FOCUS_DELAY_MS = 250;
 const ENEMY_ACTION_DELAY_MS = 300;
-// An enemy about to strike holds on its target a little longer before it
-// moves, so the lock-on reads, and again once it's in place.
-const ENEMY_TARGET_FOCUS_MS = 450;
-const ENEMY_TARGET_HOLD_MS = 500;
 // How long auto play waits between its steps (a unit's action, a menu
 // pick, moving past a screen), so it can be followed.
 const AUTO_STEP_MS = 450;
@@ -440,7 +427,6 @@ export class GridScene extends Phaser.Scene {
   dangerZoneVisible = false;
   dangerZoneTiles: Phaser.GameObjects.Rectangle[] = [];
   intentGraphics: Phaser.GameObjects.Graphics | null = null;
-  targetLock: Phaser.GameObjects.GameObject[] = [];
   pushPreviewTiles: Phaser.GameObjects.Rectangle[] = [];
   autoElapsed = 0;
   pendingAutoCommands: BattleCommand[] = [];
@@ -706,7 +692,6 @@ export class GridScene extends Phaser.Scene {
     this.dangerZoneVisible = false; // whether every enemy's reach is shaded (toggled with D or the header button)
     this.dangerZoneTiles = []; // highlight rectangles for the danger zone
     this.intentGraphics = null; // the enemies' intent lines, drawn during the player phase
-    this.targetLock = []; // the enemy phase's lock-on on the unit about to be struck
     this.pushPreviewTiles = []; // where an aimed Shove would leave its target
     this.autoElapsed = 0; // ms since auto play's last step (see updateAutoPlay)
     this.pendingAutoCommands = [];
@@ -2408,103 +2393,20 @@ export class GridScene extends Phaser.Scene {
   // Puts the cursor on the unit, walks it along its planned route, and
   // carries out its act (an attack, or waiting) from the end of it, then
   // `next` (by default the next enemy) unless that decided the battle or
-  // ended the phase. Before an attack it locks on to its target from the
-  // start (showTargetLock), and holds there once in place, so it's plain
-  // who's about to be hit.
+  // ended the phase.
   takeEnemyAction(move: BattleCommand, act: BattleCommand, next: () => void = () => this.runEnemyPhase()) {
     const moved = findEvent(this.dispatch(move), 'moved')!;
-    const intent = getActionIntent(this.battle, moved.unitId, moved.path, act);
     this.setCursor(moved.from.x, moved.from.y);
-    if (intent.target) this.showTargetLock(intent);
-    const strike = () => {
-      this.clearTargetLock();
-      const events = this.dispatch(act);
-      this.playEvents(events, () =>
-        this.time.delayedCall(ENEMY_ACTION_DELAY_MS, () => this.continueBattle(events, next)),
-      );
-    };
-    this.time.delayedCall(intent.target ? ENEMY_TARGET_FOCUS_MS : ENEMY_FOCUS_DELAY_MS, () => {
+    this.time.delayedCall(ENEMY_FOCUS_DELAY_MS, () => {
       this.walkSprite(this.unitSprites.get(moved.unitId)!, moved.path, () => {
         this.syncShown();
         this.setCursor(moved.to.x, moved.to.y);
-        if (!intent.target) return strike();
-        // In place: just the arrow onto the target now, and its HP at stake.
-        this.showTargetLock({ ...intent, path: [moved.to] });
-        this.time.delayedCall(ENEMY_TARGET_HOLD_MS, strike);
+        const events = this.dispatch(act);
+        this.playEvents(events, () =>
+          this.time.delayedCall(ENEMY_ACTION_DELAY_MS, () => this.continueBattle(events, next)),
+        );
       });
     });
-  }
-
-  // The enemy phase's lock-on before a strike: the attacker's route and an
-  // arrow onto its target (as the player phase's intents draw them), the
-  // target's tile pulsing red, corner brackets closing in on it, and the
-  // HP it stands to lose tagged over it. Redrawing replaces the last one.
-  showTargetLock(intent: EnemyIntent) {
-    this.clearTargetLock();
-    const target = intent.target!;
-    const graphics = this.add.graphics().setDepth(INTENT_DEPTH);
-    this.drawIntent(graphics, intent);
-    const { x, y } = gridToWorld(target.x, target.y, TILE_SIZE);
-    const tile = this.add
-      .rectangle(x, y, TILE_SIZE, TILE_SIZE, INTENT_COLOR, TARGET_TILE_ALPHA)
-      .setOrigin(0, 0)
-      .setStrokeStyle(2, INTENT_COLOR)
-      .setDepth(0.42);
-    this.tweens.add({ targets: tile, alpha: { from: 1, to: 0.4 }, duration: TARGET_PULSE_MS, yoyo: true, repeat: -1 });
-    const reticle = this.drawTargetReticle(x + TILE_SIZE / 2, y + TILE_SIZE / 2);
-    this.tweens.add({
-      targets: reticle,
-      scale: { from: 1.8, to: 1 },
-      alpha: { from: 0, to: 1 },
-      duration: TARGET_RETICLE_CLOSE_MS,
-      ease: 'Quad.easeOut',
-      onComplete: () =>
-        this.tweens.add({
-          targets: reticle,
-          scale: 1.12,
-          duration: TARGET_RETICLE_BREATH_MS,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        }),
-    });
-    this.targetLock = [graphics, tile, reticle];
-    const threats = intent.strikes > 0 ? getIntentThreats(this.battle, [intent]) : [];
-    gameStore.setState({ intentTags: threats.map((threat) => toIntentTagView(threat, this.getTileAnchor(threat.at))) });
-  }
-
-  // Four red corner brackets around a tile, centred on (cx, cy) so they
-  // scale about the tile's middle.
-  drawTargetReticle(cx: number, cy: number) {
-    const half = TILE_SIZE / 2 + 1;
-    const arm = 8;
-    const reticle = this.add.graphics({ x: cx, y: cy }).setDepth(TARGET_RETICLE_DEPTH);
-    for (const [sx, sy] of [
-      [-1, -1],
-      [1, -1],
-      [1, 1],
-      [-1, 1],
-    ]) {
-      const cornerX = sx * half;
-      const cornerY = sy * half;
-      const points = [
-        new Phaser.Math.Vector2(cornerX, cornerY - sy * arm),
-        new Phaser.Math.Vector2(cornerX, cornerY),
-        new Phaser.Math.Vector2(cornerX - sx * arm, cornerY),
-      ];
-      reticle.lineStyle(4, 0x1a0505, 0.8).strokePoints(points, false);
-      reticle.lineStyle(2, INTENT_COLOR_BRIGHT, 1).strokePoints(points, false);
-    }
-    return reticle;
-  }
-
-  clearTargetLock() {
-    for (const object of this.targetLock) {
-      this.tweens.killTweensOf(object);
-      object.destroy();
-    }
-    this.targetLock = [];
-    if (gameStore.getState().intentTags.length) gameStore.setState({ intentTags: [] });
   }
 
   // Options for src/game/movement.ts: allies can be walked through, anyone
