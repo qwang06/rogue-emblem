@@ -33,15 +33,27 @@ import {
   getDistance,
   isSameTile,
   moveUnit,
+  setTerrain,
   setUnit,
   type Grid,
   type Point,
+  type Terrain,
 } from '../grid.ts';
 import { getHealAmount, getHealTargets, HEAL_EXPERIENCE, isStaff, isWounded } from '../healing.ts';
 import { canUseItem, findItem, type Consumable, type Item } from '../items.ts';
 import { claimLoot, getLootQuantity } from '../loot.ts';
 import { getMoveCost, getMovePath, getMovementRange, canMoveAlongPath, type MovementOptions } from '../movement.ts';
 import { getLeapLanding, getRetreatTile, getStrafePath } from '../skillMoves.ts';
+import {
+  addMine,
+  canBreach,
+  canLayMineOn,
+  findTrippedMine,
+  getMineDamage,
+  removeMine,
+  RUBBLE_TERRAIN,
+  type Mine,
+} from '../terrainSkills.ts';
 import { getObjectiveOutcome } from '../objectives.ts';
 import { getPushDirection, getPushResult, type PushResult } from '../push.ts';
 import { createResumableRng } from '../rng.ts';
@@ -55,6 +67,7 @@ import {
   getSkillHealAmount,
   isBuffSkill,
   isSwapSkill,
+  isTileSkill,
   isHealingSkill,
   type Skill,
 } from '../skills.ts';
@@ -167,6 +180,13 @@ export type BattleEvent =
   // A skill moved `unitId` from one tile to another without walking: a
   // leap, a strafing run, a retreat or a swap (see skillMoves.ts).
   | { type: 'relocated'; unitId: string; from: Point; to: Point }
+  // A mine skill laid a mine on `at` (terrainSkills.ts).
+  | { type: 'mine-laid'; unitId: string; at: Point }
+  // `unitId` walked onto a foe's mine on `at`, which cost it `damage` HP,
+  // leaving it `health`.
+  | { type: 'mine-tripped'; unitId: string; at: Point; damage: number; health: number }
+  // A breach skill knocked down the wall or rock on `at`, leaving `terrain`.
+  | { type: 'breached'; unitId: string; at: Point; terrain: string }
   // A defeated unit's loot went to `unitId`, or to the convoy when `stored`.
   | { type: 'loot'; unitId: string; item: Item; stored: boolean }
   | { type: 'defeated'; unitId: string; at: Point }
@@ -322,6 +342,7 @@ export function getSkillTargets(
 ): TargetTile[] {
   const user = units.get(unitId);
   if (!user) return [];
+  if (isTileSkill(skill)) return getTileSkillTargets(grid, from, skill);
   if (skill.range === 0) {
     const self = { x: from.x, y: from.y, unitId };
     return getSkillVictims(grid, units, unitId, from, skill, self).length > 0 ? [self] : [];
@@ -339,6 +360,24 @@ export function getSkillTargets(
   if (isSwapSkill(skill)) {
     const walkable = (tile: Point) => Number.isFinite(getMoveCost(getCell(grid, tile.x, tile.y)!.terrain));
     return walkable(from) ? targets.filter(walkable) : [];
+  }
+  return targets;
+}
+
+// The tiles a mine or breach skill can be aimed at from `from`, in its
+// range: empty open ground for a mine, a wall or rock for a breach. Each
+// is a TargetTile with an empty unitId.
+function getTileSkillTargets(grid: Grid, from: Point, skill: Skill): TargetTile[] {
+  const walkable = (terrain: Terrain) => Number.isFinite(getMoveCost(terrain));
+  const targets: TargetTile[] = [];
+  for (let y = from.y - skill.range; y <= from.y + skill.range; y++) {
+    for (let x = from.x - skill.range; x <= from.x + skill.range; x++) {
+      const distance = getDistance(from, { x, y });
+      const cell = getCell(grid, x, y);
+      if (!cell || distance < 1 || distance > skill.range) continue;
+      const fits = skill.breach ? canBreach(cell.terrain) : canLayMineOn(grid, { x, y }, walkable);
+      if (fits) targets.push({ x, y, unitId: '' });
+    }
   }
   return targets;
 }
@@ -383,6 +422,7 @@ class Draft {
   convoyLoot: ItemSnapshot[];
   kills: Map<string, number>;
   boss: BossState | null;
+  mines: readonly Mine[];
   readonly events: BattleEvent[] = [];
   readonly rng: Rng;
   private readonly rngState: () => number;
@@ -402,6 +442,7 @@ class Draft {
     this.convoyLoot = [...base.convoyLoot];
     this.kills = new Map(base.kills);
     this.boss = base.boss;
+    this.mines = base.mines;
     const { rng, state } = createResumableRng(base.rngState);
     this.rng = rng;
     this.rngState = state;
@@ -445,6 +486,7 @@ class Draft {
       kills: this.kills,
       rngState: this.rngState(),
       boss: this.boss,
+      mines: this.mines,
     });
   }
 }
@@ -526,6 +568,14 @@ function move(draft: Draft, unitId: string, to: Point, path?: readonly Point[]) 
     to: { x: to.x, y: to.y },
     path: route.map(({ x, y }) => ({ x, y })),
   });
+  const mine = findTrippedMine(draft.mines, route, unit.team);
+  if (mine) {
+    const victim = draft.edit(unitId);
+    const damage = getMineDamage(mine, victim.health);
+    victim.takeDamage(damage);
+    draft.mines = removeMine(draft.mines, mine);
+    draft.events.push({ type: 'mine-tripped', unitId, at: { x: mine.x, y: mine.y }, damage, health: victim.health });
+  }
 }
 
 function equip(draft: Draft, unitId: string, index: number) {
@@ -668,6 +718,10 @@ function useSkill(draft: Draft, unitId: string, skillId: string, target: Point) 
     swapWith(draft, unitId, skill, target);
     return;
   }
+  if (isTileSkill(skill)) {
+    reshapeWith(draft, unitId, skill, target);
+    return;
+  }
   let from = draft.tileOf(unitId);
   const targets = getSkillTargets(draft.grid, draft.units, unitId, from, skill);
   const tile = findTileAt(targets, target) ?? draft.fail(`no foe in reach on (${target.x}, ${target.y})`);
@@ -768,6 +822,27 @@ function relocate(draft: Draft, unitId: string, to: Point): Point {
     draft.events.push({ type: 'relocated', unitId, from, to: { x: to.x, y: to.y } });
   }
   return to;
+}
+
+// A mine or breach skill on the tile `target`: its mana is spent, then a
+// mine is laid there, or its wall or rock knocked down to open ground, and
+// the user earns a heal's XP.
+function reshapeWith(draft: Draft, unitId: string, skill: Skill, target: Point) {
+  const from = draft.tileOf(unitId);
+  const targets = getSkillTargets(draft.grid, draft.units, unitId, from, skill);
+  const tile = findTileAt(targets, target) ?? draft.fail(`can't use ${skill.id} on (${target.x}, ${target.y})`);
+  const at = { x: tile.x, y: tile.y };
+
+  draft.edit(unitId).spendMana(skill.manaCost);
+  if (skill.breach) {
+    draft.grid = setTerrain(draft.grid, at.x, at.y, RUBBLE_TERRAIN);
+    draft.events.push({ type: 'breached', unitId, at, terrain: RUBBLE_TERRAIN });
+  } else {
+    draft.mines = addMine(draft.mines, { ...at, team: draft.unit(unitId).team, damage: skill.mine! });
+    draft.events.push({ type: 'mine-laid', unitId, at });
+  }
+  grantExperience(draft, unitId, { amount: HEAL_EXPERIENCE, scaled: true });
+  finishAction(draft, unitId);
 }
 
 // A swap skill on the ally on `target`: its mana is spent, the two trade
