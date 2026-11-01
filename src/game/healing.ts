@@ -1,7 +1,7 @@
 // Pure rules for healing. A staff is an item a healer carries in its
 // inventory (see items.ts) and uses through the Heal action on a wounded
 // ally within its range: the ally regains the staff's power plus the
-// healer's magic, capped at its missing health, and the healer earns XP.
+// healer's intelligence, capped at its missing health, and the healer earns XP.
 // A staff entry's `quantity` is the uses it has left, one spent per heal,
 // and a staff that runs out breaks and is gone. Staves aren't weapons:
 // they can't attack or counter. No Phaser, no rendering, no hidden state.
@@ -11,7 +11,7 @@ import type { Grid, Point } from './grid.ts';
 import type { Inventory, InventoryEntry } from './items.ts';
 
 // A staff: { kind: 'staff', id, label, hands, power, minRange, maxRange,
-// uses }. `power` adds to the healer's magic for the health it restores.
+// uses }. `power` adds to the healer's intelligence for the health it restores.
 // Every staff takes both hands, so a unit carrying one can't wear a shield
 // (see canUseShield in items.ts).
 export interface Staff {
@@ -34,7 +34,7 @@ export interface CarriedStaff {
 
 // What a heal reads off the healer and the ally it heals.
 export interface Healer {
-  magic: number;
+  intelligence: number;
 }
 
 export interface Patient {
@@ -82,10 +82,10 @@ export function isWounded(patient: Patient): boolean {
 }
 
 // Health a heal with staff restores to patient: the staff's power plus the
-// healer's magic, capped at what the patient is missing (never below 0).
+// healer's intelligence, capped at what the patient is missing (never below 0).
 export function getHealAmount(healer: Healer, staff: Pick<Staff, 'power'>, patient: Patient): number {
   const missing = Math.max(0, patient.maxHealth - patient.health);
-  return Math.max(0, Math.min(staff.power + healer.magic, missing));
+  return Math.max(0, Math.min(staff.power + healer.intelligence, missing));
 }
 
 // The tiles of allies staff can reach from origin that `canHeal` accepts

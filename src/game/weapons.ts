@@ -15,7 +15,7 @@ import type { DamageType } from './combat.ts';
 import type { Inventory, InventoryEntry } from './items.ts';
 
 // What a class can master. Physical and siege weapons hit with strength
-// against defense, magical ones with magic against resistance; siege
+// against defense, magical ones with intelligence against resistance; siege
 // weapons are the long-range engines and bombs only siege units wield.
 export type WeaponType = 'physical' | 'magical' | 'siege';
 
@@ -156,7 +156,7 @@ export const IRON_BOW = weapon({
   uses: 40,
 });
 
-// The Fire tome: magic against resistance, near or one tile further. A
+// The Fire tome: intelligence against resistance, near or one tile further. A
 // unit that casts from it 5 times learns Fire (FIRE_SPELL) for good.
 export const FIRE = weapon({
   id: 'fire',

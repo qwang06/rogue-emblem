@@ -24,7 +24,7 @@ describe('Soldier', () => {
     const soldier = new Soldier({ team: 'enemy' });
     expect(soldier.maxHealth).toBe(SOLDIER_STATS.health);
     expect(soldier.strength).toBe(SOLDIER_STATS.strength);
-    expect(soldier.magic).toBe(SOLDIER_STATS.magic);
+    expect(soldier.intelligence).toBe(SOLDIER_STATS.intelligence);
     expect(soldier.skill).toBe(SOLDIER_STATS.skill);
     expect(soldier.speed).toBe(SOLDIER_STATS.speed);
     expect(soldier.luck).toBe(SOLDIER_STATS.luck);

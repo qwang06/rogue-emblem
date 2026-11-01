@@ -3227,7 +3227,7 @@ export class GridScene extends Phaser.Scene {
   }
 
   // Heals the wounded ally under the cursor with the staff being aimed, if
-  // it's one: the ally regains the staff's power plus the healer's magic
+  // it's one: the ally regains the staff's power plus the healer's intelligence
   // (capped at its missing health), the staff spends a use, and the healer
   // earns HEAL_EXPERIENCE.
   tryHeal() {

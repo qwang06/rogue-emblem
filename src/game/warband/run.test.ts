@@ -370,6 +370,18 @@ describe('getStageSeed', () => {
 });
 
 describe('serializeRun and parseRun', () => {
+  it('reads a save from before magic was renamed intelligence', () => {
+    const acolyte = new Acolyte({ name: 'Iris', team: 'player' });
+    acolyte.boons = ['stat-intelligence'];
+    const text = serializeRun(createRun(1, new Map([['iris', acolyte]])))
+      .replace('"intelligence"', '"magic"')
+      .replace('"stat-intelligence"', '"stat-magic"');
+    expect(text).toContain('"magic"');
+    const unit = parseRun(text)?.roster[0];
+    expect(unit?.intelligence).toBe(acolyte.intelligence);
+    expect(unit?.boons).toEqual(['stat-intelligence']);
+  });
+
   it('round-trips a run mid-way through', () => {
     const run = startingRun();
     const units = restoreRoster(run);

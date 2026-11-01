@@ -67,7 +67,7 @@ describe('toUnitView', () => {
       mana: 5,
       maxMana: 5,
       strength: 4,
-      magic: 0,
+      intelligence: 0,
       skill: 0,
       speed: 0,
       luck: 0,
@@ -235,13 +235,13 @@ describe('toUnitDetailView', () => {
     });
   });
 
-  it('powers a magical weapon with magic', () => {
+  it('powers a magical weapon with intelligence', () => {
     const unit = new Unit({
       name: 'Caster',
       team: 'player',
       health: 8,
       strength: 1,
-      magic: 4,
+      intelligence: 4,
       defense: 0,
       movement: 5,
       weaponTypes: ['magical'],
@@ -249,7 +249,7 @@ describe('toUnitDetailView', () => {
     });
     const view = toUnitDetailView(unit)!;
     expect(view.damageType).toBe('magical');
-    expect(view.attack).toBe(unit.magic + FIRE.might);
+    expect(view.attack).toBe(unit.intelligence + FIRE.might);
     expect(view.equippedWeapon).toMatchObject({ label: 'Fire Tome', range: '1–2' });
   });
 
@@ -628,8 +628,18 @@ describe('toExperienceGainView', () => {
 describe('toLevelUpView', () => {
   const levelUp = {
     level: 3,
-    gains: { health: 1, mana: 0, strength: 1, magic: 0, skill: 0, speed: 1, luck: 0, defense: 0, resistance: 0 },
-    stats: { health: 12, mana: 5, strength: 5, magic: 0, skill: 3, speed: 4, luck: 2, defense: 2, resistance: 0 },
+    gains: { health: 1, mana: 0, strength: 1, intelligence: 0, skill: 0, speed: 1, luck: 0, defense: 0, resistance: 0 },
+    stats: {
+      health: 12,
+      mana: 5,
+      strength: 5,
+      intelligence: 0,
+      skill: 3,
+      speed: 4,
+      luck: 2,
+      defense: 2,
+      resistance: 0,
+    },
     skills: [POWER_STRIKE],
   };
 
@@ -708,7 +718,7 @@ describe('toRewardAction', () => {
     const action = toRewardAction({ kind: 'recruit', unit }, 0);
     expect(action.label).toBe('Recruit Dara');
     expect(action.stats?.map(({ label }) => label)).toEqual(['HP', 'STR', 'INT', 'SKL', 'SPD', 'DEF', 'RES']);
-    expect(action.stats?.find(({ label }) => label === 'INT')?.value).toBe(unit.magic);
+    expect(action.stats?.find(({ label }) => label === 'INT')?.value).toBe(unit.intelligence);
     expect(action.sprite).toBe(getUnitSprite(unit.classId));
   });
 

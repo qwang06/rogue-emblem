@@ -40,7 +40,7 @@ export const HEALTH_BOON_AMOUNT = 4;
 const STAT_LABELS: Readonly<Partial<Record<GrowthStat, string>>> = Object.freeze({
   health: 'HP',
   strength: 'STR',
-  magic: 'INT',
+  intelligence: 'INT',
   skill: 'SKL',
   speed: 'SPD',
   luck: 'LCK',
@@ -84,7 +84,7 @@ function passive(id: string, name: string, description: string, modifiers: reado
 export const BOONS: readonly Boon[] = Object.freeze([
   statBoon('health', 'Vigor'),
   statBoon('strength', 'Might'),
-  statBoon('magic', 'Insight'),
+  statBoon('intelligence', 'Insight'),
   statBoon('skill', 'Precision'),
   statBoon('speed', 'Swiftness'),
   statBoon('luck', 'Fortune'),
@@ -146,7 +146,7 @@ export function isBoonEligible(unit: Unit, boon: Boon): boolean {
     case 'stat': {
       const stat = boon.stat!.stat;
       if (stat === 'strength' && !dealsDamage(unit, 'physical')) return false;
-      if (stat === 'magic' && !dealsDamage(unit, 'magical')) return false;
+      if (stat === 'intelligence' && !dealsDamage(unit, 'magical')) return false;
       return getStatBoonGain(unit, boon) > 0;
     }
     case 'skill':

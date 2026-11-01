@@ -101,7 +101,7 @@ describe('scoreAttack', () => {
 });
 
 describe('isSoftTarget', () => {
-  it('counts a unit fighting with magic', () => {
+  it('counts a unit fighting with intelligence', () => {
     expect(isSoftTarget({ weapon: FIRE })).toBe(true);
   });
 

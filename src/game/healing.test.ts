@@ -18,7 +18,7 @@ import { IRON_SPEAR, weaponEntry } from './weapons.ts';
 const LONG_STAFF: Staff = Object.freeze({ ...HEAL_STAFF, id: 'long-staff', minRange: 1, maxRange: 3 });
 
 describe('HEAL_STAFF', () => {
-  it('heals an adjacent ally for 2 plus magic, 20 times', () => {
+  it('heals an adjacent ally for 2 plus intelligence, 20 times', () => {
     expect(HEAL_STAFF).toMatchObject({ kind: 'staff', hands: 2, power: 2, minRange: 1, maxRange: 1, uses: 20 });
     expect(Object.isFrozen(HEAL_STAFF)).toBe(true);
   });
@@ -49,20 +49,20 @@ describe('isWounded', () => {
 });
 
 describe('getHealAmount', () => {
-  it("restores the staff's power plus the healer's magic", () => {
-    expect(getHealAmount({ magic: 3 }, HEAL_STAFF, { health: 1, maxHealth: 10 })).toBe(5);
+  it("restores the staff's power plus the healer's intelligence", () => {
+    expect(getHealAmount({ intelligence: 3 }, HEAL_STAFF, { health: 1, maxHealth: 10 })).toBe(5);
   });
 
   it('is capped at the missing health', () => {
-    expect(getHealAmount({ magic: 3 }, HEAL_STAFF, { health: 8, maxHealth: 10 })).toBe(2);
+    expect(getHealAmount({ intelligence: 3 }, HEAL_STAFF, { health: 8, maxHealth: 10 })).toBe(2);
   });
 
   it('restores nothing at full health', () => {
-    expect(getHealAmount({ magic: 3 }, HEAL_STAFF, { health: 10, maxHealth: 10 })).toBe(0);
+    expect(getHealAmount({ intelligence: 3 }, HEAL_STAFF, { health: 10, maxHealth: 10 })).toBe(0);
   });
 
-  it('still heals with no magic', () => {
-    expect(getHealAmount({ magic: 0 }, HEAL_STAFF, { health: 1, maxHealth: 10 })).toBe(2);
+  it('still heals with no intelligence', () => {
+    expect(getHealAmount({ intelligence: 0 }, HEAL_STAFF, { health: 1, maxHealth: 10 })).toBe(2);
   });
 });
 

@@ -63,7 +63,7 @@ describe('planPlayerTurn', () => {
   });
 
   it('heals a wounded ally with a staff', () => {
-    const healer = makeTestUnit({ team: 'player', weaponTypes: [], items: [staffEntry(HEAL_STAFF)], magic: 3 });
+    const healer = makeTestUnit({ team: 'player', weaponTypes: [], items: [staffEntry(HEAL_STAFF)], intelligence: 3 });
     const hurt = makeTestUnit({ team: 'player', health: 20 });
     hurt.takeDamage(12);
     const state = createTestBattle(

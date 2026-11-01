@@ -259,8 +259,8 @@ describe('calculateSkillDamage', () => {
       expect(calculateSkillDamage(strike, { strength: 4 }, { defense: 2 })).toBe(5);
     });
 
-    it("adds might to the user's magic for a magical hit", () => {
-      const mage = { strength: 0, magic: 5, weapon: { type: 'magical' as const, might: 0 } };
+    it("adds might to the user's intelligence for a magical hit", () => {
+      const mage = { strength: 0, intelligence: 5, weapon: { type: 'magical' as const, might: 0 } };
       expect(calculateSkillDamage(strike, mage, { defense: 20, resistance: 1 })).toBe(7);
     });
 
@@ -357,15 +357,17 @@ describe('MEND', () => {
     expect(isHealingSkill(POWER_STRIKE)).toBe(false);
   });
 
-  it("restores its power plus the user's magic, capped at what's missing", () => {
-    expect(getSkillHealAmount(MEND, { magic: 3 }, { health: 1, maxHealth: 20 })).toBe(5);
-    expect(getSkillHealAmount(MEND, { magic: 0 }, { health: 1, maxHealth: 20 })).toBe(2);
-    expect(getSkillHealAmount(MEND, { magic: 3 }, { health: 18, maxHealth: 20 })).toBe(2);
-    expect(getSkillHealAmount(MEND, { magic: 3 }, { health: 20, maxHealth: 20 })).toBe(0);
+  it("restores its power plus the user's intelligence, capped at what's missing", () => {
+    expect(getSkillHealAmount(MEND, { intelligence: 3 }, { health: 1, maxHealth: 20 })).toBe(5);
+    expect(getSkillHealAmount(MEND, { intelligence: 0 }, { health: 1, maxHealth: 20 })).toBe(2);
+    expect(getSkillHealAmount(MEND, { intelligence: 3 }, { health: 18, maxHealth: 20 })).toBe(2);
+    expect(getSkillHealAmount(MEND, { intelligence: 3 }, { health: 20, maxHealth: 20 })).toBe(0);
   });
 
-  it('heals nothing with no power and no magic', () => {
-    expect(getSkillHealAmount({ ...MEND, power: undefined }, { magic: 0 }, { health: 1, maxHealth: 20 })).toBe(0);
+  it('heals nothing with no power and no intelligence', () => {
+    expect(getSkillHealAmount({ ...MEND, power: undefined }, { intelligence: 0 }, { health: 1, maxHealth: 20 })).toBe(
+      0,
+    );
   });
 });
 
