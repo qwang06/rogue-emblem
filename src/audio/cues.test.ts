@@ -110,6 +110,7 @@ describe('getSoundCues', () => {
       stats: [],
       skills: [],
       boons: [],
+      banishing: false,
     };
     expect(getSoundCues(base, { ...base, boonPick })).toEqual(['levelUp']);
     expect(getSoundCues({ ...base, boonPick }, { ...base, boonPick: { ...boonPick } })).toEqual([]);

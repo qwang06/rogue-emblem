@@ -84,7 +84,7 @@ import {
   type Reward,
   type RewardLevelUp,
 } from '../game/warband/rewards.ts';
-import { getBattleBoonOffer, getBoonOffer, type BoonOffer } from '../game/warband/levelUpPicks.ts';
+import { getBattleBoonOffer, getBoonOffer, getBoonRedraws, type BoonOffer } from '../game/warband/levelUpPicks.ts';
 import { toBoonPickView } from '../bridge/boonPickView.ts';
 import {
   applyRunCommand,
@@ -438,7 +438,20 @@ export class GridScene extends Phaser.Scene {
   // A roster unit's boon pick for a level it just reached in battle (see
   // offerBattleBoons): the offer, whether input was locked when it opened
   // (it's taken mid-playback), and what follows once it's taken.
-  battleBoon: { offer: BoonOffer; wasLocked: boolean; onTaken: () => void } | null = null;
+  battleBoon: {
+    offer: BoonOffer;
+    wasLocked: boolean;
+    onTaken: () => void;
+    // How to roll the pick again: which unit and level up, and its rerolls.
+    unitId: string;
+    levelUp: LevelUpResult;
+    roll: number;
+  } | null = null;
+  // The battle's own level-up redraws (written back to the run with the
+  // battle's result): whether its free reroll is spent, and what it banished.
+  battleRedraws: { rerolled: boolean; banished: string[] } = { rerolled: false, banished: [] };
+  // Whether the level-up screen is choosing a boon to banish.
+  boonBanishing = false;
   // After the reward is taken: the run as it then stands, while the camp
   // menu (Manage Roster / Next Stage) or the roster screen is up.
   campRun: RunState | null = null;
@@ -698,6 +711,14 @@ export class GridScene extends Phaser.Scene {
     this.recruitOffer = null;
     this.boonRun = null; // the run while it owes level-up boon picks
     this.battleBoon = null; // a boon pick for a level up mid-battle
+    this.battleRedraws = {
+      rerolled:
+        this.setup.mode === 'warband' &&
+        !!this.setup.run &&
+        !getBoonRedraws(this.setup.run, this.setup.run.stage).reroll,
+      banished: [],
+    };
+    this.boonBanishing = false;
     this.rewardMenu = null; // the reward screen's menu while it's up
     this.campRun = null; // the run between a won Warband stage's reward and the next stage
     this.campMenu = null; // the camp's menu (getCampActions) while it's up
@@ -1361,8 +1382,12 @@ export class GridScene extends Phaser.Scene {
   openBoonMenu() {
     const run = this.boonRun!;
     const offer = getBoonOffer(run)!;
-    gameStore.setState({ boonPick: toBoonPickView(offer, run.relics), rewardTeam: toTeamView(run.roster) });
-    this.publishMenu('rewardMenu', createActionMenu(toBoonActions(offer, run.relics)));
+    const redraws = { ...getBoonRedraws(run), banishing: this.boonBanishing };
+    gameStore.setState({
+      boonPick: toBoonPickView(offer, run.relics, redraws),
+      rewardTeam: toTeamView(run.roster),
+    });
+    this.publishMenu('rewardMenu', createActionMenu(toBoonActions(offer, run.relics, redraws)));
     this.rewardPickOpensAt = this.time.now + BOON_PICK_GRACE_MS;
   }
 
@@ -1371,11 +1396,24 @@ export class GridScene extends Phaser.Scene {
       if (delta !== 0) this.publishMenu('rewardMenu', moveSelection(this.rewardMenu!, delta));
       return;
     }
-    const result = tryRunCommand(
-      { run: this.boonRun!, phase: 'boon' },
-      { type: 'pick-boon', index: this.rewardMenu!.selectedIndex },
-    );
+    const index = this.rewardMenu!.selectedIndex;
+    const action = this.rewardMenu!.actions[index];
+    if (!action || action.disabled) return;
+    if (action.kind === 'banish') {
+      // Banish toggles choosing which boon to banish.
+      this.boonBanishing = !this.boonBanishing;
+      this.openBoonMenu();
+      return;
+    }
+    const command: RunCommand =
+      action.kind === 'reroll'
+        ? { type: 'reroll-boons' }
+        : this.boonBanishing
+          ? { type: 'banish-boon', index }
+          : { type: 'pick-boon', index };
+    const result = tryRunCommand({ run: this.boonRun!, phase: 'boon' }, command);
     if (!result) return;
+    this.boonBanishing = false;
     const { run, phase } = result.session;
     saveRun(run);
     if (phase === 'boon') {
@@ -1465,7 +1503,7 @@ export class GridScene extends Phaser.Scene {
 
   updateRewardMenu(delta: number, confirm: boolean) {
     if (this.battleBoon) {
-      if (confirm) this.takeBattleBoon(this.rewardMenu!.selectedIndex);
+      if (confirm) this.confirmBattleBoon(this.rewardMenu!.selectedIndex);
       else if (delta !== 0) this.publishMenu('rewardMenu', moveSelection(this.rewardMenu!, delta));
       return;
     }
@@ -2442,6 +2480,8 @@ export class GridScene extends Phaser.Scene {
       const result = {
         ...getRunBattleResult(this.battle, this.takePlayTime()),
         boonsTaken: getBoonPicks(this.history),
+        boonRerolled: this.battleRedraws.rerolled && getBoonRedraws(before, before.stage).reroll,
+        banishedBoons: this.battleRedraws.banished,
       };
       const { session: finished } = finishBattleWithEvents(
         { run: before, phase: 'battle' },
@@ -3368,29 +3408,92 @@ export class GridScene extends Phaser.Scene {
   // the battle (BattleResult.boonsTaken). A level with no boon left to take
   // passes without a pick.
   offerBattleBoons(unitId: string, levelUps: readonly LevelUpResult[], onDone: () => void) {
-    const run = this.setup.mode === 'warband' ? this.setup.run : undefined;
     const offerAt = (index: number) => {
       const levelUp = levelUps[index];
       if (!levelUp) {
         onDone();
         return;
       }
-      const unit = this.battle.units.get(unitId);
-      const onRoster = run?.roster.some((snapshot) => snapshot.id === unitId);
-      const offer =
-        run && unit && onRoster ? getBattleBoonOffer(run, unitId, unit, levelUp.level, levelUp.gains) : null;
+      const offer = this.rollBattleBoon(unitId, levelUp, 0);
       if (!offer) {
         offerAt(index + 1);
         return;
       }
-      this.battleBoon = { offer, wasLocked: this.inputLocked, onTaken: () => offerAt(index + 1) };
+      this.battleBoon = {
+        offer,
+        wasLocked: this.inputLocked,
+        onTaken: () => offerAt(index + 1),
+        unitId,
+        levelUp,
+        roll: 0,
+      };
       // Free the pick's input while the action's playback waits on it.
       this.inputLocked = false;
-      gameStore.setState({ boonPick: toBoonPickView(offer, run!.relics) });
-      this.publishMenu('rewardMenu', createActionMenu(toBoonActions(offer, run!.relics)));
-      this.rewardPickOpensAt = this.time.now + BOON_PICK_GRACE_MS;
+      this.publishBattleBoon();
     };
     offerAt(0);
+  }
+
+  // The battle boon pick for `unitId`'s `levelUp` after `roll` rerolls,
+  // without the run's banished boons or the battle's, or null when the
+  // unit has none to take (or isn't on the run's roster).
+  rollBattleBoon(unitId: string, levelUp: LevelUpResult, roll: number): BoonOffer | null {
+    const run = this.setup.mode === 'warband' ? this.setup.run : undefined;
+    const unit = this.battle.units.get(unitId);
+    if (!run || !unit || !run.roster.some((snapshot) => snapshot.id === unitId)) return null;
+    const banished = [...(run.banishedBoons ?? []), ...this.battleRedraws.banished];
+    return getBattleBoonOffer(run, unitId, unit, levelUp.level, levelUp.gains, { roll, banished });
+  }
+
+  // Shows the open battle boon pick, with what it may still be redrawn
+  // with this battle.
+  publishBattleBoon() {
+    const run = (this.setup as { run: RunState }).run;
+    const { offer } = this.battleBoon!;
+    const redraws = {
+      reroll: !this.battleRedraws.rerolled,
+      banishes: Math.max(0, getBoonRedraws(run).banishes - this.battleRedraws.banished.length),
+      banishing: this.boonBanishing,
+    };
+    gameStore.setState({ boonPick: toBoonPickView(offer, run.relics, redraws) });
+    this.publishMenu('rewardMenu', createActionMenu(toBoonActions(offer, run.relics, redraws)));
+    this.rewardPickOpensAt = this.time.now + BOON_PICK_GRACE_MS;
+  }
+
+  // Confirms entry `index` of the open battle boon pick: takes a boon, or
+  // rerolls, banishes or toggles banishing.
+  confirmBattleBoon(index: number) {
+    const pick = this.battleBoon!;
+    const action = this.rewardMenu!.actions[index];
+    if (!action || action.disabled) return;
+    if (action.kind === 'banish') {
+      this.boonBanishing = !this.boonBanishing;
+      this.publishBattleBoon();
+      return;
+    }
+    if (action.kind !== 'reroll' && !this.boonBanishing) {
+      this.takeBattleBoon(index);
+      return;
+    }
+    if (action.kind === 'reroll') {
+      this.battleRedraws.rerolled = true;
+      pick.roll += 1;
+    } else {
+      this.battleRedraws.banished.push(pick.offer.boons[index].id);
+      this.boonBanishing = false;
+    }
+    const offer = this.rollBattleBoon(pick.unitId, pick.levelUp, pick.roll);
+    if (!offer) {
+      // Nothing left to offer: the level passes without a pick.
+      this.battleBoon = null;
+      this.inputLocked = pick.wasLocked;
+      this.publishMenu('rewardMenu', null);
+      gameStore.setState({ boonPick: null });
+      pick.onTaken();
+      return;
+    }
+    this.battleBoon = { ...pick, offer };
+    this.publishBattleBoon();
   }
 
   // Takes boon `index` of the open battle boon pick and plays on.

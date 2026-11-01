@@ -5,14 +5,18 @@ import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
 import { findBoon } from './boons.ts';
 import {
+  banishBoonPick,
+  BOON_BANISHES,
   getBattleBoonOffer,
   getBoonOffer,
+  getBoonRedraws,
   getBoonSeed,
   pickBoon,
   queueLevelUpBoons,
+  rerollBoonPick,
   settleBoons,
 } from './levelUpPicks.ts';
-import { createRun, parseRun, restoreUnit, serializeRun, type RunState } from './run.ts';
+import { applyBattleResult, createRun, parseRun, restoreUnit, serializeRun, type RunState } from './run.ts';
 
 function newRun(): RunState {
   return createRun(
@@ -165,5 +169,70 @@ describe('getBattleBoonOffer', () => {
     const offer = getBattleBoonOffer(run, 'alden', unit, 2, { strength: 1, speed: 0 })!;
     expect(offer.boons).toEqual(getBoonOffer(later)!.boons);
     expect(offer).toMatchObject({ level: 2, unit: { id: 'alden', level: 2 }, gains: { strength: 1 } });
+  });
+});
+
+describe('rerollBoonPick and banishBoonPick', () => {
+  const owing = () => {
+    const run = newRun();
+    return queueLevelUpBoons(run, leveled(run, { alden: 2 }));
+  };
+  const ids = (run: RunState) => getBoonOffer(run)!.boons.map((boon) => boon.id);
+
+  it('rerolls the first pick once per stage, for every pick reached at it', () => {
+    const run = owing();
+    expect(getBoonRedraws(run)).toEqual({ reroll: true, banishes: BOON_BANISHES });
+    const rerolled = rerollBoonPick(run);
+    expect(rerolled.pendingBoons![0].roll).toBe(1);
+    expect(ids(rerolled)).not.toEqual(ids(run));
+    expect(getBoonRedraws(rerolled).reroll).toBe(false);
+    // The next pick, reached at the same stage, has no free reroll left.
+    expect(() => rerollBoonPick(pickBoon(rerolled, 0))).toThrow(/spent/);
+    // It survives a save.
+    expect(ids(parseRun(serializeRun(rerolled))!)).toEqual(ids(rerolled));
+  });
+
+  it('gives each battle its own reroll, shared by the picks owed after it', () => {
+    // Back at camp after stage 1's battle, whose reroll is spent.
+    const spent = { ...owing(), stage: 2, boonRerollStage: 1 };
+    expect(getBoonRedraws(spent).reroll).toBe(false);
+    // Stage 2's battle has its own.
+    expect(getBoonRedraws(spent, 2).reroll).toBe(true);
+    expect(getBoonRedraws({ ...spent, stage: 3 }).reroll).toBe(true);
+  });
+
+  it('banishes a boon from the rest of the run and draws the offer anew', () => {
+    const run = owing();
+    const banishedId = getBoonOffer(run)!.boons[0].id;
+    const banished = banishBoonPick(run, 0);
+    expect(banished.banishedBoons).toEqual([banishedId]);
+    expect(ids(banished)).not.toContain(banishedId);
+    expect(ids(pickBoon(banished, 0))).not.toContain(banishedId);
+    expect(getBoonRedraws(banished).banishes).toBe(BOON_BANISHES - 1);
+    expect(parseRun(serializeRun(banished))!.banishedBoons).toEqual([banishedId]);
+  });
+
+  it('allows only BOON_BANISHES banishes a run', () => {
+    let run = owing();
+    for (let i = 0; i < BOON_BANISHES; i++) run = banishBoonPick(run, 0);
+    expect(() => banishBoonPick(run, 0)).toThrow(/banish/);
+  });
+
+  it('keeps banished boons out of battle picks', () => {
+    const run = newRun();
+    const unit = restoreUnit(run.roster[0]);
+    const offer = getBattleBoonOffer(run, 'alden', unit, 2)!;
+    const banished = offer.boons[0].id;
+    const after = getBattleBoonOffer(run, 'alden', unit, 2, undefined, { banished: [banished] })!;
+    expect(after.boons.map((boon) => boon.id)).not.toContain(banished);
+    const rerolled = getBattleBoonOffer(run, 'alden', unit, 2, undefined, { roll: 1 })!;
+    expect(rerolled.boons.map((boon) => boon.id)).not.toEqual(offer.boons.map((boon) => boon.id));
+  });
+
+  it("writes a battle's reroll and banishes back to the run", () => {
+    const run = newRun();
+    const after = applyBattleResult(run, { units: new Map(), boonRerolled: true, banishedBoons: ['fleet'] });
+    expect(after.boonRerollStage).toBe(run.stage);
+    expect(after.banishedBoons).toEqual(['fleet']);
   });
 });
