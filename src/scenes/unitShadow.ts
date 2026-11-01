@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { listenUntilStopped } from './sceneListeners.ts';
 import { getEllipseSpans } from '../game/pixelShapes.ts';
 import type { Point } from '../game/grid.ts';
 import { ART_FEET_Y, CAST_SHADOW, getCastShadowLayout } from '../game/sideView.ts';
@@ -63,9 +64,9 @@ export function addUnitShadow(
     : addShadow(scene, sprite.x, sprite.y, shape, UNIT_SHADOW_DEPTH);
   const follow = () => shadow.setPosition(sprite.x + box.x, sprite.y + box.y);
 
-  scene.events.on(Phaser.Scenes.Events.POST_UPDATE, follow);
+  const stop = listenUntilStopped(scene.events, { [Phaser.Scenes.Events.POST_UPDATE]: follow });
   sprite.once(Phaser.GameObjects.Events.DESTROY, () => {
-    scene.events.off(Phaser.Scenes.Events.POST_UPDATE, follow);
+    stop();
     shadow.destroy();
   });
   return shadow;
@@ -165,9 +166,9 @@ export function addCastShadow(scene: Phaser.Scene, sprite: Phaser.GameObjects.Sp
       .setVisible(sprite.visible);
   };
   follow();
-  scene.events.on(Phaser.Scenes.Events.POST_UPDATE, follow);
+  const stop = listenUntilStopped(scene.events, { [Phaser.Scenes.Events.POST_UPDATE]: follow });
   sprite.once(Phaser.GameObjects.Events.DESTROY, () => {
-    scene.events.off(Phaser.Scenes.Events.POST_UPDATE, follow);
+    stop();
     shadow.destroy();
   });
   return shadow;

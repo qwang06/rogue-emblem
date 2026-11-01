@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { listenUntilStopped } from './sceneListeners.ts';
 import { recolorAccents } from '../game/teamAccents.ts';
 import { TILE_SIZE, UNIT_TEAM_MARKS } from '../game/tileset.ts';
 import type { Team } from '../game/turns.ts';
@@ -58,9 +59,9 @@ export function addTeamRing(
     .setAlpha(alpha)
     .setDepth(RING_DEPTH);
   const follow = () => ring.setPosition(sprite.x + dx, sprite.y + dy).setVisible(sprite.visible);
-  scene.events.on(Phaser.Scenes.Events.POST_UPDATE, follow);
+  const stop = listenUntilStopped(scene.events, { [Phaser.Scenes.Events.POST_UPDATE]: follow });
   sprite.once(Phaser.GameObjects.Events.DESTROY, () => {
-    scene.events.off(Phaser.Scenes.Events.POST_UPDATE, follow);
+    stop();
     ring.destroy();
   });
   return ring;
