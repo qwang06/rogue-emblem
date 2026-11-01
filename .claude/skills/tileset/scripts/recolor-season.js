@@ -6,7 +6,7 @@
 // repo root:
 //
 //   node .claude/skills/tileset/scripts/recolor-season.js autumn src/assets/overworld.png src/assets/overworld-autumn.png
-//   node .claude/skills/tileset/scripts/recolor-season.js hell src/assets/overworld.png src/assets/overworld-hell.png
+//   node .claude/skills/tileset/scripts/recolor-season.js underworld src/assets/overworld.png src/assets/overworld-underworld.png
 
 import { decode, encode } from './dump-png.js';
 
@@ -40,7 +40,7 @@ const SEASONS = {
     bare: { T: '8f4d57', D: '5e2f36', L: 'c06a32', l: '8a3424' },
   },
   // Dead ash ground, charred meadows, black rock, and lava for water.
-  hell: {
+  underworld: {
     rules: [
       [MEADOW, { '84b14d': '3f3330', abc75c: '524240' }],
       [PEAKS, { a3a7c2: '6e5f5c', f5ffe8: 'a8968c', a47d72: '574846', 865757: '3a2f30' }],
