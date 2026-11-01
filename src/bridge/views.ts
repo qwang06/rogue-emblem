@@ -84,6 +84,8 @@ export interface StatLineView {
   id: GrowthStat;
   label: string;
   value: number;
+  // Its growth rate: the percent chance it rises on a level up.
+  growth: number;
 }
 
 // The equipped weapon's full numbers, for the unit info screen.
@@ -427,7 +429,9 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
   };
   return Object.freeze({
     ...view,
-    stats: Object.freeze(DETAIL_STATS.map(([id, label]) => Object.freeze({ id, label, value: unit[id] }))),
+    stats: Object.freeze(
+      DETAIL_STATS.map(([id, label]) => Object.freeze({ id, label, value: unit[id], growth: unit.growths[id] ?? 0 })),
+    ),
     damageType,
     attack: unit[DAMAGE_TYPES[damageType].power] + (weapon?.might ?? 0) + bonus.damage,
     hit: getHit({ ...rates, bonus }),

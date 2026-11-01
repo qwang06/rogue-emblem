@@ -28,7 +28,7 @@ import {
 } from './views.ts';
 import type { ExperienceGain } from '../game/experience.ts';
 import { POWER_STRIKE, SHIELD_BASH, SHOVE, THROW_STONES, type Skill } from '../game/skills.ts';
-import { Soldier } from '../game/Soldier.ts';
+import { Soldier, SOLDIER_GROWTHS } from '../game/Soldier.ts';
 import { Acolyte } from '../game/Acolyte.ts';
 import { advanceDialog, createDialog } from '../game/dialog.ts';
 import { HEALTH_POTION, WOODEN_SHIELD } from '../game/items.ts';
@@ -188,7 +188,12 @@ describe('toUnitDetailView', () => {
     const view = toUnitDetailView(unit)!;
     expect(view.classLabel).toBe('Soldier');
     expect(view.stats.map((stat) => stat.label)).toEqual(['STR', 'INT', 'SKL', 'SPD', 'LCK', 'DEF', 'RES']);
-    expect(view.stats[0]).toEqual({ id: 'strength', label: 'STR', value: unit.strength });
+    expect(view.stats[0]).toEqual({
+      id: 'strength',
+      label: 'STR',
+      value: unit.strength,
+      growth: SOLDIER_GROWTHS.strength,
+    });
   });
 
   it('leaves the class blank for a unit without one', () => {

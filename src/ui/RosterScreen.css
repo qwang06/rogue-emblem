@@ -257,7 +257,7 @@
 
 .roster-sheet__stat {
   display: grid;
-  grid-template-columns: 2.6rem minmax(0, 1fr) 2.6rem;
+  grid-template-columns: 2.4rem 2rem minmax(0, 1fr) 2.4rem;
   align-items: center;
   gap: 6px;
   line-height: 1.3;
@@ -265,6 +265,20 @@
 
 .roster-sheet__stat dt {
   font-weight: 700;
+  color: var(--fg-dim);
+}
+
+.roster-sheet__heading--split {
+  display: flex;
+  justify-content: space-between;
+}
+
+.roster-sheet__heading-note {
+  color: var(--fg-dim);
+}
+
+.roster-sheet__stat .roster-sheet__stat-growth {
+  font-size: 0.6875rem;
   color: var(--fg-dim);
 }
 
