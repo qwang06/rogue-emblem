@@ -1,7 +1,6 @@
 import { gameCommands } from '../bridge/commands.ts';
 import type { UnitDetailView } from '../bridge/views.ts';
 import { getExperienceForLevel } from '../game/experience.ts';
-import { GlyphIcon } from './GlyphIcon.tsx';
 import { ItemIcon } from './ItemIcon.tsx';
 import { getRankLabel, RankBadge } from './RankBadge.tsx';
 import { StatIcon, type StatIconKind } from './StatIcon.tsx';
@@ -198,11 +197,8 @@ function Combat({ unit }: { unit: UnitDetailView }) {
           {unit.skills.map((skill) => (
             <li key={skill.id}>
               <span>{skill.label}</span>
-              <span className="unit-info__skill-cost" title={`${skill.manaCost} MP, range ${skill.range}`}>
-                <GlyphIcon kind="mp" />
-                {skill.manaCost}
-                <GlyphIcon kind="range" />
-                {skill.range}
+              <span className="unit-info__skill-cost" title={`Costs ${skill.manaCost} MP, range ${skill.range}`}>
+                {skill.manaCost} MP · Rng {skill.range}
               </span>
             </li>
           ))}
