@@ -40,6 +40,37 @@
   height: 100%;
 }
 
+/* A unit's name gets the row's whole width; its level and HP share the
+   line under it. */
+.roster-layout__units .roster-screen__unit {
+  flex: 1;
+}
+
+.roster-layout__unit-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.roster-layout__unit-line .roster-screen__meta {
+  flex: none;
+}
+
+/* The HP bar takes what's left of the line, the count beside it. */
+.roster-layout__unit-line .roster-screen__hp {
+  flex: 1;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.roster-layout__unit-line .roster-screen__hp-bar {
+  flex: 1;
+  width: auto;
+  min-width: 1rem;
+}
+
 .roster-layout__units .roster-screen__name {
   font-size: 0.875rem;
 }

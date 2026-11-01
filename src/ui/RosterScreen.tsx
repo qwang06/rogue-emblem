@@ -57,7 +57,8 @@ function HealthGauge({ health, maxHealth }: { health: number; maxHealth: number 
 
 // Warband Mode's roster screen between stages (see
 // src/game/warband/rosterScreen.ts), laid out like a tactics game's
-// formation screen: the units down the left; beside them the picked unit's
+// formation screen: the units down the left (sprite, name, level and HP;
+// the sprite already shows the class, which the sheet names); beside them the picked unit's
 // full status sheet (who it is, its stats, the rates it fights with, its
 // skills and passives, RosterUnitSheet), and under the sheet its inventory
 // and the convoy side by side. Moving down the unit list pages through
@@ -95,14 +96,18 @@ export function RosterScreen() {
                       aria-current={selected ? 'true' : undefined}
                       {...pointerProps('units', index)}
                     >
-                      <UnitSprite sprite={unit.sprite} />
+                      <span className="roster-screen__sprite" title={unit.classLabel}>
+                        <UnitSprite sprite={unit.sprite} />
+                      </span>
                       <span className="roster-screen__unit">
                         <span className="roster-screen__name">{unit.name}</span>
-                        <span className="roster-screen__meta">
-                          {unit.classLabel} · Lv {unit.level}
+                        <span className="roster-layout__unit-line">
+                          <span className="roster-screen__meta">
+                            <span className="visually-hidden">{unit.classLabel} </span>Lv {unit.level}
+                          </span>
+                          <HealthGauge health={unit.health} maxHealth={unit.maxHealth} />
                         </span>
                       </span>
-                      <HealthGauge health={unit.health} maxHealth={unit.maxHealth} />
                     </li>
                   );
                 })}
