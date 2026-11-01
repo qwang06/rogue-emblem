@@ -78,6 +78,13 @@
      4-pixel-tall track, the bar's own height. */
   --trough-width: calc(2 * var(--px)) calc(3 * var(--px)) calc(3 * var(--px));
   --trough: url('../assets/ui/bar-frame.png') 2 3 3 fill / var(--trough-width) stretch;
+  /* A gauge's fill: the asset sheet's two-tone bar strips, a light row
+     over a dark one. */
+  --hp-fill: linear-gradient(#c8d45d 50%, #63ab3f 50%);
+  --mp-fill: linear-gradient(#92e8c0 50%, #4fa4b8 50%);
+  --exp-fill: linear-gradient(#ffee83 50%, #f0b541 50%);
+  /* Text on the sheet's rose buttons (.header-button). */
+  --button-fg: #fff1e0;
 }
 
 /* Windows set the parchment tokens again, so one opened from the header
@@ -230,19 +237,26 @@ body {
   gap: 4px;
 }
 
-/* Bar modules: plain text that lights up under the pointer, and takes the
-   accent border while its drop-down is open. The border is always there,
-   just transparent, so it never shifts the bar. */
+/* Buttons (the header's and every page's): the asset sheet's rose button,
+   a 9-slice drawn over the element's whole box. It lights up orange with a
+   gold glow under the pointer and sinks dark while pressed, held down
+   (aria-pressed) or with its drop-down open. Each state's art has a 1px
+   margin for the glow, which border-image-outset hangs outside the box, so
+   no state changes the button's size. */
 .header-button {
   flex: none;
   padding: 3px 9px;
   white-space: nowrap;
   font: inherit;
   line-height: 1.4;
-  color: var(--fg);
+  color: var(--button-fg);
+  text-shadow: 0 var(--px) 0 rgb(61 41 54 / 55%);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border-image: url('../assets/ui/button.png') 4 4 5 fill / calc(4 * var(--px)) calc(4 * var(--px))
+    calc(5 * var(--px)) / var(--px) stretch;
+  image-rendering: pixelated;
+  border-radius: 0;
   cursor: pointer;
 }
 
@@ -253,28 +267,29 @@ a.header-button {
 }
 
 .header-button:hover {
-  color: var(--fg-bright);
-  background: var(--selection);
-}
-
-/* A header button that can't act on this screen stays in place, greyed
-   out on the bar rather than boxed, so the bar looks the same everywhere. */
-.page-header .header-button:disabled {
-  color: var(--fg-dim);
-  background: transparent;
-  border-color: transparent;
+  color: var(--button-fg);
+  border-image-source: url('../assets/ui/button-hover.png');
 }
 
 .header-button:active,
+.header-button[aria-pressed='true'],
 .header-button[aria-expanded='true'] {
-  color: var(--accent);
-  background: var(--selection);
-  border-color: var(--accent);
+  color: var(--button-fg);
+  border-image-source: url('../assets/ui/button-pressed.png');
+}
+
+/* A button that can't act on this screen stays in place, faded, so the
+   bar looks the same everywhere. */
+.header-button:disabled,
+.header-button:disabled:hover {
+  opacity: 0.5;
+  cursor: default;
+  border-image-source: url('../assets/ui/button.png');
 }
 
 .header-button:focus-visible {
   outline: 1px solid var(--accent);
-  outline-offset: 2px;
+  outline-offset: calc(2 * var(--px));
 }
 
 /* Icon-only header buttons (Auto, Danger, Controls, Settings, Main Menu):
@@ -323,43 +338,80 @@ a.header-button {
   margin-bottom: 8px;
 }
 
+/* A label's icon sits before its word. */
 .settings__label {
   color: var(--fg-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-/* Wide enough for "Off" and "On" alike, so toggling doesn't shift it. */
+/* Sound on or off: the asset sheet's checkbox, empty or with its gem. */
 .settings__toggle {
-  min-width: 3rem;
-  text-align: center;
+  flex: none;
+  width: calc(10 * var(--px));
+  height: calc(11 * var(--px));
+  padding: 0;
+  border: 0;
+  background: url('../assets/ui/checkbox.png') center / 100% 100% no-repeat;
+  image-rendering: pixelated;
+  cursor: pointer;
+}
+
+.settings__toggle[aria-checked='true'] {
+  background-image: url('../assets/ui/checkbox-checked.png');
+}
+
+.settings__toggle:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .settings__stepper {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .settings__step {
-  width: 1.25rem;
+  width: 1.5rem;
   padding-inline: 0;
   text-align: center;
 }
 
-.settings__step:disabled {
-  color: var(--fg-dim);
-  opacity: 0.55;
-  cursor: default;
+/* A volume: the sheet's bar trough, filled teal up to --level (0 to 1),
+   with its orange knob riding the fill's end. Fixed width, so the level
+   changing never moves the buttons. */
+.settings__slider {
+  position: relative;
+  width: 4.5rem;
+  height: calc(4 * var(--px));
+  border-style: solid;
+  border-width: var(--trough-width);
+  border-image: var(--trough);
+  image-rendering: pixelated;
 }
 
-/* Sized for "100%", so the number ticking doesn't move the buttons. */
-.settings__value {
-  width: 2.6rem;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
+.settings__slider-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--level) * 100%);
+  background: linear-gradient(#92e8c0 50%, #4fa4b8 50%);
 }
 
-.settings__value[data-muted='true'] {
-  color: var(--fg-dim);
+.settings__slider-knob {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--level) * 100%);
+  width: calc(8 * var(--px));
+  height: calc(8 * var(--px));
+  background: url('../assets/ui/slider-knob.png') center / 100% 100% no-repeat;
+  transform: translate(-50%, -50%);
+}
+
+.settings__slider[data-muted='true'] {
+  filter: grayscale(1);
+  opacity: 0.6;
 }
 
 .page__main {
@@ -685,15 +737,15 @@ a.header-button {
 }
 
 .meter--hp .meter__fill {
-  background: var(--hp);
+  background: var(--hp-fill);
 }
 
 .meter--mp .meter__fill {
-  background: var(--cyan);
+  background: var(--mp-fill);
 }
 
 .meter--exp .meter__fill {
-  background: var(--exp);
+  background: var(--exp-fill);
 }
 
 .meter__value {
@@ -1139,7 +1191,7 @@ kbd {
 }
 
 .combat-forecast__bar-kept {
-  background: var(--hp);
+  background: var(--hp-fill);
 }
 
 .combat-forecast__bar-lost {
@@ -1313,7 +1365,7 @@ kbd {
   display: block;
   height: 100%;
   width: var(--xp-to);
-  background: var(--exp);
+  background: var(--exp-fill);
   animation: experience-fill var(--xp-duration) ease-out;
 }
 
@@ -1510,6 +1562,14 @@ kbd {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* Each weapon sits in the asset sheet's item slot, a rose tile whose rim
+   runs a little under the art's empty margin. */
+.weapon-menu__item .item-icon {
+  border: calc(2 * var(--px)) solid transparent;
+  border-image: url('../assets/ui/item-slot.png') 3 fill / calc(3 * var(--px)) stretch;
+  image-rendering: pixelated;
 }
 
 .weapon-menu__text {
@@ -3510,13 +3570,6 @@ textarea.draft-input {
   width: min(100%, 200px);
 }
 
-.header-button:disabled {
-  opacity: 0.45;
-  cursor: default;
-  color: var(--accent);
-  background: var(--bg);
-}
-
 /* Unsaved changes: pinned to the bottom of the scrolling page. */
 .save-bar {
   position: sticky;
@@ -4067,7 +4120,7 @@ textarea.draft-input {
 }
 
 .reward-team__bar-kept {
-  background: var(--hp);
+  background: var(--hp-fill);
 }
 
 .reward-team__bar-gained {

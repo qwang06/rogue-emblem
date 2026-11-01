@@ -41,7 +41,7 @@ One 32x32 PNG per reward kind whose card doesn't show an item or unit (`draft`, 
 
 ## Glyph icons: src/assets/glyphs/
 
-16x16 PNGs, transparent, one per `GlyphKind` and per `StatIconKind` (named by kind, e.g. `crit.png`, `rout.png`). Most were painted with PixelLab in the item icons' style (dark outline, a few shades); `exp`, `health`, `gold`, `skull`, `danger`, `attack`, `move`, `book`, `skill`, `item`, `settings`, `avoid`, `mp` and `hit` are the UI asset sheet's 8x8 icons doubled, written by `scripts/slice-ui-sheet.js` (rerunning it overwrites them). Shown at 1x (16 CSS px), 12px in the reward tiles' EXP and the merchant's prices (smoothed there, since pixelated 0.75x drops rows). `glyphIcons.test.ts` checks every kind has one and each is 16x16. `range.png` (a dotted arrow) is the weakest and the first to repaint.
+16x16 PNGs, transparent, one per `GlyphKind` and per `StatIconKind` (named by kind, e.g. `crit.png`, `rout.png`). Most were painted with PixelLab in the item icons' style (dark outline, a few shades); `exp`, `health`, `gold`, `skull`, `danger`, `attack`, `move`, `book`, `skill`, `heal` (red cross), `item`, `settings`, `sound` (speaker), `music` (note), `avoid`, `mp` and `hit` are the UI asset sheet's 8x8 icons doubled, written by `scripts/slice-ui-sheet.js` (rerunning it overwrites them). Shown at 1x (16 CSS px), 12px in the reward tiles' EXP and the merchant's prices (smoothed there, since pixelated 0.75x drops rows). `glyphIcons.test.ts` checks every kind has one and each is 16x16. `range.png` (a dotted arrow) is the weakest and the first to repaint.
 
 ## Boon icons: src/assets/boons/
 
@@ -56,6 +56,10 @@ Cut from the UI asset sheet `ui-sheet-3x.png` (drawn at 3x; its layout is in **[
 - `bar-frame.png`: 48x9, a gauge's trough (`--trough` in ui.css): slice `2 3 3 fill`, round a 4-pixel track.
 - `hand-pointer.png`: 11x8, a cream hand pointing right, outlined `#52333f`; the fingertip is at x 10, y 3. `hand-pointer-down.png`: 8x11, the same hand pointing down (the overworld's site marker).
 - `arrow-down.png`, `arrow-up.png`: 5x5 teal triangles (dialog "more" cue, scroll cues).
+- `button.png`, `button-hover.png`, `button-pressed.png`: 20x15, the sheet's small rose button (normal; orange with a gold glow ring; dark) with a 1px margin round each so the glow fits and all three share one canvas. Every `.header-button` draws them as a 9-slice: `border-image: ... 4 4 5 fill / 4 4 5 (art px) / 1 (outset)`, the outset hanging the margin outside the box so no state changes the button's size. Hover is `-hover`; `:active`, `aria-pressed` and `aria-expanded` are `-pressed`.
+- `checkbox.png`, `checkbox-checked.png`: 10x11 rose checkbox, empty and with a teal gem (the settings panel's Sound switch).
+- `slider-knob.png`: an 8x8 orange bead, riding the end of a volume slider's teal fill in the bar trough.
+- `item-slot.png`: 16x16 empty rose item slot, a 9-slice (`3 fill`) behind each weapon in the weapon menu.
 
 ## Gate: gates.png
 

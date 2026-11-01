@@ -38,7 +38,11 @@ export type GlyphKind =
   | 'move'
   | 'range'
   | 'weight'
-  | 'uses';
+  | 'uses'
+  // The heal command and the settings panel's rows.
+  | 'heal'
+  | 'sound'
+  | 'music';
 
 const GLYPHS: Record<GlyphKind, readonly string[]> = {
   auto: ['.c......', '.cc.....', '.ccc....', '.cccc...', '.cccc...', '.ccc....', '.cc.....', '.c......'],
@@ -67,6 +71,9 @@ const GLYPHS: Record<GlyphKind, readonly string[]> = {
   range: ['........', '.....o..', '......o.', 'o.o.oooo', '......o.', '.....o..', '........', '........'],
   weight: ['..oooo..', '.o....o.', '.o....o.', '.oooooo.', 'oddddddo', 'oddddddo', 'oddddddo', '.oooooo.'],
   uses: ['........', '........', 'ooooooo.', 'onnnn.oo', 'onnnn.oo', 'ooooooo.', '........', '........'],
+  heal: ['...rr...', '...rr...', '...rr...', 'rrrrrrrr', 'rrrrrrrr', '...rr...', '...rr...', '...rr...'],
+  sound: ['...o....', '..oo..o.', 'ooo.o..o', 'o.o..o.o', 'o.o..o.o', 'ooo.o..o', '..oo..o.', '...o....'],
+  music: ['...ooooo', '...o...o', '...ooooo', '...o...o', '...o...o', '.ooo.ooo', 'oooooooo', '.oo..oo.'],
 };
 
 // Drawn as its painted icon from src/assets/glyphs/ where it has one, else

@@ -1,7 +1,8 @@
+import type { CSSProperties } from 'react';
 import { gameStore } from '../bridge/gameStore.ts';
 import { FEATURE_FLAGS } from '../featureFlags.ts';
 import { changeVolume, toggleMute, VOLUME_STEP, type AudioSettings, type VolumeChannel } from '../audio/settings.ts';
-import { GlyphIcon } from './GlyphIcon.tsx';
+import { GlyphIcon, type GlyphKind } from './GlyphIcon.tsx';
 import { HeaderPopover } from './HeaderPopover.tsx';
 import { useGameStore } from './useGameStore.ts';
 
@@ -9,10 +10,10 @@ type AudioUpdate = (settings: AudioSettings) => AudioSettings;
 
 const setAudio = (update: AudioUpdate) => gameStore.setState((state) => ({ audio: update(state.audio) }));
 
-// Header button (a gear) that opens the settings panel: sound on or off, and the
-// sound effect and music volumes (music only with its feature flag on). They live in the store, where
-// src/audio/index.ts picks them up (and saves them), so changing them
-// doesn't touch the game.
+// Header button (a gear) that opens the settings panel: sound on or off (a
+// checkbox), and the sound effect and music volumes (music only with its
+// feature flag on). They live in the store, where src/audio/index.ts picks
+// them up (and saves them), so changing them doesn't touch the game.
 export function SettingsButton() {
   const audio = useGameStore((state) => state.audio);
 
@@ -24,29 +25,48 @@ export function SettingsButton() {
       className="header-button--icon"
     >
       <div className="settings__row">
-        <span className="settings__label">Sound</span>
+        <span className="settings__label">
+          <GlyphIcon kind="sound" />
+          Sound
+        </span>
         <button
           type="button"
-          className="header-button settings__toggle"
-          aria-pressed={!audio.muted}
+          role="switch"
+          className="settings__toggle"
+          aria-checked={!audio.muted}
+          aria-label="Sound"
+          title={audio.muted ? 'Sound off' : 'Sound on'}
           onClick={() => setAudio(toggleMute)}
-        >
-          {audio.muted ? 'Off' : 'On'}
-        </button>
+        />
       </div>
-      <VolumeRow label="Effects" channel="volume" audio={audio} />
-      {FEATURE_FLAGS.music && <VolumeRow label="Music" channel="musicVolume" audio={audio} />}
+      <VolumeRow label="Effects" icon="skill" channel="volume" audio={audio} />
+      {FEATURE_FLAGS.music && <VolumeRow label="Music" icon="music" channel="musicVolume" audio={audio} />}
     </HeaderPopover>
   );
 }
 
-// One volume with − and + buttons either side of its percentage.
-function VolumeRow({ label, channel, audio }: { label: string; channel: VolumeChannel; audio: AudioSettings }) {
+// One volume with − and + buttons either side of a slider showing it (the
+// sheet's bar trough with a teal fill and an orange knob); the percentage
+// is there for screen readers.
+function VolumeRow({
+  label,
+  icon,
+  channel,
+  audio,
+}: {
+  label: string;
+  icon: GlyphKind;
+  channel: VolumeChannel;
+  audio: AudioSettings;
+}) {
   const value = audio[channel];
   const percent = Math.round(value * 100);
   return (
     <div className="settings__row">
-      <span className="settings__label">{label}</span>
+      <span className="settings__label">
+        <GlyphIcon kind={icon} />
+        {label}
+      </span>
       <div className="settings__stepper">
         <button
           type="button"
@@ -57,8 +77,15 @@ function VolumeRow({ label, channel, audio }: { label: string; channel: VolumeCh
         >
           −
         </button>
-        <output className="settings__value" aria-label={`${label} volume ${percent} percent`} data-muted={audio.muted}>
-          {percent}%
+        <output
+          className="settings__slider"
+          aria-label={`${label} volume ${percent} percent`}
+          title={`${percent}%`}
+          data-muted={audio.muted}
+          style={{ '--level': value } as CSSProperties}
+        >
+          <span className="settings__slider-fill" />
+          <span className="settings__slider-knob" />
         </output>
         <button
           type="button"
