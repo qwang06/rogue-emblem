@@ -6,17 +6,17 @@
 // floor, where each clump goes.
 
 import type { WorldRect } from './backdrop.ts';
-import type { BattlefieldKind, ObstacleKind } from './battlefields.ts';
+import type { BattlefieldKind, NaturalObstacle } from './battlefields.ts';
 
 // The clumps each field frames itself with, drawn from its obstacle art.
-export const FRAMING_FOLIAGE: Readonly<Record<BattlefieldKind, readonly ObstacleKind[]>> = Object.freeze({
+export const FRAMING_FOLIAGE: Readonly<Record<BattlefieldKind, readonly NaturalObstacle[]>> = Object.freeze({
   plains: ['bush', 'pine', 'thicket'],
   forest: ['pine', 'thicket', 'pine'],
   desert: ['cactus', 'boulder', 'cactus'],
 });
 
 export interface FramingClump {
-  kind: ObstacleKind;
+  kind: NaturalObstacle;
   // The clump's square art: its top-left corner and side, in world pixels.
   x: number;
   y: number;

@@ -20,15 +20,7 @@ import type { Autotile, SheetTile } from './autotile.ts';
 import type { BuildingPlacement } from './buildings.ts';
 import { getCell, type Grid, type Point } from './grid.ts';
 import type { ObstacleKind, ObstaclePlacement } from './battlefields.ts';
-import type {
-  BRIDGE_ART,
-  BUILDING_ART,
-  BuildingPalette,
-  FeatureArt,
-  GATE_ART,
-  MAP_PROPS_SHEET,
-  OBSTACLE_ART,
-} from './tileset.ts';
+import type { BRIDGE_ART, BUILDING_ART, BuildingPalette, FeatureArt, GATE_ART, MAP_PROPS_SHEET } from './tileset.ts';
 
 export type MapSpriteLayer = 'ground' | 'cap' | 'roof';
 
@@ -174,18 +166,6 @@ export function getCrossingSprites(
     }
   }
   return sprites;
-}
-
-// A battlefield's obstacles (battlefields.ts), each standing on its cell as
-// its art (OBSTACLE_ART), under units.
-export function getObstacleSprites(obstacles: readonly ObstaclePlacement[], art: typeof OBSTACLE_ART): MapSprite[] {
-  return obstacles.map(({ x, y, obstacle }) => ({
-    x,
-    y,
-    tile: art[obstacle].tile,
-    layer: 'ground',
-    sheet: art[obstacle].sheet,
-  }));
 }
 
 // A battlefield's obstacles drawn as painted art (PAINTED_OBSTACLES): each

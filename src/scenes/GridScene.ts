@@ -171,6 +171,8 @@ import {
   STANDING_OVERHANG,
   ART_FEET_Y,
   getScaledArtOrigin,
+  getScaledArtRect,
+  PAINTED_OBSTACLE_SCALE,
   PAINTED_UNIT_SCALE,
 } from '../game/sideView.ts';
 import {
@@ -3653,8 +3655,9 @@ export class GridScene extends Phaser.Scene {
     if (kit) {
       // Decals gather around the obstacles and keep off their art.
       const standing = obstacles.map(({ x, y }) => {
-        const art = { ...getStandingPosition(x, y), width: TILE_SIZE, height: TILE_SIZE };
-        return { art, foot: { x: art.x + TILE_SIZE / 2, y: art.y + ART_FEET_Y } };
+        const pos = getStandingPosition(x, y);
+        const art = getScaledArtRect(x, y, PAINTED_OBSTACLE_SCALE);
+        return { art, foot: { x: pos.x + TILE_SIZE / 2, y: pos.y + ART_FEET_Y } };
       });
       this.renderKit(kit, floor, seed, standing);
     } else if (painting) {
@@ -3801,14 +3804,16 @@ export class GridScene extends Phaser.Scene {
   }
 
   // A battlefield's obstacles as painted art (getPaintedObstacles), each
-  // standing on its cell like a unit, a hair behind a unit on the same row.
+  // standing on its cell like a unit, PAINTED_OBSTACLE_SCALE times a tile,
+  // a hair behind a unit on the same row.
   renderPaintedObstacles(obstacles: readonly { x: number; y: number; key: string }[]) {
     for (const { x, y, key } of obstacles) {
       const pos = getStandingPosition(x, y);
+      const art = getScaledArtRect(x, y, PAINTED_OBSTACLE_SCALE);
       this.add
-        .image(pos.x, pos.y, key)
+        .image(art.x, art.y, key)
         .setOrigin(0, 0)
-        .setDisplaySize(TILE_SIZE, TILE_SIZE)
+        .setDisplaySize(art.width, art.height)
         .setDepth(getStandingDepth(pos.y) - STANDING_DEPTH_HAIR);
     }
   }

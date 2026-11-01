@@ -5,6 +5,7 @@ import {
   getPropPlacement,
   getCastShadowLayout,
   getScaledArtOrigin,
+  getScaledArtRect,
   getStandingDepth,
   getStandingPosition,
   STANDING_DEPTH_MAX,
@@ -80,6 +81,17 @@ describe('getPropPlacement', () => {
     const foot = getStandingPosition(4, 5);
     expect(getPropPlacement({ x: 4, y: 4, base: 5 })).toEqual({ x: foot.x, y: foot.y - TILE_SIZE, row: 5 });
     expect(getPropPlacement({ x: 4, y: 3, base: 5 })).toEqual({ x: foot.x, y: foot.y - 2 * TILE_SIZE, row: 5 });
+  });
+});
+
+describe('getScaledArtRect', () => {
+  it('is the tile at 1x, and grows about the feet, centered across the cell', () => {
+    const pos = getStandingPosition(3, 2);
+    expect(getScaledArtRect(3, 2, 1)).toEqual({ ...pos, width: TILE_SIZE, height: TILE_SIZE });
+    const big = getScaledArtRect(3, 2, 1.4);
+    expect(big.width).toBeCloseTo(TILE_SIZE * 1.4);
+    expect(big.x + big.width / 2).toBeCloseTo(pos.x + TILE_SIZE / 2);
+    expect(big.y + (ART_FEET_Y / TILE_SIZE) * big.height).toBeCloseTo(pos.y + ART_FEET_Y);
   });
 });
 
