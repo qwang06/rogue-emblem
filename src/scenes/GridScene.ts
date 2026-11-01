@@ -214,7 +214,7 @@ import {
   type BattleHistory,
 } from '../game/battle/history.ts';
 import { createBattleState, getRunBattleResult, type BattleState as Battle } from '../game/battle/state.ts';
-import { isDone } from '../game/turns.ts';
+import { getCanto, isDone } from '../game/turns.ts';
 import {
   ARROW_TILES,
   BRIDGE_ART,
@@ -988,6 +988,14 @@ export class GridScene extends Phaser.Scene {
         else if (this.rangeMode === 'skill') this.tryUseSkill();
         else if (this.rangeMode === 'heal') this.tryHeal();
         else this.tryAttackWithActiveUnit();
+        return;
+      }
+      if (cancel && this.rangeMode === 'move' && getCanto(this.battle.turnState, this.activeUnit!.unitId)) {
+        // Backing out of a canto's move keeps the unit where it stands.
+        const { unitId } = this.activeUnit!;
+        this.hideRange();
+        this.activeUnit = null;
+        this.finishPlayerAction(this.dispatch({ type: 'wait', unitId }));
         return;
       }
       if (cancel && this.rangeMode === 'move') {
@@ -2134,10 +2142,18 @@ export class GridScene extends Phaser.Scene {
   // locked until it has, and the next step comes after AUTO_STEP_MS.
   autoPlayerAction() {
     const [move, act] = this.pendingAutoCommands;
-    if (!move || !act) return;
+    if (!move) return;
     this.hideEnemyReach();
     this.hideRange();
     this.inputLocked = true;
+    if (!act) {
+      this.pendingAutoCommands = [];
+      this.publishAutoCommandQueue();
+      this.playAiCommand(move, () => {
+        this.inputLocked = false;
+      });
+      return;
+    }
     this.takeEnemyAction(move, act, () => {
       this.inputLocked = false;
     });
@@ -2362,7 +2378,15 @@ export class GridScene extends Phaser.Scene {
   // else hands input back.
   finishPlayerAction(events: readonly BattleEvent[]) {
     this.inputLocked = false;
-    this.continueBattle(events, () => {});
+    this.continueBattle(events, () => {
+      // A Momentum kill goes straight on to the unit's extra move.
+      const canto = this.battle.turnState?.canto;
+      const at = canto && findUnit(this.grid, canto.unitId);
+      if (!canto || !at || gameStore.getState().autoPlay) return;
+      this.activeUnit = { unitId: canto.unitId, x: at.x, y: at.y };
+      this.setCursor(at.x, at.y);
+      this.showMoveRange();
+    });
   }
 
   // Ends the player phase early from the pause menu: any units that haven't
@@ -2483,10 +2507,22 @@ export class GridScene extends Phaser.Scene {
   // it out, one after another, until the last one ends the phase.
   runEnemyPhase() {
     const [move, act] = planNextTurn(this.battle);
+    if (move && !act) {
+      // A lone order (waiting out a canto) plays as it is.
+      this.playAiCommand(move, () => this.runEnemyPhase());
+      return;
+    }
     if (move && act) {
       if (gameStore.getState().autoPlay) this.queueAutoCommands([move, act]);
       this.takeEnemyAction(move, act);
     }
+  }
+
+  // Gives the battle one AI order on its own, plays it, then moves on to
+  // `next` unless that decided the battle or ended the phase.
+  playAiCommand(command: BattleCommand, next: () => void) {
+    const events = this.dispatch(command);
+    this.playEvents(events, () => this.continueBattle(events, next));
   }
 
   // Puts the cursor on the unit, walks it along its planned route, and
@@ -2531,8 +2567,11 @@ export class GridScene extends Phaser.Scene {
   // route at the unit. The ranges come from src/game/movement.ts and
   // src/game/combat.ts; this only draws them.
   showMoveRange() {
-    const { unit, x, y } = this.activeUnit!;
-    const { moveRange, tiles } = this.drawUnitReach(unit, { x, y });
+    const { unitId, unit, x, y } = this.activeUnit!;
+    const canto = getCanto(this.battle.turnState, unitId);
+    const { moveRange, tiles } = canto
+      ? this.drawUnitReach(unit, { x, y }, { movement: canto.movement, threat: false })
+      : this.drawUnitReach(unit, { x, y });
     this.moveRange = moveRange;
     this.movePath = [{ x, y }];
     this.rangeMode = 'move';
@@ -2540,11 +2579,12 @@ export class GridScene extends Phaser.Scene {
   }
 
   // Draws where `unit` standing at `from` can move (blue) and what it could
-  // attack from there (red). Returns the move range and the highlights.
-  drawUnitReach(unit: Unit, from: Point) {
-    const moveRange = getMovementRange(this.grid, from, getPhaseMovement(unit), this.movementOptions(unit));
+  // attack from there (red). Returns the move range and the highlights. A
+  // canto's move gives its own `movement` and shows no `threat`.
+  drawUnitReach(unit: Unit, from: Point, { movement = getPhaseMovement(unit), threat = true } = {}) {
+    const moveRange = getMovementRange(this.grid, from, movement, this.movementOptions(unit));
     const tiles = this.drawTileHighlights(moveRange, MOVE_RANGE_COLOR, MOVE_RANGE_ALPHA);
-    const reach = getWeaponReach(unit.wieldableWeapons.map(({ weapon }) => weapon));
+    const reach = threat && getWeaponReach(unit.wieldableWeapons.map(({ weapon }) => weapon));
     if (reach) {
       const threat = getThreatRange(this.grid, moveRange, reach.maxRange, reach.minRange);
       tiles.push(...this.drawTileHighlights(threat, ATTACK_RANGE_COLOR, ATTACK_RANGE_ALPHA));
@@ -2557,9 +2597,10 @@ export class GridScene extends Phaser.Scene {
   // Over a hostile unit it can strike from somewhere in its range, the
   // route runs to the tile it would attack from instead (getMoveAttackPlan).
   updateMovePath() {
-    const { unit } = this.activeUnit!;
+    const { unitId, unit } = this.activeUnit!;
     const to = this.getMoveAttackPlan()?.tile ?? this.cursor;
-    const path = extendMovePath(this.grid, this.movePath!, to, getPhaseMovement(unit), this.movementOptions(unit));
+    const movement = getCanto(this.battle.turnState, unitId)?.movement ?? getPhaseMovement(unit);
+    const path = extendMovePath(this.grid, this.movePath!, to, movement, this.movementOptions(unit));
     if (path === this.movePath) return;
     this.movePath = path;
     this.drawMoveArrow(path);
@@ -2571,6 +2612,8 @@ export class GridScene extends Phaser.Scene {
   // equipped weapon is tried first), or null.
   getMoveAttackPlan() {
     const { unit } = this.activeUnit!;
+    // A canto's move can't end in an attack.
+    if (getCanto(this.battle.turnState, this.activeUnit!.unitId)) return null;
     const unitId = getCell(this.grid, this.cursor.x, this.cursor.y)?.unitId;
     if (!unitId || !this.isHostileTo(unit)(unitId)) return null;
     const weapons = unit.wieldableWeapons;
@@ -2836,6 +2879,16 @@ export class GridScene extends Phaser.Scene {
 
     this.hideRange();
     this.inputLocked = true;
+    if (getCanto(this.battle.turnState, unitId)) {
+      // A canto's move ends the unit's part in the phase.
+      const events = this.dispatch({ type: 'move', unitId, to, path });
+      this.activeUnit = null;
+      this.walkSprite(this.unitSprites.get(unitId)!, path, () => {
+        this.setCursor(to.x, to.y);
+        this.finishPlayerAction(events);
+      });
+      return;
+    }
     // Remember where it came from, and the battle before the move, so
     // cancelling the menu can undo it.
     const movedAt = this.history.entries.length;
@@ -2932,6 +2985,10 @@ export class GridScene extends Phaser.Scene {
       }
       case 'chain':
         this.showDamagePopup(this.unitSprites.get(event.unitId)!, 0, 'status', 'Chain!');
+        next();
+        return;
+      case 'momentum':
+        this.showDamagePopup(this.unitSprites.get(event.unitId)!, 0, 'status', 'Momentum!');
         next();
         return;
       case 'status':

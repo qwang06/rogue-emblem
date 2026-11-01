@@ -87,6 +87,9 @@ export interface PlayerAIOptions {
 // when the battle isn't being fought or every unit has acted.
 export function planPlayerTurn(state: BattleState, options: PlayerAIOptions = {}): BattleCommand[] {
   const { weights = PLAYER_AI_WEIGHTS, lookahead = LOOKAHEAD } = options;
+  // A unit on a canto (a Momentum kill) stays put.
+  const canto = state.turnState?.canto;
+  if (canto && !state.outcome) return [{ type: 'wait', unitId: canto.unitId }];
   const plans = getPlayerPlans(state, weights);
   if (plans.length === 0) return [];
   if (!lookahead || !isContested(plans.slice(0, lookahead.candidates))) return plans[0].commands;
@@ -103,7 +106,8 @@ export function getPlayerPlans(state: BattleState, weights: PlayerAIWeights = PL
   const context = createContext(state, weights);
   const plans: PlayerPlan[] = [];
   for (const unitId of getTeamUnitIds(state.units, 'player')) {
-    if (isDone(turnState, unitId)) continue;
+    // (A unit on a canto has acted; another's order ends it.)
+    if (isDone(turnState, unitId) || turnState.canto?.unitId === unitId) continue;
     plans.push(...planUnit(state, context, unitId));
   }
   // Stable, so ties keep unit order.

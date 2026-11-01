@@ -85,12 +85,14 @@ import {
 import { areAllied, getTeamUnitIds, isAllyOf, isHostileTo } from '../teams.ts';
 import {
   getFirstPhase,
+  getCanto,
   hasMoved,
   isDone,
   isPhaseOver,
   markDone,
   markMoved,
   nextPhase,
+  startCanto,
   type BattleOutcome,
   type TurnState,
 } from '../turns.ts';
@@ -184,6 +186,9 @@ export type BattleEvent =
       amount: number;
       trigger: 'kill' | 'phase' | 'drain';
     }
+  // A Momentum kill lets `unitId` move `movement` more tiles before it's
+  // done (a canto: see turns.ts).
+  | { type: 'momentum'; unitId: string; movement: number }
   // A cleave-through hit splashed `damage` onto `unitId`, leaving it `health`.
   | { type: 'splash'; unitId: string; damage: number; health: number }
   // A chain kill: `unitId` gets a free strike on `targetId` (the strike
@@ -277,7 +282,7 @@ export function applyCommand(state: BattleState, command: BattleCommand): Comman
       useItem(draft, command.unitId, command.itemId);
       break;
     case 'wait':
-      requireActor(draft, command.unitId);
+      requireActor(draft, command.unitId, { canto: true });
       finishAction(draft, command.unitId);
       break;
     case 'end-phase':
@@ -545,12 +550,21 @@ function requireBattle(draft: Draft) {
 }
 
 // The unit giving an order: in play, on the phase's team, not done yet.
-function requireActor(draft: Draft, unitId: string): Unit {
+// A unit on a canto (see turns.ts) can only move or wait (`canto`); an
+// order to any other unit ends that canto first, the unit staying put.
+function requireActor(draft: Draft, unitId: string, { canto = false } = {}): Unit {
   requireBattle(draft);
   const unit = draft.unit(unitId);
   const turnState = draft.turnState!;
   if (unit.team !== turnState.team) draft.fail(`it's the ${turnState.team} phase, not ${unitId}'s`);
   if (isDone(turnState, unitId)) draft.fail(`${unitId} has already acted`);
+  const pending = turnState.canto;
+  if (pending && pending.unitId !== unitId) {
+    draft.turnState = markDone(turnState, pending.unitId);
+    draft.events.push({ type: 'unit-done', unitId: pending.unitId });
+  } else if (pending && !canto) {
+    draft.fail(`${unitId} has acted and can only move on`);
+  }
   return unit;
 }
 
@@ -567,10 +581,11 @@ function takeLevelUpBoon(draft: Draft, unitId: string, level: number, boonId: st
 }
 
 function move(draft: Draft, unitId: string, to: Point, path?: readonly Point[]) {
-  const unit = requireActor(draft, unitId);
-  if (hasMoved(draft.turnState!, unitId)) draft.fail(`${unitId} has already moved`);
+  const unit = requireActor(draft, unitId, { canto: true });
+  const canto = getCanto(draft.turnState, unitId);
+  if (!canto && hasMoved(draft.turnState!, unitId)) draft.fail(`${unitId} has already moved`);
   const from = draft.tileOf(unitId);
-  const movement = getPhaseMovement(unit);
+  const movement = canto?.movement ?? getPhaseMovement(unit);
   const options = getMovementOptions(draft.units, unit);
   const range = getMovementRange(draft.grid, from, movement, options);
   if (!findTileAt(range, to)) draft.fail(`(${to.x}, ${to.y}) is out of ${unitId}'s reach`);
@@ -594,6 +609,8 @@ function move(draft: Draft, unitId: string, to: Point, path?: readonly Point[]) 
     draft.mines = removeMine(draft.mines, mine);
     draft.events.push({ type: 'mine-tripped', unitId, at: { x: mine.x, y: mine.y }, damage, health: victim.health });
   }
+  // A canto's move is the last thing the unit does this phase.
+  if (canto) finishAction(draft, unitId);
 }
 
 function equip(draft: Draft, unitId: string, index: number) {
@@ -622,11 +639,27 @@ function attack(draft: Draft, unitId: string, target: Point) {
     weapon.minRange,
   );
   const tile = findTileAt(targets, target) ?? draft.fail(`no foe in reach on (${target.x}, ${target.y})`);
-  resolveAttack(draft, unitId, tile, from);
+  const killed = resolveAttack(draft, unitId, tile, from);
+  if (killed && grantMomentum(draft, unitId)) return;
   finishAction(draft, unitId);
 }
 
-function resolveAttack(draft: Draft, attackerId: string, target: TargetTile, from: Point) {
+// After `unitId` fells a foe with an attack, its `momentum` (see
+// modifiers.ts) lets it move that many tiles more before it's done (a
+// canto, and a `momentum` event), unless the kill decided the battle or
+// the unit can't move. Returns whether it did.
+function grantMomentum(draft: Draft, unitId: string): boolean {
+  const unit = draft.units.get(unitId);
+  // (A rooted unit can't use it.)
+  const movement = unit && getPhaseMovement(unit) > 0 ? sumModifiers(unit.modifiers, 'momentum') : 0;
+  if (movement <= 0 || getDraftOutcome(draft)) return false;
+  draft.turnState = startCanto(markMoved(draft.turnState!, unitId), unitId, movement);
+  draft.events.push({ type: 'momentum', unitId, movement });
+  return true;
+}
+
+// Returns whether the attacker felled the defender.
+function resolveAttack(draft: Draft, attackerId: string, target: TargetTile, from: Point): boolean {
   const attacker = draft.unit(attackerId);
   const defender = draft.unit(target.unitId);
   const { strikes } = resolveCombat(attacker, defender, { distance: getDistance(from, target), rng: draft.rng });
@@ -640,6 +673,7 @@ function resolveAttack(draft: Draft, attackerId: string, target: TargetTile, fro
   }
   awardCombatExperience(draft, ids, strikes);
   if (killedByAttacker) chainKill(draft, attackerId);
+  return killedByAttacker;
 }
 
 // Applies one strike of an exchange between `ids`: it wears the striker's
@@ -1149,17 +1183,23 @@ function startPhase(draft: Draft, turnState: TurnState) {
 
 function checkOutcome(draft: Draft): boolean {
   if (draft.outcome) return true;
+  const outcome = getDraftOutcome(draft);
+  if (!outcome) return false;
+  draft.outcome = outcome;
+  draft.events.push({ type: 'outcome', outcome });
+  return true;
+}
+
+// How the objective stands on the draft's map, without deciding it.
+function getDraftOutcome(draft: Draft): BattleOutcome | null {
+  if (draft.outcome) return draft.outcome;
   const snapshot = getBattleSnapshot({
     ...draft.base,
     grid: draft.grid,
     units: draft.units,
     turnState: draft.turnState,
   });
-  const outcome = getObjectiveOutcome(draft.base.objective, snapshot);
-  if (!outcome) return false;
-  draft.outcome = outcome;
-  draft.events.push({ type: 'outcome', outcome });
-  return true;
+  return getObjectiveOutcome(draft.base.objective, snapshot);
 }
 
 // The boss's horn as an enemy phase starts, while the boss is in play:

@@ -101,6 +101,8 @@ export const FINISHER_PERCENT = 4;
 // before rarity.
 export const CLEAVE_THROUGH_PERCENT = 25;
 export const CHAIN_KILL_PERCENT = 20;
+// The tiles a Momentum kill lets a unit move on, per rank.
+export const MOMENTUM_MOVEMENT = 2;
 
 const STAT_LABELS: Readonly<Partial<Record<GrowthStat, string>>> = Object.freeze({
   health: 'HP',
@@ -267,6 +269,13 @@ const DEFINITIONS: readonly BoonDefinition[] = [
     'Chain Kill',
     { kind: 'chain-kill', percent: CHAIN_KILL_PERCENT },
     (a) => `${a}% chance that defeating a foe earns a free strike on another in reach.`,
+  ),
+  passive(
+    'momentum',
+    'Momentum',
+    { kind: 'momentum', amount: MOMENTUM_MOVEMENT },
+    (a) => `Defeating a foe with an attack lets the unit move ${a} more tiles.`,
+    2,
   ),
 ];
 

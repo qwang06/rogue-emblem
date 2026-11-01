@@ -550,6 +550,58 @@ describe('modifiers', () => {
     expect(types(run(units(makeTestUnit({ team: 'player' }), 6), strike).events)).not.toContain('chain');
   });
 
+  describe('momentum', () => {
+    const killer = (amount = 2) => {
+      const hero = makeTestUnit({ team: 'player' });
+      hero.modifiers = [{ kind: 'momentum', amount }];
+      return createTestBattle({
+        hero: { unit: hero, at: { x: 0, y: 0 } },
+        foe: { unit: makeTestUnit({ team: 'enemy', health: 6 }), at: { x: 1, y: 0 } },
+        friend: { unit: makeTestUnit({ team: 'player' }), at: { x: 6, y: 0 } },
+        other: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 7, y: 0 } },
+      });
+    };
+
+    it('lets a unit that fells a foe move its momentum in tiles, then be done', () => {
+      const { state, events } = run(killer(), strike);
+      expect(events).toContainEqual({ type: 'momentum', unitId: 'hero', movement: 2 });
+      expect(types(events)).not.toContain('unit-done');
+      expect(state.turnState!.canto).toEqual({ unitId: 'hero', movement: 2 });
+      expect(() => applyCommand(state, { type: 'move', unitId: 'hero', to: { x: 3, y: 0 } })).toThrow(/reach/);
+      const moved = run(state, { type: 'move', unitId: 'hero', to: { x: 2, y: 0 } });
+      expect(findUnit(moved.state.grid, 'hero')).toEqual({ x: 2, y: 0 });
+      expect(isDone(moved.state.turnState!, 'hero')).toBe(true);
+      expect(moved.state.turnState!.canto).toBeNull();
+    });
+
+    it('only lets a unit on a canto move or wait', () => {
+      const { state } = run(killer(), strike);
+      expect(() => applyCommand(state, { type: 'attack', unitId: 'hero', target: { x: 1, y: 0 } })).toThrow(/move on/);
+      const waited = run(state, { type: 'wait', unitId: 'hero' }).state;
+      expect(isDone(waited.turnState!, 'hero')).toBe(true);
+    });
+
+    it('ends a canto, the unit staying put, when another unit takes an order', () => {
+      const { state } = run(killer(), strike, { type: 'move', unitId: 'friend', to: { x: 5, y: 0 } });
+      expect(findUnit(state.grid, 'hero')).toEqual({ x: 0, y: 0 });
+      expect(isDone(state.turnState!, 'hero')).toBe(true);
+      expect(state.turnState!.canto).toBeNull();
+    });
+
+    it('gives no canto without a kill, or when the kill wins the battle', () => {
+      const hero = makeTestUnit({ team: 'player' });
+      hero.modifiers = [{ kind: 'momentum', amount: 2 }];
+      const last = createTestBattle({
+        hero: { unit: hero, at: { x: 0, y: 0 } },
+        foe: { unit: makeTestUnit({ team: 'enemy', health: 6 }), at: { x: 1, y: 0 } },
+      });
+      expect(types(run(last, strike).events)).not.toContain('momentum');
+      const sturdy = killer();
+      sturdy.units.get('foe')!.health = 40;
+      expect(types(run(sturdy, strike).events)).not.toContain('momentum');
+    });
+  });
+
   it("recovers a share of max HP as the unit's phase starts with phase-heal-percent", () => {
     const hero = makeTestUnit({ team: 'player' });
     hero.modifiers = [{ kind: 'phase-heal-percent', percent: 25 }];
