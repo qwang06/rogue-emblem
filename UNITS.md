@@ -86,6 +86,8 @@ The starting unit, a townsperson in a plain tunic with no armor: Warband Mode's 
 | ------------ | ---------- | ---- | ----- | -------------------------------- |
 | Throw Stones | 2          | 2    | 1–4   | Half the regular hit, rounded up |
 
+Level-up skill pick: **Lend a Hand** (1 MP, range 1: trades places with an ally). Promoted classes keep the villager's Throw Stones but are offered only their own class's picks.
+
 Carries a Wooden Sword, its Fists for when the sword breaks, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
 ## Promotions
@@ -129,7 +131,7 @@ The ranged infantry: frail but accurate. Its bow only reaches two tiles away, so
 | Throw Stones | 2          | 2    | 1–4   | Half the regular hit, rounded up |
 | Long Shot    | 2          | 2    | 1–3   | The regular hit                  |
 
-Level-up skill picks: **Piercing Shot** (3 MP, range 1–3, the regular hit, and on a foe right behind the target) and **Pinning Shot** (2 MP, range 1–2, the regular hit, leaving the foe Rooted).
+Level-up skill picks: **Piercing Shot** (3 MP, range 1–3, the regular hit, and on a foe right behind the target), **Pinning Shot** (2 MP, range 1–2, the regular hit, leaving the foe Rooted) and **Disengage** (2 MP, range 1–2, the regular hit, then steps a tile straight back).
 
 Passive, **Steady Aim**: +10 hit. Carries an Iron Bow, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
@@ -190,7 +192,7 @@ The axe-wielding front line: high HP and strength, low skill, speed and luck. It
 | Throw Stones | 2          | 2    | 1–4   | Half the regular hit, rounded up                |
 | Cleave       | 2          | 3    | 1     | The regular hit, and on the foes on either side |
 
-Level-up skill picks: **Sunder** (3 MP, range 1, the regular hit with +2 STR, leaving the foe Sundered) and **Reckless Swing** (3 MP, range 1, the regular hit with +6 STR, costing it 3 HP, never its last).
+Level-up skill picks: **Sunder** (3 MP, range 1, the regular hit with +2 STR, leaving the foe Sundered), **Reckless Swing** (3 MP, range 1, the regular hit with +6 STR, costing it 3 HP, never its last) and **Jump Swing** (3 MP, range 1–3, leaps up to 2 tiles to land next to the foe, then the regular hit with +2 STR).
 
 Passive, **Heavy Swing**: +1 damage. Carries an Iron Axe, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
@@ -245,10 +247,11 @@ A specialized unit that doesn't promote, recruited or brought by the Sellswords 
 | ------------ | --------------- | ------- |
 | physical     | Wooden Spear    | 100%    |
 
-| Skill | Learned at | Mana | Range | Damage |
-| ----- | ---------- | ---- | ----- | ------ |
+| Skill       | Learned at | Mana | Range | Damage                                                  |
+| ----------- | ---------- | ---- | ----- | ------------------------------------------------------- |
+| Hit and Run | 2          | 2    | 1     | The regular hit, then steps up to 2 tiles straight back |
 
-Level-up skill picks: **Mark** (1 MP, range 1–3, no damage, leaving the foe Marked) and **Tailwind** (2 MP, range 1, an ally is left Hastened).
+Level-up skill picks: **Mark** (1 MP, range 1–3, no damage, leaving the foe Marked), **Tailwind** (2 MP, range 1, an ally is left Hastened) and **Airlift** (2 MP, range 1–3, trades places with an ally).
 
 Carries a Wooden Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
@@ -277,7 +280,7 @@ A specialized unit, recruited on its own (or raised by the Beast Tamer origin): 
 | ----------- | ---------- | ---- | ----- | ------------------------------------------------- |
 | Savage Bite | 2          | 1    | 1     | The regular hit; heals for half of it, rounded up |
 
-Level-up skill picks: **Wing Buffet** (2 MP, range 1, half the regular hit, then pushes the foe a tile) and **Roar** (2 MP, aimed at itself: no damage, every foe next to it is left Rooted).
+Level-up skill picks: **Wing Buffet** (2 MP, range 1, half the regular hit, then pushes the foe a tile), **Roar** (2 MP, aimed at itself: no damage, every foe next to it is left Rooted) and **Pounce** (2 MP, range 1–4, leaps up to 3 tiles to land next to the foe, then the regular hit).
 
 It carries no potions.
 
@@ -302,10 +305,11 @@ A special unit of its own kind: a rider on the faction's winged beast, strong, f
 | ------------ | --------------- | ------- |
 | physical     | Iron Spear      | 100%    |
 
-| Skill | Learned at | Mana | Range | Damage |
-| ----- | ---------- | ---- | ----- | ------ |
+| Skill  | Learned at | Mana | Range | Damage                                                              |
+| ------ | ---------- | ---- | ----- | ------------------------------------------------------------------- |
+| Charge | 2          | 2    | 1     | The regular hit, +1 STR for each tile it moved this turn (up to +4) |
 
-Level-up skill picks: **Skewer** (3 MP, range 1, the regular hit with +1 STR, and on a foe right behind the target) and **Tandem Strike** (3 MP, range 1, the regular hit, then the beast's bite for half that).
+Level-up skill picks: **Skewer** (3 MP, range 1, the regular hit with +1 STR, and on a foe right behind the target), **Tandem Strike** (3 MP, range 1, the regular hit, then the beast's bite for half that) and **Strafing Run** (4 MP, range 1–3, flies up to 3 tiles along a row or column to the farthest free tile, dealing half the regular hit to every foe it passes over).
 
 Carries an Iron Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
@@ -359,8 +363,9 @@ A specialized unit that doesn't promote: a covered battering ram, the most HP an
 | ------------ | --------------- | ------- |
 | physical     | Tackle          | 100%    |
 
-| Skill | Learned at | Mana | Range | Damage |
-| ----- | ---------- | ---- | ----- | ------ |
+| Skill            | Learned at | Mana | Range | Damage                                                                                   |
+| ---------------- | ---------- | ---- | ----- | ---------------------------------------------------------------------------------------- |
+| Battering Charge | 2          | 2    | 1–4   | Rolls up to 3 tiles along a clear row or column to the foe, the regular hit, then a push |
 
 Level-up skill pick: **Bulwark** (2 MP, aimed at itself: every ally next to it is left Guarded).
 

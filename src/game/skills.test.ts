@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AIRLIFT,
+  DISENGAGE,
+  JUMP_SWING,
+  LEND_A_HAND,
+  POUNCE,
+  STRAFING_RUN,
   SKILL_TREES,
   SKILL_UNLOCK_LEVEL,
   THROW_STONES,
@@ -411,14 +417,15 @@ describe('getClassSkillPicks', () => {
   it("is the class's own level-up skill picks, and none for a class without any", () => {
     expect(getClassSkillPicks('soldier')).toEqual([LUNGE, PHALANX]);
     expect(getClassSkillPicks('acolyte')).toEqual([SMITE, PRAYER, WARD]);
-    expect(getClassSkillPicks('beast-rider')).toEqual([SKEWER, TANDEM_STRIKE]);
-    expect(getClassSkillPicks('beast')).toEqual([WING_BUFFET, ROAR]);
-    expect(getClassSkillPicks('archer')).toEqual([PIERCING_SHOT, PINNING_SHOT]);
-    expect(getClassSkillPicks('vanguard')).toEqual([SUNDER, RECKLESS_SWING]);
+    expect(getClassSkillPicks('beast-rider')).toEqual([SKEWER, TANDEM_STRIKE, STRAFING_RUN]);
+    expect(getClassSkillPicks('beast')).toEqual([WING_BUFFET, ROAR, POUNCE]);
+    expect(getClassSkillPicks('archer')).toEqual([PIERCING_SHOT, PINNING_SHOT, DISENGAGE]);
+    expect(getClassSkillPicks('vanguard')).toEqual([SUNDER, RECKLESS_SWING, JUMP_SWING]);
     expect(getClassSkillPicks('siege')).toEqual([DEADEYE]);
-    expect(getClassSkillPicks('scout')).toEqual([MARK, TAILWIND]);
+    expect(getClassSkillPicks('scout')).toEqual([MARK, TAILWIND, AIRLIFT]);
     expect(getClassSkillPicks('ram')).toEqual([BULWARK]);
-    expect(getClassSkillPicks('villager')).toEqual([]);
+    expect(getClassSkillPicks('villager')).toEqual([LEND_A_HAND]);
+    expect(getClassSkillPicks('slime')).toEqual([]);
     expect(getClassSkillPicks(null)).toEqual([]);
   });
 

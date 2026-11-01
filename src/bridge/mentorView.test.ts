@@ -38,8 +38,11 @@ describe('toMentorScreenView', () => {
       'Soldier',
       'Vanguard',
       'Sapper',
+      'Scout',
       'Beast',
+      'Beast Rider',
       'Siege',
+      'Ram',
       'Acolyte',
     ]);
     expect(view.lessons[ACOLYTE_LESSON]).toEqual({

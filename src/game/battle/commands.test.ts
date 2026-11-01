@@ -18,6 +18,13 @@ import { createBattleState, getDeployedUnits, getRunBattleResult, type BattleSta
 import { createTestBattle, makeTestUnit } from './testLevel.ts';
 import type { Modifier } from '../modifiers.ts';
 import {
+  AIRLIFT,
+  BATTERING_CHARGE,
+  CHARGE,
+  HIT_AND_RUN,
+  JUMP_SWING,
+  LEND_A_HAND,
+  STRAFING_RUN,
   CLEAVE,
   MARK,
   MEND,
@@ -842,6 +849,139 @@ describe('drain, recoil and monster skills', () => {
       }).events.find((event) => event.type === 'skill');
     expect(hit(makeTestUnit({ team: 'enemy', health: 40 }))).toMatchObject({ damage: 9 });
     expect(hit(monster)).toMatchObject({ damage: 12 });
+  });
+});
+
+describe('movement skills', () => {
+  const user = (skill: Skill) => {
+    const hero = makeTestUnit({ team: 'player', mana: 20 });
+    hero.modifiers = [{ kind: 'skill', skill }];
+    return hero;
+  };
+  const foe = () => makeTestUnit({ team: 'enemy' });
+  const ally = () => makeTestUnit({ team: 'player' });
+  const skillAt = (skillId: string, x: number) =>
+    ({ type: 'skill', unitId: 'hero', skillId, target: { x, y: 0 } }) as const;
+
+  it('leaps Jump Swing up to 2 tiles to land next to its foe and strike with 2 more power', () => {
+    const start = createTestBattle({
+      hero: { unit: user(JUMP_SWING), at: { x: 0, y: 0 } },
+      foe: { unit: foe(), at: { x: 3, y: 0 } },
+    });
+    const { state, events } = run(start, skillAt('jump-swing', 3));
+    expect(events.slice(0, 2)).toEqual([
+      { type: 'relocated', unitId: 'hero', from: { x: 0, y: 0 }, to: { x: 2, y: 0 } },
+      expect.objectContaining({ type: 'skill', targetId: 'foe', damage: 8 }),
+    ]);
+    expect(findUnit(state.grid, 'hero')).toEqual({ x: 2, y: 0 });
+  });
+
+  it('offers no leap when no tile next to the foe is free and in reach', () => {
+    const start = createTestBattle({
+      hero: { unit: user(JUMP_SWING), at: { x: 0, y: 0 } },
+      friend: { unit: ally(), at: { x: 2, y: 0 } },
+      foe: { unit: foe(), at: { x: 3, y: 0 } },
+    });
+    expect(getSkillTargets(start.grid, start.units, 'hero', { x: 0, y: 0 }, JUMP_SWING)).toEqual([]);
+  });
+
+  it('charges Battering Charge along a clear line, then pushes the foe', () => {
+    const start = createTestBattle({
+      hero: { unit: user(BATTERING_CHARGE), at: { x: 0, y: 0 } },
+      foe: { unit: foe(), at: { x: 4, y: 0 } },
+    });
+    const { state, events } = run(start, skillAt('battering-charge', 4));
+    expect(events[0]).toEqual({ type: 'relocated', unitId: 'hero', from: { x: 0, y: 0 }, to: { x: 3, y: 0 } });
+    expect(events).toContainEqual(expect.objectContaining({ type: 'pushed' }));
+    expect(findUnit(state.grid, 'foe')).toEqual({ x: 5, y: 0 });
+
+    const blocked = createTestBattle({
+      hero: { unit: user(BATTERING_CHARGE), at: { x: 0, y: 0 } },
+      friend: { unit: ally(), at: { x: 2, y: 0 } },
+      foe: { unit: foe(), at: { x: 4, y: 0 } },
+    });
+    expect(getSkillTargets(blocked.grid, blocked.units, 'hero', { x: 0, y: 0 }, BATTERING_CHARGE)).toEqual([]);
+  });
+
+  it('flies Strafing Run over every foe in its line for half a hit each, landing past them', () => {
+    const start = createTestBattle({
+      hero: { unit: user(STRAFING_RUN), at: { x: 0, y: 0 } },
+      near: { unit: foe(), at: { x: 1, y: 0 } },
+      far: { unit: foe(), at: { x: 2, y: 0 } },
+    });
+    const { state, events } = run(start, skillAt('strafing-run', 1));
+    expect(events.slice(0, 3)).toEqual([
+      { type: 'relocated', unitId: 'hero', from: { x: 0, y: 0 }, to: { x: 3, y: 0 } },
+      expect.objectContaining({ type: 'skill', targetId: 'near', damage: 3 }),
+      expect.objectContaining({ type: 'skill', targetId: 'far', damage: 3, splash: true }),
+    ]);
+    expect(findUnit(state.grid, 'hero')).toEqual({ x: 3, y: 0 });
+  });
+
+  it('offers no strafing run without a free tile to land on past the foe', () => {
+    const start = createTestBattle({
+      hero: { unit: user(STRAFING_RUN), at: { x: 0, y: 0 } },
+      near: { unit: foe(), at: { x: 1, y: 0 } },
+      far: { unit: foe(), at: { x: 2, y: 0 } },
+      friend: { unit: ally(), at: { x: 3, y: 0 } },
+    });
+    expect(getSkillTargets(start.grid, start.units, 'hero', { x: 0, y: 0 }, STRAFING_RUN)).toEqual([]);
+  });
+
+  it('steps back after Hit and Run, as far as the map allows', () => {
+    const start = createTestBattle({
+      hero: { unit: user(HIT_AND_RUN), at: { x: 2, y: 0 } },
+      foe: { unit: foe(), at: { x: 3, y: 0 } },
+    });
+    const { state, events } = run(start, skillAt('hit-and-run', 3));
+    expect(events).toContainEqual({ type: 'relocated', unitId: 'hero', from: { x: 2, y: 0 }, to: { x: 0, y: 0 } });
+    expect(findUnit(state.grid, 'hero')).toEqual({ x: 0, y: 0 });
+  });
+
+  it('adds a power to Charge for each tile walked this turn, up to 4, until the next phase', () => {
+    const charge = (walk: number) => {
+      const start = createTestBattle({
+        hero: { unit: user(CHARGE), at: { x: 0, y: 0 } },
+        foe: { unit: foe(), at: { x: walk + 1, y: 0 } },
+      });
+      const path = Array.from({ length: walk + 1 }, (_, x) => ({ x, y: 0 }));
+      const moved = walk > 0 ? run(start, { type: 'move', unitId: 'hero', to: { x: walk, y: 0 }, path }).state : start;
+      return run(moved, skillAt('charge', walk + 1));
+    };
+    expect(charge(0).events).toContainEqual(expect.objectContaining({ type: 'skill', damage: 6 }));
+    const ran = charge(3);
+    expect(ran.events).toContainEqual(expect.objectContaining({ type: 'skill', damage: 9 }));
+    const next = run(ran.state, { type: 'wait', unitId: 'foe' });
+    expect(next.state.units.get('hero')!.movedTiles).toBe(0);
+  });
+
+  it('trades places with an ally with Lend a Hand and Airlift', () => {
+    const swap = (skill: Skill, x: number) =>
+      run(
+        createTestBattle({
+          hero: { unit: user(skill), at: { x: 0, y: 0 } },
+          friend: { unit: ally(), at: { x, y: 0 } },
+          foe: { unit: foe(), at: { x: 7, y: 0 } },
+        }),
+        skillAt(skill.id, x),
+      );
+    const { state, events } = swap(LEND_A_HAND, 1);
+    expect(events.slice(0, 2)).toEqual([
+      { type: 'relocated', unitId: 'hero', from: { x: 0, y: 0 }, to: { x: 1, y: 0 } },
+      { type: 'relocated', unitId: 'friend', from: { x: 1, y: 0 }, to: { x: 0, y: 0 } },
+    ]);
+    expect(findUnit(state.grid, 'friend')).toEqual({ x: 0, y: 0 });
+    expect(state.units.get('hero')!.mana).toBe(19);
+    expect(findUnit(swap(AIRLIFT, 3).state.grid, 'hero')).toEqual({ x: 3, y: 0 });
+  });
+
+  it("doesn't swap an ally onto ground it couldn't stand on", () => {
+    const start = createTestBattle({
+      hero: { unit: user(LEND_A_HAND), at: { x: 0, y: 0 } },
+      friend: { unit: ally(), at: { x: 1, y: 0 } },
+    });
+    const grid = setTerrain(start.grid, 1, 0, 'water');
+    expect(getSkillTargets(grid, start.units, 'hero', { x: 0, y: 0 }, LEND_A_HAND)).toEqual([]);
   });
 });
 

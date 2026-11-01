@@ -47,6 +47,16 @@ import { getModifierSkills, type Modifier } from './modifiers.ts';
 // the user that share of the damage it dealt foes, rounded up; a `recoil`
 // one costs the user that much HP (never its last); `monsterMight` is
 // power added on top of `might` against a monster.
+//
+// Some skills move the user (see skillMoves.ts). A `leap` skill jumps it
+// up to that many tiles to land next to its target before it strikes (a
+// `straight` one only along a row or column, over free tiles: a charge);
+// a `retreat` one steps it that many tiles straight back from its target
+// after; a `strafe` one flies it that far in a line, striking every foe it
+// passes over, and lands it on the farthest free tile. `chargeMight` adds
+// 1 power for each tile the user walked this turn, up to that much. A
+// skill whose `effect` is 'swap' trades places with the ally it's aimed
+// at.
 
 export interface Skill {
   id: string;
@@ -57,7 +67,7 @@ export interface Skill {
   might?: number;
   damageScale?: number;
   push?: boolean;
-  effect?: 'heal' | 'buff';
+  effect?: 'heal' | 'buff' | 'swap';
   power?: number;
   intelligenceScale?: number;
   area?: SkillArea;
@@ -67,6 +77,11 @@ export interface Skill {
   drain?: number;
   recoil?: number;
   monsterMight?: number;
+  leap?: number;
+  straight?: boolean;
+  retreat?: number;
+  strafe?: number;
+  chargeMight?: number;
 }
 
 export type SkillArea = 'sides' | 'line' | 'burst';
@@ -301,6 +316,67 @@ export const TAILWIND = promotionSkill('tailwind', 'Tailwind', {
   animation: 'mend',
 });
 
+// A swift strike and away: the user's regular attack on an adjacent foe,
+// then it darts up to 2 tiles straight back.
+export const HIT_AND_RUN = promotionSkill('hit-and-run', 'Hit and Run', { manaCost: 2, retreat: 2 });
+
+// A shot, then a step back: the user's regular attack on a foe up to 2
+// tiles away, then it steps a tile straight back.
+export const DISENGAGE = promotionSkill('disengage', 'Disengage', {
+  manaCost: 2,
+  range: 2,
+  retreat: 1,
+  animation: 'stone',
+});
+
+// A leap onto prey: the beast springs up to 3 tiles to land next to a foe
+// and strikes it with its regular attack.
+export const POUNCE = promotionSkill('pounce', 'Pounce', { manaCost: 2, range: 4, leap: 3 });
+
+// A leaping overhead swing: the user jumps up to 2 tiles to land next to a
+// foe and strikes with 2 more power.
+export const JUMP_SWING = promotionSkill('jump-swing', 'Jump Swing', { range: 3, leap: 2, might: 2 });
+
+// A lance charge: the user's regular attack on an adjacent foe, with 1
+// more power for each tile it walked this turn, up to 4.
+export const CHARGE = promotionSkill('charge', 'Charge', { manaCost: 2, chargeMight: 4 });
+
+// The ram rolls up to 3 tiles along a row or column, over free ground, to
+// slam the first foe in its way with its regular attack and push it a
+// tile.
+export const BATTERING_CHARGE = promotionSkill('battering-charge', 'Battering Charge', {
+  manaCost: 2,
+  range: 4,
+  leap: 3,
+  straight: true,
+  push: true,
+});
+
+// The beast swoops low along a row or column, up to 3 tiles, while the
+// rider spears every foe it passes over for half its regular attack; it
+// lands on the farthest free tile.
+export const STRAFING_RUN = promotionSkill('strafing-run', 'Strafing Run', {
+  manaCost: 4,
+  range: 3,
+  strafe: 3,
+  damageScale: 0.5,
+});
+
+// A hand up: the user trades places with an adjacent ally.
+export const LEND_A_HAND = promotionSkill('lend-a-hand', 'Lend a Hand', {
+  manaCost: 1,
+  effect: 'swap',
+  animation: 'mend',
+});
+
+// The flier swoops in to trade places with an ally up to 3 tiles away.
+export const AIRLIFT = promotionSkill('airlift', 'Airlift', {
+  manaCost: 2,
+  range: 3,
+  effect: 'swap',
+  animation: 'mend',
+});
+
 // A blow that splits armor: the user's regular attack with 2 more power on
 // an adjacent foe, which it leaves Sundered (3 more damage from every hit).
 export const SUNDER = promotionSkill('sunder', 'Sunder', { might: 2, status: 'sundered' });
@@ -397,20 +473,24 @@ export const SKILL_TREES: SkillTrees = Object.freeze({
   acolyte: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: MEND })]),
   siege: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: BARRAGE })]),
   beast: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: SAVAGE_BITE })]),
+  scout: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: HIT_AND_RUN })]),
+  'beast-rider': Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: CHARGE })]),
+  ram: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: BATTERING_CHARGE })]),
 });
 
 // unitClass -> the skills a level up can offer a unit of the class to
 // learn (a skill boon, see warband/boons.ts): its own, never another
 // class's. Classes without an entry are offered none.
 export const CLASS_SKILL_PICKS: Readonly<Record<string, readonly Skill[]>> = Object.freeze({
-  archer: Object.freeze([PIERCING_SHOT, PINNING_SHOT]),
-  vanguard: Object.freeze([SUNDER, RECKLESS_SWING]),
+  villager: Object.freeze([LEND_A_HAND]),
+  archer: Object.freeze([PIERCING_SHOT, PINNING_SHOT, DISENGAGE]),
+  vanguard: Object.freeze([SUNDER, RECKLESS_SWING, JUMP_SWING]),
   soldier: Object.freeze([LUNGE, PHALANX]),
   sapper: Object.freeze([SHRAPNEL]),
   acolyte: Object.freeze([SMITE, PRAYER, WARD]),
-  scout: Object.freeze([MARK, TAILWIND]),
-  beast: Object.freeze([WING_BUFFET, ROAR]),
-  'beast-rider': Object.freeze([SKEWER, TANDEM_STRIKE]),
+  scout: Object.freeze([MARK, TAILWIND, AIRLIFT]),
+  beast: Object.freeze([WING_BUFFET, ROAR, POUNCE]),
+  'beast-rider': Object.freeze([SKEWER, TANDEM_STRIKE, STRAFING_RUN]),
   siege: Object.freeze([DEADEYE]),
   ram: Object.freeze([BULWARK]),
 });
@@ -500,7 +580,9 @@ export function calculateSkillDamage(skill: Skill, user: SkillFighter, defender:
     weapon: user.weapon,
     bonus: getFighterBonus(user, defender, true),
   };
-  boosted[power] = (user[power] ?? 0) + (skill.might ?? 0) + (defender.monster ? (skill.monsterMight ?? 0) : 0);
+  const charge = Math.min(skill.chargeMight ?? 0, user.movedTiles ?? 0);
+  boosted[power] =
+    (user[power] ?? 0) + (skill.might ?? 0) + charge + (defender.monster ? (skill.monsterMight ?? 0) : 0);
   const guarded: DamageStats = {
     defense: defender.defense,
     armorDefense: defender.armorDefense,
@@ -600,9 +682,15 @@ export function isBuffSkill(skill: Skill): boolean {
   return skill.effect === 'buff';
 }
 
-// Whether `skill` is used on allies (a heal or a buff) rather than foes.
+// Whether `skill` trades places with an ally.
+export function isSwapSkill(skill: Skill): boolean {
+  return skill.effect === 'swap';
+}
+
+// Whether `skill` is used on allies (a heal, a buff or a swap) rather than
+// foes.
 export function isSupportSkill(skill: Skill): boolean {
-  return isHealingSkill(skill) || isBuffSkill(skill);
+  return isHealingSkill(skill) || isBuffSkill(skill) || isSwapSkill(skill);
 }
 
 // Whether `skill` mends an ally rather than striking a foe.
@@ -643,6 +731,7 @@ export function describeSkill(skill: Skill): string {
     if (skill.range === 0) return `Leaves every ally next to it ${leaves} until your next phase.`;
     return `Leaves an ally ${reach} ${leaves} until your next phase.`;
   }
+  if (isSwapSkill(skill)) return `Trades places with an ally ${reach}.`;
   const scale = skill.damageScale ?? 1;
   if (scale === 0 && skill.push) return `Pushes a foe ${reach} a tile away.`;
   if (scale === 0 && status) {
@@ -661,7 +750,19 @@ export function describeSkill(skill: Skill): string {
   const monsters = skill.monsterMight ? ` (+${skill.monsterMight} more against monsters)` : '';
   const drain = skill.drain ? `, healing it for ${skill.drain === 0.5 ? 'half' : `${skill.drain}×`} the damage` : '';
   const recoil = skill.recoil ? `, costing it ${skill.recoil} HP` : '';
-  return `${hit}${might}${monsters} on a foe ${reach}${area}${allies}${push}${followUp}${after}${drain}${recoil}.`;
+  const charge = skill.chargeMight ? ` (+1 for each tile it moved this turn, up to ${skill.chargeMight})` : '';
+  const retreat = skill.retreat
+    ? `, then steps ${skill.retreat === 1 ? 'a tile' : `up to ${skill.retreat} tiles`} back`
+    : '';
+  const tiles = (n: number) => `${n} ${n === 1 ? 'tile' : 'tiles'}`;
+  if (skill.strafe) {
+    return `Flies up to ${tiles(skill.strafe)} in a line, dealing ${hit.charAt(0).toLowerCase()}${hit.slice(1)} to every foe it passes over.`;
+  }
+  if (skill.leap) {
+    const way = skill.straight ? `Charges up to ${tiles(skill.leap)} in a line` : `Leaps up to ${tiles(skill.leap)}`;
+    return `${way} to a foe, then ${hit.charAt(0).toLowerCase()}${hit.slice(1)}${might}${push}.`;
+  }
+  return `${hit}${might}${charge}${monsters} on a foe ${reach}${area}${allies}${push}${followUp}${after}${drain}${recoil}${retreat}.`;
 }
 
 export function canUseSkill(unit: { mana: number }, skill: Skill): boolean {
