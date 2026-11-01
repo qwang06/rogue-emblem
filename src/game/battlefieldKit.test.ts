@@ -3,6 +3,7 @@ import {
   BLOB,
   FOREGROUND_REACH,
   getKitScene,
+  isOpenField,
   getPatchMask,
   HAZE,
   KIT_MARGIN,
@@ -30,6 +31,8 @@ const KIT: BattlefieldKit = {
 };
 const FLOOR = { width: 896, height: 400 };
 const SEEDS = Array.from({ length: 20 }, (_, i) => i * 7919 + 1);
+
+const isBush = (kit: typeof KIT, key: string) => kit.bushes.some((b) => b.key === key);
 
 describe('getKitScene', () => {
   it('runs KIT_MARGIN past the floor’s sides and front, and up over the horizon', () => {
@@ -76,6 +79,24 @@ describe('layOutKit', () => {
     expect(horizon.y + horizon.height).toBeGreaterThan(0);
     const [ground] = pieces.filter((p) => p.layer === 'ground');
     expect(ground.y).toBeLessThan(horizon.y + horizon.height);
+  });
+
+  it('lays out an open field, with no trees down the sides, on about openChance of seeds', () => {
+    const trees = (kit: typeof KIT, seed: number) =>
+      layOutKit(kit, FLOOR, seed).pieces.filter((p) => kit.trees.some((t) => t.key === p.key));
+    for (const seed of SEEDS) expect(trees(KIT, seed).length).toBeGreaterThan(0);
+    const half = { ...KIT, openChance: 0.5 };
+    const seeds = Array.from({ length: 200 }, (_, i) => i);
+    const open = seeds.filter((seed) => isOpenField(half, seed));
+    expect(open.length).toBeGreaterThan(60);
+    expect(open.length).toBeLessThan(140);
+    for (const seed of open.slice(0, 10)) {
+      expect(trees(half, seed)).toEqual([]);
+      expect(layOutKit(half, FLOOR, seed).pieces.some((p) => isBush(half, p.key))).toBe(true);
+    }
+    for (const seed of seeds.filter((s) => !isOpenField(half, s)).slice(0, 10)) {
+      expect(trees(half, seed).length).toBeGreaterThan(0);
+    }
   });
 
   it('uses only the kit’s pieces and the generated washes, and keeps decals in the scene', () => {
