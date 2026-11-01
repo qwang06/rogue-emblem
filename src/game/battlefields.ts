@@ -128,6 +128,11 @@ export const BATTLEFIELD_OBSTACLES: Readonly<Record<BattlefieldKind, readonly Ob
 // painted battlefields (src/assets/battlefieldArt.ts) leave clear.
 export const BATTLEFIELD_SIZE = Object.freeze({ width: 14, height: 12 });
 
+// The size every built-in Warband region is fought on, in cells: bigger
+// than the screen shows at once, so the camera scrolls across it
+// (SCROLL_VIEW_CELLS in camera.ts).
+export const REGION_FIELD_SIZE = Object.freeze({ width: 24, height: 16 });
+
 export interface ObstaclePlacement extends Point {
   obstacle: ObstacleKind;
 }
@@ -216,7 +221,9 @@ export function generateBattlefield(options: BattlefieldOptions, rng: Rng): Batt
     }
     let next = grid;
     for (const { x, y, obstacle } of piece) next = setTerrain(next, x, y, OBSTACLE_TERRAIN[obstacle]);
-    if (!isConnected(next, start)) return false;
+    // Only a piece with a blocker in it can wall anything off.
+    const blocks = piece.some(({ obstacle }) => getMoveCost(OBSTACLE_TERRAIN[obstacle]) === Infinity);
+    if (blocks && !isConnected(next, start)) return false;
     grid = next;
     obstacles.push(...piece);
     near(piece).forEach((p) => taken.add(key(p)));
@@ -226,12 +233,15 @@ export function generateBattlefield(options: BattlefieldOptions, rng: Rng): Batt
   const tryPiece = (build: () => ObstaclePlacement[]) => {
     for (let attempt = 0; attempt < 12; attempt++) if (tryPlace(build())) return;
   };
+  // A field bigger than BATTLEFIELD_SIZE gets its layout's set pieces
+  // again for every BATTLEFIELD_SIZE of ground it covers.
+  const repeats = Math.max(1, Math.round((width * height) / (BATTLEFIELD_SIZE.width * BATTLEFIELD_SIZE.height)));
   const middle = (low: number, high: number) => randomInt(rng, Math.floor(width * low), Math.ceil(width * high) - 1);
 
   // Fences: three to five cells along a row away from the top and bottom
   // edges, in the middle of the field, one of them broken. Where the run
   // crosses a route it's broken there too, so the way stays open.
-  for (let i = 0; i < layout.fences; i++) {
+  for (let i = 0; i < layout.fences * repeats; i++) {
     tryPiece(() => {
       const length = randomInt(rng, 3, 5);
       const x0 = middle(0.25, 0.75) - Math.floor(length / 2);
@@ -246,8 +256,8 @@ export function generateBattlefield(options: BattlefieldOptions, rng: Rng): Batt
   }
 
   // The cache: a cart or crates in no-man's-land, two or three more things
-  // stacked against its sides.
-  if (layout.cache.length > 0) {
+  // stacked against its sides (one per repeat).
+  for (let i = 0; layout.cache.length > 0 && i < repeats; i++) {
     tryPiece(() => {
       const anchor = { x: middle(0.35, 0.75), y: randomInt(rng, 1, height - 2) };
       const sides = shuffle(rng, STEPS)
@@ -258,7 +268,7 @@ export function generateBattlefield(options: BattlefieldOptions, rng: Rng): Batt
   }
 
   // Groves: two or three plants or rocks, side by side.
-  for (let i = 0; i < layout.groves; i++) {
+  for (let i = 0; i < layout.groves * repeats; i++) {
     tryPiece(() => {
       const anchor = { x: middle(0.2, 1), y: randomInt(rng, 0, height - 1) };
       const cells = [anchor, ...shuffle(rng, STEPS).map(([dx, dy]) => ({ x: anchor.x + dx, y: anchor.y + dy }))];

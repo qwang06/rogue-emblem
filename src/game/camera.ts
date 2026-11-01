@@ -53,3 +53,48 @@ export function getRenderSize(
     pixelRatio,
   };
 }
+
+interface Rect extends Size {
+  x: number;
+  y: number;
+}
+
+// The most floor a scrolling battlefield shows at once, in cells: a field
+// up to this size is framed whole, a bigger one is shown at this size's
+// zoom and the camera follows the cursor across it.
+export const SCROLL_VIEW_CELLS = Object.freeze({ width: 14, height: 12 });
+
+// Where a camera showing `view` (world pixels) should center so `focus`
+// stays at least `margin` inside the view's edges, moving as little as it
+// can from `current`, and never showing past `bounds` (centered on it along
+// an axis where the view is bigger than it). A focus too big for the view
+// with its margin is centered.
+export function getFollowCenter(
+  current: { x: number; y: number },
+  focus: Rect,
+  view: Size,
+  bounds: Rect,
+  margin: Size,
+): { x: number; y: number } {
+  const axis = (
+    center: number,
+    start: number,
+    size: number,
+    viewSize: number,
+    lo: number,
+    extent: number,
+    pad: number,
+  ) => {
+    const half = viewSize / 2;
+    const min = start + size + pad - half;
+    const max = start - pad + half;
+    let next = min > max ? (min + max) / 2 : Math.min(Math.max(center, min), max);
+    if (viewSize >= extent) return lo + extent / 2;
+    next = Math.min(Math.max(next, lo + half), lo + extent - half);
+    return next;
+  };
+  return {
+    x: axis(current.x, focus.x, focus.width, view.width, bounds.x, bounds.width, margin.width),
+    y: axis(current.y, focus.y, focus.height, view.height, bounds.y, bounds.height, margin.height),
+  };
+}

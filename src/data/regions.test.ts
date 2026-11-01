@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BATTLEFIELD_SIZE } from '../game/battlefields.ts';
+import { REGION_FIELD_SIZE } from '../game/battlefields.ts';
 import { parseRegionSettings } from '../game/warband/regionsFile.ts';
 import { REGION_CONFIGS, REGION_SETTINGS, REGIONS_TEXT } from './regions.ts';
 
@@ -20,11 +20,13 @@ describe('REGION_SETTINGS', () => {
     for (const region of REGION_CONFIGS) expect(region.description).toBeTruthy();
   });
 
-  // Every region is fought on the battlefield's size, the open ground the
-  // painted battlefields leave clear.
-  it('uses BATTLEFIELD_SIZE maps', () => {
+  // Every region is fought on the same big field the camera scrolls across.
+  it('uses REGION_FIELD_SIZE maps', () => {
     for (const region of REGION_CONFIGS) {
-      expect([region.terrain.width, region.terrain.height]).toEqual([BATTLEFIELD_SIZE.width, BATTLEFIELD_SIZE.height]);
+      expect([region.terrain.width, region.terrain.height]).toEqual([
+        REGION_FIELD_SIZE.width,
+        REGION_FIELD_SIZE.height,
+      ]);
     }
   });
 

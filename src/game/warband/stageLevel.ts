@@ -61,8 +61,20 @@ export const SPIKE_TRAP_REACH = 3;
 // the stage.
 const SPIKE_SEED_SALT = 0x51c3e5;
 
-// How many candidate maps a stage's seed lays out to keep the best of.
+// How many candidate maps a stage's seed lays out to keep the best of, on
+// a map of MAP_CANDIDATES_AREA tiles or less. A bigger map lays out fewer
+// (getCandidateCount), so a stage takes about as long to build whatever its
+// size.
 export const MAP_CANDIDATES = 30;
+export const MAP_CANDIDATES_AREA = 14 * 12;
+const MIN_MAP_CANDIDATES = 8;
+
+// How many candidates a stage on `region`'s map lays out.
+export function getCandidateCount(region: RegionConfig): number {
+  const area = region.terrain.width * region.terrain.height;
+  if (area <= MAP_CANDIDATES_AREA) return MAP_CANDIDATES;
+  return Math.max(MIN_MAP_CANDIDATES, Math.round((MAP_CANDIDATES * MAP_CANDIDATES_AREA) / area));
+}
 
 // The seeds a stage's candidates are laid out from: `seed` itself first,
 // then `count - 1` more drawn from it.
@@ -128,10 +140,15 @@ function isBetter(a: StageLayout, b: StageLayout): boolean {
   return aOk !== bOk ? aOk : a.score < b.score;
 }
 
-// The best of `candidates` layouts from `seed`: the best-scoring one that
+// The best of `candidates` layouts from `seed` (getCandidateCount's by
+// default): the best-scoring one that
 // keeps every rule (the earliest on a tie, so a map that already meets
 // every target is kept as is), or the best-scoring one if none does.
-export function pickStageLayout(seed: number, region: RegionConfig, candidates = MAP_CANDIDATES): StageLayout {
+export function pickStageLayout(
+  seed: number,
+  region: RegionConfig,
+  candidates = getCandidateCount(region),
+): StageLayout {
   let best: StageLayout | null = null;
   for (const candidate of getCandidateSeeds(seed, candidates)) {
     const layout = layOutStage(candidate, region);

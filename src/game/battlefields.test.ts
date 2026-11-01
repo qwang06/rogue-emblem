@@ -100,6 +100,25 @@ describe('generateBattlefield', () => {
     }
   });
 
+  it('sets out more set pieces on a bigger field', () => {
+    let more = 0;
+    for (const seed of SEEDS) {
+      const big = generateBattlefield(
+        { width: 24, height: 16, battlefield: 'plains', obstacles: [30, 30] },
+        createSeededRng(seed),
+      );
+      const small = field('plains', seed, [30, 30]);
+      const carts = (obstacles: { obstacle: string }[]) =>
+        obstacles.filter(({ obstacle }) => BATTLEFIELD_LAYOUTS.plains.cache.includes(obstacle as never)).length;
+      if (carts(big.obstacles) > carts(small.obstacles)) more++;
+      const open = big.grid.cells.filter((c) => getMoveCost(c.terrain) < Infinity);
+      expect(checkMap({ grid: big.grid, buildings: [], deploymentZone: big.deploymentZone, enemyTiles: open })).toEqual(
+        [],
+      );
+    }
+    expect(more).toBeGreaterThan(SEEDS.length * 0.5);
+  });
+
   it('never blocks the road', () => {
     for (const seed of SEEDS) {
       const { grid, path } = field('desert', seed, [10, 14]);

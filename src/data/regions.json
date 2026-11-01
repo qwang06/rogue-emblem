@@ -7,10 +7,10 @@
       "description": "Open fields: the run's first, quick fight. A lone slime stands three steps from the start, close enough to strike on turn one.",
       "terrain": {
         "generator": "battlefield",
-        "width": 14,
-        "height": 12,
+        "width": 24,
+        "height": 16,
         "battlefield": "plains",
-        "obstacles": [6, 10]
+        "obstacles": [14, 23]
       },
       "enemies": [{ "count": 1, "unitClass": "slime", "minDistance": 3, "maxDistance": 3 }],
       "treeChance": 0,
@@ -22,10 +22,10 @@
       "description": "Lake country: lakes funnel the warband toward two goblins guarding the far end.",
       "terrain": {
         "generator": "battlefield",
-        "width": 14,
-        "height": 12,
+        "width": 24,
+        "height": 16,
         "battlefield": "plains",
-        "obstacles": [8, 12]
+        "obstacles": [18, 28]
       },
       "enemies": [
         { "count": 1, "unitClass": "goblin" },
@@ -40,10 +40,10 @@
       "description": "Thick woods and a twisting path: lots of cover, slow going, and a wolf on the prowl.",
       "terrain": {
         "generator": "battlefield",
-        "width": 14,
-        "height": 12,
+        "width": 24,
+        "height": 16,
         "battlefield": "forest",
-        "obstacles": [14, 20]
+        "obstacles": [32, 46]
       },
       "enemies": [
         { "count": 2, "unitClass": "slime" },
@@ -58,10 +58,10 @@
       "description": "Mountain passes: outcrops of impassable rock squeeze the fight onto the path, where goblins wait with a skeleton.",
       "terrain": {
         "generator": "battlefield",
-        "width": 14,
-        "height": 12,
+        "width": 24,
+        "height": 16,
         "battlefield": "desert",
-        "obstacles": [10, 16]
+        "obstacles": [23, 37]
       },
       "enemies": [
         { "count": 2, "unitClass": "goblin", "level": 2 },
@@ -76,10 +76,10 @@
       "description": "Old burial mounds among the ruins: skeletons rise from the graves and bats circle overhead.",
       "terrain": {
         "generator": "battlefield",
-        "width": 14,
-        "height": 12,
+        "width": 24,
+        "height": 16,
         "battlefield": "desert",
-        "obstacles": [8, 14]
+        "obstacles": [18, 32]
       },
       "enemies": [
         { "count": 2, "unitClass": "skeleton", "level": 2 },
@@ -94,10 +94,10 @@
       "description": "Marshland of pools and reeds: wolves run the dry paths while bats cross the water.",
       "terrain": {
         "generator": "battlefield",
-        "width": 14,
-        "height": 12,
+        "width": 24,
+        "height": 16,
         "battlefield": "forest",
-        "obstacles": [10, 16]
+        "obstacles": [23, 37]
       },
       "enemies": [
         { "count": 2, "unitClass": "wolf", "level": 3 },
@@ -112,10 +112,10 @@
       "description": "A fortified borderland: a castle on the road and a garrison of skeletons and goblins.",
       "terrain": {
         "generator": "battlefield",
-        "width": 14,
-        "height": 12,
+        "width": 24,
+        "height": 16,
         "battlefield": "plains",
-        "obstacles": [8, 14]
+        "obstacles": [18, 32]
       },
       "enemies": [
         { "count": 2, "unitClass": "skeleton", "level": 3 },
@@ -130,10 +130,10 @@
       "description": "A brigand camp in the hills: soldiers, an archer and an axeman who fight like your own warband, with goblin lackeys.",
       "terrain": {
         "generator": "battlefield",
-        "width": 14,
-        "height": 12,
+        "width": 24,
+        "height": 16,
         "battlefield": "forest",
-        "obstacles": [10, 16]
+        "obstacles": [23, 37]
       },
       "enemies": [
         { "count": 1, "unitClass": "soldier", "level": 4 },
@@ -150,10 +150,10 @@
       "description": "Burned farmland on the orcs' border: heavy orcs and their wolves, one long march from the warlord's hold.",
       "terrain": {
         "generator": "battlefield",
-        "width": 14,
-        "height": 12,
+        "width": 24,
+        "height": 16,
         "battlefield": "desert",
-        "obstacles": [8, 14]
+        "obstacles": [18, 32]
       },
       "enemies": [
         { "count": 2, "unitClass": "orc", "level": 4 },
@@ -169,10 +169,10 @@
       "description": "The orc warlord's stronghold, the end of the run: beat the Orc Warlord, who holds the keep with orcs, wolves and an archer.",
       "terrain": {
         "generator": "battlefield",
-        "width": 14,
-        "height": 12,
+        "width": 24,
+        "height": 16,
         "battlefield": "plains",
-        "obstacles": [8, 14]
+        "obstacles": [18, 32]
       },
       "enemies": [
         { "count": 1, "unitClass": "orc", "level": 7, "boss": "Orc Warlord" },

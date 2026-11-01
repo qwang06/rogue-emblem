@@ -9,6 +9,8 @@ import {
   growToLevel,
   layOutStage,
   MAP_CANDIDATES,
+  MAP_CANDIDATES_AREA,
+  getCandidateCount,
   pickStageArchetype,
   pickStageLayout,
   SPIKE_TRAP_COUNT,
@@ -17,7 +19,7 @@ import {
   WARBAND_LEADER_NAME,
   WARBAND_MAX_DEPLOYED,
 } from './stageLevel.ts';
-import { getStageRegion } from './regions.ts';
+import { getStageRegion, type RegionConfig } from './regions.ts';
 import { LOOT_ITEMS } from '../loot.ts';
 import { ALL_STARTING_CLASSES, STARTING_CLASSES, UNLOCKABLE_STARTING_CLASSES } from './startingClasses.ts';
 import { createUnitOfClass } from '../unitClasses.ts';
@@ -111,12 +113,27 @@ describe('getCandidateSeeds', () => {
   });
 });
 
-// Lays out many full-size stages, each the best of MAP_CANDIDATES maps.
+describe('getCandidateCount', () => {
+  const sized = (width: number, height: number) =>
+    ({ ...REGION_CONFIGS[0], terrain: { ...REGION_CONFIGS[0].terrain, width, height } }) as RegionConfig;
+
+  it('lays out MAP_CANDIDATES on a map up to MAP_CANDIDATES_AREA tiles', () => {
+    expect(getCandidateCount(sized(14, 12))).toBe(MAP_CANDIDATES);
+    expect(getCandidateCount(sized(8, 8))).toBe(MAP_CANDIDATES);
+  });
+
+  it('lays out fewer on a bigger map, in proportion to its area, but never under 8', () => {
+    expect(getCandidateCount(sized(24, 16))).toBe(Math.round((MAP_CANDIDATES * MAP_CANDIDATES_AREA) / (24 * 16)));
+    expect(getCandidateCount(sized(48, 48))).toBe(8);
+  });
+});
+
+// Lays out many full-size stages, each the best of getCandidateCount maps.
 describe('pickStageLayout', { timeout: 60_000 }, () => {
   it('keeps the best-scoring candidate that keeps every rule, the earliest on a tie', () => {
     for (const region of REGION_CONFIGS) {
       for (const seed of SEEDS.slice(0, 10)) {
-        const layouts = getCandidateSeeds(seed).map((s) => layOutStage(s, region));
+        const layouts = getCandidateSeeds(seed, getCandidateCount(region)).map((s) => layOutStage(s, region));
         const valid = layouts.filter((l) => l.problems.length === 0);
         const picked = pickStageLayout(seed, region);
         const best = Math.min(...valid.map((l) => l.score));
@@ -167,14 +184,15 @@ describe('createStageLevel', { timeout: 60_000 }, () => {
     }
   });
 
-  it('lets every built-in region fight within the first turn or two', () => {
-    // Most units move 5 and strike 1 tile away, so an enemy 11 or fewer
-    // steps out can be struck by turn 2.
+  it('lets every built-in region fight within the first three turns', () => {
+    // Most units move 5 and strike 1 tile away, so an enemy 16 or fewer
+    // steps out can be struck by turn 3: on a big field the sides close in
+    // for a turn or two first, as in Fire Emblem.
     for (const region of REGION_CONFIGS) {
       for (const seed of SEEDS) {
         const { metrics } = pickStageLayout(seed, region);
         expect(metrics.nearestEnemy).not.toBeNull();
-        expect(metrics.nearestEnemy!).toBeLessThanOrEqual(11);
+        expect(metrics.nearestEnemy!).toBeLessThanOrEqual(16);
       }
     }
   });
