@@ -48,6 +48,8 @@ export function getTargetFilter(state: BattleState, unit: Unit): (unitId: string
 export function planNextTurn(state: BattleState): BattleCommand[] {
   const { turnState } = state;
   if (state.stage !== 'battle' || state.outcome || !turnState) return [];
+  // A unit on a canto (a Momentum kill) just stays put.
+  if (turnState.canto) return [{ type: 'wait', unitId: turnState.canto.unitId }];
   const unitId = getTeamUnitIds(state.units, turnState.team).find((id) => !isDone(turnState, id));
   return unitId ? planUnitTurn(state, unitId) : [];
 }

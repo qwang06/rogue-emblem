@@ -15,6 +15,14 @@ export interface TurnState {
   team: Team;
   moved: readonly string[];
   done: readonly string[];
+  // A unit that may still move `movement` tiles after acting (a Momentum
+  // kill), or null/missing for none. It isn't done until it moves or waits.
+  canto?: Canto | null;
+}
+
+export interface Canto {
+  unitId: string;
+  movement: number;
 }
 
 export type BattleOutcome = 'victory' | 'defeat';
@@ -37,10 +45,23 @@ export function markMoved(state: TurnState, unitId: string): TurnState {
 }
 
 // A unit that's done has also used up its move.
+// (It ends a canto of its own.)
 export function markDone(state: TurnState, unitId: string): TurnState {
   const done = withId(state.done, unitId);
   if (done === state.done) return state;
-  return Object.freeze({ ...state, moved: withId(state.moved, unitId), done });
+  const canto = state.canto?.unitId === unitId ? null : state.canto;
+  return Object.freeze({ ...state, moved: withId(state.moved, unitId), done, canto });
+}
+
+// Lets `unitId`, having acted, move `movement` more tiles before it's done
+// (see Canto).
+export function startCanto(state: TurnState, unitId: string, movement: number): TurnState {
+  return Object.freeze({ ...state, canto: Object.freeze({ unitId, movement }) });
+}
+
+// The canto `unitId` is on, or null.
+export function getCanto(state: TurnState | null | undefined, unitId: string): Canto | null {
+  return state?.canto?.unitId === unitId ? state.canto : null;
 }
 
 export function hasMoved(state: TurnState, unitId: string): boolean {
