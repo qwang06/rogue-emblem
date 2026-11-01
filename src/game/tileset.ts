@@ -46,7 +46,10 @@ export const TERRAIN_SHEET = {
 // pack's snow sheet, snowy buildings included; underworld (overworld-underworld.png) is
 // the summer sheet with dead ash ground, burnt bare woods, black rock and
 // lava for water.
-export const SEASONS = ['summer', 'autumn', 'winter', 'underworld'] as const;
+// starship (overworld-starship.png) is a habitable starship deck: steel
+// plating, hydroponic beds and planters, coolant channels, viewports onto
+// space for deep water, lit walkways, and machinery stacks for mountains.
+export const SEASONS = ['summer', 'autumn', 'winter', 'underworld', 'starship'] as const;
 export type Season = (typeof SEASONS)[number];
 export const DEFAULT_SEASON: Season = 'summer';
 
@@ -58,16 +61,18 @@ export const SEASON_TERRAIN_SHEETS: Readonly<Record<Season, typeof TERRAIN_SHEET
   autumn: { ...TERRAIN_SHEET, key: 'overworld-autumn' },
   winter: { ...TERRAIN_SHEET, key: 'overworld-winter' },
   underworld: { ...TERRAIN_SHEET, key: 'overworld-underworld' },
+  starship: { ...TERRAIN_SHEET, key: 'overworld-starship' },
 };
 
 // The decorative tree (TREE_SPRITES) a generated map in `season` scatters
 // over its grass, or null for none: the ginkgos stand on a patch of green
-// grass, which would show on snow or ash.
+// grass, which would show on snow, ash or a deck.
 export const SEASON_TREES: Readonly<Record<Season, string | null>> = {
   summer: 'green_ginkgo',
   autumn: 'gold_ginkgo',
   winter: null,
   underworld: null,
+  starship: null,
 };
 
 // Plain grass fills every cell under the other terrain, as a [column, row]

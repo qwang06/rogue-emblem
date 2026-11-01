@@ -8,6 +8,7 @@ import goldGinkgoTree from './gold_ginkgo_tree.png';
 import mapProps from './map-props.png';
 import overworldAutumn from './overworld-autumn.png';
 import overworldUnderworld from './overworld-underworld.png';
+import overworldStarship from './overworld-starship.png';
 import overworldWinter from './overworld-winter.png';
 import overworld from './overworld.png';
 import ballistaIcon from './items/ballista.png';
@@ -52,6 +53,7 @@ export const TERRAIN_SHEET_URLS: Readonly<Record<string, string>> = {
   'overworld-autumn': overworldAutumn,
   'overworld-winter': overworldWinter,
   'overworld-underworld': overworldUnderworld,
+  'overworld-starship': overworldStarship,
 };
 
 export const SPRITE_URLS: Readonly<Record<string, string>> = {
