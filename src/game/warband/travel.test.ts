@@ -19,7 +19,6 @@ import {
   isInTown,
   isRealmRun,
   isSiteDone,
-  shiftEnemyLevels,
   startRoute,
   travelTo,
 } from './travel.ts';
@@ -127,18 +126,6 @@ describe('getSiteRegion', () => {
     expect(Math.min(...region.enemies.map((group) => group.level!))).toBe(to.depth + FORT_LEVELS);
     expect(getSiteRegion(linearRun(), SETTINGS)).toBeNull();
     expect(realm).toBeDefined();
-  });
-});
-
-describe('shiftEnemyLevels', () => {
-  const region = SETTINGS.regions[2];
-
-  it('moves every group by the offset, never below level 1', () => {
-    expect(shiftEnemyLevels(region, 0)).toBe(region);
-    expect(shiftEnemyLevels(region, 2).enemies.map((g) => g.level)).toEqual(
-      region.enemies.map((g) => (g.level ?? 1) + 2),
-    );
-    expect(shiftEnemyLevels(region, -99).enemies.every((g) => g.level === 1)).toBe(true);
   });
 });
 

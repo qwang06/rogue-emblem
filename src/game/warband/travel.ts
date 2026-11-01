@@ -126,18 +126,6 @@ export function getSiteRegion(run: RunState, settings: RegionSettings): RegionCo
   return levelRegionForStage(region, run.stage, at.levelOffset);
 }
 
-// `region` with every enemy group `offset` levels up (down when negative,
-// never below level 1).
-export function shiftEnemyLevels(region: RegionConfig, offset: number): RegionConfig {
-  if (offset === 0) return region;
-  return Object.freeze({
-    ...region,
-    enemies: Object.freeze(
-      region.enemies.map((group) => Object.freeze({ ...group, level: Math.max(1, (group.level ?? 1) + offset) })),
-    ),
-  });
-}
-
 // How much a fort's clear pays, as a multiple of a battle's.
 export const FORT_GOLD_MULTIPLIER = 2;
 
