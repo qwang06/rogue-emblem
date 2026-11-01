@@ -41,7 +41,7 @@ One 32x32 PNG per reward kind whose card doesn't show an item or unit (`draft`, 
 
 ## Glyph icons: src/assets/glyphs/
 
-16x16 PNGs, transparent, one per `GlyphKind` and per `StatIconKind` (named by kind, e.g. `crit.png`, `rout.png`). Most were painted with PixelLab in the item icons' style (dark outline, a few shades); `exp`, `health`, `gold`, `skull`, `danger`, `attack`, `move`, `book`, `skill`, `heal` (red cross), `item`, `settings`, `sound` (speaker), `music` (note), `avoid`, `mp` and `hit` are the UI asset sheet's 8x8 icons doubled, written by `scripts/slice-ui-sheet.js` (rerunning it overwrites them). Shown at 1x (16 CSS px), 12px in the reward tiles' EXP and the merchant's prices (smoothed there, since pixelated 0.75x drops rows). `glyphIcons.test.ts` checks every kind has one and each is 16x16. `range.png` (a dotted arrow) is the weakest and the first to repaint.
+16x16 PNGs, transparent, one per `GlyphKind` and per `StatIconKind` (named by kind, e.g. `crit.png`, `rout.png`). Most were painted with PixelLab in the item icons' style (dark outline, a few shades); `auto` (fast forward), `exp`, `health`, `gold`, `skull`, `danger`, `attack`, `move`, `book`, `skill`, `heal` (red cross), `item`, `settings`, `music` (note), `avoid`, `mp` and `hit` are the UI asset sheet's 8x8 icons doubled, written by `scripts/slice-ui-sheet.js` (rerunning it overwrites them). Shown at 1x (16 CSS px), 12px in the reward tiles' EXP and the merchant's prices (smoothed there, since pixelated 0.75x drops rows). `glyphIcons.test.ts` checks every kind has one and each is 16x16. `range.png` (a dotted arrow) is the weakest and the first to repaint.
 
 ## Boon icons: src/assets/boons/
 

@@ -26,7 +26,7 @@ export function SettingsButton() {
     >
       <div className="settings__row">
         <span className="settings__label">
-          <GlyphIcon kind="sound" />
+          <GlyphIcon kind="music" />
           Sound
         </span>
         <button

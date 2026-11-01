@@ -175,6 +175,7 @@ write(`${UI}/item-slot.png`, cut(0, 112, 16, 16));
 // doubled into 16x16 glyphs. See ui-sheet-catalog.md for every icon.
 const icon = (row, col) => cut(4 + 16 * col, row === 'A' ? 709 : 725, 8, 8);
 const GLYPH_ICONS = {
+  auto: icon('B', 4), // a half disc with motion lines (fast forward)
   exp: icon('A', 0), // orange star
   health: icon('A', 2), // red heart
   gold: icon('A', 4), // coin
@@ -188,7 +189,6 @@ const GLYPH_ICONS = {
   item: icon('A', 14), // pouch
   settings: icon('B', 2), // gear
   music: icon('B', 3), // music note
-  sound: icon('B', 4), // speaker
   avoid: icon('B', 6), // feather
   mp: icon('B', 11), // cyan flask
   hit: icon('B', 14), // target
