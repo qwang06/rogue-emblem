@@ -6,7 +6,7 @@ import { TACKLE, weaponEntry, type WeaponType } from './weapons.ts';
 // and hard to dent, it slams whatever stands in front of it.
 export const RAM_STATS = Object.freeze({
   health: 16,
-  mana: 0,
+  mana: 4,
   strength: 6,
   intelligence: 0,
   skill: 1,
@@ -20,7 +20,7 @@ export const RAM_STATS = Object.freeze({
 // Percent chance per level up that each stat rises (see experience.ts).
 export const RAM_GROWTHS = Object.freeze({
   health: 80,
-  mana: 0,
+  mana: 35,
   strength: 50,
   intelligence: 0,
   skill: 25,

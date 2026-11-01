@@ -11,7 +11,7 @@ import {
   calculateSkillDamage,
   CLEAVE,
   LONG_SHOT,
-  POWER_STRIKE,
+  SHIELD_BASH,
   BLAST,
   SKILL_TREES,
   THROW_STONES,
@@ -173,7 +173,7 @@ describe('UNITS.md', () => {
     const skills = tableWithHeader(text, 'Skill');
     const SKILLS: Record<string, Skill> = {
       'Throw Stones': THROW_STONES,
-      'Power Strike': POWER_STRIKE,
+      'Shield Bash': SHIELD_BASH,
       'Long Shot': LONG_SHOT,
       Cleave: CLEAVE,
       Blast: BLAST,

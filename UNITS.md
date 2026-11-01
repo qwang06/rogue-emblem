@@ -18,7 +18,8 @@ Reference for every unit class: base stats, growth rates, weapons and skills. Ke
 - **Growths** are the % chance a stat rises by 1 on each level up. Stats have no caps and there is no level cap. Level 1 to 2 takes 50 XP, every level after 100 XP.
 - **XP rate** scales every XP gain (combat, skills, healing): a unit with a 150% rate earns 15 XP where others earn 10, rounded to the nearest point and never below 1.
 - **Skills** always hit, never crit, and the target can't counter. Their damage is the user's regular hit (weapon might included) with any bonus `STR` added, then scaled; scaled damage rounds up. Using one costs mana, earns XP like a landed hit, and spends no weapon uses. A healing skill (Mend) instead restores its power + the user's `INT` to a wounded ally in range, capped at the ally's missing HP, and earns 10 XP like a staff heal.
-- **Secondary skill sets** (Warband Mode): a unit can learn one other class's skill set at camp and knows that class's skills as it reaches their levels, as if they were its own. A mentor (a roster unit of that class that knows its skills) teaches it for 20 gold; a Mentor's Scroll, a stage reward, teaches any class's set for free. A new set replaces the old one.
+- **Learning skills:** a class learns its tree's skills (the tables below) by level. A promoted villager keeps the villager's Throw Stones. On top of that, a level up in Warband Mode can offer a skill pick (a skill boon), and only from the unit's own class: the "Level-up skill pick" lines below. A class without one is offered a second passive instead.
+- **Secondary skill sets** (Warband Mode, switched off for now with the Mentors menu): a unit can learn one other class's skill set at camp and knows that class's skills as it reaches their levels, as if they were its own. A mentor (a roster unit of that class that knows its skills) teaches it for 20 gold; a Mentor's Scroll, a stage reward, teaches any class's set for free. A new set replaces the old one.
 - **Shove** (Soldier, from level 1) deals no damage of its own: it pushes the adjacent foe one tile straight away from the user. Onto open ground it just slides; onto a spike trap it takes 5 damage; into deep water (not a ford) it drowns. If the map's edge, a wall, a mountain or another unit is in the way it stays put and takes 2 damage, and a unit it slams into takes 2 too. A boss holds its ground and can't be shoved. A unit knocked out by a shove is the shover's kill. Walking over a spike trap is safe.
 
 Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.md` (`combat.ts`, `combatStats.ts`, `weapons.ts`, `experience.ts`, `skills.ts`).
@@ -121,9 +122,10 @@ The ranged infantry: frail but accurate. Its bow only reaches two tiles away, so
 | ------------ | --------------- | ------- |
 | physical     | Iron Bow        | 100%    |
 
-| Skill     | Learned at | Mana | Range | Damage          |
-| --------- | ---------- | ---- | ----- | --------------- |
-| Long Shot | 2          | 2    | 1–3   | The regular hit |
+| Skill        | Learned at | Mana | Range | Damage                           |
+| ------------ | ---------- | ---- | ----- | -------------------------------- |
+| Throw Stones | 2          | 2    | 1–4   | Half the regular hit, rounded up |
+| Long Shot    | 2          | 2    | 1–3   | The regular hit                  |
 
 Passive, **Steady Aim**: +10 hit. Carries an Iron Bow, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
@@ -148,10 +150,13 @@ The spear-and-shield infantry: the enemy in the demo battle. Villagers become on
 | ------------ | --------------- | ------- |
 | physical     | Iron Spear      | 100%    |
 
-| Skill        | Learned at | Mana | Range | Damage                      |
-| ------------ | ---------- | ---- | ----- | --------------------------- |
-| Shove        | 1          | 1    | 1     | None; pushes the foe a tile |
-| Power Strike | 2          | 2    | 1     | The regular hit with +3 STR |
+| Skill        | Learned at | Mana | Range | Damage                                          |
+| ------------ | ---------- | ---- | ----- | ----------------------------------------------- |
+| Throw Stones | 2          | 2    | 1–4   | Half the regular hit, rounded up                |
+| Shove        | 1          | 1    | 1     | None; pushes the foe a tile                     |
+| Shield Bash  | 2          | 3    | 1     | The regular hit with +1 STR, then pushes a tile |
+
+Level-up skill pick: **Lunge** (2 MP, range 1–2, the regular hit with +2 STR).
 
 Passive, **Shield Wall**: takes 1 less damage when attacked. Carries an Iron Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
@@ -176,9 +181,10 @@ The axe-wielding front line: high HP and strength, low skill, speed and luck. It
 | ------------ | --------------- | ------- |
 | physical     | Iron Axe        | 100%    |
 
-| Skill  | Learned at | Mana | Range | Damage                        |
-| ------ | ---------- | ---- | ----- | ----------------------------- |
-| Cleave | 2          | 2    | 1     | The regular hit with +2 power |
+| Skill        | Learned at | Mana | Range | Damage                           |
+| ------------ | ---------- | ---- | ----- | -------------------------------- |
+| Throw Stones | 2          | 2    | 1–4   | Half the regular hit, rounded up |
+| Cleave       | 2          | 2    | 1     | The regular hit with +2 power    |
 
 Passive, **Heavy Swing**: +1 damage. Carries an Iron Axe, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
@@ -203,9 +209,10 @@ Promoted from the Villager. Hauls a powder keg on its back and throws it up to t
 | --------------- | --------------- | ------- |
 | physical, siege | Powder Keg      | 100%    |
 
-| Skill | Learned at | Mana | Range | Damage                        |
-| ----- | ---------- | ---- | ----- | ----------------------------- |
-| Blast | 2          | 3    | 1–2   | The regular hit with +3 power |
+| Skill        | Learned at | Mana | Range | Damage                           |
+| ------------ | ---------- | ---- | ----- | -------------------------------- |
+| Throw Stones | 2          | 2    | 1–4   | Half the regular hit, rounded up |
+| Blast        | 2          | 3    | 1–2   | The regular hit with +3 power    |
 
 Passive, **Demolitions**: +5 crit. Carries a Powder Keg, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
@@ -259,6 +266,8 @@ A specialized unit, recruited on its own (or raised by the Beast Tamer origin): 
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |
 
+Level-up skill pick: **Wing Buffet** (2 MP, range 1, half the regular hit, then pushes the foe a tile).
+
 It carries no potions.
 
 ## Beast Rider
@@ -294,7 +303,7 @@ A specialized unit that doesn't promote: a siege engine on wheels (crystal canno
 | Stat | Base | Growth |
 | ---- | ---- | ------ |
 | HP   | 12   | 60%    |
-| MP   | 0    | 0%     |
+| MP   | 4    | 35%    |
 | STR  | 5    | 45%    |
 | INT  | 0    | 0%     |
 | SKL  | 3    | 35%    |
@@ -311,6 +320,8 @@ A specialized unit that doesn't promote: a siege engine on wheels (crystal canno
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |
 
+Level-up skill pick: **Deadeye** (2 MP, range 1–5, the regular hit).
+
 It carries only its Ballista.
 
 ## Ram
@@ -320,7 +331,7 @@ A specialized unit that doesn't promote: a covered battering ram, the most HP an
 | Stat | Base | Growth |
 | ---- | ---- | ------ |
 | HP   | 16   | 80%    |
-| MP   | 0    | 0%     |
+| MP   | 4    | 35%    |
 | STR  | 6    | 50%    |
 | INT  | 0    | 0%     |
 | SKL  | 1    | 25%    |
@@ -368,7 +379,9 @@ A specialized unit that doesn't promote. The healer and the warband's magic user
 | ----- | ---------- | ---- | ----- | ----------------------------- |
 | Mend  | 2          | 3    | 1     | None: heals an ally 2 + `INT` |
 
-Mend heals like the Heal staff without needing one, so another class that learns the Acolyte's skill set can heal too. Knows Light, and carries a Heal staff, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
+Level-up skill pick: **Smite** (3 MP, range 1–2, the regular hit with +3 `INT`).
+
+Mend heals like the Heal staff without needing one. Knows Light, and carries a Heal staff, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
 ## Water Elemental
 
@@ -648,7 +661,7 @@ Every class learns its skill at level 2, its first level up (the Soldier's Shove
 | Skill        | User     | Target   | Damage | Hit    | Crit  | Strikes       |
 | ------------ | -------- | -------- | ------ | ------ | ----- | ------------- |
 | Throw Stones | Villager | Soldier  | 1      | always | never | 1, no counter |
-| Power Strike | Soldier  | Villager | 6      | always | never | 1, no counter |
+| Shield Bash  | Soldier  | Villager | 4      | always | never | 1, no counter |
 | Long Shot    | Archer   | Soldier  | 2      | always | never | 1, no counter |
 | Cleave       | Vanguard | Soldier  | 8      | always | never | 1, no counter |
 | Blast        | Sapper   | Soldier  | 9      | always | never | 1, no counter |

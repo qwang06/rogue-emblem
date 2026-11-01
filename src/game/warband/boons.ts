@@ -3,7 +3,8 @@
 // pick one of three boons, on top of the level's growth rolls. A boon is
 // one of:
 // - a stat boon: +2 to a stat (+4 max HP), taken as often as offered;
-// - a skill boon: a skill from another class's tree (skills.ts);
+// - a skill boon: one of the skills its own class can learn this way
+//   (CLASS_SKILL_PICKS in skills.ts), never another class's;
 // - a passive: a modifier (modifiers.ts) the unit carries into every
 //   battle, like a relic for one unit, taken up to its max rank (each
 //   rank adds its amount again).
@@ -20,7 +21,17 @@ import type { Rng } from '../combatStats.ts';
 import type { GrowthStat } from '../experience.ts';
 import type { Modifier } from '../modifiers.ts';
 import { shuffle } from '../rng.ts';
-import { CLEAVE, getUnitSkills, POWER_STRIKE, SHIELD_BASH, THROW_STONES, type Skill } from '../skills.ts';
+import {
+  CLASS_SKILL_PICKS,
+  CLEAVE,
+  describeSkill,
+  getClassSkillPicks,
+  getUnitSkills,
+  POWER_STRIKE,
+  SHIELD_BASH,
+  THROW_STONES,
+  type Skill,
+} from '../skills.ts';
 import type { Unit } from '../Unit.ts';
 import { WEAPON_DAMAGE_TYPES } from '../weapons.ts';
 
@@ -125,16 +136,26 @@ function statBoon(stat: GrowthStat, name: string): BoonDefinition {
   };
 }
 
-function skillBoon(skill: Skill, description: string): BoonDefinition {
+function skillBoon(skill: Skill): BoonDefinition {
   return {
     id: `skill-${skill.id}`,
     kind: 'skill',
     name: `Learn ${skill.label}`,
     maxRank: 1,
     modifiers: [{ kind: 'skill', skill }],
-    describe: () => `${description} (${skill.manaCost} MP)`,
+    describe: () => `${describeSkill(skill)} (${skill.manaCost} MP)`,
   };
 }
+
+// Skills boons once taught to any class. They're never offered now (each
+// is in no class's picks), but a unit saved with one keeps it.
+const RETIRED_SKILLS: readonly Skill[] = [POWER_STRIKE, CLEAVE, SHIELD_BASH, THROW_STONES];
+
+// A skill boon for each skill a class can be offered, then the retired
+// ones, each once.
+const SKILL_BOON_SKILLS: readonly Skill[] = [...Object.values(CLASS_SKILL_PICKS).flat(), ...RETIRED_SKILLS].filter(
+  (skill, i, all) => all.findIndex(({ id }) => id === skill.id) === i,
+);
 
 function passive(
   id: string,
@@ -155,10 +176,7 @@ const DEFINITIONS: readonly BoonDefinition[] = [
   statBoon('luck', 'Fortune'),
   statBoon('defense', 'Toughness'),
   statBoon('resistance', 'Warding'),
-  skillBoon(POWER_STRIKE, 'A heavy blow with +3 power against an adjacent foe.'),
-  skillBoon(CLEAVE, 'A wild swing with +2 power against an adjacent foe.'),
-  skillBoon(SHIELD_BASH, 'A shove with +1 power against an adjacent foe.'),
-  skillBoon(THROW_STONES, 'Half damage from up to 4 tiles away.'),
+  ...SKILL_BOON_SKILLS.map(skillBoon),
   passive('keen-eye', 'Keen Eye', { kind: 'combat', term: 'hit', amount: 15 }, (a) => `+${a} hit.`),
   passive('deadly', 'Deadly', { kind: 'combat', term: 'crit', amount: 10 }, (a) => `+${a} crit.`),
   passive('nimble', 'Nimble', { kind: 'combat', term: 'avoid', amount: 15 }, (a) => `+${a} avoid.`),
@@ -366,8 +384,9 @@ export function getStatBoonGain(boon: Boon): number {
 }
 
 // Whether `unit` could take `boon`: a stat boon (STR only for a unit with
-// physical weapons, INT only for one with magical ones), a skill it
-// doesn't know, or a passive below its max rank.
+// physical weapons, INT only for one with magical ones), a skill its class
+// can be offered (getClassSkillPicks) that it doesn't know yet, or a
+// passive below its max rank.
 export function isBoonEligible(unit: Unit, boon: Boon): boolean {
   switch (boon.kind) {
     case 'stat': {
@@ -376,10 +395,15 @@ export function isBoonEligible(unit: Unit, boon: Boon): boolean {
       if (stat === 'intelligence' && !dealsDamage(unit, 'magical')) return false;
       return true;
     }
-    case 'skill':
+    case 'skill': {
+      const picks = getClassSkillPicks(unit.unitClass);
+      const known = getUnitSkills(unit);
       return boon.modifiers.every(
-        (modifier) => modifier.kind !== 'skill' || !getUnitSkills(unit).some(({ id }) => id === modifier.skill.id),
+        (modifier) =>
+          modifier.kind !== 'skill' ||
+          (picks.some(({ id }) => id === modifier.skill.id) && !known.some(({ id }) => id === modifier.skill.id)),
       );
+    }
     case 'passive': {
       const maxRank = DEFINITION_BY_ID.get(boon.id)?.maxRank ?? MAX_BOON_RANK;
       return getBoonRank(unit.boons, boon.id) < maxRank;
