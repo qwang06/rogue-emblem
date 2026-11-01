@@ -42,7 +42,9 @@ import {
   getRewardChoices,
   getRecruitTarget,
   type Reward,
+  isBigClear,
   isEliteClear,
+  isFortClear,
 } from './rewards.ts';
 import { MENTORS_ENABLED } from './mentors.ts';
 import { findQuirk, QUIRKS } from './quirks.ts';
@@ -176,14 +178,14 @@ describe('rollRewards', () => {
   });
 
   it('only offers useful weapons, unheld relics and lessons', () => {
-    const run = { ...fullRun(), relics: [RELICS[0].id] };
+    const run = { ...fullRun(), relics: ['whetstone'] };
     const offers = Array.from({ length: 100 }, (_, seed) => rollRewards(run, 2, createSeededRng(seed))).flat();
     expect(kinds(offers)).toContain('arms');
     expect(kinds(offers)).toContain('relic');
     expect(kinds(offers)).toContain('lesson');
     for (const reward of offers) {
       if (reward.kind === 'arms') expect([IRON_SPEAR.id, IRON_AXE.id, IRON_BOW.id]).toContain(reward.itemId);
-      if (reward.kind === 'relic') expect(reward.relicId).not.toBe(RELICS[0].id);
+      if (reward.kind === 'relic') expect(reward.relicId).not.toBe('whetstone');
     }
     const veterans = withRoster(
       run,
@@ -364,11 +366,11 @@ describe('applyReward', () => {
     expect(after.roster[2].items).toEqual(fullPack);
   });
 
-  it('gives the warband the relic once', () => {
+  it('gives the warband a rule relic once', () => {
     const run = fullRun();
-    const after = applyReward(run, { kind: 'relic', relicId: RELICS[1].id });
-    expect(after.relics).toEqual([RELICS[1].id]);
-    expect(applyReward(after, { kind: 'relic', relicId: RELICS[1].id }).relics).toEqual([RELICS[1].id]);
+    const after = applyReward(run, { kind: 'relic', relicId: 'whetstone' });
+    expect(after.relics).toEqual(['whetstone']);
+    expect(applyReward(after, { kind: 'relic', relicId: 'whetstone' }).relics).toEqual(['whetstone']);
     expect(run.relics).toEqual([]);
   });
 
@@ -673,12 +675,12 @@ describe("an elite lair's reward pick", () => {
   });
   const run = () => createRun(4, new Map([['alden', new Soldier({ name: 'Alden', team: 'player' })]]));
 
-  it('offers relics the run does not hold, the same on a reload and new on a reroll', () => {
-    const at = lair({ ...run(), relics: ['hawk-lens'] });
+  it('offers 4 relics the run can take, the same on a reload and new on a reroll', () => {
+    const at = lair({ ...run(), relics: ['field-kitchen'] });
     expect(isEliteClear(at, 5)).toBe(true);
     const offers = rollStageRewards(at, 5);
-    expect(offers).toHaveLength(3);
-    expect(offers.every((offer) => offer.kind === 'relic' && offer.relicId !== 'hawk-lens')).toBe(true);
+    expect(offers).toHaveLength(4);
+    expect(offers.every((offer) => offer.kind === 'relic' && offer.relicId !== 'field-kitchen')).toBe(true);
     expect(rollStageRewards(at, 5)).toEqual(offers);
     expect(rollStageRewards(at, 5, 1)).not.toEqual(offers);
   });
@@ -687,5 +689,59 @@ describe("an elite lair's reward pick", () => {
     expect(isEliteClear(lair(run()), 4)).toBe(false);
     expect(isEliteClear(run(), 5)).toBe(false);
     expect(rollStageRewards(lair(run()), 4).every((offer) => offer.kind === 'relic')).toBe(false);
+  });
+});
+
+describe("a fort's reward pick", () => {
+  const fort = (run: RunState, depth = 5): RunState => ({
+    ...run,
+    route: {
+      visited: ['0-0', `${depth}-0`],
+      at: { id: `${depth}-0`, name: 'Grey Fort', kind: 'fort', depth, region: 3, levelOffset: 0 },
+    },
+  });
+  const run = () => createRun(4, new Map([['alden', new Soldier({ name: 'Alden', team: 'player' })]]));
+
+  it('offers 4 rewards, always with a relic among them', () => {
+    for (let seed = 0; seed < 20; seed++) {
+      const at = fort({ ...run(), seed });
+      expect(isFortClear(at, 5)).toBe(true);
+      expect(isBigClear(at, 5)).toBe(true);
+      const offers = rollStageRewards(at, 5);
+      expect(offers).toHaveLength(4);
+      expect(offers.filter((offer) => offer.kind === 'relic')).toHaveLength(1);
+      expect(rollStageRewards(at, 5)).toEqual(offers);
+    }
+  });
+
+  it('is an ordinary pick for any other stage or site', () => {
+    expect(isFortClear(fort(run()), 4)).toBe(false);
+    expect(isBigClear(run(), 5)).toBe(false);
+    expect(rollStageRewards(fort(run()), 4)).toHaveLength(3);
+  });
+});
+
+describe('relic rewards', () => {
+  const run = () => createRun(4, new Map([['alden', new Soldier({ name: 'Alden', team: 'player' })]]));
+
+  it('adds a second copy of a stacking relic, but never a third or a second of a rule relic', () => {
+    const once = applyReward(run(), { kind: 'relic', relicId: 'hawk-lens' });
+    const twice = applyReward(once, { kind: 'relic', relicId: 'hawk-lens' });
+    expect(twice.relics).toEqual(['hawk-lens', 'hawk-lens']);
+    expect(applyReward(twice, { kind: 'relic', relicId: 'hawk-lens' }).relics).toEqual(twice.relics);
+    const kitchen = applyReward(run(), { kind: 'relic', relicId: 'field-kitchen' });
+    expect(applyReward(kitchen, { kind: 'relic', relicId: 'field-kitchen' }).relics).toEqual(['field-kitchen']);
+  });
+
+  it("describes a relic at the run's stage, copies added up", () => {
+    const reward = { kind: 'relic', relicId: 'duelists-gauntlet' } as const;
+    expect(describeReward(reward)).toEqual({
+      label: "Duelist's Gauntlet",
+      description: 'Units deal +2 damage when they attack.',
+    });
+    expect(describeReward(reward, undefined, { stage: 20, relics: ['duelists-gauntlet'] })).toEqual({
+      label: "Duelist's Gauntlet ×2",
+      description: 'Units deal +10 damage when they attack.',
+    });
   });
 });

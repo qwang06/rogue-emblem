@@ -28,7 +28,7 @@ import { findPromotion } from '../game/promotions.ts';
 import { findEliteAffix } from '../game/warband/elites.ts';
 import { findQuirk } from '../game/warband/quirks.ts';
 import type { BoonOffer } from '../game/warband/levelUpPicks.ts';
-import { findRelic, type Relic } from '../game/warband/relics.ts';
+import { countRelic, findRelic, getRelicDescription, type Relic } from '../game/warband/relics.ts';
 import type { Unit, UnitRank } from '../game/Unit.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
 import { getItemSprite, getUnitSprite } from '../game/tileset.ts';
@@ -777,7 +777,7 @@ export function toRunOverView(run: Pick<RunState, 'stage' | 'fallen'>, won = fal
 // src/game/warband/rewards.ts).
 // With `run`, a reward that restores HP carries each unit's HP after it.
 export function toRewardAction(reward: Reward, index: number, run: RunState | null = null): RewardAction {
-  const { label, description } = describeReward(reward);
+  const { label, description } = describeReward(reward, undefined, run);
   const unit = reward.kind === 'recruit' ? reward.unit : null;
   const stats = unit
     ? Object.freeze(
@@ -844,14 +844,22 @@ export function toBoonActions(offer: BoonOffer, relics: readonly string[] = []):
   );
 }
 
-// The relics `relicIds` names, in order, for the camp's list; unknown ids
-// are left out.
-export function toRelicViews(relicIds: readonly string[]): readonly RelicView[] {
+// The relics `relicIds` names, in order, for the camp's list: one entry
+// per relic, with copies counted in its name and description, its numbers
+// as they stand at `stage`. Unknown ids are left out.
+export function toRelicViews(relicIds: readonly string[], stage = 1): readonly RelicView[] {
   return Object.freeze(
-    relicIds
+    [...new Set(relicIds)]
       .map(findRelic)
       .filter((relic): relic is Relic => relic !== null)
-      .map(({ id, name, description }) => Object.freeze({ id, name, description })),
+      .map((relic) => {
+        const copies = countRelic(relicIds, relic.id);
+        return Object.freeze({
+          id: relic.id,
+          name: copies > 1 ? `${relic.name} ×${copies}` : relic.name,
+          description: getRelicDescription(relic, stage, copies),
+        });
+      }),
   );
 }
 

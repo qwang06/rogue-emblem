@@ -1,48 +1,55 @@
-// The level a won stage guarantees: clearing stage 1 brings every
-// surviving unit still below level 2 up to it, on top of whatever XP its
-// kills already earned, so the starting warband always takes its first
-// level. Units that already reached it gain nothing more.
+// The XP a won stage pays: every unit that fought it and survived earns
+// clear XP that grows with the stage, more for a unit below the stage's
+// level and less for one above it (catch-up), so units that miss out on
+// kills don't fall too far behind. No level is guaranteed: a unit that
+// fought little may not level, and one fed every kill pulls ahead, at the
+// cost of its teammates. Benched units earn nothing.
 
-import { getExperienceToNextLevel } from '../experience.ts';
 import { createSeededRng } from '../rng.ts';
 import { UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
 import { getRewardSeed, type RewardLevelUp } from './rewards.ts';
 import { restoreUnit, snapshotUnit, type RunState } from './run.ts';
 
-// The level each stage's clear guarantees, by stage.
-export const STAGE_CLEAR_LEVELS: Readonly<Record<number, number>> = Object.freeze({ 1: 2 });
+// Clear XP is CLEAR_EXPERIENCE plus CLEAR_EXPERIENCE_PER_STAGE a stage.
+export const CLEAR_EXPERIENCE = 20;
+export const CLEAR_EXPERIENCE_PER_STAGE = 2;
+// How much clear XP changes for each level a unit is below (more) or
+// above (less) the stage, in percent, and the least it can fall to.
+export const CATCH_UP_PERCENT = 15;
+export const MIN_CLEAR_PERCENT = 20;
 
 // Salts getRewardSeed so the level ups don't follow the reward offers' rolls.
 const LEVEL_UP_SALT = 0x1e7e1;
 
-// The level clearing `stage` guarantees, or null for none.
-export function getStageClearLevel(stage: number): number | null {
-  return STAGE_CLEAR_LEVELS[stage] ?? null;
+// The clear XP a unit at `level` earns for winning `stage`, before its XP
+// rate: CLEAR_EXPERIENCE + CLEAR_EXPERIENCE_PER_STAGE × stage, CATCH_UP_PERCENT
+// more for each level it's below the stage and as much less for each level
+// above, never under MIN_CLEAR_PERCENT of it, rounded.
+export function getStageClearExperience(stage: number, level: number): number {
+  const base = CLEAR_EXPERIENCE + CLEAR_EXPERIENCE_PER_STAGE * stage;
+  const percent = Math.max(MIN_CLEAR_PERCENT, 100 + CATCH_UP_PERCENT * (stage - level));
+  return Math.round((base * percent) / 100);
 }
 
 // The run after clearing `stage` (the battle written back): every roster
-// unit below the stage's guaranteed level given exactly the XP to reach it
-// (unscaled, so it lands there with 0 XP), its stat gains rolled from the
-// run's seed and the stage, so a stage always gives the same ones. Also
-// returns each level up, in roster order, so it can be shown. The run as it
-// is, with none, when the stage guarantees no level or everyone is there.
+// unit in `fought` (the units that deployed and survived) given its clear
+// XP (getStageClearExperience, scaled by its XP rate), its stat gains rolled
+// from the run's seed and the stage, so a stage always gives the same ones.
+// Also returns each level up, in roster order, so it can be shown.
 export function applyStageClearExperience(
   run: RunState,
   stage: number,
+  fought: readonly string[],
   classes: readonly UnitClass[] = UNIT_CLASSES,
 ): { run: RunState; levelUps: readonly RewardLevelUp[] } {
-  const level = getStageClearLevel(stage);
-  if (level === null || run.roster.every((unit) => unit.level >= level)) return { run, levelUps: [] };
+  if (!run.roster.some((unit) => fought.includes(unit.id))) return { run, levelUps: [] };
   const rng = createSeededRng((getRewardSeed(run.seed, stage) ^ LEVEL_UP_SALT) >>> 0);
   const levelUps: RewardLevelUp[] = [];
   const roster = run.roster.map((snapshot) => {
-    if (snapshot.level >= level) return snapshot;
+    if (!fought.includes(snapshot.id)) return snapshot;
     const unit = restoreUnit(snapshot, classes);
-    while (unit.level < level) {
-      const result = unit.gainExperience(getExperienceToNextLevel(unit.level, unit.experience), rng, false);
-      if (result.levelUps.length === 0) break;
-      levelUps.push(...result.levelUps.map((levelUp) => ({ name: unit.name, unitClass: unit.unitClass, levelUp })));
-    }
+    const result = unit.gainExperience(getStageClearExperience(stage, unit.level), rng);
+    levelUps.push(...result.levelUps.map((levelUp) => ({ name: unit.name, unitClass: unit.unitClass, levelUp })));
     return Object.freeze(snapshotUnit(snapshot.id, unit));
   });
   return { run: Object.freeze({ ...run, roster: Object.freeze(roster) }), levelUps: Object.freeze(levelUps) };
