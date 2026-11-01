@@ -24,11 +24,13 @@ export function getEllipseSpans(width: number, height: number): Span[] {
   return spans;
 }
 
-// The outline around the opaque pixels of an image cut into `cell` x `cell`
-// frames: 1 for every transparent pixel within `width` steps (up, down,
-// left, right) of an opaque one in the same frame, else 0, row by row.
-// `alpha` is the image's alpha per pixel, row by row; any alpha above 0
-// counts as opaque. The outline never crosses into a neighboring frame,
+// The outline around the opaque pixels of an image cut into `cell` x
+// `cellHeight` frames (square unless cellHeight is given): 1 for every
+// transparent pixel within `width` steps (up, down, left, right) of an
+// opaque one in the same frame, else 0, row by row. `alpha` is the image's
+// alpha per pixel, row by row; alpha of `minAlpha` or more counts as opaque
+// (any above 0 by default; a higher one leaves out a see-through baked
+// shadow). The outline never crosses into a neighboring frame,
 // so each frame's outline is cut where its art touches the frame's edge.
 export function getOutlineMask(
   alpha: ArrayLike<number>,
@@ -36,17 +38,19 @@ export function getOutlineMask(
   imageHeight: number,
   cell: number,
   width: number,
+  cellHeight: number = cell,
+  minAlpha = 1,
 ): Uint8Array {
   const mask = new Uint8Array(imageWidth * imageHeight);
-  const opaque = (x: number, y: number) => alpha[y * imageWidth + x] > 0;
+  const opaque = (x: number, y: number) => alpha[y * imageWidth + x] >= minAlpha;
   for (let y = 0; y < imageHeight; y++) {
-    const top = y - (y % cell);
+    const top = y - (y % cellHeight);
     for (let x = 0; x < imageWidth; x++) {
       if (opaque(x, y)) continue;
       const left = x - (x % cell);
       search: for (let dy = -width; dy <= width; dy++) {
         const ny = y + dy;
-        if (ny < top || ny >= Math.min(top + cell, imageHeight)) continue;
+        if (ny < top || ny >= Math.min(top + cellHeight, imageHeight)) continue;
         const reach = width - Math.abs(dy);
         for (let dx = -reach; dx <= reach; dx++) {
           const nx = x + dx;

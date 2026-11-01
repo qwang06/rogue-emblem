@@ -157,7 +157,7 @@ import { areAllied, getTeamUnitIds, isAllyOf, isHostileTo } from '../game/teams.
 import { advanceDialog, createDialog, DIALOG_CHARS_PER_SECOND, getCurrentLine } from '../game/dialog.ts';
 import { getTriggeredDialog, turnTrigger } from '../game/dialogScript.ts';
 import { describeObjective, getObjectiveStatus, type Objective } from '../game/objectives.ts';
-import { getPathFacings } from '../game/facing.ts';
+import { getPathFacings, getStepFacing } from '../game/facing.ts';
 import { createKeyRepeat, updateKeyRepeat } from '../game/keyRepeat.ts';
 import { getArrowPieces } from '../game/moveArrow.ts';
 import { getQuarterFrameMap, getTileFrame, type Autotile } from '../game/autotile.ts';
@@ -213,10 +213,15 @@ import {
   TERRAIN_SHEET,
   TILE_SIZE,
   TREE_SPRITES,
-  UNIT_ANIMATIONS,
+  UNIT_ART,
   UNIT_OUTLINE,
   UNIT_SHEET,
+  getAllUnitSheets,
+  getImpactFrame,
+  getUnitSheet,
+  getUnitSheetFrameSizes,
   getUnitSprite,
+  hasBakedShadow,
   unitSheetKey,
 } from '../game/tileset.ts';
 import {
@@ -305,6 +310,9 @@ const MOVE_STEP_MS = 140;
 const DAMAGE_POPUP_DURATION_MS = 700;
 // How long a missed strike holds before the next one (about a hit flash).
 const MISS_PAUSE_MS = 420;
+// A unit playing its attack animation draws over the units around it, so
+// its breath or swing spills over their tiles (under roofs, 0.8).
+const ATTACK_DEPTH = 0.78;
 // How long the "Player Phase" / "Enemy Phase" banner holds the screen.
 const PHASE_BANNER_DURATION_MS = 1200;
 // Pauses in the enemy phase: on each enemy before it moves, and between enemies.
@@ -559,8 +567,30 @@ export class GridScene extends Phaser.Scene {
     // tiles of the terrain sheet (the tilemaps still use it whole), and each
     // unit sheet's animation frames.
     this.load.spritesheet(TERRAIN_SHEET.key, terrainSheetUrl, { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
+    // Unit art cut into bigger frames (UNIT_ART) loads at its own size.
+    const frameSizes = getUnitSheetFrameSizes();
     for (const [key, url] of Object.entries(SPRITE_URLS)) {
-      this.load.spritesheet(key, url, { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
+      this.load.spritesheet(key, url, frameSizes[key] ?? { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
+    }
+  }
+
+  // Pins each frame of the bigger unit sheets (UNIT_ART) by its unit's
+  // tile: a sprite's origin then stays on the tile's top-left corner
+  // whichever sheet it plays, so it stands where a one-tile sprite would
+  // and the art spills over the tiles around it. Textures are global to
+  // the game, so this only does work the first time.
+  pinUnitSheetFrames() {
+    for (const art of Object.keys(UNIT_ART)) {
+      for (const { key, frameWidth, frameHeight, tileX, tileY } of getAllUnitSheets(art)) {
+        if (!this.textures.exists(key)) continue;
+        const texture = this.textures.get(key);
+        for (const name of texture.getFrameNames()) {
+          const frame = texture.get(name);
+          frame.customPivot = true;
+          frame.pivotX = tileX / frameWidth;
+          frame.pivotY = tileY / frameHeight;
+        }
+      }
     }
   }
 
@@ -570,6 +600,7 @@ export class GridScene extends Phaser.Scene {
     // Every battle starts from a clean slate: clear anything a previous
     // battle left in the store.
     gameStore.setState({ ...BATTLE_STATE_DEFAULTS });
+    this.pinUnitSheetFrames();
 
     this.setup = setup;
     this.playClockFrom = Date.now(); // the run's play time is counted from here (takePlayTime)
@@ -2828,17 +2859,66 @@ export class GridScene extends Phaser.Scene {
       this.showStats(strike.targetId, { health: strike.health });
       this.showDamagePopup(sprite, strike.damage, strike.crit ? 'crit' : 'damage');
       if (juice.shake) this.shakeCamera(juice.shake);
-      playHitStop(this, sprite, [strikerSprite], juice.hitStopMs, () => playHitFlash(this, sprite, land));
+      // Art with a hit animation flinches (it holds its last frame until
+      // the flash is over, then idles).
+      const flinch = this.hasUnitAnimation(sprite, 'hit');
+      if (flinch) this.playUnitAnimationOnce(sprite, 'hit', { idleAfter: false });
+      playHitStop(this, sprite, [strikerSprite], juice.hitStopMs, () =>
+        playHitFlash(this, sprite, () => {
+          if (flinch && strike.health > 0) this.idleSprite(sprite);
+          land();
+        }),
+      );
     };
+    const onReturned = () => {
+      returned = true;
+      finish();
+    };
+    if (this.hasUnitAnimation(strikerSprite, 'attack')) {
+      this.playAttackAnimation(strikerSprite, sprite, onImpact, onReturned);
+      return;
+    }
     playLunge(this, strikerSprite, spriteCenter(sprite), {
       distance: getLungeDistance(tiles, reducedMotion),
       holdMs: juice.hitStopMs,
       onImpact,
+      onDone: onReturned,
+    });
+  }
+
+  // Art with an attack animation (UNIT_ART) strikes with it instead of a
+  // lunge: it turns to face its target, plays the attack once over the
+  // units around it, and the blow lands on its impact frame.
+  playAttackAnimation(sprite: Sprite, target: Sprite, onImpact: () => void, onDone: () => void) {
+    const art: string = sprite.getData('art');
+    const from = { x: Math.round(sprite.x / TILE_SIZE), y: Math.round(sprite.y / TILE_SIZE) };
+    const to = { x: Math.round(target.x / TILE_SIZE), y: Math.round(target.y / TILE_SIZE) };
+    sprite.setData('facing', getStepFacing(from, to) ?? sprite.getData('facing'));
+    const impactFrame = getImpactFrame(art);
+    const depth = sprite.depth;
+    sprite.setDepth(ATTACK_DEPTH);
+    let impacted = false;
+    const impact = () => {
+      if (impacted) return;
+      impacted = true;
+      onImpact();
+    };
+    this.playUnitAnimationOnce(sprite, 'attack', {
+      onFrame: (index) => {
+        if (index >= impactFrame) impact();
+      },
       onDone: () => {
-        returned = true;
-        finish();
+        sprite.setDepth(depth);
+        impact();
+        onDone();
       },
     });
+  }
+
+  // Back to its idle animation, facing the way it faces.
+  idleSprite(sprite: Sprite) {
+    if (!sprite.active) return;
+    sprite.play(this.unitAnimation(sprite.getData('art'), 'idle', sprite.getData('facing')));
   }
 
   // Shakes the camera, for as long as the shake lasts at the game speed
@@ -2852,10 +2932,16 @@ export class GridScene extends Phaser.Scene {
   playDefeat(unitId: string, next: () => void) {
     const sprite = this.unitSprites.get(unitId)!;
     gameStore.setState((state) => ({ defeats: state.defeats + 1 }));
-    playDeathBurst(this, sprite, spriteCenter(sprite), prefersReducedMotion(), () => {
-      this.removeUnitSprite(unitId);
-      next();
-    });
+    const burst = () =>
+      playDeathBurst(this, sprite, spriteCenter(sprite), prefersReducedMotion(), () => {
+        this.removeUnitSprite(unitId);
+        next();
+      });
+    // Art with a death animation plays it before it bursts apart.
+    if (this.hasUnitAnimation(sprite, 'die')) {
+      sprite.clearTint();
+      this.playUnitAnimationOnce(sprite, 'die', { idleAfter: false, onDone: burst });
+    } else burst();
   }
 
   // A skill's animation (see playSkillAnimation); the HUD shows the mana
@@ -3139,7 +3225,7 @@ export class GridScene extends Phaser.Scene {
   showDamagePopup(sprite: Sprite, amount: number, kind: PopupKind = 'damage', label?: string) {
     const { worldView, zoom } = this.cameras.main;
     const { x, y } = toCanvasFraction(
-      worldToScreen({ x: sprite.x + sprite.displayWidth / 2, y: sprite.y }, { x: worldView.x, y: worldView.y, zoom }),
+      worldToScreen({ x: sprite.x + TILE_SIZE / 2, y: sprite.y }, { x: worldView.x, y: worldView.y, zoom }),
       this.scale.gameSize,
     );
     const popup = toDamagePopupView({
@@ -3527,29 +3613,72 @@ export class GridScene extends Phaser.Scene {
       .setData('facing', UNIT_SHEET.defaultFacing)
       .play(this.unitAnimation(art, 'idle', UNIT_SHEET.defaultFacing));
     addUnitOutline(this, sprite, UNIT_OUTLINE.colors[unit.team]);
-    addUnitShadow(this, sprite);
+    if (!hasBakedShadow(art)) addUnitShadow(this, sprite);
     if (unit.rank) addRankBadge(this, sprite, unit.rank);
     this.unitSprites.set(unitId, sprite);
   }
 
-  // The looping animation (a UNIT_ANIMATIONS name) for a unit's art facing
-  // `facing`, created on first use. Animations are global to the game, so a
-  // restarted scene reuses them.
+  // The animation (a UNIT_ANIMATIONS name) for a unit's art facing
+  // `facing`, created on first use: looping for idle and move, once for the
+  // rest. Every art has idle and move; ask hasUnitAnimation for the others.
+  // Animations are global to the game, so a restarted scene reuses them.
   unitAnimation(art: string, animation: UnitAnimation, facing: Facing) {
-    const key = unitSheetKey(art, animation);
+    const sheet = getUnitSheet(art, animation) ?? getUnitSheet(art, 'idle')!;
+    const { key, frames, frameMs, loop } = sheet;
     const animKey = `${key}-${facing}`;
     if (!this.anims.exists(animKey)) {
-      const { columns, rows, frames } = UNIT_SHEET;
-      const { frameMs } = UNIT_ANIMATIONS[animation];
-      const row = rows[facing];
+      const row = UNIT_SHEET.rows[facing];
       this.anims.create({
         key: animKey,
-        frames: Array.from({ length: frames }, (_, column) => ({ key, frame: getTileFrame([column, row], columns) })),
+        frames: Array.from({ length: frames }, (_, column) => ({ key, frame: getTileFrame([column, row], frames) })),
         frameRate: 1000 / frameMs,
-        repeat: -1,
+        repeat: loop ? -1 : 0,
       });
     }
     return animKey;
+  }
+
+  // Whether a unit sprite's art has `animation` (attack, hit, die: only
+  // some art, see UNIT_ART).
+  hasUnitAnimation(sprite: Sprite, animation: UnitAnimation): boolean {
+    return getUnitSheet(sprite.getData('art'), animation) !== null;
+  }
+
+  // Plays a one-shot unit animation on a sprite facing its current way,
+  // calling onFrame with each frame's index as it shows and onDone once it
+  // ends (or, should it be cut short, once its time is up), then idles
+  // again unless `idleAfter` is false.
+  playUnitAnimationOnce(
+    sprite: Sprite,
+    animation: UnitAnimation,
+    {
+      onFrame,
+      onDone,
+      idleAfter = true,
+    }: { onFrame?: (index: number) => void; onDone?: () => void; idleAfter?: boolean },
+  ) {
+    const art: string = sprite.getData('art');
+    const facing: Facing = sprite.getData('facing');
+    const animKey = this.unitAnimation(art, animation, facing);
+    const { frames, frameMs } = getUnitSheet(art, animation) ?? getUnitSheet(art, 'idle')!;
+    const update = (_animation: unknown, frame: Phaser.Animations.AnimationFrame) => onFrame?.(frame.index - 1);
+    const completeEvent = `${Phaser.Animations.Events.ANIMATION_COMPLETE_KEY}${animKey}`;
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      sprite.off(Phaser.Animations.Events.ANIMATION_UPDATE, update);
+      sprite.off(completeEvent, finish);
+      if (idleAfter && sprite.active) sprite.play(this.unitAnimation(art, 'idle', facing));
+      onDone?.();
+    };
+    sprite.on(Phaser.Animations.Events.ANIMATION_UPDATE, update);
+    sprite.once(completeEvent, finish);
+    // A fallback in case the animation never completes (interrupted, or a
+    // one-frame animation that ends without an event).
+    this.time.delayedCall(frames * frameMs + 400, finish);
+    sprite.play(animKey);
+    onFrame?.(0);
   }
 }
 
@@ -3565,8 +3694,9 @@ function tryRunCommand(session: Parameters<typeof applyRunCommand>[0], command: 
 }
 
 // A unit sprite's center in world space (sprites are placed by their top left).
+// Its origin is its tile's top-left even when its frame is bigger than a tile.
 function spriteCenter(sprite: Sprite): Point {
-  return { x: sprite.x + sprite.displayWidth / 2, y: sprite.y + sprite.displayHeight / 2 };
+  return { x: sprite.x + TILE_SIZE / 2, y: sprite.y + TILE_SIZE / 2 };
 }
 
 // Whether the player asked their system for less motion: the map then skips

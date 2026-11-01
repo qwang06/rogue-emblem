@@ -57,7 +57,20 @@ export const ORC_WARLORD: BossRules = Object.freeze({
   enrage: Object.freeze({ below: 0.5, strength: 3 }),
 });
 
-export const BOSS_RULES: readonly BossRules[] = Object.freeze([ORC_WARLORD]);
+// The Red Dragon of the Dragon's Roost, the last test before the Hold: no
+// horn, it fights alone with its brood, but at half health it rages.
+export const RED_DRAGON: BossRules = Object.freeze({
+  id: 'red-dragon',
+  title: 'Red Dragon',
+  name: 'Ignareth',
+  taunt: Object.freeze([
+    'Little warband, the road to the Hold runs through my roost.',
+    'Come closer. I have not tasted iron in an age.',
+  ] as const),
+  enrage: Object.freeze({ below: 0.5, strength: 3 }),
+});
+
+export const BOSS_RULES: readonly BossRules[] = Object.freeze([ORC_WARLORD, RED_DRAGON]);
 
 // The rules for a boss titled `title` (any case), or null for none.
 export function findBossRules(title: string, rules: readonly BossRules[] = BOSS_RULES): BossRules | null {

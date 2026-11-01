@@ -4,6 +4,7 @@ import { ActionMenu } from './ActionMenu.tsx';
 import { BattleResult } from './BattleResult.tsx';
 import { CampMenu } from './CampMenu.tsx';
 import { CombatForecast } from './CombatForecast.tsx';
+import { AnimationViewer } from './AnimationViewer.tsx';
 import { ConfigEditor } from './ConfigEditor.tsx';
 import { ControlsButton } from './ControlsButton.tsx';
 import { DamagePopups } from './DamagePopups.tsx';
@@ -51,7 +52,8 @@ import { useRoute } from './useRoute.ts';
 // loads. On the #/configs routes, `ConfigEditor` covers it instead, except
 // for a Warband Mode region's preview, which runs the map on the stage read-only
 // (`RegionPreview`). The Map Generator (#/map-generator) runs its maps the
-// same way (`MapGenerator`).
+// same way (`MapGenerator`). The animation viewer (#/animations) covers it
+// like the config editor (`AnimationViewer`).
 //
 // Inside the stage, the HUD overlay sits on top of the canvas: the overlay
 // ignores pointer events so clicks fall through to the game, and
@@ -142,6 +144,8 @@ export function App() {
         <RegionPreview {...preview} />
       ) : generator ? (
         <MapGenerator {...generator} />
+      ) : route.page === 'animations' ? (
+        <AnimationViewer art={route.art} />
       ) : route.page !== 'game' ? (
         <ConfigEditor route={route} />
       ) : (

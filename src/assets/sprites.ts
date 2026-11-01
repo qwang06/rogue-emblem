@@ -22,6 +22,13 @@ import goldGinkgoTree from './gold_ginkgo_tree.png';
 import mapProps from './map-props.png';
 import orc01Idle from './units/Orc_01_Idle.png';
 import orc01Move from './units/Orc_01_Move.png';
+import redDragonIdle from './units/Red_Dragon_Idle.png';
+import redDragonMove from './units/Red_Dragon_Move.png';
+import redDragonAttack from './units/Red_Dragon_Attack.png';
+import redDragonAttackBody from './units/Red_Dragon_AttackBody.png';
+import redDragonAttackFire from './units/Red_Dragon_AttackFire.png';
+import redDragonHit from './units/Red_Dragon_Hit.png';
+import redDragonDie from './units/Red_Dragon_Die.png';
 import sapper04Idle from './units/Sapper_04_Idle.png';
 import sapper04Move from './units/Sapper_04_Move.png';
 import siege03Idle from './units/Siege_03_Idle.png';
@@ -100,6 +107,13 @@ export const SPRITE_URLS: Readonly<Record<string, string>> = {
   'map-props': mapProps,
   Orc_01_Idle: orc01Idle,
   Orc_01_Move: orc01Move,
+  Red_Dragon_Idle: redDragonIdle,
+  Red_Dragon_Move: redDragonMove,
+  Red_Dragon_Attack: redDragonAttack,
+  Red_Dragon_AttackBody: redDragonAttackBody,
+  Red_Dragon_AttackFire: redDragonAttackFire,
+  Red_Dragon_Hit: redDragonHit,
+  Red_Dragon_Die: redDragonDie,
   Sapper_04_Idle: sapper04Idle,
   Sapper_04_Move: sapper04Move,
   Siege_03_Idle: siege03Idle,

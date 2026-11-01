@@ -72,7 +72,7 @@ describe('createStartingWarband', () => {
   });
 
   it('rejects an unknown class', () => {
-    expect(() => createStartingWarband('dragon')).toThrow(/dragon/);
+    expect(() => createStartingWarband('kraken')).toThrow(/kraken/);
   });
 });
 
@@ -412,11 +412,19 @@ describe('the stage ramp', () => {
     }
   });
 
-  it('ends the run on stage 10, a boss fight against the Orc Warlord', () => {
-    expect(REGION_SETTINGS.finalStage).toBe(10);
-    const finale = getStageRegion(10, REGION_SETTINGS);
+  it('ends the run on stage 11, a boss fight against the Orc Warlord', () => {
+    expect(REGION_SETTINGS.finalStage).toBe(11);
+    const finale = getStageRegion(11, REGION_SETTINGS);
     expect(finale.objective).toEqual({ kind: 'boss' });
     expect(finale.enemies.filter((group) => group.boss).map((group) => group.boss)).toEqual(['Orc Warlord']);
+  });
+
+  it('fights the Red Dragon on stage 10, the last battle before the Hold', () => {
+    const roost = getStageRegion(10, REGION_SETTINGS);
+    expect(roost.name).toBe("Dragon's Roost");
+    expect(roost.objective).toEqual({ kind: 'boss' });
+    expect(roost.enemies.filter((group) => group.boss).map((group) => group.boss)).toEqual(['Red Dragon']);
+    expect(enemyClasses(10)).toContain('dragon');
   });
 
   it('never fields fewer enemies than the stage before', () => {

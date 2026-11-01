@@ -15,24 +15,27 @@ import {
   TREE_SHADOW,
   TREE_SPRITES,
   UNIT_SHADOW,
-  UNIT_ANIMATIONS,
+  UNIT_ART,
   UNIT_SHEET,
+  getAllUnitSheets,
+  getImpactFrame,
+  getUnitAnimations,
+  getUnitSheet,
+  getUnitSheetFrameSizes,
+  hasBakedShadow,
   UNIT_SPRITES,
   DEFAULT_UNIT_SPRITE,
   getUnitSprite,
   unitSheetKey,
-  type UnitAnimation,
 } from './tileset.ts';
 import { UNIT_CLASSES } from './unitClasses.ts';
 import { WOODEN_ARMOR, WOODEN_SHIELD } from './items.ts';
 import { WOODEN_AXE, WOODEN_SPEAR, WOODEN_SWORD } from './weapons.ts';
 
 describe('sprite keys', () => {
-  it('names an image for every unit animation', () => {
+  it('names an image for every unit animation and viewer sheet', () => {
     for (const sprite of Object.values(UNIT_SPRITES)) {
-      for (const animation of Object.keys(UNIT_ANIMATIONS) as UnitAnimation[]) {
-        expect(SPRITE_URLS).toHaveProperty([unitSheetKey(sprite, animation)]);
-      }
+      for (const { key } of getAllUnitSheets(sprite)) expect(SPRITE_URLS).toHaveProperty([key]);
     }
   });
 
@@ -87,7 +90,7 @@ describe('getUnitSprite', () => {
   });
 
   it('falls back to the default art for an unknown or missing class', () => {
-    expect(getUnitSprite('dragon')).toBe(DEFAULT_UNIT_SPRITE);
+    expect(getUnitSprite('kraken')).toBe(DEFAULT_UNIT_SPRITE);
     expect(getUnitSprite(null)).toBe(DEFAULT_UNIT_SPRITE);
   });
 });
@@ -155,6 +158,65 @@ describe('unitSheetKey', () => {
   it('names the sheet for each animation', () => {
     expect(unitSheetKey('Warrior_01', 'idle')).toBe('Warrior_01_Idle');
     expect(unitSheetKey('Warrior_01', 'move')).toBe('Warrior_01_Move');
+  });
+});
+
+describe('unit sheets', () => {
+  it('gives the pack art idle and move in one-tile frames, four per facing', () => {
+    expect(getUnitAnimations('Soldier_03')).toEqual(['idle', 'move']);
+    expect(getUnitSheet('Soldier_03', 'move')).toMatchObject({
+      key: 'Soldier_03_Move',
+      frameWidth: TILE_SIZE,
+      frameHeight: TILE_SIZE,
+      frames: 4,
+      tileX: 0,
+      tileY: 0,
+      loop: true,
+    });
+    expect(getUnitSheet('Soldier_03', 'attack')).toBeNull();
+    expect(hasBakedShadow('Soldier_03')).toBe(false);
+  });
+
+  it('gives the red dragon every animation, its bigger frames pinned by its tile', () => {
+    expect(getUnitSprite('dragon')).toBe('Red_Dragon');
+    expect(getUnitAnimations('Red_Dragon')).toEqual(['idle', 'move', 'attack', 'hit', 'die']);
+    expect(getUnitSheet('Red_Dragon', 'idle')).toMatchObject({ frameWidth: 32, frameHeight: 32, frames: 4 });
+    expect(getUnitSheet('Red_Dragon', 'move')).toMatchObject({ frameWidth: 48, tileX: 8, tileY: 0 });
+    expect(getUnitSheet('Red_Dragon', 'attack')).toMatchObject({
+      key: 'Red_Dragon_Attack',
+      frameWidth: 112,
+      frameHeight: 96,
+      frames: 6,
+      tileX: 40,
+      tileY: 32,
+      loop: false,
+    });
+    expect(getAllUnitSheets('Red_Dragon').map(({ key }) => key)).toEqual([
+      'Red_Dragon_Idle',
+      'Red_Dragon_Move',
+      'Red_Dragon_Attack',
+      'Red_Dragon_Hit',
+      'Red_Dragon_Die',
+      'Red_Dragon_AttackBody',
+      'Red_Dragon_AttackFire',
+    ]);
+    expect(getImpactFrame('Red_Dragon')).toBe(2);
+    expect(hasBakedShadow('Red_Dragon')).toBe(true);
+  });
+
+  it("keeps every frame's tile inside the frame", () => {
+    for (const art of Object.keys(UNIT_ART)) {
+      for (const sheet of getAllUnitSheets(art)) {
+        expect(sheet.tileX + TILE_SIZE, sheet.key).toBeLessThanOrEqual(sheet.frameWidth);
+        expect(sheet.tileY + TILE_SIZE, sheet.key).toBeLessThanOrEqual(sheet.frameHeight);
+      }
+    }
+  });
+
+  it('loads only the bigger sheets at their own frame size', () => {
+    const sizes = getUnitSheetFrameSizes();
+    expect(sizes.Red_Dragon_Attack).toEqual({ frameWidth: 112, frameHeight: 96 });
+    expect(sizes).not.toHaveProperty('Soldier_03_Idle');
   });
 });
 

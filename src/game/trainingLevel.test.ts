@@ -129,6 +129,6 @@ describe('createTrainingLevel', () => {
   });
 
   it('throws on an unknown class', () => {
-    expect(() => createTrainingLevel('dragon')).toThrow();
+    expect(() => createTrainingLevel('kraken')).toThrow();
   });
 });

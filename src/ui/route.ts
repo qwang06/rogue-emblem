@@ -5,22 +5,31 @@
 // a Warband Mode region makes from a seed, shown read-only on the battle
 // stage; '#/map-generator/<seed>' the Map Generator's map for a seed in
 // any region, and '#/map-generator/<index>/<seed>' in region <index>, shown
-// the same way; anything else is the game.
+// the same way; '#/animations' the animation viewer, and
+// '#/animations/<art>' the viewer on one unit art; anything else is the
+// game.
 
 export type Route =
   | { page: 'game' }
   | { page: 'configs' }
   | { page: 'config'; id: string }
   | { page: 'region-preview'; index: number; seed: number }
-  | { page: 'map-generator'; region: number | null; seed: number };
+  | { page: 'map-generator'; region: number | null; seed: number }
+  | { page: 'animations'; art: string | null };
 
 const CONFIG_ID_PATTERN = /^[a-z0-9-]+$/;
 // Config indices and seeds (seeds are below 2^32, so ten digits at most).
 const NUMBER_PATTERN = /^\d{1,10}$/;
+// Unit art names (UNIT_SPRITES), e.g. Red_Dragon.
+const ART_PATTERN = /^[A-Za-z0-9_]+$/;
 
 export function parseRoute(hash: string): Route {
   const [first, second, ...rest] = hash.replace(/^#\/?/, '').replace(/\/+$/, '').split('/');
   if (first === 'map-generator') return parseMapGenerator([second, ...rest]);
+  if (first === 'animations') {
+    if (rest.length > 0 || (second !== undefined && !ART_PATTERN.test(second))) return { page: 'game' };
+    return { page: 'animations', art: second ?? null };
+  }
   if (first !== 'configs') return { page: 'game' };
   if (second === 'regions' && rest.length > 0) return parseRegionPreview(rest);
   if (rest.length > 0) return { page: 'game' };
@@ -58,5 +67,7 @@ export function routeHash(route: Route): string {
       return `#/configs/regions/preview/${route.index}/${route.seed}`;
     case 'map-generator':
       return route.region === null ? `#/map-generator/${route.seed}` : `#/map-generator/${route.region}/${route.seed}`;
+    case 'animations':
+      return route.art === null ? '#/animations' : `#/animations/${route.art}`;
   }
 }

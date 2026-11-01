@@ -3,13 +3,14 @@
 // choice of class (e.g. Training) don't need to know the subclasses. The
 // base classes come first, then the promoted classes (promotions.ts),
 // which a unit only becomes by promoting, then the monsters (slime,
-// goblin, skeleton, bat, wolf, orc), which are enemies only. Neither of
+// goblin, skeleton, bat, wolf, orc, dragon), which are enemies only. Neither of
 // the last two are recruits, starting picks or Training choices (see
 // PLAYABLE_CLASSES).
 
 import { Acolyte } from './Acolyte.ts';
 import { Archer } from './Archer.ts';
 import { Bat } from './Bat.ts';
+import { Dragon } from './Dragon.ts';
 import { Goblin } from './Goblin.ts';
 import { Guard } from './Guard.ts';
 import { Orc } from './Orc.ts';
@@ -68,6 +69,12 @@ export const UNIT_CLASSES: readonly UnitClass[] = Object.freeze([
   Object.freeze<UnitClass>({ id: 'bat', label: 'Bat', create: (options) => new Bat(options), monster: true }),
   Object.freeze<UnitClass>({ id: 'wolf', label: 'Wolf', create: (options) => new Wolf(options), monster: true }),
   Object.freeze<UnitClass>({ id: 'orc', label: 'Orc', create: (options) => new Orc(options), monster: true }),
+  Object.freeze<UnitClass>({
+    id: 'dragon',
+    label: 'Dragon',
+    create: (options) => new Dragon(options),
+    monster: true,
+  }),
 ]);
 
 // The classes the player can start as, recruit or train: every class but

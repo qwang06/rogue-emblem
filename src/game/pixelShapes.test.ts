@@ -79,6 +79,18 @@ describe('getOutlineMask', () => {
     expect(maskRows(getOutlineMask(alpha, width, height, 4, 1), width)).toEqual(['..o.....']);
   });
 
+  it('cuts frames taller or shorter than they are wide at their own height', () => {
+    // Two 3-wide, 2-tall frames stacked: the bottom frame's pixel stays out
+    // of the top frame.
+    const { alpha, width, height } = image(['...', '...', '.#.', '...']);
+    expect(maskRows(getOutlineMask(alpha, width, height, 3, 1, 2), width)).toEqual(['...', '...', 'o.o', '.o.']);
+  });
+
+  it('counts only pixels at least minAlpha opaque', () => {
+    const alpha = [0, 100, 0, 0, 255, 0];
+    expect(maskRows(getOutlineMask(alpha, 6, 1, 6, 1, 1, 128), 6)).toEqual(['...o.o']);
+  });
+
   it('is empty for a fully transparent image, and for width 0', () => {
     const blank = image(['....', '....']);
     expect([...getOutlineMask(blank.alpha, 4, 2, 4, 1)].every((v) => v === 0)).toBe(true);

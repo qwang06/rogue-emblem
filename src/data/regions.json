@@ -1,6 +1,6 @@
 {
   "stagesPerRegion": 1,
-  "finalStage": 10,
+  "finalStage": 11,
   "regions": [
     {
       "name": "Meadowlands",
@@ -226,6 +226,33 @@
       ],
       "treeChance": 0.02,
       "palette": "a-brown",
+      "biome": "hills"
+    },
+    {
+      "name": "Dragon's Roost",
+      "description": "A scorched crag on the last road to the Hold, where the Red Dragon nests with bats and skeletons: beat the dragon to go on.",
+      "terrain": {
+        "generator": "planned",
+        "width": 8,
+        "height": 8,
+        "lakes": 0,
+        "mountains": 2,
+        "mountainSize": [2, 3],
+        "forests": 1,
+        "forestSize": [2, 3],
+        "meadows": 1,
+        "meadowSize": [2, 3],
+        "ruins": 1,
+        "buildings": 0
+      },
+      "enemies": [
+        { "count": 1, "unitClass": "dragon", "area": { "y": [0, 0.5] }, "level": 7, "boss": "Red Dragon" },
+        { "count": 2, "unitClass": "bat", "area": { "y": [0, 0.5] }, "level": 5 },
+        { "count": 2, "unitClass": "skeleton", "area": { "y": [0, 0.5] }, "level": 5 }
+      ],
+      "treeChance": 0.01,
+      "palette": "b-red",
+      "objective": { "kind": "boss" },
       "biome": "hills"
     },
     {

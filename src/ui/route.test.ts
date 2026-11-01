@@ -51,6 +51,16 @@ describe('parseRoute', () => {
     expect(parseRoute('#/map-generator/1/2/3')).toEqual({ page: 'game' });
   });
 
+  it('reads the animation viewer, on any art or one', () => {
+    expect(parseRoute('#/animations')).toEqual({ page: 'animations', art: null });
+    expect(parseRoute('#/animations/Red_Dragon/')).toEqual({ page: 'animations', art: 'Red_Dragon' });
+  });
+
+  it('rejects malformed animation viewer routes', () => {
+    expect(parseRoute('#/animations/Red Dragon')).toEqual({ page: 'game' });
+    expect(parseRoute('#/animations/Red_Dragon/idle')).toEqual({ page: 'game' });
+  });
+
   it('falls back to the game for unknown routes', () => {
     expect(parseRoute('#/nowhere')).toEqual({ page: 'game' });
     expect(parseRoute('#/configs/dialogs/extra')).toEqual({ page: 'game' });
@@ -67,6 +77,8 @@ describe('routeHash', () => {
       { page: 'region-preview', index: 0, seed: 4294967295 },
       { page: 'map-generator', region: null, seed: 4294967295 },
       { page: 'map-generator', region: 3, seed: 7 },
+      { page: 'animations', art: null },
+      { page: 'animations', art: 'Red_Dragon' },
     ];
     for (const route of routes) expect(parseRoute(routeHash(route))).toEqual(route);
   });

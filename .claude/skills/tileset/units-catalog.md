@@ -52,6 +52,33 @@ attempts, judge logs and the sheet build script are in the project files under
 cream tunic, iron sword; `art/warrior/` in the project files) and
 `Villager_01` before it stay in the folder but are no longer loaded.
 
+## Red dragon (not from the pack)
+
+`Red_Dragon` is the dragon class's art (`UNIT_SPRITES.dragon`), the Red
+Dragon boss. The user's source sheets were 3x upscales of true 32px art
+(every art pixel an exact 3x3 block), so they were cut back to 1x without
+loss; the 3x originals (`AdultRedDragon_*.png`) are in the project files under
+`art/red-dragon/raw/`. Rows are down/left/right/up like the pack. A red
+horned dragon with cream belly and horns, purple-brown outline, wings spread
+to the tile's edges; RGBA, with a **baked shadow** (a grey ellipse at alpha
+100 on y 30–31, under x 4–27 standing), so the map adds none
+(`UNIT_ART.Red_Dragon.bakedShadow`) and its outline skips alpha under 128.
+Every sheet is listed in `UNIT_ART` in `tileset.ts` with its frame size and
+where the unit's tile sits in a frame:
+
+| Sheet                   | Frames | Frame size | Tile at | What it shows                                                                                   |
+| ----------------------- | ------ | ---------- | ------- | ----------------------------------------------------------------------------------------------- |
+| `Red_Dragon_Idle`       | 4      | 32x32      | 0, 0    | standing, wings half-folded, a slow breath                                                      |
+| `Red_Dragon_Move`       | 4      | 48x32      | 8, 0    | flying, wings beating past both sides, body raised over its shadow                              |
+| `Red_Dragon_Attack`     | 6      | 112x96     | 40, 32  | fire breath: rears (frame 0), then a fireball grows and bursts up to 3 tiles out the facing way |
+| `Red_Dragon_AttackBody` | 6      | 112x96     | 40, 32  | the attack with the dragon alone (viewer only)                                                  |
+| `Red_Dragon_AttackFire` | 6      | 112x96     | 40, 32  | the attack's flame alone, frame 0 empty (viewer only; the source had 5 frames, for frames 1–5)  |
+| `Red_Dragon_Hit`        | 2      | 32x32      | 0, 0    | a bright orange flash frame, then a darker recoil                                               |
+| `Red_Dragon_Die`        | 1      | 32x32      | 0, 0    | a ghostly teal silhouette                                                                       |
+
+The blow lands on attack frame 2 (`impactFrame`), when the fireball is
+biggest. The animation viewer (`#/animations`) plays every sheet.
+
 ## Monsters (not from the pack)
 
 Six enemy monsters, the art of the monster classes (`UNIT_SPRITES.slime` and

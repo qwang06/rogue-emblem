@@ -213,7 +213,7 @@ describe('parseRegionSettings', () => {
     ],
     [
       'an unknown enemy class',
-      file([region({ enemies: [{ count: 1, unitClass: 'dragon' }] })]),
+      file([region({ enemies: [{ count: 1, unitClass: 'kraken' }] })]),
       /enemies\[0\]\.unitClass must be one of warrior, soldier, archer/,
     ],
     [

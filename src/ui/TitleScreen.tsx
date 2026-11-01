@@ -204,6 +204,8 @@ export function TitleScreen() {
       gameStore.setState({ screen: 'battle', battleSetup: { mode: 'training', unitClass: action.id } });
     } else if (action.id === 'map-generator') {
       window.location.hash = routeHash({ page: 'map-generator', region: null, seed: randomSeed() });
+    } else if (action.id === 'animations') {
+      window.location.hash = routeHash({ page: 'animations', art: null });
     } else if (action.id === 'story') {
       gameStore.setState({ screen: 'battle', battleSetup: FIRST_STORY_CHAPTER });
     } else if (action.id === 'warband' || action.id === 'training' || action.id === 'settings') {

@@ -15,7 +15,9 @@ import type { PixelArt } from './pixelShapes.ts';
 import type { Team } from './turns.ts';
 import type { UnitRank } from './Unit.ts';
 
-export type UnitAnimation = 'idle' | 'move';
+// What a unit can be seen doing. Every unit art has `idle` and `move`;
+// some (UNIT_ART) also have `attack`, `hit` and `die`.
+export type UnitAnimation = 'idle' | 'move' | 'attack' | 'hit' | 'die';
 
 // A blob shadow drawn under something standing on a tile (see UNIT_SHADOW).
 export interface Shadow {
@@ -231,6 +233,7 @@ export const UNIT_SPRITES: Record<string, string> = {
   bat: 'Bat_01',
   wolf: 'Wolf_01',
   orc: 'Orc_01',
+  dragon: 'Red_Dragon',
 };
 
 // Art for a unit whose class has none of its own (or no class).
@@ -257,6 +260,8 @@ export const ITEM_SPRITES: Record<string, string> = {
   fangs: 'fangs',
   fire: 'fire',
   'fire-spell': 'fire-spell',
+  // The dragon's breath shows the Fire spell's flame.
+  'fire-breath': 'fire-spell',
   fists: 'fists',
   'great-axe': 'great-axe',
   'heal-staff': 'heal-staff',
@@ -276,36 +281,178 @@ export function getItemSprite(itemId: string): string | null {
   return ITEM_SPRITES[itemId] ?? null;
 }
 
-// Every unit sheet is a grid of one-tile frames, `columns` wide: one row per
-// facing direction (`rows`, keyed by the facings in src/game/facing.ts), one
-// column per animation frame. A unit loops its facing's row, `frames` columns
-// long. Units start out facing `defaultFacing` (toward the camera), turn to
+// Every unit sheet is a grid of frames (one tile each for the pack's art,
+// see getUnitSheet): one row per facing direction (`rows`, keyed by the
+// facings in src/game/facing.ts), one column per animation frame. A unit
+// plays its facing's row. Units start out facing `defaultFacing` (toward the camera), turn to
 // face the way they step while walking, and keep facing their last step once
 // they stop.
 export const UNIT_SHEET: {
-  columns: number;
   rows: Record<Facing, number>;
   defaultFacing: Facing;
-  frames: number;
 } = {
-  columns: 4,
   rows: { down: 0, left: 1, right: 2, up: 3 },
   defaultFacing: 'down',
-  frames: 4,
 };
 
-// Unit animations: `sheet` is the suffix of the sheet's texture key, and each
-// frame shows for frameMs. Units play `idle` standing still and `move` while
-// walking.
-export const UNIT_ANIMATIONS: Record<UnitAnimation, { sheet: string; frameMs: number }> = {
-  idle: { sheet: 'Idle', frameMs: 200 },
-  move: { sheet: 'Move', frameMs: 120 },
-};
+// Unit animations: `sheet` is the suffix of the sheet's texture key, each
+// frame shows for frameMs, and `loop` says whether it repeats (else it
+// plays once and holds its last frame). Units play `idle` standing still
+// and `move` while walking; an art with an `attack` sheet plays it when it
+// strikes, `hit` when it's struck and `die` when it falls (see UNIT_ART).
+export const UNIT_ANIMATIONS: Record<UnitAnimation, { sheet: string; frameMs: number; loop: boolean; label: string }> =
+  {
+    idle: { sheet: 'Idle', frameMs: 200, loop: true, label: 'Idle' },
+    move: { sheet: 'Move', frameMs: 120, loop: true, label: 'Move' },
+    attack: { sheet: 'Attack', frameMs: 100, loop: false, label: 'Attack' },
+    hit: { sheet: 'Hit', frameMs: 140, loop: false, label: 'Hit' },
+    die: { sheet: 'Die', frameMs: 500, loop: false, label: 'Die' },
+  };
 
 // The texture key of a unit's sheet for an animation, e.g.
 // ('Warrior_02', 'move') -> 'Warrior_02_Move'.
 export function unitSheetKey(sprite: string, animation: UnitAnimation): string {
   return `${sprite}_${UNIT_ANIMATIONS[animation].sheet}`;
+}
+
+// How one unit sheet is cut: frames of frameWidth x frameHeight, `frames`
+// per row (one row per facing, UNIT_SHEET.rows), and where the unit's tile
+// sits in a frame (its top-left corner, tileX / tileY, in sheet pixels).
+// A frame bigger than a tile (a dragon's spread wings or its breath) spills
+// over the tiles around it.
+export interface UnitSheetLayout {
+  frameWidth: number;
+  frameHeight: number;
+  frames: number;
+  tileX: number;
+  tileY: number;
+}
+
+// Unit art cut differently from the pack's 4x4 sheets of 32px frames: its
+// layout per animation (only the animations it has), `extras` (more
+// sheets shown only in the animation viewer, by sheet suffix and label),
+// `impactFrame` (the attack frame where the blow lands) and
+// `bakedShadow` (the art draws its own shadow, so the map adds none).
+export interface UnitArt {
+  sheets: Partial<Record<UnitAnimation, UnitSheetLayout>>;
+  extras?: readonly { sheet: string; label: string; layout: UnitSheetLayout; animation: UnitAnimation }[];
+  impactFrame?: number;
+  bakedShadow?: boolean;
+}
+
+// The pack's layout: 4 one-tile frames per facing.
+export const PACK_SHEET_LAYOUT: UnitSheetLayout = Object.freeze({
+  frameWidth: TILE_SIZE,
+  frameHeight: TILE_SIZE,
+  frames: 4,
+  tileX: 0,
+  tileY: 0,
+});
+
+// The red dragon (src/assets/units/Red_Dragon_*.png): true 32px art, one
+// tile standing, wider in flight (48px frames, the wings past both sides)
+// and much bigger breathing fire (112x96 frames, the flame reaching up to
+// three tiles out in the facing's direction). Its shadow is in the art.
+const RED_DRAGON_ATTACK: UnitSheetLayout = Object.freeze({
+  frameWidth: 112,
+  frameHeight: 96,
+  frames: 6,
+  tileX: 40,
+  tileY: 32,
+});
+export const UNIT_ART: Readonly<Record<string, UnitArt>> = Object.freeze({
+  Red_Dragon: Object.freeze({
+    sheets: Object.freeze({
+      idle: PACK_SHEET_LAYOUT,
+      move: Object.freeze({ frameWidth: 48, frameHeight: 32, frames: 4, tileX: 8, tileY: 0 }),
+      attack: RED_DRAGON_ATTACK,
+      hit: Object.freeze({ ...PACK_SHEET_LAYOUT, frames: 2 }),
+      die: Object.freeze({ ...PACK_SHEET_LAYOUT, frames: 1 }),
+    }),
+    extras: Object.freeze([
+      Object.freeze({
+        sheet: 'AttackBody',
+        label: 'Attack (dragon only)',
+        layout: RED_DRAGON_ATTACK,
+        animation: 'attack' as const,
+      }),
+      Object.freeze({
+        sheet: 'AttackFire',
+        label: 'Attack (fire only)',
+        layout: RED_DRAGON_ATTACK,
+        animation: 'attack' as const,
+      }),
+    ]),
+    impactFrame: 2,
+    bakedShadow: true,
+  }),
+});
+
+// One sheet of a unit art, ready to cut and play: its texture key, the
+// animation it belongs to, a label, its layout and timing.
+export interface UnitSheet extends UnitSheetLayout {
+  key: string;
+  animation: UnitAnimation;
+  label: string;
+  frameMs: number;
+  loop: boolean;
+}
+
+function toUnitSheet(art: string, animation: UnitAnimation, layout: UnitSheetLayout): UnitSheet {
+  const { frameMs, loop, label } = UNIT_ANIMATIONS[animation];
+  return { ...layout, key: unitSheetKey(art, animation), animation, label, frameMs, loop };
+}
+
+// The animations a unit art has, in UNIT_ANIMATIONS order: idle and move
+// for the pack's art, more for UNIT_ART's.
+export function getUnitAnimations(art: string): UnitAnimation[] {
+  const custom = UNIT_ART[art];
+  const all = Object.keys(UNIT_ANIMATIONS) as UnitAnimation[];
+  return custom ? all.filter((animation) => custom.sheets[animation]) : ['idle', 'move'];
+}
+
+// The sheet a unit art plays `animation` from, or null if it has none.
+export function getUnitSheet(art: string, animation: UnitAnimation): UnitSheet | null {
+  const custom = UNIT_ART[art];
+  const layout = custom
+    ? custom.sheets[animation]
+    : animation === 'idle' || animation === 'move'
+      ? PACK_SHEET_LAYOUT
+      : undefined;
+  return layout ? toUnitSheet(art, animation, layout) : null;
+}
+
+// Every sheet of a unit art, the viewer's extras included: what the
+// animation viewer offers.
+export function getAllUnitSheets(art: string): UnitSheet[] {
+  const main = getUnitAnimations(art).map((animation) => getUnitSheet(art, animation)!);
+  const extras = (UNIT_ART[art]?.extras ?? []).map(({ sheet, label, layout, animation }) => ({
+    ...toUnitSheet(art, animation, layout),
+    key: `${art}_${sheet}`,
+    label,
+  }));
+  return [...main, ...extras];
+}
+
+// The frame size of every unit sheet cut differently from one tile, by
+// texture key: how GridScene loads them.
+export function getUnitSheetFrameSizes(): Record<string, { frameWidth: number; frameHeight: number }> {
+  const sizes: Record<string, { frameWidth: number; frameHeight: number }> = {};
+  for (const art of Object.keys(UNIT_ART)) {
+    for (const { key, frameWidth, frameHeight } of getAllUnitSheets(art)) sizes[key] = { frameWidth, frameHeight };
+  }
+  return sizes;
+}
+
+// Whether a unit art draws its own shadow (the map then adds none).
+export function hasBakedShadow(art: string): boolean {
+  return UNIT_ART[art]?.bakedShadow ?? false;
+}
+
+// The attack frame where a unit art's blow lands (the middle one by default).
+export function getImpactFrame(art: string): number {
+  const sheet = getUnitSheet(art, 'attack');
+  return UNIT_ART[art]?.impactFrame ?? (sheet ? Math.floor(sheet.frames / 2) : 0);
 }
 
 // Tree art, by tree name: the texture key of a one-tile tree standing on its

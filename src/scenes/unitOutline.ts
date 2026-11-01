@@ -6,7 +6,8 @@ import { UNIT_OUTLINE } from '../game/tileset.ts';
 const UNIT_OUTLINE_DEPTH = 0.74; // just under units (0.75), over their shadows (0.7)
 
 // The white outline texture of a unit sheet (getOutlineMask over its
-// pixels), cut into the same frames, built once per sheet. White, so a tint
+// pixels, the half-transparent ones left out), cut into the same frames,
+// built once per sheet. White, so a tint
 // gives it any team's color.
 function ensureOutlineTexture(scene: Phaser.Scene, key: string): string {
   const outlineKey = `${key}-outline`;
@@ -24,7 +25,9 @@ function ensureOutlineTexture(scene: Phaser.Scene, key: string): string {
   for (let i = 0; i < alpha.length; i++) alpha[i] = pixels.data[i * 4 + 3];
 
   const firstFrame = source.get(0);
-  const mask = getOutlineMask(alpha, width, height, firstFrame.width, UNIT_OUTLINE.width);
+  // Frames may be wider than tall (UNIT_ART); a see-through baked shadow
+  // gets no outline.
+  const mask = getOutlineMask(alpha, width, height, firstFrame.width, UNIT_OUTLINE.width, firstFrame.height, 128);
   const texture = scene.textures.createCanvas(outlineKey, width, height)!;
   const out = texture.context.createImageData(width, height);
   mask.forEach((on, i) => {

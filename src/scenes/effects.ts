@@ -4,6 +4,7 @@
 import type Phaser from 'phaser';
 import type { Point } from '../game/grid.ts';
 import type { RestoreStat } from '../game/items.ts';
+import { TILE_SIZE } from '../game/tileset.ts';
 
 type Sprite = Phaser.GameObjects.Sprite;
 type Done = () => void;
@@ -92,9 +93,9 @@ const POTION_PULSE_INTERVAL_MS = 90;
 // pulse ends.
 export function playPotionGlow(scene: Phaser.Scene, sprite: Sprite, center: Point, color: number, onDone?: Done): void {
   ensureParticleTexture(scene);
-  const halfWidth = sprite.displayWidth / 2 - 2;
+  const halfWidth = TILE_SIZE / 2 - 2;
   const emitter = scene.add
-    .particles(center.x, center.y + sprite.displayHeight / 2 - 2, PARTICLE_KEY, {
+    .particles(center.x, center.y + TILE_SIZE / 2 - 2, PARTICLE_KEY, {
       x: { min: -halfWidth, max: halfWidth },
       speedY: { min: -38, max: -22 },
       speedX: { min: -4, max: 4 },
@@ -148,7 +149,8 @@ export function playLunge(
   toward: Point,
   { distance = LUNGE_DISTANCE, holdMs = 0, onImpact, onDone }: LungeOptions = {},
 ): void {
-  const center = { x: sprite.x + sprite.displayWidth / 2, y: sprite.y + sprite.displayHeight / 2 };
+  // A unit sprite's origin is its tile's top-left, whatever its frame size.
+  const center = { x: sprite.x + TILE_SIZE / 2, y: sprite.y + TILE_SIZE / 2 };
   const dx = toward.x - center.x;
   const dy = toward.y - center.y;
   const length = Math.hypot(dx, dy) || 1;

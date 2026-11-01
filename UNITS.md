@@ -1,6 +1,6 @@
 # UNITS.md
 
-Reference for every unit class: base stats, growth rates, caps, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Warrior.ts`, `src/game/Soldier.ts`, `src/game/Archer.ts`, `src/game/Vanguard.ts`, `src/game/Guard.ts`, `src/game/Acolyte.ts`, `src/game/promotions.ts`, `src/game/Slime.ts`, `src/game/Goblin.ts`, `src/game/Skeleton.ts`, `src/game/Bat.ts`, `src/game/Wolf.ts`, `src/game/Orc.ts`, `src/game/healing.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
+Reference for every unit class: base stats, growth rates, caps, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Warrior.ts`, `src/game/Soldier.ts`, `src/game/Archer.ts`, `src/game/Vanguard.ts`, `src/game/Guard.ts`, `src/game/Acolyte.ts`, `src/game/promotions.ts`, `src/game/Slime.ts`, `src/game/Goblin.ts`, `src/game/Skeleton.ts`, `src/game/Bat.ts`, `src/game/Wolf.ts`, `src/game/Orc.ts`, `src/game/Dragon.ts`, `src/game/healing.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
 
 ## How the numbers work
 
@@ -25,7 +25,7 @@ Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.m
 
 ## Weapons
 
-One starter weapon per armed unit in the unit catalog. Fists, the Wooden Sword, the Iron Spear, the Iron Bow and the Iron Axe are carried by a class; the monsters fight with Tackle, Club, Bone Claws, Fangs, Bite and Great Axe, which never break; the Powder Keg and Ballista wait for their classes (milestone 2.3); the rest of the wooden set is basic gear no class starts with; the Acolyte knows Light from the start; and the Fire Tome drops as loot for an Acolyte to learn Fire from.
+One starter weapon per armed unit in the unit catalog. Fists, the Wooden Sword, the Iron Spear, the Iron Bow and the Iron Axe are carried by a class; the monsters fight with Tackle, Club, Bone Claws, Fangs, Bite, Great Axe and Fire Breath, which never break; the Powder Keg and Ballista wait for their classes (milestone 2.3); the rest of the wooden set is basic gear no class starts with; the Acolyte knows Light from the start; and the Fire Tome drops as loot for an Acolyte to learn Fire from.
 
 | Weapon       | Type     | Hands | Mt  | Hit | Crit | Wt  | Rng | Uses | For (catalog art)               |
 | ------------ | -------- | ----- | --- | --- | ---- | --- | --- | ---- | ------------------------------- |
@@ -44,6 +44,7 @@ One starter weapon per armed unit in the unit catalog. Fists, the Wooden Sword, 
 | Fangs        | physical | 1     | 1   | 85  | 0    | 0   | 1   | ∞    | Bat                             |
 | Bite         | physical | 1     | 2   | 75  | 5    | 1   | 1   | ∞    | Wolf                            |
 | Great Axe    | physical | 2     | 3   | 65  | 0    | 4   | 1   | ∞    | Orc                             |
+| Fire Breath  | physical | 1     | 4   | 75  | 0    | 0   | 1–2 | ∞    | Dragon                          |
 | Wooden Sword | physical | 1     | 1   | 90  | 0    | 1   | 1   | 20   | Warrior                         |
 | Wooden Spear | physical | 1     | 1   | 75  | 0    | 2   | 1   | 20   | –                               |
 | Wooden Axe   | physical | 1     | 2   | 60  | 0    | 3   | 1   | 20   | –                               |
@@ -734,6 +735,32 @@ The heavy monster: slow, but tough enough to take several hits, and it hits hard
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
 | physical     | Great Axe       | 100%    |
+
+| Skill | Learned at | Mana | Range | Damage |
+| ----- | ---------- | ---- | ----- | ------ |
+
+It learns no skills and carries no potions.
+
+## Dragon
+
+The Red Dragon, boss of the Dragon's Roost (the run's stage 10, before the Hold; its rules are in `src/game/bosses.ts`). The most HP and armor of any monster, and its Fire Breath reaches a tile further than a bite, so archers can't pick at it from range unanswered. Slow, so quick units can strike it twice. It carries nothing else.
+
+| Stat | Base | Growth | Cap |
+| ---- | ---- | ------ | --- |
+| HP   | 22   | 90%    | 60  |
+| MP   | 0    | 0%     | 0   |
+| STR  | 7    | 50%    | 25  |
+| MAG  | 0    | 0%     | 20  |
+| SKL  | 4    | 30%    | 20  |
+| SPD  | 3    | 20%    | 20  |
+| LCK  | 2    | 15%    | 20  |
+| DEF  | 5    | 40%    | 25  |
+| RES  | 3    | 30%    | 20  |
+| MOV  | 4    | –      | –   |
+
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| physical     | Fire Breath     | 100%    |
 
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |

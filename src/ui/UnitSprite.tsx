@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { SPRITE_URLS } from '../assets/sprites.ts';
-import { TILE_SIZE, UNIT_ANIMATIONS, UNIT_SHEET, unitSheetKey } from '../game/tileset.ts';
+import { getUnitSheet, TILE_SIZE, UNIT_SHEET } from '../game/tileset.ts';
 
 // A unit's idle sheet by unit art name (UNIT_SPRITES in tileset.ts), drawn at
 // the size of `scale` map tiles with crisp pixels, cropped from the sheet's
@@ -17,13 +17,15 @@ export function UnitSprite({
   animated?: boolean;
 }) {
   const size = TILE_SIZE * scale;
-  const { columns, rows, defaultFacing, frames } = UNIT_SHEET;
-  const { frameMs } = UNIT_ANIMATIONS.idle;
+  const { rows, defaultFacing } = UNIT_SHEET;
+  // Every art idles in one-tile frames.
+  const { key, frames, frameMs } = getUnitSheet(sprite, 'idle')!;
+  const columns = frames;
   const row = rows[defaultFacing];
   const style: CSSProperties & Record<`--${string}`, string> = {
     width: size,
     height: size,
-    backgroundImage: `url(${SPRITE_URLS[unitSheetKey(sprite, 'idle')]})`,
+    backgroundImage: `url(${SPRITE_URLS[key]})`,
     backgroundSize: `${columns * size}px auto`,
     backgroundPosition: `0 ${-row * size}px`,
   };

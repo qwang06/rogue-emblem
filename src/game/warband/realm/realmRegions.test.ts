@@ -6,6 +6,7 @@ import { detectBiome, FORT_LEVELS, getRegionIndex, getRegionSpan, pickSiteRegion
 import type { RealmLand, RealmTerrain } from './realmTerrain.ts';
 
 const SETTINGS = DEFAULT_CONTENT.regions;
+const FINAL = SETTINGS.finalStage!;
 
 function landOf(rows: readonly string[]): RealmLand {
   const terrain: Record<string, RealmTerrain> = { '.': 'grass', '~': 'water', '^': 'mountain', T: 'forest' };
@@ -46,14 +47,14 @@ describe('pickSiteRegion', () => {
   const final = SETTINGS.regions.length - 1;
 
   it('plays the final region at the Hold, and the first at depth 1', () => {
-    expect(pickSiteRegion(SETTINGS, 10, 10, 'hold', 'meadow', rng()).region).toBe(final);
-    expect(pickSiteRegion(SETTINGS, 1, 10, 'battle', 'lake', rng())).toEqual({ region: 0, levelOffset: 0 });
+    expect(pickSiteRegion(SETTINGS, FINAL, FINAL, 'hold', 'meadow', rng()).region).toBe(final);
+    expect(pickSiteRegion(SETTINGS, 1, FINAL, 'battle', 'lake', rng())).toEqual({ region: 0, levelOffset: 0 });
   });
 
   it("prefers a region whose biome matches the site's land, from its depth or one before", () => {
     for (let depth = 2; depth < 9; depth++) {
       for (const biome of ['meadow', 'lake', 'forest', 'hills'] as const) {
-        const { region, levelOffset } = pickSiteRegion(SETTINGS, depth, 10, 'battle', biome, rng());
+        const { region, levelOffset } = pickSiteRegion(SETTINGS, depth, FINAL, 'battle', biome, rng());
         expect([depth - 1, depth - 2]).toContain(region);
         expect(levelOffset).toBe(depth - 1 - region);
         const matches = [depth - 1, depth - 2].filter((i) => SETTINGS.regions[i]?.biome === biome);
@@ -66,15 +67,15 @@ describe('pickSiteRegion', () => {
   it('sends a fort to a fort region, its enemies FORT_LEVELS stronger', () => {
     const fortIndex = SETTINGS.regions.findIndex((region) => region.biome === 'fort');
     const depth = fortIndex + 1;
-    expect(pickSiteRegion(SETTINGS, depth, 10, 'fort', 'meadow', rng())).toEqual({
+    expect(pickSiteRegion(SETTINGS, depth, FINAL, 'fort', 'meadow', rng())).toEqual({
       region: fortIndex,
       levelOffset: FORT_LEVELS,
     });
   });
 
   it('never plays the final region before the Hold', () => {
-    for (let depth = 2; depth < 10; depth++) {
-      expect(pickSiteRegion(SETTINGS, depth, 10, 'battle', 'meadow', rng()).region).not.toBe(final);
+    for (let depth = 2; depth < FINAL; depth++) {
+      expect(pickSiteRegion(SETTINGS, depth, FINAL, 'battle', 'meadow', rng()).region).not.toBe(final);
     }
   });
 });

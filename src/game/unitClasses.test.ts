@@ -4,7 +4,7 @@ import { createUnitOfClass, PLAYABLE_CLASSES, UNIT_CLASSES } from './unitClasses
 import type { ClassUnitOptions, Unit } from './Unit.ts';
 
 describe('UNIT_CLASSES', () => {
-  it('lists the six player classes, then the twelve promoted classes, then the six monsters', () => {
+  it('lists the six player classes, then the twelve promoted classes, then the seven monsters', () => {
     expect(UNIT_CLASSES.map((c) => c.id)).toEqual([
       'warrior',
       'soldier',
@@ -30,6 +30,7 @@ describe('UNIT_CLASSES', () => {
       'bat',
       'wolf',
       'orc',
+      'dragon',
     ]);
     expect(UNIT_CLASSES.map((c) => c.label)).toEqual([
       'Warrior',
@@ -56,6 +57,7 @@ describe('UNIT_CLASSES', () => {
       'Bat',
       'Wolf',
       'Orc',
+      'Dragon',
     ]);
   });
 
@@ -76,7 +78,7 @@ describe('PLAYABLE_CLASSES', () => {
     expect(PLAYABLE_CLASSES.map((c) => c.id)).toEqual(['warrior', 'soldier', 'archer', 'vanguard', 'guard', 'acolyte']);
   });
 
-  it('marks exactly the six monsters as monsters', () => {
+  it('marks exactly the seven monsters as monsters', () => {
     expect(UNIT_CLASSES.filter((c) => c.monster).map((c) => c.id)).toEqual([
       'slime',
       'goblin',
@@ -84,6 +86,7 @@ describe('PLAYABLE_CLASSES', () => {
       'bat',
       'wolf',
       'orc',
+      'dragon',
     ]);
   });
 
@@ -123,7 +126,7 @@ describe('createUnitOfClass', () => {
   });
 
   it('throws on an unknown class', () => {
-    expect(() => createUnitOfClass('dragon', { team: 'player' })).toThrow('Unknown unit class: dragon');
+    expect(() => createUnitOfClass('kraken', { team: 'player' })).toThrow('Unknown unit class: kraken');
   });
 
   it('can use a custom class list', () => {

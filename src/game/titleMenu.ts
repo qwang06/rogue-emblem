@@ -13,6 +13,7 @@ export const TITLE_ACTIONS: readonly MenuAction[] = Object.freeze([
   Object.freeze({ id: 'warband', label: 'Warband Mode' }),
   Object.freeze({ id: 'training', label: 'Training' }),
   Object.freeze({ id: 'map-generator', label: 'Map Generator' }),
+  Object.freeze({ id: 'animations', label: 'Animations' }),
   Object.freeze({ id: 'settings', label: 'Settings' }),
 ]);
 

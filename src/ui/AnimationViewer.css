@@ -1,0 +1,106 @@
+/* ---- Animation viewer (#/animations) -------------------------------- */
+
+.anim-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.anim-viewer__field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.anim-viewer__label {
+  min-width: 6rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.anim-viewer__select {
+  font: inherit;
+  color: var(--fg-bright);
+  background: var(--bg);
+  border: 1px solid var(--muted);
+  border-radius: var(--radius-sm);
+  padding: 3px 6px;
+  max-width: 100%;
+}
+
+.anim-viewer__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Every choice keeps a border so picking one only recolors it. */
+.anim-viewer__choice {
+  border-color: var(--muted);
+}
+
+.anim-viewer__choice[aria-pressed='true'] {
+  color: var(--accent);
+  background: var(--selection);
+  border-color: var(--accent);
+}
+
+/* Wide enough for either label, so Play / Pause never shifts its row. */
+.anim-viewer__play {
+  min-width: 5.5em;
+  text-align: center;
+}
+
+.anim-viewer__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.anim-viewer__inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg);
+}
+
+.anim-viewer__counter {
+  min-width: 8em;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+
+.anim-viewer__info {
+  margin: 0;
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.anim-viewer__stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.anim-viewer__stage {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.anim-viewer__canvas {
+  display: block;
+  max-width: 100%;
+  image-rendering: pixelated;
+  border: var(--rule);
+}
+
+.anim-viewer__caption {
+  color: var(--fg-dim);
+}

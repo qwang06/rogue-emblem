@@ -52,11 +52,11 @@ describe('toOverworldView', () => {
   });
 
   it('offers a connected branch after a battle even when it belongs to another original road', () => {
-    const realm = generateRealm(10, SETTINGS);
-    // These roads share a junction at (28, 9), but their original links
-    // omit the turn from 6-1 to 7-1.
-    const from = getSite(realm, '6-1')!;
-    const to = getSite(realm, '7-1')!;
+    const realm = generateRealm(2, SETTINGS);
+    // These roads share a junction, but their original links omit the turn
+    // from 5-1 to 6-0.
+    const from = getSite(realm, '5-1')!;
+    const to = getSite(realm, '6-0')!;
     expect(realm.roads.some((road) => road.from === from.id && road.to === to.id)).toBe(false);
     const run = { ...home, stage: from.depth + 1, route: { visited: [from.id], at: from } };
     const view = toOverworldView(run, realm, SETTINGS);

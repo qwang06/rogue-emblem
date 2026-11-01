@@ -326,6 +326,22 @@ export const GREAT_AXE = weapon({
   uses: null,
 });
 
+// The red dragon's breath: a gout of flame that reaches a tile further
+// than a bite, so the dragon answers archers too. It never runs out.
+export const FIRE_BREATH = weapon({
+  id: 'fire-breath',
+  label: 'Fire Breath',
+  type: 'physical',
+  hands: 1,
+  might: 4,
+  hit: 75,
+  crit: 0,
+  weight: 0,
+  minRange: 1,
+  maxRange: 2,
+  uses: null,
+});
+
 // The wooden set: basic practice arms, lighter and weaker than iron and
 // quicker to break (their icons are ITEM_SPRITES in tileset.ts). The sword
 // is the accurate one.
@@ -389,6 +405,7 @@ export const WEAPONS: readonly Weapon[] = Object.freeze([
   FANGS,
   BITE,
   GREAT_AXE,
+  FIRE_BREATH,
   WOODEN_SWORD,
   WOODEN_SPEAR,
   WOODEN_AXE,
@@ -404,6 +421,7 @@ export const NATURAL_WEAPON_IDS: ReadonlySet<string> = new Set([
   FANGS.id,
   BITE.id,
   GREAT_AXE.id,
+  FIRE_BREATH.id,
   FIRE_SPELL.id,
   LIGHT.id,
 ]);

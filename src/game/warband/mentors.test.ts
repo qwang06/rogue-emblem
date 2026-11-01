@@ -163,7 +163,7 @@ describe('scrolls', () => {
 
   it('refuses a save whose secondary class does not exist', () => {
     const run = campRun();
-    const broken = { ...run, roster: [{ ...run.roster[0], secondaryClass: 'dragon' }, ...run.roster.slice(1)] };
+    const broken = { ...run, roster: [{ ...run.roster[0], secondaryClass: 'kraken' }, ...run.roster.slice(1)] };
     expect(parseRun(JSON.stringify(broken))).toBeNull();
   });
 });

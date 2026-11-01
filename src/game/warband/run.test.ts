@@ -141,7 +141,7 @@ describe('snapshotUnit and restoreUnit', () => {
 
   it('refuses an unknown class or item', () => {
     const snapshot = snapshotUnit('a', new Soldier({ team: 'player' }));
-    expect(() => restoreUnit({ ...snapshot, classId: 'dragon' })).toThrow(/Unknown unit class/);
+    expect(() => restoreUnit({ ...snapshot, classId: 'kraken' })).toThrow(/Unknown unit class/);
     expect(() => restoreUnit({ ...snapshot, items: [{ itemId: 'excalibur', quantity: 1 }] })).toThrow(/Unknown item/);
   });
 });
@@ -418,7 +418,7 @@ describe('serializeRun and parseRun', () => {
       { ...run, chronicle: { ...run.chronicle, playMs: 'long' } },
       { ...run, convoy: [{ itemId: 'excalibur', quantity: 1 }] },
       { ...run, convoy: [{ itemId: FISTS.id, quantity: 0 }] },
-      { ...run, roster: [{ ...unit, classId: 'dragon' }] },
+      { ...run, roster: [{ ...unit, classId: 'kraken' }] },
       { ...run, roster: [{ ...unit, level: 0 }] },
       { ...run, roster: [{ ...unit, health: unit.maxHealth + 1 }] },
       { ...run, roster: [{ ...unit, strength: 'lots' }] },
