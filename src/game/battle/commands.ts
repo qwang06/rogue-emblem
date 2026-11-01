@@ -95,8 +95,6 @@ export type BattleCommand =
   // isn't an action: it ends no turn and can follow the battle's last blow.
   | { type: 'take-boon'; unitId: string; level: number; boonId: string };
 
-export type BattleCommandType = BattleCommand['type'];
-
 // What a command did, in the order it happened, for the scene to play.
 export type BattleEvent =
   | { type: 'placed'; unitId: string; to: Point }

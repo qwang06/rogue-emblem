@@ -373,4 +373,4 @@ Dungeon Mode becomes **Warband Mode**: the roguelike run. The name fits the art 
 - Unit info screen (full stats, inventory, growths hidden) — done: press I on a unit (`UnitInfoScreen.tsx`).
 - Turn-start "Player Phase"-style banners per objective.
 - Sound effects and music — done: synthesized from store changes (`src/audio/`): sound effects, five looping chiptune tracks picked by `getMusicTrack` (off for now behind the `music` flag in `src/featureFlags.ts`), and mute/effects/music volume settings; hit-stop, lunges, crit shakes and death bursts in `src/scenes/hitJuice.ts`.
-- Undo last move (before acting) — partially exists via `unmarkMoved`.
+- Undo last move (before acting).

@@ -191,6 +191,7 @@ const GLYPH_ICONS = {
   music: icon('B', 3), // music note
   avoid: icon('B', 6), // feather
   mp: icon('B', 11), // cyan flask
-  hit: icon('B', 14), // target
+  // hit stays the painted 16px bullseye: the sheet's target (B, 14) is a
+  // pink-orange square ring that reads as a social media logo.
 };
 for (const [kind, rows] of Object.entries(GLYPH_ICONS)) write(`${GLYPHS}/${kind}.png`, scale(rows, 2));

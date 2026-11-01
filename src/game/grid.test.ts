@@ -3,7 +3,6 @@ import {
   createGrid,
   findTileAt,
   findUnit,
-  getCornerTiles,
   getCell,
   getDistance,
   getNeighbors,
@@ -205,42 +204,6 @@ describe('findUnit', () => {
 
   it('returns null for a unit not on the grid', () => {
     expect(findUnit(createGrid(3, 3), 'a')).toBeNull();
-  });
-});
-
-describe('getCornerTiles', () => {
-  const grid = createGrid(4, 3);
-
-  it('walks the top row from the top-left', () => {
-    expect(getCornerTiles(grid, 'top-left', 3)).toEqual([
-      { x: 0, y: 0 },
-      { x: 1, y: 0 },
-      { x: 2, y: 0 },
-    ]);
-  });
-
-  it('takes the last tiles in reading order from the bottom-right', () => {
-    expect(getCornerTiles(grid, 'bottom-right', 3)).toEqual([
-      { x: 1, y: 2 },
-      { x: 2, y: 2 },
-      { x: 3, y: 2 },
-    ]);
-  });
-
-  it('wraps onto the next row when count exceeds the width', () => {
-    expect(getCornerTiles(grid, 'top-left', 5).at(-1)).toEqual({ x: 0, y: 1 });
-    expect(getCornerTiles(grid, 'bottom-right', 5)[0]).toEqual({ x: 3, y: 1 });
-  });
-
-  it('clamps to the grid size and handles zero', () => {
-    expect(getCornerTiles(grid, 'top-left', 100)).toHaveLength(12);
-    expect(getCornerTiles(grid, 'bottom-right', 0)).toEqual([]);
-    expect(getCornerTiles(grid, 'top-left', -2)).toEqual([]);
-  });
-
-  it('throws on an unknown corner', () => {
-    // @ts-expect-error not a corner
-    expect(() => getCornerTiles(grid, 'middle', 1)).toThrow();
   });
 });
 

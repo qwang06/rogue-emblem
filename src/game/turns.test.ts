@@ -9,7 +9,6 @@ import {
   markDone,
   markMoved,
   nextPhase,
-  unmarkMoved,
   type Team,
 } from './turns.ts';
 import { Unit } from './Unit.ts';
@@ -50,35 +49,6 @@ describe('markMoved', () => {
   it('returns the same state when the unit already moved', () => {
     const state = markMoved(createTurnState(), 'a');
     expect(markMoved(state, 'a')).toBe(state);
-  });
-});
-
-describe('unmarkMoved', () => {
-  it('gives a unit its move back', () => {
-    const state = unmarkMoved(markMoved(createTurnState(), 'a'), 'a');
-    expect(hasMoved(state, 'a')).toBe(false);
-  });
-
-  it('leaves other units moved', () => {
-    const state = unmarkMoved(markMoved(markMoved(createTurnState(), 'a'), 'b'), 'a');
-    expect(state.moved).toEqual(['b']);
-    expect(Object.isFrozen(state.moved)).toBe(true);
-  });
-
-  it('returns the same state when the unit has not moved', () => {
-    const state = createTurnState();
-    expect(unmarkMoved(state, 'a')).toBe(state);
-  });
-
-  it('never takes back the move of a unit that is done', () => {
-    const state = markDone(createTurnState(), 'a');
-    expect(unmarkMoved(state, 'a')).toBe(state);
-  });
-
-  it('never mutates the state it is given', () => {
-    const before = markMoved(createTurnState(), 'a');
-    unmarkMoved(before, 'a');
-    expect(hasMoved(before, 'a')).toBe(true);
   });
 });
 
