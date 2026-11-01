@@ -222,7 +222,7 @@ Promoted from the Villager. Hauls a powder keg on its back and throws it up to t
 | Throw Stones | 2          | 2    | 1–4   | Half the regular hit, rounded up |
 | Blast        | 2          | 3    | 1–2   | The regular hit with +3 power    |
 
-Level-up skill pick: **Shrapnel** (4 MP, range 1–2, half the regular hit on the target and everyone on the 4 tiles around it, allies included).
+Level-up skill picks: **Shrapnel** (4 MP, range 1–2, half the regular hit on the target and everyone on the 4 tiles around it, allies included), **Lay Mine** (2 MP, range 1, a hidden mine on an empty tile: the first foe to walk onto it takes 6 damage, never its last HP) and **Breach** (3 MP, range 1, knocks down a wall or rock, leaving open ground).
 
 Passive, **Demolitions**: +5 crit. Carries a Powder Keg, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
@@ -338,7 +338,7 @@ A specialized unit that doesn't promote: a siege engine on wheels (crystal canno
 | ------- | ---------- | ---- | ----- | ------------------------------------------------------------------- |
 | Barrage | 2          | 3    | 1–3   | Half the regular hit, rounded up, and on foes on the 4 tiles around |
 
-Level-up skill pick: **Deadeye** (2 MP, range 1–5, the regular hit).
+Level-up skill picks: **Deadeye** (2 MP, range 1–5, the regular hit) and **Breaching Shot** (3 MP, range 1–3, knocks down a wall or rock, leaving open ground).
 
 It carries only its Ballista.
 
@@ -367,7 +367,7 @@ A specialized unit that doesn't promote: a covered battering ram, the most HP an
 | ---------------- | ---------- | ---- | ----- | ---------------------------------------------------------------------------------------- |
 | Battering Charge | 2          | 2    | 1–4   | Rolls up to 3 tiles along a clear row or column to the foe, the regular hit, then a push |
 
-Level-up skill pick: **Bulwark** (2 MP, aimed at itself: every ally next to it is left Guarded).
+Level-up skill picks: **Bulwark** (2 MP, aimed at itself: every ally next to it is left Guarded) and **Breach** (3 MP, range 1, knocks down a wall or rock, leaving open ground).
 
 It fights with its Tackle and carries nothing else.
 

@@ -6,6 +6,7 @@
 
 import { createBossState, type BossState } from '../bosses.ts';
 import { findUnit, type Grid, type Point } from '../grid.ts';
+import type { Mine } from '../terrainSkills.ts';
 import { DEFAULT_OBJECTIVE, type BattleSnapshot, type Objective } from '../objectives.ts';
 import { getDeploymentLimit } from '../deployment.ts';
 import type { Level } from '../trainingLevel.ts';
@@ -49,6 +50,9 @@ export interface BattleState {
   // A boss with rules of its own (see bosses.ts): whether it has enraged
   // and where its horn's next arrival comes. Null for any other battle.
   readonly boss: BossState | null;
+  // Mines laid with a skill (terrainSkills.ts), each waiting for a foe of
+  // the team that laid it.
+  readonly mines: readonly Mine[];
 }
 
 // The state a level starts in, before any unit is placed, with its rolls
@@ -75,6 +79,7 @@ export function createBattleState(
     kills: new Map(),
     rngState: seed >>> 0,
     boss: createBossState(objective),
+    mines: Object.freeze([]),
   });
 }
 
