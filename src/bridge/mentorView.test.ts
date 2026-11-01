@@ -38,6 +38,7 @@ describe('toMentorScreenView', () => {
       'Soldier',
       'Vanguard',
       'Sapper',
+      'Beast',
       'Siege',
       'Acolyte',
     ]);
