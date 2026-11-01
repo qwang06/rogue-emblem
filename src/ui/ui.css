@@ -640,10 +640,10 @@ a.header-button {
 }
 
 /* Gauges as in the system monitor: a flat bar on a dim trough, led by
-   its stat's icon (StatLabel). */
+   its stat's abbreviation (StatLabel). */
 .meter {
   display: grid;
-  grid-template-columns: 16px 1fr auto;
+  grid-template-columns: 2.5em 1fr auto;
   align-items: center;
   gap: 6px;
   margin-top: 2px;
@@ -702,23 +702,14 @@ a.header-button {
   font-variant-numeric: tabular-nums;
 }
 
-/* A stat's icon (StatLabel), with its abbreviation beside it on the unit
-   info sheet. */
+/* A stat's abbreviation (StatLabel): caps, with no dotted underline. */
 .stat-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  vertical-align: middle;
+  text-decoration: none;
+  text-transform: uppercase;
 }
 
-.stat-label__icon {
-  flex: none;
-  width: 16px;
-  height: 16px;
-  image-rendering: pixelated;
-}
-
-/* Three columns of a stat's icon and its value, grooved off from the bars. */
+/* Three columns of a stat's abbreviation and its value, grooved off from
+   the bars. */
 .unit-panel__stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -729,10 +720,10 @@ a.header-button {
   border-top: var(--rule);
 }
 
-/* The icon, then its value beside it, so each pair reads as one. */
+/* The abbreviation, then its value beside it, so each pair reads as one. */
 .unit-panel__stat {
   display: grid;
-  grid-template-columns: 16px 1fr;
+  grid-template-columns: 2.5em 1fr;
   align-items: center;
   gap: 6px;
 }
@@ -4060,11 +4051,6 @@ textarea.draft-input {
 
 .reward-team__label {
   display: flex;
-}
-
-.reward-team__label .stat-label__icon {
-  width: 12px;
-  height: 12px;
 }
 
 /* A GBA trough like .meter__track: green for the HP the unit has, then
