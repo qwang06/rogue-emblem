@@ -19,7 +19,7 @@ Reference for every unit class: base stats, growth rates, weapons and skills. Ke
 - **XP rate** scales every XP gain (combat, skills, healing): a unit with a 150% rate earns 15 XP where others earn 10, rounded to the nearest point and never below 1.
 - **Skills** always hit, never crit, and the target can't counter. Their damage is the user's regular hit (weapon might included) with any bonus `STR` added, then scaled; scaled damage rounds up. Using one costs mana, earns XP like a landed hit, and spends no weapon uses. A healing skill (Mend) instead restores its power + the user's `INT` to a wounded ally in range, capped at the ally's missing HP, and earns 10 XP like a staff heal.
 - **Area skills** reach past the foe they're aimed at: the tiles on either side of it (Cleave), the tile behind it as seen from the user (Piercing Shot, Skewer), or the four tiles around it (Shrapnel, Barrage, and Prayer around the user itself). Each foe there takes the skill's damage too, worked out against it, and the user earns XP for whichever foe gives the most. Shrapnel strikes allies in its blast as well. **Tandem Strike** strikes its target twice, the second blow for half the first's damage, rounded up.
-- **Statuses** a skill leaves on a foe last until the end of that foe's team's next phase: **Rooted** can't move, **Sundered** takes 3 more damage from every hit, **Marked** has 15 less avoid. A status doesn't stack with itself.
+- **Statuses** a skill leaves on a foe last until the end of that foe's team's next phase: **Rooted** can't move, **Sundered** takes 3 more damage from every hit, **Marked** has 15 less avoid. A status doesn't stack with itself. **Buffs** a skill gives an ally last until the start of that ally's next phase, so one given in the player phase holds through the enemy phase: **Guarded** takes 2 less damage from every hit, **Warded** 4 less, **Hastened** moves 2 more tiles.
 - **Learning skills:** a class learns its tree's skills (the tables below) by level. A promoted villager keeps the villager's Throw Stones. On top of that, a level up in Warband Mode can offer a skill pick (a skill boon), and only from the unit's own class: the "Level-up skill pick" lines below. A class without one is offered a second passive instead.
 - **Secondary skill sets** (Warband Mode, switched off for now with the Mentors menu): a unit can learn one other class's skill set at camp and knows that class's skills as it reaches their levels, as if they were its own. A mentor (a roster unit of that class that knows its skills) teaches it for 20 gold; a Mentor's Scroll, a stage reward, teaches any class's set for free. A new set replaces the old one.
 - **Shove** (Soldier, from level 1) deals no damage of its own: it pushes the adjacent foe one tile straight away from the user. Onto open ground it just slides; onto a spike trap it takes 5 damage; into deep water (not a ford) it drowns. If the map's edge, a wall, a mountain or another unit is in the way it stays put and takes 2 damage, and a unit it slams into takes 2 too. A boss holds its ground and can't be shoved. A unit knocked out by a shove is the shover's kill. Walking over a spike trap is safe.
@@ -160,7 +160,7 @@ The spear-and-shield infantry: the enemy in the demo battle. Villagers become on
 | Shove        | 1          | 1    | 1     | None; pushes the foe a tile                     |
 | Shield Bash  | 2          | 3    | 1     | The regular hit with +1 STR, then pushes a tile |
 
-Level-up skill pick: **Lunge** (2 MP, range 1–2, the regular hit with +2 STR).
+Level-up skill picks: **Lunge** (2 MP, range 1–2, the regular hit with +2 STR) and **Phalanx** (2 MP, aimed at itself: every ally next to it is left Guarded).
 
 Passive, **Shield Wall**: takes 1 less damage when attacked. Carries an Iron Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
@@ -248,7 +248,7 @@ A specialized unit that doesn't promote, recruited or brought by the Sellswords 
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |
 
-Level-up skill pick: **Mark** (1 MP, range 1–3, no damage, leaving the foe Marked).
+Level-up skill picks: **Mark** (1 MP, range 1–3, no damage, leaving the foe Marked) and **Tailwind** (2 MP, range 1, an ally is left Hastened).
 
 Carries a Wooden Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
@@ -361,6 +361,8 @@ A specialized unit that doesn't promote: a covered battering ram, the most HP an
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |
 
+Level-up skill pick: **Bulwark** (2 MP, aimed at itself: every ally next to it is left Guarded).
+
 It fights with its Tackle and carries nothing else.
 
 ## Acolyte
@@ -392,7 +394,7 @@ A specialized unit that doesn't promote. The healer and the warband's magic user
 | ----- | ---------- | ---- | ----- | ----------------------------- |
 | Mend  | 2          | 3    | 1     | None: heals an ally 2 + `INT` |
 
-Level-up skill picks: **Smite** (3 MP, range 1–2, the regular hit with +3 `INT`) and **Prayer** (5 MP, aimed at itself: heals every wounded ally next to it for 1 + half its `INT`, rounded down).
+Level-up skill picks: **Smite** (3 MP, range 1–2, the regular hit with +3 `INT`), **Prayer** (5 MP, aimed at itself: heals every wounded ally next to it for 1 + half its `INT`, rounded down) and **Ward** (2 MP, range 1–2, an ally is left Warded).
 
 Mend heals like the Heal staff without needing one. Knows Light, and carries a Heal staff, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
