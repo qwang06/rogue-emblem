@@ -16,7 +16,7 @@ import {
   shouldEnrage,
   type BossState,
 } from '../bosses.ts';
-import { getAttackTargets, resolveCombat, type Strike, type TargetTile } from '../combat.ts';
+import { getAttackTargets, resolveCombat, type Fighter, type Strike, type TargetTile } from '../combat.ts';
 import { canDeployUnit, canDeployUnitAt, canStartBattle, isPlaced, placeUnit } from '../deployment.ts';
 import { getPhaseMovement } from '../enemyAI.ts';
 import { getCombatAward, getCombatOutcome, type ExperienceAward, type ExperienceGain } from '../experience.ts';
@@ -24,6 +24,7 @@ import {
   findTileAt,
   findUnit,
   getCell,
+  getNeighbors,
   getDistance,
   isSameTile,
   moveUnit,
@@ -36,7 +37,14 @@ import {
 import { getHealAmount, getHealTargets, HEAL_EXPERIENCE, isStaff, isWounded } from '../healing.ts';
 import { canUseItem, findItem, type Consumable, type Item } from '../items.ts';
 import { claimLoot, getLootQuantity } from '../loot.ts';
-import { getMoveCost, getMovePath, getMovementRange, canMoveAlongPath, type MovementOptions } from '../movement.ts';
+import {
+  BLINK_MOVEMENT,
+  getMoveCost,
+  getMovePath,
+  getMovementRange,
+  canMoveAlongPath,
+  type MovementOptions,
+} from '../movement.ts';
 import { getLeapLanding, getRetreatTile, getStrafePath } from '../skillMoves.ts';
 import {
   addMine,
@@ -176,6 +184,11 @@ export type BattleEvent =
       amount: number;
       trigger: 'kill' | 'phase' | 'drain';
     }
+  // A cleave-through hit splashed `damage` onto `unitId`, leaving it `health`.
+  | { type: 'splash'; unitId: string; damage: number; health: number }
+  // A chain kill: `unitId` gets a free strike on `targetId` (the strike
+  // follows).
+  | { type: 'chain'; unitId: string; targetId: string }
   // A recoil skill cost its user `damage` HP, leaving it `health`.
   | { type: 'recoil'; unitId: string; damage: number; health: number }
   // A skill moved `unitId` from one tile to another without walking: a
@@ -281,8 +294,9 @@ export function applyCommand(state: BattleState, command: BattleCommand): Comman
 }
 
 // Movement options for `unit`: allies can be walked through, anyone else
-// blocks.
+// blocks; a unit with `blink` moves as BLINK_MOVEMENT says.
 export function getMovementOptions(units: ReadonlyMap<string, { team: Unit['team'] }>, unit: Unit): MovementOptions {
+  if (hasModifier(unit.modifiers, 'blink')) return BLINK_MOVEMENT;
   return { canPassThrough: (unitId: string) => isAllyOf(units, unit.team, unitId) };
 }
 
@@ -617,39 +631,121 @@ function resolveAttack(draft: Draft, attackerId: string, target: TargetTile, fro
   const defender = draft.unit(target.unitId);
   const { strikes } = resolveCombat(attacker, defender, { distance: getDistance(from, target), rng: draft.rng });
   const ids = { attacker: attackerId, defender: target.unitId };
+  let killedByAttacker = false;
   for (const strike of strikes) {
-    const strikerId = ids[strike.by];
-    const struckId = ids[strike.target];
-    const striker = draft.edit(strikerId);
-    // A killing blow can spare the weapon (a Whetstone).
-    const spared = strike.lethal && hasModifier(striker.modifiers, 'spare-weapon-on-kill');
-    const { broke, learned, leftover } = spared ? SPARED_STRIKE : striker.spendWeaponUse();
-    if (learned && leftover && areAllied(striker.team, 'player')) {
-      draft.convoyLoot.push({ itemId: leftover.item.id, quantity: leftover.quantity });
-    }
-    const struck = draft.edit(struckId);
-    if (strike.hit) struck.takeDamage(strike.damage);
-    draft.events.push({
-      type: 'strike',
-      strikerId,
-      targetId: struckId,
-      hit: strike.hit,
-      crit: strike.crit,
-      damage: strike.hit ? strike.damage : 0,
-      health: struck.health,
-      broke,
-      learned,
-    });
-    // A lifesteal strike heals its striker (see resolveCombat).
-    if (strike.drain) recover(draft, strikerId, 'health', strike.drain, 'drain');
-    if (!struck.isAlive()) {
-      dropLoot(draft, struckId, strikerId);
-      defeat(draft, struckId, strikerId);
-      healOnKill(draft, strikerId);
+    if (applyStrike(draft, strike, ids)) {
+      killedByAttacker = strike.by === 'attacker';
       break;
     }
   }
   awardCombatExperience(draft, ids, strikes);
+  if (killedByAttacker) chainKill(draft, attackerId);
+}
+
+// Applies one strike of an exchange between `ids`: it wears the striker's
+// weapon (and a tome strike can teach its spell), a hit lands, a lifesteal
+// strike heals its striker, a cleave-through hit splashes the target's
+// neighbours, and a unit brought to 0 health leaves the map (dropping its
+// loot to a player killer). Returns whether the struck unit fell.
+function applyStrike(draft: Draft, strike: Strike, ids: { attacker: string; defender: string }): boolean {
+  const strikerId = ids[strike.by];
+  const struckId = ids[strike.target];
+  const striker = draft.edit(strikerId);
+  // A killing blow can spare the weapon (a Whetstone).
+  const spared = strike.lethal && hasModifier(striker.modifiers, 'spare-weapon-on-kill');
+  const { broke, learned, leftover } = spared ? SPARED_STRIKE : striker.spendWeaponUse();
+  if (learned && leftover && areAllied(striker.team, 'player')) {
+    draft.convoyLoot.push({ itemId: leftover.item.id, quantity: leftover.quantity });
+  }
+  const struck = draft.edit(struckId);
+  if (strike.hit) struck.takeDamage(strike.damage);
+  draft.events.push({
+    type: 'strike',
+    strikerId,
+    targetId: struckId,
+    hit: strike.hit,
+    crit: strike.crit,
+    damage: strike.hit ? strike.damage : 0,
+    health: struck.health,
+    broke,
+    learned,
+  });
+  // A lifesteal strike heals its striker (see resolveCombat).
+  if (strike.drain) recover(draft, strikerId, 'health', strike.drain, 'drain');
+  if (strike.hit) cleaveThrough(draft, strikerId, struckId, strike.damage);
+  if (struck.isAlive()) return false;
+  dropLoot(draft, struckId, strikerId);
+  defeat(draft, struckId, strikerId);
+  healOnKill(draft, strikerId);
+  return true;
+}
+
+// A cleave-through hit (see modifiers.ts) of `damage` on `struckId` also
+// deals its striker's cleave-through percent of it (at least 1) to every
+// other foe of the striker beside the target, each as a `splash` event;
+// one brought to 0 falls to the striker.
+function cleaveThrough(draft: Draft, strikerId: string, struckId: string, damage: number) {
+  const striker = draft.unit(strikerId);
+  const percent = sumModifiers(striker.modifiers, 'cleave-through');
+  if (percent <= 0 || damage <= 0) return;
+  const splash = Math.max(1, Math.floor((damage * percent) / 100));
+  const at = draft.tileOf(struckId);
+  const isFoe = hostileTo(draft.units, striker);
+  for (const { x, y } of getNeighbors(draft.grid, at.x, at.y)) {
+    const unitId = getCell(draft.grid, x, y)?.unitId;
+    if (!unitId || unitId === strikerId || !isFoe(unitId)) continue;
+    const victim = draft.edit(unitId);
+    victim.takeDamage(splash);
+    draft.events.push({ type: 'splash', unitId, damage: splash, health: victim.health });
+    if (victim.isAlive()) continue;
+    dropLoot(draft, unitId, strikerId);
+    defeat(draft, unitId, strikerId);
+    healOnKill(draft, strikerId);
+  }
+}
+
+// After `unitId` fells its target in its own attack, its chain-kill
+// percent (see modifiers.ts) is the chance of a free strike, which can't be
+// countered, on the weakest other foe its weapon reaches from where it
+// stands (a `chain` event, then the strike). A chained kill doesn't chain
+// again.
+function chainKill(draft: Draft, unitId: string) {
+  const unit = draft.units.get(unitId);
+  const percent = unit ? sumModifiers(unit.modifiers, 'chain-kill') : 0;
+  if (!unit || percent <= 0 || !unit.weapon || draft.rng() * 100 >= percent) return;
+  const from = draft.tileOf(unitId);
+  const { minRange, maxRange } = unit.weapon;
+  const targets = getAttackTargets(draft.grid, from, maxRange, hostileTo(draft.units, unit), minRange);
+  if (targets.length === 0) return;
+  const target = targets
+    .map((tile) => ({ tile, health: draft.unit(tile.unitId).health }))
+    .sort((a, b) => a.health - b.health)[0].tile;
+  const foe = draft.unit(target.unitId);
+  // Disarmed, the foe can't counter; only the first strike counts.
+  // (A plain copy: spreading the Unit would drop its getters.)
+  const helpless: Fighter = {
+    health: foe.health,
+    maxHealth: foe.maxHealth,
+    strength: foe.strength,
+    intelligence: foe.intelligence,
+    skill: foe.skill,
+    speed: foe.speed,
+    luck: foe.luck,
+    defense: foe.defense,
+    armorDefense: foe.armorDefense,
+    armorWeight: foe.armorWeight,
+    resistance: foe.resistance,
+    weapon: null,
+    monster: foe.monster,
+    modifiers: foe.modifiers,
+    statuses: foe.statuses,
+  };
+  const [strike] = resolveCombat(unit, helpless, { distance: getDistance(from, target), rng: draft.rng }).strikes;
+  if (!strike) return;
+  draft.events.push({ type: 'chain', unitId, targetId: target.unitId });
+  const ids = { attacker: unitId, defender: target.unitId };
+  applyStrike(draft, strike, ids);
+  awardCombatExperience(draft, ids, [strike]);
 }
 
 // What spendWeaponUse would say for a strike that didn't wear the weapon.

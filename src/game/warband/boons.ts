@@ -97,6 +97,10 @@ export const THICK_SKIN_PERCENT = 8;
 // before rarity.
 export const TWIN_STRIKE_PERCENT = 10;
 export const FINISHER_PERCENT = 4;
+// Cleave Through's splash and Chain Kill's chance per rank, in percent,
+// before rarity.
+export const CLEAVE_THROUGH_PERCENT = 25;
+export const CHAIN_KILL_PERCENT = 20;
 
 const STAT_LABELS: Readonly<Partial<Record<GrowthStat, string>>> = Object.freeze({
   health: 'HP',
@@ -252,6 +256,18 @@ const DEFINITIONS: readonly BoonDefinition[] = [
     { kind: 'finisher', percent: FINISHER_PERCENT },
     (a) => `A hit that leaves a foe at ${a}% of its max HP or less fells it.`,
   ),
+  passive(
+    'cleave-through',
+    'Cleave Through',
+    { kind: 'cleave-through', percent: CLEAVE_THROUGH_PERCENT },
+    (a) => `Each hit also deals ${a}% of its damage to the target's neighbouring foes.`,
+  ),
+  passive(
+    'chain-kill',
+    'Chain Kill',
+    { kind: 'chain-kill', percent: CHAIN_KILL_PERCENT },
+    (a) => `${a}% chance that defeating a foe earns a free strike on another in reach.`,
+  ),
 ];
 
 const DEFINITION_BY_ID: ReadonlyMap<string, BoonDefinition> = new Map(DEFINITIONS.map((d) => [d.id, d]));
@@ -320,6 +336,8 @@ export function scaleModifier(modifier: Modifier, rarityPercent: number, stagePe
       return { ...modifier, amount: scaleAmount(modifier.amount, rarityPercent) };
     case 'twin-strike':
     case 'finisher':
+    case 'cleave-through':
+    case 'chain-kill':
     case 'lifesteal':
       return { ...modifier, percent: scaleAmount(modifier.percent, rarityPercent) };
     default:

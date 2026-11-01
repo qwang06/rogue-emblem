@@ -64,6 +64,15 @@ export type Modifier =
   | { kind: 'twin-strike'; percent: number }
   | { kind: 'finisher'; percent: number }
   | { kind: 'lifesteal'; percent: number }
+  // Map procs (see battle/commands.ts): each of the unit's hits also deals
+  // this percent of its damage to the target's other foes beside it
+  // (`cleave-through`); the percent chance a kill in its own attack earns
+  // it a free strike, no counter, on another foe in reach (`chain-kill`).
+  | { kind: 'cleave-through'; percent: number }
+  | { kind: 'chain-kill'; percent: number }
+  // It moves over any terrain and through any unit (see BLINK_MOVEMENT in
+  // movement.ts).
+  | { kind: 'blink' }
   // It strikes twice in every exchange, fast enough or not.
   | { kind: 'always-double' }
   // Its strikes never miss.

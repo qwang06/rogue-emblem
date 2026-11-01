@@ -172,6 +172,15 @@ export const EVOLUTIONS: readonly Evolution[] = Object.freeze([
     modifiers: [{ kind: 'lifesteal', percent: 50 }],
   }),
   evolution({
+    id: 'blink',
+    name: 'Blink',
+    description: 'Moves over any terrain and through any unit, as if it vanished and reappeared.',
+    // Fleet's top rank is 2.
+    ranks: { fleet: 2 },
+    relics: ['winged-boots'],
+    modifiers: [{ kind: 'blink' }],
+  }),
+  evolution({
     id: 'evergreen',
     name: 'Evergreen',
     description: 'Recovers 2 more HP and 1 more MP at the start of each of your phases.',
