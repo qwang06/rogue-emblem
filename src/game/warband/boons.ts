@@ -272,7 +272,7 @@ function scaleAmount(amount: number, percent: number): number {
 // A modifier at a rarity and stage scale: flat damage, guard and healing
 // grow with both; rates (hit, avoid, crit), the percent terms and MP grow
 // with rarity only; MOV, XP and skills don't change.
-function scaleModifier(modifier: Modifier, rarityPercent: number, stagePercent: number): Modifier {
+export function scaleModifier(modifier: Modifier, rarityPercent: number, stagePercent: number): Modifier {
   const both = Math.round((rarityPercent * stagePercent) / 100);
   switch (modifier.kind) {
     case 'combat': {

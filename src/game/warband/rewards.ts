@@ -24,8 +24,11 @@ import {
   CLOVER_REWARD_CHOICES,
   findRelic,
   FOUR_LEAF_CLOVER,
-  getUnownedRelics,
-  rollRelics,
+  canTakeRelic,
+  getOfferableRelics,
+  getRelicDescription,
+  countRelic,
+  rollOfferableRelics,
   hasRelic,
 } from './relics.ts';
 import {
@@ -39,12 +42,14 @@ import {
 
 // Gold for clearing any stage, plus more per stage reached.
 export const STAGE_CLEAR_GOLD = 10;
-export const STAGE_CLEAR_GOLD_PER_STAGE = 5;
+export const STAGE_CLEAR_GOLD_PER_STAGE = 10;
 // Extra gold when nobody died in the stage.
 export const FLAWLESS_BONUS_GOLD = 10;
 
 // How many rewards a stage offers to pick from.
 export const REWARD_CHOICES = 3;
+// How many more a big clear (an elite lair or a fort) offers.
+export const BIG_CLEAR_EXTRA_CHOICES = 1;
 export const ARMS_CACHE_WEAPONS: readonly Weapon[] = Object.freeze([IRON_SPEAR, IRON_AXE, IRON_BOW, FIRE]);
 
 // How many recruits a Recruit reward's draft offers (see recruitment.ts).
@@ -154,20 +159,42 @@ export function getRecruitTarget(stage: number): number {
 
 // The offers after `stage`, rerolled `rerolls` times: rollRewards seeded
 // from getRewardSeed and the reroll count, so a stage's offers, and each
-// reroll of them, are always the same. An elite lair's are relics the run
-// doesn't hold (the usual kinds once it holds every relic).
+// reroll of them, are always the same. A big clear (an elite lair or a
+// fort, isBigClear) offers BIG_CLEAR_EXTRA_CHOICES more: an elite lair's
+// are all relics the run can take (the usual kinds once there are none),
+// and a fort's always hold one.
 export function rollStageRewards(run: RunState, stage: number, rerolls: number = 0): readonly Reward[] {
-  const relics = isEliteClear(run, stage)
-    ? rollRelics(createSeededRng((getRewardSeed(run.seed, stage) + rerolls) >>> 0), run.relics, getRewardChoices(run))
-    : [];
+  const rng = createSeededRng((getRewardSeed(run.seed, stage) + rerolls) >>> 0);
+  const count = getRewardChoices(run) + (isBigClear(run, stage) ? BIG_CLEAR_EXTRA_CHOICES : 0);
+  const relics = isEliteClear(run, stage) ? rollOfferableRelics(rng, run.relics, count) : [];
   if (relics.length > 0)
     return Object.freeze(relics.map((relic) => Object.freeze({ kind: 'relic' as const, relicId: relic.id })));
-  return rollRewards(
-    run,
-    stage,
-    createSeededRng((getRewardSeed(run.seed, stage) + rerolls) >>> 0),
-    getRewardChoices(run),
-  );
+  const rewards = rollRewards(run, stage, rng, count);
+  return isFortClear(run, stage) ? withRelicReward(rewards, run, rng) : rewards;
+}
+
+// `rewards` with its last offer that isn't a Recruit swapped for a relic
+// the run can take, unless it already offers one or there's none to take.
+function withRelicReward(rewards: readonly Reward[], run: RunState, rng: Rng): readonly Reward[] {
+  const offerable = getOfferableRelics(run.relics);
+  if (offerable.length === 0 || rewards.some((reward) => reward.kind === 'relic')) return rewards;
+  let index = rewards.length - 1;
+  while (index >= 0 && rewards[index].kind === 'draft') index--;
+  if (index < 0) return rewards;
+  const relic: Reward = Object.freeze({ kind: 'relic', relicId: randomItem(rng, offerable).id });
+  return Object.freeze(rewards.map((reward, at) => (at === index ? relic : reward)));
+}
+
+// Whether the run stands at a fort of depth `stage`.
+export function isFortClear(run: Pick<RunState, 'route'>, stage: number): boolean {
+  const at = run.route?.at;
+  return at?.kind === 'fort' && at.depth === stage;
+}
+
+// Whether the clear of `stage` is a big one (an elite lair or a fort),
+// whose pick offers more.
+export function isBigClear(run: Pick<RunState, 'route'>, stage: number): boolean {
+  return isEliteClear(run, stage) || isFortClear(run, stage);
 }
 
 // Whether the offers after `stage` are an elite lair's (realm/realm.ts):
@@ -252,7 +279,7 @@ export function rollRewards(
   }
   if (run.roster.some((unit) => canTakeItem(unit, HEALTH_POTION.id))) kinds.push('supplies');
   if (eligibleWeapons(run, classes).length > 0) kinds.push('arms');
-  if (getUnownedRelics(run.relics).length > 0) kinds.push('relic');
+  if (getOfferableRelics(run.relics).length > 0) kinds.push('relic');
   if (run.roster.length > 0) kinds.push('lesson');
   if (wantsSeal(run)) kinds.push('seal');
   if (MENTORS_ENABLED && stage !== 1 && run.roster.some((unit) => getSecondaryClassIds(unit).length > 0)) {
@@ -278,7 +305,7 @@ function createReward(kind: RewardKind, run: RunState, stage: number, rng: Rng, 
     case 'supplies':
       return { kind, itemId: HEALTH_POTION.id, label: HEALTH_POTION.label };
     case 'relic':
-      return { kind, relicId: randomItem(rng, getUnownedRelics(run.relics)).id };
+      return { kind, relicId: randomItem(rng, getOfferableRelics(run.relics)).id };
     case 'arms': {
       const weapon = randomItem(rng, eligibleWeapons(run, classes));
       return { kind, itemId: weapon.id, label: weapon.label, uses: weapon.uses! };
@@ -375,7 +402,9 @@ function applyRewardEffect(run: RunState, reward: Reward, classes: readonly Unit
         canTakeItem(unit, reward.itemId) ? { ...unit, items: addItem(unit.items, reward.itemId) } : unit,
       );
     case 'relic':
-      return hasRelic(run, { id: reward.relicId }) ? run : freeze({ ...run, relics: [...run.relics, reward.relicId] });
+      return canTakeRelic(run.relics, reward.relicId)
+        ? freeze({ ...run, relics: [...run.relics, reward.relicId] })
+        : run;
     case 'arms':
       return freeze({ ...run, convoy: [...run.convoy, { itemId: reward.itemId, quantity: reward.uses }] });
     case 'lesson':
@@ -438,9 +467,12 @@ export function addGold(run: RunState, amount: number): RunState {
 
 // A short label and one-line description of `reward`, for the reward
 // screen.
+// With `run`, a relic's numbers are as they'd stand at the run's stage,
+// all copies the warband would then hold added up.
 export function describeReward(
   reward: Reward,
   classes: readonly UnitClass[] = UNIT_CLASSES,
+  run: Pick<RunState, 'stage' | 'relics'> | null = null,
 ): { label: string; description: string } {
   switch (reward.kind) {
     case 'recruit': {
@@ -468,7 +500,12 @@ export function describeReward(
       return { label: 'Supplies', description: `Every unit with room gets a ${reward.label}.` };
     case 'relic': {
       const relic = findRelic(reward.relicId);
-      return { label: relic?.name ?? reward.relicId, description: relic?.description ?? '' };
+      if (!relic) return { label: reward.relicId, description: '' };
+      const copies = run ? countRelic(run.relics, relic.id) + 1 : 1;
+      return {
+        label: copies > 1 ? `${relic.name} ×${copies}` : relic.name,
+        description: getRelicDescription(relic, run?.stage ?? 1, copies),
+      };
     }
     case 'arms':
       return { label: 'Arms Cache', description: `A fresh ${reward.label} goes to the convoy (${reward.uses} uses).` };
