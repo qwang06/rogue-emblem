@@ -16,18 +16,18 @@ unticked again.
 The full spec and prompts are in the project's shared files at
 `art/anime/prompts.md`. In short:
 
-- **Style:** characters, obstacles and props are anime game art: clean
-  dark-brown lineart, cel shading with two flat tones and a crisp
-  highlight, bright clear colors, warm afternoon light from the upper left.
+- **Style:** characters are detailed anime key art like a Japanese
+  fantasy tactics RPG: crisp ink lineart, sharp cel shading, rich colors.
   Every class is a generic unit in plain, practical gear (no gold trim or
-  ornaments); decorated outfits are kept for future unique characters.
+  ornaments); decorated outfits are kept for future unique characters. Obstacles and props are
+  simpler anime game art: clean dark-brown lineart, flat cel shading.
   Battlefields are anime background art: lush saturated greens, crisp
   painted shapes, cool blue-violet shadows falling to the lower right.
 - **Background:** solid flat magenta (#FF00FF) for anything with a cut-out
   shape; it's keyed out. Seamless ground textures have no background.
 - **Units:** one square image each, full body, facing right in
-  three-quarter side view from slightly above, about five heads tall
-  (heroic anime proportions), feet about 90% of the way down. The game animates the single image in code.
+  three-quarter side view from slightly above, about six heads tall
+  (slender heroic anime proportions), feet about 90% of the way down. The game animates the single image in code.
   Warband units have a blue accent; monsters use their own colors.
 - **Save generations:** ask for a 2x2 grid of four on one 1:1 image (each
   cell is still twice the size the game ships). Make the two key images
