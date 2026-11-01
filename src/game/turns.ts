@@ -36,13 +36,6 @@ export function markMoved(state: TurnState, unitId: string): TurnState {
   return moved === state.moved ? state : Object.freeze({ ...state, moved });
 }
 
-// Takes back a unit's move (e.g. the player cancels out of the action
-// menu after moving). A unit that's already done keeps its move.
-export function unmarkMoved(state: TurnState, unitId: string): TurnState {
-  if (!hasMoved(state, unitId) || isDone(state, unitId)) return state;
-  return Object.freeze({ ...state, moved: Object.freeze(state.moved.filter((id) => id !== unitId)) });
-}
-
 // A unit that's done has also used up its move.
 export function markDone(state: TurnState, unitId: string): TurnState {
   const done = withId(state.done, unitId);

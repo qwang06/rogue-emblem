@@ -201,11 +201,6 @@ export function getSite(realm: Realm, id: string): Site | undefined {
   return realm.sites.find((site) => site.id === id);
 }
 
-// The realm's starting site (depth 0).
-export function getHomeSite(realm: Realm): Site {
-  return realm.sites.find((site) => site.depth === 0)!;
-}
-
 // The sites reachable along the roads and their shared junctions from
 // site `id`, at the next depth, north to south.
 export function getNextSites(realm: Realm, id: string): Site[] {

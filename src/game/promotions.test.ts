@@ -6,7 +6,6 @@ import {
   becomePromotedClass,
   canPromote,
   findPromotion,
-  getBaseClassId,
   getPromotionGains,
   getPromotions,
   isPromotedClass,
@@ -61,13 +60,11 @@ describe('lookups', () => {
     expect(findPromotion('villager')).toBeNull();
   });
 
-  it('tells promoted classes apart and names their base class', () => {
+  it('tells promoted classes apart', () => {
     expect(isPromotedClass('soldier')).toBe(true);
     expect(isPromotedClass('villager')).toBe(false);
     expect(isPromotedClass('scout')).toBe(false);
     expect(isPromotedClass(null)).toBe(false);
-    expect(getBaseClassId('soldier')).toBe('villager');
-    expect(getBaseClassId('scout')).toBe('scout');
   });
 });
 
