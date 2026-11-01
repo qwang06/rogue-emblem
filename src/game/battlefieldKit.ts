@@ -88,6 +88,9 @@ export interface KitPlacement {
   foot?: number;
   // A patch's outline, as the seed getPatchMask draws it from.
   shape?: number;
+  // From and to where down the piece (0 to 1 of its height) it fades out to
+  // clear, if it does: the horizon, so its painted meadow stops short.
+  fade?: readonly [number, number];
 }
 
 // The generated washes' keys: a soft round blob, and a gradient fading
@@ -101,6 +104,15 @@ export const KIT_MARGIN = Object.freeze({ side: 280, bottom: 200 });
 // How far above the floor's back edge the horizon's foot sits: a strip of
 // far ground between it and the top row.
 const HORIZON_GAP = 24;
+// How far below the floor's back edge the horizon's own painted meadow may
+// reach before it has faded out (world pixels), so the floor shows the
+// ground texture, at its finer grain, nearly everywhere.
+export const HORIZON_MEADOW_REACH = 24;
+// How deep the haze over the far ground reaches below the horizon's foot:
+// a share of the floor's depth, but never more than HAZE_MAX_DEPTH (world
+// pixels, about the back four rows), so a big field isn't hazy halfway down.
+const HAZE_SHARE = 0.35;
+export const HAZE_MAX_DEPTH = 160;
 // How far into the floor a border piece may reach, in world pixels.
 const BORDER_OVERLAP = 8;
 // How much of a foreground piece's width may hang over the floor (its
@@ -175,10 +187,21 @@ export function layOutKit(
   const add = (p: Omit<KitPlacement, 'flip' | 'alpha'> & Partial<Pick<KitPlacement, 'flip' | 'alpha'>>) =>
     pieces.push({ flip: false, alpha: 1, ...p });
 
-  add({ layer: 'horizon', key: kit.horizon.key, x: scene.x, y: scene.y, width: scene.width, height: horizonHeight });
+  // Faded out from its foot to HORIZON_MEADOW_REACH into the floor.
+  const foot = kit.horizonFoot ?? 1;
+  const fadeEnd = Math.min(1, foot + (HORIZON_GAP + HORIZON_MEADOW_REACH) / horizonHeight);
+  add({
+    layer: 'horizon',
+    key: kit.horizon.key,
+    x: scene.x,
+    y: scene.y,
+    width: scene.width,
+    height: horizonHeight,
+    ...(fadeEnd > foot ? { fade: [foot, fadeEnd] as const } : {}),
+  });
 
-  // The ground from a little above the horizon's bottom edge down, under it.
-  const groundTop = scene.y + horizonHeight * 0.8;
+  // The ground from a little above the horizon's foot down, under it.
+  const groundTop = scene.y + horizonHeight * Math.min(0.8, foot - 0.02);
   add({
     layer: 'ground',
     key: kit.ground.key,
@@ -193,7 +216,7 @@ export function layOutKit(
     x: scene.x,
     y: groundTop,
     width: scene.width,
-    height: HORIZON_GAP + floor.height * 0.35,
+    height: HORIZON_GAP + Math.min(floor.height * HAZE_SHARE, HAZE_MAX_DEPTH),
     tint: kit.haze,
     alpha: 0.45,
   });

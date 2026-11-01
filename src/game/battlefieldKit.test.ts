@@ -6,6 +6,8 @@ import {
   isOpenField,
   getPatchMask,
   HAZE,
+  HAZE_MAX_DEPTH,
+  HORIZON_MEADOW_REACH,
   KIT_MARGIN,
   layOutKit,
   type BattlefieldKit,
@@ -78,7 +80,28 @@ describe('layOutKit', () => {
     expect(horizon.y + horizon.height * 0.75).toBeLessThan(0);
     expect(horizon.y + horizon.height).toBeGreaterThan(0);
     const [ground] = pieces.filter((p) => p.layer === 'ground');
-    expect(ground.y).toBeLessThan(horizon.y + horizon.height);
+    expect(ground.y).toBeLessThan(horizon.y + horizon.height * 0.75);
+  });
+
+  it('fades the horizon out from its foot to HORIZON_MEADOW_REACH into the floor', () => {
+    for (const floor of [FLOOR, { width: 24 * 64, height: 16 * 40 }]) {
+      const { pieces } = layOutKit({ ...KIT, horizonFoot: 0.75 }, floor, 1);
+      const [horizon] = pieces.filter((p) => p.layer === 'horizon');
+      const [start, end] = horizon.fade!;
+      expect(start).toBe(0.75);
+      expect(horizon.y + horizon.height * end).toBeCloseTo(HORIZON_MEADOW_REACH);
+    }
+    // A horizon whose foot is its bottom edge has nothing to fade.
+    expect(layOutKit(KIT, FLOOR, 1).pieces.find((p) => p.layer === 'horizon')!.fade).toBeUndefined();
+  });
+
+  it('keeps the haze over the back of the field, however deep it is', () => {
+    const haze = (floor: { width: number; height: number }) =>
+      layOutKit({ ...KIT, horizonFoot: 0.75 }, floor, 1).pieces.find((p) => p.key === HAZE)!;
+    const deep = haze({ width: 24 * 64, height: 30 * 40 });
+    expect(deep.y + deep.height).toBeLessThanOrEqual(HAZE_MAX_DEPTH + 1e-9);
+    const shallow = haze(FLOOR);
+    expect(shallow.y + shallow.height).toBeLessThan(deep.y + deep.height);
   });
 
   it('lays out an open field, with no trees down the sides, on about openChance of seeds', () => {
