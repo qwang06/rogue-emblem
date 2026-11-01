@@ -93,6 +93,25 @@ describe('finishBattle', () => {
     );
   });
 
+  it('owes a pick for each level gained in battle, bar those taken there, then for the clear’s', () => {
+    const run = newRun(1);
+    const units = restoreRoster(run);
+    units.get('alden')!.level = 3;
+    const owed = (boonsTaken?: { unitId: string; level: number }[]) =>
+      finishBattle(resumeRunSession(run), { units, boonsTaken }, 'victory').run.pendingBoons?.map(
+        ({ unitId, level }) => [unitId, level],
+      );
+    expect(owed()).toEqual([
+      ['alden', 2],
+      ['alden', 3],
+      ['cato', 2],
+    ]);
+    expect(owed([{ unitId: 'alden', level: 2 }])).toEqual([
+      ['alden', 3],
+      ['cato', 2],
+    ]);
+  });
+
   it('levels nobody after a later stage, or after a loss', () => {
     const run = newRun();
     expect(finishBattleWithEvents(resumeRunSession(run), { units: restoreRoster(run) }, 'victory').events).toEqual([]);

@@ -22,7 +22,7 @@ import { MAX_ROSTER_SIZE, type Reward } from './rewards.ts';
 import { restoreUnit, type RunState, type UnitSnapshot } from './run.ts';
 import type { Realm, Site } from './realm/realm.ts';
 import { getTravelChoices } from './travel.ts';
-import type { BoonKind } from './boons.ts';
+import type { Boon, BoonKind } from './boons.ts';
 import { getBoonOffer } from './levelUpPicks.ts';
 import { getRecruitOffers, getRelicOffers, getRewardOffers, type RunCommand, type RunSession } from './runCommands.ts';
 
@@ -88,12 +88,17 @@ export function pickStartingRelic(session: RunSession): RunCommand {
 // A boon pick: the offer whose kind scores highest in BOON_SCORES (the
 // first of equals).
 export function pickBoonOffer(session: RunSession): RunCommand {
-  const boons = getBoonOffer(session.run)?.boons ?? [];
+  return { type: 'pick-boon', index: getBestBoonIndex(getBoonOffer(session.run)?.boons ?? []) };
+}
+
+// Which of `boons` the policy takes: the one whose kind scores highest in
+// BOON_SCORES (the first of equals).
+export function getBestBoonIndex(boons: readonly Pick<Boon, 'kind'>[]): number {
   let best = 0;
   boons.forEach((boon, index) => {
     if (BOON_SCORES[boon.kind] > BOON_SCORES[boons[best].kind]) best = index;
   });
-  return { type: 'pick-boon', index: best };
+  return best;
 }
 
 // The units that deploy next stage: the healthiest deployCap of the

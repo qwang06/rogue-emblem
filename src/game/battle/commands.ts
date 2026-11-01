@@ -58,6 +58,7 @@ import {
 } from '../turns.ts';
 import type { Rng } from '../combatStats.ts';
 import type { Unit } from '../Unit.ts';
+import { findBoon, isBoonEligible, takeBoon } from '../warband/boons.ts';
 import type { ItemSnapshot } from '../warband/run.ts';
 import type { Weapon } from '../weapons.ts';
 import { getBattleSnapshot, type BattleStage, type BattleState } from './state.ts';
@@ -86,7 +87,11 @@ export type BattleCommand =
   // Ends the unit's action without doing anything.
   | { type: 'wait'; unitId: string }
   // Ends the current phase early; units that haven't acted forfeit.
-  | { type: 'end-phase' };
+  | { type: 'end-phase' }
+  // A Warband unit's pick for reaching `level`: gives it the boon `boonId`
+  // (see warband/levelUpPicks.ts). Taken as the level up happens, so it
+  // isn't an action: it ends no turn and can follow the battle's last blow.
+  | { type: 'take-boon'; unitId: string; level: number; boonId: string };
 
 export type BattleCommandType = BattleCommand['type'];
 
@@ -205,6 +210,9 @@ export function applyCommand(state: BattleState, command: BattleCommand): Comman
     case 'end-phase':
       requireBattle(draft);
       startPhase(draft, getNextPhase(draft));
+      break;
+    case 'take-boon':
+      takeLevelUpBoon(draft, command.unitId, command.level, command.boonId);
       break;
     default:
       draft.fail(`unknown command ${JSON.stringify(command)}`);
@@ -376,6 +384,17 @@ function requireActor(draft: Draft, unitId: string): Unit {
   if (unit.team !== turnState.team) draft.fail(`it's the ${turnState.team} phase, not ${unitId}'s`);
   if (isDone(turnState, unitId)) draft.fail(`${unitId} has already acted`);
   return unit;
+}
+
+// Gives `unitId` the boon it picked for reaching `level`: one it's
+// eligible for, at a level it has reached.
+function takeLevelUpBoon(draft: Draft, unitId: string, level: number, boonId: string) {
+  if (draft.stage !== 'battle') draft.fail('the battle has not started');
+  const unit = draft.unit(unitId);
+  if (level > unit.level) draft.fail(`${unitId} hasn't reached level ${level}`);
+  const boon = findBoon(boonId) ?? draft.fail(`no boon ${boonId}`);
+  if (!isBoonEligible(unit, boon)) draft.fail(`${unitId} can't take ${boonId}`);
+  takeBoon(draft.edit(unitId), boon);
 }
 
 function move(draft: Draft, unitId: string, to: Point, path?: readonly Point[]) {

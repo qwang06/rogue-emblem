@@ -5,6 +5,7 @@ import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
 import { findBoon } from './boons.ts';
 import {
+  getBattleBoonOffer,
   getBoonOffer,
   getBoonSeed,
   getTakenBoons,
@@ -56,6 +57,15 @@ describe('queueLevelUpBoons', () => {
     const none = queueLevelUpBoons(run, run);
     expect(none.pendingBoons).toBeUndefined();
     expect(owesBoons(none)).toBe(false);
+  });
+
+  it('skips the picks already taken in battle', () => {
+    const run = newRun();
+    const after = queueLevelUpBoons(run, leveled(run, { alden: 2, bryn: 1 }), [
+      { unitId: 'alden', level: 2 },
+      { unitId: 'bryn', level: 2 },
+    ]);
+    expect(after.pendingBoons).toEqual([{ unitId: 'alden', level: 3 }]);
   });
 
   it('skips units that only joined between the two runs', () => {
@@ -149,5 +159,16 @@ describe('pickBoon', () => {
     expect(() => pickBoon(newRun(), 0)).toThrow(/owed/);
     const run = queueLevelUpBoons(newRun(), leveled(newRun(), { alden: 1 }));
     expect(() => pickBoon(run, 5)).toThrow(/5/);
+  });
+});
+
+describe('getBattleBoonOffer', () => {
+  it('offers in battle the boons the run would offer for that level after it', () => {
+    const run = newRun();
+    const later = queueLevelUpBoons(run, leveled(run, { alden: 1 }));
+    const unit = restoreUnit(later.roster[0]);
+    const offer = getBattleBoonOffer(run, 'alden', unit, 2, { strength: 1, speed: 0 })!;
+    expect(offer.boons).toEqual(getBoonOffer(later)!.boons);
+    expect(offer).toMatchObject({ level: 2, unit: { id: 'alden', level: 2 }, gains: { strength: 1 } });
   });
 });

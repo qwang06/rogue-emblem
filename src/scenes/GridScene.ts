@@ -77,7 +77,7 @@ import {
   type Reward,
   type RewardLevelUp,
 } from '../game/warband/rewards.ts';
-import { getBoonOffer } from '../game/warband/levelUpPicks.ts';
+import { getBattleBoonOffer, getBoonOffer, type BoonOffer } from '../game/warband/levelUpPicks.ts';
 import { toBoonPickView } from '../bridge/boonPickView.ts';
 import {
   applyRunCommand,
@@ -98,7 +98,7 @@ import { recordRun } from '../game/warband/meta.ts';
 import { getRunHeat } from '../game/warband/heat.ts';
 import { summarizeRun } from '../game/warband/runSummary.ts';
 import { toRunSummaryView, type RunSummaryView } from '../bridge/runSummaryView.ts';
-import { pickBoonOffer, pickReward, planCamp } from '../game/warband/runPolicy.ts';
+import { getBestBoonIndex, pickBoonOffer, pickReward, planCamp } from '../game/warband/runPolicy.ts';
 import { planPlayerDeployment, planPlayerTurn } from '../game/battle/playerAI.ts';
 import { getCampActions } from '../game/warband/camp.ts';
 import {
@@ -187,6 +187,7 @@ import {
 import {
   createHistory,
   dispatch,
+  getBoonPicks,
   getCurrentState,
   rewindTo,
   undoLastAction,
@@ -251,6 +252,7 @@ import type { PopupKind } from '../bridge/views.ts';
 import { isSameBossBar, toBossBarView, toBossIntroView } from '../bridge/bossView.ts';
 import type { Skill } from '../game/skills.ts';
 import type { BattleOutcome, Team, TurnState } from '../game/turns.ts';
+import type { LevelUpResult } from '../game/experience.ts';
 import type { Unit } from '../game/Unit.ts';
 import type { ItemAction, RestoreStat } from '../game/items.ts';
 import type { SkillAction } from '../game/skills.ts';
@@ -398,6 +400,10 @@ export class GridScene extends Phaser.Scene {
   // While the run owes level-up boon picks (see levelUpPicks.ts): the run
   // as it stands. They come before the recruit and reward picks.
   boonRun: RunState | null = null;
+  // A roster unit's boon pick for a level it just reached in battle (see
+  // offerBattleBoons): the offer, whether input was locked when it opened
+  // (it's taken mid-playback), and what follows once it's taken.
+  battleBoon: { offer: BoonOffer; wasLocked: boolean; onTaken: () => void } | null = null;
   // After the reward is taken: the run as it then stands, while the camp
   // menu (Manage Roster / Next Stage) or the roster screen is up.
   campRun: RunState | null = null;
@@ -547,6 +553,8 @@ export class GridScene extends Phaser.Scene {
             return 'Start battle';
           case 'end-phase':
             return 'End phase';
+          case 'take-boon':
+            return `${actor}: Take ${command.boonId}`;
         }
       }),
     });
@@ -608,6 +616,7 @@ export class GridScene extends Phaser.Scene {
     this.rewardOffer = null; // the run and its reward picks after a won Warband stage
     this.recruitOffer = null;
     this.boonRun = null; // the run while it owes level-up boon picks
+    this.battleBoon = null; // a boon pick for a level up mid-battle
     this.rewardMenu = null; // the reward screen's menu while it's up
     this.campRun = null; // the run between a won Warband stage's reward and the next stage
     this.campMenu = null; // the camp's menu (getCampActions) while it's up
@@ -1348,6 +1357,11 @@ export class GridScene extends Phaser.Scene {
   }
 
   updateRewardMenu(delta: number, confirm: boolean) {
+    if (this.battleBoon) {
+      if (confirm) this.takeBattleBoon(this.rewardMenu!.selectedIndex);
+      else if (delta !== 0) this.publishMenu('rewardMenu', moveSelection(this.rewardMenu!, delta));
+      return;
+    }
     if (this.boonRun) {
       this.updateBoonMenu(delta, confirm);
       return;
@@ -2031,6 +2045,10 @@ export class GridScene extends Phaser.Scene {
   }
 
   autoReward() {
+    if (this.battleBoon) {
+      this.takeBattleBoon(getBestBoonIndex(this.battleBoon.offer.boons));
+      return;
+    }
     if (this.boonRun) {
       const command = pickBoonOffer({ run: this.boonRun, phase: 'boon' });
       if (command.type !== 'pick-boon') return;
@@ -2298,7 +2316,10 @@ export class GridScene extends Phaser.Scene {
       // stage, or forgets the run once the warband has fallen or won it. A win pays
       // the clear's gold and rolls the rewards the reward screen offers.
       const before = this.setup.run;
-      const result = getRunBattleResult(this.battle, this.takePlayTime());
+      const result = {
+        ...getRunBattleResult(this.battle, this.takePlayTime()),
+        boonsTaken: getBoonPicks(this.history),
+      };
       const { session: finished } = finishBattleWithEvents(
         { run: before, phase: 'battle' },
         result,
@@ -3076,9 +3097,9 @@ export class GridScene extends Phaser.Scene {
     this.waitSkippably(EXPERIENCE_BAR_MS, () => {
       gameStore.setState({ experienceGain: null });
       // In Warband Mode, the combined level-up and boon pick screen shows
-      // each level gained once the battle finishes.
+      // each level gained there and then.
       if (this.setup.mode === 'warband') {
-        onDone();
+        this.offerBattleBoons(unitId, result.levelUps, onDone);
         return;
       }
       this.showLevelUps(
@@ -3086,6 +3107,51 @@ export class GridScene extends Phaser.Scene {
         onDone,
       );
     });
+  }
+
+  // In Warband Mode, a roster unit's level ups in battle open the level-up
+  // screen's boon pick there and then, one level at a time, and the battle
+  // plays on once each is taken (a 'take-boon' command, so it's undone with
+  // the action that leveled the unit). The run then doesn't owe them after
+  // the battle (BattleResult.boonsTaken). A level with no boon left to take
+  // passes without a pick.
+  offerBattleBoons(unitId: string, levelUps: readonly LevelUpResult[], onDone: () => void) {
+    const run = this.setup.mode === 'warband' ? this.setup.run : undefined;
+    const offerAt = (index: number) => {
+      const levelUp = levelUps[index];
+      if (!levelUp) {
+        onDone();
+        return;
+      }
+      const unit = this.battle.units.get(unitId);
+      const onRoster = run?.roster.some((snapshot) => snapshot.id === unitId);
+      const offer =
+        run && unit && onRoster ? getBattleBoonOffer(run, unitId, unit, levelUp.level, levelUp.gains) : null;
+      if (!offer) {
+        offerAt(index + 1);
+        return;
+      }
+      this.battleBoon = { offer, wasLocked: this.inputLocked, onTaken: () => offerAt(index + 1) };
+      // Free the pick's input while the action's playback waits on it.
+      this.inputLocked = false;
+      gameStore.setState({ boonPick: toBoonPickView(offer, run!.relics) });
+      this.publishMenu('rewardMenu', createActionMenu(toBoonActions(offer, run!.relics)));
+      this.rewardPickOpensAt = this.time.now + BOON_PICK_GRACE_MS;
+    };
+    offerAt(0);
+  }
+
+  // Takes boon `index` of the open battle boon pick and plays on.
+  takeBattleBoon(index: number) {
+    const { offer, wasLocked, onTaken } = this.battleBoon!;
+    const boon = offer.boons[index];
+    if (!boon) return;
+    this.dispatch({ type: 'take-boon', unitId: offer.unit.id, level: offer.level, boonId: boon.id });
+    this.battleBoon = null;
+    this.inputLocked = wasLocked;
+    this.publishMenu('rewardMenu', null);
+    gameStore.setState({ boonPick: null });
+    onTaken();
   }
 
   // Shows React's level-up panel for each level up in turn, holding each

@@ -9,6 +9,7 @@
 import { GROWTH_STATS, type GrowthStat } from '../experience.ts';
 import { createSeededRng } from '../rng.ts';
 import type { UnitClass } from '../unitClasses.ts';
+import type { Unit } from '../Unit.ts';
 import { findBoon, rollBoons, takeBoon, type Boon } from './boons.ts';
 import { restoreUnit, snapshotUnit, type PendingBoon, type RunState, type UnitSnapshot } from './run.ts';
 
@@ -51,17 +52,26 @@ export function getBoonSeed(runSeed: number, unitId: string, level: number): num
   return Math.floor(createSeededRng(hash)() * 2 ** 32);
 }
 
+// A level a unit reached whose boon pick was already taken (in battle, as
+// the level up happened).
+export interface TakenBoon {
+  unitId: string;
+  level: number;
+}
+
 // `after` (a run that `before` became) owing a boon pick for each level
-// any unit on both rosters gained between them, queued after the ones it
-// already owes, unit by unit in roster order and level by level, with any
-// stat gains from `before` to `after` recorded on the pick.
-export function queueLevelUpBoons(before: RunState, after: RunState): RunState {
+// any unit on both rosters gained between them, except the `taken` ones,
+// queued after the ones it already owes, unit by unit in roster order and
+// level by level, with any stat gains from `before` to `after` recorded on
+// the last pick.
+export function queueLevelUpBoons(before: RunState, after: RunState, taken: readonly TakenBoon[] = []): RunState {
   const queued: PendingBoon[] = [];
   for (const unit of after.roster) {
     const was = before.roster.find((snapshot) => snapshot.id === unit.id);
     if (!was || unit.level <= was.level) continue;
     const gains = diffStats(was, unit);
     for (let level = was.level + 1; level <= unit.level; level++) {
+      if (taken.some((pick) => pick.unitId === unit.id && pick.level === level)) continue;
       queued.push({
         unitId: unit.id,
         level,
@@ -71,6 +81,28 @@ export function queueLevelUpBoons(before: RunState, after: RunState): RunState {
   }
   if (queued.length === 0) return after;
   return setPending(after, [...(after.pendingBoons ?? []), ...queued]);
+}
+
+// The boon pick a roster unit is offered as it reaches `level` in battle,
+// `unit` being the unit as it stands there: the same boons the run would
+// offer it for that level after the battle (they're seeded alike), with the
+// level up's stat `gains`. Null when it has none left to take.
+export function getBattleBoonOffer(
+  run: Pick<RunState, 'seed'>,
+  unitId: string,
+  unit: Unit,
+  level: number,
+  gains?: Partial<Record<GrowthStat, number>>,
+): BoonOffer | null {
+  const boons = rollBoons(unit, createSeededRng(getBoonSeed(run.seed, unitId, level)));
+  if (boons.length === 0) return null;
+  const grew = gains && Object.fromEntries(Object.entries(gains).filter(([, gain]) => gain > 0));
+  return Object.freeze({
+    unit: snapshotUnit(unitId, unit),
+    level,
+    boons: Object.freeze(boons),
+    ...(grew && Object.keys(grew).length > 0 && { gains: Object.freeze(grew) }),
+  });
 }
 
 // Whether the run owes any boon pick.

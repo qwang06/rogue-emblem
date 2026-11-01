@@ -544,3 +544,32 @@ describe('phases', () => {
     expect([...getDeployedUnits(state).keys()]).toEqual([start.roster[0]]);
   });
 });
+
+describe('take-boon', () => {
+  it('gives the unit the boon it picked for a level it reached, without ending its turn', () => {
+    const before = duel();
+    const { state, events } = run(before, { type: 'take-boon', unitId: 'hero', level: 1, boonId: 'keen-eye' });
+    expect(state.units.get('hero')!.boons).toEqual(['keen-eye']);
+    expect(before.units.get('hero')!.boons).toEqual([]);
+    expect(events).toEqual([]);
+    expect(isDone(state.turnState!, 'hero')).toBe(false);
+  });
+
+  it('raises the stat a stat boon names', () => {
+    const before = duel();
+    const { state } = run(before, { type: 'take-boon', unitId: 'hero', level: 1, boonId: 'stat-health' });
+    expect(state.units.get('hero')!.maxHealth).toBeGreaterThan(before.units.get('hero')!.maxHealth);
+  });
+
+  it('refuses a level not reached, an unknown boon or one the unit can’t take again', () => {
+    const state = duel();
+    const take = (level: number, boonId: string) => () =>
+      applyCommand(state, { type: 'take-boon', unitId: 'hero', level, boonId });
+    expect(take(2, 'keen-eye')).toThrow(/level 2/);
+    expect(take(1, 'nope')).toThrow(/no boon/);
+    const taken = applyCommand(state, { type: 'take-boon', unitId: 'hero', level: 1, boonId: 'keen-eye' }).state;
+    expect(() => applyCommand(taken, { type: 'take-boon', unitId: 'hero', level: 1, boonId: 'keen-eye' })).toThrow(
+      /can't take/,
+    );
+  });
+});

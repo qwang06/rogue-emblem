@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { BattleCommand } from './commands.ts';
-import { createHistory, dispatch, getCommands, getCurrentState, replay, undo, undoLastAction } from './history.ts';
+import {
+  createHistory,
+  dispatch,
+  getBoonPicks,
+  getCommands,
+  getCurrentState,
+  replay,
+  undo,
+  undoLastAction,
+} from './history.ts';
 import { createTestBattle, makeTestUnit } from './testLevel.ts';
 
 function battle() {
@@ -75,6 +84,15 @@ describe('history', () => {
       const history = play([...heroAttacks, { type: 'wait', unitId: 'ally' }, { type: 'wait', unitId: 'foe' }]);
       expect(getCurrentState(history).turnState).toMatchObject({ turn: 2, team: 'player' });
       expect(getCommands(undoLastAction(history)!)).toEqual(heroAttacks);
+    });
+
+    it('takes back a level up’s boon with the action that leveled the unit', () => {
+      const boon: BattleCommand = { type: 'take-boon', unitId: 'hero', level: 1, boonId: 'keen-eye' };
+      const history = play([{ type: 'wait', unitId: 'ally' }, ...heroAttacks, boon]);
+      expect(getBoonPicks(history)).toEqual([{ unitId: 'hero', level: 1 }]);
+      const undone = undoLastAction(history)!;
+      expect(getCommands(undone)).toEqual([{ type: 'wait', unitId: 'ally' }]);
+      expect(getBoonPicks(undone)).toEqual([]);
     });
 
     it('counts ending the phase early as an action', () => {

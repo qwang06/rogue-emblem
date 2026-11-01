@@ -163,6 +163,9 @@ export interface BattleResult {
   kills?: ReadonlyMap<string, number>;
   bossDefeated?: boolean;
   elapsedMs?: number;
+  // The level-up boon picks units already took during the battle (see
+  // levelUpPicks.ts), so the run doesn't owe them again.
+  boonsTaken?: readonly { unitId: string; level: number }[];
 }
 
 // The stats a snapshot stores besides its identity and inventory.

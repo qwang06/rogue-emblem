@@ -35,6 +35,14 @@ export function getCommands(history: BattleHistory): BattleCommand[] {
   return history.entries.map((entry) => entry.command);
 }
 
+// The level-up boon picks taken so far (each 'take-boon' command's unit
+// and level), in order.
+export function getBoonPicks(history: BattleHistory): { unitId: string; level: number }[] {
+  return history.entries.flatMap(({ command }) =>
+    command.type === 'take-boon' ? [{ unitId: command.unitId, level: command.level }] : [],
+  );
+}
+
 // Applies `command` to the current state and records it. Throws a
 // BattleCommandError (leaving the history as it was) if it isn't allowed.
 export function dispatch(
@@ -78,7 +86,8 @@ export function undoLastAction(history: BattleHistory, team: Team = 'player'): B
       if (before.turnState?.team === team) return rewindTo(history, index);
       continue;
     }
-    if (!('unitId' in command) || command.type === 'place') continue;
+    // A level up's boon goes back with the action that leveled the unit.
+    if (!('unitId' in command) || command.type === 'place' || command.type === 'take-boon') continue;
     if (before.units.get(command.unitId)?.team !== team) continue;
     // Take the unit's move and equips before its act back with it.
     let start = index;

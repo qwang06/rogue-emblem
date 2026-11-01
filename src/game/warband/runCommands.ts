@@ -204,7 +204,7 @@ export function finishBattle(
 // the run; a win on `finalStage` wins it ('won'); any other win levels up
 // the units below the level the stage guarantees (applyStageClearExperience,
 // reported as a `level-ups` event), owes a boon pick for every level the
-// stage gained (queueLevelUpBoons), pays the clear's gold (with the
+// stage gained (queueLevelUpBoons) bar those taken in battle, pays the clear's gold (with the
 // Bounty Ledger's for the warband's kills) and owes the reward pick, or goes
 // straight to camp when there's nothing to offer.
 // How many foes the warband's own units felled in `result` (a guest's
@@ -224,14 +224,17 @@ export function finishBattleWithEvents(
   const finished = finishStage(before, result, outcome, isFinalBattle(before, finalStage) ? before.stage : undefined);
   if (finished.over)
     return { session: freeze({ run: finished.run, phase: finished.won ? 'won' : 'over' }), events: [] };
-  const leveled = applyStageClearExperience(finished.run, before.stage);
+  // The battle's level ups owe their picks (bar those taken in battle),
+  // then the stage clear's.
+  const owed = queueLevelUpBoons(before, finished.run, result.boonsTaken);
+  const leveled = applyStageClearExperience(owed, before.stage);
   const events: RunEvent[] = leveled.levelUps.length > 0 ? [{ type: 'level-ups', levelUps: leveled.levelUps }] : [];
   const clear = getClearGold(before, finished.run.fallen.length - before.fallen.length, {
     kills: countWarbandKills(before, result),
     relics: before.relics,
     heat: getRunHeat(before),
   });
-  const paid = addGold(queueLevelUpBoons(before, leveled.run), clear.gold);
+  const paid = addGold(queueLevelUpBoons(owed, leveled.run), clear.gold);
   const guest = result.units.get(GUEST_UNIT_ID);
   const candidate = guest?.isAlive() && paid.roster.length < MAX_ROSTER_SIZE ? rollGuest(before) : null;
   const pending =
