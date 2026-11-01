@@ -52,7 +52,8 @@ describe('toOverworldView', () => {
   });
 
   it('offers a connected branch after a battle even when it belongs to another original road', () => {
-    const realm = generateRealm(1, SETTINGS);
+    // A 13-stage realm, whose roads from this seed have the junction below.
+    const realm = generateRealm(1, { ...SETTINGS, stagesPerRegion: 1, finalStage: 13 });
     // These roads share a junction, but their original links omit the turn
     // from 3-2 to 4-1.
     const from = getSite(realm, '3-2')!;

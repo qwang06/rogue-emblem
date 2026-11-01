@@ -58,7 +58,8 @@ const HELP: Record<string, FieldHelp> = {
       <p>
         How many stages in a row a Warband Mode run spends in each region before moving on to the next. With 2, stages
         1–2 are in the first region, stages 3–4 the second, and so on. Once the regions run out, the last one repeats
-        forever.
+        forever. Blank, with a final stage set: the regions are spread evenly over the run, and the last one plays the
+        final stage.
       </p>
     ),
   },

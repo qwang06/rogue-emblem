@@ -14,8 +14,8 @@ import { findEvent, getEventChoices } from '../game/warband/events.ts';
 import type { RegionSettings } from '../game/warband/regions.ts';
 import { getStageSeed, type RunState } from '../game/warband/run.ts';
 import { pickStageObjective } from '../game/warband/stageObjective.ts';
-import { getRunHeatRules } from '../game/warband/heat.ts';
-import { getCurrentSiteId, getTravelChoices, shiftEnemyLevels } from '../game/warband/travel.ts';
+import { levelRegionForStage } from '../game/warband/enemyCurve.ts';
+import { getCurrentSiteId, getTravelChoices } from '../game/warband/travel.ts';
 import { toTeamView, type TeamUnitView } from './views.ts';
 
 export type SiteState = 'visited' | 'current' | 'choice' | 'ahead';
@@ -144,13 +144,13 @@ function getRoadTiles(realm: Realm, from: string, to: string): readonly Point[] 
 }
 
 // The card for `site`: its kind's text, and for a battle the region it
-// plays (its enemies' levels shifted as the site and the run's Heat say), what fights there
+// plays (its enemies at the site's depth's level, plus a fort's offset), what fights there
 // and the objective the stage draws.
 export function toSiteDetailView(run: RunState, site: Site, settings: RegionSettings): SiteDetailView {
   const { label, blurb } = KIND_TEXT[site.kind];
   const base = settings.regions[site.region];
   const fights = BATTLE_KINDS.has(site.kind) && base !== undefined;
-  const region = fights ? shiftEnemyLevels(base, site.levelOffset + getRunHeatRules(run).enemyLevels) : null;
+  const region = fights ? levelRegionForStage(base, site.depth, site.levelOffset) : null;
   return Object.freeze({
     siteId: site.id,
     name: site.name,

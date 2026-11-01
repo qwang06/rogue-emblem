@@ -227,7 +227,7 @@ function planUnit(state: BattleState, context: Context, unitId: string): PlayerP
   const from = findUnit(state.grid, unitId);
   if (!unit || !from) return [];
   const options = getMovementOptions(state.units, unit);
-  const tiles = getMovementRange(state.grid, from, unit.movement, options);
+  const tiles = getMovementRange(state.grid, from, getPhaseMovement(unit), options);
   const here = context.goal.get(key(from));
   const best = new Map<string, Omit<PlayerPlan, 'commands'> & { act: Action; tile: RangeTile }>();
   for (const tile of tiles) {
@@ -244,7 +244,7 @@ function planUnit(state: BattleState, context: Context, unitId: string): PlayerP
     }
   }
   return [...best.values()].map(({ act, tile, ...plan }) => {
-    const path = getMovePath(state.grid, from, tile, unit.movement, options) ?? [from];
+    const path = getMovePath(state.grid, from, tile, getPhaseMovement(unit), options) ?? [from];
     const to = { x: tile.x, y: tile.y };
     const move: BattleCommand = { type: 'move', unitId, to, path: path.map(({ x, y }) => ({ x, y })) };
     return { ...plan, commands: [move, ...act.commands] };

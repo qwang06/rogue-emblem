@@ -59,7 +59,7 @@ export function RegionPreviewBanner({ index }: PreviewRoute) {
   const settings = useMemo(() => getActiveRegionSettings(), []);
   const region = settings.regions[index];
   if (!region) return null;
-  const { first, last } = getRegionStages(index, settings.regions.length, settings.stagesPerRegion);
+  const { first, last } = getRegionStages(index, settings);
 
   return (
     <div className="deployment-banner">

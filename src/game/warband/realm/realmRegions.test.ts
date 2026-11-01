@@ -44,6 +44,9 @@ describe('getRegionSpan and getRegionIndex', () => {
 
 describe('pickSiteRegion', () => {
   const rng = () => createSeededRng(9);
+  // One region a stage, so region i is meant for stage i + 1.
+  const SETTINGS: RegionSettings = { ...DEFAULT_CONTENT.regions, stagesPerRegion: 1 };
+  const FINAL = SETTINGS.regions.length;
   const final = SETTINGS.regions.length - 1;
 
   it('plays the final region at the Hold, and the first at depth 1', () => {
@@ -51,12 +54,12 @@ describe('pickSiteRegion', () => {
     expect(pickSiteRegion(SETTINGS, 1, FINAL, 'battle', 'lake', rng())).toEqual({ region: 0, levelOffset: 0 });
   });
 
-  it("prefers a region whose biome matches the site's land, from its depth or one before", () => {
+  it("prefers a region whose biome matches the site's land, from its depth or one before, at the stage's level", () => {
     for (let depth = 2; depth < 9; depth++) {
       for (const biome of ['meadow', 'lake', 'forest', 'hills'] as const) {
         const { region, levelOffset } = pickSiteRegion(SETTINGS, depth, FINAL, 'battle', biome, rng());
         expect([depth - 1, depth - 2]).toContain(region);
-        expect(levelOffset).toBe(depth - 1 - region);
+        expect(levelOffset).toBe(0);
         const matches = [depth - 1, depth - 2].filter((i) => SETTINGS.regions[i]?.biome === biome);
         if (matches.length > 0) expect(matches).toContain(region);
         expect(SETTINGS.regions[region].biome).not.toBe('fort');

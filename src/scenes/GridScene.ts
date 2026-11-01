@@ -149,6 +149,7 @@ import { getStructureTiles } from '../game/structures.ts';
 import { getConsumables, getItemActions } from '../game/items.ts';
 import { getWeaponActions, getWeaponReach, type Weapon, type WeaponAction } from '../game/weapons.ts';
 import { getPhaseMovement } from '../game/enemyAI.ts';
+import { STATUSES } from '../game/statuses.ts';
 import {
   canDeployUnitAt,
   canPickToDeploy,
@@ -2494,7 +2495,7 @@ export class GridScene extends Phaser.Scene {
   updateMovePath() {
     const { unit } = this.activeUnit!;
     const to = this.getMoveAttackPlan()?.tile ?? this.cursor;
-    const path = extendMovePath(this.grid, this.movePath!, to, unit.movement, this.movementOptions(unit));
+    const path = extendMovePath(this.grid, this.movePath!, to, getPhaseMovement(unit), this.movementOptions(unit));
     if (path === this.movePath) return;
     this.movePath = path;
     this.drawMoveArrow(path);
@@ -2851,6 +2852,10 @@ export class GridScene extends Phaser.Scene {
       case 'skill':
         this.playSkill(event, next);
         return;
+      case 'status':
+        this.showDamagePopup(this.unitSprites.get(event.targetId)!, 0, 'status', STATUSES[event.status].label);
+        next();
+        return;
       case 'pushed':
         this.playPush(event, next);
         return;
@@ -3041,9 +3046,11 @@ export class GridScene extends Phaser.Scene {
   playSkill({ unitId, targetId, skill, damage, health, splash }: BattleEventOf<'skill'>, next: () => void) {
     const userSprite = this.unitSprites.get(unitId)!;
     const targetSprite = this.unitSprites.get(targetId)!;
+    // A skill that only leaves a status shows that, not a 0.
+    const quiet = damage === 0 && (skill.push || skill.status !== undefined);
     if (splash) {
       this.showStats(targetId, { health });
-      this.showDamagePopup(targetSprite, damage);
+      if (!quiet) this.showDamagePopup(targetSprite, damage);
       playHitFlash(this, targetSprite, next);
       return;
     }
@@ -3053,7 +3060,7 @@ export class GridScene extends Phaser.Scene {
       this.showStats(targetId, { health });
       // A Shove's blow does nothing itself: the push that follows shows
       // what it cost.
-      if (damage > 0 || !skill.push) this.showDamagePopup(targetSprite, damage);
+      if (!quiet) this.showDamagePopup(targetSprite, damage);
     };
     this.playSkillAnimation(skill.animation, userSprite, targetSprite, onImpact, next);
   }

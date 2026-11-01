@@ -128,7 +128,7 @@ describe('describeBattle', () => {
   it('names chapters, stages and training', () => {
     expect(describeBattle({ mode: 'story', chapter: 2 }, undefined, CHAPTERS)).toBe('Chapter 2: Two');
     expect(describeBattle({ mode: 'warband', seed: 0, stage: 2 }, CUSTOM_CONTENT)).toBe('Stage 2: Custom Depths');
-    expect(describeBattle({ mode: 'warband', seed: 0, stage: 2 })).toBe(`Stage 2: ${REGION_CONFIGS[1].name}`);
+    expect(describeBattle({ mode: 'warband', seed: 0, stage: 2 })).toBe(`Stage 2: ${REGION_CONFIGS[0].name}`);
     expect(describeBattle({ mode: 'training', unitClass: 'soldier' })).toBe('Training');
   });
 });
