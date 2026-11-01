@@ -356,10 +356,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.roster-sheet__skill-cost .pixel-icon:last-of-type {
-  margin-left: 6px;
-}
-
 .roster-sheet__passive {
   display: flex;
   flex-direction: column;
