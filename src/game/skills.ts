@@ -19,6 +19,7 @@ import {
   type SkillFighter,
 } from './combat.ts';
 import type { Point } from './grid.ts';
+import { STATUSES, type StatusId } from './statuses.ts';
 import { getModifierSkills, type Modifier } from './modifiers.ts';
 
 // A skill: { id, label, manaCost, range, animation, might?, damageScale?,
@@ -39,7 +40,8 @@ import { getModifierSkills, type Modifier } from './modifiers.ts';
 // only foes there unless it has `friendlyFire`, which strikes every unit
 // but the user. A skill with range 0 is aimed at the user's own tile (an
 // area around itself). `followUp` strikes the target a second time, at that
-// fraction of the first blow's damage.
+// fraction of the first blow's damage. A `status` skill leaves that status
+// (statuses.ts) on every foe it lands on that's still standing.
 
 export interface Skill {
   id: string;
@@ -56,6 +58,7 @@ export interface Skill {
   area?: SkillArea;
   friendlyFire?: boolean;
   followUp?: number;
+  status?: StatusId;
 }
 
 export type SkillArea = 'sides' | 'line' | 'burst';
@@ -249,7 +252,38 @@ function promotionSkill(id: string, label: string, fields: Partial<Skill>): Skil
   return Object.freeze({ id, label, manaCost: 3, range: 1, animation: 'strike', ...fields });
 }
 
-export const SUNDER = promotionSkill('sunder', 'Sunder', { might: 4 });
+// A blow that splits armor: the user's regular attack with 2 more power on
+// an adjacent foe, which it leaves Sundered (3 more damage from every hit).
+export const SUNDER = promotionSkill('sunder', 'Sunder', { might: 2, status: 'sundered' });
+
+// An arrow through the foot: the user's regular attack on a foe up to 2
+// tiles away, which it leaves Rooted.
+export const PINNING_SHOT = promotionSkill('pinning-shot', 'Pinning Shot', {
+  manaCost: 2,
+  range: 2,
+  status: 'rooted',
+  animation: 'stone',
+});
+
+// A foe singled out for the others: no damage, but a foe up to 3 tiles
+// away is left Marked (15 less avoid).
+export const MARK = promotionSkill('mark', 'Mark', {
+  manaCost: 1,
+  range: 3,
+  damageScale: 0,
+  status: 'marked',
+  animation: 'stone',
+});
+
+// A roar that freezes foes in place: no damage, but every foe next to the
+// user is left Rooted.
+export const ROAR = promotionSkill('roar', 'Roar', {
+  manaCost: 2,
+  range: 0,
+  damageScale: 0,
+  area: 'burst',
+  status: 'rooted',
+});
 export const FRENZY = promotionSkill('frenzy', 'Frenzy', { manaCost: 4, might: 6 });
 export const IMPALE = promotionSkill('impale', 'Impale', { might: 5 });
 export const LUNGE = promotionSkill('lunge', 'Lunge', { manaCost: 2, range: 2, might: 2 });
@@ -309,11 +343,13 @@ export const SKILL_TREES: SkillTrees = Object.freeze({
 // learn (a skill boon, see warband/boons.ts): its own, never another
 // class's. Classes without an entry are offered none.
 export const CLASS_SKILL_PICKS: Readonly<Record<string, readonly Skill[]>> = Object.freeze({
-  archer: Object.freeze([PIERCING_SHOT]),
+  archer: Object.freeze([PIERCING_SHOT, PINNING_SHOT]),
+  vanguard: Object.freeze([SUNDER]),
   soldier: Object.freeze([LUNGE]),
   sapper: Object.freeze([SHRAPNEL]),
   acolyte: Object.freeze([SMITE, PRAYER]),
-  beast: Object.freeze([WING_BUFFET]),
+  scout: Object.freeze([MARK]),
+  beast: Object.freeze([WING_BUFFET, ROAR]),
   'beast-rider': Object.freeze([SKEWER, TANDEM_STRIKE]),
   siege: Object.freeze([DEADEYE]),
 });
@@ -531,6 +567,12 @@ export function describeSkill(skill: Skill): string {
   }
   const scale = skill.damageScale ?? 1;
   if (scale === 0 && skill.push) return `Pushes a foe ${reach} a tile away.`;
+  const status = skill.status && STATUSES[skill.status];
+  const leaves = status ? `${status.label} (${status.description.replace(/\.$/, '').toLowerCase()})` : '';
+  if (scale === 0 && status) {
+    if (skill.range === 0) return `Leaves every foe next to it ${leaves}.`;
+    return `Leaves a foe ${reach} ${leaves}.`;
+  }
   const hit = scale === 1 ? 'Its regular hit' : scale === 0.5 ? 'Half its regular hit' : `${scale}× its regular hit`;
   const might = skill.might ? ` with +${skill.might} power` : '';
   const area = skill.area ? ` ${AREA_PHRASES[skill.area]}` : '';
@@ -539,7 +581,8 @@ export function describeSkill(skill: Skill): string {
   const followUp = skill.followUp
     ? `, then a second hit for ${skill.followUp === 0.5 ? 'half' : `${skill.followUp}×`} that`
     : '';
-  return `${hit}${might} on a foe ${reach}${area}${allies}${push}${followUp}.`;
+  const after = status ? `, leaving it ${leaves}` : '';
+  return `${hit}${might} on a foe ${reach}${area}${allies}${push}${followUp}${after}.`;
 }
 
 export function canUseSkill(unit: { mana: number }, skill: Skill): boolean {

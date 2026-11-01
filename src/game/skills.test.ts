@@ -7,6 +7,10 @@ import {
   CLEAVE,
   SHIELD_BASH,
   CLASS_SKILL_PICKS,
+  MARK,
+  PINNING_SHOT,
+  ROAR,
+  SUNDER,
   BARRAGE,
   getFollowUpDamage,
   getSkillAreaTiles,
@@ -402,9 +406,12 @@ describe('getClassSkillPicks', () => {
     expect(getClassSkillPicks('soldier')).toEqual([LUNGE]);
     expect(getClassSkillPicks('acolyte')).toEqual([SMITE, PRAYER]);
     expect(getClassSkillPicks('beast-rider')).toEqual([SKEWER, TANDEM_STRIKE]);
-    expect(getClassSkillPicks('beast')).toEqual([WING_BUFFET]);
+    expect(getClassSkillPicks('beast')).toEqual([WING_BUFFET, ROAR]);
+    expect(getClassSkillPicks('archer')).toEqual([PIERCING_SHOT, PINNING_SHOT]);
+    expect(getClassSkillPicks('vanguard')).toEqual([SUNDER]);
     expect(getClassSkillPicks('siege')).toEqual([DEADEYE]);
-    expect(getClassSkillPicks('scout')).toEqual([]);
+    expect(getClassSkillPicks('scout')).toEqual([MARK]);
+    expect(getClassSkillPicks('ram')).toEqual([]);
     expect(getClassSkillPicks(null)).toEqual([]);
   });
 
@@ -437,6 +444,11 @@ describe('describeSkill', () => {
     );
     expect(describeSkill(TANDEM_STRIKE)).toBe('Its regular hit on a foe next to it, then a second hit for half that.');
     expect(describeSkill(PRAYER)).toBe('Heals every wounded ally next to it for 1 + half INT.');
+    expect(describeSkill(SUNDER)).toBe(
+      'Its regular hit with +2 power on a foe next to it, leaving it Sundered (takes 3 more damage from every hit).',
+    );
+    expect(describeSkill(MARK)).toBe('Leaves a foe up to 3 tiles away Marked (15 less avoid).');
+    expect(describeSkill(ROAR)).toBe("Leaves every foe next to it Rooted (can't move).");
     expect(describeSkill(THROW_STONES)).toBe('Half its regular hit on a foe up to 4 tiles away.');
     expect(describeSkill({ ...THROW_STONES, damageScale: 1.5 })).toBe(
       '1.5× its regular hit on a foe up to 4 tiles away.',

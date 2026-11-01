@@ -18,6 +18,7 @@ import {
 } from './combatStats.ts';
 import type { Grid, Point } from './grid.ts';
 import { getCombatBonus, isWounded, type CombatBonus, type Modifier } from './modifiers.ts';
+import { getStatusModifiers, type StatusId } from './statuses.ts';
 import { WEAPON_DAMAGE_TYPES, type Weapon } from './weapons.ts';
 
 export type DamageType = 'physical' | 'magical';
@@ -49,7 +50,7 @@ export interface StrikeRange {
 // Everything a unit brings to a full exchange of strikes: its stats, its
 // equipped weapon (null if it has none, so it can't strike), and the uses
 // that weapon has left (`weaponUses`; null or missing for one that never
-// breaks). Its `modifiers` (modifiers.ts) give it a combat bonus,
+// breaks). Its `modifiers` (modifiers.ts) and `statuses` (statuses.ts) give it a combat bonus,
 // checked against its health (`wounded`) and whether its opponent is a
 // `monster`.
 export interface Fighter extends CombatStatLine, DamageStats, StrikeRange {
@@ -59,6 +60,7 @@ export interface Fighter extends CombatStatLine, DamageStats, StrikeRange {
   weaponUses?: number | null;
   monster?: boolean;
   modifiers?: readonly Modifier[];
+  statuses?: readonly StatusId[];
 }
 
 // A fighter as the forecast shows it, health bar and all.
@@ -220,18 +222,20 @@ export interface SkillFighter extends DamageStats {
   maxHealth?: number;
   monster?: boolean;
   modifiers?: readonly Modifier[];
+  statuses?: readonly StatusId[];
 }
 
-// What `unit`'s modifiers add (getCombatBonus) as it fights `opponent`,
-// given whether it's `attacking`, is under half HP and faces a monster;
-// undefined without modifiers.
+// What `unit`'s modifiers and statuses (statuses.ts) add (getCombatBonus)
+// as it fights `opponent`, given whether it's `attacking`, is under half
+// HP and faces a monster; undefined without either.
 export function getFighterBonus(
   unit: SkillFighter,
   opponent: SkillFighter,
   attacking: boolean,
 ): CombatBonus | undefined {
-  if (!unit.modifiers || unit.modifiers.length === 0) return undefined;
-  return getCombatBonus(unit.modifiers, {
+  const modifiers = [...(unit.modifiers ?? []), ...getStatusModifiers(unit.statuses)];
+  if (modifiers.length === 0) return undefined;
+  return getCombatBonus(modifiers, {
     attacking,
     wounded: unit.health !== undefined && isWounded({ health: unit.health, maxHealth: unit.maxHealth }),
     vsMonster: opponent.monster === true,
@@ -261,6 +265,7 @@ export function withCombatBonus<T extends Fighter>(unit: T, opponent: Fighter, a
     weaponUses: unit.weaponUses,
     monster: unit.monster,
     modifiers: unit.modifiers,
+    statuses: unit.statuses,
     bonus,
   } as T;
 }

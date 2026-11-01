@@ -34,6 +34,7 @@ import { getMovePath, getMovementRange, canMoveAlongPath, type MovementOptions }
 import { getObjectiveOutcome } from '../objectives.ts';
 import { getPushDirection, getPushResult, type PushResult } from '../push.ts';
 import { createResumableRng } from '../rng.ts';
+import { addStatus, type StatusId } from '../statuses.ts';
 import {
   calculateSkillDamage,
   canUseSkill,
@@ -128,6 +129,8 @@ export type BattleEvent =
       splash?: boolean;
       followUp?: boolean;
     }
+  // A skill left `status` on `targetId` (statuses.ts).
+  | { type: 'status'; unitId: string; targetId: string; status: StatusId }
   // A push skill shoved `push.unitId` (see push.ts). `health` is the shoved
   // unit's health after it, `collidedHealth` that of the unit it slammed
   // into, if any. A unit it left at 0 health (or drowned) is `defeated` next.
@@ -634,8 +637,16 @@ function useSkill(draft: Draft, unitId: string, skillId: string, target: Point) 
     return { victim, defender, damage };
   });
 
+  if (skill.status) {
+    for (const { victim, defender } of blows) {
+      if (!defender.isAlive() || areAllied(defender.team, draft.unit(unitId).team)) continue;
+      defender.statuses = addStatus(defender.statuses, skill.status);
+      draft.events.push({ type: 'status', unitId, targetId: victim.unitId, status: skill.status });
+    }
+  }
+
   const [aimed] = blows;
-  const shoved = skill.push && aimed.defender.isAlive() ? push(draft, unitId, from, aimed.victim) : null;
+  const shoved = skill.push && aimed?.defender.isAlive() ? push(draft, unitId, from, aimed.victim) : null;
   if (shoved) aimed.damage += shoved.damage;
 
   let award: ExperienceAward | null = null;
@@ -786,7 +797,15 @@ function hasGuests(draft: Draft): boolean {
 // Otherwise an enemy phase plays its boss's horn (runBossHorn), and the
 // phase's units recover their phase-heal and phase-mana modifiers' HP and
 // MP.
+// Starts `turnState`'s phase. The statuses on the team whose phase just
+// ended wear off first (statuses.ts).
 function startPhase(draft: Draft, turnState: TurnState) {
+  const ended = draft.turnState?.team;
+  if (ended) {
+    for (const unitId of getTeamUnitIds(draft.units, ended)) {
+      if (draft.unit(unitId).statuses.length > 0) draft.edit(unitId).statuses = Object.freeze([]);
+    }
+  }
   draft.turnState = turnState;
   draft.events.push({ type: 'phase-started', turnState });
   if (checkOutcome(draft)) return;

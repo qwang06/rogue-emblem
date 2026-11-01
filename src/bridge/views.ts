@@ -22,6 +22,7 @@ import { describeReward, previewRewardHealth, type Reward, type RewardKind } fro
 import type { MenuAction } from '../game/actionMenu.ts';
 import { getUnitSkills } from '../game/skills.ts';
 import { getStandingCombatBonus } from '../game/modifiers.ts';
+import { getStatusModifiers, STATUSES } from '../game/statuses.ts';
 import { findBoon, getTakenBoonList, type BoonKind } from '../game/warband/boons.ts';
 import { completesEvolution, findEvolution } from '../game/warband/evolutions.ts';
 import { findPromotion } from '../game/promotions.ts';
@@ -77,6 +78,9 @@ export interface UnitView {
   loot: string | null;
   // Whether it's its stage's boss or an elite (Unit.rank), for its badge.
   rank: UnitRank | null;
+  // The statuses a skill has left on it (statuses.ts), in the order they
+  // came.
+  statuses: readonly { id: string; label: string; description: string }[];
 }
 
 // One stat on the unit info screen and its value (stats have no caps).
@@ -196,7 +200,9 @@ export type PopupKind =
   | 'enraged'
   // A shove (src/game/push.ts): its unit drowned, or wouldn't budge.
   | 'drowned'
-  | 'steadfast';
+  | 'steadfast'
+  // A skill left a status (statuses.ts), named by `label`.
+  | 'status';
 
 export interface DamagePopupView {
   id: number;
@@ -388,6 +394,12 @@ export function toUnitView(unit: Unit | null | undefined): UnitView | null {
     ),
     loot: unit.loot?.label ?? null,
     rank: unit.rank,
+    statuses: Object.freeze(
+      (unit.statuses ?? []).map((id) => {
+        const { label, description } = STATUSES[id];
+        return Object.freeze({ id, label, description });
+      }),
+    ),
   });
 }
 
@@ -414,8 +426,8 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
   const equipped = unit.equippedWeapon;
   const weapon = equipped?.weapon ?? null;
   const damageType = getDamageType(unit);
-  // The rates count the modifiers that hold in any exchange.
-  const bonus = getStandingCombatBonus(unit.modifiers);
+  // The rates count the modifiers (and statuses) that hold in any exchange.
+  const bonus = getStandingCombatBonus([...unit.modifiers, ...getStatusModifiers(unit.statuses)]);
   const quirk = unit.quirk ? findQuirk(unit.quirk) : null;
   const rates = {
     skill: unit.skill,
@@ -584,6 +596,7 @@ const POPUP_TEXT: Readonly<Record<PopupKind, (amount: number, label: string) => 
   enraged: (amount) => `Enraged! +${amount} STR`,
   drowned: () => 'Drowned!',
   steadfast: () => 'Steadfast',
+  status: (_, label) => `${label}!`,
 });
 
 // Snapshot of one floating number over a unit: damage taken (plain, a
