@@ -71,6 +71,10 @@ export const RECRUIT_CLASS_IDS: readonly string[] = Object.freeze([
   'acolyte',
 ]);
 
+// Recruits who'd join below this level always come as villagers, whatever
+// class was asked for, so an early specialist doesn't outclass the warband.
+export const RECRUIT_VILLAGER_BELOW_LEVEL = 5;
+
 // Gold in a purse: a base plus more per stage.
 export const PURSE_GOLD = 30;
 export const PURSE_GOLD_PER_STAGE = 10;
@@ -338,7 +342,8 @@ export function eligibleWeapons(run: RunState, classes: readonly UnitClass[] = U
 
 // A recruit for `run`: a `classId` unit (a random RECRUIT_CLASS_IDS class
 // when none is given) at the roster's average level (rounded down, at least
-// 1), its level ups from its growths (getLevelUpGains), named from WARBAND_NAMES (one
+// 1; a villager whatever the class while that's below
+// RECRUIT_VILLAGER_BELOW_LEVEL), its level ups from its growths (getLevelUpGains), named from WARBAND_NAMES (one
 // nobody in the run has and that isn't in `takenNames`; "Recruit" once
 // they've all been used), with an id no unit in the run has and that isn't
 // in `takenIds`, and a random quirk (quirks.ts; one not in `takenQuirks`
@@ -367,6 +372,7 @@ export function rollRecruit(
   classId ??= randomItem(rng, RECRUIT_CLASS_IDS);
   const totalLevel = run.roster.reduce((sum, unit) => sum + unit.level, 0);
   const level = Math.max(1, Math.floor(totalLevel / Math.max(1, run.roster.length)));
+  if (level < RECRUIT_VILLAGER_BELOW_LEVEL) classId = 'villager';
   const unit = createUnitOfClass(classId, { name, team: 'player' }, classes);
   while (unit.level < level) unit.levelUp(getLevelUpGains(unit.growths, unit.level));
   const usedIds = new Set([...everyone.map((snapshot) => snapshot.id), ...takenIds]);
