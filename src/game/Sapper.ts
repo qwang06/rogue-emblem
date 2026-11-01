@@ -19,17 +19,19 @@ export const SAPPER_STATS = Object.freeze({
   movement: 5,
 });
 
-// Percent chance per level up that each stat rises (see experience.ts).
+// How fast each stat grows, on a fixed schedule with no dice: 100 is a
+// point every level, 50 every second level, 25 every fourth (see
+// getLevelUpGains in experience.ts).
 export const SAPPER_GROWTHS = Object.freeze({
-  health: 65,
-  mana: 40,
-  strength: 45,
-  intelligence: 5,
-  skill: 40,
-  speed: 35,
-  luck: 30,
+  health: 75,
+  mana: 50,
+  strength: 50,
+  intelligence: 0,
+  skill: 100,
+  speed: 25,
+  luck: 0,
   defense: 25,
-  resistance: 15,
+  resistance: 0,
 });
 
 // The weapon types it can wield.

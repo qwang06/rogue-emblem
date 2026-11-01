@@ -17,17 +17,19 @@ export const RAM_STATS = Object.freeze({
   movement: 4,
 });
 
-// Percent chance per level up that each stat rises (see experience.ts).
+// How fast each stat grows, on a fixed schedule with no dice: 100 is a
+// point every level, 50 every second level, 25 every fourth (see
+// getLevelUpGains in experience.ts).
 export const RAM_GROWTHS = Object.freeze({
-  health: 80,
-  mana: 35,
+  health: 100,
+  mana: 25,
   strength: 50,
   intelligence: 0,
-  skill: 25,
-  speed: 5,
-  luck: 5,
-  defense: 45,
-  resistance: 10,
+  skill: 0,
+  speed: 0,
+  luck: 0,
+  defense: 100,
+  resistance: 0,
 });
 
 // The weapon types it can wield.

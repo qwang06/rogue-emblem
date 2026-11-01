@@ -514,8 +514,8 @@ describe("the veteran's lesson reward", () => {
 
   it('gives each unit just what it still needs, so XP it had already earned is not wasted', () => {
     const soldier = new Soldier({ name: 'Alden', team: 'player' });
-    soldier.gainExperience(30, () => 0);
-    soldier.gainExperience(70, () => 0);
+    soldier.gainExperience(30);
+    soldier.gainExperience(70);
     expect(soldier).toMatchObject({ level: 2, experience: 50 });
     const run = runOf(['alden', soldier], ['cato', new Villager({ name: 'Cato', team: 'player' })]);
     const after = applyReward(run, experience());
