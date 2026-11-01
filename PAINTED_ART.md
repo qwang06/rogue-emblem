@@ -42,36 +42,36 @@ Biggest win: these are on screen all the time. Grouped into batches of four.
 
 Base classes
 
-- [ ] Warrior
-- [ ] Archer
-- [ ] Acolyte (cleric)
-- [ ] Soldier (spear and shield infantry)
-- [ ] Vanguard (axe-wielding front line)
-- [ ] Guard (heavy armor behind a tower shield, spear)
+- [x] Warrior
+- [x] Archer
+- [x] Acolyte (cleric)
+- [x] Soldier (spear and shield infantry)
+- [x] Vanguard (axe-wielding front line)
+- [x] Guard (heavy armor behind a tower shield, spear)
 
 Promoted classes (a richer version of their base class's look)
 
-- [ ] Hero (from warrior)
-- [ ] Berserker (from warrior)
-- [ ] General (from soldier)
-- [ ] Halberdier (from soldier)
-- [ ] Sniper (from archer)
-- [ ] Arbalest (from archer, crossbow)
-- [ ] Champion (from vanguard)
-- [ ] Bombardier (from vanguard, powder kegs)
-- [ ] Bastion (from guard)
-- [ ] Templar (from guard)
-- [ ] Bishop (from acolyte)
-- [ ] Sage (from acolyte; uses the mage)
+- [x] Hero (from warrior)
+- [x] Berserker (from warrior)
+- [x] General (from soldier)
+- [x] Halberdier (from soldier)
+- [x] Sniper (from archer)
+- [x] Arbalest (from archer, crossbow)
+- [x] Champion (from vanguard)
+- [x] Bombardier (from vanguard, powder kegs)
+- [x] Bastion (from guard)
+- [x] Templar (from guard)
+- [x] Bishop (from acolyte)
+- [x] Sage (from acolyte; uses the mage)
 
 Monsters (enemies)
 
-- [ ] Slime
-- [ ] Goblin
-- [ ] Skeleton
-- [ ] Bat
-- [ ] Wolf
-- [ ] Orc
+- [x] Slime
+- [x] Goblin
+- [x] Skeleton
+- [x] Bat
+- [x] Wolf
+- [x] Orc
 
 ## 2. Battlefield obstacles
 
@@ -81,13 +81,13 @@ on forest and desert still use the old `OBSTACLE_ART`. One cut-out each, on mage
 seen from the same slightly-above angle, sitting on the ground with no
 cast shadow (the game adds one). Two or three variants of each helps.
 
-- [ ] Rock (small, impassable)
-- [ ] Boulder (big pile, impassable)
-- [ ] Bush (slows movement)
-- [ ] Pine (slows movement)
-- [ ] Thicket (dense brush, slows movement)
-- [ ] Crag (jagged rock, desert)
-- [ ] Cactus (desert)
+- [x] Rock (small, impassable)
+- [x] Boulder (big pile, impassable)
+- [x] Bush (slows movement)
+- [x] Pine (slows movement)
+- [x] Thicket (dense brush, slows movement)
+- [x] Crag (jagged rock, desert)
+- [x] Cactus (desert)
 
 ## 3. Battlefields
 
@@ -105,8 +105,8 @@ Each needs the same set of pieces as plains:
       horizon strip (dunes, mesas), border rocks and dead trees, scrub, 5
       decals, 2 foreground pieces
 
-Plains extras still wanted: a right-side tree cluster, small trees, rocks,
-a log, flowers, dirt decals.
+Plains extras done: right-side trees, rocks, flowers and edge props
+(fences, barrels, crates, a cart, a signpost, a sack, a stump).
 
 ## 4. Gates
 

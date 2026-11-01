@@ -256,35 +256,34 @@ export const FORD_ART: SheetTile = [10, 0];
 export const SPIKES_ART: SheetTile = [10, 1];
 
 // Unit art keyed by unit class, so every unit of a class looks alike
-// whichever side it's on. Each names a set of sheets, one per animation in
-// UNIT_ANIMATIONS (see unitSheetKey).
+// whichever side it's on. Every class has a painted single image
+// (SINGLE_IMAGE_UNITS); art that isn't one names a set of sheets, one per
+// animation in UNIT_ANIMATIONS (see unitSheetKey).
 export const UNIT_SPRITES: Record<string, string> = {
   warrior: 'Painted_Warrior',
-  soldier: 'Soldier_03',
+  soldier: 'Painted_Soldier',
   archer: 'Painted_Archer',
-  vanguard: 'Vanguard_04',
-  guard: 'Soldier_04',
-  acolyte: 'Painted_Cleric',
-  // The promoted classes (promotions.ts) wear other variants of the pack's
-  // units, close to their base class's look.
-  hero: 'Vanguard_02',
-  berserker: 'Vanguard_06',
-  general: 'Soldier_05',
-  halberdier: 'Soldier_02',
-  sniper: 'Archer_03',
-  arbalest: 'Siege_03',
-  champion: 'Vanguard_03',
-  bombardier: 'Sapper_04',
-  bastion: 'Soldier_06',
-  templar: 'Vanguard_01',
-  bishop: 'Acolyte_01',
+  vanguard: 'Painted_Vanguard',
+  guard: 'Painted_Guard',
+  acolyte: 'Painted_Acolyte',
+  hero: 'Painted_Hero',
+  berserker: 'Painted_Berserker',
+  general: 'Painted_General',
+  halberdier: 'Painted_Halberdier',
+  sniper: 'Painted_Sniper',
+  arbalest: 'Painted_Arbalest',
+  champion: 'Painted_Champion',
+  bombardier: 'Painted_Bombardier',
+  bastion: 'Painted_Bastion',
+  templar: 'Painted_Templar',
+  bishop: 'Painted_Bishop',
   sage: 'Painted_Mage',
-  slime: 'Slime_01',
-  goblin: 'Goblin_01',
-  skeleton: 'Skeleton_01',
-  bat: 'Bat_01',
-  wolf: 'Wolf_01',
-  orc: 'Orc_01',
+  slime: 'Painted_Slime',
+  goblin: 'Painted_Goblin',
+  skeleton: 'Painted_Skeleton',
+  bat: 'Painted_Bat',
+  wolf: 'Painted_Wolf',
+  orc: 'Painted_Orc',
 };
 
 // Unit art drawn from a single image instead of a set of sheets: a texture
@@ -294,9 +293,29 @@ export const UNIT_SPRITES: Record<string, string> = {
 // other art.
 export const SINGLE_IMAGE_UNITS: ReadonlySet<string> = new Set<string>([
   'Painted_Warrior',
+  'Painted_Soldier',
   'Painted_Archer',
+  'Painted_Vanguard',
+  'Painted_Guard',
+  'Painted_Acolyte',
+  'Painted_Hero',
+  'Painted_Berserker',
+  'Painted_General',
+  'Painted_Halberdier',
+  'Painted_Sniper',
+  'Painted_Arbalest',
+  'Painted_Champion',
+  'Painted_Bombardier',
+  'Painted_Bastion',
+  'Painted_Templar',
+  'Painted_Bishop',
   'Painted_Mage',
-  'Painted_Cleric',
+  'Painted_Slime',
+  'Painted_Goblin',
+  'Painted_Skeleton',
+  'Painted_Bat',
+  'Painted_Wolf',
+  'Painted_Orc',
 ]);
 
 // Single-image units whose walk is drawn frame by frame: a sheet in SPRITES
@@ -305,9 +324,7 @@ export const SINGLE_IMAGE_UNITS: ReadonlySet<string> = new Set<string>([
 // in place of the code-drawn hop) while the unit walks. The frames make one
 // walk cycle, played at the shared pace (WALK_CYCLE_MS in unitRig.ts), so a
 // sheet can have any number of them.
-export const SINGLE_IMAGE_WALKS: Readonly<Record<string, WalkFrames>> = {
-  Painted_Warrior: { key: 'Painted_Warrior_Walk', frames: 8 },
-};
+export const SINGLE_IMAGE_WALKS: Readonly<Record<string, WalkFrames>> = {};
 
 // A single-image unit's frame-by-frame walk, or undefined when it hops in
 // code.

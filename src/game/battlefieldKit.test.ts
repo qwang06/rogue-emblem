@@ -167,6 +167,27 @@ describe('layOutKit', () => {
     }
   });
 
+  it('stands props off the floor, clear of the front row and of each other', () => {
+    const kit = { ...KIT, props: [piece('barrels', 400, 320), piece('fence', 450, 270)] };
+    for (const seed of SEEDS) {
+      const { pieces } = layOutKit(kit, FLOOR, seed);
+      const props = pieces.filter((p) => p.key === 'barrels' || p.key === 'fence');
+      expect(props.length).toBeGreaterThan(0);
+      for (const p of props) {
+        expect(p.layer).toBe('standing');
+        expect(p.foot).toBeCloseTo(p.y + p.height);
+        // Wholly in front of the floor, or standing behind its back edge.
+        expect(p.y >= FLOOR.height || p.foot! <= 0).toBe(true);
+      }
+      for (const a of props)
+        for (const b of props)
+          if (a !== b)
+            expect(a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height).toBe(
+              false,
+            );
+    }
+  });
+
   it('draws no foreground for a kit without one', () => {
     const { foreground: _, ...bare } = KIT;
     for (const seed of SEEDS) {
