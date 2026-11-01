@@ -318,10 +318,6 @@ const PUSH_SLIDE_MS = 160;
 // A breach shakes the camera as the rock comes down.
 const BREACH_SHAKE_MS = 220;
 const BREACH_SHAKE_INTENSITY = 0.006;
-// The marker on a mine the player's side laid: a dark disc with a red rim.
-const MINE_MARKER_RADIUS = 6;
-const MINE_MARKER_COLOR = 0x1f2937;
-const MINE_MARKER_RIM = 0xdc2626;
 // How long a skill's leap or flight takes for each tile it covers.
 const RELOCATE_TILE_MS = 90;
 const PUSH_BUMP_PX = 6;
@@ -504,7 +500,7 @@ export class GridScene extends Phaser.Scene {
   terrainTimers: Phaser.Time.TimerEvent[] = [];
   terrainKey: string | null = null;
   // Markers on the player's side's mines, by "x,y" (refreshMines).
-  mineMarkers = new Map<string, Phaser.GameObjects.Arc>();
+  mineMarkers = new Map<string, Phaser.GameObjects.Image>();
 
   constructor() {
     super('Grid');
@@ -645,10 +641,7 @@ export class GridScene extends Phaser.Scene {
     for (const [key, mine] of shown) {
       if (this.mineMarkers.has(key)) continue;
       const pos = gridToWorld(mine.x, mine.y, TILE_SIZE);
-      const marker = this.add
-        .circle(pos.x + TILE_SIZE / 2, pos.y + TILE_SIZE / 2, MINE_MARKER_RADIUS, MINE_MARKER_COLOR)
-        .setStrokeStyle(2, MINE_MARKER_RIM)
-        .setDepth(0.43);
+      const marker = this.add.image(pos.x, pos.y, 'mine-marker').setOrigin(0, 0).setDepth(0.43);
       this.mineMarkers.set(key, marker);
     }
   }
