@@ -411,10 +411,10 @@
   margin: 0;
 }
 
-/* A boon's icon, or its kind's letter where it has none yet. */
+/* A boon's icon (painted art, smoothed to its size), or its kind's letter
+   where it has none yet. */
 .boon-icon {
   display: block;
-  image-rendering: pixelated;
 }
 
 .boon-icon--missing {

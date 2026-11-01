@@ -22,7 +22,7 @@ const ICONS: Record<StatIconKind, readonly string[]> = {
 export function StatIcon({ kind }: { kind: StatIconKind }) {
   const url = kind === 'health' ? BOON_ICON_URLS['stat-health'] : GLYPH_ICON_URLS[kind];
   return url ? (
-    <PixelArtIcon url={url} className="stat-icon" />
+    <PixelArtIcon url={url} className={kind === 'health' ? 'stat-icon stat-icon--painted' : 'stat-icon'} />
   ) : (
     <PixelIcon rows={ICONS[kind]} className="stat-icon" />
   );

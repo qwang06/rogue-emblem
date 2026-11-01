@@ -2,8 +2,8 @@ import { BOON_ICON_URLS } from '../assets/boonIcons.ts';
 import { GlyphIcon, type GlyphKind } from './GlyphIcon.tsx';
 
 // A stat's label as its icon: the stat boons' pictures (a heart for HP, a
-// flexed arm for STR, a tome for MAG...) at 16px, their 16px art's native
-// size, and pixel glyphs for the stats with no boon (MP, MOV, RNG, EXP).
+// flexed arm for STR, a crystal for MAG...) at 16px, smoothed down from
+// their painted art, and pixel glyphs for the stats with no boon (MP, MOV, RNG, EXP).
 // The abbreviation stays for screen readers and as the tooltip's lead, or
 // beside the icon with `text` (the unit info sheet, where the pictures are
 // learned). Keyed by the abbreviation every view already labels its stats
@@ -30,7 +30,7 @@ export function StatLabel({ label, text = false }: { label: string; text?: boole
   return (
     <span className="stat-label" title={`${label}: ${stat.name}`}>
       {url ? (
-        <img className="stat-label__icon" src={url} alt="" width={16} height={16} />
+        <img className="stat-label__icon stat-label__icon--painted" src={url} alt="" width={16} height={16} />
       ) : (
         <GlyphIcon kind={stat.glyph ?? 'exp'} className="stat-label__icon" />
       )}
