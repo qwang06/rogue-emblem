@@ -89,6 +89,15 @@ import obstacleBush2 from './obstacles/bush-2.png';
 import obstacleThicket from './obstacles/thicket.png';
 import obstaclePine from './obstacles/pine.png';
 import obstacleCactus from './obstacles/cactus.png';
+import obstacleFence from './obstacles/fence.png';
+import obstacleFenceBroken from './obstacles/fence-broken.png';
+import obstacleBarrels from './obstacles/barrels.png';
+import obstacleCrates from './obstacles/crates.png';
+import obstacleCart from './obstacles/cart.png';
+import obstacleWheel from './obstacles/wheel.png';
+import obstacleSack from './obstacles/sack.png';
+import obstacleStump from './obstacles/stump.png';
+import obstacleSignpost from './obstacles/signpost.png';
 import ballistaIcon from './items/ballista.png';
 import biteIcon from './items/bite.png';
 import boneClawsIcon from './items/bone-claws.png';
@@ -192,6 +201,15 @@ export const SPRITES: Readonly<Record<string, SpriteSheet>> = {
   Obstacle_thicket: { url: obstacleThicket, frame: 256, smooth: true },
   Obstacle_pine: { url: obstaclePine, frame: 256, smooth: true },
   Obstacle_cactus: { url: obstacleCactus, frame: 256, smooth: true },
+  Obstacle_fence: { url: obstacleFence, frame: 256, smooth: true },
+  Obstacle_fence_broken: { url: obstacleFenceBroken, frame: 256, smooth: true },
+  Obstacle_barrels: { url: obstacleBarrels, frame: 256, smooth: true },
+  Obstacle_crates: { url: obstacleCrates, frame: 256, smooth: true },
+  Obstacle_cart: { url: obstacleCart, frame: 256, smooth: true },
+  Obstacle_wheel: { url: obstacleWheel, frame: 256, smooth: true },
+  Obstacle_sack: { url: obstacleSack, frame: 256, smooth: true },
+  Obstacle_stump: { url: obstacleStump, frame: 256, smooth: true },
+  Obstacle_signpost: { url: obstacleSignpost, frame: 256, smooth: true },
   // Painted single-image units (SINGLE_IMAGE_UNITS in tileset.ts).
   Painted_Warrior: { url: paintedWarrior, frame: 256, smooth: true },
   Painted_Soldier: { url: paintedSoldier, frame: 256, smooth: true },

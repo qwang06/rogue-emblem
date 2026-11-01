@@ -4,6 +4,7 @@
 // rise over the cells behind them. Things further down the screen (nearer
 // the camera) draw over things behind them.
 
+import type { WorldRect } from './backdrop.ts';
 import { gridToWorld, type Point } from './grid.ts';
 import { CELL, TILE_SIZE, UNIT_SHADOW } from './tileset.ts';
 
@@ -67,6 +68,19 @@ export const STANDING_OVERHANG = Math.max(0, ART_FEET_Y - CELL_FEET * CELL.heigh
 // their detail reads on a painted battlefield. Their feet stay on their
 // cell; the extra height rises over the cells behind.
 export const PAINTED_UNIT_SCALE = 1.5;
+// How big a battlefield's painted obstacles (PAINTED_OBSTACLES in
+// tileset.ts) are drawn, the same way: big enough to read as cover beside
+// a unit, a fence's run overlapping its neighbors' so a fence line joins up.
+export const PAINTED_OBSTACLE_SCALE = 1.4;
+
+// The rectangle (world pixels) TILE_SIZE square art standing on cell
+// (x, y) covers when drawn `scale` times its size with getScaledArtOrigin.
+export function getScaledArtRect(x: number, y: number, scale: number): WorldRect {
+  const pos = getStandingPosition(x, y);
+  const origin = getScaledArtOrigin(scale);
+  const size = TILE_SIZE * scale;
+  return { x: pos.x - origin.x * size, y: pos.y - origin.y * size, width: size, height: size };
+}
 
 // The origin (fractions of the drawn image) to draw TILE_SIZE square art
 // `scale` times its size with, so a sprite positioned by its tile's

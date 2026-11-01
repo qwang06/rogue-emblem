@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BATTLEFIELD_KINDS,
+  BATTLEFIELD_LAYOUTS,
   BATTLEFIELD_OBSTACLES,
   BATTLEFIELD_SIZE,
   generateBattlefield,
@@ -22,6 +23,12 @@ const field = (battlefield: BattlefieldKind, seed: number, obstacles: [number, n
 describe('battlefield tables', () => {
   it('gives every obstacle a terrain and every battlefield obstacles of its own', () => {
     for (const obstacle of OBSTACLE_KINDS) expect(['mountain', 'forest']).toContain(OBSTACLE_TERRAIN[obstacle]);
+    for (const kind of BATTLEFIELD_KINDS) {
+      const { cache, cacheSides, grove, scatter } = BATTLEFIELD_LAYOUTS[kind];
+      for (const obstacle of [...cache, ...cacheSides, ...grove, ...scatter]) {
+        expect(BATTLEFIELD_OBSTACLES[kind]).toContain(obstacle);
+      }
+    }
     for (const kind of BATTLEFIELD_KINDS) expect(BATTLEFIELD_OBSTACLES[kind].length).toBeGreaterThan(0);
   });
 });
@@ -41,16 +48,55 @@ describe('generateBattlefield', () => {
     }
   });
 
-  it('keeps obstacles off and away from the deployment zone, off the seize tile, and apart', () => {
-    for (const seed of SEEDS) {
-      const { obstacles, deploymentZone, seizeTile } = field('forest', seed, [10, 14]);
-      for (const a of obstacles) {
-        expect(key(a)).not.toBe(key(seizeTile));
-        for (const d of deploymentZone) expect(Math.max(Math.abs(a.x - d.x), Math.abs(a.y - d.y))).toBeGreaterThan(1);
-        for (const b of obstacles) {
-          if (a !== b) expect(Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y))).toBeGreaterThan(1);
+  it('keeps obstacles off and away from the deployment zone and off the seize tile', () => {
+    for (const kind of BATTLEFIELD_KINDS) {
+      for (const seed of SEEDS) {
+        const { obstacles, deploymentZone, seizeTile } = field(kind, seed, [10, 14]);
+        for (const a of obstacles) {
+          expect(key(a)).not.toBe(key(seizeTile));
+          for (const d of deploymentZone) expect(Math.max(Math.abs(a.x - d.x), Math.abs(a.y - d.y))).toBeGreaterThan(1);
         }
       }
+    }
+  });
+
+  it('never walls a cell off', () => {
+    for (const kind of BATTLEFIELD_KINDS) {
+      for (const seed of SEEDS) {
+        const { grid, obstacles, deploymentZone } = field(kind, seed, [14, 20]);
+        const open = grid.cells.filter((c) => getMoveCost(c.terrain) < Infinity);
+        expect(checkMap({ grid, buildings: [], deploymentZone, enemyTiles: open })).toEqual([]);
+        expect(obstacles.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('runs a fence along a row of the plains, broken in at least one place', () => {
+    let fenced = 0;
+    for (const seed of SEEDS) {
+      const { obstacles } = field('plains', seed);
+      const fence = obstacles.filter(({ obstacle }) => obstacle === 'fence' || obstacle === 'brokenFence');
+      if (fence.length === 0) continue;
+      fenced++;
+      expect(fence.length).toBeGreaterThanOrEqual(3);
+      expect(new Set(fence.map(({ y }) => y)).size).toBe(1);
+      const xs = fence.map(({ x }) => x).sort((a, b) => a - b);
+      expect(xs.at(-1)! - xs[0]).toBe(xs.length - 1);
+      expect(fence.some(({ obstacle }) => obstacle === 'brokenFence')).toBe(true);
+    }
+    expect(fenced).toBeGreaterThan(SEEDS.length * 0.7);
+  });
+
+  it('stacks a cache of supplies in the middle of the field', () => {
+    for (const kind of BATTLEFIELD_KINDS) {
+      let cached = 0;
+      for (const seed of SEEDS) {
+        const { obstacles } = field(kind, seed);
+        const anchors = obstacles.filter(({ obstacle }) => BATTLEFIELD_LAYOUTS[kind].cache.includes(obstacle));
+        const stacked = anchors.find((a) => obstacles.some((b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y) === 1));
+        if (stacked) cached++;
+      }
+      expect(cached).toBeGreaterThan(SEEDS.length * 0.7);
     }
   });
 

@@ -4,7 +4,6 @@ import {
   getBuildingSprites,
   getCrossingSprites,
   getFeatureSprites,
-  getObstacleSprites,
   getPaintedObstacles,
   getHazardSprites,
   getWallAutotile,
@@ -23,7 +22,6 @@ import {
   DEFAULT_BUILDING_PALETTE,
   FOREST_ART,
   MOUNTAIN_ART,
-  OBSTACLE_ART,
   SPIKES_ART,
   TERRAIN64_PROPS_SHEET,
   TERRAIN_SHEET,
@@ -293,14 +291,6 @@ describe('GATE_ART', () => {
   });
 });
 
-describe('getObstacleSprites', () => {
-  it('stands each obstacle on its cell as its art', () => {
-    expect(getObstacleSprites([{ x: 2, y: 3, obstacle: 'rock' }], OBSTACLE_ART)).toEqual([
-      { x: 2, y: 3, tile: OBSTACLE_ART.rock.tile, layer: 'ground', sheet: OBSTACLE_ART.rock.sheet },
-    ]);
-  });
-});
-
 describe('getPaintedObstacles', () => {
   const art = {
     rock: ['r1', 'r2'],
@@ -310,6 +300,15 @@ describe('getPaintedObstacles', () => {
     thicket: ['t'],
     crag: ['c'],
     cactus: ['k'],
+    fence: ['f'],
+    brokenFence: ['fb'],
+    barrels: ['ba'],
+    crates: ['cr'],
+    cart: ['ca'],
+    wheel: ['w'],
+    sack: ['sa'],
+    stump: ['st'],
+    signpost: ['si'],
   };
 
   it('stands each obstacle on its cell as one of its kind’s images', () => {

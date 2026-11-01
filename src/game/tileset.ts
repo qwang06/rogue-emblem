@@ -14,7 +14,7 @@
 
 import type { SheetTile } from './autotile.ts';
 import type { WangSet } from './wangTiles.ts';
-import type { ObstacleKind } from './battlefields.ts';
+import type { NaturalObstacle, ObstacleKind } from './battlefields.ts';
 import type { BuildingKind } from './buildings.ts';
 import type { Facing } from './facing.ts';
 import type { ArrowPiece } from './moveArrow.ts';
@@ -132,7 +132,7 @@ export const MOUNTAIN_ART: FeatureArt = {
 // The art each battlefield obstacle (battlefields.ts) stands as, a tile of
 // `sheet`. Placeholders off the 64px props sheet until obstacles get art
 // of their own: the desert's cactus is a crag for now.
-export const OBSTACLE_ART: Readonly<Record<ObstacleKind, { sheet: typeof TERRAIN64_PROPS_SHEET; tile: SheetTile }>> =
+export const OBSTACLE_ART: Readonly<Record<NaturalObstacle, { sheet: typeof TERRAIN64_PROPS_SHEET; tile: SheetTile }>> =
   Object.freeze({
     rock: { sheet: TERRAIN64_PROPS_SHEET, tile: [7, 0] },
     boulder: { sheet: TERRAIN64_PROPS_SHEET, tile: [4, 2] },
@@ -146,7 +146,8 @@ export const OBSTACLE_ART: Readonly<Record<ObstacleKind, { sheet: typeof TERRAIN
 // The painted art each battlefield obstacle stands as, in place of
 // OBSTACLE_ART on a battlefield: texture keys of SPRITES, each one image
 // the size of a tile with the obstacle's base where a unit's feet go and
-// its own painted shadow falling to the lower right. A
+// its own painted shadow falling to the lower right (a fence's runs the
+// tile's full width, so a fence line joins up). A
 // kind with several picks one per cell (getPaintedObstacles in mapArt.ts).
 export const PAINTED_OBSTACLES: Readonly<Record<ObstacleKind, readonly string[]>> = Object.freeze({
   rock: ['Obstacle_rock_1', 'Obstacle_rock_2'],
@@ -156,6 +157,15 @@ export const PAINTED_OBSTACLES: Readonly<Record<ObstacleKind, readonly string[]>
   thicket: ['Obstacle_thicket'],
   crag: ['Obstacle_crag'],
   cactus: ['Obstacle_cactus'],
+  fence: ['Obstacle_fence'],
+  brokenFence: ['Obstacle_fence_broken'],
+  barrels: ['Obstacle_barrels'],
+  crates: ['Obstacle_crates'],
+  cart: ['Obstacle_cart'],
+  wheel: ['Obstacle_wheel'],
+  sack: ['Obstacle_sack'],
+  stump: ['Obstacle_stump'],
+  signpost: ['Obstacle_signpost'],
 });
 
 // Where each building kind sits on the terrain sheet in its block's first
