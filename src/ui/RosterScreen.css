@@ -1,9 +1,10 @@
 /* ---- Roster screen: formation layout ---------------------------------- */
 
 /* The roster screen as a tactics game's formation screen: the unit list
-   down the left, the picked unit's status sheet (RosterUnitSheet) on the
-   right with its inventory and the convoy under it. Every box has a fixed
-   size so paging through units or moving items never reflows anything
+   down the left, and on the right one panel with Stats, Skills and Items
+   tabs (the sheets in RosterUnitSheet; the inventory beside the convoy).
+   Every box has a fixed size, the panel the same on every tab, so paging
+   through units, switching tabs or moving items never reflows anything
    (see "UI layout" in AGENTS.md). The shared row, column and list styles
    are in ui.css's "Roster screen" section. */
 .roster-screen__scroll--wide {
@@ -87,8 +88,62 @@
 .roster-layout__main {
   display: flex;
   flex-direction: column;
-  gap: 10px;
   min-width: 0;
+}
+
+/* ---- The tabbed panel ---- */
+
+.roster-tabs {
+  /* Tall enough for the six inventory slots under their heading. */
+  --tab-body: calc(6 * var(--row) + 2.4rem);
+}
+
+.roster-tabs__strip {
+  display: flex;
+  gap: 4px;
+  padding-left: 8px;
+}
+
+/* A tab hangs over the body's top border; the open one takes the body's
+   color and covers that border, so it reads as the front page. Only
+   colors change, so switching tabs never moves anything. */
+.roster-tabs__tab {
+  position: relative;
+  z-index: 1;
+  margin-bottom: calc(-1 * var(--px));
+  padding: 3px 14px 2px;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+  background: var(--bg);
+  border: var(--border);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  cursor: pointer;
+}
+
+.roster-tabs__tab:hover {
+  color: var(--fg);
+}
+
+.roster-tabs__tab--selected,
+.roster-tabs__tab--selected:hover {
+  color: var(--accent);
+  background: var(--bg-light);
+  border-bottom-color: var(--bg-light);
+  box-shadow: inset 0 calc(2 * var(--px)) 0 var(--accent);
+}
+
+.roster-tabs__body {
+  flex: 1;
+  box-sizing: border-box;
+  min-height: var(--tab-body);
+  padding: 8px;
+  overflow-y: auto;
+  background: var(--bg-light);
+  border: var(--border);
+  border-radius: 0 var(--radius-sm) var(--radius-sm);
 }
 
 .roster-layout__bags {
@@ -105,18 +160,23 @@
 /* ---- The status sheet ---- */
 
 .roster-sheet {
-  /* Three lines of skills or passives before they scroll. */
-  --sheet-list: 3.6rem;
   display: grid;
+  gap: 6px 16px;
+  height: 100%;
+  font-size: 0.8125rem;
+}
+
+.roster-sheet--stats {
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-areas:
-    'identity stats combat'
-    'identity skills passives';
-  gap: 6px 12px;
-  padding: 6px 10px;
-  font-size: 0.75rem;
-  border: var(--border);
-  background: var(--bg-light);
+  grid-template-areas: 'identity stats combat';
+  align-items: start;
+}
+
+/* The skill and passive lists fill the page and scroll past it. */
+.roster-sheet--skills {
+  --sheet-list: calc(var(--tab-body) - 3.4rem);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas: 'skills passives';
 }
 
 .roster-sheet--empty {
@@ -402,12 +462,11 @@
     overflow-y: auto;
   }
 
-  .roster-sheet {
+  .roster-sheet--stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-areas:
       'identity identity'
-      'stats combat'
-      'skills passives';
+      'stats combat';
   }
 }
 
@@ -416,8 +475,13 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .roster-sheet {
+  .roster-sheet--stats {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: 'identity' 'stats' 'combat' 'skills' 'passives';
+    grid-template-areas: 'identity' 'stats' 'combat';
+  }
+
+  .roster-sheet--skills {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'skills' 'passives';
   }
 }

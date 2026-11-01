@@ -17,6 +17,7 @@ import {
   type RosterColumn,
   type RosterItemAction,
   type RosterScreenState,
+  type RosterTab,
 } from '../game/warband/rosterScreen.ts';
 
 export interface RosterUnitView {
@@ -45,6 +46,7 @@ export interface RosterItemView {
 }
 
 export interface RosterScreenView {
+  tab: RosterTab;
   column: RosterColumn;
   unitIndex: number;
   itemIndex: number;
@@ -102,6 +104,7 @@ export function toRosterScreenView(
   const detail = highlighted ? describeItem(lookUpItem(highlighted.itemId, items)) : null;
 
   return Object.freeze({
+    tab: state.tab,
     column: state.column,
     unitIndex: state.unitIndex,
     itemIndex: state.itemIndex,

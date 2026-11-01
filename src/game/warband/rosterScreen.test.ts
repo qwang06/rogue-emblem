@@ -34,7 +34,14 @@ function ids(state: RosterScreenState) {
 describe('moving the cursor', () => {
   it('opens on the first unit', () => {
     const state = openRosterScreen(campRun());
-    expect(state).toMatchObject({ column: 'units', unitIndex: 0, itemIndex: 0, convoyIndex: 0, actions: null });
+    expect(state).toMatchObject({
+      tab: 'stats',
+      column: 'units',
+      unitIndex: 0,
+      itemIndex: 0,
+      convoyIndex: 0,
+      actions: null,
+    });
     expect(getPickedUnit(state)!.id).toBe('alden');
   });
 
@@ -45,18 +52,25 @@ describe('moving the cursor', () => {
     expect(moveRosterCursor(moveRosterCursor(state, 0, 1), 0, 1).unitIndex).toBe(0);
   });
 
-  it('steps between columns, stopping at the ends', () => {
+  it('steps through the tabs, then the Items columns, stopping at the ends', () => {
     const state = openRosterScreen(campRun());
     expect(moveRosterCursor(state, -1, 0)).toBe(state);
-    const items = moveRosterCursor(state, 1, 0);
-    expect(items.column).toBe('items');
+    const skills = moveRosterCursor(state, 1, 0);
+    expect(skills).toMatchObject({ tab: 'skills', column: 'units' });
+    const itemsTab = moveRosterCursor(skills, 1, 0);
+    expect(itemsTab).toMatchObject({ tab: 'items', column: 'units' });
+    const items = moveRosterCursor(itemsTab, 1, 0);
+    expect(items).toMatchObject({ tab: 'items', column: 'items' });
     const convoy = moveRosterCursor(items, 1, 0);
     expect(convoy.column).toBe('convoy');
     expect(moveRosterCursor(convoy, 1, 0)).toBe(convoy);
+    expect(moveRosterCursor(itemsTab, -1, 0)).toMatchObject({ tab: 'skills', column: 'units' });
   });
 
   it('stays put in an empty column', () => {
-    const convoy = moveRosterCursor(moveRosterCursor(openRosterScreen(campRun()), 1, 0), 1, 0);
+    const atItems = confirmRoster(openRosterScreen(campRun()));
+    const convoy = moveRosterCursor(atItems, 1, 0);
+    expect(convoy.column).toBe('convoy');
     expect(moveRosterCursor(convoy, 0, 1)).toBe(convoy);
   });
 
@@ -68,6 +82,25 @@ describe('moving the cursor', () => {
     const moved = moveRosterCursor({ ...atLastItem, column: 'units' }, 0, 1);
     expect(moved.unitIndex).toBe(1);
     expect(moved.itemIndex).toBe(0);
+  });
+});
+
+describe('tabs', () => {
+  it('opens a tab, leaving the units picked', () => {
+    const state = moveRosterCursor(openRosterScreen(campRun()), 0, 1);
+    expect(pointRosterCursor(state, 'tabs', 1)).toMatchObject({ tab: 'skills', column: 'units', unitIndex: 1 });
+    expect(pointRosterCursor(state, 'tabs', 0)).toBe(state);
+    expect(pointRosterCursor(state, 'tabs', 3)).toBe(state);
+  });
+
+  it('puts the cursor back on the units, closing actions, when leaving Items', () => {
+    const open = confirmRoster(pointRosterCursor(openRosterScreen(campRun()), 'items', 0));
+    expect(open.actions).not.toBeNull();
+    expect(pointRosterCursor(open, 'tabs', 0)).toMatchObject({ tab: 'stats', column: 'units', actions: null });
+  });
+
+  it('opens the Items tab when pointing at an item', () => {
+    expect(pointRosterCursor(openRosterScreen(campRun()), 'items', 1)).toMatchObject({ tab: 'items', column: 'items' });
   });
 });
 
@@ -122,7 +155,8 @@ describe('item actions', () => {
   it('offers nothing for an empty inventory', () => {
     const run = campRun();
     const bare = { ...run, roster: [{ ...run.roster[0], items: [] }] };
-    const state = moveRosterCursor(openRosterScreen(bare), 1, 0);
+    const state = confirmRoster(openRosterScreen(bare));
+    expect(state.column).toBe('items');
     expect(getItemActions(state)).toEqual([]);
     expect(confirmRoster(state)).toBe(state);
   });
@@ -130,7 +164,7 @@ describe('item actions', () => {
 
 describe('confirming', () => {
   it('moves from a unit into its items', () => {
-    expect(confirmRoster(openRosterScreen(campRun())).column).toBe('items');
+    expect(confirmRoster(openRosterScreen(campRun()))).toMatchObject({ tab: 'items', column: 'items' });
   });
 
   it('stores an item through its actions', () => {

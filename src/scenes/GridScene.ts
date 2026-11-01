@@ -3801,7 +3801,8 @@ export class GridScene extends Phaser.Scene {
         case 'select-roster':
           if (!this.rosterScreen) break;
           this.publishRosterScreen(pointRosterCursor(this.rosterScreen, command.target, command.index));
-          if (command.type === 'select-roster') result.confirm = true;
+          // Clicking a tab only opens it.
+          if (command.type === 'select-roster' && command.target !== 'tabs') result.confirm = true;
           break;
         case 'hover-merchant':
         case 'select-merchant':
