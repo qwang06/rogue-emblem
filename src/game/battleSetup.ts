@@ -11,6 +11,8 @@ import { getRegionStages, getStageRegion, type RegionSettings } from './warband/
 import { getBattleSeed, getStageSeed, restoreRoster, restoreUnit, type RunState } from './warband/run.ts';
 import { GUEST_UNIT_ID, rollGuest } from './warband/recruitment.ts';
 import { setUnit } from './grid.ts';
+import { createUnitOfClass } from './unitClasses.ts';
+import type { Team } from './turns.ts';
 import { getMoveCost } from './movement.ts';
 import { createStageLevel, pickStageArchetype, withArchetype } from './warband/stageLevel.ts';
 import { pickStageObjective, placeObjective } from './warband/stageObjective.ts';
@@ -104,6 +106,32 @@ export function createBattleLevel(
       let level = setup.run
         ? createStageLevel(setup.seed, region, restoreRoster(setup.run), setup.run.deployCap, lootCount)
         : createStageLevel(setup.seed, region, undefined, undefined, lootCount);
+      if (!setup.run && typeof window !== 'undefined' && window.location.search.includes('outline=')) {
+        // TRIAL: a lineup of painted units on both sides
+        const lineup: [string, Team][] = [
+          ['warrior', 'player'], ['archer', 'player'], ['sage', 'player'], ['guard', 'player'], ['acolyte', 'player'],
+          ['soldier', 'enemy'], ['goblin', 'enemy'], ['orc', 'enemy'], ['skeleton', 'enemy'], ['wolf', 'enemy'],
+        ];
+        const { width, height } = level.grid;
+        const used = new Set<string>();
+        const near = (tx: number, ty: number) =>
+          level.grid.cells
+            .filter((c) => !c.unitId && !used.has(`${c.x},${c.y}`) && getMoveCost(c.terrain) < Infinity)
+            .sort((p, q) => Math.hypot(p.x - tx, (p.y - ty) * 1.6) - Math.hypot(q.x - tx, (q.y - ty) * 1.6))[0];
+        const units = new Map(level.units);
+        let grid = level.grid;
+        lineup.forEach(([cls, team], i) => {
+          const k = i % 5;
+          const tx = team === 'player' ? width * 0.36 + (k % 2) : width * 0.58 + (k % 2);
+          const cell = near(tx, height * 0.4 + k);
+          if (!cell) return;
+          used.add(`${cell.x},${cell.y}`);
+          const id = `trial-${i}`;
+          units.set(id, createUnitOfClass(cls, { name: cls, team }));
+          grid = setUnit(grid, cell.x, cell.y, id);
+        });
+        level = { ...level, grid, units };
+      }
       const guest = setup.run && rollGuest(setup.run);
       if (guest) {
         const zone = new Set(level.deploymentZone.map(({ x, y }) => `${x},${y}`));

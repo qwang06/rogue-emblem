@@ -273,6 +273,7 @@ import {
 import { CRIT_SHAKE, getLungeDistance, getStrikeJuice, type Shake } from './hitJuice.ts';
 import { addCastShadow, addTreeShadow, addUnitShadow } from './unitShadow.ts';
 import { addUnitOutline } from './unitOutline.ts';
+import { addHalo, addTeamMarker, addTeamRing, getTrialStyle } from './unitMarkerTrial.ts';
 import { addUnitRig, faceRigToward, playRigAction, setRigMotion } from './unitRig.ts';
 import { addRankBadge } from './rankBadge.ts';
 import type { Menu } from '../game/actionMenu.ts';
@@ -3901,9 +3902,16 @@ export class GridScene extends Phaser.Scene {
         .setOrigin(origin.x, origin.y)
         .setDisplaySize(TILE_SIZE * PAINTED_UNIT_SCALE, TILE_SIZE * PAINTED_UNIT_SCALE);
     }
-    const outline = addUnitOutline(this, sprite, UNIT_OUTLINE.colors[unit.team]);
+    const style = getTrialStyle();
+    const color = UNIT_OUTLINE.colors[unit.team];
+    const parts: Phaser.GameObjects.Image[] = [];
+    if (style === 'current') parts.push(addUnitOutline(this, sprite, color));
+    if (style === 'glow' || style === 'rim') parts.push(addHalo(this, sprite, unit.team, style, color));
+    if (style === 'ringrim') parts.push(addHalo(this, sprite, unit.team, 'rim', color));
+    if (style === 'ring' || style === 'ringrim') addTeamRing(this, sprite, color);
+    if (style === 'marker') addTeamMarker(this, sprite, color);
     if (isSingleImageUnit(art)) {
-      addUnitRig(this, sprite, unit.team === 'enemy' ? -1 : 1, [outline], getSingleImageWalk(art));
+      addUnitRig(this, sprite, unit.team === 'enemy' ? -1 : 1, parts, getSingleImageWalk(art));
     }
     // A battlefield's painted floor gets a soft shadow, a terrain map the crisp blob.
     if (this.battlefieldKind) addUnitShadow(this, sprite, SOFT_UNIT_SHADOW, true);
