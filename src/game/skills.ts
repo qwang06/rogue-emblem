@@ -299,16 +299,6 @@ export function findUnitSkill(unit: SkillUser, skillId: string, trees: SkillTree
   return getUnitSkills(unit, trees).find((skill) => skill.id === skillId) ?? null;
 }
 
-// Finds a skill the unit knows by id, or null.
-export function findLearnedSkill(
-  unitClass: string | null,
-  level: number,
-  skillId: string,
-  trees: SkillTrees = SKILL_TREES,
-): Skill | null {
-  return getLearnedSkills(unitClass, level, trees).find((skill) => skill.id === skillId) ?? null;
-}
-
 // Damage a skill deals when `user` uses it on `defender`: the user's
 // regular hit (calculateDamage, of its weapon's damage type and with its
 // weapon's might) with the skill's `might` added to its attack power,

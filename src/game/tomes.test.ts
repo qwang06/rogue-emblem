@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createInventory, HEALTH_POTION, MAX_INVENTORY_SLOTS } from './items.ts';
-import { getTomeSpell, getUsesToLearn, isTome, knowsSpell, learnSpell, recordTomeUse, type Tome } from './tomes.ts';
+import { getTomeSpell, isTome, knowsSpell, learnSpell, recordTomeUse, type Tome } from './tomes.ts';
 import { FIRE, FIRE_SPELL, IRON_SPEAR, NATURAL_WEAPON_IDS, WEAPONS, weaponEntry } from './weapons.ts';
 
 const FIRE_TOME = FIRE as Tome;
@@ -50,7 +50,7 @@ describe('recordTomeUse', () => {
       expect(result).toEqual({ progress: { fire: strike }, learned: false });
       progress = result.progress;
     }
-    expect(getUsesToLearn(progress, FIRE_TOME)).toBe(1);
+    expect(progress).toEqual({ fire: 4 });
     expect(recordTomeUse(progress, FIRE_TOME)).toEqual({ progress: {}, learned: true });
   });
 
@@ -65,13 +65,6 @@ describe('recordTomeUse', () => {
   it('learns on the first strike from a tome that teaches after one', () => {
     const quick = { ...FIRE_TOME, teaches: { spellId: 'fire-spell', afterUses: 1 } };
     expect(recordTomeUse({}, quick).learned).toBe(true);
-  });
-});
-
-describe('getUsesToLearn', () => {
-  it('is the full count with no progress, never below zero', () => {
-    expect(getUsesToLearn({}, FIRE_TOME)).toBe(5);
-    expect(getUsesToLearn({ fire: 9 }, FIRE_TOME)).toBe(0);
   });
 });
 

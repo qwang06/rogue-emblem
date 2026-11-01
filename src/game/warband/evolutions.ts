@@ -172,11 +172,6 @@ export function getEvolutions(unit: EvolutionHolder, relics: readonly string[]):
   return EVOLUTIONS.filter((candidate) => hasEvolution(unit, relics, candidate));
 }
 
-// Every modifier `unit`'s evolutions give, in order.
-export function getEvolutionModifiers(unit: EvolutionHolder, relics: readonly string[]): Modifier[] {
-  return getEvolutions(unit, relics).flatMap((candidate) => candidate.modifiers);
-}
-
 // The evolutions `after` has that `before` didn't (the same unit before
 // and after a boon, a promotion or a new relic), in EVOLUTIONS order.
 export function getNewEvolutions(

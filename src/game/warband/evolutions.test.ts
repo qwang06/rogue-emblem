@@ -9,7 +9,6 @@ import {
   completesEvolution,
   EVOLUTIONS,
   findEvolution,
-  getEvolutionModifiers,
   getEvolutions,
   getNewEvolutions,
   hasEvolution,
@@ -66,11 +65,10 @@ describe('hasEvolution', () => {
   });
 });
 
-describe('getEvolutions and getEvolutionModifiers', () => {
+describe('getEvolutions', () => {
   it('lists every evolution a unit has, in order, with their modifiers', () => {
     const unit = { classId: 'archer', boons: ['keen-eye', 'deadly', 'stalwart'] };
     expect(getEvolutions(unit, ['bulwark-crest']).map(({ id }) => id)).toEqual(['volley', 'juggernaut']);
-    expect(getEvolutionModifiers(unit, ['bulwark-crest'])).toEqual([...volley.modifiers, ...juggernaut.modifiers]);
     expect(getEvolutions({ classId: 'archer' }, [])).toEqual([]);
   });
 });

@@ -5,7 +5,6 @@ import type { Unit } from '../Unit.ts';
 import { getRestCost, REST_COST } from './camp.ts';
 import {
   applyHeatToClearGold,
-  findHeatLevel,
   getHeatRules,
   getRunHeat,
   getRunHeatRules,
@@ -27,8 +26,6 @@ describe('HEAT_LEVELS', () => {
   it('numbers its levels from 1, each with a name and a rule', () => {
     expect(HEAT_LEVELS.map(({ level }) => level)).toEqual(Array.from({ length: MAX_HEAT }, (_, i) => i + 1));
     expect(HEAT_LEVELS.every(({ name, description }) => name.length > 0 && description.length > 0)).toBe(true);
-    expect(findHeatLevel(1)?.name).toBe('Hardened Foes');
-    expect(findHeatLevel(0)).toBeNull();
   });
 });
 

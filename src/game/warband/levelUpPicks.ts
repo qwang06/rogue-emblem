@@ -11,7 +11,7 @@ import { GROWTH_STATS, type GrowthStat } from '../experience.ts';
 import { createSeededRng } from '../rng.ts';
 import type { UnitClass } from '../unitClasses.ts';
 import type { Unit } from '../Unit.ts';
-import { getTakenBoonList, rollBoons, takeBoon, type Boon } from './boons.ts';
+import { rollBoons, takeBoon, type Boon } from './boons.ts';
 import { restoreUnit, snapshotUnit, type PendingBoon, type RunState, type UnitSnapshot } from './run.ts';
 
 // A boon pick as it's offered: the unit, the level it reached, the boons to
@@ -108,11 +108,6 @@ export function getBattleBoonOffer(
   });
 }
 
-// Whether the run owes any boon pick.
-export function owesBoons(run: RunState): boolean {
-  return (run.pendingBoons?.length ?? 0) > 0;
-}
-
 // The first boon pick the run owes, or null when it owes none. Picks it
 // can't offer (the unit has left the roster, or has nothing left to take)
 // are passed over; settleBoons drops them.
@@ -147,11 +142,6 @@ export function pickBoon(run: RunState, index: number, classes?: readonly UnitCl
   );
   const next = Object.freeze({ ...settled, roster: Object.freeze(roster) });
   return settleBoons(setPending(next, settled.pendingBoons!.slice(1)), classes);
-}
-
-// The boons `unit` has taken, looked up, in the order taken.
-export function getTakenBoons(unit: Pick<UnitSnapshot, 'boons'>): Boon[] {
-  return getTakenBoonList(unit.boons ?? []);
 }
 
 function rollOffer(run: RunState, pending: PendingBoon, classes?: readonly UnitClass[]): BoonOffer | null {

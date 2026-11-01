@@ -22,8 +22,6 @@ export interface Grid {
   cells: Cell[];
 }
 
-export type Corner = 'top-left' | 'bottom-right';
-
 export function createGrid(width: number, height: number, terrain: Terrain = null): Grid {
   const cells: Cell[] = new Array(width * height);
   for (let y = 0; y < height; y++) {
@@ -84,19 +82,6 @@ export function moveUnit(grid: Grid, from: Point, to: Point): Grid {
 export function findUnit(grid: Grid, unitId: string): Point | null {
   const cell = grid.cells.find((c) => c.unitId === unitId);
   return cell ? { x: cell.x, y: cell.y } : null;
-}
-
-// The first `count` tiles in reading order from a corner, as [{ x, y }]:
-// 'top-left' walks rows left to right from the top, 'bottom-right' takes the
-// last `count` tiles of the grid (still returned in reading order). Clamps
-// to the grid's size.
-export function getCornerTiles(grid: Grid, corner: Corner, count: number): Point[] {
-  const n = Math.max(0, Math.min(count, grid.cells.length));
-  let cells: Cell[];
-  if (corner === 'top-left') cells = grid.cells.slice(0, n);
-  else if (corner === 'bottom-right') cells = grid.cells.slice(grid.cells.length - n);
-  else throw new Error(`Unknown corner: ${corner}`);
-  return cells.map(({ x, y }) => ({ x, y }));
 }
 
 // Orthogonal neighbors only — this is a Fire Emblem/Advance Wars style
