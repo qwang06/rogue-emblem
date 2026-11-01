@@ -1,4 +1,6 @@
-// How strong a Warband stage's enemies are: the "surge" curve. An enemy's
+// How strong and how many a Warband stage's enemies are: the "surge"
+// curve. A stage fields at least getStageEnemyCount enemies (its region's
+// groups topped up). An enemy's
 // level is the stage it fights on, plus how far its group stands above the
 // region's weakest (a boss group authored 2 levels up stays 2 up), plus the
 // site's offset (a fort's). From SURGE_FROM_STAGE on, every enemy's stats
@@ -22,18 +24,31 @@ export function getRegionBaseLevel(region: RegionConfig): number {
   return Math.min(...region.enemies.map((group) => group.level ?? 1));
 }
 
-// `region` with each enemy group at level `stage` + `offset` + how far it
-// was authored above the region's base level, never below 1.
+// The fewest enemies stage `stage` fields: 1 + one per ENEMIES_PER_STAGE
+// stages, up to MAX_STAGE_ENEMIES.
+export const ENEMIES_PER_STAGE = 4;
+export const MAX_STAGE_ENEMIES = 8;
+export function getStageEnemyCount(stage: number): number {
+  return Math.min(MAX_STAGE_ENEMIES, 1 + Math.floor(Math.max(0, stage) / ENEMIES_PER_STAGE));
+}
+
+// `region` as stage `stage` plays it: each enemy group at level `stage` +
+// `offset` + how far it was authored above the region's base level (never
+// below 1), and, while it fields fewer than getStageEnemyCount(stage),
+// one more enemy at a time in its groups without a boss (every group when
+// all have one), the biggest first, then in turn. A region already that
+// big keeps its counts.
 export function levelRegionForStage(region: RegionConfig, stage: number, offset = 0): RegionConfig {
   const base = getRegionBaseLevel(region);
-  return Object.freeze({
-    ...region,
-    enemies: Object.freeze(
-      region.enemies.map((group) =>
-        Object.freeze({ ...group, level: Math.max(1, stage + offset + (group.level ?? 1) - base) }),
-      ),
-    ),
-  });
+  const groups = region.enemies.map((group) => ({
+    ...group,
+    level: Math.max(1, stage + offset + (group.level ?? 1) - base),
+  }));
+  const plain = groups.filter((group) => !group.boss);
+  const growing = (plain.length > 0 ? plain : groups).slice().sort((a, b) => b.count - a.count);
+  let missing = getStageEnemyCount(stage) - groups.reduce((sum, group) => sum + group.count, 0);
+  for (let i = 0; missing > 0 && growing.length > 0; i++, missing--) growing[i % growing.length].count++;
+  return Object.freeze({ ...region, enemies: Object.freeze(groups.map((group) => Object.freeze(group))) });
 }
 
 // The percent enemy stats stand at on `stage` with `rate`% surge a stage:

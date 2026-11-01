@@ -4,6 +4,8 @@ import {
   applySurge,
   BASE_SURGE_RATE,
   getRegionBaseLevel,
+  getStageEnemyCount,
+  MAX_STAGE_ENEMIES,
   getSurgePercent,
   levelRegionForStage,
   SURGE_FROM_STAGE,
@@ -80,5 +82,28 @@ describe('applySurge', () => {
     const before = { ...unit };
     applySurge(unit, 100);
     expect({ ...unit }).toEqual(before);
+  });
+});
+
+describe('getStageEnemyCount', () => {
+  it('is 1 more every 4 stages, up to the most', () => {
+    expect([1, 3, 4, 8, 12, 27, 28, 40].map(getStageEnemyCount)).toEqual([1, 1, 2, 3, 4, 7, 8, MAX_STAGE_ENEMIES]);
+  });
+});
+
+describe('levelRegionForStage enemy counts', () => {
+  const counts = (r: RegionConfig) => r.enemies.map((group) => group.count);
+
+  it('tops a small region up to the stage count, biggest group first, then in turn', () => {
+    const small: RegionConfig = { ...region([1, 1]), enemies: [{ count: 1 }, { count: 2 }] };
+    expect(counts(levelRegionForStage(small, 20))).toEqual([2, 4]);
+    expect(counts(levelRegionForStage(small, 1))).toEqual([1, 2]);
+  });
+
+  it('never adds to a boss group while another has none', () => {
+    const bossed: RegionConfig = { ...region([]), enemies: [{ count: 1, boss: 'Chief' }, { count: 1 }] };
+    expect(counts(levelRegionForStage(bossed, 28))).toEqual([1, 7]);
+    const alone: RegionConfig = { ...region([]), enemies: [{ count: 1, boss: 'Chief' }] };
+    expect(counts(levelRegionForStage(alone, 8))).toEqual([3]);
   });
 });

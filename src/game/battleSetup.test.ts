@@ -31,6 +31,8 @@ import {
   withArchetype,
 } from './warband/stageLevel.ts';
 import { pickStageObjective } from './warband/stageObjective.ts';
+import { getStageEnemyCount, getSurgePercent } from './warband/enemyCurve.ts';
+import { WAVE_EVERY, WAVE_LIMIT } from './battle/reinforcements.ts';
 import { Archer } from './Archer.ts';
 import { createDemoLevel, PLAYER_ROSTER } from './demoLevel.ts';
 import { parseCharacters, parseDialogScript } from './dialogScript.ts';
@@ -258,5 +260,23 @@ describe('generatedMap', () => {
 
   it('is null for a region that does not exist', () => {
     expect(generatedMap(9, settings, 3)).toBeNull();
+  });
+});
+
+describe('stage reinforcements', () => {
+  it('sends waves of the region classes from stage 10, at the stage level and surge', () => {
+    const early = createBattleLevel({ mode: 'warband', seed: 3, stage: 9 });
+    expect(early.reinforcements?.waves).toBeUndefined();
+    const late = createBattleLevel({ mode: 'warband', seed: 3, stage: 20 });
+    expect(late.reinforcements).toMatchObject({ level: 20, surgePercent: getSurgePercent(20) });
+    expect(late.reinforcements!.waves).toMatchObject({ every: WAVE_EVERY, limit: WAVE_LIMIT });
+    expect(late.reinforcements!.waves!.classes.length).toBeGreaterThan(0);
+  });
+
+  it('fields the stage enemy count, and creeps in elites', () => {
+    const level = createBattleLevel({ mode: 'warband', seed: 3, stage: 28 });
+    const enemies = [...level.units.values()].filter((unit) => unit.team === 'enemy');
+    expect(enemies.length).toBe(getStageEnemyCount(28));
+    expect(enemies.some((unit) => unit.eliteAffixes.length > 0)).toBe(true);
   });
 });

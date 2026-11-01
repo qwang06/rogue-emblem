@@ -84,3 +84,51 @@ export function applyEliteAffixes(
     }
   }
 }
+
+// Elite creep: past ELITE_CREEP_FROM_STAGE, ordinary battles field elites
+// too. From that stage each enemy has ELITE_CREEP_PERCENT_PER_STAGE% a
+// stage (up to 100%) to carry one affix, and the boss one affix for every
+// BOSS_AFFIX_STAGES stages.
+export const ELITE_CREEP_FROM_STAGE = 5;
+export const ELITE_CREEP_PERCENT_PER_STAGE = 3;
+export const BOSS_AFFIX_STAGES = 6;
+
+// The chance (percent) each enemy of stage `stage` carries an affix.
+export function getEliteCreepChance(stage: number): number {
+  return stage < ELITE_CREEP_FROM_STAGE ? 0 : Math.min(100, ELITE_CREEP_PERCENT_PER_STAGE * stage);
+}
+
+// How many affixes a boss of stage `stage` carries.
+export function getBossAffixCount(stage: number): number {
+  return stage < ELITE_CREEP_FROM_STAGE ? 0 : Math.min(ELITE_AFFIXES.length, Math.floor(stage / BOSS_AFFIX_STAGES));
+}
+
+// Gives the enemies among `units` stage `stage`'s elite creep, rolled
+// from `seed` (so a stage's battle always gets the same): each non-boss
+// enemy, at getEliteCreepChance, one random affix, and the boss
+// (`bossUnitId`) getBossAffixCount different ones, named and ranked as
+// applyEliteAffixes does.
+export function applyEliteCreep(
+  units: ReadonlyMap<string, Unit>,
+  seed: number,
+  stage: number,
+  bossUnitId?: string,
+): void {
+  const chance = getEliteCreepChance(stage);
+  if (chance === 0) return;
+  const rng = createSeededRng((seed ^ Math.imul(stage + 0x51, 0x2c1b3c6d) ^ 0x63726570) >>> 0);
+  for (const [unitId, unit] of units) {
+    if (unit.team !== 'enemy') continue;
+    if (unitId === bossUnitId) {
+      const given = shuffle(rng, ELITE_AFFIXES).slice(0, getBossAffixCount(stage));
+      applyModifiers(
+        unit,
+        given.flatMap((one) => one.modifiers),
+      );
+      unit.eliteAffixes = Object.freeze([...unit.eliteAffixes, ...given.map((one) => one.id)]);
+      continue;
+    }
+    if (rng() * 100 >= chance) continue;
+    applyEliteAffixes(new Map([[unitId, unit]]), [ELITE_AFFIXES[Math.floor(rng() * ELITE_AFFIXES.length)]]);
+  }
+}
