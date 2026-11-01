@@ -98,3 +98,20 @@ export function getFollowCenter(
     y: axis(current.y, focus.y, focus.height, view.height, bounds.y, bounds.height, margin.height),
   };
 }
+
+// The player's zoom on a battlefield, as factors of its usual zoom:
+// ZOOM_LEVELS[DEFAULT_ZOOM_LEVEL] (1) is the usual view.
+export const ZOOM_LEVELS: readonly number[] = Object.freeze([0.5, 0.65, 0.8, 1, 1.25, 1.5, 1.8]);
+export const DEFAULT_ZOOM_LEVEL = ZOOM_LEVELS.indexOf(1);
+
+// The zoom level `delta` steps (+1 in, -1 out) from `level`, held within
+// ZOOM_LEVELS.
+export function stepZoomLevel(level: number, delta: number): number {
+  return Math.min(Math.max(level + Math.sign(delta), 0), ZOOM_LEVELS.length - 1);
+}
+
+// The camera's zoom for zoom `level` over a usual zoom of `base`, never so
+// far out that the canvas shows past the scenery (`minZoom`).
+export function getLevelZoom(base: number, level: number, minZoom: number): number {
+  return Math.max(base * ZOOM_LEVELS[level], minZoom);
+}

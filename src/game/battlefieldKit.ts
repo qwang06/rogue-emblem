@@ -32,6 +32,9 @@ export interface KitPatch {
 export interface BattlefieldKit {
   // World pixels per art pixel: how big the kit's art is drawn.
   scale: number;
+  // World pixels per art pixel for the tiled ground textures (the ground and
+  // its patches), when they're drawn finer than the rest; else `scale`.
+  groundScale?: number;
   // Seamless; tiled over the whole scene.
   ground: KitPiece;
   // The far scenery, its bottom edge fading out over the ground.

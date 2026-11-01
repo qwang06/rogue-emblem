@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { getCameraView, getFitZoom, getFollowCenter, getRenderSize, MAX_PIXEL_RATIO } from './camera.ts';
+import {
+  DEFAULT_ZOOM_LEVEL,
+  getCameraView,
+  getFitZoom,
+  getFollowCenter,
+  getLevelZoom,
+  getRenderSize,
+  MAX_PIXEL_RATIO,
+  stepZoomLevel,
+  ZOOM_LEVELS,
+} from './camera.ts';
 
 const CANVAS = { width: 960, height: 720 };
 
@@ -125,5 +135,27 @@ describe('getFollowCenter', () => {
   it('centers a focus too big for the view and its margin', () => {
     const big = { x: 100, y: 100, width: 380, height: 40 };
     expect(getFollowCenter({ x: 900, y: 120 }, big, view, bounds, margin).x).toBe(290);
+  });
+});
+
+describe('zoom levels', () => {
+  it('starts at the usual zoom', () => {
+    expect(ZOOM_LEVELS[DEFAULT_ZOOM_LEVEL]).toBe(1);
+  });
+
+  it('steps one level in or out per call, whatever the size of the step asked', () => {
+    expect(stepZoomLevel(DEFAULT_ZOOM_LEVEL, 1)).toBe(DEFAULT_ZOOM_LEVEL + 1);
+    expect(stepZoomLevel(DEFAULT_ZOOM_LEVEL, -120)).toBe(DEFAULT_ZOOM_LEVEL - 1);
+    expect(stepZoomLevel(DEFAULT_ZOOM_LEVEL, 0)).toBe(DEFAULT_ZOOM_LEVEL);
+  });
+
+  it('stops at the closest and farthest levels', () => {
+    expect(stepZoomLevel(0, -1)).toBe(0);
+    expect(stepZoomLevel(ZOOM_LEVELS.length - 1, 1)).toBe(ZOOM_LEVELS.length - 1);
+  });
+
+  it('scales the usual zoom, but never below the least zoom', () => {
+    expect(getLevelZoom(2, DEFAULT_ZOOM_LEVEL + 1, 0.5)).toBe(2 * ZOOM_LEVELS[DEFAULT_ZOOM_LEVEL + 1]);
+    expect(getLevelZoom(1, 0, 0.9)).toBe(0.9);
   });
 });

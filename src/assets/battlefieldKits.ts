@@ -25,6 +25,9 @@ import type { BattlefieldKit, KitPiece } from '../game/battlefieldKit.ts';
 const piece = (key: string, width: number, height: number): KitPiece => ({ key: `kit-plains-${key}`, size: [width, height] });
 
 const PLAINS = {
+  // The ground textures' grass and pebbles drawn finer than the rest of the
+  // art, so the props and units standing on them don't look small.
+  groundScale: 0.36,
   ground: piece('ground-grass', 1024, 1024),
   horizon: piece('horizon', 1916, 558),
   // Where the treeline's bushes meet the meadow.

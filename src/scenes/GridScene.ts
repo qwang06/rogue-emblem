@@ -58,7 +58,15 @@ import {
 } from '../game/healing.ts';
 import { findUnitSkill, getSkillActions, getSkillForecast, getUnitSkills, isHealingSkill } from '../game/skills.ts';
 import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange } from '../game/combat.ts';
-import { getCameraView, getFitZoom, getFollowCenter, SCROLL_VIEW_CELLS } from '../game/camera.ts';
+import {
+  DEFAULT_ZOOM_LEVEL,
+  getCameraView,
+  getFitZoom,
+  getFollowCenter,
+  getLevelZoom,
+  SCROLL_VIEW_CELLS,
+  stepZoomLevel,
+} from '../game/camera.ts';
 import { getFramingClumps } from '../game/battlefieldFraming.ts';
 import { getCellTones } from '../game/floorTiles.ts';
 import { layOutKit, type BattlefieldKit, type KitLayer, type KitStanding } from '../game/battlefieldKit.ts';
@@ -303,6 +311,10 @@ const MAX_ZOOM = 3 / GRID_PX;
 // the view's edge before the camera follows it, and how long that pan takes.
 const FOLLOW_MARGIN = 2;
 const FOLLOW_PAN_MS = 140;
+// The player's zoom on a battlefield (an index into ZOOM_LEVELS), set with
+// the mouse wheel or the +/- keys (zoomBy). Kept from battle to battle.
+let zoomLevel = DEFAULT_ZOOM_LEVEL;
+const WHEEL_ZOOM_MS = 160;
 // How dark a battlefield's floor grid is (see renderFloorGrid).
 const FLOOR_GRID_ALPHA = 0.05;
 // The framing clumps' shade: near the camera and out of the light, so dark
@@ -851,23 +863,25 @@ export class GridScene extends Phaser.Scene {
       const fit = Math.min(canvas.width / floor.width, canvas.height / floor.height);
       // A field bigger than SCROLL_VIEW_CELLS is shown at that size's fit
       // (never so far out the page shows past the scenery) and the camera
-      // follows the cursor across it (followCamera).
+      // follows the cursor across it (followCamera); so is any field the
+      // player has zoomed (zoomLevel, getLevelZoom).
       const shown = {
         width: Math.min(this.grid.width, SCROLL_VIEW_CELLS.width) * CELL.width,
         height: Math.min(this.grid.height, SCROLL_VIEW_CELLS.height) * CELL.height + STANDING_OVERHANG,
       };
       const viewFit = Math.min(canvas.width / shown.width, canvas.height / shown.height);
-      this.scrollingCamera = fit < viewFit;
+      const cover = Math.max(canvas.width / scenery.width, canvas.height / scenery.height);
+      const framed = getPaintingCamera(scenery, floor, canvas, fit);
+      this.scrollingCamera = fit < viewFit || zoomLevel !== DEFAULT_ZOOM_LEVEL;
       this.cameraTarget = null;
       if (this.scrollingCamera) {
-        const cover = Math.max(canvas.width / scenery.width, canvas.height / scenery.height);
-        camera.setZoom(Math.max(viewFit, cover));
+        const base = fit < viewFit ? Math.max(viewFit, cover) : framed.zoom;
+        camera.setZoom(getLevelZoom(base, zoomLevel, cover));
         this.followCamera(this.cursor ?? { x: 0, y: 0 }, 0);
         return;
       }
-      const { zoom, center } = getPaintingCamera(scenery, floor, canvas, fit);
-      camera.setZoom(zoom);
-      camera.centerOn(center.x, center.y);
+      camera.setZoom(framed.zoom);
+      camera.centerOn(framed.center.x, framed.center.y);
       this.afterCameraFit();
       return;
     }
@@ -920,7 +934,18 @@ export class GridScene extends Phaser.Scene {
     };
     const current = { x: camera.midPoint.x, y: camera.midPoint.y };
     if (this.cameraTarget) Object.assign(current, this.cameraTarget);
-    const margin = { width: FOLLOW_MARGIN * CELL.width, height: FOLLOW_MARGIN * CELL.height };
+    let margin = { width: FOLLOW_MARGIN * CELL.width, height: FOLLOW_MARGIN * CELL.height };
+    // Zoomed out far enough to see the whole floor, keep all of it in view.
+    const floor = {
+      x: 0,
+      y: -STANDING_OVERHANG,
+      width: this.grid.width * CELL.width,
+      height: this.grid.height * CELL.height + STANDING_OVERHANG,
+    };
+    if (floor.width <= view.width && floor.height <= view.height) {
+      Object.assign(focus, floor);
+      margin = { width: 0, height: 0 };
+    }
     const center = getFollowCenter(current, focus, view, this.battlefieldScene, margin);
     if (this.cameraTarget && center.x === this.cameraTarget.x && center.y === this.cameraTarget.y) return;
     this.cameraTarget = center;
@@ -933,6 +958,16 @@ export class GridScene extends Phaser.Scene {
     camera.pan(center.x, center.y, durationMs, 'Sine.easeOut', true, (_camera: unknown, progress: number) => {
       if (progress === 1) this.afterCameraFit();
     });
+  }
+
+  // Zooms a battlefield one ZOOM_LEVELS step in (`delta` > 0) or out, and
+  // refits the camera around the cursor.
+  zoomBy(delta: number) {
+    if (!this.battlefieldScene || delta === 0) return;
+    const next = stepZoomLevel(zoomLevel, delta);
+    if (next === zoomLevel) return;
+    zoomLevel = next;
+    this.fitCamera();
   }
 
   // After the camera moves: what's placed by screen position follows it.
@@ -3461,6 +3496,23 @@ export class GridScene extends Phaser.Scene {
       const tile = toTile(pointer);
       if (tile && pointer.button === 0) this.pointerQueue.push({ type: 'click-tile', ...tile });
     });
+    // The wheel and the +/- keys zoom a battlefield in and out.
+    // A trackpad sends a stream of small wheel events, so one step at most
+    // every WHEEL_ZOOM_MS.
+    let lastWheelZoom = -Infinity;
+    this.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => {
+      if (dy === 0 || this.time.now - lastWheelZoom < WHEEL_ZOOM_MS) return;
+      lastWheelZoom = this.time.now;
+      this.zoomBy(-dy);
+    });
+    for (const [event, delta] of [
+      ['keydown-PLUS', 1],
+      ['keydown-NUMPAD_ADD', 1],
+      ['keydown-MINUS', -1],
+      ['keydown-NUMPAD_SUBTRACT', -1],
+    ] as const) {
+      this.input.keyboard!.on(event, () => this.zoomBy(delta));
+    }
 
     const unsubscribe = gameCommands.subscribe((command) => this.pointerQueue.push(command));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, unsubscribe);
@@ -3783,11 +3835,11 @@ export class GridScene extends Phaser.Scene {
         this.add
           .tileSprite(piece.x, piece.y, piece.width, piece.height, piece.key)
           .setOrigin(0, 0)
-          .setTileScale(kit.scale)
+          .setTileScale(kit.groundScale ?? kit.scale)
           .setDepth(depths.ground);
         continue;
       }
-      const key = piece.layer === 'patch' ? makePatchTexture(this, piece, kit.scale) : piece.key;
+      const key = piece.layer === 'patch' ? makePatchTexture(this, piece, kit.groundScale ?? kit.scale) : piece.key;
       if (piece.layer === 'patch') patchKeys.push(key);
       const image = this.add
         .image(piece.x, piece.y, key)
