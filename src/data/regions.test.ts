@@ -27,6 +27,13 @@ describe('REGION_SETTINGS', () => {
     }
   });
 
+  // Starship is still being built: in the file, but no stage plays it.
+  it('parks Starship outside the run, with the Hold still the finale', () => {
+    expect(REGION_SETTINGS.parkedRegions?.map((r) => r.name)).toEqual(['Starship']);
+    expect(REGION_CONFIGS.map((r) => r.name)).not.toContain('Starship');
+    expect(REGION_CONFIGS.at(-1)?.name).toBe("Warlord's Hold");
+  });
+
   it('starts on the Meadowlands', () => {
     expect(REGION_CONFIGS[0].name).toBe('Meadowlands');
   });

@@ -372,5 +372,35 @@
       "faction": "crimson",
       "objective": { "kind": "boss" }
     }
+  ],
+  "parkedRegions": [
+    {
+      "name": "Starship",
+      "description": "The decks of a habitable starship: steel plating, coolant channels, machinery stacks and hydroponic planters, held by an azure strike team.",
+      "terrain": {
+        "generator": "planned",
+        "width": 8,
+        "height": 8,
+        "lakes": 1,
+        "lakeSize": [2, 3],
+        "mountains": 2,
+        "mountainSize": [2, 3],
+        "forests": 2,
+        "forestSize": [2, 3],
+        "meadows": 1,
+        "meadowSize": [2, 3],
+        "ruins": 0,
+        "buildings": 2
+      },
+      "enemies": [
+        { "count": 2, "unitClass": "vanguard", "area": { "y": [0, 0.34] }, "level": 7 },
+        { "count": 2, "unitClass": "archer", "area": { "y": [0, 0.34] }, "level": 7 },
+        { "count": 1, "unitClass": "sapper", "area": { "y": [0, 0.34] }, "level": 7 }
+      ],
+      "treeChance": 0,
+      "palette": "b-blue",
+      "faction": "azure",
+      "season": "starship"
+    }
   ]
 }
