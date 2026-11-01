@@ -318,7 +318,6 @@
   height: var(--pointer-h);
   margin-top: calc(var(--pointer-h) / -2);
   background: var(--pointer) center / 100% 100% no-repeat;
-  image-rendering: pixelated;
   animation: pointer-bob 0.8s steps(1) infinite;
 }
 

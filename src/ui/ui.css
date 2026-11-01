@@ -69,11 +69,11 @@
   --radius-sm: 0;
   /* Lifts windows that float over the map off it: a hard pixel drop. */
   --lift: var(--px) var(--px) 0 rgb(0 0 0 / 35%);
-  /* The selection cue: a white gauntlet (10x7 art pixels), drawn hanging
-     off the left of the row it points at. */
+  /* The selection cue: a painted steel gauntlet pointing right (88x44 art,
+     shown at 24x12), drawn hanging off the left of the row it points at. */
   --pointer: url('../assets/ui/hand-pointer.png');
-  --pointer-w: calc(10 * var(--px));
-  --pointer-h: calc(7 * var(--px));
+  --pointer-w: calc(12 * var(--px));
+  --pointer-h: calc(6 * var(--px));
 }
 
 /* Windows set the parchment tokens again, so one opened from the header
@@ -444,11 +444,13 @@ a.header-button {
 
 /* ---- Windows ---------------------------------------------------------- */
 
-/* Every in-game window is a framed parchment box: a 9-slice of pixel art
-   (src/assets/ui/frame-*.png, drawn by the tileset skill's draw-ui-art.js)
-   with a dark brown frame and gold corner plates. `<Frame>` renders one;
+/* Every in-game window is a framed parchment box: a 9-slice of painted art
+   (src/assets/ui/frame-*.png, cut from the section M sheet; see the tileset
+   skill) with a wooden frame and brass corner caps, each 32px slice drawn at
+   16 CSS px. `<Frame>` renders one;
    `.panel` is the same box for windows that predate it. The banner
-   variants are the blue (player) and red (enemy) boxes for phase and turn
+   variants (silver caps on blue, red or green cloth) are the player, enemy
+   and guest boxes for phase and turn
    readouts. */
 .panel,
 .frame {
@@ -458,8 +460,7 @@ a.header-button {
   background: none;
   border-style: solid;
   border-width: calc(8 * var(--px));
-  border-image: url('../assets/ui/frame-parchment.png') 8 fill / calc(8 * var(--px)) stretch;
-  image-rendering: pixelated;
+  border-image: url('../assets/ui/frame-parchment.png') 32 fill / calc(8 * var(--px)) stretch;
 }
 
 .frame--banner {
@@ -958,7 +959,6 @@ kbd {
   height: var(--pointer-h);
   transform: translateY(-50%);
   background: var(--pointer) center / 100% 100% no-repeat;
-  image-rendering: pixelated;
   animation: pointer-bob 0.8s steps(1) infinite;
 }
 
@@ -2575,8 +2575,8 @@ kbd {
 .title-menu {
   --px: 3px;
   /* Set again so the pointer takes the bigger pixel too. */
-  --pointer-w: calc(10 * var(--px));
-  --pointer-h: calc(7 * var(--px));
+  --pointer-w: calc(12 * var(--px));
+  --pointer-h: calc(6 * var(--px));
 
   position: relative;
   flex: none;
@@ -2643,7 +2643,6 @@ kbd {
   height: var(--pointer-h);
   transform: translateY(-50%);
   background: var(--pointer) center / 100% 100% no-repeat;
-  image-rendering: pixelated;
   filter: drop-shadow(0 var(--px) 0 rgb(0 0 0 / 30%));
   animation: pointer-bob 0.8s steps(1) infinite;
 }
@@ -3836,7 +3835,6 @@ textarea.draft-input {
   width: var(--pointer-w);
   height: var(--pointer-h);
   background: var(--pointer) center / 100% 100% no-repeat;
-  image-rendering: pixelated;
   animation: pointer-bob 0.8s steps(1) infinite;
 }
 
@@ -3938,7 +3936,6 @@ textarea.draft-input {
   height: var(--pointer-h);
   transform: translateY(-50%);
   background: var(--pointer) center / 100% 100% no-repeat;
-  image-rendering: pixelated;
   animation: pointer-bob 0.8s steps(1) infinite;
 }
 
