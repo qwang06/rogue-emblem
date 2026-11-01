@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_ZOOM_LEVEL,
   getCameraView,
+  getDragCenter,
   getFitZoom,
   getFollowCenter,
   getLevelZoom,
@@ -157,5 +158,25 @@ describe('zoom levels', () => {
   it('scales the usual zoom, but never below the least zoom', () => {
     expect(getLevelZoom(2, DEFAULT_ZOOM_LEVEL + 1, 0.5)).toBe(2 * ZOOM_LEVELS[DEFAULT_ZOOM_LEVEL + 1]);
     expect(getLevelZoom(1, 0, 0.9)).toBe(0.9);
+  });
+});
+
+describe('getDragCenter', () => {
+  const view = { width: 400, height: 300 };
+  const bounds = { x: 0, y: 0, width: 2000, height: 1000 };
+
+  it('moves the center against the drag, in world pixels', () => {
+    // Dragging 100 canvas pixels right at 2x shows 50 world pixels further left.
+    expect(getDragCenter({ x: 1000, y: 500 }, { x: 100, y: -40 }, 2, view, bounds)).toEqual({ x: 950, y: 520 });
+  });
+
+  it('never shows past the bounds', () => {
+    expect(getDragCenter({ x: 300, y: 200 }, { x: 1000, y: 1000 }, 1, view, bounds)).toEqual({ x: 200, y: 150 });
+    expect(getDragCenter({ x: 1700, y: 800 }, { x: -1000, y: -1000 }, 1, view, bounds)).toEqual({ x: 1800, y: 850 });
+  });
+
+  it('centers on the bounds along an axis the view is bigger than', () => {
+    const narrow = { x: -100, y: 0, width: 300, height: 1000 };
+    expect(getDragCenter({ x: 500, y: 500 }, { x: 80, y: 0 }, 1, view, narrow).x).toBe(50);
   });
 });
