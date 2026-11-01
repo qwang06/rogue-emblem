@@ -7,7 +7,13 @@ import { findUnit } from '../grid.ts';
 import { Soldier } from '../Soldier.ts';
 import { findQuirk } from './quirks.ts';
 import { GUEST_UNIT_ID, hasGuest, isRecruitmentStage, rollDraft, rollGuest, settleDraft } from './recruitment.ts';
-import { DRAFT_CHOICES, MAX_ROSTER_SIZE, RECRUIT_CLASS_IDS, type Reward } from './rewards.ts';
+import {
+  DRAFT_CHOICES,
+  MAX_ROSTER_SIZE,
+  RECRUIT_CLASS_IDS,
+  RECRUIT_VILLAGER_BELOW_LEVEL,
+  type Reward,
+} from './rewards.ts';
 import { advanceStage, createRun, parseRun, restoreRoster, restoreUnit, serializeRun } from './run.ts';
 import { applyRunCommand, finishBattle, getRecruitOffers, getRewardOffers, resumeRunSession } from './runCommands.ts';
 
@@ -114,8 +120,12 @@ describe('recruit drafts', () => {
   const owing = (stage = 2) => ({ ...stageTwo(), pendingDraft: stage });
 
   it('offers DRAFT_CHOICES recruits of different classes, names, ids and quirks', () => {
+    const veteran = (seed: number) => {
+      const run = stageTwo();
+      return { ...run, seed, roster: run.roster.map((unit) => ({ ...unit, level: RECRUIT_VILLAGER_BELOW_LEVEL })) };
+    };
     for (let seed = 0; seed < 20; seed++) {
-      const draft = rollDraft({ ...stageTwo(), seed }, 2);
+      const draft = rollDraft(veteran(seed), 2);
       expect(draft).toHaveLength(DRAFT_CHOICES);
       for (const key of ['classId', 'name', 'id', 'quirk'] as const) {
         expect(new Set(draft.map((unit) => unit[key])).size).toBe(DRAFT_CHOICES);
@@ -126,6 +136,14 @@ describe('recruit drafts', () => {
         expect(unit.name).not.toBe('Alden');
         expect(unit.id).not.toBe('starter');
       }
+    }
+  });
+
+  it('offers only villagers while the warband is below RECRUIT_VILLAGER_BELOW_LEVEL', () => {
+    for (let seed = 0; seed < 20; seed++) {
+      const draft = rollDraft({ ...stageTwo(), seed }, 2);
+      expect(draft.map((unit) => unit.classId)).toEqual(Array(DRAFT_CHOICES).fill('villager'));
+      expect(new Set(draft.map((unit) => unit.name)).size).toBe(DRAFT_CHOICES);
     }
   });
 

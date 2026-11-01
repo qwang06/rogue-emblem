@@ -33,6 +33,7 @@ import {
   PURSE_GOLD,
   PURSE_GOLD_PER_STAGE,
   RECRUIT_CLASS_IDS,
+  RECRUIT_VILLAGER_BELOW_LEVEL,
   REWARD_CHOICES,
   previewRewardHealth,
   rollRecruit,
@@ -299,6 +300,26 @@ describe('rollRecruit', () => {
     expect(second.quirk).toBe('lucky');
   });
 
+  it('is always a villager below RECRUIT_VILLAGER_BELOW_LEVEL, whatever class was asked for', () => {
+    const run = fullRun();
+    const atLevel = (level: number) =>
+      withRoster(
+        run,
+        run.roster.map((unit) => ({ ...unit, level })),
+      );
+    for (let seed = 0; seed < 20; seed++) {
+      expect(rollRecruit(atLevel(RECRUIT_VILLAGER_BELOW_LEVEL - 1), 3, createSeededRng(seed)).classId).toBe('villager');
+      expect(rollRecruit(atLevel(1), 3, createSeededRng(seed), undefined, { classId: 'scout' }).classId).toBe(
+        'villager',
+      );
+    }
+    const scout = rollRecruit(atLevel(RECRUIT_VILLAGER_BELOW_LEVEL), 3, createSeededRng(1), undefined, {
+      classId: 'scout',
+    });
+    expect(scout.classId).toBe('scout');
+    expect(scout.level).toBe(RECRUIT_VILLAGER_BELOW_LEVEL);
+  });
+
   it('comes out at level 1 for an empty roster', () => {
     expect(rollRecruit(withRoster(fullRun(), []), 1, createSeededRng(1)).level).toBe(1);
   });
@@ -549,7 +570,10 @@ describe("the veteran's lesson reward", () => {
 
 describe('rollRecruit options', () => {
   it('uses the given class and skips taken names', () => {
-    const run = fullRun();
+    const run = withRoster(
+      fullRun(),
+      fullRun().roster.map((unit) => ({ ...unit, level: RECRUIT_VILLAGER_BELOW_LEVEL })),
+    );
     const taken = WARBAND_NAMES.filter((name) => name !== 'Dara');
     const unit = rollRecruit(run, 2, createSeededRng(1), undefined, { classId: 'acolyte', takenNames: taken });
     expect(unit.classId).toBe('acolyte');

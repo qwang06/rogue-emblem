@@ -5,7 +5,8 @@
 //   rolled before battle so reloading the same stage brings back the same
 //   person.
 // - A Recruit reward (rewards.ts) opens a draft, Slay the Spire style: a
-//   pick of DRAFT_CHOICES recruits of different classes, each with its own
+//   pick of DRAFT_CHOICES recruits of different classes (all villagers while
+//   the warband is low level, see rollRecruit), each with its own
 //   quirk (quirks.ts), rolled from the run and the stage so a reload offers
 //   the same ones.
 import { createSeededRng, shuffle } from '../rng.ts';
@@ -47,6 +48,7 @@ export function settleGuest(run: RunState, recruit: boolean): RunState {
 
 // The recruits the draft after `stage` offers `run`: DRAFT_CHOICES of them
 // (fewer if there are fewer recruit classes), each of a different class
+// (villagers all, while rollRecruit makes low-level recruits villagers)
 // and with a different name, id and quirk. Always the same for the same
 // run and stage.
 export function rollDraft(run: RunState, stage: number): readonly UnitSnapshot[] {
