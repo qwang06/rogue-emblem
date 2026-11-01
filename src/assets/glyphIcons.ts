@@ -1,4 +1,4 @@
-// Icon id -> URL of its painted icon in src/assets/glyphs/ (one 16x16 PNG
+// Icon id -> URL of its painted icon in src/assets/glyphs/ (one 20x20 PNG
 // per GlyphIcon or StatIcon kind, named by kind; see the tileset skill).
 // Only the React UI shows these, so they stay out of SPRITE_URLS, which
 // GridScene preloads.
