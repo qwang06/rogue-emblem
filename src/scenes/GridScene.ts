@@ -225,13 +225,13 @@ import {
   SPIKES_ART,
   FOREST_ART,
   GATE_ART,
-  MAP_PROPS_SHEET,
   MOUNTAIN_ART,
   STRUCTURE_SPRITES,
   TERRAIN_AUTOTILES,
   TERRAIN_BASE_TILE,
   TERRAIN_SHEET,
   SEASON_TERRAIN_SHEETS,
+  SEASON_PROPS_SHEETS,
   DEFAULT_SEASON,
   TILE_SIZE,
   TREE_SPRITES,
@@ -722,14 +722,15 @@ export class GridScene extends Phaser.Scene {
     const palette = BUILDING_PALETTES[paletteName];
     // The map's terrain, forests, mountains and buildings in its season's art.
     const sheet = SEASON_TERRAIN_SHEETS[level.season ?? DEFAULT_SEASON];
+    const props = SEASON_PROPS_SHEETS[level.season ?? DEFAULT_SEASON];
     this.terrainKey = null; // the last battle's art went with its scene
     this.terrainArt = [];
     this.terrainTimers = [];
     this.drawTerrain = (grid) => {
       this.renderTerrain(grid, { ...TERRAIN_AUTOTILES, wall: getWallAutotile(palette) }, sheet);
       this.renderMapSprites(sheet, [
-        ...getCrossingSprites(grid, BRIDGE_ART, GATE_ART[paletteName], FORD_ART, MAP_PROPS_SHEET),
-        ...getHazardSprites(grid, SPIKES_ART, MAP_PROPS_SHEET),
+        ...getCrossingSprites(grid, BRIDGE_ART, GATE_ART[paletteName], FORD_ART, props),
+        ...getHazardSprites(grid, SPIKES_ART, props),
         ...getFeatureSprites(grid, FOREST_ART, MOUNTAIN_ART),
         ...getBuildingSprites(level.buildings ?? [], palette, BUILDING_ART),
       ]);
