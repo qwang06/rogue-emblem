@@ -2875,7 +2875,7 @@ export class GridScene extends Phaser.Scene {
       case 'item-used':
         this.playRecovery(event.unitId, event.item.stat, event.amount, next);
         return;
-      // A kill's heal plays like a potion; a phase's recoveries pop up as
+      // A kill's or a drain's heal plays like a potion; a phase's recoveries pop up as
       // the phase starts (see continueBattle).
       case 'recovered':
         if (event.trigger !== 'phase') this.playRecovery(event.unitId, event.stat, event.amount, next);

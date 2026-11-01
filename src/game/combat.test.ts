@@ -778,3 +778,72 @@ describe('scaleDamage', () => {
     expect(calculateDamage(attacker, { defense: 4 })).toBe(9);
   });
 });
+
+describe('combat procs', () => {
+  const fighter = (overrides: Partial<Combatant> = {}): Combatant => ({
+    health: 20,
+    maxHealth: 20,
+    strength: 6,
+    defense: 1,
+    skill: 5,
+    speed: 3,
+    luck: 2,
+    weapon: arms({ might: 2, crit: 5 }),
+    ...overrides,
+  });
+  const sides = (strikes: readonly { by: CombatSide }[]) => strikes.map(({ by }) => by);
+
+  it('lets a twin strike roll for one more strike at once, never chaining', () => {
+    const twin = fighter({ modifiers: [{ kind: 'twin-strike', percent: 10 }] });
+    // Hit, no crit, twin; the twin hits, no crit; the counter hits, no crit.
+    const struck = resolveCombat(twin, fighter(), { distance: 1, rng: rolls(0, 0.999, 0, 0, 0.999, 0, 0.999) });
+    expect(sides(struck.strikes)).toEqual(['attacker', 'attacker', 'defender']);
+    expect(struck.defenderHealth).toBe(20 - 14);
+    const missed = resolveCombat(twin, fighter(), { distance: 1, rng: rolls(0, 0.999, 0.5, 0, 0.999) });
+    expect(sides(missed.strikes)).toEqual(['attacker', 'defender']);
+  });
+
+  it('has no twin strike once the weapon has no uses left', () => {
+    const twin = fighter({ modifiers: [{ kind: 'twin-strike', percent: 100 }], weaponUses: 1 });
+    const { strikes } = resolveCombat(twin, fighter(), { distance: 1, rng: rolls(0, 0.999, 0, 0.999) });
+    expect(sides(strikes)).toEqual(['attacker', 'defender']);
+  });
+
+  it('fells a foe a finisher hit leaves at or under its threshold', () => {
+    const finisher = fighter({ modifiers: [{ kind: 'finisher', percent: 50 }] });
+    const felled = resolveCombat(finisher, fighter({ health: 16 }), { distance: 1, rng: rolls(0, 0.999) });
+    expect(felled.strikes).toEqual([
+      { by: 'attacker', target: 'defender', damage: 16, hit: true, crit: false, lethal: true, finished: true },
+    ]);
+    const spared = resolveCombat(finisher, fighter(), { distance: 1, rng: rolls(0, 0.999, 0, 0.999) });
+    expect(spared.defenderHealth).toBe(13);
+  });
+
+  it('heals a lifesteal striker its share of the damage, up to its max HP', () => {
+    const leech = fighter({ health: 10, modifiers: [{ kind: 'lifesteal', percent: 50 }] });
+    const result = resolveCombat(leech, fighter(), { distance: 1, rng: rolls(0, 0.999, 0, 0.999) });
+    expect(result.strikes[0].drain).toBe(3);
+    expect(result.attackerHealth).toBe(10 + 3 - 7);
+    const full = resolveCombat({ ...leech, health: 20 }, fighter(), { distance: 1, rng: rolls(0, 0.999, 0, 0.999) });
+    expect(full.strikes[0].drain).toBeUndefined();
+  });
+
+  it('strikes twice with always-double, slower or not', () => {
+    const berserk = fighter({ modifiers: [{ kind: 'always-double' }] });
+    expect(getStrikeOrder(berserk, fighter(), 1)).toEqual(['attacker', 'defender', 'attacker']);
+    expect(getStrikeOrder(fighter(), berserk, 1)).toEqual(['attacker', 'defender', 'defender']);
+    expect(getCombatForecast(berserk, fighter(), { distance: 1 }).attacker.strikes).toBe(2);
+  });
+
+  it('never misses with sure-hit, and crits by the highest crit multiplier', () => {
+    const eagle = fighter({ modifiers: [{ kind: 'sure-hit' }, { kind: 'crit-multiplier', amount: 4 }] });
+    expect(getCombatForecast(eagle, fighter({ speed: 30 }), { distance: 1 }).attacker.hit).toBe(100);
+    const missRoll = resolveCombat(eagle, fighter(), { distance: 1, rng: rolls(0.999, 0.999, 0, 0.999) });
+    expect(missRoll.strikes[0].hit).toBe(true);
+    const crit = resolveCombat(eagle, fighter({ health: 40, maxHealth: 40 }), {
+      distance: 1,
+      rng: rolls(0, 0, 0, 0.999),
+    });
+    expect(crit.strikes[0].damage).toBe(7 * 4);
+  });
+});

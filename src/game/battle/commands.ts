@@ -141,8 +141,8 @@ export type BattleEvent =
   | { type: 'healed'; unitId: string; targetId: string; amount: number; skill?: Skill }
   | { type: 'item-used'; unitId: string; item: Consumable; amount: number }
   // A modifier's recovery (see modifiers.ts): HP healed on a kill
-  // (`trigger` 'kill'), or HP or MP recovered as the unit's phase starts
-  // ('phase').
+  // (`trigger` 'kill'), drained by a drain skill or a lifesteal strike
+  // ('drain'), or HP or MP recovered as the unit's phase starts ('phase').
   | {
       type: 'recovered';
       unitId: string;
@@ -551,6 +551,8 @@ function resolveAttack(draft: Draft, attackerId: string, target: TargetTile, fro
       broke,
       learned,
     });
+    // A lifesteal strike heals its striker (see resolveCombat).
+    if (strike.drain) recover(draft, strikerId, 'health', strike.drain, 'drain');
     if (!struck.isAlive()) {
       dropLoot(draft, struckId, strikerId);
       defeat(draft, struckId, strikerId);
@@ -879,7 +881,9 @@ function startPhase(draft: Draft, turnState: TurnState) {
   if (turnState.team === 'enemy') runBossHorn(draft);
   for (const unitId of getTeamUnitIds(draft.units, turnState.team)) {
     const { modifiers } = draft.unit(unitId);
-    recover(draft, unitId, 'health', sumModifiers(modifiers, 'phase-heal'), 'phase');
+    const { maxHealth } = draft.unit(unitId);
+    const percentHeal = Math.floor((maxHealth * sumModifiers(modifiers, 'phase-heal-percent')) / 100);
+    recover(draft, unitId, 'health', sumModifiers(modifiers, 'phase-heal') + percentHeal, 'phase');
     recover(draft, unitId, 'mana', sumModifiers(modifiers, 'phase-mana'), 'phase');
   }
 }

@@ -52,8 +52,25 @@ export type Modifier =
   // HP and MP the unit recovers as each of its team's phases starts.
   | { kind: 'phase-heal'; amount: number }
   | { kind: 'phase-mana'; amount: number }
+  // Also as a share of its max HP, in percent, rounded down.
+  | { kind: 'phase-heal-percent'; percent: number }
   | { kind: 'spare-weapon-on-kill' }
-  | { kind: 'skill'; skill: Skill };
+  | { kind: 'skill'; skill: Skill }
+  // Combat procs (see resolveCombat in combat.ts). The percent chance each
+  // of the unit's strikes is followed at once by another (`twin-strike`);
+  // a foe its hit leaves at or under this percent of max HP falls
+  // (`finisher`); the percent of the damage it deals it heals
+  // (`lifesteal`).
+  | { kind: 'twin-strike'; percent: number }
+  | { kind: 'finisher'; percent: number }
+  | { kind: 'lifesteal'; percent: number }
+  // It strikes twice in every exchange, fast enough or not.
+  | { kind: 'always-double' }
+  // Its strikes never miss.
+  | { kind: 'sure-hit' }
+  // Its crits deal this many times the damage instead of CRIT_MULTIPLIER
+  // (the highest one counts).
+  | { kind: 'crit-multiplier'; amount: number };
 
 export type ModifierKind = Modifier['kind'];
 
