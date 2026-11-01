@@ -39,6 +39,7 @@ describe('getSecondaryClassIds', () => {
       'soldier',
       'vanguard',
       'sapper',
+      'beast',
       'siege',
       'acolyte',
     ]);

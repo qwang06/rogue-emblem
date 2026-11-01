@@ -41,7 +41,12 @@ import { getModifierSkills, type Modifier } from './modifiers.ts';
 // but the user. A skill with range 0 is aimed at the user's own tile (an
 // area around itself). `followUp` strikes the target a second time, at that
 // fraction of the first blow's damage. A `status` skill leaves that status
-// (statuses.ts) on every foe it lands on that's still standing.
+// (statuses.ts) on every foe it lands on that's still standing. A skill
+// whose `effect` is 'buff' strikes no one: it gives its `status` to an
+// ally instead (or to every ally its area reaches). A `drain` skill heals
+// the user that share of the damage it dealt foes, rounded up; a `recoil`
+// one costs the user that much HP (never its last); `monsterMight` is
+// power added on top of `might` against a monster.
 
 export interface Skill {
   id: string;
@@ -52,13 +57,16 @@ export interface Skill {
   might?: number;
   damageScale?: number;
   push?: boolean;
-  effect?: 'heal';
+  effect?: 'heal' | 'buff';
   power?: number;
   intelligenceScale?: number;
   area?: SkillArea;
   friendlyFire?: boolean;
   followUp?: number;
   status?: StatusId;
+  drain?: number;
+  recoil?: number;
+  monsterMight?: number;
 }
 
 export type SkillArea = 'sides' | 'line' | 'burst';
@@ -252,6 +260,47 @@ function promotionSkill(id: string, label: string, fields: Partial<Skill>): Skil
   return Object.freeze({ id, label, manaCost: 3, range: 1, animation: 'strike', ...fields });
 }
 
+// A wall of shields: no damage, but every ally next to the user is left
+// Guarded (2 less damage from every hit) until its next phase.
+export const PHALANX = promotionSkill('phalanx', 'Phalanx', {
+  manaCost: 2,
+  range: 0,
+  area: 'burst',
+  effect: 'buff',
+  status: 'guarded',
+  animation: 'mend',
+});
+
+// The ram's covered frame sheltering those beside it: Phalanx's effect.
+export const BULWARK = promotionSkill('bulwark', 'Bulwark', {
+  manaCost: 2,
+  range: 0,
+  area: 'burst',
+  effect: 'buff',
+  status: 'guarded',
+  animation: 'mend',
+});
+
+// A blessing on one ally up to 2 tiles away: it's left Warded (4 less
+// damage from every hit) until its next phase.
+export const WARD = promotionSkill('ward', 'Ward', {
+  manaCost: 2,
+  range: 2,
+  effect: 'buff',
+  status: 'warded',
+  animation: 'mend',
+});
+
+// A gust behind an adjacent ally: it's left Hastened (+2 MOV) until its
+// next phase, so one that hasn't moved yet goes further this turn.
+export const TAILWIND = promotionSkill('tailwind', 'Tailwind', {
+  manaCost: 2,
+  range: 1,
+  effect: 'buff',
+  status: 'hastened',
+  animation: 'mend',
+});
+
 // A blow that splits armor: the user's regular attack with 2 more power on
 // an adjacent foe, which it leaves Sundered (3 more damage from every hit).
 export const SUNDER = promotionSkill('sunder', 'Sunder', { might: 2, status: 'sundered' });
@@ -291,7 +340,17 @@ export const CRUSHING_BLOW = promotionSkill('crushing-blow', 'Crushing Blow', { 
 export const BLAST = promotionSkill('blast', 'Blast', { range: 2, might: 3, animation: 'stone' });
 export const BULWARK_BASH = promotionSkill('bulwark-bash', 'Bulwark Bash', { might: 3 });
 export const HOLY_STRIKE = promotionSkill('holy-strike', 'Holy Strike', { might: 3 });
-export const SMITE = promotionSkill('smite', 'Smite', { range: 2, might: 3, animation: 'stone' });
+// Holy light from up to 2 tiles away: the user's regular attack with 3
+// more power, and 3 more again against a monster.
+export const SMITE = promotionSkill('smite', 'Smite', { range: 2, might: 3, monsterMight: 3, animation: 'stone' });
+
+// The beast's jaws: its regular attack on an adjacent foe, healing it for
+// half the damage dealt.
+export const SAVAGE_BITE = promotionSkill('savage-bite', 'Savage Bite', { manaCost: 1, drain: 0.5 });
+
+// An all-out swing: the user's regular attack with 6 more power on an
+// adjacent foe, at the cost of 3 of its own HP (never its last).
+export const RECKLESS_SWING = promotionSkill('reckless-swing', 'Reckless Swing', { might: 6, recoil: 3 });
 export const FLARE = promotionSkill('flare', 'Flare', { range: 2, might: 4, animation: 'stone' });
 
 // The skills an evolution teaches (see warband/evolutions.ts).
@@ -337,6 +396,7 @@ export const SKILL_TREES: SkillTrees = Object.freeze({
   sapper: promotedTree({ level: SKILL_UNLOCK_LEVEL, skill: BLAST }),
   acolyte: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: MEND })]),
   siege: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: BARRAGE })]),
+  beast: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: SAVAGE_BITE })]),
 });
 
 // unitClass -> the skills a level up can offer a unit of the class to
@@ -344,14 +404,15 @@ export const SKILL_TREES: SkillTrees = Object.freeze({
 // class's. Classes without an entry are offered none.
 export const CLASS_SKILL_PICKS: Readonly<Record<string, readonly Skill[]>> = Object.freeze({
   archer: Object.freeze([PIERCING_SHOT, PINNING_SHOT]),
-  vanguard: Object.freeze([SUNDER]),
-  soldier: Object.freeze([LUNGE]),
+  vanguard: Object.freeze([SUNDER, RECKLESS_SWING]),
+  soldier: Object.freeze([LUNGE, PHALANX]),
   sapper: Object.freeze([SHRAPNEL]),
-  acolyte: Object.freeze([SMITE, PRAYER]),
-  scout: Object.freeze([MARK]),
+  acolyte: Object.freeze([SMITE, PRAYER, WARD]),
+  scout: Object.freeze([MARK, TAILWIND]),
   beast: Object.freeze([WING_BUFFET, ROAR]),
   'beast-rider': Object.freeze([SKEWER, TANDEM_STRIKE]),
   siege: Object.freeze([DEADEYE]),
+  ram: Object.freeze([BULWARK]),
 });
 
 // The skills a level up can offer a unit of `unitClass` (CLASS_SKILL_PICKS).
@@ -439,7 +500,7 @@ export function calculateSkillDamage(skill: Skill, user: SkillFighter, defender:
     weapon: user.weapon,
     bonus: getFighterBonus(user, defender, true),
   };
-  boosted[power] = (user[power] ?? 0) + (skill.might ?? 0);
+  boosted[power] = (user[power] ?? 0) + (skill.might ?? 0) + (defender.monster ? (skill.monsterMight ?? 0) : 0);
   const guarded: DamageStats = {
     defense: defender.defense,
     armorDefense: defender.armorDefense,
@@ -534,6 +595,16 @@ export function getSkillAreaTiles(skill: Pick<Skill, 'area'>, from: Point, targe
   );
 }
 
+// Whether `skill` gives allies a buff rather than striking a foe.
+export function isBuffSkill(skill: Skill): boolean {
+  return skill.effect === 'buff';
+}
+
+// Whether `skill` is used on allies (a heal or a buff) rather than foes.
+export function isSupportSkill(skill: Skill): boolean {
+  return isHealingSkill(skill) || isBuffSkill(skill);
+}
+
 // Whether `skill` mends an ally rather than striking a foe.
 export function isHealingSkill(skill: Skill): boolean {
   return skill.effect === 'heal';
@@ -565,10 +636,15 @@ export function describeSkill(skill: Skill): string {
     if (skill.range === 0) return `Heals every wounded ally next to it for ${skill.power ?? 0} + ${int}.`;
     return `Heals an ally ${reach} for ${skill.power ?? 0} + ${int}.`;
   }
+  const status = skill.status && STATUSES[skill.status];
+  const effect = status?.description.replace(/\.$/, '') ?? '';
+  const leaves = status ? `${status.label} (${effect.charAt(0).toLowerCase()}${effect.slice(1)})` : '';
+  if (isBuffSkill(skill)) {
+    if (skill.range === 0) return `Leaves every ally next to it ${leaves} until your next phase.`;
+    return `Leaves an ally ${reach} ${leaves} until your next phase.`;
+  }
   const scale = skill.damageScale ?? 1;
   if (scale === 0 && skill.push) return `Pushes a foe ${reach} a tile away.`;
-  const status = skill.status && STATUSES[skill.status];
-  const leaves = status ? `${status.label} (${status.description.replace(/\.$/, '').toLowerCase()})` : '';
   if (scale === 0 && status) {
     if (skill.range === 0) return `Leaves every foe next to it ${leaves}.`;
     return `Leaves a foe ${reach} ${leaves}.`;
@@ -582,7 +658,10 @@ export function describeSkill(skill: Skill): string {
     ? `, then a second hit for ${skill.followUp === 0.5 ? 'half' : `${skill.followUp}×`} that`
     : '';
   const after = status ? `, leaving it ${leaves}` : '';
-  return `${hit}${might} on a foe ${reach}${area}${allies}${push}${followUp}${after}.`;
+  const monsters = skill.monsterMight ? ` (+${skill.monsterMight} more against monsters)` : '';
+  const drain = skill.drain ? `, healing it for ${skill.drain === 0.5 ? 'half' : `${skill.drain}×`} the damage` : '';
+  const recoil = skill.recoil ? `, costing it ${skill.recoil} HP` : '';
+  return `${hit}${might}${monsters} on a foe ${reach}${area}${allies}${push}${followUp}${after}${drain}${recoil}.`;
 }
 
 export function canUseSkill(unit: { mana: number }, skill: Skill): boolean {

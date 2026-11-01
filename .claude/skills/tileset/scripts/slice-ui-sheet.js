@@ -171,9 +171,11 @@ write(`${UI}/slider-knob.png`, cut(436, 228, 8, 8));
 // highlight on its right and bottom), a 9-slice with 3px corners.
 write(`${UI}/item-slot.png`, cut(0, 112, 16, 16));
 
-// ---- Icons: 8x8 in a 16px grid from (4, 709) (row A) and (4, 725) (row B),
-// doubled into 16x16 glyphs. See ui-sheet-catalog.md for every icon.
-const icon = (row, col) => cut(4 + 16 * col, row === 'A' ? 709 : 725, 8, 8);
+// ---- Icons: the sheet has each icon three times (plain, gold glow, dark
+// outline); the glyphs use the bottom set, the dark-outlined ones: 10x10
+// in a 16px grid from (3, 772) (row A) and (3, 788) (row B), doubled into
+// 20x20 glyphs. See ui-sheet-catalog.md for every icon.
+const icon = (row, col) => cut(3 + 16 * col, row === 'A' ? 772 : 788, 10, 10);
 const GLYPH_ICONS = {
   auto: icon('B', 4), // a half disc with motion lines (fast forward)
   exp: icon('A', 0), // orange star

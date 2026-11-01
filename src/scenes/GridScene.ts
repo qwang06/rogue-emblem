@@ -61,7 +61,7 @@ import {
   getSkillAreaTiles,
   getSkillForecast,
   getUnitSkills,
-  isHealingSkill,
+  isSupportSkill,
 } from '../game/skills.ts';
 import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange } from '../game/combat.ts';
 import { getFitZoom } from '../game/camera.ts';
@@ -1158,9 +1158,9 @@ export class GridScene extends Phaser.Scene {
       this.publishMenu('skillMenu', null);
       const { unit, unitId, x, y } = this.activeUnit!;
       this.activeSkill = findUnitSkill(unit, skill.id);
-      // A healing skill's reach shows in green, like a staff's. A range-0
+      // A healing or buff skill's reach shows in green, like a staff's. A range-0
       // skill, aimed at the unit itself, shows the area around it.
-      const healing = isHealingSkill(this.activeSkill!);
+      const healing = isSupportSkill(this.activeSkill!);
       const reach =
         this.activeSkill!.range === 0
           ? getSkillAreaTiles(this.activeSkill!, { x, y }, { x, y }).filter((tile) =>
@@ -2585,7 +2585,7 @@ export class GridScene extends Phaser.Scene {
       gameStore.setState({ combatForecast: toCombatForecastView({ forecast, attacker: unit, defender, anchor }) });
       return;
     }
-    if (this.rangeMode === 'skill' && this.activeSkill && !isHealingSkill(this.activeSkill)) {
+    if (this.rangeMode === 'skill' && this.activeSkill && !isSupportSkill(this.activeSkill)) {
       const target = this.getSkillTargetUnderCursor();
       if (!target) {
         gameStore.setState({ combatForecast: null });
@@ -2852,6 +2852,13 @@ export class GridScene extends Phaser.Scene {
       case 'skill':
         this.playSkill(event, next);
         return;
+      case 'recoil': {
+        const sprite = this.unitSprites.get(event.unitId)!;
+        this.showStats(event.unitId, { health: event.health });
+        this.showDamagePopup(sprite, event.damage);
+        playHitFlash(this, sprite, next);
+        return;
+      }
       case 'status':
         this.showDamagePopup(this.unitSprites.get(event.targetId)!, 0, 'status', STATUSES[event.status].label);
         next();
@@ -2871,7 +2878,7 @@ export class GridScene extends Phaser.Scene {
       // A kill's heal plays like a potion; a phase's recoveries pop up as
       // the phase starts (see continueBattle).
       case 'recovered':
-        if (event.trigger === 'kill') this.playRecovery(event.unitId, event.stat, event.amount, next);
+        if (event.trigger !== 'phase') this.playRecovery(event.unitId, event.stat, event.amount, next);
         else next();
         return;
       case 'loot':

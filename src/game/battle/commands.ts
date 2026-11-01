@@ -34,7 +34,7 @@ import { getMovePath, getMovementRange, canMoveAlongPath, type MovementOptions }
 import { getObjectiveOutcome } from '../objectives.ts';
 import { getPushDirection, getPushResult, type PushResult } from '../push.ts';
 import { createResumableRng } from '../rng.ts';
-import { addStatus, type StatusId } from '../statuses.ts';
+import { addStatus, clearStatuses, type StatusId, type StatusKind } from '../statuses.ts';
 import {
   calculateSkillDamage,
   canUseSkill,
@@ -42,6 +42,7 @@ import {
   getFollowUpDamage,
   getSkillAreaTiles,
   getSkillHealAmount,
+  isBuffSkill,
   isHealingSkill,
   type Skill,
 } from '../skills.ts';
@@ -142,7 +143,15 @@ export type BattleEvent =
   // A modifier's recovery (see modifiers.ts): HP healed on a kill
   // (`trigger` 'kill'), or HP or MP recovered as the unit's phase starts
   // ('phase').
-  | { type: 'recovered'; unitId: string; stat: 'health' | 'mana'; amount: number; trigger: 'kill' | 'phase' }
+  | {
+      type: 'recovered';
+      unitId: string;
+      stat: 'health' | 'mana';
+      amount: number;
+      trigger: 'kill' | 'phase' | 'drain';
+    }
+  // A recoil skill cost its user `damage` HP, leaving it `health`.
+  | { type: 'recoil'; unitId: string; damage: number; health: number }
   // A defeated unit's loot went to `unitId`, or to the convoy when `stored`.
   | { type: 'loot'; unitId: string; item: Item; stored: boolean }
   | { type: 'defeated'; unitId: string; at: Point }
@@ -262,18 +271,28 @@ export function woundedAllyOf(units: ReadonlyMap<string, Unit>, healerId: string
   };
 }
 
+// Whether the unit `otherId` is an ally of `unitId`'s, not itself.
+function allyOf(units: ReadonlyMap<string, Unit>, unitId: string) {
+  const user = units.get(unitId);
+  return (otherId: string) => {
+    const other = units.get(otherId);
+    return otherId !== unitId && user !== undefined && other !== undefined && areAllied(other.team, user.team);
+  };
+}
+
 // Whether `skill`, used by `unitId`, affects the unit `otherId`: a wounded
-// ally for a healing skill; for any other, a foe, or for a friendlyFire
-// one anyone but the user.
+// ally for a healing skill, any ally for a buff; for any other, a foe, or
+// for a friendlyFire one anyone but the user.
 function affectedBy(units: ReadonlyMap<string, Unit>, unitId: string, skill: Skill) {
   const user = units.get(unitId)!;
   if (isHealingSkill(skill)) return woundedAllyOf(units, unitId);
+  if (isBuffSkill(skill)) return allyOf(units, unitId);
   if (skill.friendlyFire) return (otherId: string) => otherId !== unitId && units.has(otherId);
   return hostileTo(units, user);
 }
 
 // The tiles the unit `unitId` can use `skill` on from `from`: hostile units
-// in its range, or wounded allies for a healing skill. A skill with range 0
+// in its range, or wounded allies for a healing skill, or allies for a buff. A skill with range 0
 // is aimed at the user's own tile, which it can use when its area holds
 // anyone it affects (getSkillVictims).
 export function getSkillTargets(
@@ -289,8 +308,7 @@ export function getSkillTargets(
     const self = { x: from.x, y: from.y, unitId };
     return getSkillVictims(grid, units, unitId, from, skill, self).length > 0 ? [self] : [];
   }
-  const canTarget = isHealingSkill(skill) ? woundedAllyOf(units, unitId) : hostileTo(units, user);
-  return getAttackTargets(grid, from, skill.range, canTarget);
+  return getAttackTargets(grid, from, skill.range, affectedBy(units, unitId, { ...skill, friendlyFire: false }));
 }
 
 // Everyone `skill`, used by `unitId` from `from` and aimed at `target`,
@@ -553,7 +571,13 @@ function healOnKill(draft: Draft, unitId: string) {
 
 // Restores up to `amount` of a unit's HP or MP for a modifier, with a
 // `recovered` event when that restored anything.
-function recover(draft: Draft, unitId: string, stat: 'health' | 'mana', amount: number, trigger: 'kill' | 'phase') {
+function recover(
+  draft: Draft,
+  unitId: string,
+  stat: 'health' | 'mana',
+  amount: number,
+  trigger: 'kill' | 'phase' | 'drain',
+) {
   if (amount <= 0) return;
   const unit = draft.unit(unitId);
   const restored = Math.min(amount, stat === 'health' ? unit.maxHealth - unit.health : unit.maxMana - unit.mana);
@@ -594,6 +618,10 @@ function useSkill(draft: Draft, unitId: string, skillId: string, target: Point) 
   if (!canUseSkill(user, skill)) draft.fail(`${unitId} can't afford ${skillId}`);
   if (isHealingSkill(skill)) {
     mendWith(draft, unitId, skill, target);
+    return;
+  }
+  if (isBuffSkill(skill)) {
+    buffWith(draft, unitId, skill, target);
     return;
   }
   const from = draft.tileOf(unitId);
@@ -648,6 +676,21 @@ function useSkill(draft: Draft, unitId: string, skillId: string, target: Point) 
   const [aimed] = blows;
   const shoved = skill.push && aimed?.defender.isAlive() ? push(draft, unitId, from, aimed.victim) : null;
   if (shoved) aimed.damage += shoved.damage;
+
+  if (skill.drain) {
+    const dealt = blows
+      .filter(({ defender }) => !areAllied(defender.team, draft.unit(unitId).team))
+      .reduce((sum, { damage }) => sum + damage, 0);
+    recover(draft, unitId, 'health', Math.ceil(dealt * skill.drain), 'drain');
+  }
+  if (skill.recoil) {
+    const self = draft.edit(unitId);
+    const damage = Math.min(skill.recoil, self.health - 1);
+    if (damage > 0) {
+      self.takeDamage(damage);
+      draft.events.push({ type: 'recoil', unitId, damage, health: self.health });
+    }
+  }
 
   let award: ExperienceAward | null = null;
   for (const { victim, defender, damage } of blows) {
@@ -715,6 +758,25 @@ function mendWith(draft: Draft, unitId: string, skill: Skill, target: Point) {
     const amount = getSkillHealAmount(skill, draft.unit(unitId), patient);
     patient.heal(amount);
     draft.events.push({ type: 'healed', unitId, targetId: victim.unitId, amount, skill });
+  }
+  grantExperience(draft, unitId, { amount: HEAL_EXPERIENCE, scaled: true });
+  finishAction(draft, unitId);
+}
+
+// A buff skill on the ally on `target` (or, for a range-0 one, aimed at
+// the user's own tile), and every ally its area reaches: its mana is
+// spent, each is given its status (statuses.ts), and the user earns a
+// heal's XP once.
+function buffWith(draft: Draft, unitId: string, skill: Skill, target: Point) {
+  const from = draft.tileOf(unitId);
+  const targets = getSkillTargets(draft.grid, draft.units, unitId, from, skill);
+  const tile = findTileAt(targets, target) ?? draft.fail(`no ally in reach on (${target.x}, ${target.y})`);
+
+  draft.edit(unitId).spendMana(skill.manaCost);
+  for (const victim of getSkillVictims(draft.grid, draft.units, unitId, from, skill, tile)) {
+    const ally = draft.edit(victim.unitId);
+    ally.statuses = addStatus(ally.statuses, skill.status!);
+    draft.events.push({ type: 'status', unitId, targetId: victim.unitId, status: skill.status! });
   }
   grantExperience(draft, unitId, { amount: HEAL_EXPERIENCE, scaled: true });
   finishAction(draft, unitId);
@@ -797,15 +859,20 @@ function hasGuests(draft: Draft): boolean {
 // Otherwise an enemy phase plays its boss's horn (runBossHorn), and the
 // phase's units recover their phase-heal and phase-mana modifiers' HP and
 // MP.
-// Starts `turnState`'s phase. The statuses on the team whose phase just
-// ended wear off first (statuses.ts).
+// Starts `turnState`'s phase. The debuffs on the team whose phase just
+// ended and the buffs on the team whose phase starts wear off first
+// (statuses.ts).
 function startPhase(draft: Draft, turnState: TurnState) {
-  const ended = draft.turnState?.team;
-  if (ended) {
-    for (const unitId of getTeamUnitIds(draft.units, ended)) {
-      if (draft.unit(unitId).statuses.length > 0) draft.edit(unitId).statuses = Object.freeze([]);
+  const wearOff = (team: TurnState['team'], kind: StatusKind) => {
+    for (const unitId of getTeamUnitIds(draft.units, team)) {
+      const { statuses } = draft.unit(unitId);
+      const left = clearStatuses(statuses, kind);
+      if (left.length !== statuses.length) draft.edit(unitId).statuses = left;
     }
-  }
+  };
+  const ended = draft.turnState?.team;
+  if (ended) wearOff(ended, 'debuff');
+  wearOff(turnState.team, 'buff');
   draft.turnState = turnState;
   draft.events.push({ type: 'phase-started', turnState });
   if (checkOutcome(draft)) return;

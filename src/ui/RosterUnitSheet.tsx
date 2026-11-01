@@ -1,6 +1,5 @@
 import type { UnitDetailView } from '../bridge/views.ts';
 import { getExperienceForLevel } from '../game/experience.ts';
-import { GlyphIcon } from './GlyphIcon.tsx';
 import { getRankLabel, RankBadge } from './RankBadge.tsx';
 import { StatIcon, type StatIconKind } from './StatIcon.tsx';
 import { StatLabel } from './StatLabel.tsx';
@@ -137,11 +136,8 @@ function Skills({ unit }: { unit: UnitDetailView }) {
           {unit.skills.map((skill) => (
             <li key={skill.id} className="roster-sheet__skill">
               <span className="roster-sheet__skill-name">{skill.label}</span>
-              <span className="roster-sheet__skill-cost" title={`${skill.manaCost} MP, range ${skill.range}`}>
-                <GlyphIcon kind="mp" />
-                {skill.manaCost}
-                <GlyphIcon kind="range" />
-                {skill.range}
+              <span className="roster-sheet__skill-cost" title={`Costs ${skill.manaCost} MP, range ${skill.range}`}>
+                {skill.manaCost} MP · Rng {skill.range}
               </span>
             </li>
           ))}

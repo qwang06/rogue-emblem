@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { getFighterBonus } from './combat.ts';
 import { getPhaseMovement } from './enemyAI.ts';
-import { addStatus, getStatusModifiers, isRooted, STATUS_IDS, STATUSES } from './statuses.ts';
+import {
+  addStatus,
+  clearStatuses,
+  getStatusModifiers,
+  getStatusMovement,
+  isRooted,
+  STATUS_IDS,
+  STATUSES,
+} from './statuses.ts';
 
 describe('STATUSES', () => {
   it('describes every status', () => {
@@ -17,6 +25,22 @@ describe('addStatus', () => {
     expect(none).toEqual([]);
     expect(addStatus(rooted, 'rooted')).toBe(rooted);
     expect(addStatus(rooted, 'marked')).toEqual(['rooted', 'marked']);
+  });
+});
+
+describe('clearStatuses', () => {
+  it('drops the statuses of one kind, keeping the rest', () => {
+    expect(clearStatuses(['rooted', 'guarded', 'marked', 'hastened'], 'debuff')).toEqual(['guarded', 'hastened']);
+    expect(clearStatuses(['rooted', 'guarded'], 'buff')).toEqual(['rooted']);
+  });
+});
+
+describe('hastened', () => {
+  it('adds 2 MOV, but not to a rooted unit', () => {
+    expect(getStatusMovement({ statuses: ['hastened'] })).toBe(2);
+    expect(getStatusMovement({})).toBe(0);
+    expect(getPhaseMovement({ movement: 5, statuses: ['hastened'] })).toBe(7);
+    expect(getPhaseMovement({ movement: 5, statuses: ['hastened', 'rooted'] })).toBe(0);
   });
 });
 
