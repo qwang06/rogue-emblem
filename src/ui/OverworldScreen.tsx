@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
-import { INK_STAMP_URLS, SITE_ICON_URLS } from '../assets/realmIcons.ts';
+import { getSiteIconUrl, INK_STAMP_URLS } from '../assets/realmIcons.ts';
 import { gameStore } from '../bridge/gameStore.ts';
 import { getOverworldZoom, toEventView, toOverworldView, type OverworldView } from '../bridge/overworldView.ts';
 import { enterRun, getRunScreen } from '../bridge/warbandFlow.ts';
@@ -271,7 +271,12 @@ function Overworld({ run, realm, onRun }: { run: RunState; realm: Realm; onRun: 
                 onMouseEnter={() => index >= 0 && !walk && setSelected(index)}
                 onClick={() => index >= 0 && travel(index)}
               >
-                <img className="overworld__icon" src={SITE_ICON_URLS[site.kind]} alt="" draggable={false} />
+                <img
+                  className="overworld__icon"
+                  src={getSiteIconUrl(site.kind, site.season)}
+                  alt=""
+                  draggable={false}
+                />
                 <span className={`overworld__pennant overworld__pennant--${pennantOf(site)}`} aria-hidden="true" />
                 {isSelected && <span className="overworld__pointer" aria-hidden="true" />}
                 {labelled && <span className="overworld__label">{site.name}</span>}

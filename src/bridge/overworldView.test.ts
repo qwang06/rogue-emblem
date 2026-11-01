@@ -51,6 +51,17 @@ describe('toOverworldView', () => {
     expect(view.depth).toBe(1);
   });
 
+  it('gives each site the season of the region it plays, summer when the region has none', () => {
+    const view = toOverworldView(home, realm, SETTINGS);
+    for (const site of realm.sites) {
+      const season = SETTINGS.regions[site.region].season ?? 'summer';
+      expect(view.sites.find((shown) => shown.id === site.id)?.season).toBe(season);
+    }
+    expect(new Set(view.sites.map((site) => site.season))).toEqual(
+      new Set(['summer', 'autumn', 'winter', 'underworld']),
+    );
+  });
+
   it('offers a connected branch after a battle even when it belongs to another original road', () => {
     // A 13-stage realm, whose roads from this seed have the junction below.
     const realm = generateRealm(1, { ...SETTINGS, stagesPerRegion: 1, finalStage: 13 });
