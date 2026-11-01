@@ -264,6 +264,8 @@ export const FACTION_BODIES: Readonly<Record<string, string>> = Object.freeze({
   sapper: 'Sapper',
   scout: 'Scout',
   beast: 'Beast',
+  // The whelp wears the Beast's art until it has some of its own.
+  whelp: 'Beast',
   'beast-rider': 'BeastRider',
   siege: 'Siege',
   ram: 'Ram',
@@ -311,8 +313,9 @@ export function getUnitSprite(unitClass: string | null | undefined, faction?: Fa
 // Every unit art the game can show: each faction body in all six
 // versions, then the faction-free art.
 export function getAllUnitArts(): string[] {
+  const bodies = [...new Set(Object.values(FACTION_BODIES))];
   return [
-    ...Object.values(FACTION_BODIES).flatMap((body) => FACTIONS.map((faction) => factionArt(body, faction.id))),
+    ...bodies.flatMap((body) => FACTIONS.map((faction) => factionArt(body, faction.id))),
     ...Object.values(UNIT_SPRITES),
   ];
 }

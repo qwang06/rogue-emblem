@@ -3,14 +3,17 @@
 // purse and how many starting relics it picks. The starting class (the
 // villager) is an origin of one unit (with the class's id, so older runs
 // and scripts naming it still start the same), and renown unlocks the
-// rest (see meta.ts's UNLOCKS): bands that bring a second unit or a twist.
+// rest (see meta.ts's UNLOCKS): bands that bring more units or a twist,
+// none of them stronger at the start than a Villager or two.
 // Pure: createOriginRun builds a new run from one.
 
 import { createUnitOfClass } from '../unitClasses.ts';
 import type { Unit } from '../Unit.ts';
 import { createSeededRng } from '../rng.ts';
 import { generateName } from './names.ts';
-import { createRun, type RunState } from './run.ts';
+import { HEALTH_POTION, MANA_POTION } from '../items.ts';
+import { WHELP_GROWN_LEVEL } from '../Whelp.ts';
+import { createRun, type ItemSnapshot, type RunState } from './run.ts';
 import { STARTING_CLASSES, type StartingClass } from './startingClasses.ts';
 
 export interface Origin {
@@ -21,12 +24,21 @@ export interface Origin {
   // is the leader, whom the player names; the rest get generated names.
   units: readonly string[];
   gold: number;
-  // How many starting relics the run picks, each one of three.
+  // How many starting relics the run picks, each one of three (none for
+  // an origin that starts without).
   relicPicks: number;
+  // The items it starts with in the convoy.
+  convoy: readonly ItemSnapshot[];
 }
 
-function origin(fields: Omit<Origin, 'gold' | 'relicPicks'> & Partial<Origin>): Origin {
-  return Object.freeze({ gold: 0, relicPicks: 1, ...fields, units: Object.freeze([...fields.units]) });
+function origin(fields: Omit<Origin, 'gold' | 'relicPicks' | 'convoy'> & Partial<Origin>): Origin {
+  return Object.freeze({
+    gold: 0,
+    relicPicks: 1,
+    ...fields,
+    units: Object.freeze([...fields.units]),
+    convoy: Object.freeze((fields.convoy ?? []).map((entry) => Object.freeze({ ...entry }))),
+  });
 }
 
 function classOrigin({ id, label, description }: StartingClass): Origin {
@@ -43,41 +55,34 @@ export const MILITIA = origin({
   units: ['villager', 'villager'],
   gold: 20,
 });
-export const SELLSWORDS = origin({
-  id: 'sellswords',
-  label: 'Sellswords',
-  description: 'A Villager and a hired Scout, with 30 gold in the purse.',
-  units: ['villager', 'scout'],
-  gold: 30,
-});
 export const BEAST_TAMER = origin({
   id: 'beast-tamer',
   label: 'Beast Tamer',
-  description: 'A Villager and the winged Beast it raised, but not a coin between them.',
-  units: ['villager', 'beast'],
+  description: `A Villager and the Whelp it raised, which grows into a winged Beast at level ${WHELP_GROWN_LEVEL}. Not a coin between them.`,
+  units: ['villager', 'whelp'],
 });
-export const PILGRIMS = origin({
-  id: 'pilgrims',
-  label: 'Pilgrims',
-  description: 'A Villager escorting an Acolyte who heals, but not a coin between them.',
-  units: ['villager', 'acolyte'],
-});
-export const LONE_WOLF = origin({
-  id: 'lone-wolf',
-  label: 'Lone Wolf',
-  description: 'One Villager alone, who picks two starting relics.',
+export const PEDDLERS = origin({
+  id: 'peddlers',
+  label: 'Peddlers',
+  description: 'One Villager with 60 gold and a pack of potions, to buy its strength at the first merchant.',
   units: ['villager'],
-  relicPicks: 2,
+  gold: 60,
+  convoy: [
+    { itemId: HEALTH_POTION.id, quantity: 1 },
+    { itemId: HEALTH_POTION.id, quantity: 1 },
+    { itemId: MANA_POTION.id, quantity: 1 },
+  ],
+});
+export const SURVIVORS = origin({
+  id: 'survivors',
+  label: 'Survivors',
+  description: 'Three Villagers who escaped a burning village, with no gold and no starting relic.',
+  units: ['villager', 'villager', 'villager'],
+  relicPicks: 0,
 });
 
 // The origins renown unlocks, in the order they unlock (see meta.ts).
-export const UNLOCKABLE_ORIGINS: readonly Origin[] = Object.freeze([
-  MILITIA,
-  SELLSWORDS,
-  BEAST_TAMER,
-  PILGRIMS,
-  LONE_WOLF,
-]);
+export const UNLOCKABLE_ORIGINS: readonly Origin[] = Object.freeze([MILITIA, BEAST_TAMER, PEDDLERS, SURVIVORS]);
 
 // Every origin: the base ones, then the unlockable ones.
 export const ORIGINS: readonly Origin[] = Object.freeze([...BASE_ORIGINS, ...UNLOCKABLE_ORIGINS]);
@@ -87,7 +92,8 @@ export function findOrigin(id: string | undefined): Origin | null {
   return ORIGINS.find((candidate) => candidate.id === id) ?? null;
 }
 
-// How many starting relics `run` picks: its origin's count, else one.
+// How many starting relics `run` picks: its origin's count, else one (a
+// run from before origins, or from one since retired).
 export function getRelicPicks(run: Pick<RunState, 'origin'>): number {
   return findOrigin(run.origin)?.relicPicks ?? 1;
 }
@@ -117,11 +123,17 @@ function pickName(rng: () => number, taken: readonly string[]): string {
 }
 
 // A new run with `seed` started as origin `originId`, its leader named
-// `name`, at Heat `heat`: its warband, its gold, and the origin and Heat
-// kept on the run. Throws on an unknown origin.
+// `name`, at Heat `heat`: its warband, its gold and convoy, and the origin
+// and Heat kept on the run. Throws on an unknown origin.
 export function createOriginRun(seed: number, originId: string, name: string, heat = 0): RunState {
   const origin = findOrigin(originId);
   if (!origin) throw new Error(`Unknown origin: ${originId}`);
   const run = createRun(seed, createOriginWarband(origin, name, seed));
-  return Object.freeze({ ...run, gold: origin.gold, origin: origin.id, ...(heat > 0 && { heat }) });
+  return Object.freeze({
+    ...run,
+    gold: origin.gold,
+    convoy: Object.freeze(origin.convoy.map((entry) => Object.freeze({ ...entry }))),
+    origin: origin.id,
+    ...(heat > 0 && { heat }),
+  });
 }

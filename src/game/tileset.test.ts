@@ -89,13 +89,15 @@ describe('sprite keys', () => {
     }
   });
 
-  it('gives every unit class art of its own, a faction class one per faction', () => {
+  it("gives every unit class art of its own (the whelp borrows the Beast's), a faction class one per faction", () => {
     for (const { id } of UNIT_CLASSES) expect(FACTION_BODIES[id] ?? UNIT_SPRITES[id], id).toBeTruthy();
-    const arts = UNIT_CLASSES.flatMap(({ id }) => FACTIONS.map((faction) => getUnitSprite(id, faction.id)));
+    const classes = UNIT_CLASSES.filter(({ id }) => id !== 'whelp');
+    const arts = classes.flatMap(({ id }) => FACTIONS.map((faction) => getUnitSprite(id, faction.id)));
     expect(new Set(arts).size).toBe(
-      UNIT_CLASSES.filter(({ id }) => FACTION_BODIES[id]).length * FACTIONS.length +
-        UNIT_CLASSES.filter(({ id }) => !FACTION_BODIES[id]).length,
+      classes.filter(({ id }) => FACTION_BODIES[id]).length * FACTIONS.length +
+        classes.filter(({ id }) => !FACTION_BODIES[id]).length,
     );
+    expect(getUnitSprite('whelp', 'rose')).toBe(getUnitSprite('beast', 'rose'));
   });
 });
 

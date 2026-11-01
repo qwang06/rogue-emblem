@@ -12,6 +12,7 @@ import { applyModifiers } from '../modifiers.ts';
 import { getBoonModifiers } from './boons.ts';
 import { getEvolutions } from './evolutions.ts';
 import { getQuirkModifiers } from './quirks.ts';
+import { growUpWhelp } from './whelp.ts';
 import { getRelicModifiers, hasRelic, PHOENIX_FEATHER } from './relics.ts';
 import { MAX_HEAT } from './heat.ts';
 import { EMPTY_CHRONICLE, parseChronicle, recordBattle, type RunChronicle } from './chronicle.ts';
@@ -220,21 +221,24 @@ export function createRun(seed: number, roster: ReadonlyMap<string, Unit>): RunS
 }
 
 // The snapshot of `unit` under unitId `id`. Throws if it has no class,
-// since a snapshot is rebuilt from its class.
+// since a snapshot is rebuilt from its class. A whelp that has come of age
+// is saved grown into a Beast (see whelp.ts).
 export function snapshotUnit(id: string, unit: Unit): UnitSnapshot {
   if (!unit.unitClass) throw new Error(`${unit.name} has no class to snapshot`);
   const stats = Object.fromEntries(STAT_FIELDS.map((field) => [field, unit[field]])) as Record<StatField, number>;
-  return freezeSnapshot({
-    id,
-    name: unit.name,
-    classId: unit.unitClass,
-    ...stats,
-    items: unit.items.map(({ item, quantity }) => ({ itemId: item.id, quantity })),
-    ...(Object.keys(unit.tomeProgress).length > 0 && { tomeProgress: unit.tomeProgress }),
-    ...(unit.boons.length > 0 && { boons: unit.boons }),
-    ...(unit.quirk && { quirk: unit.quirk }),
-    ...(unit.secondaryClass !== null && { secondaryClass: unit.secondaryClass }),
-  });
+  return growUpWhelp(
+    freezeSnapshot({
+      id,
+      name: unit.name,
+      classId: unit.unitClass,
+      ...stats,
+      items: unit.items.map(({ item, quantity }) => ({ itemId: item.id, quantity })),
+      ...(Object.keys(unit.tomeProgress).length > 0 && { tomeProgress: unit.tomeProgress }),
+      ...(unit.boons.length > 0 && { boons: unit.boons }),
+      ...(unit.quirk && { quirk: unit.quirk }),
+      ...(unit.secondaryClass !== null && { secondaryClass: unit.secondaryClass }),
+    }),
+  );
 }
 
 // A player Unit rebuilt from `snapshot`: its class's unit with the
