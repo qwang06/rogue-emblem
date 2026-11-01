@@ -11,6 +11,7 @@
 //   node .claude/skills/tileset/scripts/recolor-season.js starship src/assets/overworld.png src/assets/overworld-starship.png
 
 import { decode, encode } from './dump-png.js';
+import { BUILDING_ART, BUILDING_PALETTES } from '../../../../src/game/tileset.ts';
 
 const [season, input, output] = process.argv.slice(2);
 
@@ -265,6 +266,278 @@ const MACHINE_COMPACT = [
   '................',
 ];
 
+// The starship's buildings (BUILDING_ART), one per kind, drawn in every
+// palette with the palette's color as the accent (A, a); tall kinds also
+// have a top (`<kind>Top`). o outline, H lit, M metal, S shade, K dark,
+// G and g glow, W window, Y warning light, F and f hydroponic greens.
+const SHIP_BUILDINGS = {
+  house: [
+    '................',
+    '................',
+    '................',
+    '.....oooooo.....',
+    '...ooHHMMMMoo...',
+    '..oHHMMMMMMSSo..',
+    '..oHMMMMMMMMSo..',
+    '.oAAAAAAAAAAAAo.',
+    '.oaaaaaaaaaaaao.',
+    '.oHMWWoMMoWWSSo.',
+    '.oHMWWoMMoWWSSo.',
+    '.oHMMMoKKoMMSSo.',
+    '.oHMMMoKKoMMSSo.',
+    '.oKKKKKKKKKKKKo.',
+    '..oooooooooooo..',
+    '................',
+  ],
+  fort: [
+    '................',
+    '................',
+    '................',
+    '................',
+    '..oooooooooooo..',
+    '.oHHHHMMMMMMSSo.',
+    'oHMMMMMMMMMMMSSo',
+    'oAAAAAAAAAAAAAAo',
+    'oHMGMMGMMGMMGSSo',
+    'oHMMMMooooMMMSSo',
+    'oHMMMoKKKKoMMSSo',
+    'oHMMMoKggKoMMSSo',
+    'oHMMMoKKKKoMMSSo',
+    'oKKKKKKKKKKKKKKo',
+    '.oooooooooooooo.',
+    '................',
+  ],
+  temple: [
+    '.......oo.......',
+    '......oGGo......',
+    '......oGgo......',
+    '.....oHMMSo.....',
+    '.....oHMMSo.....',
+    '.....oHAaSo.....',
+    '.....oHAaSo.....',
+    '.....oHMMSo.....',
+    '....oHHMMSSo....',
+    '...oHMMMMMMSo...',
+    '..oAAAAAAAAAAo..',
+    '..oHMMGMMGMMSo..',
+    '.oHMMMMMMMMMSSo.',
+    '.oKKKKKKKKKKKKo.',
+    '..oooooooooooo..',
+    '................',
+  ],
+  windmill: [
+    '................',
+    '....oooo........',
+    '...oHHMMoo......',
+    '..oHMMMMMSo.....',
+    '..oHMMGMMMSo....',
+    '...oHMMMMMSo....',
+    '....oHMMMSo.....',
+    '.....ooSoo......',
+    '.......oMo......',
+    '.......oMo......',
+    '.....ooMMSoo....',
+    '....oHAAAAaSo...',
+    '...oHMMMMMMSSo..',
+    '...oKKKKKKKKKo..',
+    '....ooooooooo...',
+    '................',
+  ],
+  camp: [
+    '................',
+    '................',
+    '...........o....',
+    '...........G....',
+    '..........oKo...',
+    '...........K....',
+    '...........K....',
+    '.ooooooo...K....',
+    '.oHHMMSo...K....',
+    '.oHAAaSo..oKo...',
+    '.oHMMMSoooooooo.',
+    '.oHMMMSoHHMMSSo.',
+    '.oKKKKKoHAAAaSo.',
+    '.ooooooooMMMSSo.',
+    '........oKKKKKo.',
+    '........ooooooo.',
+  ],
+  workshop: [
+    '..oooooooooo....',
+    '..oKKKKKKKKKo...',
+    '..oo.......oKo..',
+    '...o.......oKo..',
+    '...Y.......oKo..',
+    '...........oKo..',
+    '..oooooooooooooo',
+    '.oHHHMMMMMMMMSSo',
+    '.oHAAAAAAAAAAaSo',
+    '.oHMWWMMWWMMWWSo',
+    '.oHMWWMMWWMMWWSo',
+    '.oHMMMMMMMMMMMSo',
+    '.oHMMMooooMMMMSo',
+    '.oKKKKoKKoKKKKKo',
+    '.oooooooooooooo.',
+    '................',
+  ],
+  farm: [
+    '................',
+    '................',
+    '................',
+    '.oooooooooooooo.',
+    '.oHHHHHHHHHHHSo.',
+    '.oHfFfFfFfFfFSo.',
+    '.oHMMMMMMMMMMSo.',
+    '.oHfFfFfFfFfFSo.',
+    '.oHMMMMMMMMMMSo.',
+    '.oHfFfFfFfFfFSo.',
+    '.oHMMMMMMMMMMSo.',
+    '.oHfFfFfFfFfFSo.',
+    '.oAAAAAAAAAAaSo.',
+    '.oKKKKKKKKKKKKo.',
+    '.oooooooooooooo.',
+    '................',
+  ],
+  fountain: [
+    '................',
+    '................',
+    '................',
+    '................',
+    '....oooooooo....',
+    '..ooHHMMMMMSoo..',
+    '.oHMooooooooSSo.',
+    '.oHogGGGGGGgoSo.',
+    'oHMoGGWGGGGGoSSo',
+    'oHMoGGGGGWGGoSSo',
+    '.oHogGGGGGGgoSo.',
+    '.oHMooooooooSSo.',
+    '..oAAAAAAAAaao..',
+    '...oKKKKKKKKo...',
+    '....oooooooo....',
+    '................',
+  ],
+  goldMine: [
+    '................',
+    '................',
+    '................',
+    '.....oooooo.....',
+    '...ooHHMMMSoo...',
+    '..oHHMMMMMMSSo..',
+    '.oHMMMKKKKMMSSo.',
+    '.oHMMKoooKMMSSo.',
+    '.oHMMKoAoKMMSSo.',
+    '.oAAAAAAAAAAaao.',
+    '.oHMMMMMMMMMSSo.',
+    '.oHMoooooMMMSSoo',
+    '.oHMoKKKoMMSoYYo',
+    '.oKKKKKKKKKKoYYo',
+    '.ooooooooooo.oo.',
+    '................',
+  ],
+  mine: [
+    '......oo........',
+    '.....oKKo.......',
+    '.....oKKo.......',
+    '....oKooKo......',
+    '....oK..Ko......',
+    '...oK....Ko.....',
+    '...oKooooKo.....',
+    '..oHHMMMMSSo....',
+    '..oAAAAAAaao....',
+    '..oHMMMMMMSo....',
+    '..oHMMoGoMSo.oo.',
+    '..oHMMMMMMSoKKKo',
+    '..oHMMMoMMSoKoKo',
+    '.oKKKKKoKKKKoKKo',
+    '.oooooooooooooo.',
+    '................',
+  ],
+  towerTop: [
+    '.......oo.......',
+    '.......Gg.......',
+    '.......oo.......',
+    '.......oo.......',
+    '......oHSo......',
+    '......oHSo......',
+    '.....oAAaao.....',
+    '.....oHMMSo.....',
+    '.....oHWWSo.....',
+    '.....oHMMSo.....',
+    '.....oHMMSo.....',
+    '....oHHMMSSo....',
+    '....oHMWWMSo....',
+    '....oHMMMMSo....',
+    '....oHMMMMSo....',
+    '....oHMMMMSo....',
+  ],
+  tower: [
+    '....oHMMMMSo....',
+    '....oHMGgMSo....',
+    '....oHMMMMSo....',
+    '....oAAAAaao....',
+    '....oHMMMMSo....',
+    '....oHMWWMSo....',
+    '....oHMMMMSo....',
+    '...oHHMMMMSSo...',
+    '...oHMMMMMMSo...',
+    '..oHMMMMMMMSSo..',
+    '..oAAAAAAAAaao..',
+    '..oHMMooooMSSo..',
+    '..oHMMoKKoMSSo..',
+    '.oKKKKoKKoKKKKo.',
+    '.oooooooooooooo.',
+    '................',
+  ],
+  castleTop: [
+    '................',
+    '................',
+    '.......oo.......',
+    '.......GG.......',
+    '......oKKo......',
+    '.....oHMMSo.....',
+    '....oHMWWMSo....',
+    '....oHMMMMSo....',
+    '...ooAAAAaaoo...',
+    '..oHHMMMMMMSSo..',
+    '..oHMWWMMWWMSo..',
+    '..oHMMMMMMMMSo..',
+    '.oHHMMMMMMMMSSo.',
+    '.oHMMMMMMMMMMSo.',
+    '.oHMMMMMMMMMMSo.',
+    '.oHMMMMMMMMMMSo.',
+  ],
+  castle: [
+    'oHHMMMMMMMMMMSSo',
+    'oHMGMMGMMGMMGMSo',
+    'oHMMMMMMMMMMMMSo',
+    'oAAAAAAAAAAAAaao',
+    'oHMWWMMMMMMWWMSo',
+    'oHMWWMMMMMMWWMSo',
+    'oHMMMMMMMMMMMMSo',
+    'oHMMMMooooMMMMSo',
+    'oHMMMoKKKKoMMMSo',
+    'oHMMMoKggKoMMMSo',
+    'oHMMMoKKKKoMMMSo',
+    'oHMMMoKKKKoMMMSo',
+    'oKKKKKKKKKKKKKKo',
+    'oooooooooooooooo',
+    '................',
+    '................',
+  ],
+};
+// Each palette's accent (A, a) on the starship's buildings and walls.
+const SHIP_ACCENTS = {
+  'a-stone': ['6ff3ff', '23a9cf'],
+  'a-orange': ['ff9a3c', 'c2621e'],
+  'a-teal': ['3fd6c0', '1f8f86'],
+  'a-pink': ['ff6fb5', 'b83a7c'],
+  'a-brown': ['c79a66', '7a5534'],
+  'b-white': ['e6fdff', '9fb6c4'],
+  'b-red': ['ff4a4a', 'a82424'],
+  'b-blue': ['4a8cff', '2450b0'],
+  'b-green': ['6fe36f', '2f9a3c'],
+  'b-orange': ['ffb03a', 'c27410'],
+};
+
 const SEASONS = {
   // Golden grass and rust meadows; the green building palette keeps its
   // greens (tree shade #3b7d4f is one of them, so it only changes above).
@@ -349,6 +622,7 @@ const SEASONS = {
       colors: { d: '2f5a3c', F: '9ccc5a', f: '5d9a45', h: 'c4e07a', o: '3a4152', P: '8b96a9', g: '6ff3ff' },
     },
     deck: { art: DECK, colors: { b: '5f6879', c: '939dae', a: '7f899b', s: '6b7486', r: 'b4bdcb' } },
+    structures: true,
     machines: {
       colors: {
         o: '262b38',
@@ -454,6 +728,37 @@ if (machines) {
   ]) {
     paint(column, 1, MACHINE_BODIES[body], colors);
     paint(column, 1, MACHINE_CAP, colors, true);
+  }
+}
+
+// The starship's buildings, every kind in every palette (their flag tiles
+// cleared: the accent marks the team), and its walls: every rampart group
+// redrawn in steel by brightness, keeping a little of its color.
+if (config.structures) {
+  const colors = { ...config.machines.colors, W: 'e6fdff', F: '9ccc5a', f: '5d9a45' };
+  for (const [name, palette] of Object.entries(BUILDING_PALETTES)) {
+    const [A, a] = SHIP_ACCENTS[name];
+    const tinted = { ...colors, A, a };
+    for (const [kind, { column, row, tall }] of Object.entries(BUILDING_ART)) {
+      const c = column + palette.buildingColumn;
+      paint(c, row, SHIP_BUILDINGS[kind], tinted);
+      if (tall) paint(c, row - 1, SHIP_BUILDINGS[`${kind}Top`], tinted);
+      paint(c, row - (tall ? 2 : 1), Array(16).fill('................'), tinted);
+    }
+    const [wc, wr] = palette.wall;
+    const steel = ['262b38', '3a4152', '5c6578', '8b96a9', 'c3ccd9', 'e8eef5'].map(rgb);
+    for (let y = wr * TILE; y < (wr + 5) * TILE; y++) {
+      for (let x = wc * TILE; x < (wc + 6) * TILE; x++) {
+        const px = rows[y][x];
+        if (px[3] === 0) continue;
+        const lum = (0.3 * px[0] + 0.59 * px[1] + 0.11 * px[2]) / 255;
+        const t = Math.min(0.999, 0.15 + lum * 0.7) * (steel.length - 1);
+        const [lo, hi, f] = [steel[Math.floor(t)], steel[Math.floor(t) + 1], t % 1];
+        rows[y][x] = [0, 1, 2]
+          .map((i) => Math.round((lo[i] + (hi[i] - lo[i]) * f) * 0.85 + px[i] * 0.15))
+          .concat(px[3]);
+      }
+    }
   }
 }
 
