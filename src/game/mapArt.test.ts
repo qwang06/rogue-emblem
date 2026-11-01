@@ -4,7 +4,6 @@ import {
   getBuildingSprites,
   getCrossingSprites,
   getFeatureSprites,
-  getPaintedObstacles,
   getHazardSprites,
   getWallAutotile,
   pickVariant,
@@ -23,7 +22,6 @@ import {
   FOREST_ART,
   MOUNTAIN_ART,
   SPIKES_ART,
-  TERRAIN64_PROPS_SHEET,
   TERRAIN_SHEET,
   type BuildingPaletteName,
 } from './tileset.ts';
@@ -55,29 +53,6 @@ describe('getFeatureSprites', () => {
     expect(features(['.,~', '#".'])).toEqual([]);
   });
 
-  it('stands a 2x2 forest clump on a 2x2 block of forest', () => {
-    const sprites = features(['TT', 'TT']);
-    const [column, row] = FOREST_ART.big![pickVariant(0, 0, FOREST_ART.big!.length)];
-    expect(sprites.map(({ x, y, tile }) => [x, y, tile])).toEqual([
-      [0, 0, [column, row]],
-      [1, 0, [column + 1, row]],
-      [0, 1, [column, row + 1]],
-      [1, 1, [column + 1, row + 1]],
-    ]);
-    // The back row stands on the front row, for the side view.
-    expect(sprites.map(({ base }) => base)).toEqual([1, 1, undefined, undefined]);
-  });
-
-  it("doesn't mix forest and mountain cells in one block", () => {
-    const sprites = features(['TT', 'T^']);
-    expect(sprites.map(({ tile }) => tile)).toEqual([
-      FOREST_ART.tiles[pickVariant(0, 0, 3)],
-      FOREST_ART.tiles[pickVariant(1, 0, 3)],
-      FOREST_ART.tiles[pickVariant(0, 1, 3)],
-      MOUNTAIN_ART.tiles[pickVariant(1, 1, MOUNTAIN_ART.tiles.length)],
-    ]);
-  });
-
   it('draws a forest variant on each forest cell', () => {
     const sprites = features(['T.', '.T']);
     expect(sprites).toHaveLength(2);
@@ -87,51 +62,42 @@ describe('getFeatureSprites', () => {
     }
   });
 
-  it('draws a one-tile mountain on a mountain cell with no 2x2 block, with nothing spilling north', () => {
-    const sprites = features(['.', '^', '^']);
-    expect(sprites.map(({ x, y }) => [x, y])).toEqual([
-      [0, 1],
-      [0, 2],
-    ]);
-    for (const { tile } of sprites) expect(MOUNTAIN_ART.tiles).toContainEqual(tile);
+  it('caps a lone mountain with a peak in the cell north of it', () => {
+    const sprites = features(['.', '^']);
+    expect(MOUNTAIN_ART.body).toContainEqual(at(sprites, 0, 1)[0].tile);
+    expect(at(sprites, 0, 0)).toEqual([{ x: 0, y: 0, tile: expect.anything(), layer: 'cap' }]);
+    expect(MOUNTAIN_ART.cap).toContainEqual(at(sprites, 0, 0)[0].tile);
   });
 
-  it('stands a 2x2 mountain on a 2x2 block, each cell drawing its quarter', () => {
-    const sprites = features(['^^', '^^']);
-    const [column, row] = MOUNTAIN_ART.big![pickVariant(0, 0, MOUNTAIN_ART.big!.length)];
-    expect(sprites.map(({ x, y, tile }) => [x, y, tile])).toEqual([
-      [0, 0, [column, row]],
-      [1, 0, [column + 1, row]],
-      [0, 1, [column, row + 1]],
-      [1, 1, [column + 1, row + 1]],
-    ]);
+  it('stacks a column of mountains: peak-below bodies over the bottom one, one cap on top', () => {
+    const sprites = features(['.', '^', '^', '^']);
+    expect(MOUNTAIN_ART.peakBelow).toContainEqual(at(sprites, 0, 1)[0].tile);
+    expect(MOUNTAIN_ART.peakBelow).toContainEqual(at(sprites, 0, 2)[0].tile);
+    expect(MOUNTAIN_ART.body).toContainEqual(at(sprites, 0, 3)[0].tile);
+    expect(sprites.filter((s) => s.layer === 'cap')).toEqual([expect.objectContaining({ x: 0, y: 0 })]);
   });
 
-  it('gives each cell to one block at most, leaving the rest one-tile mountains', () => {
-    // A 3x2 range: one 2x2 block on the left, singles on the right column.
-    const sprites = features(['^^^', '^^^']);
-    expect(sprites).toHaveLength(6);
-    const singles = sprites.filter(({ tile }) => MOUNTAIN_ART.tiles.some((t) => t[0] === tile[0] && t[1] === tile[1]));
-    expect(singles.map(({ x, y }) => [x, y])).toEqual([
-      [2, 0],
-      [2, 1],
-    ]);
+  it('bakes the peak into a forest north of a mountain instead of capping it', () => {
+    const sprites = features(['T', '^']);
+    expect(at(sprites, 0, 0)).toHaveLength(1);
+    const forest = at(sprites, 0, 0)[0];
+    expect(forest.layer).toBe('ground');
+    expect(forest.tile).toEqual(FOREST_ART.peakBelow[pickVariant(0, 0, FOREST_ART.tiles.length)]);
   });
 
-  it('pins the prop sheet tiles', () => {
-    const sheet = TERRAIN64_PROPS_SHEET;
-    expect(features(['T^'])).toEqual([
-      { x: 0, y: 0, tile: FOREST_ART.tiles[pickVariant(0, 0, 3)], layer: 'ground', sheet },
-      { x: 1, y: 0, tile: MOUNTAIN_ART.tiles[pickVariant(1, 0, 5)], layer: 'ground', sheet },
-    ]);
-    expect(FOREST_ART.tiles).toEqual([
-      [0, 0],
-      [1, 0],
-      [2, 0],
-    ]);
-    expect(MOUNTAIN_ART.big).toEqual([
-      [0, 3],
-      [2, 3],
+  it('leaves out the cap of a mountain on the top row', () => {
+    const sprites = features(['^']);
+    expect(sprites).toHaveLength(1);
+    expect(sprites[0].layer).toBe('ground');
+  });
+
+  it('pins the sheet tiles of a small range under a forest', () => {
+    expect(features(['T.', '^.', '^^'])).toEqual([
+      { x: 0, y: 0, tile: [8, 1], layer: 'ground' },
+      { x: 0, y: 1, tile: [7, 1], layer: 'ground' },
+      { x: 0, y: 2, tile: [4, 1], layer: 'ground' },
+      { x: 1, y: 2, tile: [8, 2], layer: 'ground' },
+      { x: 1, y: 1, tile: [5, 0], layer: 'cap' },
     ]);
   });
 });
@@ -149,15 +115,15 @@ describe('getBuildingSprites', () => {
   it('flags a colored building from the cell north of it', () => {
     expect(sprites([{ x: 3, y: 4, building: 'farm' }], 'b-red')).toEqual([
       { x: 3, y: 4, tile: [19, 50], layer: 'ground' },
-      { x: 3, y: 3, tile: [19, 49], layer: 'cap', base: 4 },
+      { x: 3, y: 3, tile: [19, 49], layer: 'cap' },
     ]);
   });
 
   it('draws a tall building with its top over units and its flag above that', () => {
     expect(sprites([{ x: 3, y: 4, building: 'castle' }], 'a-teal')).toEqual([
       { x: 3, y: 4, tile: [14, 62], layer: 'ground' },
-      { x: 3, y: 3, tile: [14, 61], layer: 'roof', base: 4 },
-      { x: 3, y: 2, tile: [14, 60], layer: 'cap', base: 4 },
+      { x: 3, y: 3, tile: [14, 61], layer: 'roof' },
+      { x: 3, y: 2, tile: [14, 60], layer: 'cap' },
     ]);
   });
 
@@ -233,34 +199,12 @@ describe('getCrossingSprites', () => {
 
   it('runs a bridge north–south across a river running west–east, and west–east across a channel', () => {
     expect(sprites(['~=~', '~=~'])).toEqual([
-      { x: 1, y: 0, tile: BRIDGE_ART.vertical, layer: 'ground', sheet: BRIDGE_ART.sheet },
-      { x: 1, y: 1, tile: BRIDGE_ART.vertical, layer: 'ground', sheet: BRIDGE_ART.sheet },
+      { x: 1, y: 0, tile: BRIDGE_ART.vertical, layer: 'ground' },
+      { x: 1, y: 1, tile: BRIDGE_ART.vertical, layer: 'ground' },
     ]);
-    expect(sprites(['.~.', '.=.', '.~.']).filter((s) => s.x === 1)).toEqual([
-      { x: 1, y: 1, tile: BRIDGE_ART.horizontal, layer: 'ground', sheet: BRIDGE_ART.sheet },
-    ]);
+    expect(sprites(['.~.', '.=.', '.~.'])).toEqual([{ x: 1, y: 1, tile: BRIDGE_ART.horizontal, layer: 'ground' }]);
     // Bridge beside bridge (a two-wide channel's) isn't water either side.
-    expect(
-      sprites(['.~~.', '.==.'])
-        .filter((s) => s.y === 1 && s.x > 0 && s.x < 3)
-        .map((s) => s.tile),
-    ).toEqual([BRIDGE_ART.horizontal, BRIDGE_ART.horizontal]);
-  });
-
-  it('runs a bridge onto the bank at each end, not onto water or the map edge', () => {
-    const sheet = BRIDGE_ART.sheet;
-    expect(sprites(['.', '=', '='], 'a-stone').length).toBe(2);
-    expect(sprites(['.', '~=~', '.'].map((r) => r.padEnd(3, '.')))).toEqual([
-      { x: 1, y: 1, tile: BRIDGE_ART.vertical, layer: 'ground', sheet },
-      { x: 1, y: 0, tile: BRIDGE_ART.ends.north, layer: 'ground', sheet },
-      { x: 1, y: 2, tile: BRIDGE_ART.ends.south, layer: 'ground', sheet },
-    ]);
-    expect(sprites(['.~~.', '.==.'])).toEqual([
-      { x: 1, y: 1, tile: BRIDGE_ART.horizontal, layer: 'ground', sheet },
-      { x: 0, y: 1, tile: BRIDGE_ART.ends.west, layer: 'ground', sheet },
-      { x: 2, y: 1, tile: BRIDGE_ART.horizontal, layer: 'ground', sheet },
-      { x: 3, y: 1, tile: BRIDGE_ART.ends.east, layer: 'ground', sheet },
-    ]);
+    expect(sprites(['.~~.', '.==.']).map((s) => s.tile)).toEqual([BRIDGE_ART.horizontal, BRIDGE_ART.horizontal]);
   });
 
   it('lays stepping stones on a ford, off the props sheet', () => {
@@ -288,46 +232,5 @@ describe('GATE_ART', () => {
       expect(posts[0]).toBeLessThan(MAP_PROPS_SHEET.columns);
     }
     expect(FORD_ART[0]).toBeLessThan(MAP_PROPS_SHEET.columns);
-  });
-});
-
-describe('getPaintedObstacles', () => {
-  const art = {
-    rock: ['r1', 'r2'],
-    boulder: ['b'],
-    bush: ['s1', 's2'],
-    pine: ['p'],
-    thicket: ['t'],
-    crag: ['c'],
-    cactus: ['k'],
-    fence: ['f'],
-    brokenFence: ['fb'],
-    barrels: ['ba'],
-    crates: ['cr'],
-    cart: ['ca'],
-    wheel: ['w'],
-    sack: ['sa'],
-    stump: ['st'],
-    signpost: ['si'],
-    log: ['l'],
-  };
-
-  it('stands each obstacle on its cell as one of its kind’s images', () => {
-    const placed = getPaintedObstacles(
-      [
-        { x: 2, y: 3, obstacle: 'pine' },
-        { x: 5, y: 1, obstacle: 'rock' },
-      ],
-      art,
-    );
-    expect(placed.map(({ x, y, key }) => ({ x, y, key }))[0]).toEqual({ x: 2, y: 3, key: 'p' });
-    expect(['r1', 'r2']).toContain(placed[1].key);
-  });
-
-  it('picks the same image for a cell every time, and varies across cells', () => {
-    const rocks = Array.from({ length: 20 }, (_, i) => ({ x: i, y: i % 7, obstacle: 'rock' as const }));
-    expect(getPaintedObstacles(rocks, art)).toEqual(getPaintedObstacles(rocks, art));
-    const placed = getPaintedObstacles(rocks, art);
-    expect(new Set(placed.map((p) => p.key)).size).toBe(2);
   });
 });

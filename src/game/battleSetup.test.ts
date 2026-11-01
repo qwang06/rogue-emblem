@@ -3,7 +3,6 @@ import {
   createBattleLevel,
   DEFAULT_CONTENT,
   regionPreview,
-  generatedMap,
   describeBattle,
   FIRST_STORY_CHAPTER,
   getBattleDiceSeed,
@@ -83,7 +82,7 @@ describe('createBattleLevel', () => {
     expect(createBattleLevel({ mode: 'training', unitClass: 'soldier' }).deploymentZone).toEqual([]);
     const stage2 = createBattleLevel({ mode: 'warband', seed: 3, stage: 2 });
     expect(terrainToRows(stage2.grid)).toEqual(
-      terrainToRows(createStageLevel(3, withArchetype(getStageRegion(2, REGION_SETTINGS), 'arena')).grid),
+      terrainToRows(createStageLevel(3, getStageRegion(2, REGION_SETTINGS)).grid),
     );
   });
 
@@ -96,7 +95,7 @@ describe('createBattleLevel', () => {
 
   it('builds Warband stages from the regions passed in', () => {
     const stage3 = createBattleLevel({ mode: 'warband', seed: 3, stage: 3 }, CUSTOM_CONTENT);
-    const expected = createStageLevel(3, withArchetype(CUSTOM_CONTENT.regions.regions[1], 'arena'));
+    const expected = createStageLevel(3, CUSTOM_CONTENT.regions.regions[1]);
     expect(terrainToRows(stage3.grid)).toEqual(terrainToRows(expected.grid));
   });
 
@@ -217,7 +216,8 @@ describe('regionPreview', () => {
     const setup = regionPreview(1, 31, settings)!;
     const level = createBattleLevel(setup, { ...DEFAULT_CONTENT, regions: settings });
     const region = settings.regions[1];
-    const stageRegion = withArchetype(region, pickStageArchetype(region));
+    const objective = pickStageObjective(3, region, 31).kind;
+    const stageRegion = withArchetype(region, pickStageArchetype(3, region, 31, objective));
     expect(terrainToRows(level.grid)).toEqual(terrainToRows(createStageLevel(31, stageRegion).grid));
   });
 
@@ -225,37 +225,5 @@ describe('regionPreview', () => {
     expect(regionPreview(3, 9, settings)).toBeNull();
     expect(regionPreview(-1, 9, settings)).toBeNull();
     expect(regionPreview(0.5, 9, settings)).toBeNull();
-  });
-});
-
-describe('generatedMap', () => {
-  const settings = { stagesPerRegion: 2, regions: REGION_CONFIGS.slice(0, 3) };
-
-  it("previews a region's first stage on the seed", () => {
-    const setup = generatedMap(9, settings)!;
-    expect(setup).toMatchObject({ mode: 'warband', seed: 9 });
-    expect([1, 3, 5]).toContain(setup.mode === 'warband' && setup.stage);
-  });
-
-  it('is the same for the same seed', () => {
-    expect(generatedMap(1234, settings)).toEqual(generatedMap(1234, settings));
-  });
-
-  it('reaches every region across seeds', () => {
-    const stages = new Set(
-      Array.from({ length: 60 }, (_, seed) => generatedMap(seed, settings)!).map(
-        (s) => s.mode === 'warband' && s.stage,
-      ),
-    );
-    expect(stages).toEqual(new Set([1, 3, 5]));
-  });
-
-  it('keeps to the region it is given', () => {
-    expect(generatedMap(9, settings, 1)).toEqual(regionPreview(1, 9, settings));
-    expect(generatedMap(10, settings, 2)).toEqual({ mode: 'warband', seed: 10, stage: 5 });
-  });
-
-  it('is null for a region that does not exist', () => {
-    expect(generatedMap(9, settings, 3)).toBeNull();
   });
 });

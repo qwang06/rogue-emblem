@@ -24,10 +24,6 @@
 //   fortress   — a walled fort at the north end with one or two gates in
 //                its south wall; the enemy holds the inside, and the fort
 //                building in it is the tile to seize
-//   arena      — the side view's battlefield: deploy down the west edge,
-//                the enemy holds the east half, and a dirt road (plus a
-//                second clear route on maps 5 or more rows deep) runs
-//                between; the road's east end is the tile to seize
 // Pure: the same size and Rng always give the same plan.
 
 import type { BuildingPlacement } from './buildings.ts';
@@ -35,7 +31,7 @@ import type { Rng } from './combatStats.ts';
 import type { Point } from './grid.ts';
 import { randomInt, shuffle } from './rng.ts';
 
-export type MapArchetype = 'advance' | 'crossroads' | 'ambush' | 'gauntlet' | 'islands' | 'fortress' | 'arena';
+export type MapArchetype = 'advance' | 'crossroads' | 'ambush' | 'gauntlet' | 'islands' | 'fortress';
 
 export const MAP_ARCHETYPES: readonly MapArchetype[] = Object.freeze([
   'advance',
@@ -44,7 +40,6 @@ export const MAP_ARCHETYPES: readonly MapArchetype[] = Object.freeze([
   'gauntlet',
   'islands',
   'fortress',
-  'arena',
 ]);
 
 // A tile of terrain a plan lays before the fill.
@@ -449,46 +444,12 @@ export function planFortress(width: number, height: number, rng: Rng): Archetype
   };
 }
 
-// Arena: the side view's battlefield, seen from the south, so the two sides
-// face each other across it. The player deploys in three tiles down the
-// west edge, around a middle row; the enemy is dealt into the north and
-// south halves of the east half, so on a big field the fight still starts
-// within a turn's walk. A dirt road runs from the deployment
-// zone to the east edge, and on maps 5 or more rows deep a second route
-// (kept clear, not dirt) runs along the other half, so there's a way
-// around whatever the fill grows.
-export function planArena(width: number, height: number, rng: Rng): ArchetypePlan {
-  const cy = randomInt(rng, 1, height - 2);
-  const deploymentZone = rect(0, cy - 1, 0, cy + 1);
-  const path = carveRoad({ x: 0, y: cy }, { x: width - 1, y: randomInt(rng, 1, height - 2) }, rng);
-  const routes: Point[][] = [];
-  if (height >= 5) {
-    // Along the half the deployment zone leaves more room in.
-    const y = cy < height / 2 ? height - 1 : 0;
-    routes.push(carveRoad({ x: 1, y }, { x: width - 1, y: randomInt(rng, 0, height - 1) }, rng));
-  }
-  const east = width - Math.max(2, Math.floor(width / 2));
-  const middle = Math.floor(height / 2);
-  return {
-    deploymentZone,
-    enemyZones: [rect(east, 0, width - 1, middle - 1), rect(east, middle, width - 1, height - 1)],
-    path,
-    routes,
-    terrain: [],
-    reserved: withNeighbors(deploymentZone, width, height),
-    buildings: [],
-    seizeTile: path[path.length - 1],
-    fill: { mountains: 0 },
-  };
-}
-
 const PLANNERS: Record<Exclude<MapArchetype, 'advance'>, (width: number, height: number, rng: Rng) => ArchetypePlan> = {
   crossroads: planCrossroads,
   ambush: planAmbush,
   gauntlet: planGauntlet,
   islands: planIslands,
   fortress: planFortress,
-  arena: planArena,
 };
 
 // The plan for `archetype` (any but 'advance') on a `width` x `height` map.

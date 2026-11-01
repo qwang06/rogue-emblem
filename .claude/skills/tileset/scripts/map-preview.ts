@@ -1,8 +1,8 @@
 // Renders a procedurally generated map (src/game/mapGen.ts, or an
 // archetype's plan, src/game/mapArchetypes.ts) the way GridScene draws it —
-// the 64px corner-tile ground (grass, dirt, river), the wall autotile and
-// the forest/mountain/building/crossing overlays in a building palette — so
-// the generator's output can be judged without a browser.
+// grass, every autotiled terrain (first animation frame), the wall
+// autotile and the forest/mountain/building/crossing overlays in a building
+// palette — so the generator's output can be judged without a browser.
 // Ginkgo trees are left out. With --units, the player's warrior stands on
 // the middle deployment tile (the zone tinted blue) and skeletons on the
 // enemies' tiles (from the archetype's enemy zones).
@@ -14,7 +14,6 @@
 // uses the planned generator.
 
 import { getQuarterFrames, getTileFrame } from '../../../../src/game/autotile.ts';
-import { getWangFrameMap } from '../../../../src/game/wangTiles.ts';
 import { pickZonedEnemyTiles } from '../../../../src/game/enemySpawns.ts';
 import {
   getBuildingSprites,
@@ -34,17 +33,14 @@ import {
   GATE_ART,
   MAP_PROPS_SHEET,
   MOUNTAIN_ART,
-  TERRAIN64_PROPS_SHEET,
+  TERRAIN_AUTOTILES,
+  TERRAIN_BASE_TILE,
   TERRAIN_SHEET,
-  WANG_SETS,
-  WANG_SHEET,
   type BuildingPaletteName,
 } from '../../../../src/game/tileset.ts';
 import { decode, encode } from './dump-png.js';
 
-// Drawn at 64px per tile, the ground's own size; the 32px art (the
-// overworld sheet, the map-props sheet and the units) is doubled.
-const TILE = 64;
+const TILE = 32;
 const HALF = TILE / 2;
 
 const args = process.argv.slice(2);
@@ -64,8 +60,6 @@ if (!palette) throw new Error(`Unknown palette ${paletteName}`);
 
 const sheet = decode('src/assets/overworld.png');
 const props = decode('src/assets/map-props.png');
-const ground = decode('src/assets/terrain64.png');
-const props64 = decode('src/assets/terrain64-props.png');
 const units = {
   player: decode('src/assets/units/Warrior_02_Idle.png'),
   enemy: decode('src/assets/units/Skeleton_01_Idle.png'),
@@ -75,16 +69,16 @@ const width = seeds.length * (mapWidth + 1) * TILE - TILE;
 const height = mapHeight * TILE;
 const scene: number[][][] = Array.from({ length: height }, () => Array.from({ length: width }, () => [40, 40, 48]));
 
-// Blends frame `frame` of `image` (cut into `size`-pixel frames) onto the
-// scene at (x, y), `zoom` scene pixels per image pixel.
-const blend = (frame: number, size: number, x: number, y: number, image = sheet, zoom = 2) => {
-  const perRow = image[0].length / size;
+// Blends a size x size block of `image` (frame `frame` of it cut into
+// `size` tiles, `imageColumns` tiles of 32px wide) onto the scene at (x, y).
+const blend = (frame: number, size: number, x: number, y: number, image = sheet, imageColumns = columns, alpha = 1) => {
+  const perRow = (imageColumns * TILE) / size;
   const sx = (frame % perRow) * size;
   const sy = Math.floor(frame / perRow) * size;
-  for (let j = 0; j < size * zoom; j++) {
-    for (let i = 0; i < size * zoom; i++) {
-      const px = image[sy + Math.floor(j / zoom)][sx + Math.floor(i / zoom)];
-      const a = px[3] / 255;
+  for (let j = 0; j < size; j++) {
+    for (let i = 0; i < size; i++) {
+      const px = image[sy + j][sx + i];
+      const a = (px[3] / 255) * alpha;
       const under = scene[y + j][x + i];
       scene[y + j][x + i] = [0, 1, 2].map((k) => Math.round(px[k] * a + under[k] * (1 - a)));
     }
@@ -109,16 +103,15 @@ seeds.forEach((seed, n) => {
     rng,
   );
   const { grid, buildings } = terrain;
-  for (const set of Object.values(WANG_SETS)) {
-    getWangFrameMap(grid, set, WANG_SHEET.columns).forEach((row, qy) =>
-      row.forEach((frame, qx) => frame >= 0 && blend(frame, HALF, left + qx * HALF, qy * HALF, ground, 1)),
-    );
-  }
-  const wall = getWallAutotile(palette);
-  for (const cell of grid.cells) {
-    getQuarterFrames(grid, cell.x, cell.y, 'wall', wall, columns, 0)?.forEach((frame, q) =>
-      blend(frame, HALF / 2, left + cell.x * TILE + (q & 1) * HALF, cell.y * TILE + (q >> 1) * HALF),
-    );
+  for (const cell of grid.cells)
+    blend(getTileFrame(TERRAIN_BASE_TILE, columns), TILE, left + cell.x * TILE, cell.y * TILE);
+  const autotiles = { ...TERRAIN_AUTOTILES, wall: getWallAutotile(palette) };
+  for (const [terrainName, autotile] of Object.entries(autotiles)) {
+    for (const cell of grid.cells) {
+      getQuarterFrames(grid, cell.x, cell.y, terrainName, autotile, columns, 0)?.forEach((frame, q) =>
+        blend(frame, HALF, left + cell.x * TILE + (q & 1) * HALF, cell.y * TILE + (q >> 1) * HALF),
+      );
+    }
   }
   const start = terrain.path[0];
   const deploymentZone = terrain.deploymentZone ?? [-1, 0, 1].map((dx) => ({ x: start.x + dx, y: start.y }));
@@ -133,11 +126,9 @@ seeds.forEach((seed, n) => {
     y,
     layer,
     draw: () =>
-      on === TERRAIN64_PROPS_SHEET
-        ? blend(getTileFrame(tile, on.columns), TILE, left + x * TILE, y * TILE, props64, 1)
-        : on
-          ? blend(getTileFrame(tile, on.columns), HALF, left + x * TILE, y * TILE, props)
-          : blend(getTileFrame(tile, columns), HALF, left + x * TILE, y * TILE),
+      on
+        ? blend(getTileFrame(tile, on.columns), TILE, left + x * TILE, y * TILE, props, on.columns)
+        : blend(getTileFrame(tile, columns), TILE, left + x * TILE, y * TILE),
   }));
   if (unitCount > 0) {
     const enemies = pickZonedEnemyTiles(
@@ -152,7 +143,7 @@ seeds.forEach((seed, n) => {
       ...enemies.map((p) => ({ ...p, image: units.enemy })),
     ];
     for (const { x, y, image } of standing) {
-      sprites.push({ x, y, layer: 'unit', draw: () => blend(0, HALF, left + x * TILE, y * TILE, image) });
+      sprites.push({ x, y, layer: 'unit', draw: () => blend(0, TILE, left + x * TILE, y * TILE, image, 4) });
     }
   }
   const depth = { ...order, unit: 2 } as Record<string, number>;

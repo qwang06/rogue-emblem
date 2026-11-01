@@ -4,32 +4,31 @@
 // layer; GridScene only draws them.
 //
 // Layers, bottom to top:
-//   'ground' — the cell's own art (a forest, a mountain, a building),
+//   'ground' — the cell's own art (a forest, a mountain body, a building),
 //              under units
-//   'cap'    — art spilling into the cell north of its owner (a flag),
-//              over that cell's ground art but under units
+//   'cap'    — art spilling into the cell north of its owner (a mountain's
+//              peak, a flag), over that cell's ground art but under units
 //   'roof'   — a tall building's top, over units, so a unit standing north
 //              of a tower passes behind it
-//
-// In the side view, props stand up out of the floor (see sideView.ts): a
-// piece of a prop taller than one cell (a building's top or flag, the back
-// row of a 2x2 clump) names the row its prop stands on as `base`, so it's
-// drawn stacked a whole tile above the piece below it and sorted with it.
 
 import type { Autotile, SheetTile } from './autotile.ts';
 import type { BuildingPlacement } from './buildings.ts';
 import { getCell, type Grid, type Point } from './grid.ts';
-import type { ObstacleKind, ObstaclePlacement } from './battlefields.ts';
-import type { BRIDGE_ART, BUILDING_ART, BuildingPalette, FeatureArt, GATE_ART, MAP_PROPS_SHEET } from './tileset.ts';
+import type {
+  BRIDGE_ART,
+  BUILDING_ART,
+  BuildingPalette,
+  FOREST_ART,
+  GATE_ART,
+  MAP_PROPS_SHEET,
+  MOUNTAIN_ART,
+} from './tileset.ts';
 
 export type MapSpriteLayer = 'ground' | 'cap' | 'roof';
 
 export interface MapSprite extends Point {
   tile: SheetTile;
   layer: MapSpriteLayer;
-  // The row the prop this piece belongs to stands on, when that's a row
-  // in front of the piece's own (y); unset for a piece on its prop's row.
-  base?: number;
   // The sheet `tile` is on, when it isn't the terrain sheet.
   sheet?: { key: string; columns: number };
 }
@@ -41,39 +40,36 @@ export function pickVariant(x: number, y: number, count: number): number {
   return (hash >>> 0) % count;
 }
 
-// Overlays for every forest and mountain cell, under units. Each terrain
-// first takes its art's 2x2 props (`big`), on 2x2 blocks of its cells found
-// in reading order (each cell in one block at most), drawn a tile at a
-// time; every other forest or mountain cell gets a one-tile variant.
-export function getFeatureSprites(grid: Grid, forestArt: FeatureArt, mountainArt: FeatureArt): MapSprite[] {
+function isTerrain(grid: Grid, x: number, y: number, terrain: string): boolean {
+  return getCell(grid, x, y)?.terrain === terrain;
+}
+
+// Overlays for every forest and mountain cell. A mountain draws its body
+// variant, or a peak-below variant when the cell south of it is a mountain
+// too; the top mountain of a column puts a cap in the cell north of it,
+// unless that cell is off the map or a forest, which draws the
+// forest-with-peak tile instead.
+export function getFeatureSprites(
+  grid: Grid,
+  forestArt: typeof FOREST_ART,
+  mountainArt: typeof MOUNTAIN_ART,
+): MapSprite[] {
   const sprites: MapSprite[] = [];
-  const claimed = new Set<string>();
-  const block = [
-    [0, 0],
-    [1, 0],
-    [0, 1],
-    [1, 1],
-  ] as const;
-  const artFor = (terrain: string | null) =>
-    terrain === 'forest' ? forestArt : terrain === 'mountain' ? mountainArt : null;
-  const isFree = (x: number, y: number, terrain: string) =>
-    getCell(grid, x, y)?.terrain === terrain && !claimed.has(`${x},${y}`);
   for (const { x, y, terrain } of grid.cells) {
-    const big = artFor(terrain)?.big ?? [];
-    if (big.length === 0 || !block.every(([dx, dy]) => isFree(x + dx, y + dy, terrain!))) continue;
-    const [column, row] = big[pickVariant(x, y, big.length)];
-    for (const [dx, dy] of block) {
-      claimed.add(`${x + dx},${y + dy}`);
-      const tile: SheetTile = [column + dx, row + dy];
-      const sprite: MapSprite = { x: x + dx, y: y + dy, tile, layer: 'ground', sheet: artFor(terrain)!.sheet };
-      sprites.push(dy === 0 ? { ...sprite, base: y + 1 } : sprite);
+    const mountainSouth = isTerrain(grid, x, y + 1, 'mountain');
+    if (terrain === 'forest') {
+      const variant = pickVariant(x, y, forestArt.tiles.length);
+      const tile = mountainSouth ? forestArt.peakBelow[variant] : forestArt.tiles[variant];
+      sprites.push({ x, y, tile, layer: 'ground' });
+    } else if (terrain === 'mountain') {
+      const variants = mountainSouth ? mountainArt.peakBelow : mountainArt.body;
+      sprites.push({ x, y, tile: variants[pickVariant(x, y, variants.length)], layer: 'ground' });
+      const north = getCell(grid, x, y - 1);
+      if (north && north.terrain !== 'mountain' && north.terrain !== 'forest') {
+        const cap = mountainArt.cap[pickVariant(x, y, mountainArt.cap.length)];
+        sprites.push({ x, y: y - 1, tile: cap, layer: 'cap' });
+      }
     }
-  }
-  for (const { x, y, terrain } of grid.cells) {
-    const art = artFor(terrain);
-    if (!art || claimed.has(`${x},${y}`)) continue;
-    const tile = art.tiles[pickVariant(x, y, art.tiles.length)];
-    sprites.push({ x, y, tile, layer: 'ground', sheet: art.sheet });
   }
   return sprites;
 }
@@ -95,10 +91,10 @@ export function getBuildingSprites(
     let top = y;
     if (tall) {
       top = y - 1;
-      if (top >= 0) sprites.push({ x, y: top, tile: [c, row - 1], layer: 'roof', base: y });
+      if (top >= 0) sprites.push({ x, y: top, tile: [c, row - 1], layer: 'roof' });
     }
     const flagRow = row - (tall ? 2 : 1);
-    if (palette.flags && top - 1 >= 0) sprites.push({ x, y: top - 1, tile: [c, flagRow], layer: 'cap', base: y });
+    if (palette.flags && top - 1 >= 0) sprites.push({ x, y: top - 1, tile: [c, flagRow], layer: 'cap' });
   }
   return sprites;
 }
@@ -121,8 +117,7 @@ export function getHazardSprites(grid: Grid, spikesTile: SheetTile, propsSheet: 
 }
 
 // Overlays for crossings: a bridge on each bridge cell (running north–south
-// when water or a ford lies west or east of it, else west–east, with an
-// end on each bank cell it runs onto), stepping stones on
+// when water or a ford lies west or east of it, else west–east), stepping stones on
 // each ford cell, and a gateway on each gate cell (its posts under units,
 // its lintel over them, in the map's palette). Props come off `propsSheet`.
 export function getCrossingSprites(
@@ -134,30 +129,10 @@ export function getCrossingSprites(
 ): MapSprite[] {
   const sprites: MapSprite[] = [];
   const isWater = (x: number, y: number) => ['water', 'ford'].includes(getCell(grid, x, y)?.terrain ?? '');
-  // A bank cell a bridge runs onto: on the map, and not water or bridge.
-  const isBank = (x: number, y: number) => {
-    const terrain = getCell(grid, x, y)?.terrain;
-    return terrain !== undefined && terrain !== 'bridge' && !isWater(x, y);
-  };
   for (const { x, y, terrain } of grid.cells) {
     if (terrain === 'bridge') {
-      const vertical = isWater(x - 1, y) || isWater(x + 1, y);
-      const sheet = bridgeArt.sheet;
-      sprites.push({ x, y, tile: vertical ? bridgeArt.vertical : bridgeArt.horizontal, layer: 'ground', sheet });
-      const ends = vertical
-        ? ([
-            ['north', 0, -1],
-            ['south', 0, 1],
-          ] as const)
-        : ([
-            ['west', -1, 0],
-            ['east', 1, 0],
-          ] as const);
-      for (const [side, dx, dy] of ends) {
-        if (isBank(x + dx, y + dy)) {
-          sprites.push({ x: x + dx, y: y + dy, tile: bridgeArt.ends[side], layer: 'ground', sheet });
-        }
-      }
+      const tile = isWater(x - 1, y) || isWater(x + 1, y) ? bridgeArt.vertical : bridgeArt.horizontal;
+      sprites.push({ x, y, tile, layer: 'ground' });
     } else if (terrain === 'ford') {
       sprites.push({ x, y, tile: fordTile, layer: 'ground', sheet: propsSheet });
     } else if (terrain === 'gate') {
@@ -166,18 +141,4 @@ export function getCrossingSprites(
     }
   }
   return sprites;
-}
-
-// A battlefield's obstacles drawn as painted art (PAINTED_OBSTACLES): each
-// on its cell as one of its kind's images, picked by cell so the same field
-// always draws the same. Never mirrored: the art's light and painted shadow
-// fall one way, the same as the rest of the scene's.
-export function getPaintedObstacles(
-  obstacles: readonly ObstaclePlacement[],
-  art: Readonly<Record<ObstacleKind, readonly string[]>>,
-): { x: number; y: number; key: string }[] {
-  return obstacles.map(({ x, y, obstacle }) => {
-    const keys = art[obstacle];
-    return { x, y, key: keys[pickVariant(x, y, keys.length)] };
-  });
 }

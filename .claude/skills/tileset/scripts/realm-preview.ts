@@ -7,9 +7,10 @@
 //   node .claude/skills/tileset/scripts/realm-preview.ts out.png 1 2 3
 
 import { readFileSync } from 'node:fs';
+import { TILE_SIZE } from '../../../../src/game/tileset.ts';
 import { paintRealmInk, type RgbaImage } from '../../../../src/game/warband/realm/inkRaster.ts';
 import { generateRealm } from '../../../../src/game/warband/realm/realm.ts';
-import { getRealmInk, INK_STAMPS, REALM_CELL, type InkStamp } from '../../../../src/game/warband/realm/realmInk.ts';
+import { getRealmInk, INK_STAMPS, type InkStamp } from '../../../../src/game/warband/realm/realmInk.ts';
 import { decode, encode } from './dump-png.js';
 
 const [output, ...seeds] = process.argv.slice(2);
@@ -31,16 +32,14 @@ const maps = realms.map((realm) => {
   const ink = getRealmInk(realm);
   const map = paintRealmInk(ink, realm.seed, stamps);
   for (const site of realm.sites) {
-    // As on screen: the icon drawn two cells wide, centered on the tile,
-    // its foot a little below the tile's middle. The art is larger than
-    // that (128px), so it's sampled down.
+    // As on screen: the icon's 64px disc centered on the tile, its foot a
+    // little below the tile's middle.
     const art = icon(site.kind);
-    const size = REALM_CELL * 2;
-    const left = site.x * REALM_CELL + REALM_CELL / 2 - size / 2;
-    const top = site.y * REALM_CELL + REALM_CELL * 0.75 - size;
-    for (let y = 0; y < size; y++) {
-      for (let x = 0; x < size; x++) {
-        const s = (Math.floor((y * art.height) / size) * art.width + Math.floor((x * art.width) / size)) * 4;
+    const left = site.x * TILE_SIZE + TILE_SIZE / 2 - art.width / 2;
+    const top = site.y * TILE_SIZE + TILE_SIZE * 0.75 - art.height;
+    for (let y = 0; y < art.height; y++) {
+      for (let x = 0; x < art.width; x++) {
+        const s = (y * art.width + x) * 4;
         const tx = left + x;
         const ty = top + y;
         const alpha = art.data[s + 3] / 255;
@@ -61,7 +60,7 @@ const maps = realms.map((realm) => {
   return map;
 });
 
-const gap = REALM_CELL;
+const gap = TILE_SIZE;
 const rows: number[][][] = [];
 for (const map of maps) {
   for (let y = 0; y < map.height; y++) {

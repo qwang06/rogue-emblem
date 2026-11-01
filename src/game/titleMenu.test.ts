@@ -20,14 +20,8 @@ import { createStartingWarband } from './warband/stageLevel.ts';
 
 describe('TITLE_ACTIONS', () => {
   it('lists Story Mode, Warband Mode, Training, then Settings', () => {
-    expect(TITLE_ACTIONS.map((a) => a.id)).toEqual(['story', 'warband', 'training', 'map-generator', 'settings']);
-    expect(TITLE_ACTIONS.map((a) => a.label)).toEqual([
-      'Story Mode',
-      'Warband Mode',
-      'Training',
-      'Map Generator',
-      'Settings',
-    ]);
+    expect(TITLE_ACTIONS.map((a) => a.id)).toEqual(['story', 'warband', 'training', 'settings']);
+    expect(TITLE_ACTIONS.map((a) => a.label)).toEqual(['Story Mode', 'Warband Mode', 'Training', 'Settings']);
   });
 
   it('is frozen', () => {
@@ -40,7 +34,7 @@ describe('TITLE_ACTIONS', () => {
     expect(getSelectedAction(menu)!.id).toBe('story');
     expect(getSelectedAction(moveSelection(menu, 1))!.id).toBe('warband');
     expect(getSelectedAction(moveSelection(menu, -1))!.id).toBe('settings');
-    expect(getSelectedAction(moveSelection(menu, 5))!.id).toBe('story');
+    expect(getSelectedAction(moveSelection(menu, 4))!.id).toBe('story');
   });
 });
 

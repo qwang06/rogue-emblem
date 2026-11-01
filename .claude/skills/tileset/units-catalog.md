@@ -9,8 +9,7 @@ in `src/assets/sprites.ts` when a class needs art.
 
 ## Warrior and Amazon (generated, not from the pack)
 
-Two PixelLab recreations of Tactics Ogre's Warrior and Amazon (the Warrior's
-since replaced by 64px art, see below), made from the
+Two PixelLab recreations of Tactics Ogre's Warrior and Amazon, made from the
 original sprites (cut out at 1:1 into 32x32 frames as the reference). Like the
 pack they are 128x128 sheets (rows down/left/right/up, 4 frames, RGBA, alpha
 fully on or off), but they are **true 32px art, not 16px doubled**, with the
@@ -19,18 +18,9 @@ y 3–30; feet on y 30 (29–30 in the walks' passing frames), a row lower than
 the pack's.
 
 - `Warrior_02` is the warrior class's art (`UNIT_SPRITES.warrior`, also
-  `DEFAULT_UNIT_SPRITE`). It is now **64px art** (256x256 sheets, `frame: 64`),
-  replacing the 32px recreation described in this section: a chibi knight
-  (about 2.5 heads tall) in a polished ridged steel kettle helmet, steel
-  breastplate over a chainmail skirt, navy hooded long coat with gold cuffs,
-  red sash with a silver buckle, brown gloves and boots, a sword carried on
-  the shoulder and another scabbarded at the hip. Four stills made from
-  Qiang's fifth turnaround (`ref-v5`) with PixelLab `image_to_pixelart` at
-  64x64 (faithful, strength 120), north's colours matched to the others and
-  the buckle recolored silver; east is west mirrored (process in the project
-  files at `art/warrior-64/`, finals in `out-v5/`). Assembled by
-  `scripts/assemble-unit-sheet.js`; the shouldered sword makes it nearly a
-  full tile wide (footprint about x 3–60, y 6–61, feet on y 61).
+  `DEFAULT_UNIT_SPRITE`): a foot soldier in a big round pale-blue steel kettle
+  helmet, blue tunic with a belt, grey mail collar (seen from behind), tan
+  gloves and boots, small face in the helmet's shadow. No weapon shows.
 - `Amazon_01` is the archer class's art (`UNIT_SPRITES.archer`, replacing
   `Archer_02`): a woman with a big blonde mane and a green headband, light
   blue top, white short skirt, bare tan arms and legs, green boots. No weapon
@@ -70,14 +60,7 @@ down/left/right/up, 4 frames, 16px art doubled), RGBA instead of color-keyed,
 colors from the pack's palette, no baked shadow, lowest pixels on y 28–29
 (the bat hovers above that).
 
-`Slime_01` is 64px art (256x256 sheets, `frame: 64` in `sprites.ts`): four
-stills made from a concept painting with PixelLab `image_to_pixelart` at 64x64
-(the process is in the project files at `art/slime-64/out/notes.md`; east is
-west mirrored), assembled by `scripts/assemble-unit-sheet.js <dir> Slime_01`,
-which keeps the stills as they are and only shifts them: idle sinks 2px on
-frames 2–3, move hops 4px up on frames 1 and 3. Its feet are on y 60.
-
-`Goblin_01` (and `Slime_01` before it went 64px) were made with PixelLab (Pro Flash at 16x16,
+`Slime_01` and `Goblin_01` were made with PixelLab (Pro Flash at 16x16,
 styled on the villager) and assembled by `scripts/build-unit-sheet.js`. Only
 the four facing stills were generated; idle sinks the body 1px onto the feet
 for frames 2–3, and move hops 1px up on frames 1 and 3. To redo one, save
@@ -95,7 +78,7 @@ west grids mirrored. Each went through up to three review passes against the pac
 
 | Art           | What it shows                                                                                                                                                                                       | Animation                                                      |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `Slime_01`    | 64px: green jelly dome with two dark eyes, a smile and a drip on its side; glossy highlight. Side views are a lower dome.                                                                           | idle sink, move hop                                            |
+| `Slime_01`    | Green jelly blob with two eyes, a mouth and a top-left highlight. Side views have a small pointed tail.                                                                                             | idle squash, move hop                                          |
 | `Goblin_01`   | Green goblin with wide pointed ears, orange eyes, a brown tunic and a club in its right hand.                                                                                                       | idle squash, move hop                                          |
 | `Skeleton_01` | Bone-white skeleton: big skull with red eye glints and a row of teeth, ribs over a spine and pelvis, thin legs, a rusty sword (orange hilt, rust flecks) held up, in front when walking left/right. | idle squash; move steps each foot in turn                      |
 | `Bat_01`      | Purple cave bat, wings spread: pointed ears, yellow eyes, open mouth with two fangs, lit leading wing edges and scalloped trailing edges. Hovers, lowest pixel y ~26.                               | idle and move flap mid, up, mid, down (lifted 1px on the down) |

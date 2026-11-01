@@ -5,12 +5,7 @@ import { createStageLevel } from '../game/warband/stageLevel.ts';
 import { getMapPreview } from './mapPreview.ts';
 
 describe('getMapPreview', () => {
-  // A region on the planned generator, so the map has buildings to mark.
-  const planned = {
-    ...REGION_CONFIGS[0],
-    terrain: { width: 8, height: 8, generator: 'planned' as const, buildings: 2 },
-  };
-  const level = createStageLevel(5, planned);
+  const level = createStageLevel(5, REGION_CONFIGS[0]);
   const cells = getMapPreview(level);
   const at = (x: number, y: number) => cells.find((c) => c.x === x && c.y === y)!;
 

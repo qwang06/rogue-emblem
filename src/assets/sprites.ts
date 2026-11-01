@@ -1,4 +1,4 @@
-// Texture key -> image for every standalone sprite sheet and item icon. GridScene preloads
+// Texture key -> URL for every standalone sprite sheet and item icon. GridScene preloads
 // them all under these keys; the React UI looks unit portraits up here.
 // src/game/tileset.ts names which key each unit draws with.
 
@@ -28,8 +28,6 @@ import siege03Idle from './units/Siege_03_Idle.png';
 import siege03Move from './units/Siege_03_Move.png';
 import skeleton01Idle from './units/Skeleton_01_Idle.png';
 import skeleton01Move from './units/Skeleton_01_Move.png';
-import terrain64 from './terrain64.png';
-import terrain64Props from './terrain64-props.png';
 import slime01Idle from './units/Slime_01_Idle.png';
 import slime01Move from './units/Slime_01_Move.png';
 import soldier02Idle from './units/Soldier_02_Idle.png';
@@ -56,68 +54,6 @@ import warrior02Idle from './units/Warrior_02_Idle.png';
 import warrior02Move from './units/Warrior_02_Move.png';
 import wolf01Idle from './units/Wolf_01_Idle.png';
 import wolf01Move from './units/Wolf_01_Move.png';
-import paintedWarrior from './units/painted/warrior.png';
-import paintedSoldier from './units/painted/soldier.png';
-import paintedArcher from './units/painted/archer.png';
-import paintedVanguard from './units/painted/vanguard.png';
-import paintedGuard from './units/painted/guard.png';
-import paintedAcolyte from './units/painted/acolyte.png';
-import paintedHero from './units/painted/hero.png';
-import paintedBerserker from './units/painted/berserker.png';
-import paintedGeneral from './units/painted/general.png';
-import paintedHalberdier from './units/painted/halberdier.png';
-import paintedSniper from './units/painted/sniper.png';
-import paintedArbalest from './units/painted/arbalest.png';
-import paintedChampion from './units/painted/champion.png';
-import paintedBombardier from './units/painted/bombardier.png';
-import paintedBastion from './units/painted/bastion.png';
-import paintedTemplar from './units/painted/templar.png';
-import paintedBishop from './units/painted/bishop.png';
-import paintedMage from './units/painted/mage.png';
-import paintedSlime from './units/painted/slime.png';
-import paintedGoblin from './units/painted/goblin.png';
-import paintedSkeleton from './units/painted/skeleton.png';
-import paintedBat from './units/painted/bat.png';
-import paintedWolf from './units/painted/wolf.png';
-import paintedOrc from './units/painted/orc.png';
-import obstacleRock1 from './obstacles/rock-1.png';
-import obstacleRock2 from './obstacles/rock-2.png';
-import obstacleBoulder from './obstacles/boulder.png';
-import obstacleCrag from './obstacles/crag.png';
-import obstacleBush1 from './obstacles/bush-1.png';
-import obstacleBush2 from './obstacles/bush-2.png';
-import obstacleThicket from './obstacles/thicket.png';
-import obstaclePine from './obstacles/pine.png';
-import obstacleCactus from './obstacles/cactus.png';
-import obstacleFence from './obstacles/fence.png';
-import obstacleFenceBroken from './obstacles/fence-broken.png';
-import obstacleBarrels from './obstacles/barrels.png';
-import obstacleCrates from './obstacles/crates.png';
-import obstacleCart from './obstacles/cart.png';
-import obstacleWheel from './obstacles/wheel.png';
-import obstacleSack from './obstacles/sack.png';
-import obstacleStump from './obstacles/stump.png';
-import obstacleSignpost from './obstacles/signpost.png';
-import obstacleForestRock1 from './obstacles/forest-rock-1.png';
-import obstacleForestRock2 from './obstacles/forest-rock-2.png';
-import obstacleForestBoulder from './obstacles/forest-boulder.png';
-import obstacleForestPine1 from './obstacles/forest-pine-1.png';
-import obstacleForestPine2 from './obstacles/forest-pine-2.png';
-import obstacleForestBush1 from './obstacles/forest-bush-1.png';
-import obstacleForestBush2 from './obstacles/forest-bush-2.png';
-import obstacleForestThicket1 from './obstacles/forest-thicket-1.png';
-import obstacleForestThicket2 from './obstacles/forest-thicket-2.png';
-import obstacleForestStump from './obstacles/forest-stump.png';
-import obstacleForestLog from './obstacles/forest-log.png';
-import obstacleDesertRock1 from './obstacles/desert-rock-1.png';
-import obstacleDesertRock2 from './obstacles/desert-rock-2.png';
-import obstacleDesertBoulder from './obstacles/desert-boulder.png';
-import obstacleDesertCrag from './obstacles/desert-crag.png';
-import obstacleDesertBush from './obstacles/desert-bush.png';
-import obstacleDesertThicket from './obstacles/desert-thicket.png';
-import obstacleDesertCactus1 from './obstacles/desert-cactus-1.png';
-import obstacleDesertCactus2 from './obstacles/desert-cactus-2.png';
-import obstacleDesertStump from './obstacles/desert-stump.png';
 import ballistaIcon from './items/ballista.png';
 import biteIcon from './items/bite.png';
 import boneClawsIcon from './items/bone-claws.png';
@@ -143,167 +79,81 @@ import woodenShield from './items/wooden-shield.png';
 import woodenSpear from './items/wooden-spear.png';
 import woodenSword from './items/wooden-sword.png';
 
-// An image and the size of its square frames in its own pixels: a unit
-// sheet is 4x4 frames, a one-tile sprite is one frame, a multi-tile
-// structure one frame per tile. The game draws every frame one map tile
-// (TILE_SIZE) big whatever its pixel size, so 32px and 64px art mix.
-// `smooth` art (painted rather than pixel art, like a generated
-// single-image unit) is filtered smoothly when scaled instead of kept
-// crisp.
-export interface SpriteSheet {
-  url: string;
-  frame: number;
-  smooth?: boolean;
-}
-
-export const SPRITES: Readonly<Record<string, SpriteSheet>> = {
-  Acolyte_01_Idle: { url: acolyte01Idle, frame: 32 },
-  Acolyte_01_Move: { url: acolyte01Move, frame: 32 },
-  Acolyte_02_Idle: { url: acolyte02Idle, frame: 32 },
-  Acolyte_02_Move: { url: acolyte02Move, frame: 32 },
-  Acolyte_03_Idle: { url: acolyte03Idle, frame: 32 },
-  Acolyte_03_Move: { url: acolyte03Move, frame: 32 },
-  Amazon_01_Idle: { url: amazon01Idle, frame: 32 },
-  Amazon_01_Move: { url: amazon01Move, frame: 32 },
-  Archer_03_Idle: { url: archer03Idle, frame: 32 },
-  Archer_03_Move: { url: archer03Move, frame: 32 },
-  Bat_01_Idle: { url: bat01Idle, frame: 32 },
-  Bat_01_Move: { url: bat01Move, frame: 32 },
-  gates: { url: gates, frame: 32 },
-  ginkgo_tree_green: { url: ginkgoTreeGreen, frame: 32 },
-  Goblin_01_Idle: { url: goblin01Idle, frame: 32 },
-  Goblin_01_Move: { url: goblin01Move, frame: 32 },
-  gold_ginkgo_tree: { url: goldGinkgoTree, frame: 32 },
-  'map-props': { url: mapProps, frame: 32 },
-  terrain64: { url: terrain64, frame: 64 },
-  'terrain64-props': { url: terrain64Props, frame: 64 },
-  Orc_01_Idle: { url: orc01Idle, frame: 32 },
-  Orc_01_Move: { url: orc01Move, frame: 32 },
-  Sapper_04_Idle: { url: sapper04Idle, frame: 32 },
-  Sapper_04_Move: { url: sapper04Move, frame: 32 },
-  Siege_03_Idle: { url: siege03Idle, frame: 32 },
-  Siege_03_Move: { url: siege03Move, frame: 32 },
-  Skeleton_01_Idle: { url: skeleton01Idle, frame: 32 },
-  Skeleton_01_Move: { url: skeleton01Move, frame: 32 },
-  Slime_01_Idle: { url: slime01Idle, frame: 64 },
-  Slime_01_Move: { url: slime01Move, frame: 64 },
-  Soldier_02_Idle: { url: soldier02Idle, frame: 32 },
-  Soldier_02_Move: { url: soldier02Move, frame: 32 },
-  Soldier_03_Idle: { url: soldier03Idle, frame: 32 },
-  Soldier_03_Move: { url: soldier03Move, frame: 32 },
-  Soldier_04_Idle: { url: soldier04Idle, frame: 32 },
-  Soldier_04_Move: { url: soldier04Move, frame: 32 },
-  Soldier_05_Idle: { url: soldier05Idle, frame: 32 },
-  Soldier_05_Move: { url: soldier05Move, frame: 32 },
-  Soldier_06_Idle: { url: soldier06Idle, frame: 32 },
-  Soldier_06_Move: { url: soldier06Move, frame: 32 },
-  Vanguard_01_Idle: { url: vanguard01Idle, frame: 32 },
-  Vanguard_01_Move: { url: vanguard01Move, frame: 32 },
-  Vanguard_02_Idle: { url: vanguard02Idle, frame: 32 },
-  Vanguard_02_Move: { url: vanguard02Move, frame: 32 },
-  Vanguard_03_Idle: { url: vanguard03Idle, frame: 32 },
-  Vanguard_03_Move: { url: vanguard03Move, frame: 32 },
-  Vanguard_04_Idle: { url: vanguard04Idle, frame: 32 },
-  Vanguard_04_Move: { url: vanguard04Move, frame: 32 },
-  Vanguard_06_Idle: { url: vanguard06Idle, frame: 32 },
-  Vanguard_06_Move: { url: vanguard06Move, frame: 32 },
-  Warrior_02_Idle: { url: warrior02Idle, frame: 64 },
-  Warrior_02_Move: { url: warrior02Move, frame: 64 },
-  Wolf_01_Idle: { url: wolf01Idle, frame: 32 },
-  Wolf_01_Move: { url: wolf01Move, frame: 32 },
-  // Painted battlefield obstacles (PAINTED_OBSTACLES in tileset.ts).
-  Obstacle_rock_1: { url: obstacleRock1, frame: 256, smooth: true },
-  Obstacle_rock_2: { url: obstacleRock2, frame: 256, smooth: true },
-  Obstacle_boulder: { url: obstacleBoulder, frame: 256, smooth: true },
-  Obstacle_crag: { url: obstacleCrag, frame: 256, smooth: true },
-  Obstacle_bush_1: { url: obstacleBush1, frame: 256, smooth: true },
-  Obstacle_bush_2: { url: obstacleBush2, frame: 256, smooth: true },
-  Obstacle_thicket: { url: obstacleThicket, frame: 256, smooth: true },
-  Obstacle_pine: { url: obstaclePine, frame: 256, smooth: true },
-  Obstacle_cactus: { url: obstacleCactus, frame: 256, smooth: true },
-  Obstacle_fence: { url: obstacleFence, frame: 256, smooth: true },
-  Obstacle_fence_broken: { url: obstacleFenceBroken, frame: 256, smooth: true },
-  Obstacle_barrels: { url: obstacleBarrels, frame: 256, smooth: true },
-  Obstacle_crates: { url: obstacleCrates, frame: 256, smooth: true },
-  Obstacle_cart: { url: obstacleCart, frame: 256, smooth: true },
-  Obstacle_wheel: { url: obstacleWheel, frame: 256, smooth: true },
-  Obstacle_sack: { url: obstacleSack, frame: 256, smooth: true },
-  Obstacle_stump: { url: obstacleStump, frame: 256, smooth: true },
-  Obstacle_signpost: { url: obstacleSignpost, frame: 256, smooth: true },
-  // The forest's own (FIELD_OBSTACLES in tileset.ts), on moss and fallen leaves.
-  Obstacle_forest_rock_1: { url: obstacleForestRock1, frame: 256, smooth: true },
-  Obstacle_forest_rock_2: { url: obstacleForestRock2, frame: 256, smooth: true },
-  Obstacle_forest_boulder: { url: obstacleForestBoulder, frame: 256, smooth: true },
-  Obstacle_forest_pine_1: { url: obstacleForestPine1, frame: 256, smooth: true },
-  Obstacle_forest_pine_2: { url: obstacleForestPine2, frame: 256, smooth: true },
-  Obstacle_forest_bush_1: { url: obstacleForestBush1, frame: 256, smooth: true },
-  Obstacle_forest_bush_2: { url: obstacleForestBush2, frame: 256, smooth: true },
-  Obstacle_forest_thicket_1: { url: obstacleForestThicket1, frame: 256, smooth: true },
-  Obstacle_forest_thicket_2: { url: obstacleForestThicket2, frame: 256, smooth: true },
-  Obstacle_forest_stump: { url: obstacleForestStump, frame: 256, smooth: true },
-  Obstacle_forest_log: { url: obstacleForestLog, frame: 256, smooth: true },
-  // The desert's own, on sand.
-  Obstacle_desert_rock_1: { url: obstacleDesertRock1, frame: 256, smooth: true },
-  Obstacle_desert_rock_2: { url: obstacleDesertRock2, frame: 256, smooth: true },
-  Obstacle_desert_boulder: { url: obstacleDesertBoulder, frame: 256, smooth: true },
-  Obstacle_desert_crag: { url: obstacleDesertCrag, frame: 256, smooth: true },
-  Obstacle_desert_bush: { url: obstacleDesertBush, frame: 256, smooth: true },
-  Obstacle_desert_thicket: { url: obstacleDesertThicket, frame: 256, smooth: true },
-  Obstacle_desert_cactus_1: { url: obstacleDesertCactus1, frame: 256, smooth: true },
-  Obstacle_desert_cactus_2: { url: obstacleDesertCactus2, frame: 256, smooth: true },
-  Obstacle_desert_stump: { url: obstacleDesertStump, frame: 256, smooth: true },
-  // Painted single-image units (SINGLE_IMAGE_UNITS in tileset.ts).
-  Painted_Warrior: { url: paintedWarrior, frame: 256, smooth: true },
-  Painted_Soldier: { url: paintedSoldier, frame: 256, smooth: true },
-  Painted_Archer: { url: paintedArcher, frame: 256, smooth: true },
-  Painted_Vanguard: { url: paintedVanguard, frame: 256, smooth: true },
-  Painted_Guard: { url: paintedGuard, frame: 256, smooth: true },
-  Painted_Acolyte: { url: paintedAcolyte, frame: 256, smooth: true },
-  Painted_Hero: { url: paintedHero, frame: 256, smooth: true },
-  Painted_Berserker: { url: paintedBerserker, frame: 256, smooth: true },
-  Painted_General: { url: paintedGeneral, frame: 256, smooth: true },
-  Painted_Halberdier: { url: paintedHalberdier, frame: 256, smooth: true },
-  Painted_Sniper: { url: paintedSniper, frame: 256, smooth: true },
-  Painted_Arbalest: { url: paintedArbalest, frame: 256, smooth: true },
-  Painted_Champion: { url: paintedChampion, frame: 256, smooth: true },
-  Painted_Bombardier: { url: paintedBombardier, frame: 256, smooth: true },
-  Painted_Bastion: { url: paintedBastion, frame: 256, smooth: true },
-  Painted_Templar: { url: paintedTemplar, frame: 256, smooth: true },
-  Painted_Bishop: { url: paintedBishop, frame: 256, smooth: true },
-  Painted_Mage: { url: paintedMage, frame: 256, smooth: true },
-  Painted_Slime: { url: paintedSlime, frame: 256, smooth: true },
-  Painted_Goblin: { url: paintedGoblin, frame: 256, smooth: true },
-  Painted_Skeleton: { url: paintedSkeleton, frame: 256, smooth: true },
-  Painted_Bat: { url: paintedBat, frame: 256, smooth: true },
-  Painted_Wolf: { url: paintedWolf, frame: 256, smooth: true },
-  Painted_Orc: { url: paintedOrc, frame: 256, smooth: true },
-  'ballista': { url: ballistaIcon, frame: 32 },
-  'bite': { url: biteIcon, frame: 32 },
-  'bone-claws': { url: boneClawsIcon, frame: 32 },
-  'club': { url: clubIcon, frame: 32 },
-  'fangs': { url: fangsIcon, frame: 32 },
-  'fire-spell': { url: fireSpellIcon, frame: 32 },
-  'fire': { url: fireIcon, frame: 32 },
-  'fists': { url: fistsIcon, frame: 32 },
-  'great-axe': { url: greatAxeIcon, frame: 32 },
-  'heal-staff': { url: healStaffIcon, frame: 32 },
-  'health-potion': { url: healthPotionIcon, frame: 32 },
-  'iron-axe': { url: ironAxeIcon, frame: 32 },
-  'iron-bow': { url: ironBowIcon, frame: 32 },
-  'iron-spear': { url: ironSpearIcon, frame: 32 },
-  'light': { url: lightIcon, frame: 32 },
-  'mana-potion': { url: manaPotionIcon, frame: 32 },
-  'master-seal': { url: masterSealIcon, frame: 32 },
-  'powder-keg': { url: powderKegIcon, frame: 32 },
-  'tackle': { url: tackleIcon, frame: 32 },
-  'wooden-armor': { url: woodenArmor, frame: 32 },
-  'wooden-axe': { url: woodenAxe, frame: 32 },
-  'wooden-shield': { url: woodenShield, frame: 32 },
-  'wooden-spear': { url: woodenSpear, frame: 32 },
-  'wooden-sword': { url: woodenSword, frame: 32 },
+export const SPRITE_URLS: Readonly<Record<string, string>> = {
+  Acolyte_01_Idle: acolyte01Idle,
+  Acolyte_01_Move: acolyte01Move,
+  Acolyte_02_Idle: acolyte02Idle,
+  Acolyte_02_Move: acolyte02Move,
+  Acolyte_03_Idle: acolyte03Idle,
+  Acolyte_03_Move: acolyte03Move,
+  Amazon_01_Idle: amazon01Idle,
+  Amazon_01_Move: amazon01Move,
+  Archer_03_Idle: archer03Idle,
+  Archer_03_Move: archer03Move,
+  Bat_01_Idle: bat01Idle,
+  Bat_01_Move: bat01Move,
+  gates,
+  ginkgo_tree_green: ginkgoTreeGreen,
+  Goblin_01_Idle: goblin01Idle,
+  Goblin_01_Move: goblin01Move,
+  gold_ginkgo_tree: goldGinkgoTree,
+  'map-props': mapProps,
+  Orc_01_Idle: orc01Idle,
+  Orc_01_Move: orc01Move,
+  Sapper_04_Idle: sapper04Idle,
+  Sapper_04_Move: sapper04Move,
+  Siege_03_Idle: siege03Idle,
+  Siege_03_Move: siege03Move,
+  Skeleton_01_Idle: skeleton01Idle,
+  Skeleton_01_Move: skeleton01Move,
+  Slime_01_Idle: slime01Idle,
+  Slime_01_Move: slime01Move,
+  Soldier_02_Idle: soldier02Idle,
+  Soldier_02_Move: soldier02Move,
+  Soldier_03_Idle: soldier03Idle,
+  Soldier_03_Move: soldier03Move,
+  Soldier_04_Idle: soldier04Idle,
+  Soldier_04_Move: soldier04Move,
+  Soldier_05_Idle: soldier05Idle,
+  Soldier_05_Move: soldier05Move,
+  Soldier_06_Idle: soldier06Idle,
+  Soldier_06_Move: soldier06Move,
+  Vanguard_01_Idle: vanguard01Idle,
+  Vanguard_01_Move: vanguard01Move,
+  Vanguard_02_Idle: vanguard02Idle,
+  Vanguard_02_Move: vanguard02Move,
+  Vanguard_03_Idle: vanguard03Idle,
+  Vanguard_03_Move: vanguard03Move,
+  Vanguard_04_Idle: vanguard04Idle,
+  Vanguard_04_Move: vanguard04Move,
+  Vanguard_06_Idle: vanguard06Idle,
+  Vanguard_06_Move: vanguard06Move,
+  Warrior_02_Idle: warrior02Idle,
+  Warrior_02_Move: warrior02Move,
+  Wolf_01_Idle: wolf01Idle,
+  Wolf_01_Move: wolf01Move,
+  'ballista': ballistaIcon,
+  'bite': biteIcon,
+  'bone-claws': boneClawsIcon,
+  'club': clubIcon,
+  'fangs': fangsIcon,
+  'fire-spell': fireSpellIcon,
+  'fire': fireIcon,
+  'fists': fistsIcon,
+  'great-axe': greatAxeIcon,
+  'heal-staff': healStaffIcon,
+  'health-potion': healthPotionIcon,
+  'iron-axe': ironAxeIcon,
+  'iron-bow': ironBowIcon,
+  'iron-spear': ironSpearIcon,
+  'light': lightIcon,
+  'mana-potion': manaPotionIcon,
+  'master-seal': masterSealIcon,
+  'powder-keg': powderKegIcon,
+  'tackle': tackleIcon,
+  'wooden-armor': woodenArmor,
+  'wooden-axe': woodenAxe,
+  'wooden-shield': woodenShield,
+  'wooden-spear': woodenSpear,
+  'wooden-sword': woodenSword,
 };
-
-// Texture key -> URL, for the UI, which sizes images itself.
-export const SPRITE_URLS: Readonly<Record<string, string>> = Object.fromEntries(
-  Object.entries(SPRITES).map(([key, { url }]) => [key, url]),
-);

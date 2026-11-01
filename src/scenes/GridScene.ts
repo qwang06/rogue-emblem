@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { SPRITES } from '../assets/sprites.ts';
+import { SPRITE_URLS } from '../assets/sprites.ts';
 import terrainSheetUrl from '../assets/overworld.png';
 import { gameCommands, type Command, type MenuField } from '../bridge/commands.ts';
 import { changeAutoSpeed, cycleAutoSpeed } from '../game/autoSpeed.ts';
@@ -58,21 +58,7 @@ import {
 } from '../game/healing.ts';
 import { findUnitSkill, getSkillActions, getSkillForecast, getUnitSkills, isHealingSkill } from '../game/skills.ts';
 import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange } from '../game/combat.ts';
-import {
-  DEFAULT_ZOOM_LEVEL,
-  getCameraView,
-  getFitZoom,
-  getDragCenter,
-  getFollowCenter,
-  getLevelZoom,
-  SCROLL_VIEW_CELLS,
-  stepZoomLevel,
-} from '../game/camera.ts';
-import { getFramingClumps } from '../game/battlefieldFraming.ts';
-import { getCellTones } from '../game/floorTiles.ts';
-import { layOutKit, type BattlefieldKit, type KitLayer, type KitStanding } from '../game/battlefieldKit.ts';
-import { BATTLEFIELD_KITS, KIT_URLS } from '../assets/battlefieldKits.ts';
-import { ensureKitTextures, makeFadedTexture, makePatchTexture } from './kitTextures.ts';
+import { getFitZoom } from '../game/camera.ts';
 import { createCursor, moveCursor } from '../game/cursor.ts';
 import {
   createBattleLevel,
@@ -171,44 +157,15 @@ import { areAllied, getTeamUnitIds, isAllyOf, isHostileTo } from '../game/teams.
 import { advanceDialog, createDialog, DIALOG_CHARS_PER_SECOND, getCurrentLine } from '../game/dialog.ts';
 import { getTriggeredDialog, turnTrigger } from '../game/dialogScript.ts';
 import { describeObjective, getObjectiveStatus, type Objective } from '../game/objectives.ts';
-import { getFacingToward, getPathFacings, getStartFacing } from '../game/facing.ts';
-import {
-  getPropPlacement,
-  getStandingDepth,
-  getStandingPosition,
-  STANDING_DEPTH_HAIR,
-  STANDING_OVERHANG,
-  ART_FEET_Y,
-  getScaledArtOrigin,
-  getScaledArtRect,
-  PAINTED_OBSTACLE_SCALE,
-  PAINTED_UNIT_SCALE,
-} from '../game/sideView.ts';
-import {
-  BACKDROP_COLUMN,
-  BACKDROP_HEIGHT,
-  BATTLEFIELD_LOOKS,
-  getBackdropSeed,
-  getBackdropStyle,
-  getFloorFlecks,
-  getPaintingCamera,
-  getPaintingPlacement,
-  getSilhouette,
-  type BackdropStyle,
-  type WorldRect,
-} from '../game/backdrop.ts';
-import type { BattlefieldKind } from '../game/battlefields.ts';
-import { BATTLEFIELD_PAINTINGS, battlefieldPaintingKey } from '../assets/battlefieldArt.ts';
+import { getPathFacings } from '../game/facing.ts';
 import { createKeyRepeat, updateKeyRepeat } from '../game/keyRepeat.ts';
 import { getArrowPieces } from '../game/moveArrow.ts';
 import { getQuarterFrameMap, getTileFrame, type Autotile } from '../game/autotile.ts';
-import { getWangFrameMap } from '../game/wangTiles.ts';
 import {
   getBuildingSprites,
   getCrossingSprites,
   getHazardSprites,
   getFeatureSprites,
-  getPaintedObstacles,
   getWallAutotile,
   type MapSprite,
 } from '../game/mapArt.ts';
@@ -250,23 +207,16 @@ import {
   GATE_ART,
   MAP_PROPS_SHEET,
   MOUNTAIN_ART,
-  OBSTACLE_ART,
-  getFieldObstacleArt,
-  SOFT_UNIT_SHADOW,
   STRUCTURE_SPRITES,
+  TERRAIN_AUTOTILES,
+  TERRAIN_BASE_TILE,
   TERRAIN_SHEET,
-  WANG_SETS,
-  WANG_SHEET,
-  CELL,
-  GRID_PX,
   TILE_SIZE,
   TREE_SPRITES,
   UNIT_ANIMATIONS,
+  UNIT_OUTLINE,
   UNIT_SHEET,
   getUnitSprite,
-  getUnitTextureKey,
-  isSingleImageUnit,
-  getSingleImageWalk,
   unitSheetKey,
 } from '../game/tileset.ts';
 import {
@@ -279,9 +229,8 @@ import {
   playStoneThrow,
 } from './effects.ts';
 import { CRIT_SHAKE, getLungeDistance, getStrikeJuice, type Shake } from './hitJuice.ts';
-import { addCastShadow, addTreeShadow, addUnitShadow } from './unitShadow.ts';
-import { addTeamRing, getTeamTextureKey } from './unitTeamMarks.ts';
-import { addUnitRig, faceRigToward, playRigAction, setRigMotion } from './unitRig.ts';
+import { addTreeShadow, addUnitShadow } from './unitShadow.ts';
+import { addUnitOutline } from './unitOutline.ts';
 import { addRankBadge } from './rankBadge.ts';
 import type { Menu } from '../game/actionMenu.ts';
 import type { Dialog, DialogLine } from '../game/dialog.ts';
@@ -303,30 +252,8 @@ import type { SkillAction } from '../game/skills.ts';
 import type { RosterMenuEntry } from '../bridge/gameStore.ts';
 
 // The canvas is sized by the page (see main.ts); maps are zoomed to fit it,
-// up to MAX_ZOOM, and centered. Zoom goes in steps of ZOOM_STEP, so a
-// pixel of the 32px art (drawn at GRID_PX) stays a whole number of screen
-// pixels; the cap is a tile 96 screen pixels big.
-const ZOOM_STEP = 1 / GRID_PX;
-const MAX_ZOOM = 3 / GRID_PX;
-// On a field too big to show whole, how close (in cells) the cursor gets to
-// the view's edge before the camera follows it, and how long that pan takes.
-const FOLLOW_MARGIN = 2;
-const FOLLOW_PAN_MS = 140;
-// The player's zoom on a battlefield (an index into ZOOM_LEVELS), set with
-// the mouse wheel or the +/- keys (zoomBy). Kept from battle to battle.
-let zoomLevel = DEFAULT_ZOOM_LEVEL;
-const WHEEL_ZOOM_MS = 160;
-// How far (CSS pixels) a left press moves before it's a drag, not a click.
-const DRAG_THRESHOLD = 6;
-// How dark a battlefield's floor grid is (see renderFloorGrid).
-const FLOOR_GRID_ALPHA = 0.05;
-// The framing clumps' shade: near the camera and out of the light, so dark
-// and cool, and their depth, over everything standing but under the cursor.
-const FRAMING_TINT = 0x56664a;
-const FRAMING_DEPTH = 0.85;
-// The darkening toward a battlefield's screen edges (Phaser's vignette:
-// radius and strength), drawing the eye in to the fight.
-const VIGNETTE = { radius: 0.85, strength: 0.35 };
+// up to MAX_ZOOM, and centered.
+const MAX_ZOOM = 3;
 const MOVE_RANGE_COLOR = 0x3b82f6;
 const MOVE_RANGE_ALPHA = 0.45;
 const ATTACK_RANGE_COLOR = 0xef4444;
@@ -352,7 +279,7 @@ const PUSH_PREVIEW_ALPHA = 0.5;
 // A shoved unit's slide onto its new tile, and the nudge of one that's
 // stopped (in px).
 const PUSH_SLIDE_MS = 160;
-const PUSH_BUMP_PX = 6 * GRID_PX;
+const PUSH_BUMP_PX = 6;
 const DEPLOYMENT_ZONE_COLOR = 0xfacc15;
 const DEPLOYMENT_ZONE_ALPHA = 0.4;
 // A seize objective's tile: a gold outline over a faint fill that pulses,
@@ -517,19 +444,6 @@ export class GridScene extends Phaser.Scene {
   // The marker on the tile a boss's horn marked, and that tile as "x,y".
   incomingMarker: Phaser.GameObjects.Rectangle | null = null;
   incomingMarkerKey: string | null = null;
-  // A battlefield's kind, the world rectangle its painted scenery (a kit
-  // or a painting) covers, which fitCamera frames, and the out-of-focus
-  // clumps framing a code-drawn one.
-  battlefieldKind: BattlefieldKind | null = null;
-  battlefieldScene: WorldRect | null = null;
-  // Whether the field is too big to show whole, so the camera follows the
-  // cursor (followCamera), and where it's last been sent.
-  scrollingCamera = false;
-  cameraTarget: { x: number; y: number } | null = null;
-  // Whether the cursor is being moved by the mouse (drainPointerInput), so
-  // the camera doesn't follow it.
-  cursorFromPointer = false;
-  framingClumps: Phaser.GameObjects.Image[] = [];
 
   constructor() {
     super('Grid');
@@ -643,27 +557,11 @@ export class GridScene extends Phaser.Scene {
     this.load.on('progress', (progress: number) => gameStore.setState({ mapLoadProgress: progress }));
     // Spritesheets so sprites can draw single frames: the cursor and arrow
     // tiles of the terrain sheet (the tilemaps still use it whole), and each
-    // unit sheet's animation frames. Each is cut at its own frame size and
-    // drawn one tile big (addTileSprite, addTileImage).
-    const { tileSize } = TERRAIN_SHEET;
-    this.load.spritesheet(TERRAIN_SHEET.key, terrainSheetUrl, { frameWidth: tileSize, frameHeight: tileSize });
-    for (const [key, { url, frame }] of Object.entries(SPRITES)) {
-      this.load.spritesheet(key, url, { frameWidth: frame, frameHeight: frame });
+    // unit sheet's animation frames.
+    this.load.spritesheet(TERRAIN_SHEET.key, terrainSheetUrl, { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
+    for (const [key, url] of Object.entries(SPRITE_URLS)) {
+      this.load.spritesheet(key, url, { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
     }
-    const paintings = Object.keys(BATTLEFIELD_PAINTINGS) as BattlefieldKind[];
-    for (const kind of paintings) this.load.image(battlefieldPaintingKey(kind), BATTLEFIELD_PAINTINGS[kind]!.url);
-    for (const [key, url] of Object.entries(KIT_URLS)) this.load.image(key, url);
-    // Painted art is filtered smoothly when scaled; the rest stays crisp
-    // (the game's pixelArt default).
-    this.load.once(Phaser.Loader.Events.COMPLETE, () => {
-      for (const [key, { smooth }] of Object.entries(SPRITES)) {
-        if (smooth) this.textures.get(key).setFilter(Phaser.Textures.FilterMode.LINEAR);
-      }
-      for (const kind of paintings) {
-        this.textures.get(battlefieldPaintingKey(kind)).setFilter(Phaser.Textures.FilterMode.LINEAR);
-      }
-      for (const key of Object.keys(KIT_URLS)) this.textures.get(key).setFilter(Phaser.Textures.FilterMode.LINEAR);
-    });
   }
 
   // `setup` is the battle to run (gameStore's battleSetup, see
@@ -702,34 +600,13 @@ export class GridScene extends Phaser.Scene {
 
     const paletteName = level.palette ?? DEFAULT_BUILDING_PALETTE;
     const palette = BUILDING_PALETTES[paletteName];
-    // A battlefield is its field's painted (or code-drawn) look with its
-    // obstacles standing on it; any other map is drawn from its terrain.
-    this.battlefieldKind = level.battlefield ?? null;
-    this.battlefieldScene = null;
-    this.scrollingCamera = false;
-    this.cameraTarget = null;
-    this.framingClumps = [];
-    // A battlefield darkens toward the screen's edges (WebGL only).
-    const cameraFX = this.cameras.main.postFX;
-    cameraFX?.clear();
-    if (level.battlefield) cameraFX?.addVignette(0.5, 0.5, VIGNETTE.radius, VIGNETTE.strength);
-    if (level.battlefield) {
-      this.renderBattlefield(level.battlefield, getBackdropSeed(this.grid), level.obstacles ?? []);
-    } else {
-      this.renderBackdrop(getBackdropStyle(level.biome), getBackdropSeed(this.grid));
-      this.renderTerrain(this.grid, { wall: getWallAutotile(palette) });
-    }
+    this.renderTerrain(this.grid, { ...TERRAIN_AUTOTILES, wall: getWallAutotile(palette) });
     this.renderMapSprites([
       ...getCrossingSprites(this.grid, BRIDGE_ART, GATE_ART[paletteName], FORD_ART, MAP_PROPS_SHEET),
       ...getHazardSprites(this.grid, SPIKES_ART, MAP_PROPS_SHEET),
+      ...getFeatureSprites(this.grid, FOREST_ART, MOUNTAIN_ART),
+      ...getBuildingSprites(level.buildings ?? [], palette, BUILDING_ART),
     ]);
-    if (level.battlefield)
-      this.renderPaintedObstacles(getPaintedObstacles(level.obstacles ?? [], getFieldObstacleArt(level.battlefield)));
-    else
-      this.renderStandingProps([
-        ...getFeatureSprites(this.grid, FOREST_ART, MOUNTAIN_ART),
-        ...getBuildingSprites(level.buildings ?? [], palette, BUILDING_ART),
-      ]);
     this.renderDecorations(level.decorations ?? []);
     this.renderStructures(level.structures ?? []);
     this.renderObjectiveTile();
@@ -852,182 +729,23 @@ export class GridScene extends Phaser.Scene {
     gameStore.setState({ mapLoadProgress: 1, mapReady: true });
   }
 
-  // Zooms the map to fit the canvas (up to MAX_ZOOM) and centers it; a
-  // painted battlefield is framed by its painting instead
-  // (getPaintingCamera). Runs on create and whenever the page resizes the
-  // canvas.
+  // Zooms the map to fit the canvas (up to MAX_ZOOM) and centers it. Runs
+  // on create and whenever the page resizes the canvas.
   fitCamera() {
     const camera = this.cameras.main;
-    const scenery = this.battlefieldScene;
-    if (scenery) {
-      const canvas = this.scale.gameSize;
-      const floor = {
-        x: 0,
-        y: -STANDING_OVERHANG,
-        width: this.grid.width * CELL.width,
-        height: this.grid.height * CELL.height + STANDING_OVERHANG,
-      };
-      const fit = Math.min(canvas.width / floor.width, canvas.height / floor.height);
-      // A field bigger than SCROLL_VIEW_CELLS is shown at that size's fit
-      // (never so far out the page shows past the scenery) and the camera
-      // follows the cursor across it (followCamera); so is any field the
-      // player has zoomed (zoomLevel, getLevelZoom).
-      const shown = {
-        width: Math.min(this.grid.width, SCROLL_VIEW_CELLS.width) * CELL.width,
-        height: Math.min(this.grid.height, SCROLL_VIEW_CELLS.height) * CELL.height + STANDING_OVERHANG,
-      };
-      const viewFit = Math.min(canvas.width / shown.width, canvas.height / shown.height);
-      const cover = Math.max(canvas.width / scenery.width, canvas.height / scenery.height);
-      const framed = getPaintingCamera(scenery, floor, canvas, fit);
-      this.scrollingCamera = fit < viewFit || zoomLevel !== DEFAULT_ZOOM_LEVEL;
-      this.cameraTarget = null;
-      if (this.scrollingCamera) {
-        const base = fit < viewFit ? Math.max(viewFit, cover) : framed.zoom;
-        camera.setZoom(getLevelZoom(base, zoomLevel, cover));
-        this.followCamera(this.cursor ?? { x: 0, y: 0 }, 0);
-        return;
-      }
-      camera.setZoom(framed.zoom);
-      camera.centerOn(framed.center.x, framed.center.y);
-      this.afterCameraFit();
-      return;
-    }
-    // The backdrop stands above the floor (with room for the top row's
-    // heads), so frame it too.
-    const rows = this.grid.height + BACKDROP_HEIGHT / CELL.height;
-    // The canvas has pixelRatio canvas pixels per CSS pixel (see main.ts), so
-    // the cap grows with it to keep the map the same size on screen, and the
-    // steps stay whole canvas pixels.
-    const pixelRatio = 1 / this.scale.zoom;
-    const zoom = getFitZoom(
-      { width: this.grid.width, height: rows },
-      CELL,
-      this.scale.gameSize,
-      MAX_ZOOM * pixelRatio,
-      ZOOM_STEP,
-    );
-    const center = {
-      x: (this.grid.width * CELL.width) / 2,
-      y: (this.grid.height * CELL.height - BACKDROP_HEIGHT) / 2,
-    };
-    camera.setZoom(zoom);
-    camera.centerOn(center.x, center.y);
-    if (this.battlefieldKind) this.frameBattlefield(getCameraView(center, zoom, this.scale.gameSize));
-    this.afterCameraFit();
-  }
-
-  // On a field too big to show whole (scrollingCamera), pans the camera
-  // just far enough to keep `tiles` (one tile, or all of a route)
-  // FOLLOW_MARGIN cells inside the view (getFollowCenter), over
-  // `durationMs`, then moves what's placed by screen position. Does nothing
-  // on a field shown whole.
-  followCamera(tiles: Point | readonly Point[], durationMs = FOLLOW_PAN_MS) {
-    if (!this.scrollingCamera || !this.battlefieldScene) return;
-    const list = Array.isArray(tiles) ? tiles : [tiles as Point];
-    if (list.length === 0) return;
-    const camera = this.cameras.main;
-    const canvas = this.scale.gameSize;
-    const view = { width: canvas.width / camera.zoom, height: canvas.height / camera.zoom };
-    const xs = list.map(({ x }) => x);
-    const ys = list.map(({ y }) => y);
-    const topLeft = gridToWorld(Math.min(...xs), Math.min(...ys), CELL);
-    const bottomRight = gridToWorld(Math.max(...xs) + 1, Math.max(...ys) + 1, CELL);
-    // The cells, with room above them for the head of a unit standing there.
-    const focus = {
-      x: topLeft.x,
-      y: topLeft.y - STANDING_OVERHANG,
-      width: bottomRight.x - topLeft.x,
-      height: bottomRight.y - topLeft.y + STANDING_OVERHANG,
-    };
-    const current = { x: camera.midPoint.x, y: camera.midPoint.y };
-    if (this.cameraTarget) Object.assign(current, this.cameraTarget);
-    let margin = { width: FOLLOW_MARGIN * CELL.width, height: FOLLOW_MARGIN * CELL.height };
-    // Zoomed out far enough to see the whole floor, keep all of it in view.
-    const floor = {
-      x: 0,
-      y: -STANDING_OVERHANG,
-      width: this.grid.width * CELL.width,
-      height: this.grid.height * CELL.height + STANDING_OVERHANG,
-    };
-    if (floor.width <= view.width && floor.height <= view.height) {
-      Object.assign(focus, floor);
-      margin = { width: 0, height: 0 };
-    }
-    const center = getFollowCenter(current, focus, view, this.battlefieldScene, margin);
-    if (this.cameraTarget && center.x === this.cameraTarget.x && center.y === this.cameraTarget.y) return;
-    this.cameraTarget = center;
-    if (durationMs <= 0) {
-      camera.panEffect.reset();
-      camera.centerOn(center.x, center.y);
-      this.afterCameraFit();
-      return;
-    }
-    camera.pan(center.x, center.y, durationMs, 'Sine.easeOut', true, (_camera: unknown, progress: number) => {
-      if (progress === 1) this.afterCameraFit();
-    });
-  }
-
-  // Pans a scrolling battlefield as the pointer drags `moved` canvas
-  // pixels from where the camera was centered on `from`, kept within the
-  // scenery (getDragCenter).
-  dragCamera(from: Point, moved: Point) {
-    if (!this.scrollingCamera || !this.battlefieldScene) return;
-    const camera = this.cameras.main;
-    const canvas = this.scale.gameSize;
-    const view = { width: canvas.width / camera.zoom, height: canvas.height / camera.zoom };
-    const center = getDragCenter(from, moved, camera.zoom, view, this.battlefieldScene);
-    camera.panEffect.reset();
-    camera.centerOn(center.x, center.y);
-    this.cameraTarget = center;
-  }
-
-  // Zooms a battlefield one ZOOM_LEVELS step in (`delta` > 0) or out, and
-  // refits the camera around the cursor.
-  zoomBy(delta: number) {
-    if (!this.battlefieldScene || delta === 0) return;
-    const next = stepZoomLevel(zoomLevel, delta);
-    if (next === zoomLevel) return;
-    zoomLevel = next;
-    this.fitCamera();
-  }
-
-  // After the camera moves: what's placed by screen position follows it.
-  afterCameraFit() {
+    camera.setZoom(getFitZoom(this.grid, TILE_SIZE, this.scale.gameSize, MAX_ZOOM));
+    camera.centerOn((this.grid.width * TILE_SIZE) / 2, (this.grid.height * TILE_SIZE) / 2);
     // The camera's visible area only updates when it next renders, so move
     // an open unit menu to the refitted map then.
     this.events.once(Phaser.Scenes.Events.RENDER, () => {
       if (this.activeUnit) this.publishMenuAnchor();
-      if (this.hoveredUnit) this.publishHoveredUnit();
       if (this.rangeMode === 'attack' || this.rangeMode === 'skill') this.updateCombatForecast();
       if (this.rangeMode === 'skill') this.updatePushPreview();
       this.refreshIntents();
     });
   }
 
-  // Fits a code-drawn battlefield to the camera's `view`: the
-  // out-of-focus clumps (getFramingClumps) redrawn in its bottom corners,
-  // over everything on the floor but the cursor. (A painting has its own
-  // foreground painted in.)
-  frameBattlefield(view: { x: number; y: number; width: number; height: number }) {
-    const kind = this.battlefieldKind!;
-    const floor = { width: this.grid.width * CELL.width, height: this.grid.height * CELL.height };
-    for (const clump of this.framingClumps) clump.destroy();
-    this.framingClumps = getFramingClumps(kind, view, floor).map(({ kind: obstacle, x, y, size, flip }) => {
-      const { sheet, tile } = OBSTACLE_ART[obstacle];
-      const image = this.add
-        .image(x, y, sheet.key, getTileFrame(tile, sheet.columns))
-        .setOrigin(0, 0)
-        .setDisplaySize(size, size)
-        .setFlipX(flip)
-        .setTint(FRAMING_TINT)
-        .setDepth(FRAMING_DEPTH);
-      image.preFX?.addBlur(0, 1, 1, Math.max(1, size / 120));
-      return image;
-    });
-  }
-
   override update(_time: number, delta: number) {
-    this.sortUnitSprites();
     const { JustDown } = Phaser.Input.Keyboard;
     const { dx, dy } = this.readArrowKeys(delta);
     const pointer = this.drainPointerInput();
@@ -1423,7 +1141,7 @@ export class GridScene extends Phaser.Scene {
   getTileAnchor(tile: Point) {
     const { worldView, zoom } = this.cameras.main;
     const camera = { x: worldView.x, y: worldView.y, zoom };
-    return toTileAnchorView(tile, CELL, camera, this.scale.gameSize);
+    return toTileAnchorView(tile, TILE_SIZE, camera, this.scale.gameSize);
   }
 
   // Keeps a menu on the scene and mirrors it to the store field of the same
@@ -2157,7 +1875,7 @@ export class GridScene extends Phaser.Scene {
       if (!at) {
         if (sprite) this.removeUnitSprite(id);
       } else if (sprite) {
-        const pos = getStandingPosition(at.x, at.y);
+        const pos = gridToWorld(at.x, at.y, TILE_SIZE);
         sprite.setPosition(pos.x, pos.y);
       } else {
         this.addUnitSprite(id, at.x, at.y);
@@ -2416,11 +2134,11 @@ export class GridScene extends Phaser.Scene {
     this.incomingMarker = null;
     this.incomingMarkerKey = key;
     if (!tile) return;
-    const { x, y } = gridToWorld(tile.x, tile.y, CELL);
+    const { x, y } = gridToWorld(tile.x, tile.y, TILE_SIZE);
     this.incomingMarker = this.add
-      .rectangle(x, y, CELL.width, CELL.height, INCOMING_TILE_COLOR, INCOMING_TILE_ALPHA)
+      .rectangle(x, y, TILE_SIZE, TILE_SIZE, INCOMING_TILE_COLOR, INCOMING_TILE_ALPHA)
       .setOrigin(0, 0)
-      .setStrokeStyle(2 * GRID_PX, INCOMING_TILE_COLOR)
+      .setStrokeStyle(2, INCOMING_TILE_COLOR)
       .setDepth(0.42);
     this.tweens.add({
       targets: this.incomingMarker,
@@ -2627,8 +2345,6 @@ export class GridScene extends Phaser.Scene {
   takeEnemyAction(move: BattleCommand, act: BattleCommand, next: () => void = () => this.runEnemyPhase()) {
     const moved = findEvent(this.dispatch(move), 'moved')!;
     this.setCursor(moved.from.x, moved.from.y);
-    // On a big field, bring its whole route into view before it walks.
-    this.followCamera(moved.path);
     this.time.delayedCall(ENEMY_FOCUS_DELAY_MS, () => {
       this.walkSprite(this.unitSprites.get(moved.unitId)!, moved.path, () => {
         this.syncShown();
@@ -2718,9 +2434,9 @@ export class GridScene extends Phaser.Scene {
   drawMoveArrow(path: readonly Point[]) {
     this.clearMoveArrow();
     this.arrowSprites = getArrowPieces(path).map(({ x, y, piece }) => {
-      const pos = gridToWorld(x, y, CELL);
+      const pos = gridToWorld(x, y, TILE_SIZE);
       const frame = getTileFrame(ARROW_TILES[piece], TERRAIN_SHEET.columns);
-      return this.addTileSprite(pos.x, pos.y, TERRAIN_SHEET.key, frame).setDepth(0.6);
+      return this.add.sprite(pos.x, pos.y, TERRAIN_SHEET.key, frame).setOrigin(0, 0).setDepth(0.6);
     });
   }
 
@@ -2805,8 +2521,8 @@ export class GridScene extends Phaser.Scene {
   // Returns the rectangles so the caller can destroy them later.
   drawTileHighlights(tiles: readonly Point[], color: number, alpha: number) {
     return tiles.map((tile) => {
-      const pos = gridToWorld(tile.x, tile.y, CELL);
-      return this.add.rectangle(pos.x, pos.y, CELL.width, CELL.height, color, alpha).setOrigin(0, 0).setDepth(0.5);
+      const pos = gridToWorld(tile.x, tile.y, TILE_SIZE);
+      return this.add.rectangle(pos.x, pos.y, TILE_SIZE, TILE_SIZE, color, alpha).setOrigin(0, 0).setDepth(0.5);
     });
   }
 
@@ -2885,12 +2601,12 @@ export class GridScene extends Phaser.Scene {
   }
 
   drawIntent(graphics: Phaser.GameObjects.Graphics, { path, target }: EnemyIntent) {
-    const center = ({ x, y }: Point) => new Phaser.Math.Vector2((x + 0.5) * CELL.width, (y + 0.5) * CELL.height);
+    const center = ({ x, y }: Point) => new Phaser.Math.Vector2((x + 0.5) * TILE_SIZE, (y + 0.5) * TILE_SIZE);
     const end = center(path[path.length - 1]);
     if (path.length > 1) {
-      graphics.lineStyle(2 * GRID_PX, INTENT_COLOR, INTENT_ROUTE_ALPHA);
+      graphics.lineStyle(2, INTENT_COLOR, INTENT_ROUTE_ALPHA);
       graphics.strokePoints(path.map(center), false);
-      if (!target) graphics.fillStyle(INTENT_COLOR, INTENT_ROUTE_ALPHA).fillCircle(end.x, end.y, 3 * GRID_PX);
+      if (!target) graphics.fillStyle(INTENT_COLOR, INTENT_ROUTE_ALPHA).fillCircle(end.x, end.y, 3);
     }
     if (!target) return;
     // From the edge of the attacker's tile to the edge of its target's, so
@@ -2899,9 +2615,9 @@ export class GridScene extends Phaser.Scene {
     const direction = tip.clone().subtract(end).normalize();
     const from = end.clone().add(direction.clone().scale(TILE_SIZE * 0.3));
     const to = tip.clone().subtract(direction.clone().scale(TILE_SIZE * 0.4));
-    const side = new Phaser.Math.Vector2(-direction.y, direction.x).scale(4 * GRID_PX);
-    const base = to.clone().subtract(direction.clone().scale(7 * GRID_PX));
-    graphics.lineStyle(3 * GRID_PX, INTENT_COLOR, INTENT_ARROW_ALPHA).lineBetween(from.x, from.y, base.x, base.y);
+    const side = new Phaser.Math.Vector2(-direction.y, direction.x).scale(4);
+    const base = to.clone().subtract(direction.clone().scale(7));
+    graphics.lineStyle(3, INTENT_COLOR, INTENT_ARROW_ALPHA).lineBetween(from.x, from.y, base.x, base.y);
     graphics
       .fillStyle(INTENT_COLOR, INTENT_ARROW_ALPHA)
       .fillTriangle(to.x, to.y, base.x + side.x, base.y + side.y, base.x - side.x, base.y - side.y);
@@ -2978,7 +2694,7 @@ export class GridScene extends Phaser.Scene {
     this.history = rewindTo(this.history, movedAt!);
     this.syncShown();
     this.refreshIntents();
-    const pos = getStandingPosition(origin!.x, origin!.y);
+    const pos = gridToWorld(origin!.x, origin!.y, TILE_SIZE);
     this.unitSprites.get(unitId)!.setPosition(pos.x, pos.y);
     this.activeUnit = { unitId, x: origin!.x, y: origin!.y };
     this.setCursor(origin!.x, origin!.y);
@@ -3083,7 +2799,7 @@ export class GridScene extends Phaser.Scene {
     const reducedMotion = prefersReducedMotion();
     const juice = getStrikeJuice({ hit: strike.hit, crit: strike.crit, lethal: strike.health <= 0 }, reducedMotion);
     const tiles = Math.round(
-      Math.max(Math.abs(sprite.x - strikerSprite.x) / CELL.width, Math.abs(sprite.y - strikerSprite.y) / CELL.height),
+      Math.max(Math.abs(sprite.x - strikerSprite.x), Math.abs(sprite.y - strikerSprite.y)) / TILE_SIZE,
     );
 
     // Done once the target's flash (or the miss pause) and the striker's
@@ -3111,14 +2827,9 @@ export class GridScene extends Phaser.Scene {
       }
       this.showStats(strike.targetId, { health: strike.health });
       this.showDamagePopup(sprite, strike.damage, strike.crit ? 'crit' : 'damage');
-      playRigAction(sprite, 'hit');
       if (juice.shake) this.shakeCamera(juice.shake);
       playHitStop(this, sprite, [strikerSprite], juice.hitStopMs, () => playHitFlash(this, sprite, land));
     };
-    // The two turn to face each other, and the striker swings.
-    this.faceSpriteToward(strikerSprite, sprite);
-    this.faceSpriteToward(sprite, strikerSprite);
-    playRigAction(strikerSprite, 'attack');
     playLunge(this, strikerSprite, spriteCenter(sprite), {
       distance: getLungeDistance(tiles, reducedMotion),
       holdMs: juice.hitStopMs,
@@ -3159,13 +2870,7 @@ export class GridScene extends Phaser.Scene {
       // A Shove's blow does nothing itself: the push that follows shows
       // what it cost.
       if (damage > 0 || !skill.push) this.showDamagePopup(targetSprite, damage);
-      if (damage > 0) playRigAction(targetSprite, 'hit');
     };
-    if (targetSprite !== userSprite) {
-      faceRigToward(userSprite, targetSprite.x);
-      faceRigToward(targetSprite, userSprite.x);
-    }
-    playRigAction(userSprite, 'attack');
     this.playSkillAnimation(skill.animation, userSprite, targetSprite, onImpact, next);
   }
 
@@ -3182,7 +2887,6 @@ export class GridScene extends Phaser.Scene {
         const collided = this.unitSprites.get(push.collidedId)!;
         this.showStats(push.collidedId, { health: collidedHealth });
         this.showDamagePopup(collided, push.collisionDamage);
-        playRigAction(collided, 'hit');
         playHitFlash(this, collided);
       }
       if (push.drowned) {
@@ -3190,7 +2894,7 @@ export class GridScene extends Phaser.Scene {
         this.tweens.add({
           targets: sprite,
           alpha: 0.2,
-          y: sprite.y + 6 * GRID_PX,
+          y: sprite.y + 6,
           duration: PUSH_SLIDE_MS * 2,
           onComplete: next,
         });
@@ -3202,13 +2906,12 @@ export class GridScene extends Phaser.Scene {
       }
       this.showStats(push.unitId, { health });
       this.showDamagePopup(sprite, push.damage);
-      playRigAction(sprite, 'hit');
       playHitFlash(this, sprite, next);
     };
     if (push.moved) {
       this.tweens.add({
         targets: sprite,
-        ...getStandingPosition(push.to.x, push.to.y),
+        ...gridToWorld(push.to.x, push.to.y, TILE_SIZE),
         duration: PUSH_SLIDE_MS,
         ease: 'Quad.easeOut',
         onComplete: land,
@@ -3436,7 +3139,7 @@ export class GridScene extends Phaser.Scene {
   showDamagePopup(sprite: Sprite, amount: number, kind: PopupKind = 'damage', label?: string) {
     const { worldView, zoom } = this.cameras.main;
     const { x, y } = toCanvasFraction(
-      worldToScreen(sprite.getTopCenter(), { x: worldView.x, y: worldView.y, zoom }),
+      worldToScreen({ x: sprite.x + sprite.displayWidth / 2, y: sprite.y }, { x: worldView.x, y: worldView.y, zoom }),
       this.scale.gameSize,
     );
     const popup = toDamagePopupView({
@@ -3475,17 +3178,19 @@ export class GridScene extends Phaser.Scene {
       return;
     }
 
+    const art = sprite.getData('art');
     const facings = getPathFacings(path, sprite.getData('facing'));
     this.tweens.chain({
       targets: sprite,
       tweens: steps.map((step, i) => ({
-        ...getStandingPosition(step.x, step.y),
+        ...gridToWorld(step.x, step.y, TILE_SIZE),
         duration: MOVE_STEP_MS,
         ease: 'Linear',
-        onStart: () => this.playUnitMotion(sprite, 'move', facings[i]),
+        onStart: () => sprite.play(this.unitAnimation(art, 'move', facings[i]), true),
       })),
       onComplete: () => {
-        this.playUnitMotion(sprite, 'idle', facings[facings.length - 1]);
+        const facing = facings[facings.length - 1];
+        sprite.setData('facing', facing).play(this.unitAnimation(art, 'idle', facing));
         onDone();
       },
     });
@@ -3506,65 +3211,17 @@ export class GridScene extends Phaser.Scene {
     this.pointerQueue = [];
     this.pointerTile = null; // last tile the pointer was over, so only tile changes move the cursor
 
-    const toTile = (pointer: Phaser.Input.Pointer) => worldToTile(this.grid, pointer.worldX, pointer.worldY, CELL);
-    // A left click picks the tile it lets go on, unless the pointer was
-    // dragged first, which pans a scrolling battlefield instead
-    // (getDragCenter).
-    let drag: { start: Point; center: Point; dragging: boolean } | null = null;
+    const toTile = (pointer: Phaser.Input.Pointer) => worldToTile(this.grid, pointer.worldX, pointer.worldY, TILE_SIZE);
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (drag && pointer.isDown) {
-        const moved = { x: pointer.x - drag.start.x, y: pointer.y - drag.start.y };
-        if (!drag.dragging && Math.hypot(moved.x, moved.y) < DRAG_THRESHOLD / this.scale.zoom) return;
-        drag.dragging = true;
-        this.dragCamera(drag.center, moved);
-        return;
-      }
       const tile = toTile(pointer);
       if (!tile || (this.pointerTile && isSameTile(tile, this.pointerTile))) return;
       this.pointerTile = tile;
       this.pointerQueue.push({ type: 'hover-tile', ...tile });
     });
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.button !== 0) return;
-      const camera = this.cameras.main;
-      drag = {
-        start: { x: pointer.x, y: pointer.y },
-        center: { x: camera.midPoint.x, y: camera.midPoint.y },
-        dragging: false,
-      };
-    });
-    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.button !== 0 || !drag) return;
-      const dragged = drag.dragging;
-      drag = null;
-      if (dragged) {
-        this.afterCameraFit();
-        return;
-      }
       const tile = toTile(pointer);
-      if (tile) this.pointerQueue.push({ type: 'click-tile', ...tile });
+      if (tile && pointer.button === 0) this.pointerQueue.push({ type: 'click-tile', ...tile });
     });
-    this.input.on('pointerupoutside', () => {
-      if (drag?.dragging) this.afterCameraFit();
-      drag = null;
-    });
-    // The wheel and the +/- keys zoom a battlefield in and out.
-    // A trackpad sends a stream of small wheel events, so one step at most
-    // every WHEEL_ZOOM_MS.
-    let lastWheelZoom = -Infinity;
-    this.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => {
-      if (dy === 0 || this.time.now - lastWheelZoom < WHEEL_ZOOM_MS) return;
-      lastWheelZoom = this.time.now;
-      this.zoomBy(-dy);
-    });
-    for (const [event, delta] of [
-      ['keydown-PLUS', 1],
-      ['keydown-NUMPAD_ADD', 1],
-      ['keydown-MINUS', -1],
-      ['keydown-NUMPAD_SUBTRACT', -1],
-    ] as const) {
-      this.input.keyboard!.on(event, () => this.zoomBy(delta));
-    }
 
     const unsubscribe = gameCommands.subscribe((command) => this.pointerQueue.push(command));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, unsubscribe);
@@ -3593,9 +3250,6 @@ export class GridScene extends Phaser.Scene {
     if (this.inputLocked) return result;
 
     for (const command of queue) {
-      // The mouse moves the cursor where the player can already see it, so
-      // the camera stays put (they drag to move it: startMapDrag).
-      this.cursorFromPointer = command.type === 'hover-tile' || command.type === 'click-tile';
       switch (command.type) {
         case 'hover-tile':
           if (this.canRoamCursor()) this.pointCursorAt(command.x, command.y);
@@ -3658,7 +3312,6 @@ export class GridScene extends Phaser.Scene {
           break;
       }
     }
-    this.cursorFromPointer = false;
     return result;
   }
 
@@ -3688,7 +3341,6 @@ export class GridScene extends Phaser.Scene {
 
   setCursor(x: number, y: number) {
     this.cursor = moveCursor(this.grid, this.cursor, x - this.cursor.x, y - this.cursor.y);
-    if (!this.cursorFromPointer) this.followCamera(this.cursor);
     this.updateCursorSprite();
     this.updateHoveredUnit();
     if (this.rangeMode === 'attack' || this.rangeMode === 'skill') this.updateCombatForecast();
@@ -3723,7 +3375,7 @@ export class GridScene extends Phaser.Scene {
 
   createCursor() {
     this.cursor = createCursor(0, 0);
-    const { x, y } = gridToWorld(this.cursor.x, this.cursor.y, CELL);
+    const { x, y } = gridToWorld(this.cursor.x, this.cursor.y, TILE_SIZE);
     const { key, columns } = TERRAIN_SHEET;
     const frames = CURSOR_ANIMATION.tiles.map((tile) => ({ key, frame: getTileFrame(tile, columns) }));
     // Animations are global to the game, so a restarted scene reuses it.
@@ -3735,7 +3387,11 @@ export class GridScene extends Phaser.Scene {
         repeat: -1,
       });
     }
-    this.cursorSprite = this.addTileSprite(x, y, key, frames[0].frame).setDepth(1).play(CURSOR_ANIMATION.key);
+    this.cursorSprite = this.add
+      .sprite(x, y, key, frames[0].frame)
+      .setOrigin(0, 0)
+      .setDepth(1)
+      .play(CURSOR_ANIMATION.key);
   }
 
   // A hidden cursor hovers nothing, so the unit panel clears with it.
@@ -3745,56 +3401,28 @@ export class GridScene extends Phaser.Scene {
   }
 
   updateCursorSprite() {
-    const { x, y } = gridToWorld(this.cursor.x, this.cursor.y, CELL);
+    const { x, y } = gridToWorld(this.cursor.x, this.cursor.y, TILE_SIZE);
     this.cursorSprite.setPosition(x, y);
   }
 
-  // A sprite (by texture key, and frame of a sheet) covering the map tile
-  // whose top-left corner is (x, y), stretched to the tile whatever the
-  // image's own pixel size.
-  addTileSprite(x: number, y: number, key: string, frame?: number) {
-    return this.add.sprite(x, y, key, frame).setOrigin(0, 0).setDisplaySize(CELL.width, CELL.height);
+  // A sprite (by texture key) covering the map tile whose top-left corner is
+  // (x, y), stretched to the tile whatever the image's own size.
+  addTileSprite(x: number, y: number, key: string) {
+    return this.add.sprite(x, y, key).setOrigin(0, 0).setDisplaySize(TILE_SIZE, TILE_SIZE);
   }
 
-  // A sprite standing on cell (gridX, gridY) (see src/game/sideView.ts): its
-  // full TILE_SIZE square art with its feet on the cell, sorted by row.
-  addStandingSprite(gridX: number, gridY: number, key: string, frame?: number) {
-    const { x, y } = getStandingPosition(gridX, gridY);
-    return this.add
-      .sprite(x, y, key, frame)
-      .setOrigin(0, 0)
-      .setDisplaySize(TILE_SIZE, TILE_SIZE)
-      .setDepth(getStandingDepth(y));
-  }
-
-  // A still image of one tile-sized frame, placed like addTileSprite.
-  addTileImage(x: number, y: number, key: string, frame: number) {
-    return this.add.image(x, y, key, frame).setOrigin(0, 0).setDisplaySize(CELL.width, CELL.height);
-  }
-
-  // The ground is the 64px corner tilesets (WANG_SETS, see
-  // src/game/wangTiles.ts), each a layer of half-size tiles, four per cell:
-  // the grass-and-dirt base under every cell, then the river over any
-  // quarter touching water. Each blob-autotiled terrain (`autotiles`, see
-  // src/game/autotile.ts) is drawn over that as its own layer off the
-  // overworld sheet; animated sets step through their copies on a timer.
-  // The tilemaps use their sheet's own tile size, and each layer is scaled
-  // to the floor's CELL (squashed into the side view's slant).
+  // Terrain is plain grass under every cell, with each autotiled terrain
+  // (`autotiles`, see src/game/autotile.ts) drawn over it as its own layer of
+  // half-size tiles, four per cell. Animated sets step through their copies
+  // on a timer.
   renderTerrain(grid: Grid, autotiles: Record<string, Autotile>) {
-    const wangHalf = SPRITES[WANG_SHEET.key].frame / 2;
-    for (const set of Object.values(WANG_SETS)) {
-      const map = this.make.tilemap({
-        data: getWangFrameMap(grid, set, WANG_SHEET.columns),
-        tileWidth: wangHalf,
-        tileHeight: wangHalf,
-      });
-      const tiles = map.addTilesetImage(WANG_SHEET.key, WANG_SHEET.key, wangHalf, wangHalf)!;
-      map.createLayer(0, tiles, 0, 0)!.setScale(CELL.width / (wangHalf * 2), CELL.height / (wangHalf * 2));
-    }
+    const { key, columns } = TERRAIN_SHEET;
+    const grassFrame = getTileFrame(TERRAIN_BASE_TILE, columns);
+    const grass = Array.from({ length: grid.height }, () => Array(grid.width).fill(grassFrame));
+    const grassMap = this.make.tilemap({ data: grass, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });
+    grassMap.createLayer(0, grassMap.addTilesetImage(key, key, TILE_SIZE, TILE_SIZE)!, 0, 0);
 
-    const { key, columns, tileSize } = TERRAIN_SHEET;
-    const scale = { x: CELL.width / tileSize, y: CELL.height / tileSize };
-    const half = tileSize / 2;
+    const half = TILE_SIZE / 2;
     for (const [terrain, autotile] of Object.entries(autotiles)) {
       const frameCount = autotile.animation?.frames ?? 1;
       // One quarter-frame map per animation frame: frames[i][y][x].
@@ -3803,7 +3431,7 @@ export class GridScene extends Phaser.Scene {
       );
 
       const map = this.make.tilemap({ data: frames[0], tileWidth: half, tileHeight: half });
-      const layer = map.createLayer(0, map.addTilesetImage(key, key, half, half)!, 0, 0)!.setScale(scale.x, scale.y);
+      const layer = map.createLayer(0, map.addTilesetImage(key, key, half, half)!, 0, 0)!;
       if (frameCount < 2) continue;
       let current = 0;
       this.time.addEvent({
@@ -3819,215 +3447,39 @@ export class GridScene extends Phaser.Scene {
     }
   }
 
-  // A battlefield's floor and backdrop: its painting (BATTLEFIELD_PAINTINGS)
-  // with its field laid over the floor (fitCamera frames the camera on it),
-  // or without one its code-drawn look (BATTLEFIELD_LOOKS): a
-  // flecked floor under the backdrop, both running a floor's width past
-  // either side and on below the front edge, so neither ends on screen.
-  // A faint grid over the floor marks out its cells without boxing them in.
-  renderBattlefield(kind: BattlefieldKind, seed: number, obstacles: readonly { x: number; y: number }[] = []) {
-    const floor = { width: this.grid.width * CELL.width, height: this.grid.height * CELL.height };
-    const kit = BATTLEFIELD_KITS[kind];
-    const painting = BATTLEFIELD_PAINTINGS[kind];
-    if (kit) {
-      // Decals gather around the obstacles and keep off their art.
-      const standing = obstacles.map(({ x, y }) => {
-        const pos = getStandingPosition(x, y);
-        const art = getScaledArtRect(x, y, PAINTED_OBSTACLE_SCALE);
-        return { art, foot: { x: pos.x + TILE_SIZE / 2, y: pos.y + ART_FEET_Y } };
-      });
-      this.renderKit(kit, floor, seed, standing);
-    } else if (painting) {
-      const at = getPaintingPlacement(painting, floor.width);
-      this.add
-        .image(at.x, at.y, battlefieldPaintingKey(kind))
-        .setOrigin(0, 0)
-        .setDisplaySize(at.width, at.height)
-        .setDepth(-1);
-      this.battlefieldScene = at;
-    } else {
-      const look = BATTLEFIELD_LOOKS[kind];
-      this.renderBackdrop(look.backdrop, seed, floor.width);
-      const graphics = this.add.graphics().setDepth(-1);
-      const field = { x: -floor.width, width: 3 * floor.width, height: 2 * floor.height };
-      graphics.fillStyle(look.floor.base).fillRect(field.x, 0, field.width, field.height);
-      for (const { x, y, color } of getFloorFlecks(look.floor, field.width, field.height, seed)) {
-        graphics.fillStyle(color).fillRect(field.x + x, y, BACKDROP_COLUMN, BACKDROP_COLUMN);
-      }
-    }
-    this.renderFloorGrid(floor, seed);
-  }
-
-  // A battlefield built from its kit (layOutKit): the ground tiled under
-  // everything, washes of light, shade and haze over it, decals on it, the
-  // horizon along the top, border trees and bushes sorted with the units
-  // by where they stand, and the foreground out of focus over it all.
-  renderKit(
-    kit: BattlefieldKit,
-    floor: { width: number; height: number },
-    seed: number,
-    standing: readonly KitStanding[] = [],
-  ) {
-    ensureKitTextures(this);
-    const { scene, pieces } = layOutKit(kit, floor, seed, standing);
-    this.battlefieldScene = scene;
-    const depths: Record<Exclude<KitLayer, 'standing'>, number> = {
-      ground: -1,
-      patch: -0.97,
-      wash: -0.95,
-      decal: -0.9,
-      horizon: -0.85,
-      foreground: FRAMING_DEPTH,
-    };
-    // Each patch's texture is made for this battle alone; let it go after.
-    const patchKeys: string[] = [];
-    const dropPatches = () => {
-      for (const key of patchKeys.splice(0)) if (this.textures.exists(key)) this.textures.remove(key);
-    };
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, dropPatches);
-    this.events.once(Phaser.Scenes.Events.DESTROY, dropPatches);
-    for (const piece of pieces) {
-      if (piece.layer === 'ground') {
-        this.add
-          .tileSprite(piece.x, piece.y, piece.width, piece.height, piece.key)
-          .setOrigin(0, 0)
-          .setTileScale(kit.groundScale ?? kit.scale)
-          .setDepth(depths.ground);
-        continue;
-      }
-      let key = piece.key;
-      if (piece.layer === 'patch') key = makePatchTexture(this, piece, kit.groundScale ?? kit.scale);
-      else if (piece.fade) key = makeFadedTexture(this, piece.key, piece.fade);
-      if (key !== piece.key) patchKeys.push(key);
-      const image = this.add
-        .image(piece.x, piece.y, key)
-        .setOrigin(0, 0)
-        .setDisplaySize(piece.width, piece.height)
-        .setFlipX(piece.flip)
-        .setAlpha(piece.alpha);
-      if (piece.tint !== undefined) image.setTint(piece.tint);
-      if (piece.layer === 'standing') {
-        image.setDepth(getStandingDepth(piece.foot! - ART_FEET_Y) - STANDING_DEPTH_HAIR);
-      } else {
-        image.setDepth(depths[piece.layer]);
-      }
-      if (piece.layer === 'foreground') image.preFX?.addBlur(0, 1, 1, 1.5);
-    }
-  }
-
-  // The battlefield's cells as worn ground: each tinted a touch lighter or
-  // darker (getCellTones), then outlined faintly with a dark line and a
-  // lighter one just under it, like a groove pressed into the ground, over
-  // the floor and under everything on it.
-  renderFloorGrid(floor: { width: number; height: number }, seed: number) {
-    const graphics = this.add.graphics().setDepth(-0.5);
-    for (const { x, y, light, alpha } of getCellTones(this.grid.width, this.grid.height, seed)) {
-      graphics.fillStyle(light ? 0xffffff : 0x000000, alpha);
-      // Inset with rounded corners, so the cells read as worn stones with
-      // seams between them rather than squares of a board.
-      graphics.fillRoundedRect(x * CELL.width + 3, y * CELL.height + 3, CELL.width - 6, CELL.height - 6, 8);
-    }
-    const line = GRID_PX;
-    for (const [color, alpha, offset] of [
-      [0x000000, FLOOR_GRID_ALPHA, 0],
-      [0xffffff, FLOOR_GRID_ALPHA / 2, line],
-    ] as const) {
-      graphics.fillStyle(color, alpha);
-      for (let x = 0; x <= this.grid.width; x++) {
-        const at = Math.min(x * CELL.width, floor.width - line);
-        graphics.fillRect(at + offset, 0, line, floor.height);
-      }
-      for (let y = 0; y <= this.grid.height; y++) {
-        const at = Math.min(y * CELL.height, floor.height - line);
-        graphics.fillRect(0, at + offset, floor.width, line);
-      }
-    }
-  }
-
-  // The sky and far scenery behind the arena (src/game/backdrop.ts): the
-  // sky's color bands, then each silhouette from farthest to nearest, in
-  // the BACKDROP_HEIGHT above the floor's back edge, under everything.
-  // `margin` runs it that far past either side of the floor, with the top
-  // band of sky going on up as far again, so a battlefield's backdrop fills
-  // the screen.
-  renderBackdrop(style: BackdropStyle, seed: number, margin = 0) {
-    const left = -margin;
-    const width = this.grid.width * CELL.width + 2 * margin;
-    const graphics = this.add.graphics().setDepth(-1);
-    const band = BACKDROP_HEIGHT / style.sky.length;
-    if (margin > 0) graphics.fillStyle(style.sky[0]).fillRect(left, -BACKDROP_HEIGHT - 2 * margin, width, 2 * margin);
-    style.sky.forEach((color, i) => graphics.fillStyle(color).fillRect(left, -BACKDROP_HEIGHT + i * band, width, band));
-    style.layers.forEach((layer, i) => {
-      graphics.fillStyle(layer.color);
-      getSilhouette(layer, width, BACKDROP_HEIGHT, seed + i).forEach((height, column) =>
-        graphics.fillRect(left + column * BACKDROP_COLUMN, -height, BACKDROP_COLUMN, height),
-      );
-    });
-  }
-
-  // Props that stand up out of the floor (forests, mountains, buildings;
-  // see src/game/mapArt.ts), at their full TILE_SIZE square art: each
-  // piece stacked over its prop's base row (getPropPlacement) and sorted
-  // with the units on that row, a hair behind a unit on the same cell.
-  renderStandingProps(sprites: readonly MapSprite[]) {
-    for (const sprite of sprites) {
-      const { x, y, row } = getPropPlacement(sprite);
-      const sheet = sprite.sheet ?? TERRAIN_SHEET;
-      const depth = getStandingDepth(getStandingPosition(sprite.x, row).y) - STANDING_DEPTH_HAIR;
-      this.add
-        .image(x, y, sheet.key, getTileFrame(sprite.tile, sheet.columns))
-        .setOrigin(0, 0)
-        .setDisplaySize(TILE_SIZE, TILE_SIZE)
-        .setDepth(depth);
-    }
-  }
-
-  // A battlefield's obstacles as painted art (getPaintedObstacles), each
-  // standing on its cell like a unit, PAINTED_OBSTACLE_SCALE times a tile,
-  // a hair behind a unit on the same row.
-  renderPaintedObstacles(obstacles: readonly { x: number; y: number; key: string }[]) {
-    for (const { x, y, key } of obstacles) {
-      const pos = getStandingPosition(x, y);
-      const art = getScaledArtRect(x, y, PAINTED_OBSTACLE_SCALE);
-      this.add
-        .image(art.x, art.y, key)
-        .setOrigin(0, 0)
-        .setDisplaySize(art.width, art.height)
-        .setDepth(getStandingDepth(pos.y) - STANDING_DEPTH_HAIR);
-    }
-  }
-
-  // Overlays lying flat on the floor, from the terrain sheet or the props
-  // sheet (crossings and hazards; see src/game/mapArt.ts): ground art under
-  // units, caps just above, and roofs over units like the gate's.
+  // One-tile overlays from the terrain sheet, or the props sheet (forests,
+  // mountains, buildings, crossings; see src/game/mapArt.ts): ground art
+  // and caps under units, at the trees' depth (caps just above, so a peak
+  // covers the forest it pokes into), and roofs over units like the gate's.
   renderMapSprites(sprites: readonly MapSprite[]) {
     const depths = { ground: 0.4, cap: 0.45, roof: 0.8 };
     for (const { x, y, tile, layer, sheet = TERRAIN_SHEET } of sprites) {
-      const pos = gridToWorld(x, y, CELL);
-      this.addTileImage(pos.x, pos.y, sheet.key, getTileFrame(tile, sheet.columns)).setDepth(depths[layer]);
+      const pos = gridToWorld(x, y, TILE_SIZE);
+      this.add
+        .image(pos.x, pos.y, sheet.key, getTileFrame(tile, sheet.columns))
+        .setOrigin(0, 0)
+        .setDepth(depths[layer]);
     }
   }
 
-  // Trees ({ x, y, tree } from the level) standing on the grass, sorted by
-  // row with the units: a hair behind a unit on the same cell, so it stands
-  // in front of the trunk.
+  // Trees ({ x, y, tree } from the level) over the grass, below range highlights
+  // and units.
   renderDecorations(decorations: readonly TreePlacement[]) {
     for (const { x, y, tree } of decorations) {
-      const pos = getStandingPosition(x, y);
+      const pos = gridToWorld(x, y, TILE_SIZE);
       addTreeShadow(this, pos.x, pos.y);
-      const sprite = this.addStandingSprite(x, y, TREE_SPRITES[tree]);
-      sprite.setDepth(sprite.depth - STANDING_DEPTH_HAIR);
+      this.addTileSprite(pos.x, pos.y, TREE_SPRITES[tree]).setDepth(0.4);
     }
   }
 
   // Marks a seize objective's tile on the map so the player can find it.
   renderObjectiveTile() {
     if (this.objective.kind !== 'seize') return;
-    const { x, y } = gridToWorld(this.objective.tile.x, this.objective.tile.y, CELL);
+    const { x, y } = gridToWorld(this.objective.tile.x, this.objective.tile.y, TILE_SIZE);
     const marker = this.add
-      .rectangle(x, y, CELL.width, CELL.height, SEIZE_TILE_COLOR, SEIZE_TILE_ALPHA)
+      .rectangle(x, y, TILE_SIZE, TILE_SIZE, SEIZE_TILE_COLOR, SEIZE_TILE_ALPHA)
       .setOrigin(0, 0)
-      .setStrokeStyle(2 * GRID_PX, SEIZE_TILE_COLOR)
+      .setStrokeStyle(2, SEIZE_TILE_COLOR)
       .setDepth(0.42);
     this.tweens.add({
       targets: marker,
@@ -4046,8 +3498,11 @@ export class GridScene extends Phaser.Scene {
     for (const { x, y, structure } of structures) {
       const sprite = STRUCTURE_SPRITES[structure];
       for (const tile of getStructureTiles(sprite, x, y)) {
-        const pos = gridToWorld(tile.x, tile.y, CELL);
-        this.addTileImage(pos.x, pos.y, sprite.key, tile.frame).setDepth(tile.overUnits ? 0.8 : 0.4);
+        const pos = gridToWorld(tile.x, tile.y, TILE_SIZE);
+        this.add
+          .image(pos.x, pos.y, sprite.key, tile.frame)
+          .setOrigin(0, 0)
+          .setDepth(tile.overUnits ? 0.8 : 0.4);
       }
     }
   }
@@ -4062,68 +3517,19 @@ export class GridScene extends Phaser.Scene {
     }
   }
 
-  // Units stand on their cell (addStandingSprite) facing the other side:
-  // right for the player and guests, left for enemies. A single-image unit
-  // (isSingleImageUnit) is animated in code by addUnitRig.
   addUnitSprite(unitId: string, gridX: number, gridY: number) {
     const unit = this.units.get(unitId)!;
+    const { x, y } = gridToWorld(gridX, gridY, TILE_SIZE);
     const art = getUnitSprite(unit.unitClass);
-    const facing = getStartFacing(unit.team);
-    // A painted unit wears its team's hue on its blue accents.
-    const painted = isSingleImageUnit(art);
-    const key = painted ? getTeamTextureKey(this, art, unit.team) : getUnitTextureKey(art, 'idle');
-    const sprite = this.addStandingSprite(gridX, gridY, key).setData('art', art).setData('facing', facing);
-    if (!isSingleImageUnit(art)) sprite.play(this.unitAnimation(art, 'idle', facing));
-    // Painted units are drawn bigger, their feet kept on their cell.
-    if (isSingleImageUnit(art)) {
-      const origin = getScaledArtOrigin(PAINTED_UNIT_SCALE);
-      sprite
-        .setOrigin(origin.x, origin.y)
-        .setDisplaySize(TILE_SIZE * PAINTED_UNIT_SCALE, TILE_SIZE * PAINTED_UNIT_SCALE);
-    }
-    // Its side shows as a ring at its feet.
-    addTeamRing(this, sprite, unit.team);
-    if (painted) {
-      const walk = getSingleImageWalk(art);
-      const teamWalk = walk && { ...walk, key: getTeamTextureKey(this, walk.key, unit.team) };
-      addUnitRig(this, sprite, unit.team === 'enemy' ? -1 : 1, [], teamWalk);
-    }
-    // A battlefield's painted floor gets a soft shadow, a terrain map the crisp blob.
-    if (this.battlefieldKind) addUnitShadow(this, sprite, SOFT_UNIT_SHADOW, true);
-    else addUnitShadow(this, sprite);
-    // A painted unit on a painted floor also casts its shadow with the light.
-    if (this.battlefieldKind && isSingleImageUnit(art)) addCastShadow(this, sprite);
+    const sprite = this.addTileSprite(x, y, unitSheetKey(art, 'idle'))
+      .setDepth(0.75)
+      .setData('art', art)
+      .setData('facing', UNIT_SHEET.defaultFacing)
+      .play(this.unitAnimation(art, 'idle', UNIT_SHEET.defaultFacing));
+    addUnitOutline(this, sprite, UNIT_OUTLINE.colors[unit.team]);
+    addUnitShadow(this, sprite);
     if (unit.rank) addRankBadge(this, sprite, unit.rank);
     this.unitSprites.set(unitId, sprite);
-  }
-
-  // Turns a unit sprite to face `other` (left or right; one straight ahead
-  // or behind keeps its facing): a rig turns its image, a sheet unit idles
-  // on that facing's row.
-  faceSpriteToward(sprite: Sprite, other: Sprite) {
-    if (isSingleImageUnit(sprite.getData('art'))) {
-      faceRigToward(sprite, other.x);
-      return;
-    }
-    const facing = getFacingToward(sprite, other);
-    if (facing && facing !== sprite.getData('facing')) this.playUnitMotion(sprite, 'idle', facing);
-  }
-
-  // Keeps every unit drawn in front of what stands behind it as it walks
-  // between rows (see getStandingDepth).
-  sortUnitSprites() {
-    if (!this.unitSprites) return;
-    for (const sprite of this.unitSprites.values()) sprite.setDepth(getStandingDepth(sprite.y));
-  }
-
-  // Sets a unit sprite standing or walking (a UNIT_ANIMATIONS name) facing
-  // `facing`: its sheet's animation for that facing, or for a single-image
-  // unit, its rig's motion (a walk already under way keeps going).
-  playUnitMotion(sprite: Sprite, animation: UnitAnimation, facing: Facing) {
-    const art = sprite.getData('art');
-    sprite.setData('facing', facing);
-    if (isSingleImageUnit(art)) setRigMotion(sprite, animation, facing);
-    else sprite.play(this.unitAnimation(art, animation, facing), true);
   }
 
   // The looping animation (a UNIT_ANIMATIONS name) for a unit's art facing
@@ -4158,10 +3564,9 @@ function tryRunCommand(session: Parameters<typeof applyRunCommand>[0], command: 
   }
 }
 
-// A unit sprite's center in world space (wherever its origin is).
+// A unit sprite's center in world space (sprites are placed by their top left).
 function spriteCenter(sprite: Sprite): Point {
-  const { x, y } = sprite.getCenter();
-  return { x, y };
+  return { x: sprite.x + sprite.displayWidth / 2, y: sprite.y + sprite.displayHeight / 2 };
 }
 
 // Whether the player asked their system for less motion: the map then skips

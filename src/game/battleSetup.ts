@@ -21,7 +21,6 @@ import { getRunHeatRules } from './warband/heat.ts';
 import type { RegionConfig } from './warband/regions.ts';
 import { createDemoLevel, type DemoLevel } from './demoLevel.ts';
 import { createTrainingLevel, type Level } from './trainingLevel.ts';
-import { createSeededRng, randomInt } from './rng.ts';
 
 export type BattleSetup =
   | { mode: 'story'; chapter: number }
@@ -81,7 +80,7 @@ function getStoryChapter(chapter: number, chapters: readonly StoryChapter[]): St
 // and deploy cap; one without a run (a region preview) the starting
 // warband. Either way the stage's enemies carry its loot (getStageLootCount),
 // it plays the objective pickStageObjective gives it, and its map is laid
-// out as the archetype pickStageArchetype picks.
+// out as the archetype pickStageArchetype picks for that objective.
 export function createBattleLevel(
   setup: BattleSetup,
   content: GameContent = DEFAULT_CONTENT,
@@ -99,7 +98,7 @@ export function createBattleLevel(
       const baseRegion = setup.run ? shiftEnemyLevels(unheated, getRunHeatRules(setup.run).enemyLevels) : unheated;
       if (setup.run && isVisit(setup.run)) return createVisitLevel(setup, setup.run, baseRegion);
       const spec = pickStageObjective(setup.stage, baseRegion, setup.seed);
-      const region = withArchetype(baseRegion, pickStageArchetype(baseRegion));
+      const region = withArchetype(baseRegion, pickStageArchetype(setup.stage, baseRegion, setup.seed, spec.kind));
       const lootCount = getStageLootCount(setup.stage);
       let level = setup.run
         ? createStageLevel(setup.seed, region, restoreRoster(setup.run), setup.run.deployCap, lootCount)
@@ -206,13 +205,4 @@ export function regionPreview(index: number, seed: number, settings: RegionSetti
   if (!Number.isInteger(index) || index < 0 || index >= settings.regions.length) return null;
   const { first } = getRegionStages(index, settings.regions.length, settings.stagesPerRegion);
   return { mode: 'warband', seed, stage: first };
-}
-
-// The battle the Map Generator shows for `seed`: region `region` of
-// `settings` previewed as regionPreview does, or with no region one picked
-// from the seed, so one seed is always the same map and a new seed may land
-// in any region. Null for a region that doesn't exist.
-export function generatedMap(seed: number, settings: RegionSettings, region: number | null = null): BattleSetup | null {
-  const index = region ?? randomInt(createSeededRng(seed), 0, settings.regions.length - 1);
-  return regionPreview(index, seed, settings);
 }

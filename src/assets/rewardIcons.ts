@@ -1,4 +1,4 @@
-// Reward kind -> URL of its icon in src/assets/rewards/ (one 128x128 painted PNG per
+// Reward kind -> URL of its icon in src/assets/rewards/ (one 32x32 PNG per
 // kind that isn't shown by its item or unit: a Draft, Rest, Relic, Gold,
 // Lesson and Scroll; see the tileset skill). Only the reward screen shows
 // these, so they stay out of SPRITE_URLS, which GridScene preloads.

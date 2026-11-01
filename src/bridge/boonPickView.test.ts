@@ -24,7 +24,7 @@ describe('toBoonPickView', () => {
       key: 'alden-2',
       name: 'Alden',
       classLabel: 'Soldier',
-      sprite: 'Painted_Soldier',
+      sprite: 'Soldier_03',
       level: 2,
       skills: ['Power Strike'],
     });

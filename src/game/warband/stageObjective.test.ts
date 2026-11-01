@@ -128,8 +128,7 @@ describe('makeBoss', () => {
   });
 });
 
-// Lays out many full-size stages, each the best of MAP_CANDIDATES maps.
-describe('objectives on generated stages', { timeout: 60_000 }, () => {
+describe('objectives on generated stages', () => {
   const placed = (kind: 'seize' | 'boss') =>
     REGION_CONFIGS.flatMap((region) =>
       SEEDS.slice(0, 40).map((seed) => {

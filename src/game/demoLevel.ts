@@ -4,7 +4,6 @@
 // once maps are loaded from data.
 
 import { DIALOGS } from '../data/dialogs.ts';
-import type { BattlefieldKind, ObstaclePlacement } from './battlefields.ts';
 import type { BuildingPlacement } from './buildings.ts';
 import type { DialogScripts } from './dialogScript.ts';
 import { setUnit, type Point } from './grid.ts';
@@ -13,7 +12,6 @@ import { Warrior } from './Warrior.ts';
 import { parseTerrainMap } from './terrainMap.ts';
 import type { BuildingPaletteName } from './tileset.ts';
 import type { Level } from './trainingLevel.ts';
-import type { RegionBiome } from './warband/realm/realmRegions.ts';
 
 export interface TreePlacement extends Point {
   tree: string;
@@ -31,14 +29,6 @@ export interface DemoLevel extends Level {
   // They default to none and DEFAULT_BUILDING_PALETTE (tileset.ts).
   buildings?: BuildingPlacement[];
   palette?: BuildingPaletteName;
-  // The land the battle is fought in (a region's biome), which sets the
-  // side view's backdrop (backdrop.ts); none draws the default sky.
-  biome?: RegionBiome;
-  // A battlefield level (battlefields.ts) is drawn as its field's floor and
-  // backdrop with its obstacles standing on it, instead of from the
-  // terrain.
-  battlefield?: BattlefieldKind;
-  obstacles?: ObstaclePlacement[];
   // The tile a seize objective should mark, when the map was planned
   // around one (see mapArchetypes.ts).
   seizeTile?: Point;

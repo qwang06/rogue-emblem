@@ -2,7 +2,6 @@ import { RUN_ITEMS } from './warband/run.ts';
 import { WEAPONS } from './weapons.ts';
 import { describe, expect, it } from 'vitest';
 import { SPRITE_URLS } from '../assets/sprites.ts';
-import { BATTLEFIELD_OBSTACLES } from './battlefields.ts';
 import { FACINGS } from './facing.ts';
 import {
   ARROW_TILES,
@@ -20,16 +19,9 @@ import {
   UNIT_SHEET,
   UNIT_SPRITES,
   DEFAULT_UNIT_SPRITE,
-  GRID_PX,
   getUnitSprite,
-  getUnitTextureKey,
-  isSingleImageUnit,
-  SINGLE_IMAGE_UNITS,
   unitSheetKey,
   type UnitAnimation,
-  FIELD_OBSTACLES,
-  getFieldObstacleArt,
-  PAINTED_OBSTACLES,
 } from './tileset.ts';
 import { UNIT_CLASSES } from './unitClasses.ts';
 import { WOODEN_ARMOR, WOODEN_SHIELD } from './items.ts';
@@ -39,7 +31,7 @@ describe('sprite keys', () => {
   it('names an image for every unit animation', () => {
     for (const sprite of Object.values(UNIT_SPRITES)) {
       for (const animation of Object.keys(UNIT_ANIMATIONS) as UnitAnimation[]) {
-        expect(SPRITE_URLS).toHaveProperty([getUnitTextureKey(sprite, animation)]);
+        expect(SPRITE_URLS).toHaveProperty([unitSheetKey(sprite, animation)]);
       }
     }
   });
@@ -81,38 +73,17 @@ describe('sprite keys', () => {
   });
 });
 
-describe('getFieldObstacleArt', () => {
-  it('stands the forest’s rocks and plants as its own art', () => {
-    const art = getFieldObstacleArt('forest');
-    expect(art.rock).toEqual(FIELD_OBSTACLES.forest?.rock);
-    expect(art.rock).not.toEqual(PAINTED_OBSTACLES.rock);
-    expect(art.cart).toEqual(PAINTED_OBSTACLES.cart);
-  });
-
-  it('gives a field without art of its own the shared art', () => {
-    expect(getFieldObstacleArt('plains')).toEqual(PAINTED_OBSTACLES);
-  });
-
-  it('has the forest’s and desert’s own art for everything their layouts put down', () => {
-    for (const field of ['forest', 'desert'] as const) {
-      for (const obstacle of BATTLEFIELD_OBSTACLES[field]) {
-        expect(FIELD_OBSTACLES[field]?.[obstacle], `${field} ${obstacle}`).toBeDefined();
-      }
-    }
-  });
-});
-
 describe('getUnitSprite', () => {
   it('picks the art by unit class', () => {
-    expect(getUnitSprite('warrior')).toBe('Painted_Warrior');
-    expect(getUnitSprite('soldier')).toBe('Painted_Soldier');
-    expect(getUnitSprite('archer')).toBe('Painted_Archer');
-    expect(getUnitSprite('vanguard')).toBe('Painted_Vanguard');
-    expect(getUnitSprite('guard')).toBe('Painted_Guard');
-    expect(getUnitSprite('acolyte')).toBe('Painted_Acolyte');
-    expect(getUnitSprite('slime')).toBe('Painted_Slime');
-    expect(getUnitSprite('goblin')).toBe('Painted_Goblin');
-    expect(getUnitSprite('skeleton')).toBe('Painted_Skeleton');
+    expect(getUnitSprite('warrior')).toBe('Warrior_02');
+    expect(getUnitSprite('soldier')).toBe('Soldier_03');
+    expect(getUnitSprite('archer')).toBe('Amazon_01');
+    expect(getUnitSprite('vanguard')).toBe('Vanguard_04');
+    expect(getUnitSprite('guard')).toBe('Soldier_04');
+    expect(getUnitSprite('acolyte')).toBe('Acolyte_02');
+    expect(getUnitSprite('slime')).toBe('Slime_01');
+    expect(getUnitSprite('goblin')).toBe('Goblin_01');
+    expect(getUnitSprite('skeleton')).toBe('Skeleton_01');
   });
 
   it('falls back to the default art for an unknown or missing class', () => {
@@ -125,15 +96,14 @@ describe('shadows', () => {
   it('fit inside one tile and are translucent', () => {
     for (const { width, height, centerX, centerY, alpha } of [UNIT_SHADOW, TREE_SHADOW]) {
       expect(centerX - width / 2).toBeGreaterThanOrEqual(0);
-      expect(centerX + width / 2).toBeLessThanOrEqual(1);
+      expect(centerX + width / 2).toBeLessThanOrEqual(TILE_SIZE);
       expect(centerY - height / 2).toBeGreaterThanOrEqual(0);
-      expect(centerY + height / 2).toBeLessThanOrEqual(1);
+      expect(centerY + height / 2).toBeLessThanOrEqual(TILE_SIZE);
       expect(alpha).toBeGreaterThan(0);
       expect(alpha).toBeLessThan(1);
-      // Whole world pixels, so the pixel art stays crisp.
-      for (const size of [width, height, centerX - width / 2, centerY - height / 2]) {
-        expect(Number.isInteger(size * TILE_SIZE)).toBe(true);
-      }
+      // Whole-pixel corners, so the pixel art stays crisp.
+      expect(Number.isInteger(centerX - width / 2)).toBe(true);
+      expect(Number.isInteger(centerY - height / 2)).toBe(true);
     }
   });
 });
@@ -145,10 +115,8 @@ describe('RANK_BADGES', () => {
       expect(rows.every((row) => row.length === width)).toBe(true);
       expect(x).toBeGreaterThanOrEqual(0);
       expect(y).toBeGreaterThanOrEqual(0);
-      expect(x * TILE_SIZE + width * GRID_PX).toBeLessThanOrEqual(TILE_SIZE);
-      expect(y * TILE_SIZE + rows.length * GRID_PX).toBeLessThanOrEqual(TILE_SIZE);
-      expect(Number.isInteger(x * TILE_SIZE)).toBe(true);
-      expect(Number.isInteger(y * TILE_SIZE)).toBe(true);
+      expect(x + width).toBeLessThanOrEqual(TILE_SIZE);
+      expect(y + rows.length).toBeLessThanOrEqual(TILE_SIZE);
       for (const char of rows.join('')) expect(char === '.' || char in palette).toBe(true);
     }
   });
@@ -187,21 +155,6 @@ describe('unitSheetKey', () => {
   it('names the sheet for each animation', () => {
     expect(unitSheetKey('Warrior_01', 'idle')).toBe('Warrior_01_Idle');
     expect(unitSheetKey('Warrior_01', 'move')).toBe('Warrior_01_Move');
-  });
-});
-
-describe('getUnitTextureKey', () => {
-  it('draws sheet art from its animation’s sheet', () => {
-    expect(getUnitTextureKey('Warrior_02', 'move')).toBe('Warrior_02_Move');
-    expect(isSingleImageUnit('Warrior_02')).toBe(false);
-  });
-
-  it('draws single-image art from its one image for every animation', () => {
-    for (const art of SINGLE_IMAGE_UNITS) {
-      expect(isSingleImageUnit(art)).toBe(true);
-      expect(getUnitTextureKey(art, 'idle')).toBe(art);
-      expect(getUnitTextureKey(art, 'move')).toBe(art);
-    }
   });
 });
 

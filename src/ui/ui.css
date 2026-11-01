@@ -1,83 +1,22 @@
 /* ---- Theme ----------------------------------------------------------- */
 
-/* The painted look's two faces, both SIL OFL 1.1, Latin subsets from
-   Fontsource. Alegreya Sans (Juan Pablo del Peral, Huerta Tipográfica) is
-   the body: a humanist sans with a calligraphic hand that reads at small
-   sizes. Cinzel (Natanael Gama) is the display face: carved Roman capitals
-   for window titles, name plates and banners. Both are adjusted to the
-   proportions the UI's sizes and line heights were set for (capitals about
-   0.7em, a line 0.92em above the baseline and 0.28em below), so swapping
-   faces changes no box. */
+/* Silver (Poppy Works, CC BY 4.0), cut down to Latin, punctuation, arrows
+   and the symbols the UI draws. Its capitals are under half its em, so it
+   is scaled up to Pixelify Sans's proportions (capitals 0.7em, a line
+   0.92em above the baseline and 0.28em below), which the UI's sizes and
+   line heights were set for. */
 @font-face {
-  font-family: 'Alegreya Sans';
-  src: url('../assets/fonts/alegreya-sans-latin-400-normal.woff2') format('woff2');
-  font-weight: 400;
+  font-family: 'Silver';
+  src: url('../assets/fonts/silver.woff2') format('woff2');
   font-display: block;
-  size-adjust: 108%;
+  size-adjust: 150%;
   /* Percentages of the adjusted size: 0.92em and 0.28em after it. */
-  ascent-override: 85%;
-  descent-override: 26%;
+  ascent-override: 61%;
+  descent-override: 19%;
 }
 
-@font-face {
-  font-family: 'Alegreya Sans';
-  src: url('../assets/fonts/alegreya-sans-latin-400-italic.woff2') format('woff2');
-  font-weight: 400;
-  font-style: italic;
-  font-display: block;
-  size-adjust: 108%;
-  ascent-override: 85%;
-  descent-override: 26%;
-}
-
-@font-face {
-  font-family: 'Alegreya Sans';
-  src: url('../assets/fonts/alegreya-sans-latin-500-normal.woff2') format('woff2');
-  font-weight: 500;
-  font-display: block;
-  size-adjust: 108%;
-  ascent-override: 85%;
-  descent-override: 26%;
-}
-
-@font-face {
-  font-family: 'Alegreya Sans';
-  src: url('../assets/fonts/alegreya-sans-latin-700-normal.woff2') format('woff2');
-  font-weight: 600 700;
-  font-display: block;
-  size-adjust: 108%;
-  ascent-override: 85%;
-  descent-override: 26%;
-}
-
-@font-face {
-  font-family: 'Alegreya Sans';
-  src: url('../assets/fonts/alegreya-sans-latin-800-normal.woff2') format('woff2');
-  font-weight: 800 900;
-  font-display: block;
-  size-adjust: 108%;
-  ascent-override: 85%;
-  descent-override: 26%;
-}
-
-@font-face {
-  font-family: 'Cinzel';
-  src: url('../assets/fonts/cinzel-latin-700-normal.woff2') format('woff2');
-  font-weight: 400 800;
-  font-display: block;
-  ascent-override: 92%;
-  descent-override: 28%;
-}
-
-@font-face {
-  font-family: 'Cinzel';
-  src: url('../assets/fonts/cinzel-latin-900-normal.woff2') format('woff2');
-  font-weight: 900;
-  font-display: block;
-}
-
-/* A painted tactics look: windows are parchment in a wooden frame with
-   brass corner caps, text is dark brown (Cinzel titles over Alegreya Sans), and the
+/* A GBA tactics look: windows are parchment in a dark brown frame with
+   gold corner plates, text is a chunky pixel font in dark brown, and the
    selection cue is a white gauntlet pointing at the row. The page around
    the map is dark wood, so anything drawn straight on it (the header, the
    title and config pages) uses the light text set in `.on-dark`. */
@@ -120,23 +59,21 @@
   --bar-fg: #fff8e8;
   --rule: var(--px) solid var(--muted);
   --border: var(--px) solid var(--muted);
-  /* Body text in Alegreya Sans, titles in Cinzel. The arrows, stars and
-     other symbols the fonts lack fall back to the system's symbol faces.
-     --mono is the body face too: numbers line up because the whole page
-     sets lining, tabular figures. */
-  --symbols: 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', sans-serif;
-  --sans: 'Alegreya Sans', 'Trebuchet MS', var(--symbols);
-  --display: 'Cinzel', Georgia, var(--symbols);
-  --mono: var(--sans);
+  /* One face for everything: a pixel font, set in caps where the GBA
+     would. */
+  --pixel: 'Silver', ui-monospace, monospace;
+  --sans: var(--pixel);
+  --display: var(--pixel);
+  --mono: var(--pixel);
   --radius: 0;
   --radius-sm: 0;
   /* Lifts windows that float over the map off it: a hard pixel drop. */
   --lift: var(--px) var(--px) 0 rgb(0 0 0 / 35%);
-  /* The selection cue: a painted steel gauntlet pointing right (88x44 art,
-     shown at 24x12), drawn hanging off the left of the row it points at. */
+  /* The selection cue: a white gauntlet (10x7 art pixels), drawn hanging
+     off the left of the row it points at. */
   --pointer: url('../assets/ui/hand-pointer.png');
-  --pointer-w: calc(12 * var(--px));
-  --pointer-h: calc(6 * var(--px));
+  --pointer-w: calc(10 * var(--px));
+  --pointer-h: calc(7 * var(--px));
 }
 
 /* Windows set the parchment tokens again, so one opened from the header
@@ -213,9 +150,11 @@ body {
      and the boxes sized around it: 28px from a 560px wide window up,
      shrinking with the window below that so phones still fit. */
   font-size: clamp(16px, 5vw, 28px);
-  /* Alegreya Sans's default figures are old-style and proportional; stats
-     and counters want them lining and all one width. */
-  font-variant-numeric: lining-nums tabular-nums;
+  font-variant-numeric: tabular-nums;
+  /* Pixel fonts' "fi" and "fl" ligatures can draw as other letters
+     ("Flawless" read "Aawless" in Pixelify Sans), so letters are never
+     joined. */
+  font-variant-ligatures: none;
 }
 
 /* ---- Page layout ---------------------------------------------------- */
@@ -412,7 +351,7 @@ a.header-button {
 .settings__value {
   width: 2.6rem;
   text-align: center;
-  font-variant-numeric: lining-nums tabular-nums;
+  font-variant-numeric: tabular-nums;
 }
 
 .settings__value[data-muted='true'] {
@@ -434,9 +373,9 @@ a.header-button {
 }
 
 /* The canvas and the HUD overlay share this box, which fills the stage
-   area. main.ts keeps the canvas the same size (at the screen's pixel
-   density), and the map scene centers the map in it, framed by a thin
-   border drawn as a shadow so it takes no space. */
+   area. Phaser's RESIZE mode keeps the canvas the same size, and the map
+   scene centers the map in it, framed by a thin border drawn as a shadow
+   so it takes no space. */
 .stage {
   position: relative;
   flex: 1;
@@ -505,13 +444,11 @@ a.header-button {
 
 /* ---- Windows ---------------------------------------------------------- */
 
-/* Every in-game window is a framed parchment box: a 9-slice of painted art
-   (src/assets/ui/frame-*.png, cut from the section M sheet; see the tileset
-   skill) with a wooden frame and brass corner caps, each 32px slice drawn at
-   16 CSS px. `<Frame>` renders one;
+/* Every in-game window is a framed parchment box: a 9-slice of pixel art
+   (src/assets/ui/frame-*.png, drawn by the tileset skill's draw-ui-art.js)
+   with a dark brown frame and gold corner plates. `<Frame>` renders one;
    `.panel` is the same box for windows that predate it. The banner
-   variants (silver caps on blue, red or green cloth) are the player, enemy
-   and guest boxes for phase and turn
+   variants are the blue (player) and red (enemy) boxes for phase and turn
    readouts. */
 .panel,
 .frame {
@@ -521,7 +458,8 @@ a.header-button {
   background: none;
   border-style: solid;
   border-width: calc(8 * var(--px));
-  border-image: url('../assets/ui/frame-parchment.png') 32 fill / calc(8 * var(--px)) stretch;
+  border-image: url('../assets/ui/frame-parchment.png') 8 fill / calc(8 * var(--px)) stretch;
+  image-rendering: pixelated;
 }
 
 .frame--banner {
@@ -554,7 +492,6 @@ a.header-button {
 .header-popover__title,
 .objective__title,
 .deployment-menu__title,
-.map-generator__title,
 .merchant-screen__recipients-title,
 .reward-screen__title,
 .reward-team__title,
@@ -568,13 +505,10 @@ a.header-button {
   transform: translateY(-80%);
   margin: 0;
   padding: 0 8px;
-  font-family: var(--display);
   font-size: 0.8125rem;
   font-weight: 700;
   line-height: 1.5;
-  /* Cinzel's capitals are wide already: little tracking, and one line. */
-  letter-spacing: 0.02em;
-  white-space: nowrap;
+  letter-spacing: 0.04em;
   text-align: left;
   text-transform: uppercase;
   color: var(--fg-bright);
@@ -754,7 +688,7 @@ a.header-button {
 .meter__value {
   min-width: 3.5rem;
   text-align: right;
-  font-variant-numeric: lining-nums tabular-nums;
+  font-variant-numeric: tabular-nums;
 }
 
 /* A stat's icon (StatLabel), with its abbreviation beside it on the unit
@@ -770,6 +704,7 @@ a.header-button {
   flex: none;
   width: 16px;
   height: 16px;
+  image-rendering: pixelated;
 }
 
 /* Three columns of a stat's icon and its value, grooved off from the bars. */
@@ -1023,6 +958,7 @@ kbd {
   height: var(--pointer-h);
   transform: translateY(-50%);
   background: var(--pointer) center / 100% 100% no-repeat;
+  image-rendering: pixelated;
   animation: pointer-bob 0.8s steps(1) infinite;
 }
 
@@ -1149,7 +1085,7 @@ kbd {
   font-size: 1.0625rem;
   font-weight: 700;
   line-height: 1.4;
-  font-variant-numeric: lining-nums tabular-nums;
+  font-variant-numeric: tabular-nums;
   color: var(--fg-bright);
 }
 
@@ -1222,14 +1158,23 @@ kbd {
 
 /* ---- Item and stat icons ---------------------------------------------- */
 
-/* Item icons are painted art (128px PNGs) shown at one 32px tile at full
-   size; windows that need a smaller one set its width and height. The
-   browser smooths them down. An item with no icon keeps the spot. */
+/* Item icons are one 32x32 tile at full size; windows that need a smaller
+   one set its width and height. An item with no icon keeps the spot. */
 .item-icon {
   flex: none;
   display: inline-block;
   width: 32px;
   height: 32px;
+  image-rendering: pixelated;
+}
+
+/* Item art is painted at 32px, so shrinking it pixelated drops whole rows
+   and columns; the smaller spots smooth it instead. */
+.unit-info__item .item-icon,
+.unit-panel__item .item-icon,
+.combat-forecast__weapon .item-icon,
+.item-menu__item .item-icon {
+  image-rendering: auto;
 }
 
 /* PixelIcon's bitmaps (StatIcon, GlyphIcon) at two screen pixels per art
@@ -1241,9 +1186,8 @@ kbd {
   vertical-align: middle;
 }
 
-/* Painted glyph art (64px PNGs) is smoothed down to its 16px or 12px box. */
 .pixel-icon--art {
-  image-rendering: auto;
+  image-rendering: pixelated;
 }
 
 /* The icons' colors (see PixelIcon and GlyphIcon): text, ink, dim, blade,
@@ -1310,7 +1254,7 @@ kbd {
   align-items: center;
   gap: 3px;
   white-space: nowrap;
-  font-variant-numeric: lining-nums tabular-nums;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- Experience and level ups ----------------------------------------- */
@@ -1453,7 +1397,7 @@ kbd {
   padding-top: 6px;
   border-top: var(--rule);
   font-size: 0.875rem;
-  font-variant-numeric: lining-nums tabular-nums;
+  font-variant-numeric: tabular-nums;
 }
 
 .level-up__stat {
@@ -1706,85 +1650,6 @@ kbd {
   }
 }
 
-/* Painted (not pixel) art, like a generated single-image unit. */
-.unit-sprite--smooth {
-  image-rendering: auto;
-}
-
-/* A single-image unit breathes about its feet, as on the map (BREATH_MS
-   and the stretch in src/game/unitRig.ts). */
-.unit-sprite--breathing {
-  animation: unit-sprite-breathe 1800ms ease-in-out infinite;
-  transform-origin: 50% 100%;
-}
-
-@keyframes unit-sprite-breathe {
-  25% {
-    transform: scale(0.9875, 1.025);
-  }
-  75% {
-    transform: scale(1.0125, 0.975);
-  }
-}
-
-/* ---- Map Generator (the title menu's map preview) --------------------- */
-
-/* Docked in the map's bottom-left corner, clear of the unit panel up top. */
-.hud .map-generator {
-  position: absolute;
-  left: 12px;
-  bottom: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 13rem;
-  box-sizing: border-box;
-  padding: 14px 8px 8px;
-  font-size: 0.8125rem;
-}
-
-.map-generator__field {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-weight: 700;
-  color: var(--fg-dim);
-}
-
-.map-generator__select,
-.map-generator__button {
-  box-sizing: border-box;
-  width: 100%;
-  padding: 3px 6px;
-  font: inherit;
-  color: var(--fg-bright);
-  background: var(--bg-light);
-  border: var(--border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.map-generator__button {
-  font-weight: 700;
-  box-shadow: var(--lift);
-}
-
-.map-generator__select:hover,
-.map-generator__button:hover {
-  background: var(--selection);
-}
-
-.map-generator__button:active {
-  transform: translate(var(--px), var(--px));
-  box-shadow: none;
-}
-
-.map-generator__select:focus-visible,
-.map-generator__button:focus-visible {
-  outline: var(--px) solid var(--accent);
-  outline-offset: 1px;
-}
-
 /* ---- Pause menu ------------------------------------------------------ */
 
 /* Overlays dim the map with a flat wash of the desktop's color. */
@@ -1954,7 +1819,7 @@ kbd {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-variant-numeric: lining-nums tabular-nums;
+  font-variant-numeric: tabular-nums;
 }
 
 .page-header .turn-indicator__phase,
@@ -1967,10 +1832,10 @@ kbd {
   border-image-width: calc(4 * var(--px));
 }
 
-/* Bright cyan Cinzel capitals on the blue banner (pale on the red one). */
+/* Bright cyan caps on the blue banner (pale on the red one), as on the
+   GBA. */
 .turn-indicator__phase,
 .phase-banner {
-  font-family: var(--display);
   color: #7fe8ff;
 }
 
@@ -2147,7 +2012,7 @@ kbd {
   gap: 6px;
   margin: 0;
   text-align: center;
-  font-variant-numeric: lining-nums tabular-nums;
+  font-variant-numeric: tabular-nums;
 }
 
 .run-summary__stat {
@@ -2234,7 +2099,7 @@ kbd {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  font-variant-numeric: lining-nums tabular-nums;
+  font-variant-numeric: tabular-nums;
 }
 
 .run-summary__renown-total {
@@ -2565,7 +2430,7 @@ kbd {
   justify-items: center;
   margin: 0;
   padding: 0.3em 0 0.34em;
-  font-family: var(--display);
+  font-family: 'Cinzel', Georgia, serif;
   font-size: clamp(38.5px, min(13vw, 15vh), 140px);
   font-weight: 900;
   line-height: 0.95;
@@ -2639,8 +2504,8 @@ kbd {
 .title-menu {
   --px: 3px;
   /* Set again so the pointer takes the bigger pixel too. */
-  --pointer-w: calc(12 * var(--px));
-  --pointer-h: calc(6 * var(--px));
+  --pointer-w: calc(10 * var(--px));
+  --pointer-h: calc(7 * var(--px));
 
   position: relative;
   flex: none;
@@ -2707,6 +2572,7 @@ kbd {
   height: var(--pointer-h);
   transform: translateY(-50%);
   background: var(--pointer) center / 100% 100% no-repeat;
+  image-rendering: pixelated;
   filter: drop-shadow(0 var(--px) 0 rgb(0 0 0 / 30%));
   animation: pointer-bob 0.8s steps(1) infinite;
 }
@@ -2870,7 +2736,7 @@ kbd {
   line-height: 1.5;
   text-align: center;
   color: var(--fg);
-  font-variant-numeric: lining-nums tabular-nums;
+  font-variant-numeric: tabular-nums;
 }
 
 /* In the flow (not absolutely placed) so it can never sit on the menu:
@@ -3778,8 +3644,7 @@ textarea.draft-input {
   .combat-forecast__bar-lost,
   .level-up,
   .objective,
-  .unit-sprite--animated,
-  .unit-sprite--breathing {
+  .unit-sprite--animated {
     animation: none;
   }
 
@@ -3899,6 +3764,7 @@ textarea.draft-input {
   width: var(--pointer-w);
   height: var(--pointer-h);
   background: var(--pointer) center / 100% 100% no-repeat;
+  image-rendering: pixelated;
   animation: pointer-bob 0.8s steps(1) infinite;
 }
 
@@ -3914,6 +3780,7 @@ textarea.draft-input {
 
 .reward-card__icon {
   display: block;
+  image-rendering: pixelated;
 }
 
 .reward-card__label {
@@ -3944,7 +3811,7 @@ textarea.draft-input {
   padding-top: 6px;
   border-top: var(--rule);
   font-size: 0.75rem;
-  font-variant-numeric: lining-nums tabular-nums;
+  font-variant-numeric: tabular-nums;
 }
 
 .reward-card__stat {
@@ -4000,6 +3867,7 @@ textarea.draft-input {
   height: var(--pointer-h);
   transform: translateY(-50%);
   background: var(--pointer) center / 100% 100% no-repeat;
+  image-rendering: pixelated;
   animation: pointer-bob 0.8s steps(1) infinite;
 }
 
@@ -4064,7 +3932,7 @@ textarea.draft-input {
   min-width: 0;
   font-size: 0.8125rem;
   line-height: 1.35;
-  font-variant-numeric: lining-nums tabular-nums;
+  font-variant-numeric: tabular-nums;
 }
 
 .reward-team__sprite {
@@ -4315,7 +4183,7 @@ textarea.draft-input {
 
 .roster-screen__meta {
   font-size: 0.75rem;
-  font-variant-numeric: lining-nums tabular-nums;
+  font-variant-numeric: tabular-nums;
   color: var(--fg-dim);
 }
 
@@ -4333,6 +4201,7 @@ textarea.draft-input {
   flex: none;
   width: 32px;
   height: 32px;
+  image-rendering: pixelated;
 }
 
 .roster-screen__label {
@@ -4348,13 +4217,20 @@ textarea.draft-input {
   gap: 2px;
   min-width: calc(16px + 4ch);
   font-size: 0.8125rem;
-  font-variant-numeric: lining-nums tabular-nums;
+  font-variant-numeric: tabular-nums;
   color: var(--fg-dim);
 }
 
 .merchant-screen__price .pixel-icon {
   width: 12px;
   height: 12px;
+}
+
+/* Painted 16px art shrunk to 12px drops whole rows when pixelated, so
+   these small spots smooth it instead. */
+.reward-team__exp .pixel-icon--art,
+.merchant-screen__price .pixel-icon--art {
+  image-rendering: auto;
 }
 
 /* A unit's HP: the count over a small GBA trough. */
@@ -4366,7 +4242,7 @@ textarea.draft-input {
   gap: 2px;
   margin-left: auto;
   font-size: 0.75rem;
-  font-variant-numeric: lining-nums tabular-nums;
+  font-variant-numeric: tabular-nums;
   color: var(--fg-dim);
 }
 
@@ -4431,7 +4307,7 @@ textarea.draft-input {
   padding: 0 8px;
   font-size: 0.8125rem;
   font-weight: 700;
-  font-variant-numeric: lining-nums tabular-nums;
+  font-variant-numeric: tabular-nums;
   line-height: 1.5;
   text-transform: uppercase;
   color: var(--yellow);
@@ -4530,7 +4406,7 @@ textarea.draft-input {
   gap: 2px;
   min-width: calc(12px + 4ch);
   font-size: 0.8125rem;
-  font-variant-numeric: lining-nums tabular-nums;
+  font-variant-numeric: tabular-nums;
   text-align: right;
   color: var(--yellow);
 }
@@ -4744,7 +4620,7 @@ textarea.draft-input {
   min-width: 9ch;
   margin-left: auto;
   font-size: 0.75rem;
-  font-variant-numeric: lining-nums tabular-nums;
+  font-variant-numeric: tabular-nums;
   text-align: right;
   color: var(--yellow);
 }

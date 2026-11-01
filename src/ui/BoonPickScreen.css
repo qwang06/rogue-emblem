@@ -182,7 +182,7 @@
 .boon-pick__level {
   margin: 0 0 8px;
   font-weight: 700;
-  font-variant-numeric: lining-nums tabular-nums;
+  font-variant-numeric: tabular-nums;
   color: var(--fg);
 }
 
@@ -211,7 +211,7 @@
   padding: 6px 4px 0;
   border-top: var(--px) solid var(--muted);
   font-size: 0.875rem;
-  font-variant-numeric: lining-nums tabular-nums;
+  font-variant-numeric: tabular-nums;
   text-align: left;
 }
 
@@ -318,6 +318,7 @@
   height: var(--pointer-h);
   margin-top: calc(var(--pointer-h) / -2);
   background: var(--pointer) center / 100% 100% no-repeat;
+  image-rendering: pixelated;
   animation: pointer-bob 0.8s steps(1) infinite;
 }
 
@@ -410,10 +411,10 @@
   margin: 0;
 }
 
-/* A boon's icon (painted art, smoothed to its size), or its kind's letter
-   where it has none yet. */
+/* A boon's icon, or its kind's letter where it has none yet. */
 .boon-icon {
   display: block;
+  image-rendering: pixelated;
 }
 
 .boon-icon--missing {

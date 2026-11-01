@@ -1,32 +1,23 @@
 // Art config: which image each piece of the map draws with.
 //
-// The ground (grass, dirt and water) comes from 64px corner tilesets
-// (src/assets/terrain64.png, see WANG_SHEET), and trees, mountains and
-// bridges from the 64px props beside it. Other terrain comes from the
-// overworld sheet (src/assets/overworld.png, 32px tiles, 42 columns x 63
-// rows; see .claude/skills/tileset/overworld-catalog.md for what's where)
-// and is picked by position on it. The tile cursor and the
+// Terrain comes from the overworld sheet (src/assets/overworld.png, 32x32
+// tiles, 42 columns x 63 rows; see .claude/skills/tileset/overworld-catalog.md
+// for what's where) and is picked by position on it. The tile cursor and the
 // movement arrow are tiles of the same sheet. Units are standalone sprite
 // sheets, one per animation, named here by texture key (src/assets/sprites.ts
-// maps keys to files and gives each its frame size), cut into one-tile
-// frames. Every image declares its own pixel size and is drawn one map tile
-// (TILE_SIZE) big, so art of different sizes mixes on the map.
+// maps keys to files), cut into one-tile frames.
 
-import type { SheetTile } from './autotile.ts';
-import type { WangSet } from './wangTiles.ts';
-import type { BattlefieldKind, NaturalObstacle, ObstacleKind } from './battlefields.ts';
+import type { Autotile, SheetTile } from './autotile.ts';
 import type { BuildingKind } from './buildings.ts';
 import type { Facing } from './facing.ts';
 import type { ArrowPiece } from './moveArrow.ts';
 import type { PixelArt } from './pixelShapes.ts';
 import type { Team } from './turns.ts';
 import type { UnitRank } from './Unit.ts';
-import { getWalkFrameMs, type WalkFrames } from './unitRig.ts';
 
 export type UnitAnimation = 'idle' | 'move';
 
-// A blob shadow drawn under something standing on a tile (see UNIT_SHADOW),
-// sized and placed in fractions of a tile.
+// A blob shadow drawn under something standing on a tile (see UNIT_SHADOW).
 export interface Shadow {
   width: number;
   height: number;
@@ -35,173 +26,93 @@ export interface Shadow {
   alpha: number;
 }
 
-// Size of one map tile in world pixels. Art of any pixel size is scaled to
-// it: each sheet says how big its frames are (TERRAIN_SHEET.tileSize, the
-// `frame` of each entry in src/assets/sprites.ts).
-export const TILE_SIZE = 64;
-
-// The battlefield is seen from the side at a slant, so a floor cell shows
-// TILE_SIZE wide but only TILE_HEIGHT tall, while units, trees and other
-// things standing on it keep their full TILE_SIZE square art and rise out of
-// it (see src/game/sideView.ts). CELL is that floor cell's size, for
-// gridToWorld and friends.
-export const TILE_HEIGHT = 40;
-export const CELL = Object.freeze({ width: TILE_SIZE, height: TILE_HEIGHT });
-
-// World pixels per pixel of a 32px tile: the scale for sizes that were
-// tuned on the old 32px grid (stroke widths, nudges, lunges), so they keep
-// their size relative to a tile.
-export const GRID_PX = TILE_SIZE / 32;
+// Size of one map tile in world pixels — the terrain sheet's tile size.
+export const TILE_SIZE = 32;
 
 export const TERRAIN_SHEET = {
   key: 'overworld',
   columns: 42,
   rows: 63,
-  // The sheet's tile size in its own pixels.
-  tileSize: 32,
 };
 
-// The 64px ground: PixelLab corner (Wang) tilesets drawn by
-// src/game/wangTiles.ts, one row of 16 tiles per set in index order, built
-// by .claude/skills/tileset/scripts/build-terrain64.js. Both sets share one
-// grass tile.
-export const WANG_SHEET = { key: 'terrain64', columns: 16 };
+// Plain grass fills every cell under the other terrain, as a [column, row]
+// tile on the terrain sheet.
+export const TERRAIN_BASE_TILE: SheetTile = [0, 0];
 
-// The ground sets, drawn in this order. Grass and dirt is the base under
-// every cell (dirt runs on under a gate); the river set then draws over
-// any quarter touching water, with a rocky cut bank between water and
-// grass. Water runs on under bridges and fords, which draw over it.
-export const WANG_SETS: Record<string, WangSet> = {
-  dirt: { row: 0, terrains: ['dirt', 'gate'], terrainIs: 'upper', base: true },
-  water: { row: 1, terrains: ['water', 'bridge', 'ford'], terrainIs: 'lower' },
+// Blob autotiles drawn over the grass, keyed by terrain (see
+// src/game/autotile.ts). `block` is the top-left tile of the terrain's plain
+// 3x3 block (outer corners, edges, and the full middle); `inner` is the tile
+// with an inside corner in each of its four corners. `animation` steps
+// through `frames` copies of the set laid out `columnStride` tiles apart.
+export const TERRAIN_AUTOTILES: Record<string, Autotile> = {
+  // Water runs on under bridges and fords, which draw over it (see
+  // getCrossingSprites in src/game/mapArt.ts).
+  water: {
+    block: [4, 8],
+    inner: [2, 9],
+    animation: { frames: 6, columnStride: 7, frameMs: 180 },
+    joins: ['bridge', 'ford'],
+  },
+  // The sand-patch set, used as a dirt path. It has no plain 3x3, only the
+  // notched one, so `block` is the notched 3x3: its outer corners and edges
+  // are clean, but its middle has a notch in every corner, so a dirt patch
+  // two or more tiles wide shows small grass holes where its 'full' quarters
+  // meet. One-tile-wide paths only use the clean pieces. It runs on under a
+  // gate, whose art leaves its floor's south edge open to it.
+  dirt: {
+    block: [1, 3],
+    inner: [2, 4],
+    joins: ['gate'],
+  },
+  // Dark grass: the one patch set with a plain 3x3, so it's clean at any
+  // size. A meadow is walkable like grass.
+  meadow: {
+    block: [12, 3],
+    inner: [10, 4],
+  },
 };
 
-// Meadow cells draw as plain grass until a 64px meadow set is made; walls
-// are still the overworld sheet's blob autotile (getWallAutotile in
-// src/game/mapArt.ts, src/game/autotile.ts).
-
-// 64px props on the ground's own sheet (src/assets/terrain64-props.png,
-// laid out by build-terrain64.js): row 0 pine, pine cluster, broadleaf
-// tree, mountain peak, twin peaks, bridge west–east, bridge north–south,
-// boulders; row 1 red, blue and orange houses, watchtower, castle wall,
-// castle tower, gatehouse, village wall; row 2 the bridge ends (see
-// BRIDGE_ART), then two low ridges and a crag; rows 3–4 two 2x2 mountains,
-// a massif and a tall peak; rows 5–6 three 2x2 forest clumps (pines, mixed,
-// broadleaf).
-export const TERRAIN64_PROPS_SHEET = { key: 'terrain64-props', columns: 8 };
-
-// One-tile overlays on forest and mountain cells, a variant per cell (see
-// getFeatureSprites in src/game/mapArt.ts), off `sheet`.
-// `big` are 2x2 props, each named by its top-left tile, stood on 2x2 blocks
-// of the terrain.
-export interface FeatureArt {
-  sheet: { key: string; columns: number };
-  tiles: SheetTile[];
-  big?: SheetTile[];
-}
-
-export const FOREST_ART: FeatureArt = {
-  sheet: TERRAIN64_PROPS_SHEET,
+// One-tile overlays drawn over the grass on forest cells (see
+// getFeatureSprites in src/game/mapArt.ts). `tiles` are the variants (dense
+// pine, sparse pine, broadleaf); `peakBelow[i]` is `tiles[i]` with the
+// mountain peak of the cell south of it baked into its bottom, for a forest
+// just north of a mountain.
+export const FOREST_ART: { tiles: SheetTile[]; peakBelow: SheetTile[] } = {
   tiles: [
-    [0, 0],
-    [1, 0],
-    [2, 0],
+    [0, 1],
+    [1, 1],
+    [2, 1],
   ],
-  big: [
-    [0, 5],
-    [2, 5],
-    [4, 5],
+  peakBelow: [
+    [8, 1],
+    [9, 1],
+    [10, 1],
   ],
 };
 
-export const MOUNTAIN_ART: FeatureArt = {
-  sheet: TERRAIN64_PROPS_SHEET,
-  tiles: [
-    [3, 0],
-    [4, 0],
-    [4, 2],
+// Mountain overlays, stacked a column at a time: a mountain cell draws a
+// `body` variant, or a `peakBelow` one (the same body with the next
+// mountain's peak in its bottom) when the cell south of it is a mountain
+// too. The top mountain of a column pokes its peak into the cell north of it
+// with a `cap`, drawn over that cell.
+export const MOUNTAIN_ART: { body: SheetTile[]; peakBelow: SheetTile[]; cap: SheetTile[] } = {
+  body: [
+    [4, 1],
+    [6, 1],
     [5, 2],
-    [6, 2],
+    [8, 2],
+    [9, 2],
+    [10, 2],
   ],
-  big: [
-    [0, 3],
-    [2, 3],
+  peakBelow: [
+    [5, 1],
+    [7, 1],
+  ],
+  cap: [
+    [4, 0],
+    [5, 0],
   ],
 };
-
-// The art each battlefield obstacle (battlefields.ts) stands as, a tile of
-// `sheet`. Placeholders off the 64px props sheet until obstacles get art
-// of their own: the desert's cactus is a crag for now.
-export const OBSTACLE_ART: Readonly<Record<NaturalObstacle, { sheet: typeof TERRAIN64_PROPS_SHEET; tile: SheetTile }>> =
-  Object.freeze({
-    rock: { sheet: TERRAIN64_PROPS_SHEET, tile: [7, 0] },
-    boulder: { sheet: TERRAIN64_PROPS_SHEET, tile: [4, 2] },
-    bush: { sheet: TERRAIN64_PROPS_SHEET, tile: [2, 0] },
-    pine: { sheet: TERRAIN64_PROPS_SHEET, tile: [0, 0] },
-    thicket: { sheet: TERRAIN64_PROPS_SHEET, tile: [1, 0] },
-    crag: { sheet: TERRAIN64_PROPS_SHEET, tile: [6, 2] },
-    cactus: { sheet: TERRAIN64_PROPS_SHEET, tile: [5, 2] },
-  });
-
-// The painted art each battlefield obstacle stands as, in place of
-// OBSTACLE_ART on a battlefield: texture keys of SPRITES, each one image
-// the size of a tile with the obstacle's base where a unit's feet go and
-// its own painted shadow falling to the lower right (a fence's runs the
-// tile's full width, so a fence line joins up). A
-// kind with several picks one per cell (getPaintedObstacles in mapArt.ts).
-export const PAINTED_OBSTACLES: Readonly<Record<ObstacleKind, readonly string[]>> = Object.freeze({
-  rock: ['Obstacle_rock_1', 'Obstacle_rock_2'],
-  boulder: ['Obstacle_boulder'],
-  bush: ['Obstacle_bush_1', 'Obstacle_bush_2'],
-  pine: ['Obstacle_pine'],
-  thicket: ['Obstacle_thicket'],
-  crag: ['Obstacle_crag'],
-  cactus: ['Obstacle_cactus'],
-  fence: ['Obstacle_fence'],
-  brokenFence: ['Obstacle_fence_broken'],
-  barrels: ['Obstacle_barrels'],
-  crates: ['Obstacle_crates'],
-  cart: ['Obstacle_cart'],
-  wheel: ['Obstacle_wheel'],
-  sack: ['Obstacle_sack'],
-  stump: ['Obstacle_stump'],
-  signpost: ['Obstacle_signpost'],
-  log: ['Obstacle_forest_log'],
-});
-
-// A field's own art for some obstacles, in place of PAINTED_OBSTACLES'
-// (which stand on little grass patches): the forest's rocks and plants sit
-// on moss and fallen leaves, and its stump is an old one with its roots
-// showing; the desert's sandstone, scrub and cacti on sand, and its stump
-// a dead twisted tree.
-export const FIELD_OBSTACLES: Readonly<
-  Partial<Record<BattlefieldKind, Readonly<Partial<Record<ObstacleKind, readonly string[]>>>>>
-> = Object.freeze({
-  forest: {
-    rock: ['Obstacle_forest_rock_1', 'Obstacle_forest_rock_2'],
-    boulder: ['Obstacle_forest_boulder'],
-    bush: ['Obstacle_forest_bush_1', 'Obstacle_forest_bush_2'],
-    pine: ['Obstacle_forest_pine_1', 'Obstacle_forest_pine_2'],
-    thicket: ['Obstacle_forest_thicket_1', 'Obstacle_forest_thicket_2'],
-    stump: ['Obstacle_forest_stump'],
-    log: ['Obstacle_forest_log'],
-  },
-  desert: {
-    rock: ['Obstacle_desert_rock_1', 'Obstacle_desert_rock_2'],
-    boulder: ['Obstacle_desert_boulder'],
-    crag: ['Obstacle_desert_crag'],
-    bush: ['Obstacle_desert_bush'],
-    thicket: ['Obstacle_desert_thicket'],
-    cactus: ['Obstacle_desert_cactus_1', 'Obstacle_desert_cactus_2'],
-    stump: ['Obstacle_desert_stump'],
-  },
-});
-
-// The painted art each obstacle stands as on a `field`: its own
-// (FIELD_OBSTACLES) where it has some, else PAINTED_OBSTACLES.
-export function getFieldObstacleArt(field: BattlefieldKind): Readonly<Record<ObstacleKind, readonly string[]>> {
-  return { ...PAINTED_OBSTACLES, ...FIELD_OBSTACLES[field] };
-}
 
 // Where each building kind sits on the terrain sheet in its block's first
 // color column: `column` is that column (0 or 12; a palette's
@@ -255,26 +166,16 @@ export type BuildingPaletteName = keyof typeof BUILDING_PALETTES;
 // The palette for a level that doesn't pick one.
 export const DEFAULT_BUILDING_PALETTE: BuildingPaletteName = 'a-stone';
 
-// Bridges over water on TERRAIN64_PROPS_SHEET: `vertical` runs
-// north–south, `horizontal` west–east, each repeating along its length.
-// `ends` run the deck onto the bank cell on that side of a bridge, over
-// the cut bank.
-export const BRIDGE_ART: {
-  sheet: typeof TERRAIN64_PROPS_SHEET;
-  vertical: SheetTile;
-  horizontal: SheetTile;
-  ends: Record<'north' | 'south' | 'west' | 'east', SheetTile>;
-} = {
-  sheet: TERRAIN64_PROPS_SHEET,
-  vertical: [6, 0],
-  horizontal: [5, 0],
-  ends: { north: [0, 2], south: [1, 2], west: [2, 2], east: [3, 2] },
+// Bridges on the terrain sheet, over water: `vertical` runs north–south
+// (rails on its west and east sides), `horizontal` west–east.
+export const BRIDGE_ART: { vertical: SheetTile; horizontal: SheetTile } = {
+  vertical: [11, 2],
+  horizontal: [11, 1],
 };
 
 // Map props the terrain sheet doesn't have, drawn to match it by
 // .claude/skills/tileset/scripts/draw-map-props.js: a gateway per palette
-// ford stepping stones and a spike trap. A 32px sheet like the terrain one
-// (its frame size is in src/assets/sprites.ts).
+// ford stepping stones and a spike trap. A 32px sheet like the terrain one.
 export const MAP_PROPS_SHEET = { key: 'map-props', columns: 11 };
 
 // Each palette's gateway on MAP_PROPS_SHEET: `posts` (a short post either
@@ -301,93 +202,36 @@ export const FORD_ART: SheetTile = [10, 0];
 export const SPIKES_ART: SheetTile = [10, 1];
 
 // Unit art keyed by unit class, so every unit of a class looks alike
-// whichever side it's on. Every class has a painted single image
-// (SINGLE_IMAGE_UNITS); art that isn't one names a set of sheets, one per
-// animation in UNIT_ANIMATIONS (see unitSheetKey).
+// whichever side it's on. Each names a set of sheets, one per animation in
+// UNIT_ANIMATIONS (see unitSheetKey).
 export const UNIT_SPRITES: Record<string, string> = {
-  warrior: 'Painted_Warrior',
-  soldier: 'Painted_Soldier',
-  archer: 'Painted_Archer',
-  vanguard: 'Painted_Vanguard',
-  guard: 'Painted_Guard',
-  acolyte: 'Painted_Acolyte',
-  hero: 'Painted_Hero',
-  berserker: 'Painted_Berserker',
-  general: 'Painted_General',
-  halberdier: 'Painted_Halberdier',
-  sniper: 'Painted_Sniper',
-  arbalest: 'Painted_Arbalest',
-  champion: 'Painted_Champion',
-  bombardier: 'Painted_Bombardier',
-  bastion: 'Painted_Bastion',
-  templar: 'Painted_Templar',
-  bishop: 'Painted_Bishop',
-  sage: 'Painted_Mage',
-  slime: 'Painted_Slime',
-  goblin: 'Painted_Goblin',
-  skeleton: 'Painted_Skeleton',
-  bat: 'Painted_Bat',
-  wolf: 'Painted_Wolf',
-  orc: 'Painted_Orc',
+  warrior: 'Warrior_02',
+  soldier: 'Soldier_03',
+  archer: 'Amazon_01',
+  vanguard: 'Vanguard_04',
+  guard: 'Soldier_04',
+  acolyte: 'Acolyte_02',
+  // The promoted classes (promotions.ts) wear other variants of the pack's
+  // units, close to their base class's look.
+  hero: 'Vanguard_02',
+  berserker: 'Vanguard_06',
+  general: 'Soldier_05',
+  halberdier: 'Soldier_02',
+  sniper: 'Archer_03',
+  arbalest: 'Siege_03',
+  champion: 'Vanguard_03',
+  bombardier: 'Sapper_04',
+  bastion: 'Soldier_06',
+  templar: 'Vanguard_01',
+  bishop: 'Acolyte_01',
+  sage: 'Acolyte_03',
+  slime: 'Slime_01',
+  goblin: 'Goblin_01',
+  skeleton: 'Skeleton_01',
+  bat: 'Bat_01',
+  wolf: 'Wolf_01',
+  orc: 'Orc_01',
 };
-
-// Unit art drawn from a single image instead of a set of sheets: a texture
-// key of SPRITES whose one frame is the whole picture, the character facing
-// right, mirrored to face left, and animated in code (src/game/unitRig.ts)
-// rather than frame by frame. Map a class to one in UNIT_SPRITES like any
-// other art.
-export const SINGLE_IMAGE_UNITS: ReadonlySet<string> = new Set<string>([
-  'Painted_Warrior',
-  'Painted_Soldier',
-  'Painted_Archer',
-  'Painted_Vanguard',
-  'Painted_Guard',
-  'Painted_Acolyte',
-  'Painted_Hero',
-  'Painted_Berserker',
-  'Painted_General',
-  'Painted_Halberdier',
-  'Painted_Sniper',
-  'Painted_Arbalest',
-  'Painted_Champion',
-  'Painted_Bombardier',
-  'Painted_Bastion',
-  'Painted_Templar',
-  'Painted_Bishop',
-  'Painted_Mage',
-  'Painted_Slime',
-  'Painted_Goblin',
-  'Painted_Skeleton',
-  'Painted_Bat',
-  'Painted_Wolf',
-  'Painted_Orc',
-]);
-
-// Single-image units whose walk is drawn frame by frame: a sheet in SPRITES
-// of the same frame size as the unit's image, the character facing right
-// with its feet where the image has them, shown instead of the image (and
-// in place of the code-drawn hop) while the unit walks. The frames make one
-// walk cycle, played at the shared pace (WALK_CYCLE_MS in unitRig.ts), so a
-// sheet can have any number of them.
-export const SINGLE_IMAGE_WALKS: Readonly<Record<string, WalkFrames>> = {};
-
-// A single-image unit's frame-by-frame walk, or undefined when it hops in
-// code.
-export function getSingleImageWalk(art: string): WalkFrames | undefined {
-  return isSingleImageUnit(art) ? SINGLE_IMAGE_WALKS[art] : undefined;
-}
-
-// Whether a unit's art (a value of UNIT_SPRITES) is one image animated in
-// code, rather than sheets of frames.
-export function isSingleImageUnit(art: string): boolean {
-  return SINGLE_IMAGE_UNITS.has(art);
-}
-
-// The texture key to draw a unit's art with for an animation: the image
-// itself for a single-image unit, else that animation's sheet (unitSheetKey).
-export function getUnitTextureKey(art: string, animation: UnitAnimation): string {
-  return isSingleImageUnit(art) ? art : unitSheetKey(art, animation);
-}
 
 // Art for a unit whose class has none of its own (or no class).
 export const DEFAULT_UNIT_SPRITE = UNIT_SPRITES.warrior;
@@ -433,12 +277,11 @@ export function getItemSprite(itemId: string): string | null {
 }
 
 // Every unit sheet is a grid of one-tile frames, `columns` wide: one row per
-// facing direction, one column per animation frame. The side view only uses
-// the left and right rows (`rows`, keyed by the facings in
-// src/game/facing.ts). A unit loops its facing's row, `frames` columns long.
-// Units start out facing the other side (getStartFacing), turn to face the
-// way they step sideways while walking, and keep that facing once they stop.
-// `defaultFacing` is the row shown off the map (e.g. in the roster).
+// facing direction (`rows`, keyed by the facings in src/game/facing.ts), one
+// column per animation frame. A unit loops its facing's row, `frames` columns
+// long. Units start out facing `defaultFacing` (toward the camera), turn to
+// face the way they step while walking, and keep facing their last step once
+// they stop.
 export const UNIT_SHEET: {
   columns: number;
   rows: Record<Facing, number>;
@@ -446,18 +289,17 @@ export const UNIT_SHEET: {
   frames: number;
 } = {
   columns: 4,
-  rows: { left: 1, right: 2 },
-  defaultFacing: 'right',
+  rows: { down: 0, left: 1, right: 2, up: 3 },
+  defaultFacing: 'down',
   frames: 4,
 };
 
 // Unit animations: `sheet` is the suffix of the sheet's texture key, and each
 // frame shows for frameMs. Units play `idle` standing still and `move` while
-// walking; a sheet's move row is one walk cycle, at the pace every unit
-// walks (getWalkFrameMs).
+// walking.
 export const UNIT_ANIMATIONS: Record<UnitAnimation, { sheet: string; frameMs: number }> = {
   idle: { sheet: 'Idle', frameMs: 200 },
-  move: { sheet: 'Move', frameMs: getWalkFrameMs(UNIT_SHEET.frames) },
+  move: { sheet: 'Move', frameMs: 120 },
 };
 
 // The texture key of a unit's sheet for an animation, e.g.
@@ -485,47 +327,21 @@ export const STRUCTURE_SPRITES: Record<string, { key: string; width: number; hei
 
 // The blob shadow drawn under every unit, since the unit sprites have none:
 // a flat ellipse centered at (centerX, centerY) within the unit's tile, in
-// fractions of a tile, lined up with where the units' feet touch the ground.
+// tile pixels, lined up with where the units' feet touch the ground.
 export const UNIT_SHADOW: Shadow = {
-  width: 16 / 32,
-  height: 6 / 32,
-  centerX: 16 / 32,
-  centerY: 29 / 32,
+  width: 16,
+  height: 6,
+  centerX: 16,
+  centerY: 29,
   alpha: 0.35,
 };
 
-// The soft shadows a battlefield's painted floor gets instead (see
-// addSoftShadow in src/scenes/unitShadow.ts): a blurred pool, wider than
-// the crisp blob and darkest under the feet, so a unit or an obstacle sits
-// on the painting instead of floating over it. On the same feet line as
-// UNIT_SHADOW.
-export const SOFT_UNIT_SHADOW: Shadow = {
-  width: 26 / 32,
-  height: 9 / 32,
-  centerX: 16 / 32,
-  centerY: 29 / 32,
-  alpha: 0.55,
-};
-
-// How every unit on the map shows its side without hiding the painted art:
-// a team-colored ring on the floor around
-// its feet (`ring`, its size and center within the tile in fractions of a
-// tile, like a Shadow), and its blue accents (cloaks, tabards, shields)
-// turned to its team's hue (`accentHue`, in degrees; the player's blue art
-// stays as painted).
-export const UNIT_TEAM_MARKS: {
-  ring: Shadow & { colors: Readonly<Record<Team, number>> };
-  accentHue: Readonly<Record<Team, number | null>>;
-} = {
-  ring: {
-    width: 29 / 32,
-    height: 10 / 32,
-    centerX: 16 / 32,
-    centerY: 27 / 32,
-    alpha: 0.9,
-    colors: { player: 0x4a8cff, enemy: 0xff4a4a, guest: 0x4ad860 },
-  },
-  accentHue: { player: null, enemy: 0, guest: 130 },
+// The outline drawn around every unit on the map in its team's color, so
+// sides read at a glance without recoloring the sprite: `width` sheet
+// pixels thick, hugging the art's silhouette within each frame.
+export const UNIT_OUTLINE: { width: number; colors: Readonly<Record<Team, number>> } = {
+  width: 1,
+  colors: { player: 0x4a8cff, enemy: 0xff4a4a, guest: 0x4ad860 },
 };
 
 // The badge pinned to a boss's or an elite's tile on the map, and shown on
@@ -533,12 +349,11 @@ export const UNIT_TEAM_MARKS: {
 // changing their sprites (boss and elite monsters look like any other of
 // their class): a white skull on a red plate for the boss, a gold star on a
 // violet plate for an elite. Each is drawn pixel by pixel (getPixelArtSpans)
-// at GRID_PX world pixels per art pixel, its top-left corner at (x, y)
-// within the unit's tile in fractions of a tile, tucked into the top-right
-// corner.
+// at 1 world pixel per art pixel, its top-left corner at (x, y) within the
+// unit's tile, tucked into the top-right corner.
 export const RANK_BADGES: Readonly<Record<UnitRank, PixelArt & { x: number; y: number }>> = {
   boss: {
-    x: 21 / 32,
+    x: 21,
     y: 0,
     palette: { O: 0x1a0d12, R: 0xc0283a, D: 0x8a1426, W: 0xf5ecd6, K: 0x2a1018 },
     rows: [
@@ -556,7 +371,7 @@ export const RANK_BADGES: Readonly<Record<UnitRank, PixelArt & { x: number; y: n
     ],
   },
   elite: {
-    x: 21 / 32,
+    x: 21,
     y: 0,
     palette: { O: 0x1a0d12, P: 0x3a2a5a, Y: 0xffd23a, L: 0xfff4a0 },
     rows: [
@@ -578,12 +393,12 @@ export const RANK_BADGES: Readonly<Record<UnitRank, PixelArt & { x: number; y: n
 // The blob shadow drawn at the foot of every tree, in the same terms as
 // UNIT_SHADOW: wider than the trunk and a bit under the canopy's spread, so
 // the tree sits on the ground, centered on the foot of the ginkgos' trunk
-// (x 12–19, y 28–29 of their 32px frame).
+// (x 12–19, y 28–29).
 export const TREE_SHADOW: Shadow = {
-  width: 20 / 32,
-  height: 6 / 32,
-  centerX: 16 / 32,
-  centerY: 29 / 32,
+  width: 20,
+  height: 6,
+  centerX: 16,
+  centerY: 29,
   alpha: 0.35,
 };
 

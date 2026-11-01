@@ -15,7 +15,7 @@ import { pickZonedEnemyTiles } from '../enemySpawns.ts';
 import type { Rng } from '../combatStats.ts';
 import { growToLevel } from '../experience.ts';
 import { assignLoot } from '../loot.ts';
-import { MAP_GEN_DEFAULTS, type GeneratedTerrain } from '../mapGen.ts';
+import type { GeneratedTerrain } from '../mapGen.ts';
 import { generateMap } from '../mapPlan.ts';
 import { checkMap } from '../mapCheck.ts';
 import { getMapMetrics, scoreMap, type MapMetrics } from '../mapScore.ts';
@@ -61,20 +61,8 @@ export const SPIKE_TRAP_REACH = 3;
 // the stage.
 const SPIKE_SEED_SALT = 0x51c3e5;
 
-// How many candidate maps a stage's seed lays out to keep the best of, on
-// a map of MAP_CANDIDATES_AREA tiles or less. A bigger map lays out fewer
-// (getCandidateCount), so a stage takes about as long to build whatever its
-// size.
+// How many candidate maps a stage's seed lays out to keep the best of.
 export const MAP_CANDIDATES = 30;
-export const MAP_CANDIDATES_AREA = 14 * 12;
-const MIN_MAP_CANDIDATES = 8;
-
-// How many candidates a stage on `region`'s map lays out.
-export function getCandidateCount(region: RegionConfig): number {
-  const area = region.terrain.width * region.terrain.height;
-  if (area <= MAP_CANDIDATES_AREA) return MAP_CANDIDATES;
-  return Math.max(MIN_MAP_CANDIDATES, Math.round((MAP_CANDIDATES * MAP_CANDIDATES_AREA) / area));
-}
 
 // The seeds a stage's candidates are laid out from: `seed` itself first,
 // then `count - 1` more drawn from it.
@@ -140,15 +128,10 @@ function isBetter(a: StageLayout, b: StageLayout): boolean {
   return aOk !== bOk ? aOk : a.score < b.score;
 }
 
-// The best of `candidates` layouts from `seed` (getCandidateCount's by
-// default): the best-scoring one that
+// The best of `candidates` layouts from `seed`: the best-scoring one that
 // keeps every rule (the earliest on a tie, so a map that already meets
 // every target is kept as is), or the best-scoring one if none does.
-export function pickStageLayout(
-  seed: number,
-  region: RegionConfig,
-  candidates = getCandidateCount(region),
-): StageLayout {
+export function pickStageLayout(seed: number, region: RegionConfig, candidates = MAP_CANDIDATES): StageLayout {
   let best: StageLayout | null = null;
   for (const candidate of getCandidateSeeds(seed, candidates)) {
     const layout = layOutStage(candidate, region);
@@ -259,26 +242,39 @@ export function createStageLevel(
     structures: [],
     buildings,
     palette: region.palette,
-    ...(region.biome ? { biome: region.biome } : {}),
-    ...(region.terrain.generator === 'battlefield'
-      ? {
-          battlefield: region.terrain.battlefield ?? MAP_GEN_DEFAULTS.battlefield,
-          obstacles: layout.terrain.obstacles ?? [],
-        }
-      : {}),
     objective: DEFAULT_OBJECTIVE,
     ...(layout.terrain.seizeTile ? { seizeTile: { ...layout.terrain.seizeTile } } : {}),
     ...(bossUnitId ? { bossUnitId } : {}),
   };
 }
 
-// The archetype `region`'s stages are laid out as: the region's own if it
-// sets one, else 'arena', the side view's battlefield (see
-// mapArchetypes.ts). Every objective plays on an arena: its road's far end
-// is the tile to seize, and a boss is the enemy farthest from the
-// deployment zone.
-export function pickStageArchetype(region: RegionConfig): MapArchetype {
-  return region.terrain.archetype ?? 'arena';
+// Which archetypes suit each objective (see mapArchetypes.ts): a seize
+// wants a tile worth fighting over, a boss a stronghold, a survive enemies
+// closing in from more than one side.
+export const OBJECTIVE_ARCHETYPES: Readonly<Record<ObjectiveKind, readonly MapArchetype[]>> = Object.freeze({
+  rout: Object.freeze(['advance', 'ambush', 'gauntlet', 'islands'] as const),
+  seize: Object.freeze(['crossroads', 'islands', 'fortress'] as const),
+  boss: Object.freeze(['fortress', 'advance', 'gauntlet'] as const),
+  survive: Object.freeze(['ambush', 'crossroads'] as const),
+});
+
+// Mixed into the stage seed so the archetype's draw doesn't follow the
+// objective's or the map's.
+const ARCHETYPE_SEED_SALT = 0x3a9e7c;
+
+// The archetype stage `stage` (1 is the first) of `region` is laid out
+// as, for an `objective` stage, seeded by the stage's `seed`: the region's
+// own if it sets one, 'advance' on stage 1, else one of
+// OBJECTIVE_ARCHETYPES[objective].
+export function pickStageArchetype(
+  stage: number,
+  region: RegionConfig,
+  seed: number,
+  objective: ObjectiveKind,
+): MapArchetype {
+  if (region.terrain.archetype) return region.terrain.archetype;
+  if (stage <= 1) return 'advance';
+  return randomItem(createSeededRng(seed ^ ARCHETYPE_SEED_SALT), OBJECTIVE_ARCHETYPES[objective]);
 }
 
 // `region` with its maps laid out as `archetype`.

@@ -1,12 +1,11 @@
 import Phaser from 'phaser';
-import { listenUntilStopped } from './sceneListeners.ts';
 import { getPixelArtSpans } from '../game/pixelShapes.ts';
-import { GRID_PX, RANK_BADGES, TILE_SIZE } from '../game/tileset.ts';
+import { RANK_BADGES } from '../game/tileset.ts';
 import type { UnitRank } from '../game/Unit.ts';
-import { STANDING_DEPTH_HAIR } from '../game/sideView.ts';
 
-// A rank's badge texture, built once from its pixel rows (no anti-aliasing),
-// one texture pixel per art pixel; the image is scaled by GRID_PX.
+const RANK_BADGE_DEPTH = 0.76; // just over units (0.75), under roofs (0.8)
+
+// A rank's badge texture, built once from its pixel rows (no anti-aliasing).
 function ensureBadgeTexture(scene: Phaser.Scene, rank: UnitRank): string {
   const key = `rank-badge-${rank}`;
   if (scene.textures.exists(key)) return key;
@@ -30,22 +29,18 @@ export function addRankBadge(
   sprite: Phaser.GameObjects.Sprite,
   rank: UnitRank,
 ): Phaser.GameObjects.Image {
-  const x = Math.round(RANK_BADGES[rank].x * TILE_SIZE);
-  const y = Math.round(RANK_BADGES[rank].y * TILE_SIZE);
-  const badge = scene.add
-    .image(sprite.x + x, sprite.y + y, ensureBadgeTexture(scene, rank))
-    .setOrigin(0, 0)
-    .setScale(GRID_PX);
+  const { x, y } = RANK_BADGES[rank];
+  const badge = scene.add.image(sprite.x + x, sprite.y + y, ensureBadgeTexture(scene, rank)).setOrigin(0, 0);
+  badge.setDepth(RANK_BADGE_DEPTH);
   const follow = () =>
     badge
       .setPosition(sprite.x + x, sprite.y + y)
-      .setDepth(sprite.depth + STANDING_DEPTH_HAIR) // just over its unit
       .setAlpha(sprite.alpha)
       .setVisible(sprite.visible);
   follow();
-  const stop = listenUntilStopped(scene.events, { [Phaser.Scenes.Events.POST_UPDATE]: follow });
+  scene.events.on(Phaser.Scenes.Events.POST_UPDATE, follow);
   sprite.once(Phaser.GameObjects.Events.DESTROY, () => {
-    stop();
+    scene.events.off(Phaser.Scenes.Events.POST_UPDATE, follow);
     badge.destroy();
   });
   return badge;
