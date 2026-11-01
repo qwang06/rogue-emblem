@@ -43,8 +43,10 @@ export const TERRAIN_SHEET = {
 // them): summer is the green overworld sheet; autumn (overworld-autumn.png)
 // is it with its greens recolored (golden grass, rust meadows) and its
 // forests bare, everything else left as it is; winter (overworld-winter.png) is the
-// pack's snow sheet, snowy buildings included.
-export const SEASONS = ['summer', 'autumn', 'winter'] as const;
+// pack's snow sheet, snowy buildings included; hell (overworld-hell.png) is
+// the summer sheet with dead ash ground, burnt bare woods, black rock and
+// lava for water.
+export const SEASONS = ['summer', 'autumn', 'winter', 'hell'] as const;
 export type Season = (typeof SEASONS)[number];
 export const DEFAULT_SEASON: Season = 'summer';
 
@@ -55,15 +57,17 @@ export const SEASON_TERRAIN_SHEETS: Readonly<Record<Season, typeof TERRAIN_SHEET
   summer: TERRAIN_SHEET,
   autumn: { ...TERRAIN_SHEET, key: 'overworld-autumn' },
   winter: { ...TERRAIN_SHEET, key: 'overworld-winter' },
+  hell: { ...TERRAIN_SHEET, key: 'overworld-hell' },
 };
 
 // The decorative tree (TREE_SPRITES) a generated map in `season` scatters
 // over its grass, or null for none: the ginkgos stand on a patch of green
-// grass, which would show on snow.
+// grass, which would show on snow or ash.
 export const SEASON_TREES: Readonly<Record<Season, string | null>> = {
   summer: 'green_ginkgo',
   autumn: 'gold_ginkgo',
   winter: null,
+  hell: null,
 };
 
 // Plain grass fills every cell under the other terrain, as a [column, row]
