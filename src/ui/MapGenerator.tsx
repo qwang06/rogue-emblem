@@ -52,7 +52,14 @@ export function MapGeneratorBanner(route: GeneratorRoute) {
 // or one of Warband Mode's regions) and Generate, a whole new map there.
 // Picking a region generates a map in it straight away.
 export function MapGeneratorPanel({ region }: GeneratorRoute) {
-  const names = useMemo(() => getActiveRegionSettings().regions.map((entry) => entry.name), []);
+  // Each region's name, with the field it's fought on (plains, forest, desert).
+  const names = useMemo(
+    () =>
+      getActiveRegionSettings().regions.map(({ name, terrain }) =>
+        terrain.battlefield ? `${name} (${terrain.battlefield})` : name,
+      ),
+    [],
+  );
   const [picked, setPicked] = useState(region);
 
   function pick(value: string) {

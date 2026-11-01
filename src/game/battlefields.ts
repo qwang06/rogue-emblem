@@ -21,7 +21,8 @@ export const BATTLEFIELD_KINDS = ['plains', 'forest', 'desert'] as const;
 export type BattlefieldKind = (typeof BATTLEFIELD_KINDS)[number];
 
 // Natural obstacles (rocks and plants) and props (things people left
-// on the field: fences, a cart, supplies), both painted (PAINTED_OBSTACLES
+// on the field: fences, a cart, supplies; and what's left of trees: a
+// stump, a fallen log), both painted (PAINTED_OBSTACLES
 // in tileset.ts), each standing on one cell.
 export const NATURAL_OBSTACLES = ['rock', 'boulder', 'bush', 'pine', 'thicket', 'crag', 'cactus'] as const;
 export type NaturalObstacle = (typeof NATURAL_OBSTACLES)[number];
@@ -35,13 +36,15 @@ export const PROP_OBSTACLES = [
   'sack',
   'stump',
   'signpost',
+  'log',
 ] as const;
 export const OBSTACLE_KINDS = [...NATURAL_OBSTACLES, ...PROP_OBSTACLES] as const;
 export type ObstacleKind = (typeof OBSTACLE_KINDS)[number];
 
 // The terrain each obstacle gives its cell, which sets its rules
 // (movement.ts and the rest read terrain): mountain blocks, forest slows.
-// The big things (rocks, a fence, a cart, stacked crates and barrels) block;
+// The big things (rocks, a fence, a cart, stacked crates and barrels, a
+// fallen trunk) block;
 // what can be clambered over or pushed through (plants, a broken fence, a
 // stump, a sack, a fallen wheel, a signpost) slows.
 export const OBSTACLE_TERRAIN: Readonly<Record<ObstacleKind, 'mountain' | 'forest'>> = Object.freeze({
@@ -61,6 +64,7 @@ export const OBSTACLE_TERRAIN: Readonly<Record<ObstacleKind, 'mountain' | 'fores
   sack: 'forest',
   stump: 'forest',
   signpost: 'forest',
+  log: 'mountain',
 });
 
 // How a battlefield sets its obstacles out, as set pieces that make
@@ -92,14 +96,15 @@ export const BATTLEFIELD_LAYOUTS: Readonly<Record<BattlefieldKind, BattlefieldLa
     grove: ['bush', 'bush', 'thicket', 'rock', 'boulder'],
     scatter: ['rock', 'boulder', 'bush', 'bush', 'thicket', 'stump', 'signpost'],
   },
-  // A woodcutters' clearing: stumps and a cart of logs among pine groves.
+  // Old deep woods: a fallen trunk or mossy boulders with stumps and ferns
+  // around them, groves of young pines and brambles, mossy stones.
   forest: {
     fences: 0,
-    cache: ['cart', 'crates'],
-    cacheSides: ['stump', 'sack', 'barrels'],
+    cache: ['log', 'log', 'boulder'],
+    cacheSides: ['stump', 'bush', 'rock'],
     groves: 2,
-    grove: ['pine', 'pine', 'thicket', 'bush'],
-    scatter: ['pine', 'pine', 'thicket', 'bush', 'stump', 'rock'],
+    grove: ['pine', 'pine', 'thicket', 'bush', 'boulder'],
+    scatter: ['pine', 'thicket', 'bush', 'bush', 'stump', 'rock', 'log'],
   },
   // A broken-down caravan among the rocks.
   desert: {

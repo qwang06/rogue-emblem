@@ -14,7 +14,7 @@
 
 import type { SheetTile } from './autotile.ts';
 import type { WangSet } from './wangTiles.ts';
-import type { NaturalObstacle, ObstacleKind } from './battlefields.ts';
+import type { BattlefieldKind, NaturalObstacle, ObstacleKind } from './battlefields.ts';
 import type { BuildingKind } from './buildings.ts';
 import type { Facing } from './facing.ts';
 import type { ArrowPiece } from './moveArrow.ts';
@@ -166,7 +166,32 @@ export const PAINTED_OBSTACLES: Readonly<Record<ObstacleKind, readonly string[]>
   sack: ['Obstacle_sack'],
   stump: ['Obstacle_stump'],
   signpost: ['Obstacle_signpost'],
+  log: ['Obstacle_forest_log'],
 });
+
+// A field's own art for some obstacles, in place of PAINTED_OBSTACLES'
+// (which stand on little grass patches): the forest's rocks and plants sit
+// on moss and fallen leaves, and its stump is an old one with its roots
+// showing.
+export const FIELD_OBSTACLES: Readonly<
+  Partial<Record<BattlefieldKind, Readonly<Partial<Record<ObstacleKind, readonly string[]>>>>>
+> = Object.freeze({
+  forest: {
+    rock: ['Obstacle_forest_rock_1', 'Obstacle_forest_rock_2'],
+    boulder: ['Obstacle_forest_boulder'],
+    bush: ['Obstacle_forest_bush_1', 'Obstacle_forest_bush_2'],
+    pine: ['Obstacle_forest_pine_1', 'Obstacle_forest_pine_2'],
+    thicket: ['Obstacle_forest_thicket_1', 'Obstacle_forest_thicket_2'],
+    stump: ['Obstacle_forest_stump'],
+    log: ['Obstacle_forest_log'],
+  },
+});
+
+// The painted art each obstacle stands as on a `field`: its own
+// (FIELD_OBSTACLES) where it has some, else PAINTED_OBSTACLES.
+export function getFieldObstacleArt(field: BattlefieldKind): Readonly<Record<ObstacleKind, readonly string[]>> {
+  return { ...PAINTED_OBSTACLES, ...FIELD_OBSTACLES[field] };
+}
 
 // Where each building kind sits on the terrain sheet in its block's first
 // color column: `column` is that column (0 or 12; a palette's

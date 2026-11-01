@@ -2,6 +2,7 @@ import { RUN_ITEMS } from './warband/run.ts';
 import { WEAPONS } from './weapons.ts';
 import { describe, expect, it } from 'vitest';
 import { SPRITE_URLS } from '../assets/sprites.ts';
+import { BATTLEFIELD_OBSTACLES } from './battlefields.ts';
 import { FACINGS } from './facing.ts';
 import {
   ARROW_TILES,
@@ -26,6 +27,9 @@ import {
   SINGLE_IMAGE_UNITS,
   unitSheetKey,
   type UnitAnimation,
+  FIELD_OBSTACLES,
+  getFieldObstacleArt,
+  PAINTED_OBSTACLES,
 } from './tileset.ts';
 import { UNIT_CLASSES } from './unitClasses.ts';
 import { WOODEN_ARMOR, WOODEN_SHIELD } from './items.ts';
@@ -74,6 +78,25 @@ describe('sprite keys', () => {
     const sprites = UNIT_CLASSES.map(({ id }) => UNIT_SPRITES[id]);
     expect(sprites.every(Boolean)).toBe(true);
     expect(new Set(sprites).size).toBe(sprites.length);
+  });
+});
+
+describe('getFieldObstacleArt', () => {
+  it('stands the forest’s rocks and plants as its own art', () => {
+    const art = getFieldObstacleArt('forest');
+    expect(art.rock).toEqual(FIELD_OBSTACLES.forest?.rock);
+    expect(art.rock).not.toEqual(PAINTED_OBSTACLES.rock);
+    expect(art.cart).toEqual(PAINTED_OBSTACLES.cart);
+  });
+
+  it('gives a field without art of its own the shared art', () => {
+    expect(getFieldObstacleArt('desert')).toEqual(PAINTED_OBSTACLES);
+  });
+
+  it('has the forest’s own art for everything its layout puts down', () => {
+    for (const obstacle of BATTLEFIELD_OBSTACLES.forest) {
+      expect(FIELD_OBSTACLES.forest?.[obstacle], obstacle).toBeDefined();
+    }
   });
 });
 
