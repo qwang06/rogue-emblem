@@ -62,6 +62,7 @@ import {
   DEFAULT_ZOOM_LEVEL,
   getCameraView,
   getFitZoom,
+  getDragCenter,
   getFollowCenter,
   getLevelZoom,
   SCROLL_VIEW_CELLS,
@@ -315,6 +316,8 @@ const FOLLOW_PAN_MS = 140;
 // the mouse wheel or the +/- keys (zoomBy). Kept from battle to battle.
 let zoomLevel = DEFAULT_ZOOM_LEVEL;
 const WHEEL_ZOOM_MS = 160;
+// How far (CSS pixels) a left press moves before it's a drag, not a click.
+const DRAG_THRESHOLD = 6;
 // How dark a battlefield's floor grid is (see renderFloorGrid).
 const FLOOR_GRID_ALPHA = 0.05;
 // The framing clumps' shade: near the camera and out of the light, so dark
@@ -523,6 +526,9 @@ export class GridScene extends Phaser.Scene {
   // cursor (followCamera), and where it's last been sent.
   scrollingCamera = false;
   cameraTarget: { x: number; y: number } | null = null;
+  // Whether the cursor is being moved by the mouse (drainPointerInput), so
+  // the camera doesn't follow it.
+  cursorFromPointer = false;
   framingClumps: Phaser.GameObjects.Image[] = [];
 
   constructor() {
@@ -958,6 +964,20 @@ export class GridScene extends Phaser.Scene {
     camera.pan(center.x, center.y, durationMs, 'Sine.easeOut', true, (_camera: unknown, progress: number) => {
       if (progress === 1) this.afterCameraFit();
     });
+  }
+
+  // Pans a scrolling battlefield as the pointer drags `moved` canvas
+  // pixels from where the camera was centered on `from`, kept within the
+  // scenery (getDragCenter).
+  dragCamera(from: Point, moved: Point) {
+    if (!this.scrollingCamera || !this.battlefieldScene) return;
+    const camera = this.cameras.main;
+    const canvas = this.scale.gameSize;
+    const view = { width: canvas.width / camera.zoom, height: canvas.height / camera.zoom };
+    const center = getDragCenter(from, moved, camera.zoom, view, this.battlefieldScene);
+    camera.panEffect.reset();
+    camera.centerOn(center.x, center.y);
+    this.cameraTarget = center;
   }
 
   // Zooms a battlefield one ZOOM_LEVELS step in (`delta` > 0) or out, and
@@ -3486,15 +3506,46 @@ export class GridScene extends Phaser.Scene {
     this.pointerTile = null; // last tile the pointer was over, so only tile changes move the cursor
 
     const toTile = (pointer: Phaser.Input.Pointer) => worldToTile(this.grid, pointer.worldX, pointer.worldY, CELL);
+    // A left click picks the tile it lets go on, unless the pointer was
+    // dragged first, which pans a scrolling battlefield instead
+    // (getDragCenter).
+    let drag: { start: Point; center: Point; dragging: boolean } | null = null;
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (drag && pointer.isDown) {
+        const moved = { x: pointer.x - drag.start.x, y: pointer.y - drag.start.y };
+        if (!drag.dragging && Math.hypot(moved.x, moved.y) < DRAG_THRESHOLD / this.scale.zoom) return;
+        drag.dragging = true;
+        this.dragCamera(drag.center, moved);
+        return;
+      }
       const tile = toTile(pointer);
       if (!tile || (this.pointerTile && isSameTile(tile, this.pointerTile))) return;
       this.pointerTile = tile;
       this.pointerQueue.push({ type: 'hover-tile', ...tile });
     });
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.button !== 0) return;
+      const camera = this.cameras.main;
+      drag = {
+        start: { x: pointer.x, y: pointer.y },
+        center: { x: camera.midPoint.x, y: camera.midPoint.y },
+        dragging: false,
+      };
+    });
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.button !== 0 || !drag) return;
+      const dragged = drag.dragging;
+      drag = null;
+      if (dragged) {
+        this.afterCameraFit();
+        return;
+      }
       const tile = toTile(pointer);
-      if (tile && pointer.button === 0) this.pointerQueue.push({ type: 'click-tile', ...tile });
+      if (tile) this.pointerQueue.push({ type: 'click-tile', ...tile });
+    });
+    this.input.on('pointerupoutside', () => {
+      if (drag?.dragging) this.afterCameraFit();
+      drag = null;
     });
     // The wheel and the +/- keys zoom a battlefield in and out.
     // A trackpad sends a stream of small wheel events, so one step at most
@@ -3541,6 +3592,9 @@ export class GridScene extends Phaser.Scene {
     if (this.inputLocked) return result;
 
     for (const command of queue) {
+      // The mouse moves the cursor where the player can already see it, so
+      // the camera stays put (they drag to move it: startMapDrag).
+      this.cursorFromPointer = command.type === 'hover-tile' || command.type === 'click-tile';
       switch (command.type) {
         case 'hover-tile':
           if (this.canRoamCursor()) this.pointCursorAt(command.x, command.y);
@@ -3603,6 +3657,7 @@ export class GridScene extends Phaser.Scene {
           break;
       }
     }
+    this.cursorFromPointer = false;
     return result;
   }
 
@@ -3632,7 +3687,7 @@ export class GridScene extends Phaser.Scene {
 
   setCursor(x: number, y: number) {
     this.cursor = moveCursor(this.grid, this.cursor, x - this.cursor.x, y - this.cursor.y);
-    this.followCamera(this.cursor);
+    if (!this.cursorFromPointer) this.followCamera(this.cursor);
     this.updateCursorSprite();
     this.updateHoveredUnit();
     if (this.rangeMode === 'attack' || this.rangeMode === 'skill') this.updateCombatForecast();

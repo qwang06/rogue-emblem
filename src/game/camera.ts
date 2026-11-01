@@ -115,3 +115,24 @@ export function stepZoomLevel(level: number, delta: number): number {
 export function getLevelZoom(base: number, level: number, minZoom: number): number {
   return Math.max(base * ZOOM_LEVELS[level], minZoom);
 }
+
+// Where a camera at `zoom` centered on `from` moves when the pointer drags
+// `moved` canvas pixels: the world follows the pointer, so the center goes
+// the other way. Kept so the view (`view`, world pixels) never shows past
+// `bounds`, centered on it along an axis where the view is bigger.
+export function getDragCenter(
+  from: { x: number; y: number },
+  moved: { x: number; y: number },
+  zoom: number,
+  view: Size,
+  bounds: Rect,
+): { x: number; y: number } {
+  const axis = (center: number, start: number, extent: number, viewSize: number) =>
+    viewSize >= extent
+      ? start + extent / 2
+      : Math.min(Math.max(center, start + viewSize / 2), start + extent - viewSize / 2);
+  return {
+    x: axis(from.x - moved.x / zoom, bounds.x, bounds.width, view.width),
+    y: axis(from.y - moved.y / zoom, bounds.y, bounds.height, view.height),
+  };
+}
