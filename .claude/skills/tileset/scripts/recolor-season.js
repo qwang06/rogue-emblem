@@ -592,6 +592,20 @@ const SHIP_GATE_COLORS = {
   Y: 'f2c84b',
 };
 
+// The starship walls' colors, by the summer a-stone rampart's color in the
+// same spot: outline, steel top, dark face, shadow on the deck, and the
+// tower pieces' sand, orange and gold; its highlight (#f5ffe8) and door
+// (#633d4c) take the palette's accent, as does any other color.
+const SHIP_WALL_ROLES = {
+  '8f4d57': '262b38',
+  d7d3bd: '8b96a9',
+  '9d9387': '5c6578',
+  '84b14d': '6b7486',
+  ffc2a1: 'c3ccd9',
+  cf752b: '8b96a9',
+  f0b541: '5c6578',
+};
+
 const SEASONS = {
   // Golden grass and rust meadows; the green building palette keeps its
   // greens (tree shade #3b7d4f is one of them, so it only changes above).
@@ -786,8 +800,7 @@ if (machines) {
 }
 
 // The starship's buildings, every kind in every palette (their flag tiles
-// cleared: the accent marks the team), and its walls: every rampart group
-// redrawn in steel by brightness, keeping a little of its color.
+// cleared: the accent marks the team), and its walls.
 if (config.structures) {
   const colors = { ...config.machines.colors, W: 'e6fdff', F: '9ccc5a', f: '5d9a45' };
   for (const [name, palette] of Object.entries(BUILDING_PALETTES)) {
@@ -799,18 +812,18 @@ if (config.structures) {
       if (tall) paint(c, row - 1, SHIP_BUILDINGS[`${kind}Top`], tinted);
       paint(c, row - (tall ? 2 : 1), Array(16).fill('................'), tinted);
     }
+    // The walls: every palette's rampart group has the same shapes, so the
+    // a-stone group's colors in the summer sheet name each pixel's role,
+    // redrawn as a steel bulkhead trimmed in the palette's accent.
     const [wc, wr] = palette.wall;
-    const steel = ['262b38', '3a4152', '5c6578', '8b96a9', 'c3ccd9', 'e8eef5'].map(rgb);
-    for (let y = wr * TILE; y < (wr + 5) * TILE; y++) {
-      for (let x = wc * TILE; x < (wc + 6) * TILE; x++) {
-        const px = rows[y][x];
+    const [sc, sr] = BUILDING_PALETTES['a-stone'].wall;
+    const roles = { ...SHIP_WALL_ROLES, f5ffe8: A, '633d4c': a };
+    for (let y = 0; y < 5 * TILE; y++) {
+      for (let x = 0; x < 6 * TILE; x++) {
+        const px = rows[wr * TILE + y][wc * TILE + x];
         if (px[3] === 0) continue;
-        const lum = (0.3 * px[0] + 0.59 * px[1] + 0.11 * px[2]) / 255;
-        const t = Math.min(0.999, 0.15 + lum * 0.7) * (steel.length - 1);
-        const [lo, hi, f] = [steel[Math.floor(t)], steel[Math.floor(t) + 1], t % 1];
-        rows[y][x] = [0, 1, 2]
-          .map((i) => Math.round((lo[i] + (hi[i] - lo[i]) * f) * 0.85 + px[i] * 0.15))
-          .concat(px[3]);
+        const role = roles[hex(summer[sr * TILE + y][sc * TILE + x])] ?? A;
+        rows[wr * TILE + y][wc * TILE + x] = [...rgb(role), px[3]];
       }
     }
   }
