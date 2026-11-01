@@ -345,7 +345,7 @@ export function getSkillHealAmount(
 // One line on what `skill` does, e.g. for a lesson's or a boon's offer.
 export function describeSkill(skill: Skill): string {
   const reach = skill.range === 1 ? 'next to it' : `up to ${skill.range} tiles away`;
-  if (isHealingSkill(skill)) return `Heals an ally ${reach} for ${skill.power ?? 0} + MAG.`;
+  if (isHealingSkill(skill)) return `Heals an ally ${reach} for ${skill.power ?? 0} + INT.`;
   const scale = skill.damageScale ?? 1;
   const hit = scale === 1 ? 'Its regular hit' : scale === 0.5 ? 'Half its regular hit' : `${scale}× its regular hit`;
   const might = skill.might ? ` with +${skill.might} power` : '';

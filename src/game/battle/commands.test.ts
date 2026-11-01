@@ -360,7 +360,7 @@ describe('secondary skill sets', () => {
   }
   const mend = { type: 'skill', unitId: 'hero', skillId: 'mend', target: { x: 0, y: 0 } } as const;
 
-  it("mends a wounded ally with its secondary class's Mend: mana spent, power + MAG healed, heal XP", () => {
+  it("mends a wounded ally with its secondary class's Mend: mana spent, power + INT healed, heal XP", () => {
     const { state, events } = run(mender(), mend);
     expect(events[0]).toEqual({ type: 'healed', unitId: 'hero', targetId: 'ally', amount: 3, skill: MEND });
     expect(events).toContainEqual(expect.objectContaining({ type: 'experience', unitId: 'hero' }));

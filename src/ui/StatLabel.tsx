@@ -1,11 +1,11 @@
-// A stat's label as its abbreviation (STR, MAG, DEF...), the names every
+// A stat's label as its abbreviation (STR, INT, DEF...), the names every
 // view already labels its stats with, with the stat's full name as the
 // tooltip. An unknown abbreviation shows as plain text with no tooltip.
 const STAT_NAMES: Readonly<Record<string, string>> = {
   HP: 'Hit points',
   MP: 'Mana',
   STR: 'Strength',
-  MAG: 'Magic',
+  INT: 'Intelligence',
   SKL: 'Skill',
   SPD: 'Speed',
   LCK: 'Luck',

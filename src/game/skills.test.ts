@@ -342,7 +342,7 @@ describe('hasSkillTree', () => {
 
 describe('describeSkill', () => {
   it('says what each kind of skill does and how far it reaches', () => {
-    expect(describeSkill(MEND)).toBe('Heals an ally next to it for 2 + MAG.');
+    expect(describeSkill(MEND)).toBe('Heals an ally next to it for 2 + INT.');
     expect(describeSkill(POWER_STRIKE)).toBe('Its regular hit with +3 power on a foe next to it.');
     expect(describeSkill(THROW_STONES)).toBe('Half its regular hit on a foe up to 4 tiles away.');
     expect(describeSkill({ ...THROW_STONES, damageScale: 1.5 })).toBe(

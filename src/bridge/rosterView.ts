@@ -165,7 +165,7 @@ export function describeItem(item: Item): ItemDetail {
     });
   }
   if (item.kind === 'staff') {
-    return describe(`Staff · ${formatHands(item.hands)} · Heals ${item.power} + MAG`, {
+    return describe(`Staff · ${formatHands(item.hands)} · Heals ${item.power} + INT`, {
       range: formatWeaponRange(item),
       uses: item.uses,
     });
