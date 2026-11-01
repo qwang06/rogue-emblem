@@ -54,6 +54,7 @@ import {
   getSkillHealAmount,
   hasSkillTree,
   isHealingSkill,
+  FLARE,
   MEND,
   type Skill,
   type SkillTrees,
@@ -115,9 +116,12 @@ describe('SKILL_TREES', () => {
   });
 
   it("keeps the villager's skills in every promoted class's tree, and each class's own skills to it", () => {
-    for (const promotion of PROMOTIONS) {
+    for (const promotion of PROMOTIONS.filter(({ from }) => from === 'villager')) {
       expect(getLearnedSkills(promotion.id, 20), promotion.id).toContain(THROW_STONES);
     }
+    expect(getLearnedSkills('mage', 20)).toContain(MEND);
+    expect(getLearnedSkills('mage', 20)).not.toContain(THROW_STONES);
+    expect(getLearnedSkills('acolyte', 20)).not.toContain(FLARE);
     expect(getLearnedSkills('villager', 20)).not.toContain(SHIELD_BASH);
     expect(getLearnedSkills('archer', 20)).not.toContain(SHIELD_BASH);
     expect(getLearnedSkills('acolyte', 20)).not.toContain(THROW_STONES);

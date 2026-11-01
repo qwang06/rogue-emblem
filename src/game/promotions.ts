@@ -1,22 +1,24 @@
 // Pure promotion rules: the class tree's second tier. A villager (the
 // starting unit) that has reached PROMOTION_LEVEL can become an Archer,
-// Soldier, Vanguard or Sapper. Promoting makes the unit that class: it
+// Soldier, Vanguard or Sapper, and an acolyte a Mage. Promoting makes the unit that class: it
 // takes the class's growths, weapon types, XP rate and skill tree,
-// gains whatever stats the class starts above a villager, carries the class's passive modifier (modifiers.ts) into every
+// gains whatever stats the class starts above the class it promotes from, carries the class's passive modifier (modifiers.ts) into every
 // battle and is handed the class's weapon. The level, XP, items, boons and
 // tome progress are kept, so a promotion is a step up rather than a fresh
 // start. No Phaser, no hidden state: promoteUnit changes the unit it's
 // given, like levelUp does.
 
+import { ACOLYTE_STATS } from './Acolyte.ts';
 import { ARCHER_GROWTHS, ARCHER_PASSIVE, ARCHER_STATS, ARCHER_WEAPON_TYPES } from './Archer.ts';
 import { DEFAULT_EXPERIENCE_RATE, GROWTH_STATS, type GrowthStat, type GrowthTable } from './experience.ts';
+import { MAGE_GROWTHS, MAGE_PASSIVE, MAGE_STATS, MAGE_WEAPON_TYPES } from './Mage.ts';
 import { applyModifiers, type Modifier } from './modifiers.ts';
 import { SAPPER_GROWTHS, SAPPER_PASSIVE, SAPPER_STATS, SAPPER_WEAPON_TYPES } from './Sapper.ts';
 import { SOLDIER_GROWTHS, SOLDIER_PASSIVE, SOLDIER_STATS, SOLDIER_WEAPON_TYPES } from './Soldier.ts';
 import type { Unit } from './Unit.ts';
 import { VANGUARD_GROWTHS, VANGUARD_PASSIVE, VANGUARD_STATS, VANGUARD_WEAPON_TYPES } from './Vanguard.ts';
 import { VILLAGER_STATS } from './Villager.ts';
-import { IRON_AXE, IRON_BOW, IRON_SPEAR, POWDER_KEG, type Weapon, type WeaponType } from './weapons.ts';
+import { FIRE, IRON_AXE, IRON_BOW, IRON_SPEAR, POWDER_KEG, type Weapon, type WeaponType } from './weapons.ts';
 
 // The level a unit must reach to promote. Units end a ten-stage run
 // around level 6 to 10, so this lands promotions mid-run.
@@ -30,7 +32,7 @@ export interface Promotion {
   // The promoted class's id (a UNIT_CLASSES id) and display name.
   id: string;
   label: string;
-  // The class it promotes from: the villager.
+  // The class it promotes from: the villager, or the acolyte.
   from: string;
   // A line on what the class is for, for the promotion screen.
   description: string;
@@ -47,36 +49,44 @@ export interface Promotion {
 
 type StatLine = Readonly<Record<GrowthStat | 'movement', number>>;
 
-// What a villager gains becoming a class that starts on `stats`: each stat
-// the class starts above the villager by the difference, MOV by the
-// difference either way.
-function bonusesOver(stats: StatLine): PromotionBonuses {
+// What a unit on stat line `base` gains becoming a class that starts on
+// `stats`: each stat the class starts above the base by the difference, MOV
+// by the difference either way.
+function bonusesOver(stats: StatLine, base: StatLine): PromotionBonuses {
   const bonuses: PromotionBonuses = {};
   for (const stat of GROWTH_STATS) {
-    const gain = stats[stat] - VILLAGER_STATS[stat];
+    const gain = stats[stat] - base[stat];
     if (gain > 0) bonuses[stat] = gain;
   }
-  if (stats.movement !== VILLAGER_STATS.movement) bonuses.movement = stats.movement - VILLAGER_STATS.movement;
+  if (stats.movement !== base.movement) bonuses.movement = stats.movement - base.movement;
   return Object.freeze(bonuses);
 }
 
+// The stat line of each class that has promotions, by id.
+const BASE_STATS: Readonly<Record<string, StatLine>> = Object.freeze({
+  villager: VILLAGER_STATS,
+  acolyte: ACOLYTE_STATS,
+});
+
 function promotion(
   fields: Omit<Promotion, 'bonuses' | 'passive' | 'from'> & {
+    from?: string;
     stats: StatLine;
     passive: Promotion['passive'];
   },
 ): Promotion {
-  const { stats, passive, ...rest } = fields;
+  const { stats, passive, from = 'villager', ...rest } = fields;
   return Object.freeze({
     ...rest,
-    from: 'villager',
-    bonuses: bonusesOver(stats),
+    from,
+    bonuses: bonusesOver(stats, BASE_STATS[from]),
     weaponTypes: Object.freeze([...rest.weaponTypes]),
     passive: Object.freeze({ ...passive, modifiers: Object.freeze(passive.modifiers.map((m) => Object.freeze(m))) }),
   });
 }
 
-// Every promotion, in UNIT_CLASSES order: the villager's four.
+// Every promotion, in UNIT_CLASSES order: the villager's four, then the
+// acolyte's one.
 export const PROMOTIONS: readonly Promotion[] = Object.freeze([
   promotion({
     id: 'archer',
@@ -121,6 +131,18 @@ export const PROMOTIONS: readonly Promotion[] = Object.freeze([
     weaponTypes: SAPPER_WEAPON_TYPES,
     passive: SAPPER_PASSIVE,
     gift: POWDER_KEG,
+  }),
+  promotion({
+    id: 'mage',
+    label: 'Mage',
+    from: 'acolyte',
+    description: 'Trades prayers for fire: hits hardest from range, still frail up close.',
+    stats: MAGE_STATS,
+    growths: MAGE_GROWTHS,
+    experienceRate: DEFAULT_EXPERIENCE_RATE,
+    weaponTypes: MAGE_WEAPON_TYPES,
+    passive: MAGE_PASSIVE,
+    gift: FIRE,
   }),
 ]);
 

@@ -464,7 +464,33 @@ export const SAVAGE_BITE = promotionSkill('savage-bite', 'Savage Bite', { manaCo
 // An all-out swing: the user's regular attack with 6 more power on an
 // adjacent foe, at the cost of 3 of its own HP (never its last).
 export const RECKLESS_SWING = promotionSkill('reckless-swing', 'Reckless Swing', { might: 6, recoil: 3 });
+// The mage's signature: a burst of flame on a foe up to 2 tiles away, the
+// user's regular attack with 4 more power.
 export const FLARE = promotionSkill('flare', 'Flare', { range: 2, might: 4, animation: 'stone' });
+
+// The mage's level-up picks. A ball of fire thrown up to 3 tiles: the
+// user's regular attack with 1 more power, on the target and every foe
+// on the four tiles around it.
+export const FIREBALL = promotionSkill('fireball', 'Fireball', {
+  manaCost: 4,
+  range: 3,
+  might: 1,
+  area: 'burst',
+  animation: 'stone',
+});
+
+// A shard of ice up to 2 tiles away: the user's regular attack, through to
+// the foe right behind the target, leaving both Rooted.
+export const FROST_LANCE = promotionSkill('frost-lance', 'Frost Lance', {
+  range: 2,
+  area: 'line',
+  status: 'rooted',
+  animation: 'stone',
+});
+
+// Life drawn out of a foe up to 2 tiles away: the user's regular attack,
+// healing it for half the damage dealt.
+export const SIPHON = promotionSkill('siphon', 'Siphon', { manaCost: 2, range: 2, drain: 0.5, animation: 'stone' });
 
 // The skills an evolution teaches (see warband/evolutions.ts).
 export const VOLLEY = promotionSkill('volley', 'Volley', { range: 3, might: 3, animation: 'stone' });
@@ -497,6 +523,12 @@ function promotedTree(...entries: SkillTreeEntry[]): readonly SkillTreeEntry[] {
   return Object.freeze([...VILLAGER_TREE, ...entries.map((entry) => Object.freeze(entry))]);
 }
 
+// The acolyte's tree, which the mage keeps: a promoted acolyte still knows
+// Mend.
+const ACOLYTE_TREE: readonly SkillTreeEntry[] = Object.freeze([
+  Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: MEND }),
+]);
+
 // unitClass -> [{ level, skill }]: the skills a class learns by level,
 // its signature skill at SKILL_UNLOCK_LEVEL. Classes without an entry (the
 // specialized units bar the acolyte, the elementals and the monsters, for
@@ -507,7 +539,8 @@ export const SKILL_TREES: SkillTrees = Object.freeze({
   soldier: promotedTree({ level: 1, skill: SHOVE }, { level: SKILL_UNLOCK_LEVEL, skill: SHIELD_BASH }),
   vanguard: promotedTree({ level: SKILL_UNLOCK_LEVEL, skill: CLEAVE }),
   sapper: promotedTree({ level: SKILL_UNLOCK_LEVEL, skill: BLAST }),
-  acolyte: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: MEND })]),
+  acolyte: ACOLYTE_TREE,
+  mage: Object.freeze([...ACOLYTE_TREE, Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: FLARE })]),
   siege: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: BARRAGE })]),
   beast: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: SAVAGE_BITE })]),
   scout: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: HIT_AND_RUN })]),
@@ -525,6 +558,7 @@ export const CLASS_SKILL_PICKS: Readonly<Record<string, readonly Skill[]>> = Obj
   soldier: Object.freeze([LUNGE, PHALANX, TAUNT]),
   sapper: Object.freeze([SHRAPNEL, LAY_MINE, BREACH]),
   acolyte: Object.freeze([SMITE, PRAYER, WARD]),
+  mage: Object.freeze([FIREBALL, FROST_LANCE, SIPHON]),
   scout: Object.freeze([MARK, TAILWIND, AIRLIFT]),
   beast: Object.freeze([WING_BUFFET, ROAR, POUNCE]),
   'beast-rider': Object.freeze([SKEWER, TANDEM_STRIKE, STRAFING_RUN]),

@@ -268,6 +268,7 @@ export const FACTION_BODIES: Readonly<Record<string, string>> = Object.freeze({
   siege: 'Siege',
   ram: 'Ram',
   acolyte: 'Acolyte',
+  mage: 'Mage',
 });
 
 // Unit art for the classes that look the same whatever side they're on:

@@ -3,8 +3,8 @@
 // choice of class (e.g. Training) don't need to know the subclasses. The
 // class tree: the villager, the starting unit, comes first; then its four
 // promotions (promotions.ts), which a unit becomes by promoting; then the
-// specialized units, which don't promote (the scout, the beast, the beast
-// rider, siege engines, rams and the acolyte); then the neutral
+// specialized units (the scout, the beast, the beast rider, siege engines,
+// rams and the acolyte, the only one that promotes, into the mage); then the neutral
 // elementals, which belong to no faction; then the monsters (slime,
 // goblin, skeleton, bat, orc, dragon), which are enemies only. Promoted classes, neutral units and monsters
 // are never recruits, starting picks or Training choices (see
@@ -18,6 +18,7 @@ import { BeastRider } from './BeastRider.ts';
 import { Dragon } from './Dragon.ts';
 import { Elemental, ELEMENTAL_KINDS, ELEMENTALS, elementalClassId } from './Elemental.ts';
 import { Goblin } from './Goblin.ts';
+import { Mage } from './Mage.ts';
 import { findPromotion } from './promotions.ts';
 import { Orc } from './Orc.ts';
 import { Ram } from './Ram.ts';
@@ -70,6 +71,7 @@ export const UNIT_CLASSES: readonly UnitClass[] = Object.freeze([
   baseClass('siege', 'Siege', (options) => new Siege(options)),
   baseClass('ram', 'Ram', (options) => new Ram(options)),
   baseClass('acolyte', 'Acolyte', (options) => new Acolyte(options)),
+  promotedClass('mage', (options) => new Mage(options)),
   ...ELEMENTAL_KINDS.map((kind) =>
     Object.freeze<UnitClass>({
       id: elementalClassId(kind),
