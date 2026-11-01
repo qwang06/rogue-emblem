@@ -42,6 +42,10 @@ describe('guest recruitment', () => {
 
   it('lets the guest act through the battle AI on its own phase while keeping it outside deployment', () => {
     const level = createBattleLevel(runStage(stageTwo()));
+    // Tough enough enemies that the guest's first blow can't end the battle.
+    for (const unit of level.units.values()) {
+      if (unit.team === 'enemy') unit.maxHealth = unit.health = 999;
+    }
     let state = createBattleState(level, 1);
     for (const command of planDeployment(state)) state = applyCommand(state, command).state;
     expect(state.deployed).not.toContain(GUEST_UNIT_ID);

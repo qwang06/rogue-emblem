@@ -36,13 +36,13 @@ describe('getHeatRules', () => {
   });
 
   it('stacks every level up to the one asked for', () => {
-    expect(getHeatRules(1)).toEqual({ ...NO_HEAT, enemyLevels: 1 });
-    expect(getHeatRules(2)).toEqual({ ...NO_HEAT, enemyLevels: 1, clearGoldPercent: LEAN_PURSES_PERCENT });
+    expect(getHeatRules(1)).toEqual({ ...NO_HEAT, surgeRate: 5.5 });
+    expect(getHeatRules(2)).toEqual({ ...NO_HEAT, surgeRate: 5.5, clearGoldPercent: LEAN_PURSES_PERCENT });
     expect(getHeatRules(3).restCostMultiplier).toBe(2);
     expect(getHeatRules(3).guests).toBe(true);
     expect(getHeatRules(4).guests).toBe(false);
     expect(getHeatRules(5)).toEqual({
-      enemyLevels: 2,
+      surgeRate: 6.5,
       clearGoldPercent: LEAN_PURSES_PERCENT,
       restCostMultiplier: 2,
       guests: false,
@@ -95,13 +95,15 @@ describe('Heat in the run rules', () => {
     expect(rollGuest(stage2(4))).toBeNull();
   });
 
-  it("raises the enemies' levels in battle", () => {
-    const enemyLevels = (heat?: number) =>
-      [...createBattleLevel(runStage(run(heat))).units.values()]
-        .filter((unit) => unit.team === 'enemy')
-        .map((unit) => unit.level);
-    const base = enemyLevels();
-    expect(enemyLevels(1)).toEqual(base.map((level) => level + 1));
-    expect(enemyLevels(MAX_HEAT)).toEqual(base.map((level) => level + 2));
+  it("makes the enemies' stats surge faster in battle, at the same level", () => {
+    const enemies = (heat?: number) =>
+      [...createBattleLevel(runStage({ ...run(heat), stage: 12 })).units.values()].filter(
+        (unit) => unit.team === 'enemy',
+      );
+    const base = enemies();
+    expect(enemies(1).map((unit) => unit.level)).toEqual(base.map((unit) => unit.level));
+    const health = (units: readonly Unit[]) => units.reduce((sum, unit) => sum + unit.maxHealth, 0);
+    expect(health(enemies(1))).toBeGreaterThan(health(base));
+    expect(health(enemies(MAX_HEAT))).toBeGreaterThan(health(enemies(1)));
   });
 });

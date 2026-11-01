@@ -208,11 +208,13 @@ export function RegionsConfigPage() {
 
   const regions = getIn(draft, ['regions']);
   const regionCount = Array.isArray(regions) ? regions.length : 0;
-  const stagesPerRegion = getIn(draft, ['stagesPerRegion']);
-  const perRegion =
-    typeof stagesPerRegion === 'number' && Number.isInteger(stagesPerRegion) && stagesPerRegion >= 1
-      ? stagesPerRegion
-      : 1;
+  const wholeAtLeastOne = (value: unknown) =>
+    typeof value === 'number' && Number.isInteger(value) && value >= 1 ? value : undefined;
+  const spans = {
+    stagesPerRegion: wholeAtLeastOne(getIn(draft, ['stagesPerRegion'])),
+    finalStage: wholeAtLeastOne(getIn(draft, ['finalStage'])),
+    regions: { length: regionCount },
+  };
   const [, maxRegions] = REGION_LIMITS.regions;
   const regionSaved = (i: number) =>
     JSON.stringify(getIn(draft, ['regions', i])) === JSON.stringify(getIn(baseDraft, ['regions', i]));
@@ -240,11 +242,14 @@ export function RegionsConfigPage() {
             </p>
           )}
           <p className="config-card__description">
-            {plural(regionCount, 'region')}, each lasting {plural(perRegion, 'stage')} of a run; the last one repeats
-            from then on.
+            {plural(regionCount, 'region')},{' '}
+            {spans.stagesPerRegion === undefined && spans.finalStage !== undefined
+              ? 'spread evenly over a run; the last one plays the final stage'
+              : `each lasting ${plural(spans.stagesPerRegion ?? 1, 'stage')} of a run; the last one repeats from then on`}
+            .
           </p>
           <div className="regions-summary__fields">
-            <NumberField form={form} path={['stagesPerRegion']} label="Stages per region" />
+            <NumberField form={form} path={['stagesPerRegion']} label="Stages per region" placeholder="spread" />
             <NumberField form={form} path={['finalStage']} label="Final stage" placeholder="none" />
           </div>
           <div className="dialog-files__actions">
@@ -269,7 +274,7 @@ export function RegionsConfigPage() {
 
         <ul className="region-list">
           {Array.from({ length: regionCount }, (_, i) => {
-            const { first, last } = getRegionStages(i, regionCount, perRegion);
+            const { first, last } = getRegionStages(i, spans);
             return (
               <RegionEditor
                 key={i}
@@ -388,7 +393,9 @@ function RegionsFormat() {
 }`}</pre>
       <ul>
         <li>
-          <code>stagesPerRegion</code>: how many stages of a run each region lasts; the last region repeats forever.
+          <code>stagesPerRegion</code> (optional): how many stages of a run each region lasts; the last region repeats
+          forever. Without it, the regions are spread evenly over the stages before <code>finalStage</code> and the last
+          one plays the final stage.
         </li>
         <li>
           <code>finalStage</code> (optional, {REGION_LIMITS.finalStage[0]} to {REGION_LIMITS.finalStage[1]}): winning

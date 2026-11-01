@@ -145,7 +145,7 @@ describe('getHeatActions', () => {
     expect(actions.map((a) => a.id)).toEqual(Array.from({ length: MAX_HEAT + 1 }, (_, level) => `heat-${level}`));
     expect(actions.map((a) => Boolean(a.disabled))).toEqual([false, false, false, ...Array(MAX_HEAT - 2).fill(true)]);
     expect(actions[1].label).toBe('Heat 1');
-    expect(actions[1].description).toBe('Hardened Foes: Enemies are 1 level higher.');
+    expect(actions[1].description).toBe('Hardened Foes: Enemy stats grow 5.5% a stage instead of 4.5%.');
     expect(actions[2].description).toMatch(/Plus Heat 1\.$/);
     expect(actions[3].description).toBe('Costly Rest: win a run at Heat 2 to unlock.');
     expect(actions.map((a) => getHeatOfAction(a.id))).toEqual(

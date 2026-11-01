@@ -1,6 +1,5 @@
 {
-  "stagesPerRegion": 1,
-  "finalStage": 13,
+  "finalStage": 30,
   "regions": [
     {
       "name": "Meadowlands",

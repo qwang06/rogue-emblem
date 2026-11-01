@@ -2,16 +2,18 @@
 // opens Heat 1, and winning at the highest Heat open opens the next (see
 // meta.ts). A new run picks any open level, and each level adds its rule
 // on top of every lower level's, so Heat 3 plays with the rules of 1, 2
-// and 3. The rules that read the Heat (battleSetup.ts for enemy levels,
+// and 3. The rules that read the Heat (battleSetup.ts for the enemies' surge,
 // rewards.ts for clear gold, camp.ts for the rest and recruitment.ts for
 // guests) ask getHeatRules for them. Pure data and lookups.
 
+import { BASE_SURGE_RATE } from './enemyCurve.ts';
 import type { RunState } from './run.ts';
 
 // What a run's Heat changes, all levels together.
 export interface HeatRules {
-  // Levels every enemy gains.
-  enemyLevels: number;
+  // The percent every enemy stat grows a stage past the surge's start
+  // (see enemyCurve.ts).
+  surgeRate: number;
   // The share of a stage clear's gold paid, in percent.
   clearGoldPercent: number;
   // What a rest's cost is multiplied by.
@@ -31,11 +33,15 @@ export interface HeatLevel {
 
 // The rules of a run with no Heat.
 export const NO_HEAT: HeatRules = Object.freeze({
-  enemyLevels: 0,
+  surgeRate: BASE_SURGE_RATE,
   clearGoldPercent: 100,
   restCostMultiplier: 1,
   guests: true,
 });
+
+// The surge rates Hardened Foes and Warlord's Wrath set.
+export const HARDENED_FOES_SURGE_RATE = 5.5;
+export const WARLORDS_WRATH_SURGE_RATE = 6.5;
 
 // The share of a clear's gold Lean Purses pays, in percent.
 export const LEAN_PURSES_PERCENT = 75;
@@ -46,10 +52,12 @@ function heatLevel(level: number, name: string, description: string, apply: Heat
 
 // Every Heat level, from 1.
 export const HEAT_LEVELS: readonly HeatLevel[] = Object.freeze([
-  heatLevel(1, 'Hardened Foes', 'Enemies are 1 level higher.', (rules) => ({
-    ...rules,
-    enemyLevels: rules.enemyLevels + 1,
-  })),
+  heatLevel(
+    1,
+    'Hardened Foes',
+    `Enemy stats grow ${HARDENED_FOES_SURGE_RATE}% a stage instead of ${BASE_SURGE_RATE}%.`,
+    (rules) => ({ ...rules, surgeRate: HARDENED_FOES_SURGE_RATE }),
+  ),
   heatLevel(2, 'Lean Purses', `Stage clears pay ${100 - LEAN_PURSES_PERCENT}% less gold.`, (rules) => ({
     ...rules,
     clearGoldPercent: LEAN_PURSES_PERCENT,
@@ -59,9 +67,9 @@ export const HEAT_LEVELS: readonly HeatLevel[] = Object.freeze([
     ...rules,
     guests: false,
   })),
-  heatLevel(5, "Warlord's Wrath", 'Enemies are 1 more level higher.', (rules) => ({
+  heatLevel(5, "Warlord's Wrath", `Enemy stats grow ${WARLORDS_WRATH_SURGE_RATE}% a stage.`, (rules) => ({
     ...rules,
-    enemyLevels: rules.enemyLevels + 1,
+    surgeRate: WARLORDS_WRATH_SURGE_RATE,
   })),
 ]);
 
