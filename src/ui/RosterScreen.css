@@ -256,9 +256,8 @@
 }
 
 .roster-sheet__stat {
-  display: grid;
-  grid-template-columns: 2.6rem minmax(0, 1fr) 2.6rem;
-  align-items: center;
+  display: flex;
+  justify-content: space-between;
   gap: 6px;
   line-height: 1.3;
 }
@@ -274,19 +273,6 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
   color: var(--fg-bright);
-}
-
-.roster-sheet__stat-track {
-  height: calc(3 * var(--px));
-  background: var(--bg);
-  box-shadow: inset 0 0 0 1px var(--muted);
-  overflow: hidden;
-}
-
-.roster-sheet__stat-fill {
-  display: block;
-  height: 100%;
-  background: var(--bar);
 }
 
 .roster-sheet__rates {

@@ -11,7 +11,7 @@ const WEAPON_TYPE_LABELS = { physical: 'Physical', magical: 'Magic', siege: 'Sie
 
 // The roster screen's status sheet for the picked unit, the way a tactics
 // game's formation screen shows one: who it is (sprite, name, class,
-// level, HP/MP/EXP, movement, what it wields) beside its stats as bars and
+// level, HP/MP/EXP, movement, what it wields) beside its stats and
 // the rates it fights with; under them its skills, and its passives and
 // quirk. The sheet keeps one size whoever it shows: the skill and passive
 // boxes have fixed heights and scroll, so paging down the roster never
@@ -73,10 +73,8 @@ function Identity({ unit }: { unit: UnitDetailView }) {
   );
 }
 
-// Each stat with a bar sized against the unit's highest stat (stats have
-// no caps), so the bars show the build's shape at a glance.
+// Each stat as its abbreviation and value, one to a row like the rates.
 function Stats({ unit }: { unit: UnitDetailView }) {
-  const highest = Math.max(1, ...unit.stats.map((stat) => stat.value));
   return (
     <div className="roster-sheet__box roster-sheet__stats">
       <h4 className="roster-sheet__heading">Stats</h4>
@@ -86,12 +84,6 @@ function Stats({ unit }: { unit: UnitDetailView }) {
             <dt>
               <StatLabel label={stat.label} />
             </dt>
-            <span className="roster-sheet__stat-track" aria-hidden="true">
-              <span
-                className="roster-sheet__stat-fill"
-                style={{ width: `${(Math.max(0, stat.value) / highest) * 100}%` }}
-              />
-            </span>
             <dd>{stat.value}</dd>
           </div>
         ))}
