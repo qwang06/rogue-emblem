@@ -393,6 +393,61 @@
   outline-offset: var(--px);
 }
 
+/* While banishing, the pick reads as a strike-out: the hovered boon in
+   red. Color only, so nothing moves. */
+.boon-pick__list--banishing .boon-pick__boon--selected {
+  border-color: var(--red);
+}
+
+.boon-pick__list--banishing .boon-pick__boon--selected .boon-pick__boon-name {
+  color: var(--red);
+  text-decoration: line-through;
+}
+
+/* Reroll and Banish, side by side under the boons, each a fixed half so
+   their labels changing ("Keep all") never shifts the other. The wide
+   left padding is the hand's spot. */
+.boon-pick__redraws {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.boon-pick__redraw {
+  position: relative;
+  padding: 3px 8px 3px 26px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--fg-bright);
+  border: var(--border);
+  cursor: pointer;
+}
+
+.boon-pick__redraw--disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.boon-pick__redraw--selected {
+  background: var(--selection);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.boon-pick__redraw--selected::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  width: var(--pointer-w);
+  height: var(--pointer-h);
+  margin-top: calc(var(--pointer-h) / -2);
+  background: var(--pointer) center / 100% 100% no-repeat;
+  image-rendering: pixelated;
+  animation: pointer-bob 0.8s steps(1) infinite;
+}
+
 /* The picked boon, big, with its whole description. Its height is set
    for the longest description, so moving the pick never resizes it. */
 .boon-pick__detail {

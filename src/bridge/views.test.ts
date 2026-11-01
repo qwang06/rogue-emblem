@@ -809,6 +809,27 @@ describe('toBoonActions', () => {
     expect(new Set(actions.map((action) => action.id)).size).toBe(actions.length);
   });
 
+  it('follows the boons with Reroll and Banish, disabled once spent', () => {
+    const run = createRun(1, new Map([['alden', new Soldier({ name: 'Alden', team: 'player' })]]));
+    const offer = getBoonOffer(queueLevelUpBoons(run, { ...run, roster: [{ ...run.roster[0], level: 2 }] }))!;
+    const buttons = (redraws: { reroll: boolean; banishes: number; banishing: boolean }) =>
+      toBoonActions(offer, [], redraws)
+        .slice(offer.boons.length)
+        .map((action) => [action.kind, action.label, action.disabled ?? false]);
+    expect(buttons({ reroll: true, banishes: 2, banishing: false })).toEqual([
+      ['reroll', 'Reroll (free)', false],
+      ['banish', 'Banish (2 left)', false],
+    ]);
+    expect(buttons({ reroll: false, banishes: 0, banishing: false })).toEqual([
+      ['reroll', 'Reroll (used)', true],
+      ['banish', 'Banish (0 left)', true],
+    ]);
+    expect(buttons({ reroll: true, banishes: 1, banishing: true })).toEqual([
+      ['reroll', 'Reroll (free)', true],
+      ['banish', 'Keep all', false],
+    ]);
+  });
+
   it('marks a boon that would complete an evolution', () => {
     const run = createRun(1, new Map([['bryn', new Archer({ name: 'Bryn', team: 'player' })]]));
     const unit = { ...run.roster[0], boons: ['keen-eye'] };

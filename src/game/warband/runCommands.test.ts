@@ -472,6 +472,18 @@ describe('level-up boon picks', () => {
     expect(() => applyRunCommand(second, { type: 'pick-boon', index: 0 })).toThrow(RunCommandError);
   });
 
+  it('rerolls a boon pick once per battle, and banishes boons from the run', () => {
+    const session = cleared();
+    const rerolled = apply(session, { type: 'reroll-boons' });
+    expect(rerolled.phase).toBe('boon');
+    expect(rerolled.run.boonRerollStage).toBe(1);
+    expect(() => applyRunCommand(rerolled, { type: 'reroll-boons' })).toThrow(/spent/);
+    const banished = apply(rerolled, { type: 'banish-boon', index: 0 });
+    expect(banished.run.banishedBoons).toHaveLength(1);
+    expect(() => applyRunCommand(banished, { type: 'banish-boon', index: 9 })).toThrow(/9/);
+    expect(() => applyRunCommand(won(newRun()), { type: 'reroll-boons' })).toThrow(RunCommandError);
+  });
+
   it('refuses other commands while a boon is owed', () => {
     expect(() => applyRunCommand(cleared(), { type: 'pick-reward', index: 0 })).toThrow(/boon/);
     expect(() => applyRunCommand(cleared(), { type: 'pick-boon', index: 7 })).toThrow(/7/);

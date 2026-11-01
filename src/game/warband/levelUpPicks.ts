@@ -46,11 +46,40 @@ function diffStats(before: UnitSnapshot, after: UnitSnapshot): Partial<Record<Gr
 }
 
 // The seed the boon offer for `unitId` reaching `level` rolls from, in a
-// run started with `runSeed`.
-export function getBoonSeed(runSeed: number, unitId: string, level: number): number {
+// run started with `runSeed`, after `roll` rerolls.
+export function getBoonSeed(runSeed: number, unitId: string, level: number, roll = 0): number {
   let hash = (runSeed ^ Math.imul(level + 0x3c6e, 0x27d4eb2d)) >>> 0;
   for (const char of unitId) hash = Math.imul(hash ^ char.charCodeAt(0), 0x01000193) >>> 0;
+  if (roll > 0) hash = Math.imul(hash ^ (roll + 0x51ed), 0x85ebca6b) >>> 0;
   return Math.floor(createSeededRng(hash)() * 2 ** 32);
+}
+
+// A level-up pick can be rerolled for free once per battle (the picks in
+// a stage's battle and those owed after it, until the next battle), and
+// BOON_BANISHES boons can be banished from the run's offers, each banish
+// drawing the offer anew.
+export const FREE_BOON_REROLLS = 1;
+export const BOON_BANISHES = 2;
+
+// How a pick may still be redrawn: whether its stage's free reroll is
+// unspent, and how many banishes the run has left.
+export interface BoonRedraws {
+  reroll: boolean;
+  banishes: number;
+}
+
+// What a run may still redraw a pick with, the pick belonging to the
+// battle of `stage`: by default the last one fought (the stage before the
+// run's), for picks owed between battles; a battle's own picks pass its
+// stage.
+export function getBoonRedraws(
+  run: Pick<RunState, 'stage' | 'banishedBoons' | 'boonRerollStage'>,
+  stage = run.stage - 1,
+): BoonRedraws {
+  return Object.freeze({
+    reroll: run.boonRerollStage !== stage,
+    banishes: Math.max(0, BOON_BANISHES - (run.banishedBoons?.length ?? 0)),
+  });
 }
 
 // A level a unit reached whose boon pick was already taken (in battle, as
@@ -89,15 +118,17 @@ export function queueLevelUpBoons(before: RunState, after: RunState, taken: read
 // The boon pick a roster unit is offered as it reaches `level` in battle,
 // `unit` being the unit as it stands there: the same boons the run would
 // offer it for that level after the battle (they're seeded alike), with the
-// level up's stat `gains`. Null when it has none left to take.
+// level up's stat `gains`, after `roll` rerolls and without the `banished`
+// boons. Null when it has none left to take.
 export function getBattleBoonOffer(
   run: Pick<RunState, 'seed' | 'stage'>,
   unitId: string,
   unit: Unit,
   level: number,
   gains?: Partial<Record<GrowthStat, number>>,
+  { roll = 0, banished = [] }: { roll?: number; banished?: readonly string[] } = {},
 ): BoonOffer | null {
-  const boons = rollBoons(unit, createSeededRng(getBoonSeed(run.seed, unitId, level)), run.stage);
+  const boons = rollBoons(unit, createSeededRng(getBoonSeed(run.seed, unitId, level, roll)), run.stage, banished);
   if (boons.length === 0) return null;
   const grew = gains && Object.fromEntries(Object.entries(gains).filter(([, gain]) => gain > 0));
   return Object.freeze({
@@ -144,13 +175,41 @@ export function pickBoon(run: RunState, index: number, classes?: readonly UnitCl
   return settleBoons(setPending(next, settled.pendingBoons!.slice(1)), classes);
 }
 
+// The run after rerolling the first pick it owes (spending its stage's
+// free reroll: see getBoonRedraws). Throws when it owes none or the reroll
+// is spent.
+export function rerollBoonPick(run: RunState, classes?: readonly UnitClass[]): RunState {
+  const settled = settleBoons(run, classes);
+  const [first, ...rest] = settled.pendingBoons ?? [];
+  if (!first) throw new Error('No boon pick is owed');
+  if (!getBoonRedraws(settled).reroll) throw new Error('The free reroll is spent');
+  const next = setPending(settled, [{ ...first, roll: (first.roll ?? 0) + 1 }, ...rest]);
+  return Object.freeze({ ...next, boonRerollStage: settled.stage - 1 });
+}
+
+// The run after banishing boon `index` of the first pick it owes: that
+// boon never offered again in the run, and the pick drawn anew without it.
+// Throws when it owes none, there's no such boon, or no banish is left.
+export function banishBoonPick(run: RunState, index: number, classes?: readonly UnitClass[]): RunState {
+  const settled = settleBoons(run, classes);
+  const boon = getBoonOffer(settled, classes)?.boons[index];
+  if (!boon) throw new Error(`No boon offer ${index}`);
+  if (getBoonRedraws(settled).banishes <= 0) throw new Error('No banish is left');
+  const banished = Object.freeze({
+    ...settled,
+    banishedBoons: Object.freeze([...(settled.banishedBoons ?? []), boon.id]),
+  });
+  return settleBoons(banished, classes);
+}
+
 function rollOffer(run: RunState, pending: PendingBoon, classes?: readonly UnitClass[]): BoonOffer | null {
   const unit = run.roster.find((snapshot) => snapshot.id === pending.unitId);
   if (!unit) return null;
   const boons = rollBoons(
     restoreUnit(unit, classes),
-    createSeededRng(getBoonSeed(run.seed, pending.unitId, pending.level)),
+    createSeededRng(getBoonSeed(run.seed, pending.unitId, pending.level, pending.roll ?? 0)),
     pending.stage ?? run.stage,
+    run.banishedBoons,
   );
   return boons.length > 0
     ? Object.freeze({

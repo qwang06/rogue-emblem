@@ -279,7 +279,7 @@ export interface ObjectiveView extends ObjectiveText {
 export interface RewardAction extends MenuAction {
   // A reward's kind, 'boon' for a level up's boon, or 'skip' / 'reroll' /
   // 'decline' for the buttons under the cards.
-  kind: RewardKind | 'boon' | 'skip' | 'reroll' | 'decline';
+  kind: RewardKind | 'boon' | 'skip' | 'reroll' | 'decline' | 'banish';
   // The card's small caption when it isn't the kind, e.g. a boon's kind.
   tag?: string;
   description: string;
@@ -836,25 +836,67 @@ const BOON_TAGS: Readonly<Record<BoonKind, string>> = Object.freeze({
 
 // A level up's boon pick (see warband/levelUpPicks.ts) as the level-up
 // screen's menu, an entry per boon (boonPickView.ts has what it shows of
-// each). A boon that
-// would complete an evolution for the unit, with the warband's `relics`
-// (see warband/evolutions.ts), says so in its caption.
-export function toBoonActions(offer: BoonOffer, relics: readonly string[] = []): readonly RewardAction[] {
-  return Object.freeze(
-    offer.boons.map((boon, index) =>
-      Object.freeze({
-        id: `boon-${index}-${boon.id}`,
-        label: boon.name,
-        kind: 'boon' as const,
-        tag: completesEvolution(offer.unit, relics, { boon: boon.id })
-          ? `${BOON_TAGS[boon.kind]} · evolves!`
-          : BOON_TAGS[boon.kind],
-        description: boon.description,
-        stats: null,
-        healthAfter: null,
-      }),
-    ),
+// each). A boon that would complete an evolution for the unit, with the
+// warband's `relics` (see warband/evolutions.ts), says so in its caption.
+// With `redraws`, Reroll and Banish follow the boons (while banishing,
+// Banish reads Keep all and backs out).
+export function toBoonActions(
+  offer: BoonOffer,
+  relics: readonly string[] = [],
+  redraws?: BoonRedrawView,
+): readonly RewardAction[] {
+  const boons = offer.boons.map((boon, index) =>
+    Object.freeze({
+      id: `boon-${index}-${boon.id}`,
+      label: boon.name,
+      kind: 'boon' as const,
+      tag: completesEvolution(offer.unit, relics, { boon: boon.id })
+        ? `${BOON_TAGS[boon.kind]} · evolves!`
+        : BOON_TAGS[boon.kind],
+      description: boon.description,
+      stats: null,
+      healthAfter: null,
+    }),
   );
+  if (!redraws) return Object.freeze(boons);
+  const button = (kind: 'reroll' | 'banish', label: string, description: string, disabled: boolean): RewardAction =>
+    Object.freeze({
+      id: kind,
+      label,
+      kind,
+      description,
+      stats: null,
+      healthAfter: null,
+      ...(disabled && { disabled }),
+    });
+  const { reroll, banishes, banishing } = redraws;
+  return Object.freeze([
+    ...boons,
+    button(
+      'reroll',
+      reroll ? 'Reroll (free)' : 'Reroll (used)',
+      reroll ? 'Offer three new boons. Free once per battle.' : "This battle's free reroll is spent.",
+      !reroll || banishing,
+    ),
+    banishing
+      ? button('banish', 'Keep all', 'Banish nothing after all.', false)
+      : button(
+          'banish',
+          `Banish (${banishes} left)`,
+          banishes > 0
+            ? 'Pick a boon to remove from the rest of the run; the offer is drawn anew.'
+            : 'No banishes are left this run.',
+          banishes <= 0,
+        ),
+  ]);
+}
+
+// What a level-up pick may still be redrawn with (getBoonRedraws), and
+// whether the player is picking a boon to banish.
+export interface BoonRedrawView {
+  reroll: boolean;
+  banishes: number;
+  banishing: boolean;
 }
 
 // The relics `relicIds` names, in order, for the camp's list: one entry

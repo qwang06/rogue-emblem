@@ -34,7 +34,13 @@ export function BoonPickScreen() {
   const pick = useGameStore((state) => state.boonPick);
   if (!menu || !pick) return null;
   const selected = pick.boons[menu.selectedIndex] ?? null;
-  const gain = selected?.gain ?? null;
+  const gain = pick.banishing ? null : (selected?.gain ?? null);
+  // Reroll and Banish, when the pick has them, follow the boons in the menu.
+  const buttons = menu.actions.slice(pick.boons.length).map((action, offset) => ({
+    action,
+    index: pick.boons.length + offset,
+  }));
+  const button = selected ? null : (menu.actions[menu.selectedIndex] ?? null);
 
   return (
     <div className="pause-overlay boon-pick-overlay">
@@ -91,8 +97,8 @@ export function BoonPickScreen() {
           {pick.skills.length > 0 && <p className="boon-pick__skills">Learned {pick.skills.join(', ')}</p>}
         </Frame>
         <Frame as="div" className="boon-pick__choices">
-          <h3 className="boon-pick__choices-title">Choose a Boon</h3>
-          <ul className="boon-pick__list">
+          <h3 className="boon-pick__choices-title">{pick.banishing ? 'Banish a Boon' : 'Choose a Boon'}</h3>
+          <ul className={`boon-pick__list${pick.banishing ? ' boon-pick__list--banishing' : ''}`}>
             {pick.boons.map((boon, index) => {
               const isSelected = index === menu.selectedIndex;
               return (
@@ -112,7 +118,33 @@ export function BoonPickScreen() {
               );
             })}
           </ul>
+          {buttons.length > 0 && (
+            <div className="boon-pick__redraws">
+              {buttons.map(({ action, index }) => {
+                const classes = ['boon-pick__redraw'];
+                if (index === menu.selectedIndex) classes.push('boon-pick__redraw--selected');
+                if (action.disabled) classes.push('boon-pick__redraw--disabled');
+                return (
+                  <span
+                    key={action.id}
+                    className={classes.join(' ')}
+                    aria-current={index === menu.selectedIndex ? 'true' : undefined}
+                    aria-disabled={action.disabled ? 'true' : undefined}
+                    {...menuItemPointerProps('rewardMenu', index)}
+                  >
+                    {action.label}
+                  </span>
+                );
+              })}
+            </div>
+          )}
           <div className="boon-pick__detail" aria-live="polite">
+            {button && (
+              <div className="boon-pick__detail-text">
+                <p className="boon-pick__detail-name">{button.label}</p>
+                <p className="boon-pick__detail-description">{button.description}</p>
+              </div>
+            )}
             {selected && (
               <>
                 <span className="boon-pick__detail-icon">
@@ -133,7 +165,7 @@ export function BoonPickScreen() {
             className="boon-pick__hint"
             entries={[
               ['↑↓', 'Choose'],
-              ['Enter', 'Take boon'],
+              ['Enter', pick.banishing ? 'Banish' : 'Take boon'],
             ]}
           />
         </Frame>
