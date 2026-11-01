@@ -7,7 +7,7 @@ import { BALLISTA, weaponEntry, type WeaponType } from './weapons.ts';
 // two or three tiles away and is helpless up close; slow and plodding.
 export const SIEGE_STATS = Object.freeze({
   health: 12,
-  mana: 0,
+  mana: 4,
   strength: 5,
   intelligence: 0,
   skill: 3,
@@ -21,7 +21,7 @@ export const SIEGE_STATS = Object.freeze({
 // Percent chance per level up that each stat rises (see experience.ts).
 export const SIEGE_GROWTHS = Object.freeze({
   health: 60,
-  mana: 0,
+  mana: 35,
   strength: 45,
   intelligence: 0,
   skill: 35,

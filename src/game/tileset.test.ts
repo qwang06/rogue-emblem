@@ -1,7 +1,7 @@
 import { RUN_ITEMS } from './warband/run.ts';
 import { WEAPONS } from './weapons.ts';
 import { describe, expect, it } from 'vitest';
-import { SPRITE_URLS } from '../assets/sprites.ts';
+import { SPRITE_URLS, TERRAIN_SHEET_URLS } from '../assets/sprites.ts';
 import { FACINGS } from './facing.ts';
 import {
   ARROW_TILES,
@@ -11,6 +11,9 @@ import {
   RANK_BADGES,
   STRUCTURE_SPRITES,
   TERRAIN_SHEET,
+  SEASONS,
+  SEASON_TERRAIN_SHEETS,
+  SEASON_TREES,
   TILE_SIZE,
   TREE_SHADOW,
   TREE_SPRITES,
@@ -58,6 +61,18 @@ describe('sprite keys', () => {
     for (const item of [WOODEN_SWORD, WOODEN_SPEAR, WOODEN_AXE, WOODEN_SHIELD, WOODEN_ARMOR]) {
       expect(getItemSprite(item.id), item.id).not.toBeNull();
     }
+  });
+
+  it('names a terrain sheet with the summer layout, and a tree that has art, for every season', () => {
+    for (const season of SEASONS) {
+      const sheet = SEASON_TERRAIN_SHEETS[season];
+      expect(TERRAIN_SHEET_URLS).toHaveProperty([sheet.key]);
+      expect(sheet).toMatchObject({ columns: TERRAIN_SHEET.columns, rows: TERRAIN_SHEET.rows });
+      const tree = SEASON_TREES[season];
+      if (tree) expect(TREE_SPRITES).toHaveProperty([tree]);
+    }
+    expect(SEASON_TERRAIN_SHEETS.summer).toBe(TERRAIN_SHEET);
+    expect(new Set(SEASONS.map((season) => SEASON_TERRAIN_SHEETS[season].key)).size).toBe(SEASONS.length);
   });
 
   it('names an image for every tree', () => {

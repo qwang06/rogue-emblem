@@ -388,3 +388,18 @@ describe('a region biome', () => {
     );
   });
 });
+
+describe('a region season', () => {
+  it('reads an optional season and writes it back out', () => {
+    const settings = parseRegionSettings(file([region({ season: 'winter' }), region()]));
+    expect(settings.regions[0].season).toBe('winter');
+    expect(settings.regions[1].season).toBeUndefined();
+    expect(parseRegionSettings(formatRegionSettings(settings))).toEqual(settings);
+  });
+
+  it('refuses a season it does not know', () => {
+    expect(() => parseRegionSettings(file([region({ season: 'spring' })]))).toThrow(
+      /^regions\[0\]\.season must be one of summer, autumn, winter/,
+    );
+  });
+});

@@ -73,6 +73,15 @@ The sheet comes from a pack drawn at 3x (every art pixel is a 3x3 block, so it's
 
 Terrain is **blob-autotiled on the map's own cells** (not a dual grid). Grass (`TERRAIN_BASE_TILE`) fills every cell; each terrain in `TERRAIN_AUTOTILES` is drawn over it, with its border inside its own edge cells. Every set uses the same 7-column layout (strip, notched 3x3, plain 3x3), which the catalog diagrams. Water, sand beach and deep water come in **6 animation frames** laid 7 columns apart. The **dirt** path (`TERRAIN_AUTOTILES.dirt`) is the peach sand-patch set, which only has a _notched_ 3x3 (`block: [1, 3]`, `inner: [2, 4]`): its outer corners and edges are clean, but every quarter that would be `'full'` has a ~8x6px notch in its inner corner, so dirt two or more tiles wide shows grass holes in its middle. One-tile-wide paths (only `'outer'` and `'vertical'`/`'horizontal'` quarters) are clean. A wider path needs a full sand tile added to the sheet (e.g. in the empty row 7) and a `full` option in `autotile.ts`.
 
+## Seasonal terrain sheets: overworld-autumn.png, overworld-winter.png
+
+Two more copies of the overworld sheet, 1344x2016 with **exactly the same layout** as `overworld.png`, so every `[column, row]` and frame number works on all three. `SEASON_TERRAIN_SHEETS` in `tileset.ts` names their texture keys (`overworld-autumn`, `overworld-winter`), `TERRAIN_SHEET_URLS` in `sprites.ts` their files; a level's `season` (from its region) picks the one GridScene draws terrain, forests, mountains and buildings from. The cursor and movement arrow always come from the summer sheet. `map-props.png` (bridges, gates, fords, spikes) has no seasonal copy.
+
+- **Winter** (`overworld-winter.png`): the pack's snow tilesheet (`Tactical RPG Overworld Pack - Snow Tilesheet.png`, 3072x3072 at 3x, same used area as the green one), rescaled with the same `rescale-png.js --from 3 --to 2 --crop 672x1008` command. Snow grass, icy lavender water, grey-blue pines and round trees, a pink dirt path, and snow-roofed buildings in every palette.
+- **Autumn** (`overworld-autumn.png`): `overworld.png` with only its greens swapped, by `node .claude/skills/tileset/scripts/recolor-autumn.js src/assets/overworld.png src/assets/overworld-autumn.png` (rerun it after changing the summer sheet): grass `#b7d463` / `#ceda62` to golden `#e0a24e` / `#ebb55c`; tree bodies, mountain tufts and the grass lip under buildings and walls `#84b14d` to rust `#c06a32`; tree shade `#3b7d4f` to `#8a3424` (terrain rows 0–32 only, since the green building palette uses it too); the dark-grass meadow set (columns 8–14, rows 3–7) deeper, `#a94f27` / `#c06a32`. Water, sand, mountains and buildings are untouched. (An autumn tilesheet was uploaded too, kept in project files `art/seasons/raw/`, but it was a blurry resample, so the recolor replaced it.)
+
+`map-preview.ts --season autumn|winter` renders maps from these sheets.
+
 ## Inspecting art
 
 Images this small are unreadable when viewed directly — dump them as ASCII:
@@ -101,7 +110,7 @@ node .claude/skills/tileset/scripts/autotile-preview.ts --block 1,33 --inner 2,3
 To judge the procedural map generator's output, `map-preview.ts` renders `generateMap` maps for some seeds side by side, drawn the way GridScene draws them (terrain, walls, crossings, forests, mountains and buildings in one palette; no ginkgos). `--archetype <type>` picks a map type (`mapArchetypes.ts`), `--terrain '<json>'` sets other terrain options, and `--units N` stands N warriors on the deployment zone (tinted) and N skeletons on enemy spots:
 
 ```sh
-node .claude/skills/tileset/scripts/map-preview.ts --scale 1 --palette a-stone <scratchpad>/maps.png 1 2 3
+node .claude/skills/tileset/scripts/map-preview.ts --scale 1 --palette a-stone [--season winter] <scratchpad>/maps.png 1 2 3
 ```
 
 `realm-preview.ts` does the same for the Warband overworld (`generateRealm` in `src/game/warband/realm/`): it renders whole realms for some seeds the way the overworld screen paints them (the parchment map from `getRealmInk` and `paintRealmInk`, with each site's icon stood on its tile), one under the other, and prints each realm's sites (id, kind, biome, region) and the names lettered on it:

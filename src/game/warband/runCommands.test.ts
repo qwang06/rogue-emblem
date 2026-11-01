@@ -40,6 +40,12 @@ function newRun(stage = 2): RunState {
   return staged;
 }
 
+// The run with every unit `experience` XP into its level, so stage 1's
+// clear XP (22, or 33 for Cato's Villager rate) levels it.
+function primed(run: RunState, experience = 40): RunState {
+  return { ...run, roster: run.roster.map((unit) => ({ ...unit, experience })) };
+}
+
 // The run's battle won with Alden hurt by `damage` (killed for 99).
 function won(run: RunState, damage = 3): RunSession {
   const units = restoreRoster(run);
@@ -73,14 +79,14 @@ describe('finishBattle', () => {
     expect(session.run.roster.find((unit) => unit.id === 'alden')!.health).toBe(run.roster[0].maxHealth - 3);
   });
 
-  it('levels every survivor of stage 1 to level 2, and reports the level ups', () => {
-    const run = newRun(1);
+  it('gives every survivor clear XP, and reports the level ups', () => {
+    const run = primed(newRun(1));
     const units = restoreRoster(run);
     units.get('alden')!.takeDamage(3);
     const { session, events } = finishBattleWithEvents(resumeRunSession(run), { units }, 'victory');
     expect(session.run.roster.map((unit) => [unit.id, unit.level, unit.experience])).toEqual([
-      ['alden', 2, 0],
-      ['cato', 2, 0],
+      ['alden', 2, 12],
+      ['cato', 2, 23],
     ]);
     expect(events).toEqual([
       {
@@ -93,8 +99,19 @@ describe('finishBattle', () => {
     );
   });
 
-  it('owes a pick for each level gained in battle, bar those taken there, then for the clear’s', () => {
+  it('gives no clear XP to a unit that sat the battle out', () => {
     const run = newRun(1);
+    const units = restoreRoster(run);
+    units.delete('cato');
+    const session = finishBattle(resumeRunSession(run), { units }, 'victory');
+    expect(session.run.roster.map((unit) => [unit.id, unit.experience])).toEqual([
+      ['alden', 22],
+      ['cato', 0],
+    ]);
+  });
+
+  it('owes a pick for each level gained in battle, bar those taken there, then for the clear’s', () => {
+    const run = primed(newRun(1));
     const units = restoreRoster(run);
     units.get('alden')!.level = 3;
     const owed = (boonsTaken?: { unitId: string; level: number }[]) =>
@@ -112,7 +129,7 @@ describe('finishBattle', () => {
     ]);
   });
 
-  it('levels nobody after a later stage, or after a loss', () => {
+  it('levels nobody whose clear XP falls short, or after a loss', () => {
     const run = newRun();
     expect(finishBattleWithEvents(resumeRunSession(run), { units: restoreRoster(run) }, 'victory').events).toEqual([]);
     const first = newRun(1);
@@ -426,9 +443,9 @@ describe('starting relic pick', () => {
 });
 
 describe('level-up boon picks', () => {
-  // Stage 1's clear levels both units to 2, so each owes a boon.
+  // Stage 1's clear levels both primed units to 2, so each owes a boon.
   const cleared = () => {
-    const run = newRun(1);
+    const run = primed(newRun(1));
     return finishBattle(resumeRunSession(run), { units: restoreRoster(run) }, 'victory');
   };
 

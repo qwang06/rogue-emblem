@@ -10,7 +10,7 @@ import type { FactionId } from '../factions.ts';
 import type { EnemyGroup } from '../enemySpawns.ts';
 import type { MapGenOptions } from '../mapGen.ts';
 import type { ObjectiveSpec } from '../objectives.ts';
-import type { BuildingPaletteName } from '../tileset.ts';
+import type { BuildingPaletteName, Season } from '../tileset.ts';
 import type { RegionBiome } from './realm/realmRegions.ts';
 
 export interface RegionConfig {
@@ -37,6 +37,9 @@ export interface RegionConfig {
   // land prefer to play (see realm/realmRegions.ts); any site may play a
   // region without one.
   biome?: RegionBiome;
+  // The season its maps are drawn in (SEASON_TERRAIN_SHEETS in tileset.ts):
+  // summer's green grass when unset, or autumn's or winter's sheet.
+  season?: Season;
 }
 
 // Everything Warband Mode reads per stage: the regions in order and how

@@ -6,6 +6,12 @@ import {
   POWER_STRIKE,
   CLEAVE,
   SHIELD_BASH,
+  CLASS_SKILL_PICKS,
+  DEADEYE,
+  getClassSkillPicks,
+  LUNGE,
+  SMITE,
+  WING_BUFFET,
   SHOVE,
   calculateSkillDamage,
   canUseSkill,
@@ -49,9 +55,9 @@ const trees: SkillTrees = {
 };
 
 describe('SKILL_TREES', () => {
-  it('teaches the soldier Shove from the start and Power Strike at level 2, its first level up', () => {
+  it('teaches the soldier Shove from the start and Shield Bash at level 2, its first level up', () => {
     expect(getLearnedSkills('soldier', 1)).toEqual([SHOVE]);
-    expect(getSkillsLearnedBetween('soldier', 1, 2)).toEqual([POWER_STRIKE]);
+    expect(getSkillsLearnedBetween('soldier', 1, 2)).toEqual([THROW_STONES, SHIELD_BASH]);
   });
 
   it('teaches the villager Throw Stones at level 2, its first level up', () => {
@@ -78,12 +84,16 @@ describe('SKILL_TREES', () => {
       expect(tree.length, promotion.id).toBeGreaterThan(0);
       for (const { level } of tree) expect(level, promotion.id).toBeLessThanOrEqual(SKILL_UNLOCK_LEVEL);
     }
-    expect(getLearnedSkills('sapper', SKILL_UNLOCK_LEVEL)).toEqual([BLAST]);
+    expect(getLearnedSkills('sapper', SKILL_UNLOCK_LEVEL)).toEqual([THROW_STONES, BLAST]);
   });
 
-  it('keeps each skill to its own class', () => {
-    expect(getLearnedSkills('villager', 20)).not.toContain(POWER_STRIKE);
-    expect(getLearnedSkills('soldier', 20)).not.toContain(THROW_STONES);
+  it("keeps the villager's skills in every promoted class's tree, and each class's own skills to it", () => {
+    for (const promotion of PROMOTIONS) {
+      expect(getLearnedSkills(promotion.id, 20), promotion.id).toContain(THROW_STONES);
+    }
+    expect(getLearnedSkills('villager', 20)).not.toContain(SHIELD_BASH);
+    expect(getLearnedSkills('archer', 20)).not.toContain(SHIELD_BASH);
+    expect(getLearnedSkills('acolyte', 20)).not.toContain(THROW_STONES);
   });
 
   it('gives every entry a level of at least 1 and a skill with a mana cost', () => {
@@ -269,11 +279,11 @@ describe('calculateSkillDamage', () => {
 describe('getUnitSkills', () => {
   it("is the class's skills, then those modifiers teach that it lacks", () => {
     const soldier = { unitClass: 'soldier', level: 2 };
-    expect(getUnitSkills(soldier)).toEqual([SHOVE, POWER_STRIKE]);
+    expect(getUnitSkills(soldier)).toEqual([THROW_STONES, SHOVE, SHIELD_BASH]);
     const taught = { ...soldier, modifiers: [{ kind: 'skill', skill: CLEAVE } as const] };
-    expect(getUnitSkills(taught)).toEqual([SHOVE, POWER_STRIKE, CLEAVE]);
-    const repeat = { ...soldier, modifiers: [{ kind: 'skill', skill: POWER_STRIKE } as const] };
-    expect(getUnitSkills(repeat)).toEqual([SHOVE, POWER_STRIKE]);
+    expect(getUnitSkills(taught)).toEqual([THROW_STONES, SHOVE, SHIELD_BASH, CLEAVE]);
+    const repeat = { ...soldier, modifiers: [{ kind: 'skill', skill: SHIELD_BASH } as const] };
+    expect(getUnitSkills(repeat)).toEqual([THROW_STONES, SHOVE, SHIELD_BASH]);
     expect(findUnitSkill(taught, 'cleave')).toBe(CLEAVE);
     expect(findUnitSkill(soldier, 'cleave')).toBeNull();
   });
@@ -304,9 +314,9 @@ describe('getSecondarySkills', () => {
 
   it("joins getUnitSkills after the class's own and before taught ones, without repeats", () => {
     const soldier = { unitClass: 'soldier', level: 2, secondaryClass: 'vanguard' };
-    expect(getUnitSkills(soldier)).toEqual([SHOVE, POWER_STRIKE, CLEAVE]);
+    expect(getUnitSkills(soldier)).toEqual([THROW_STONES, SHOVE, SHIELD_BASH, CLEAVE]);
     const taught = { ...soldier, modifiers: [{ kind: 'skill', skill: CLEAVE } as const] };
-    expect(getUnitSkills(taught)).toEqual([SHOVE, POWER_STRIKE, CLEAVE]);
+    expect(getUnitSkills(taught)).toEqual([THROW_STONES, SHOVE, SHIELD_BASH, CLEAVE]);
     expect(findUnitSkill(soldier, 'cleave')).toBe(CLEAVE);
   });
 });
@@ -324,10 +334,39 @@ describe('hasSkillTree', () => {
   });
 });
 
+describe('getClassSkillPicks', () => {
+  it("is the class's own level-up skill picks, and none for a class without any", () => {
+    expect(getClassSkillPicks('soldier')).toEqual([LUNGE]);
+    expect(getClassSkillPicks('acolyte')).toEqual([SMITE]);
+    expect(getClassSkillPicks('beast')).toEqual([WING_BUFFET]);
+    expect(getClassSkillPicks('siege')).toEqual([DEADEYE]);
+    expect(getClassSkillPicks('scout')).toEqual([]);
+    expect(getClassSkillPicks(null)).toEqual([]);
+  });
+
+  it('never repeats a skill the class learns by level', () => {
+    for (const [unitClass, picks] of Object.entries(CLASS_SKILL_PICKS)) {
+      const tree = getLearnedSkills(unitClass, 99).map(({ id }) => id);
+      for (const skill of picks) expect(tree, unitClass).not.toContain(skill.id);
+    }
+  });
+});
+
+describe('SHIELD_BASH and WING_BUFFET', () => {
+  it('strike and then push', () => {
+    expect(SHIELD_BASH).toMatchObject({ might: 1, push: true, range: 1 });
+    expect(WING_BUFFET).toMatchObject({ damageScale: 0.5, push: true, range: 1 });
+  });
+});
+
 describe('describeSkill', () => {
   it('says what each kind of skill does and how far it reaches', () => {
     expect(describeSkill(MEND)).toBe('Heals an ally next to it for 2 + INT.');
     expect(describeSkill(POWER_STRIKE)).toBe('Its regular hit with +3 power on a foe next to it.');
+    expect(describeSkill(SHIELD_BASH)).toBe(
+      'Its regular hit with +1 power on a foe next to it, then pushes it a tile away.',
+    );
+    expect(describeSkill(SHOVE)).toBe('Pushes a foe next to it a tile away.');
     expect(describeSkill(THROW_STONES)).toBe('Half its regular hit on a foe up to 4 tiles away.');
     expect(describeSkill({ ...THROW_STONES, damageScale: 1.5 })).toBe(
       '1.5× its regular hit on a foe up to 4 tiles away.',

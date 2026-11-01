@@ -27,7 +27,7 @@ import {
   type TileAnchorView,
 } from './views.ts';
 import type { ExperienceGain } from '../game/experience.ts';
-import { POWER_STRIKE, SHOVE, type Skill } from '../game/skills.ts';
+import { POWER_STRIKE, SHIELD_BASH, SHOVE, THROW_STONES, type Skill } from '../game/skills.ts';
 import { Soldier } from '../game/Soldier.ts';
 import { Acolyte } from '../game/Acolyte.ts';
 import { advanceDialog, createDialog } from '../game/dialog.ts';
@@ -264,8 +264,9 @@ describe('toUnitDetailView', () => {
       range: skill.range,
     });
     expect(toUnitDetailView(new Soldier({ team: 'player', level: 2 }))!.skills).toEqual([
+      entry(THROW_STONES),
       entry(SHOVE),
-      entry(POWER_STRIKE),
+      entry(SHIELD_BASH),
     ]);
     expect(toUnitDetailView(new Soldier({ team: 'player' }))!.skills).toEqual([entry(SHOVE)]);
     expect(toUnitDetailView(makeUnit())!.skills).toEqual([]);
@@ -829,7 +830,7 @@ describe('toUnitDetailView with modifiers', () => {
     const after = toUnitDetailView(boosted)!;
     expect(after.hit).toBe(before.hit + 15);
     expect(after.avoid).toBe(before.avoid);
-    expect(after.skills.map((skill) => skill.id)).toEqual(['shove', 'power-strike', 'cleave']);
+    expect(after.skills.map((skill) => skill.id)).toEqual(['throw-stones', 'shove', 'shield-bash', 'cleave']);
     // The soldier's own passive, then its boons'.
     expect(after.passives.map((passive) => passive.id)).toEqual(['class', 'keen-eye', 'stalwart']);
   });

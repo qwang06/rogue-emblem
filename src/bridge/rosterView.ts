@@ -10,7 +10,8 @@ import { getItemSprite, getUnitSprite } from '../game/tileset.ts';
 import { UNIT_CLASSES, type UnitClass } from '../game/unitClasses.ts';
 import { formatWeaponRange, type Hands } from '../game/weapons.ts';
 import { canGiveFromConvoy, getEquippedIndex, getWornIndices, lookUpItem } from '../game/warband/convoy.ts';
-import { RUN_ITEMS, type ItemSnapshot } from '../game/warband/run.ts';
+import { restoreRoster, RUN_ITEMS, type ItemSnapshot } from '../game/warband/run.ts';
+import { toUnitDetailView, type UnitDetailView } from './views.ts';
 import {
   getPickedUnit,
   type RosterColumn,
@@ -51,6 +52,9 @@ export interface RosterScreenView {
   units: readonly RosterUnitView[];
   // The picked unit's name, or null with nobody on the roster.
   unitName: string | null;
+  // The picked unit's full stat sheet (stats, rates, skills, passives),
+  // as the unit info screen shows it, or null with nobody on the roster.
+  unit: UnitDetailView | null;
   items: readonly RosterItemView[];
   // How many slots an inventory has, so empty ones can be drawn.
   slots: number;
@@ -116,6 +120,7 @@ export function toRosterScreenView(
       ),
     ),
     unitName: unit?.name ?? null,
+    unit: unit ? toUnitDetailView(restoreRoster({ ...state.run, roster: [unit] }, classes, items).get(unit.id)) : null,
     items: Object.freeze(unitItems),
     slots: MAX_INVENTORY_SLOTS,
     convoy: Object.freeze(convoy),

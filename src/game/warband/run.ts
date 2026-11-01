@@ -254,7 +254,7 @@ export function restoreRoster(
   classes?: readonly UnitClass[],
   items?: readonly Item[],
 ): Map<string, Unit> {
-  const relics = getRelicModifiers(run.relics);
+  const relics = getRelicModifiers(run.relics, run.stage);
   return new Map(
     run.roster.map((snapshot) => {
       const evolutions = getEvolutions(snapshot, run.relics);

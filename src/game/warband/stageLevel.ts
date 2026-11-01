@@ -24,7 +24,7 @@ import { DEFAULT_OBJECTIVE, type ObjectiveKind } from '../objectives.ts';
 import { createSeededRng, randomInt, randomItem } from '../rng.ts';
 import type { Unit } from '../Unit.ts';
 import { createUnitOfClass, UNIT_CLASSES } from '../unitClasses.ts';
-import { BUILDING_ART, BUILDING_PALETTES, FOREST_ART, MOUNTAIN_ART } from '../tileset.ts';
+import { BUILDING_ART, BUILDING_PALETTES, DEFAULT_SEASON, FOREST_ART, MOUNTAIN_ART, SEASON_TREES } from '../tileset.ts';
 import type { RegionConfig } from './regions.ts';
 import { DEFAULT_STARTING_CLASS } from './startingClasses.ts';
 
@@ -156,8 +156,10 @@ export function pickStageLayout(seed: number, region: RegionConfig, candidates =
 // - bossUnitId: the first enemy of the first group that names a boss,
 //   renamed to it and holding its ground
 // - buildings: the generator's, drawn in region.palette
-// - decorations: green ginkgos scattered (region.treeChance) on the grass no
-//   other art covers
+// - decorations: the region's season's tree (SEASON_TREES: green ginkgos,
+//   gold in autumn, none in winter) scattered (region.treeChance) on the
+//   grass no other art covers
+// - season: the region's, for the art the map is drawn in
 // - objective: a rout; battleSetup.ts places the stage's own (stageObjective.ts)
 // - seizeTile: the tile the map's archetype planned for a seize, if any
 // - spike traps (hazards.ts): on SPIKE_TRAP_CHANCE of seeds, a few near
@@ -208,10 +210,14 @@ export function createStageLevel(
     ...buildingTiles.map(key),
     ...getFeatureSprites(grid, FOREST_ART, MOUNTAIN_ART).map(key),
   ]);
+  const season = region.season ?? DEFAULT_SEASON;
+  const tree = SEASON_TREES[season];
+  // Rolled for every free tile whatever the season, so the rolls after
+  // them (loot) come out the same.
   const decorations: TreePlacement[] = grid.cells
     .filter((c) => c.terrain === 'grass' && !c.unitId && !covered.has(key(c)))
     .filter(() => rng() < region.treeChance)
-    .map(({ x, y }) => ({ x, y, tree: 'green_ginkgo' }));
+    .flatMap(({ x, y }) => (tree ? [{ x, y, tree }] : []));
 
   const enemyIds = enemyTiles.map((_, i) => `enemy-${i + 1}`);
   for (const [unitId, item] of assignLoot(enemyIds, lootCount, rng)) units.get(unitId)!.loot = item;
@@ -243,6 +249,7 @@ export function createStageLevel(
     structures: [],
     buildings,
     palette: region.palette,
+    season,
     objective: DEFAULT_OBJECTIVE,
     ...(layout.terrain.seizeTile ? { seizeTile: { ...layout.terrain.seizeTile } } : {}),
     ...(bossUnitId ? { bossUnitId } : {}),

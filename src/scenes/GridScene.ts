@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
-import { SPRITE_URLS } from '../assets/sprites.ts';
-import terrainSheetUrl from '../assets/overworld.png';
+import { SPRITE_URLS, TERRAIN_SHEET_URLS } from '../assets/sprites.ts';
 import { gameCommands, type Command, type MenuField } from '../bridge/commands.ts';
 import { changeAutoSpeed, cycleAutoSpeed } from '../game/autoSpeed.ts';
 import { getActiveContent } from '../data/customContent.ts';
@@ -175,6 +174,7 @@ import { getDangerZone } from '../game/dangerZone.ts';
 import { getPauseActions } from '../game/pauseMenu.ts';
 import { planNextTurn } from '../game/battle/ai.ts';
 import { getEnemyIntents, getIntentThreats, type EnemyIntent } from '../game/battle/intents.ts';
+import { getIntentArrowShape } from '../game/intentArrow.ts';
 import { getPushDirection, getPushResult } from '../game/push.ts';
 import { toIntentTagView, toPushTagView } from '../bridge/mapTagView.ts';
 import {
@@ -212,6 +212,8 @@ import {
   TERRAIN_AUTOTILES,
   TERRAIN_BASE_TILE,
   TERRAIN_SHEET,
+  SEASON_TERRAIN_SHEETS,
+  DEFAULT_SEASON,
   TILE_SIZE,
   TREE_SPRITES,
   UNIT_ART,
@@ -273,13 +275,18 @@ const HEAL_RANGE_ALPHA = 0.45;
 // sits under every other highlight.
 const DANGER_ZONE_COLOR = 0x9f1239;
 const DANGER_ZONE_ALPHA = 0.35;
-// Enemy intents: the route an enemy will walk (thin, faint) and the arrow
-// onto the unit it'll strike, over the highlights and the move arrow but
-// under units.
-const INTENT_COLOR = 0xdc2626;
-const INTENT_ROUTE_ALPHA = 0.5;
-const INTENT_ARROW_ALPHA = 0.9;
+// Enemy intents (src/game/intentArrow.ts): the route an enemy will walk,
+// dashed, over the highlights and the move arrow but under units, and the
+// arrow onto the unit it'll strike, over units (under roofs, 0.8) so
+// neither sprite hides it, gently pulsing. Each is outlined dark so it
+// reads on any terrain.
+const INTENT_COLOR = 0xef4444;
+const INTENT_OUTLINE_COLOR = 0x2a0606;
+const INTENT_ROUTE_ALPHA = 0.75;
+const INTENT_ARROW_ALPHA = 1;
 const INTENT_DEPTH = 0.65;
+const INTENT_ARROW_DEPTH = 0.79;
+const INTENT_PULSE_MS = 600;
 // Where an aimed Shove would leave its target.
 const PUSH_PREVIEW_COLOR = 0x3858b0;
 const PUSH_PREVIEW_ALPHA = 0.5;
@@ -427,6 +434,7 @@ export class GridScene extends Phaser.Scene {
   dangerZoneVisible = false;
   dangerZoneTiles: Phaser.GameObjects.Rectangle[] = [];
   intentGraphics: Phaser.GameObjects.Graphics | null = null;
+  intentArrowGraphics: Phaser.GameObjects.Graphics | null = null;
   pushPreviewTiles: Phaser.GameObjects.Rectangle[] = [];
   autoElapsed = 0;
   pendingAutoCommands: BattleCommand[] = [];
@@ -572,9 +580,11 @@ export class GridScene extends Phaser.Scene {
     // Drives the loading screen's bar; the screen lifts at the end of create().
     this.load.on('progress', (progress: number) => gameStore.setState({ mapLoadProgress: progress }));
     // Spritesheets so sprites can draw single frames: the cursor and arrow
-    // tiles of the terrain sheet (the tilemaps still use it whole), and each
-    // unit sheet's animation frames.
-    this.load.spritesheet(TERRAIN_SHEET.key, terrainSheetUrl, { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
+    // tiles of the terrain sheet and each season's map art (the tilemaps
+    // still use the sheets whole), and each unit sheet's animation frames.
+    for (const [key, url] of Object.entries(TERRAIN_SHEET_URLS)) {
+      this.load.spritesheet(key, url, { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
+    }
     // Unit art cut into bigger frames (UNIT_ART) loads at its own size.
     const frameSizes = getUnitSheetFrameSizes();
     for (const [key, url] of Object.entries(SPRITE_URLS)) {
@@ -640,8 +650,10 @@ export class GridScene extends Phaser.Scene {
 
     const paletteName = level.palette ?? DEFAULT_BUILDING_PALETTE;
     const palette = BUILDING_PALETTES[paletteName];
-    this.renderTerrain(this.grid, { ...TERRAIN_AUTOTILES, wall: getWallAutotile(palette) });
-    this.renderMapSprites([
+    // The map's terrain, forests, mountains and buildings in its season's art.
+    const sheet = SEASON_TERRAIN_SHEETS[level.season ?? DEFAULT_SEASON];
+    this.renderTerrain(this.grid, { ...TERRAIN_AUTOTILES, wall: getWallAutotile(palette) }, sheet);
+    this.renderMapSprites(sheet, [
       ...getCrossingSprites(this.grid, BRIDGE_ART, GATE_ART[paletteName], FORD_ART, MAP_PROPS_SHEET),
       ...getHazardSprites(this.grid, SPIKES_ART, MAP_PROPS_SHEET),
       ...getFeatureSprites(this.grid, FOREST_ART, MOUNTAIN_ART),
@@ -691,7 +703,8 @@ export class GridScene extends Phaser.Scene {
     this.rangeTiles = null; // highlight rectangles for the current range
     this.dangerZoneVisible = false; // whether every enemy's reach is shaded (toggled with D or the header button)
     this.dangerZoneTiles = []; // highlight rectangles for the danger zone
-    this.intentGraphics = null; // the enemies' intent lines, drawn during the player phase
+    this.intentGraphics = null; // the enemies' intent routes, drawn during the player phase
+    this.intentArrowGraphics = null; // and their strike arrows, over the units
     this.pushPreviewTiles = []; // where an aimed Shove would leave its target
     this.autoElapsed = 0; // ms since auto play's last step (see updateAutoPlay)
     this.pendingAutoCommands = [];
@@ -1464,7 +1477,7 @@ export class GridScene extends Phaser.Scene {
     const actions = getCampActions(run);
     const selected = this.campMenu?.selectedIndex ?? actions.findIndex((action) => action.id === 'march');
     this.publishMenu('campMenu', selectIndex(createActionMenu(actions), selected));
-    gameStore.setState({ campGold: run.gold, campRelics: toRelicViews(run.relics) });
+    gameStore.setState({ campGold: run.gold, campRelics: toRelicViews(run.relics, run.stage) });
   }
 
   updateCampMenu(dy: number, confirm: boolean) {
@@ -2634,7 +2647,7 @@ export class GridScene extends Phaser.Scene {
 
   // ---- Enemy intents ----------------------------------------------------
   // During the player phase every enemy's plan for the coming enemy phase
-  // (src/game/battle/intents.ts) shows on the map: a faint line along the
+  // (src/game/battle/intents.ts) shows on the map: a dashed line along the
   // route it'll walk, and from where it stops an arrow onto the unit it'll
   // strike, whose tile React tags with the HP it stands to lose. Redrawn
   // whenever the battle on the map changes; hidden in any other phase.
@@ -2642,37 +2655,57 @@ export class GridScene extends Phaser.Scene {
   refreshIntents() {
     this.intentGraphics ??= this.add.graphics().setDepth(INTENT_DEPTH);
     this.intentGraphics.clear();
+    if (!this.intentArrowGraphics) {
+      this.intentArrowGraphics = this.add.graphics().setDepth(INTENT_ARROW_DEPTH);
+      this.tweens.add({
+        targets: this.intentArrowGraphics,
+        alpha: { from: 1, to: 0.8 },
+        duration: INTENT_PULSE_MS,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    }
+    this.intentArrowGraphics.clear();
     const { stage, outcome, turnState } = this.shown;
     const showing = !this.preview && stage === 'battle' && !outcome && turnState?.team === 'player';
     const intents = showing ? getEnemyIntents(this.shown) : [];
-    for (const intent of intents) this.drawIntent(this.intentGraphics, intent);
+    for (const intent of intents) this.drawIntent(this.intentGraphics, this.intentArrowGraphics, intent);
     const tags = getIntentThreats(this.shown, intents).map((threat) =>
       toIntentTagView(threat, this.getTileAnchor(threat.at)),
     );
     gameStore.setState({ intentTags: tags });
   }
 
-  drawIntent(graphics: Phaser.GameObjects.Graphics, { path, target }: EnemyIntent) {
-    const center = ({ x, y }: Point) => new Phaser.Math.Vector2((x + 0.5) * TILE_SIZE, (y + 0.5) * TILE_SIZE);
-    const end = center(path[path.length - 1]);
-    if (path.length > 1) {
-      graphics.lineStyle(2, INTENT_COLOR, INTENT_ROUTE_ALPHA);
-      graphics.strokePoints(path.map(center), false);
-      if (!target) graphics.fillStyle(INTENT_COLOR, INTENT_ROUTE_ALPHA).fillCircle(end.x, end.y, 3);
+  // Draws an intent's shape (getIntentArrowShape): the dashed route on
+  // `routes`, and the strike arrow, or a dot where the route ends when it
+  // has no target, on `arrows`. Each stroke goes down twice, dark and wide
+  // under the red, for an outline.
+  drawIntent(routes: Phaser.GameObjects.Graphics, arrows: Phaser.GameObjects.Graphics, intent: EnemyIntent) {
+    const { routeDashes, end, strike } = getIntentArrowShape(intent.path, intent.target, TILE_SIZE);
+    const vectors = (points: readonly Point[]) => points.map(({ x, y }) => new Phaser.Math.Vector2(x, y));
+    for (const [width, color] of [
+      [4, INTENT_OUTLINE_COLOR],
+      [2, INTENT_COLOR],
+    ] as const) {
+      routes.lineStyle(width, color, INTENT_ROUTE_ALPHA);
+      for (const dash of routeDashes) routes.strokePoints(vectors(dash), false);
     }
-    if (!target) return;
-    // From the edge of the attacker's tile to the edge of its target's, so
-    // neither sprite hides the arrow.
-    const tip = center(target);
-    const direction = tip.clone().subtract(end).normalize();
-    const from = end.clone().add(direction.clone().scale(TILE_SIZE * 0.3));
-    const to = tip.clone().subtract(direction.clone().scale(TILE_SIZE * 0.4));
-    const side = new Phaser.Math.Vector2(-direction.y, direction.x).scale(4);
-    const base = to.clone().subtract(direction.clone().scale(7));
-    graphics.lineStyle(3, INTENT_COLOR, INTENT_ARROW_ALPHA).lineBetween(from.x, from.y, base.x, base.y);
-    graphics
-      .fillStyle(INTENT_COLOR, INTENT_ARROW_ALPHA)
-      .fillTriangle(to.x, to.y, base.x + side.x, base.y + side.y, base.x - side.x, base.y - side.y);
+    if (!strike) {
+      if (routeDashes.length) {
+        routes.fillStyle(INTENT_OUTLINE_COLOR, INTENT_ROUTE_ALPHA).fillCircle(end.x, end.y, 4.5);
+        routes.fillStyle(INTENT_COLOR, INTENT_ROUTE_ALPHA).fillCircle(end.x, end.y, 3);
+      }
+      return;
+    }
+    const { from, base, head } = strike;
+    const [tip, left, right] = head;
+    arrows.lineStyle(6, INTENT_OUTLINE_COLOR, INTENT_ARROW_ALPHA).lineBetween(from.x, from.y, base.x, base.y);
+    arrows
+      .lineStyle(3, INTENT_OUTLINE_COLOR, INTENT_ARROW_ALPHA)
+      .strokeTriangle(tip.x, tip.y, left.x, left.y, right.x, right.y);
+    arrows.fillStyle(INTENT_COLOR, INTENT_ARROW_ALPHA).fillTriangle(tip.x, tip.y, left.x, left.y, right.x, right.y);
+    arrows.lineStyle(3, INTENT_COLOR, INTENT_ARROW_ALPHA).lineBetween(from.x, from.y, base.x, base.y);
   }
 
   // Shows where the enemy `unitId` can move and strike, or hides it again
@@ -3579,8 +3612,8 @@ export class GridScene extends Phaser.Scene {
   // (`autotiles`, see src/game/autotile.ts) drawn over it as its own layer of
   // half-size tiles, four per cell. Animated sets step through their copies
   // on a timer.
-  renderTerrain(grid: Grid, autotiles: Record<string, Autotile>) {
-    const { key, columns } = TERRAIN_SHEET;
+  renderTerrain(grid: Grid, autotiles: Record<string, Autotile>, terrainSheet = TERRAIN_SHEET) {
+    const { key, columns } = terrainSheet;
     const grassFrame = getTileFrame(TERRAIN_BASE_TILE, columns);
     const grass = Array.from({ length: grid.height }, () => Array(grid.width).fill(grassFrame));
     const grassMap = this.make.tilemap({ data: grass, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });
@@ -3611,13 +3644,13 @@ export class GridScene extends Phaser.Scene {
     }
   }
 
-  // One-tile overlays from the terrain sheet, or the props sheet (forests,
+  // One-tile overlays from `terrainSheet`, or the props sheet (forests,
   // mountains, buildings, crossings; see src/game/mapArt.ts): ground art
   // and caps under units, at the trees' depth (caps just above, so a peak
   // covers the forest it pokes into), and roofs over units like the gate's.
-  renderMapSprites(sprites: readonly MapSprite[]) {
+  renderMapSprites(terrainSheet: typeof TERRAIN_SHEET, sprites: readonly MapSprite[]) {
     const depths = { ground: 0.4, cap: 0.45, roof: 0.8 };
-    for (const { x, y, tile, layer, sheet = TERRAIN_SHEET } of sprites) {
+    for (const { x, y, tile, layer, sheet = terrainSheet } of sprites) {
       const pos = gridToWorld(x, y, TILE_SIZE);
       this.add
         .image(pos.x, pos.y, sheet.key, getTileFrame(tile, sheet.columns))

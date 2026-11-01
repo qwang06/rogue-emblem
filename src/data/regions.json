@@ -1,6 +1,6 @@
 {
   "stagesPerRegion": 1,
-  "finalStage": 11,
+  "finalStage": 13,
   "regions": [
     {
       "name": "Meadowlands",
@@ -99,6 +99,33 @@
       "treeChance": 0.03,
       "palette": "b-white",
       "biome": "hills"
+    },
+    {
+      "name": "Amberwood",
+      "description": "Autumn woods of gold and rust: goblin poachers and their wolf hunt among the falling leaves.",
+      "terrain": {
+        "generator": "planned",
+        "width": 8,
+        "height": 8,
+        "lakes": 0,
+        "mountains": 1,
+        "mountainSize": [2, 3],
+        "forests": 3,
+        "forestSize": [2, 4],
+        "meadows": 2,
+        "meadowSize": [2, 3],
+        "ruins": 0,
+        "buildings": 1,
+        "turnChance": 0.45
+      },
+      "enemies": [
+        { "count": 2, "unitClass": "goblin", "area": { "y": [0, 0.34] }, "level": 2 },
+        { "count": 1, "unitClass": "beast", "area": { "y": [0, 0.34] }, "level": 2 }
+      ],
+      "treeChance": 0.08,
+      "palette": "a-orange",
+      "biome": "forest",
+      "season": "autumn"
     },
     {
       "name": "Barrow Hills",
@@ -231,6 +258,34 @@
       "palette": "a-brown",
       "faction": "ironhold",
       "biome": "hills"
+    },
+    {
+      "name": "Frostfell",
+      "description": "Snowbound peaks on the road to the Roost: skeletons and bats from the frozen barrows, with an orc to lead them.",
+      "terrain": {
+        "generator": "planned",
+        "width": 8,
+        "height": 8,
+        "lakes": 1,
+        "lakeSize": [2, 3],
+        "mountains": 2,
+        "mountainSize": [2, 3],
+        "forests": 1,
+        "forestSize": [2, 3],
+        "meadows": 1,
+        "meadowSize": [2, 3],
+        "ruins": 1,
+        "buildings": 1
+      },
+      "enemies": [
+        { "count": 1, "unitClass": "orc", "area": { "y": [0, 0.34] }, "level": 5 },
+        { "count": 2, "unitClass": "skeleton", "area": { "y": [0, 0.34] }, "level": 5 },
+        { "count": 2, "unitClass": "bat", "area": { "y": [0, 0.34] }, "level": 5 }
+      ],
+      "treeChance": 0,
+      "palette": "b-white",
+      "biome": "hills",
+      "season": "winter"
     },
     {
       "name": "Dragon's Roost",
