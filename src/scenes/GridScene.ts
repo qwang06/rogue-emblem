@@ -2899,6 +2899,7 @@ export class GridScene extends Phaser.Scene {
       this.playAttackAnimation(strikerSprite, sprite, onImpact, onReturned);
       return;
     }
+    this.faceSprite(strikerSprite, sprite);
     playLunge(this, strikerSprite, spriteCenter(sprite), {
       distance: getLungeDistance(tiles, reducedMotion),
       holdMs: juice.hitStopMs,
@@ -2912,9 +2913,7 @@ export class GridScene extends Phaser.Scene {
   // units around it, and the blow lands on its impact frame.
   playAttackAnimation(sprite: Sprite, target: Sprite, onImpact: () => void, onDone: () => void) {
     const art: string = sprite.getData('art');
-    const from = { x: Math.round(sprite.x / TILE_SIZE), y: Math.round(sprite.y / TILE_SIZE) };
-    const to = { x: Math.round(target.x / TILE_SIZE), y: Math.round(target.y / TILE_SIZE) };
-    sprite.setData('facing', getStepFacing(from, to) ?? sprite.getData('facing'));
+    this.faceSprite(sprite, target);
     const impactFrame = getImpactFrame(art);
     const depth = sprite.depth;
     sprite.setDepth(ATTACK_DEPTH);
@@ -2934,6 +2933,18 @@ export class GridScene extends Phaser.Scene {
         onDone();
       },
     });
+  }
+
+  // Turns a unit sprite to face another (the tile toward it, see
+  // getStepFacing), idling that way. Any striker turns before its blow,
+  // whether or not its art has an attack animation.
+  faceSprite(sprite: Sprite, target: Sprite) {
+    const from = { x: Math.round(sprite.x / TILE_SIZE), y: Math.round(sprite.y / TILE_SIZE) };
+    const to = { x: Math.round(target.x / TILE_SIZE), y: Math.round(target.y / TILE_SIZE) };
+    const facing = getStepFacing(from, to);
+    if (!facing || facing === sprite.getData('facing')) return;
+    sprite.setData('facing', facing);
+    this.idleSprite(sprite);
   }
 
   // Back to its idle animation, facing the way it faces.
@@ -3243,6 +3254,7 @@ export class GridScene extends Phaser.Scene {
     onDone: () => void,
   ) {
     const center = (sprite: Sprite) => ({ x: sprite.x + TILE_SIZE / 2, y: sprite.y + TILE_SIZE / 2 });
+    this.faceSprite(userSprite, targetSprite);
     if (animation === 'stone') {
       playStoneThrow(this, center(userSprite), center(targetSprite), () => {
         onImpact();
