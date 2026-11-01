@@ -5,6 +5,7 @@
 // No Phaser, no hidden state.
 
 import { createBossState, type BossState } from '../bosses.ts';
+import { createReinforcementState, type ReinforcementState } from './reinforcements.ts';
 import { findUnit, type Grid, type Point } from '../grid.ts';
 import type { Mine } from '../terrainSkills.ts';
 import { DEFAULT_OBJECTIVE, type BattleSnapshot, type Objective } from '../objectives.ts';
@@ -53,13 +54,16 @@ export interface BattleState {
   // Mines laid with a skill (terrainSkills.ts), each waiting for a foe of
   // the team that laid it.
   readonly mines: readonly Mine[];
+  // Arrivals' strength and the waves so far (see reinforcements.ts); null
+  // or missing for a battle without them.
+  readonly reinforcements?: ReinforcementState | null;
 }
 
 // The state a level starts in, before any unit is placed, with its rolls
 // seeded by `seed`. The state takes the level's units over: don't change
 // them afterwards.
 export function createBattleState(
-  level: Pick<Level, 'grid' | 'units' | 'roster' | 'deploymentZone' | 'maxDeployed' | 'objective'>,
+  level: Pick<Level, 'grid' | 'units' | 'roster' | 'deploymentZone' | 'maxDeployed' | 'objective' | 'reinforcements'>,
   seed: number,
 ): BattleState {
   const objective = level.objective ?? DEFAULT_OBJECTIVE;
@@ -80,6 +84,7 @@ export function createBattleState(
     rngState: seed >>> 0,
     boss: createBossState(objective),
     mines: Object.freeze([]),
+    reinforcements: createReinforcementState(level.reinforcements),
   });
 }
 

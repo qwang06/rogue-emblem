@@ -12,10 +12,11 @@ import { getBattleSeed, getStageSeed, restoreRoster, restoreUnit, type RunState 
 import { GUEST_UNIT_ID, rollGuest } from './warband/recruitment.ts';
 import { setUnit } from './grid.ts';
 import { getMoveCost } from './movement.ts';
-import { createStageLevel, pickStageArchetype, withArchetype } from './warband/stageLevel.ts';
+import { createStageLevel, DEFAULT_ENEMY_CLASS, pickStageArchetype, withArchetype } from './warband/stageLevel.ts';
 import { pickStageObjective, placeObjective } from './warband/stageObjective.ts';
 import { getStageLootCount } from './loot.ts';
-import { applyEliteAffixes, rollEliteAffixes } from './warband/elites.ts';
+import { applyEliteAffixes, applyEliteCreep, rollEliteAffixes } from './warband/elites.ts';
+import { WAVE_EVERY, WAVE_LIMIT, WAVES_FROM_STAGE, type ReinforcementRules } from './battle/reinforcements.ts';
 import { getRunSite, getSiteRegion } from './warband/travel.ts';
 import { applySurge, getSurgePercent, levelRegionForStage } from './warband/enemyCurve.ts';
 import { getRunHeatRules } from './warband/heat.ts';
@@ -132,13 +133,35 @@ export function createBattleLevel(
         }
       }
       const objective = placeObjective(spec, level);
+      const bossUnitId = objective.kind === 'boss' ? objective.unitId : undefined;
+      // A lair's enemies all carry its affixes; elsewhere they creep in
+      // with the stage (elites.ts).
       if (setup.run && getRunSite(setup.run)?.kind === 'elite') {
-        const bossUnitId = objective.kind === 'boss' ? objective.unitId : undefined;
         applyEliteAffixes(level.units, rollEliteAffixes(setup.run.seed, setup.stage), bossUnitId);
+      } else {
+        applyEliteCreep(level.units, setup.seed, setup.stage, bossUnitId);
       }
-      return { ...level, objective };
+      return { ...level, objective, reinforcements: getStageReinforcements(setup.stage, baseRegion, surge) };
     }
   }
+}
+
+// How stage `stage`'s arrivals come (see battle/reinforcements.ts): at the
+// level of `region`'s weakest group (already set for the stage) and with
+// the stage's `surgePercent`, and from WAVES_FROM_STAGE with waves of the
+// region's classes (its groups without a boss).
+export function getStageReinforcements(stage: number, region: RegionConfig, surgePercent: number): ReinforcementRules {
+  const level = Math.min(...region.enemies.map((group) => group.level ?? 1), Infinity);
+  const classes = [
+    ...new Set(region.enemies.filter((group) => !group.boss).map((group) => group.unitClass ?? DEFAULT_ENEMY_CLASS)),
+  ];
+  const waves =
+    stage >= WAVES_FROM_STAGE && classes.length > 0 ? { every: WAVE_EVERY, classes, limit: WAVE_LIMIT } : null;
+  return Object.freeze({
+    level: Number.isFinite(level) ? level : stage,
+    surgePercent,
+    ...(waves && { waves: Object.freeze({ ...waves, classes: Object.freeze(classes) }) }),
+  });
 }
 
 // Whether `run` is visiting a realm site with no battle: a town or a shrine.

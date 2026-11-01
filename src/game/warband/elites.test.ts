@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { getCombatBonus } from '../modifiers.ts';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
-import { applyEliteAffixes, ELITE_AFFIX_COUNT, ELITE_AFFIXES, findEliteAffix, rollEliteAffixes } from './elites.ts';
+import {
+  applyEliteAffixes,
+  applyEliteCreep,
+  ELITE_AFFIX_COUNT,
+  ELITE_AFFIXES,
+  findEliteAffix,
+  getBossAffixCount,
+  getEliteCreepChance,
+  rollEliteAffixes,
+} from './elites.ts';
 
 const enemies = (count: number) =>
   new Map<string, Unit>(
@@ -64,5 +73,50 @@ describe('applyEliteAffixes', () => {
       expect(affix.description.length).toBeGreaterThan(0);
       expect(affix.modifiers.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('elite creep', () => {
+  const foes = (count: number) =>
+    new Map<string, Unit>(
+      Array.from({ length: count }, (_, i) => [
+        `enemy-${i + 1}`,
+        new Soldier({ name: 'Enemy Soldier', team: 'enemy' }),
+      ]),
+    );
+
+  it('starts at stage 5 and grows 3% a stage, up to every enemy', () => {
+    expect(getEliteCreepChance(4)).toBe(0);
+    expect(getEliteCreepChance(5)).toBe(15);
+    expect(getEliteCreepChance(30)).toBe(90);
+    expect(getEliteCreepChance(60)).toBe(100);
+  });
+
+  it('gives a boss one affix every 6 stages', () => {
+    expect([4, 5, 6, 12, 30].map(getBossAffixCount)).toEqual([0, 0, 1, 2, 5]);
+  });
+
+  it('leaves stages before it alone', () => {
+    const units = foes(4);
+    applyEliteCreep(units, 1, 4);
+    expect([...units.values()].every((unit) => unit.eliteAffixes.length === 0)).toBe(true);
+  });
+
+  it('gives about its share of enemies one affix each, the boss its count, the same for a seed', () => {
+    const units = foes(200);
+    applyEliteCreep(units, 7, 20, 'enemy-1');
+    const boss = units.get('enemy-1')!;
+    expect(new Set(boss.eliteAffixes).size).toBe(getBossAffixCount(20));
+    expect(boss.rank).not.toBe('elite');
+    const rest = [...units.values()].slice(1);
+    const elites = rest.filter((unit) => unit.eliteAffixes.length > 0);
+    expect(elites.every((unit) => unit.eliteAffixes.length === 1 && unit.rank === 'elite')).toBe(true);
+    expect(elites.length / rest.length).toBeGreaterThan(0.45);
+    expect(elites.length / rest.length).toBeLessThan(0.75);
+    const again = foes(200);
+    applyEliteCreep(again, 7, 20, 'enemy-1');
+    expect([...again.values()].map((unit) => unit.eliteAffixes)).toEqual(
+      [...units.values()].map((unit) => unit.eliteAffixes),
+    );
   });
 });

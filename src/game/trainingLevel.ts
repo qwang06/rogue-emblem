@@ -2,6 +2,7 @@
 // Training menu faces a single sparring partner of the same class on a
 // small open field. There's no deployment — both units start on the map.
 
+import type { ReinforcementRules } from './battle/reinforcements.ts';
 import { DIALOGS } from '../data/dialogs.ts';
 import type { MenuAction } from './actionMenu.ts';
 import type { DialogScripts } from './dialogScript.ts';
@@ -21,6 +22,8 @@ export interface Level {
   dialogs: DialogScripts;
   // What wins and loses the battle (see objectives.ts); a rout if unset.
   objective?: Objective;
+  // How strong arrivals come, and any waves (see battle/reinforcements.ts).
+  reinforcements?: ReinforcementRules;
 }
 
 // Open grass, '.' per tile.

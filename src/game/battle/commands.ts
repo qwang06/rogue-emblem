@@ -19,13 +19,7 @@ import {
 import { getAttackTargets, resolveCombat, type Strike, type TargetTile } from '../combat.ts';
 import { canDeployUnit, canDeployUnitAt, canStartBattle, isPlaced, placeUnit } from '../deployment.ts';
 import { getPhaseMovement } from '../enemyAI.ts';
-import {
-  getCombatAward,
-  getCombatOutcome,
-  growToLevel,
-  type ExperienceAward,
-  type ExperienceGain,
-} from '../experience.ts';
+import { getCombatAward, getCombatOutcome, type ExperienceAward, type ExperienceGain } from '../experience.ts';
 import {
   findTileAt,
   findUnit,
@@ -72,8 +66,15 @@ import {
   type Skill,
 } from '../skills.ts';
 import { hasModifier, sumModifiers } from '../modifiers.ts';
+import {
+  createArrival,
+  createWaveArrival,
+  getWaveUnitId,
+  isWaveTurn,
+  pickWaveTile,
+  type ReinforcementState,
+} from './reinforcements.ts';
 import { areAllied, getTeamUnitIds, isAllyOf, isHostileTo } from '../teams.ts';
-import { createUnitOfClass, UNIT_CLASSES } from '../unitClasses.ts';
 import {
   getFirstPhase,
   hasMoved,
@@ -423,6 +424,7 @@ class Draft {
   kills: Map<string, number>;
   boss: BossState | null;
   mines: readonly Mine[];
+  reinforcements: ReinforcementState | null;
   readonly events: BattleEvent[] = [];
   readonly rng: Rng;
   private readonly rngState: () => number;
@@ -443,6 +445,7 @@ class Draft {
     this.kills = new Map(base.kills);
     this.boss = base.boss;
     this.mines = base.mines;
+    this.reinforcements = base.reinforcements ?? null;
     const { rng, state } = createResumableRng(base.rngState);
     this.rng = rng;
     this.rngState = state;
@@ -487,6 +490,7 @@ class Draft {
       rngState: this.rngState(),
       boss: this.boss,
       mines: this.mines,
+      ...(this.reinforcements && { reinforcements: this.reinforcements }),
     });
   }
 }
@@ -1034,7 +1038,10 @@ function startPhase(draft: Draft, turnState: TurnState) {
   draft.turnState = turnState;
   draft.events.push({ type: 'phase-started', turnState });
   if (checkOutcome(draft)) return;
-  if (turnState.team === 'enemy') runBossHorn(draft);
+  if (turnState.team === 'enemy') {
+    runBossHorn(draft);
+    runWaves(draft);
+  }
   for (const unitId of getTeamUnitIds(draft.units, turnState.team)) {
     const { modifiers } = draft.unit(unitId);
     const { maxHealth } = draft.unit(unitId);
@@ -1073,9 +1080,7 @@ function runBossHorn(draft: Draft) {
     if (canArrive(draft.grid, at)) {
       called += 1;
       const unitId = getHornUnitId(called);
-      const label = UNIT_CLASSES.find((c) => c.id === horn.unitClass)?.label ?? horn.unitClass;
-      const arrival = createUnitOfClass(horn.unitClass, { name: `Enemy ${label}`, team: 'enemy' });
-      growToLevel(arrival, horn.level);
+      const arrival = createArrival(horn.unitClass, horn.level, draft.reinforcements?.rules ?? null);
       draft.units.set(unitId, arrival);
       draft.grid = setUnit(draft.grid, at.x, at.y, unitId);
       draft.turnState = markDone(draft.turnState!, unitId);
@@ -1095,6 +1100,22 @@ function runBossHorn(draft: Draft) {
     }
   }
   draft.boss = Object.freeze({ ...boss, incoming, called });
+}
+
+// On a wave turn (see reinforcements.ts) the next wave's enemy arrives on
+// the free tile farthest from the deployment zone, done for the phase,
+// with a `reinforced` event; with no such tile, none comes this time.
+function runWaves(draft: Draft) {
+  const state = draft.reinforcements;
+  if (!state || !isWaveTurn(state, draft.turnState!.turn)) return;
+  const at = pickWaveTile(draft.grid, draft.base.deploymentZone);
+  if (!at) return;
+  const unitId = getWaveUnitId(state.arrived + 1);
+  draft.units.set(unitId, createWaveArrival(state));
+  draft.grid = setUnit(draft.grid, at.x, at.y, unitId);
+  draft.turnState = markDone(draft.turnState!, unitId);
+  draft.events.push({ type: 'reinforced', unitId, at });
+  draft.reinforcements = Object.freeze({ ...state, arrived: state.arrived + 1 });
 }
 
 // A boss whose last hit left it at or under its enrage share enrages: its
