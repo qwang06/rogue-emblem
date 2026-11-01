@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { findUnit } from '../grid.ts';
 import { planNextTurn } from './ai.ts';
 import { applyCommand } from './commands.ts';
-import { getEnemyIntents, getIntentThreats } from './intents.ts';
+import { getActionIntent, getEnemyIntents, getIntentThreats } from './intents.ts';
 import { createTestBattle, makeTestUnit } from './testLevel.ts';
 
 describe('getEnemyIntents', () => {
@@ -79,6 +79,44 @@ describe('getEnemyIntents', () => {
       { started: false },
     );
     expect(getEnemyIntents(state)).toEqual([]);
+  });
+});
+
+describe('getActionIntent', () => {
+  it('names the unit the enemy phase is about to strike, with the forecast', () => {
+    const start = createTestBattle({
+      hero: { unit: makeTestUnit({ team: 'player' }), at: { x: 0, y: 0 } },
+      foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 4, y: 0 } },
+    });
+    const enemyPhase = applyCommand(start, { type: 'end-phase' }).state;
+    const [move, act] = planNextTurn(enemyPhase);
+    const moved = applyCommand(enemyPhase, move!).state;
+    const path = move?.type === 'move' ? move.path! : [];
+    expect(getActionIntent(moved, 'foe', path, act)).toMatchObject({
+      unitId: 'foe',
+      target: { x: 0, y: 0, unitId: 'hero' },
+      damage: 6,
+      strikes: 1,
+      hit: 100,
+    });
+  });
+
+  it('has no target when the unit only waits', () => {
+    const state = createTestBattle({
+      hero: { unit: makeTestUnit({ team: 'player' }), at: { x: 0, y: 0 } },
+      foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 4, y: 0 } },
+    });
+    const intent = getActionIntent(state, 'foe', [{ x: 4, y: 0 }], { type: 'wait', unitId: 'foe' });
+    expect(intent).toMatchObject({ target: null, damage: 0, strikes: 0 });
+  });
+
+  it('has no target when the attacked tile is empty', () => {
+    const state = createTestBattle({
+      hero: { unit: makeTestUnit({ team: 'player' }), at: { x: 0, y: 0 } },
+      foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 4, y: 0 } },
+    });
+    const act = { type: 'attack', unitId: 'foe', target: { x: 3, y: 0 } } as const;
+    expect(getActionIntent(state, 'foe', [{ x: 4, y: 0 }], act).target).toBeNull();
   });
 });
 
