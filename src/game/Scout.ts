@@ -18,16 +18,18 @@ export const SCOUT_STATS = Object.freeze({
   movement: 7,
 });
 
-// Percent chance per level up that each stat rises (see experience.ts).
+// How fast each stat grows, on a fixed schedule with no dice: 100 is a
+// point every level, 50 every second level, 25 every fourth (see
+// getLevelUpGains in experience.ts).
 export const SCOUT_GROWTHS = Object.freeze({
   health: 50,
-  mana: 40,
-  strength: 30,
-  intelligence: 10,
-  skill: 45,
-  speed: 60,
-  luck: 50,
-  defense: 15,
+  mana: 25,
+  strength: 25,
+  intelligence: 0,
+  skill: 25,
+  speed: 100,
+  luck: 100,
+  defense: 0,
   resistance: 25,
 });
 

@@ -32,8 +32,8 @@ export interface EnemyGroup {
   // soldiers when unset.
   unitClass?: string;
   area?: SpawnArea;
-  // The level its enemies are, grown from level 1 on their class's average
-  // growths (see getAverageLevelUp in experience.ts); 1 when unset.
+  // The level its enemies are, grown from level 1 on their class's fixed
+  // growths (see getLevelUpGains in experience.ts); 1 when unset.
   level?: number;
   minDistance?: number;
   maxDistance?: number;

@@ -11,23 +11,17 @@ import {
   getCombatExperience,
   getExperienceToNextLevel,
   getCombatOutcome,
-  getAverageLevelUp,
   getGrowthStatValue,
   getHitExperience,
   getKillExperience,
   resolveExperienceGain,
-  rollLevelUp,
+  getLevelUpGains,
   scaleExperience,
   type Experienced,
 } from './experience.ts';
 import type { CombatSide, Strike } from './combat.ts';
 import { POWER_STRIKE } from './skills.ts';
 
-// Plays back the given rolls (as fractions) in order, then repeats the last.
-const rolls = (...values: number[]) => {
-  let i = 0;
-  return () => values[Math.min(i++, values.length - 1)];
-};
 const allGrowths = (rate: number) => Object.fromEntries(GROWTH_STATS.map((stat) => [stat, rate]));
 const noGains = Object.fromEntries(GROWTH_STATS.map((stat) => [stat, 0]));
 
@@ -175,63 +169,83 @@ describe('getGrowthStatValue', () => {
   });
 });
 
-describe('rollLevelUp', () => {
-  it('raises nothing at 0% growths', () => {
-    expect(rollLevelUp(allGrowths(0), () => 0)).toEqual(noGains);
+describe('getLevelUpGains', () => {
+  const sum = (gains: Record<string, number>) => Object.values(gains).reduce((total, gain) => total + gain, 0);
+  // The gains of level ups 1..steps added up, per stat.
+  const totals = (growths: Parameters<typeof getLevelUpGains>[0], steps: number) => {
+    const out = { ...noGains };
+    for (let step = 1; step <= steps; step++) {
+      const gains = getLevelUpGains(growths, step);
+      for (const stat of GROWTH_STATS) out[stat] += gains[stat];
+    }
+    return out;
+  };
+
+  it('raises nothing at 0 growths', () => {
+    expect(getLevelUpGains(allGrowths(0), 1)).toEqual(noGains);
+    expect(getLevelUpGains(allGrowths(0), 7)).toEqual(noGains);
   });
 
-  it('raises everything at 100% growths', () => {
-    const gains = rollLevelUp(allGrowths(100), () => 0.999);
-    for (const stat of GROWTH_STATS) expect(gains[stat]).toBe(1);
+  it('raises everything every level at 100', () => {
+    for (const step of [1, 2, 9]) {
+      const gains = getLevelUpGains(allGrowths(100), step);
+      for (const stat of GROWTH_STATS) expect(gains[stat]).toBe(1);
+    }
   });
 
-  it('rolls each stat in order against its growth', () => {
-    // health 50% rolls 49 (up), mana 50% rolls 50 (no), strength 50% rolls 0 (up), rest roll 99.
-    const gains = rollLevelUp(allGrowths(50), rolls(0.49, 0.5, 0, 0.99));
-    expect(gains).toEqual({ ...noGains, health: 1, strength: 1 });
+  it('gives a lone 50 growth a point every second level', () => {
+    expect([1, 2, 3, 4].map((step) => getLevelUpGains({ strength: 50 }, step).strength)).toEqual([0, 1, 0, 1]);
   });
 
-  it('treats missing growths as 0%', () => {
-    expect(rollLevelUp({ strength: 100 }, () => 0)).toEqual({ ...noGains, strength: 1 });
+  it('gives a growth over 100 more than a point a level', () => {
+    expect([1, 2, 3, 4].map((step) => getLevelUpGains({ health: 150 }, step).health)).toEqual([1, 2, 1, 2]);
   });
 
-  it('gives a guaranteed point per 100% and rolls the rest', () => {
-    expect(rollLevelUp({ health: 150 }, () => 0.4).health).toBe(2);
-    expect(rollLevelUp({ health: 150 }, () => 0.6).health).toBe(1);
+  it('is the same every time for the same growths and step', () => {
+    const growths = { health: 100, mana: 25, strength: 100, skill: 50, speed: 25, defense: 25 };
+    expect(getLevelUpGains(growths, 5)).toEqual(getLevelUpGains(growths, 5));
+  });
+
+  it('gives every level the same number of points, give or take one', () => {
+    const growths = {
+      health: 50,
+      mana: 75,
+      intelligence: 100,
+      skill: 25,
+      speed: 25,
+      luck: 25,
+      defense: 25,
+      resistance: 50,
+    };
+    const perLevel = Array.from({ length: 12 }, (_, i) => sum(getLevelUpGains(growths, i + 1)));
+    expect(Math.max(...perLevel) - Math.min(...perLevel)).toBeLessThanOrEqual(1);
+    expect(perLevel.every((points) => points > 0)).toBe(true);
+  });
+
+  it('keeps every stat within a point of its share', () => {
+    const growths = { health: 100, mana: 25, strength: 100, skill: 50, speed: 25, defense: 25 };
+    for (const steps of [1, 3, 4, 7, 12, 30]) {
+      const got = totals(growths, steps);
+      for (const stat of GROWTH_STATS) {
+        expect(Math.abs(got[stat] - (steps * (growths[stat as keyof typeof growths] ?? 0)) / 100)).toBeLessThan(1);
+      }
+    }
+  });
+
+  it('adds up to floor(levels × growth total / 100)', () => {
+    expect(sum(totals({ strength: 45 }, 9))).toBe(4);
+    expect(sum(totals({ strength: 85, skill: 40 }, 4))).toBe(5);
+  });
+
+  it('treats missing and negative growths as 0', () => {
+    expect(getLevelUpGains({ defense: 100, luck: -50 }, 3)).toEqual({ ...noGains, defense: 1 });
   });
 
   it('does not mutate the growths', () => {
-    const growths = allGrowths(100);
+    const growths = allGrowths(75);
     const copy = { ...growths };
-    rollLevelUp(growths, () => 0);
+    getLevelUpGains(growths, 4);
     expect(growths).toEqual(copy);
-  });
-});
-
-describe('getAverageLevelUp', () => {
-  const total = (growth: number, steps: number) =>
-    Array.from({ length: steps }, (_, i) => getAverageLevelUp({ strength: growth }, i + 1).strength).reduce(
-      (sum, gain) => sum + gain,
-      0,
-    );
-
-  it('raises nothing at 0% growths', () => {
-    expect(getAverageLevelUp(allGrowths(0), 1)).toEqual(noGains);
-  });
-
-  it('carries the fractions, so a 50% growth rises every second level', () => {
-    expect([1, 2, 3, 4].map((step) => getAverageLevelUp({ strength: 50 }, step).strength)).toEqual([0, 1, 0, 1]);
-  });
-
-  it('adds up to floor(levels × growth / 100)', () => {
-    expect(total(45, 9)).toBe(4);
-    expect(total(85, 4)).toBe(3);
-    expect(total(100, 6)).toBe(6);
-    expect(total(150, 2)).toBe(3);
-  });
-
-  it('treats missing growths as 0%', () => {
-    expect(getAverageLevelUp({ defense: 100 }, 3)).toEqual({ ...noGains, defense: 1 });
   });
 });
 
@@ -278,23 +292,23 @@ describe('resolveExperienceGain', () => {
   });
 
   it('adds XP without leveling', () => {
-    expect(resolveExperienceGain(unit(), 30, () => 0)).toEqual({ amount: 30, level: 1, experience: 30, levelUps: [] });
+    expect(resolveExperienceGain(unit(), 30)).toEqual({ amount: 30, level: 1, experience: 30, levelUps: [] });
   });
 
   it("scales the gain by the unit's XP rate and reports what it earned", () => {
-    expect(resolveExperienceGain(unit({ experienceRate: 150 }), 30, () => 0)).toEqual({
+    expect(resolveExperienceGain(unit({ experienceRate: 150 }), 30)).toEqual({
       amount: 45,
       level: 1,
       experience: 45,
       levelUps: [],
     });
-    const result = resolveExperienceGain(unit({ experience: 40, experienceRate: 150 }), 20, () => 0);
+    const result = resolveExperienceGain(unit({ experience: 40, experienceRate: 150 }), 20);
     expect(result).toMatchObject({ amount: 30, level: 2, experience: 20 });
     expect(result.levelUps).toHaveLength(1);
   });
 
   it('rolls one level up per level gained, with the running stats', () => {
-    const result = resolveExperienceGain(unit({ experience: 40 }), 120, () => 0);
+    const result = resolveExperienceGain(unit({ experience: 40 }), 120);
     expect(result.level).toBe(3);
     expect(result.experience).toBe(10);
     expect(result.levelUps.map((l) => l.level)).toEqual([2, 3]);
@@ -303,24 +317,24 @@ describe('resolveExperienceGain', () => {
   });
 
   it('keeps raising stats over consecutive level ups (there are no caps)', () => {
-    const result = resolveExperienceGain(unit({ strength: 50 }), 200, () => 0);
+    const result = resolveExperienceGain(unit({ strength: 50 }), 200);
     expect(result.levelUps.map((l) => l.gains.strength)).toEqual([1, 1]);
   });
 
   it('lists the skills learned at each new level', () => {
     const trees = { soldier: [{ level: 3, skill: POWER_STRIKE }] };
-    const result = resolveExperienceGain(unit({ unitClass: 'soldier' }), 200, () => 0, { trees });
+    const result = resolveExperienceGain(unit({ unitClass: 'soldier' }), 200, { trees });
     expect(result.levelUps.map((l) => l.skills)).toEqual([[], [POWER_STRIKE]]);
   });
 
   it('skips the XP rate for an unscaled gain', () => {
-    const result = resolveExperienceGain(unit({ experienceRate: 150 }), 50, () => 0, { scaled: false });
+    const result = resolveExperienceGain(unit({ experienceRate: 150 }), 50, { scaled: false });
     expect(result).toMatchObject({ amount: 50, level: 2, experience: 0 });
   });
 
   it('does not mutate the unit', () => {
     const original = unit();
-    resolveExperienceGain(original, 250, () => 0);
+    resolveExperienceGain(original, 250);
     expect(original).toEqual(unit());
   });
 });
@@ -359,7 +373,7 @@ describe('getCombatAward', () => {
     for (const experienceRate of [50, 100, 150]) {
       const leveller = { unitClass: null, level: 1, experience: 30, maxHealth: 10, maxMana: 0, experienceRate };
       const { amount, scaled } = getCombatAward(leveller, { level: 1, levelUpOnKill: true }, 'kill');
-      expect(resolveExperienceGain(leveller, amount, () => 0, { scaled })).toMatchObject({ level: 2, experience: 0 });
+      expect(resolveExperienceGain(leveller, amount, { scaled })).toMatchObject({ level: 2, experience: 0 });
     }
   });
 

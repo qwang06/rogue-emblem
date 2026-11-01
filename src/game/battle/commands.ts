@@ -143,7 +143,15 @@ export type BattleEvent =
   // A modifier's recovery (see modifiers.ts): HP healed on a kill
   // (`trigger` 'kill'), or HP or MP recovered as the unit's phase starts
   // ('phase').
-  | { type: 'recovered'; unitId: string; stat: 'health' | 'mana'; amount: number; trigger: 'kill' | 'phase' }
+  | {
+      type: 'recovered';
+      unitId: string;
+      stat: 'health' | 'mana';
+      amount: number;
+      trigger: 'kill' | 'phase' | 'drain';
+    }
+  // A recoil skill cost its user `damage` HP, leaving it `health`.
+  | { type: 'recoil'; unitId: string; damage: number; health: number }
   // A defeated unit's loot went to `unitId`, or to the convoy when `stored`.
   | { type: 'loot'; unitId: string; item: Item; stored: boolean }
   | { type: 'defeated'; unitId: string; at: Point }
@@ -563,7 +571,13 @@ function healOnKill(draft: Draft, unitId: string) {
 
 // Restores up to `amount` of a unit's HP or MP for a modifier, with a
 // `recovered` event when that restored anything.
-function recover(draft: Draft, unitId: string, stat: 'health' | 'mana', amount: number, trigger: 'kill' | 'phase') {
+function recover(
+  draft: Draft,
+  unitId: string,
+  stat: 'health' | 'mana',
+  amount: number,
+  trigger: 'kill' | 'phase' | 'drain',
+) {
   if (amount <= 0) return;
   const unit = draft.unit(unitId);
   const restored = Math.min(amount, stat === 'health' ? unit.maxHealth - unit.health : unit.maxMana - unit.mana);
@@ -589,7 +603,7 @@ function grantExperience(draft: Draft, unitId: string, { amount, scaled }: Exper
   if (amount <= 0) return;
   const unit = draft.edit(unitId);
   const from = { level: unit.level, experience: unit.experience };
-  const result = unit.gainExperience(amount, draft.rng, scaled);
+  const result = unit.gainExperience(amount, scaled);
   draft.events.push({ type: 'experience', unitId, from, result });
 }
 
@@ -662,6 +676,21 @@ function useSkill(draft: Draft, unitId: string, skillId: string, target: Point) 
   const [aimed] = blows;
   const shoved = skill.push && aimed?.defender.isAlive() ? push(draft, unitId, from, aimed.victim) : null;
   if (shoved) aimed.damage += shoved.damage;
+
+  if (skill.drain) {
+    const dealt = blows
+      .filter(({ defender }) => !areAllied(defender.team, draft.unit(unitId).team))
+      .reduce((sum, { damage }) => sum + damage, 0);
+    recover(draft, unitId, 'health', Math.ceil(dealt * skill.drain), 'drain');
+  }
+  if (skill.recoil) {
+    const self = draft.edit(unitId);
+    const damage = Math.min(skill.recoil, self.health - 1);
+    if (damage > 0) {
+      self.takeDamage(damage);
+      draft.events.push({ type: 'recoil', unitId, damage, health: self.health });
+    }
+  }
 
   let award: ExperienceAward | null = null;
   for (const { victim, defender, damage } of blows) {

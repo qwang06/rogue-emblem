@@ -360,7 +360,7 @@ describe('Unit', () => {
     it('starts at 0 XP and stores what it gains', () => {
       const unit = makeGrower({});
       expect(unit.experience).toBe(0);
-      unit.gainExperience(30, () => 0);
+      unit.gainExperience(30);
       expect(unit.experience).toBe(30);
       expect(unit.level).toBe(1);
     });
@@ -368,7 +368,7 @@ describe('Unit', () => {
     it('levels up with its growths and carries the overflow', () => {
       const unit = makeGrower({ health: 100, strength: 100 });
       unit.experience = 30;
-      const result = unit.gainExperience(45, () => 0.5);
+      const result = unit.gainExperience(45);
       expect(unit.level).toBe(2);
       expect(unit.experience).toBe(25);
       expect(unit.maxHealth).toBe(11);
@@ -379,7 +379,7 @@ describe('Unit', () => {
 
     it('applies several level ups at once', () => {
       const unit = makeGrower({ strength: 100 });
-      unit.gainExperience(200, () => 0);
+      unit.gainExperience(200);
       expect(unit.level).toBe(3);
       expect(unit.strength).toBe(6);
       expect(unit.experience).toBe(50);

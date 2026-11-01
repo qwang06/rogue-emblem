@@ -18,17 +18,19 @@ export const ARCHER_STATS = Object.freeze({
   movement: 5,
 });
 
-// Percent chance per level up that each stat rises (see experience.ts).
+// How fast each stat grows, on a fixed schedule with no dice: 100 is a
+// point every level, 50 every second level, 25 every fourth (see
+// getLevelUpGains in experience.ts).
 export const ARCHER_GROWTHS = Object.freeze({
-  health: 60,
-  mana: 40,
-  strength: 40,
-  intelligence: 5,
-  skill: 55,
-  speed: 45,
-  luck: 35,
-  defense: 20,
-  resistance: 20,
+  health: 50,
+  mana: 25,
+  strength: 50,
+  intelligence: 0,
+  skill: 100,
+  speed: 50,
+  luck: 25,
+  defense: 25,
+  resistance: 25,
 });
 
 // The weapon types an archer can wield.

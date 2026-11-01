@@ -43,7 +43,10 @@ import { getModifierSkills, type Modifier } from './modifiers.ts';
 // fraction of the first blow's damage. A `status` skill leaves that status
 // (statuses.ts) on every foe it lands on that's still standing. A skill
 // whose `effect` is 'buff' strikes no one: it gives its `status` to an
-// ally instead (or to every ally its area reaches).
+// ally instead (or to every ally its area reaches). A `drain` skill heals
+// the user that share of the damage it dealt foes, rounded up; a `recoil`
+// one costs the user that much HP (never its last); `monsterMight` is
+// power added on top of `might` against a monster.
 
 export interface Skill {
   id: string;
@@ -61,6 +64,9 @@ export interface Skill {
   friendlyFire?: boolean;
   followUp?: number;
   status?: StatusId;
+  drain?: number;
+  recoil?: number;
+  monsterMight?: number;
 }
 
 export type SkillArea = 'sides' | 'line' | 'burst';
@@ -334,7 +340,17 @@ export const CRUSHING_BLOW = promotionSkill('crushing-blow', 'Crushing Blow', { 
 export const BLAST = promotionSkill('blast', 'Blast', { range: 2, might: 3, animation: 'stone' });
 export const BULWARK_BASH = promotionSkill('bulwark-bash', 'Bulwark Bash', { might: 3 });
 export const HOLY_STRIKE = promotionSkill('holy-strike', 'Holy Strike', { might: 3 });
-export const SMITE = promotionSkill('smite', 'Smite', { range: 2, might: 3, animation: 'stone' });
+// Holy light from up to 2 tiles away: the user's regular attack with 3
+// more power, and 3 more again against a monster.
+export const SMITE = promotionSkill('smite', 'Smite', { range: 2, might: 3, monsterMight: 3, animation: 'stone' });
+
+// The beast's jaws: its regular attack on an adjacent foe, healing it for
+// half the damage dealt.
+export const SAVAGE_BITE = promotionSkill('savage-bite', 'Savage Bite', { manaCost: 1, drain: 0.5 });
+
+// An all-out swing: the user's regular attack with 6 more power on an
+// adjacent foe, at the cost of 3 of its own HP (never its last).
+export const RECKLESS_SWING = promotionSkill('reckless-swing', 'Reckless Swing', { might: 6, recoil: 3 });
 export const FLARE = promotionSkill('flare', 'Flare', { range: 2, might: 4, animation: 'stone' });
 
 // The skills an evolution teaches (see warband/evolutions.ts).
@@ -380,6 +396,7 @@ export const SKILL_TREES: SkillTrees = Object.freeze({
   sapper: promotedTree({ level: SKILL_UNLOCK_LEVEL, skill: BLAST }),
   acolyte: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: MEND })]),
   siege: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: BARRAGE })]),
+  beast: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: SAVAGE_BITE })]),
 });
 
 // unitClass -> the skills a level up can offer a unit of the class to
@@ -387,7 +404,7 @@ export const SKILL_TREES: SkillTrees = Object.freeze({
 // class's. Classes without an entry are offered none.
 export const CLASS_SKILL_PICKS: Readonly<Record<string, readonly Skill[]>> = Object.freeze({
   archer: Object.freeze([PIERCING_SHOT, PINNING_SHOT]),
-  vanguard: Object.freeze([SUNDER]),
+  vanguard: Object.freeze([SUNDER, RECKLESS_SWING]),
   soldier: Object.freeze([LUNGE, PHALANX]),
   sapper: Object.freeze([SHRAPNEL]),
   acolyte: Object.freeze([SMITE, PRAYER, WARD]),
@@ -483,7 +500,7 @@ export function calculateSkillDamage(skill: Skill, user: SkillFighter, defender:
     weapon: user.weapon,
     bonus: getFighterBonus(user, defender, true),
   };
-  boosted[power] = (user[power] ?? 0) + (skill.might ?? 0);
+  boosted[power] = (user[power] ?? 0) + (skill.might ?? 0) + (defender.monster ? (skill.monsterMight ?? 0) : 0);
   const guarded: DamageStats = {
     defense: defender.defense,
     armorDefense: defender.armorDefense,
@@ -641,7 +658,10 @@ export function describeSkill(skill: Skill): string {
     ? `, then a second hit for ${skill.followUp === 0.5 ? 'half' : `${skill.followUp}×`} that`
     : '';
   const after = status ? `, leaving it ${leaves}` : '';
-  return `${hit}${might} on a foe ${reach}${area}${allies}${push}${followUp}${after}.`;
+  const monsters = skill.monsterMight ? ` (+${skill.monsterMight} more against monsters)` : '';
+  const drain = skill.drain ? `, healing it for ${skill.drain === 0.5 ? 'half' : `${skill.drain}×`} the damage` : '';
+  const recoil = skill.recoil ? `, costing it ${skill.recoil} HP` : '';
+  return `${hit}${might}${monsters} on a foe ${reach}${area}${allies}${push}${followUp}${after}${drain}${recoil}.`;
 }
 
 export function canUseSkill(unit: { mana: number }, skill: Skill): boolean {
