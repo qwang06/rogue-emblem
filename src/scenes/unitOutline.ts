@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { listenUntilStopped } from './sceneListeners.ts';
 import { getOutlineMask } from '../game/pixelShapes.ts';
 import { UNIT_OUTLINE } from '../game/tileset.ts';
 
@@ -60,9 +61,9 @@ export function addUnitOutline(
       .setVisible(sprite.visible);
   };
   follow();
-  scene.events.on(Phaser.Scenes.Events.POST_UPDATE, follow);
+  const stop = listenUntilStopped(scene.events, { [Phaser.Scenes.Events.POST_UPDATE]: follow });
   sprite.once(Phaser.GameObjects.Events.DESTROY, () => {
-    scene.events.off(Phaser.Scenes.Events.POST_UPDATE, follow);
+    stop();
     outline.destroy();
   });
   return outline;

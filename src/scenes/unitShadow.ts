@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { listenUntilStopped } from './sceneListeners.ts';
 import { getEllipseSpans } from '../game/pixelShapes.ts';
 import { TREE_SHADOW, UNIT_SHADOW, type Shadow } from '../game/tileset.ts';
 
@@ -38,9 +39,9 @@ export function addUnitShadow(scene: Phaser.Scene, sprite: Phaser.GameObjects.Sp
   const shadow = addShadow(scene, sprite.x, sprite.y, UNIT_SHADOW, UNIT_SHADOW_DEPTH);
   const follow = () => shadow.setPosition(sprite.x + centerX - width / 2, sprite.y + centerY - height / 2);
 
-  scene.events.on(Phaser.Scenes.Events.POST_UPDATE, follow);
+  const stop = listenUntilStopped(scene.events, { [Phaser.Scenes.Events.POST_UPDATE]: follow });
   sprite.once(Phaser.GameObjects.Events.DESTROY, () => {
-    scene.events.off(Phaser.Scenes.Events.POST_UPDATE, follow);
+    stop();
     shadow.destroy();
   });
   return shadow;
