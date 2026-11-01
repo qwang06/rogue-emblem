@@ -26,4 +26,13 @@ describe('getFitZoom', () => {
   it('never goes below 1 for maps too big to fit', () => {
     expect(getFitZoom({ width: 100, height: 100 }, 16, CANVAS, 8)).toBe(1);
   });
+
+  it('steps in fractions when given a step', () => {
+    // An 8x8 map of 32px tiles is 256px: 768px tall fits 3x, capped at 2.5.
+    expect(getFitZoom({ width: 8, height: 8 }, 32, { width: 1200, height: 768 }, 2.5, 0.5)).toBe(2.5);
+    // 700px fits 2.73x, which rounds down to 2.5.
+    expect(getFitZoom({ width: 8, height: 8 }, 32, { width: 1200, height: 700 }, 3, 0.5)).toBe(2.5);
+    // 600px fits 2.34x, which rounds down to 2.
+    expect(getFitZoom({ width: 8, height: 8 }, 32, { width: 1200, height: 600 }, 3, 0.5)).toBe(2);
+  });
 });

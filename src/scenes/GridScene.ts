@@ -281,8 +281,10 @@ import type { SkillAction } from '../game/skills.ts';
 import type { RosterMenuEntry } from '../bridge/gameStore.ts';
 
 // The canvas is sized by the page (see main.ts); maps are zoomed to fit it,
-// up to MAX_ZOOM, and centered.
-const MAX_ZOOM = 3;
+// in half steps up to MAX_ZOOM, and centered. 2.5x (80px tiles) keeps units
+// readable without filling the screen the way 3x did.
+const MAX_ZOOM = 2.5;
+const ZOOM_STEP = 0.5;
 const MOVE_RANGE_COLOR = 0x3b82f6;
 const MOVE_RANGE_ALPHA = 0.45;
 const ATTACK_RANGE_COLOR = 0xef4444;
@@ -886,7 +888,7 @@ export class GridScene extends Phaser.Scene {
   // on create and whenever the page resizes the canvas.
   fitCamera() {
     const camera = this.cameras.main;
-    camera.setZoom(getFitZoom(this.grid, TILE_SIZE, this.scale.gameSize, MAX_ZOOM));
+    camera.setZoom(getFitZoom(this.grid, TILE_SIZE, this.scale.gameSize, MAX_ZOOM, ZOOM_STEP));
     camera.centerOn((this.grid.width * TILE_SIZE) / 2, (this.grid.height * TILE_SIZE) / 2);
     // The camera's visible area only updates when it next renders, so move
     // an open unit menu to the refitted map then.
