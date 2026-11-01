@@ -172,7 +172,8 @@ export const PAINTED_OBSTACLES: Readonly<Record<ObstacleKind, readonly string[]>
 // A field's own art for some obstacles, in place of PAINTED_OBSTACLES'
 // (which stand on little grass patches): the forest's rocks and plants sit
 // on moss and fallen leaves, and its stump is an old one with its roots
-// showing.
+// showing; the desert's sandstone, scrub and cacti on sand, and its stump
+// a dead twisted tree.
 export const FIELD_OBSTACLES: Readonly<
   Partial<Record<BattlefieldKind, Readonly<Partial<Record<ObstacleKind, readonly string[]>>>>>
 > = Object.freeze({
@@ -184,6 +185,15 @@ export const FIELD_OBSTACLES: Readonly<
     thicket: ['Obstacle_forest_thicket_1', 'Obstacle_forest_thicket_2'],
     stump: ['Obstacle_forest_stump'],
     log: ['Obstacle_forest_log'],
+  },
+  desert: {
+    rock: ['Obstacle_desert_rock_1', 'Obstacle_desert_rock_2'],
+    boulder: ['Obstacle_desert_boulder'],
+    crag: ['Obstacle_desert_crag'],
+    bush: ['Obstacle_desert_bush'],
+    thicket: ['Obstacle_desert_thicket'],
+    cactus: ['Obstacle_desert_cactus_1', 'Obstacle_desert_cactus_2'],
+    stump: ['Obstacle_desert_stump'],
   },
 });
 

@@ -106,14 +106,15 @@ export const BATTLEFIELD_LAYOUTS: Readonly<Record<BattlefieldKind, BattlefieldLa
     grove: ['pine', 'pine', 'thicket', 'bush', 'boulder'],
     scatter: ['pine', 'thicket', 'bush', 'bush', 'stump', 'rock', 'log'],
   },
-  // A broken-down caravan among the rocks.
+  // Badlands: a sandstone crag or boulder pile with scrub and cacti about
+  // it, clumps of rock and thornbrush, cacti and dead trees.
   desert: {
     fences: 0,
-    cache: ['cart', 'barrels'],
-    cacheSides: ['crates', 'barrels', 'sack', 'wheel'],
+    cache: ['crag', 'boulder'],
+    cacheSides: ['rock', 'bush', 'cactus'],
     groves: 2,
-    grove: ['rock', 'boulder', 'crag', 'cactus'],
-    scatter: ['rock', 'boulder', 'crag', 'cactus', 'cactus'],
+    grove: ['rock', 'boulder', 'crag', 'cactus', 'thicket'],
+    scatter: ['rock', 'boulder', 'crag', 'cactus', 'cactus', 'bush', 'stump'],
   },
 });
 

@@ -90,12 +90,14 @@ describe('getFieldObstacleArt', () => {
   });
 
   it('gives a field without art of its own the shared art', () => {
-    expect(getFieldObstacleArt('desert')).toEqual(PAINTED_OBSTACLES);
+    expect(getFieldObstacleArt('plains')).toEqual(PAINTED_OBSTACLES);
   });
 
-  it('has the forest’s own art for everything its layout puts down', () => {
-    for (const obstacle of BATTLEFIELD_OBSTACLES.forest) {
-      expect(FIELD_OBSTACLES.forest?.[obstacle], obstacle).toBeDefined();
+  it('has the forest’s and desert’s own art for everything their layouts put down', () => {
+    for (const field of ['forest', 'desert'] as const) {
+      for (const obstacle of BATTLEFIELD_OBSTACLES[field]) {
+        expect(FIELD_OBSTACLES[field]?.[obstacle], `${field} ${obstacle}`).toBeDefined();
+      }
     }
   });
 });
