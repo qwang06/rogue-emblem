@@ -1159,23 +1159,14 @@ kbd {
 
 /* ---- Item and stat icons ---------------------------------------------- */
 
-/* Item icons are one 32x32 tile at full size; windows that need a smaller
-   one set its width and height. An item with no icon keeps the spot. */
+/* Item icons are painted art (128px PNGs) shown at one 32px tile at full
+   size; windows that need a smaller one set its width and height. The
+   browser smooths them down. An item with no icon keeps the spot. */
 .item-icon {
   flex: none;
   display: inline-block;
   width: 32px;
   height: 32px;
-  image-rendering: pixelated;
-}
-
-/* Item art is painted at 32px, so shrinking it pixelated drops whole rows
-   and columns; the smaller spots smooth it instead. */
-.unit-info__item .item-icon,
-.unit-panel__item .item-icon,
-.combat-forecast__weapon .item-icon,
-.item-menu__item .item-icon {
-  image-rendering: auto;
 }
 
 /* PixelIcon's bitmaps (StatIcon, GlyphIcon) at two screen pixels per art
@@ -3864,6 +3855,11 @@ textarea.draft-input {
   image-rendering: pixelated;
 }
 
+/* Item icons are painted art, smoothed rather than pixelated. */
+.reward-card__icon--painted {
+  image-rendering: auto;
+}
+
 .reward-card__label {
   margin: 0;
   font-size: 1rem;
@@ -4282,7 +4278,6 @@ textarea.draft-input {
   flex: none;
   width: 32px;
   height: 32px;
-  image-rendering: pixelated;
 }
 
 .roster-screen__label {
