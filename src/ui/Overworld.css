@@ -270,7 +270,7 @@
 /* The hand, pointing down at the highlighted site and bobbing. */
 .overworld__pointer {
   --pointer-w: calc(20 * var(--px));
-  --pointer-h: calc(14 * var(--px));
+  --pointer-h: calc(10 * var(--px));
   position: absolute;
   left: 0;
   top: calc(var(--tile) * -1.55);
@@ -289,7 +289,6 @@
   width: var(--pointer-w);
   height: var(--pointer-h);
   background: var(--pointer) center / 100% 100% no-repeat;
-  image-rendering: pixelated;
   transform: translate(-50%, -50%) rotate(90deg);
   filter: drop-shadow(0 var(--px) 0 rgb(0 0 0 / 50%));
 }
@@ -603,7 +602,6 @@
   height: var(--pointer-h);
   translate: 0 -50%;
   background: var(--pointer) center / 100% 100% no-repeat;
-  image-rendering: pixelated;
 }
 
 .overworld-event__choice:disabled {

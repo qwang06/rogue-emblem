@@ -61,10 +61,10 @@ One 128x128 PNG per level-up boon (`BOONS` in `src/game/warband/boons.ts`), name
 
 ## UI art: src/assets/ui/
 
-Drawn pixel by pixel by `scripts/draw-ui-art.js` (run it from the repo root after changing a color or shape there; it rewrites every file), at 1x and shown at `--px` (2 CSS px) per art pixel with `image-rendering: pixelated`:
+Painted anime-style art cut from the 3x3 sheet generated from section M of `art/anime/prompts.md` in the project files (on the art machine under `pixellab/frames/`) by `art/item-icons/cut_frames.py` in the project files (`python3 cut_frames.py <sheet> src/assets/ui`), keyed off its magenta like the item icons and shown smoothed (not pixelated). The old pixel versions (and the `draw-ui-art.js` that drew them) are in git history.
 
-- `frame-parchment.png`, `frame-banner.png`, `frame-banner-red.png`, `frame-banner-green.png`: 24x24 9-slices for CSS `border-image` (`8 fill`). Each edge is 8 bands, outside in: dark outline, brown (gold on the banners), light brown, brown, outline, a light bevel, then two rows of the fill, which act as built-in padding. Every corner has a 6x6 beveled gold plate (light top-left, dark bottom-right, mirrored per corner) and a 2px gold spur running from it along the edge's third band. Parchment fill is `#f0d9a8`, banner blue `#2a4fa8`, banner red `#a82a2a`, banner green `#2a8034` (the red banner with its three reds swapped for greens: outline-side dark `#0e3214`, fill, bevel `#62ba5a`).
-- `hand-pointer.png`: 10x7, a white gauntlet pointing right (index finger along rows 1–3, folded knuckles under it, a blue-grey cuff on the left), outlined `#2a170a`. The fingertip is at x 9, y 2.
+- `frame-parchment.png`, `frame-banner.png`, `frame-banner-red.png`, `frame-banner-green.png`: about 248x243 9-slices for CSS `border-image` (`32 fill`, drawn at `8 * var(--px)`, so 16 CSS px: twice the screen density). Parchment has a wooden frame with brass corner caps; the banners have blue, red or green cloth borders with silver caps. The cutter scales each frame so 48 sheet pixels (the caps and the band) make the 32px slice, and replaces the painted cream inside with one flat fill: the game's parchment `#f0d9a8`, or the banner's team color (`#2a4fa8`, `#a82a2a`, `#2a8034`) that the banners' light text sits on.
+- `hand-pointer.png`: 88x44, a steel gauntlet with a brown leather cuff pointing right, shown at `--pointer-w` x `--pointer-h` (12x6 art pixels, 24x12 CSS px in game; the title menu and the overworld set their own sizes at the same 2:1 shape).
 
 ## Gate: gates.png
 
