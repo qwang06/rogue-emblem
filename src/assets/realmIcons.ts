@@ -1,5 +1,5 @@
 // The Warband overworld's art (see the tileset skill): an illustrated icon
-// per kind of site, in src/assets/realm/sites/ (64x64, named by SiteKind),
+// per kind of site, in src/assets/realm/sites/ (128x128, named by SiteKind),
 // and the parchment map's ink symbols, in src/assets/realm/ink/ (32x32,
 // named by InkStamp). Only the overworld screen shows these, so they stay
 // out of SPRITE_URLS, which GridScene preloads.
