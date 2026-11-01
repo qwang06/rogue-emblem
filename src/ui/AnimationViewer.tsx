@@ -43,6 +43,7 @@ export function AnimationViewer({ art }: { art: string | null }) {
       title="Animations"
       lede="Every unit animation, as the map plays it. The marked tile is the one the unit stands on."
       back={{ href: routeHash({ page: 'game' }), label: 'Back to title' }}
+      underHeader
     >
       <div className="anim-viewer">
         <label className="anim-viewer__field">

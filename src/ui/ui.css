@@ -2863,6 +2863,12 @@ kbd {
   font-family: var(--sans);
 }
 
+/* A page that leaves the page header showing above it (the animation
+   viewer), like the overworld does. */
+.configs-page--under-header {
+  inset: var(--below-header) 0 0;
+}
+
 .configs-page__header {
   display: flex;
   flex-wrap: wrap;
