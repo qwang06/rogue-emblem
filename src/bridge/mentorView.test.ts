@@ -60,7 +60,7 @@ describe('toMentorScreenView', () => {
     const state = pointMentorCursor(openMentorScreen(campRun()), 'lessons', ACOLYTE_LESSON);
     const detail = {
       label: 'Acolyte set',
-      description: 'Mend (3 MP, from Lv 2): Heals an ally next to it for 2 + MAG.',
+      description: 'Mend (3 MP, from Lv 2): Heals an ally next to it for 2 + INT.',
     };
     expect(toMentorScreenView(state).detail).toEqual(detail);
     const back = pointMentorCursor(confirmMentor(state), 'units', 0);

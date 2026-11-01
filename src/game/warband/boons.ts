@@ -40,7 +40,7 @@ export const HEALTH_BOON_AMOUNT = 4;
 const STAT_LABELS: Readonly<Partial<Record<GrowthStat, string>>> = Object.freeze({
   health: 'HP',
   strength: 'STR',
-  magic: 'MAG',
+  magic: 'INT',
   skill: 'SKL',
   speed: 'SPD',
   luck: 'LCK',
@@ -139,7 +139,7 @@ export function getStatBoonGain(unit: Unit, boon: Boon): number {
 }
 
 // Whether `unit` could take `boon`: a stat boon that would raise something
-// (STR only for a unit with physical weapons, MAG only for one with
+// (STR only for a unit with physical weapons, INT only for one with
 // magical ones), a skill it doesn't know, or a passive it hasn't taken.
 export function isBoonEligible(unit: Unit, boon: Boon): boolean {
   switch (boon.kind) {

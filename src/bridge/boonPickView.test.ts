@@ -32,7 +32,7 @@ describe('toBoonPickView', () => {
       ['HP', unit.maxHealth, 1],
       ['MP', unit.maxMana, 0],
       ['STR', unit.strength, 1],
-      ['MAG', unit.magic, 0],
+      ['INT', unit.magic, 0],
       ['SKL', unit.skill, 0],
       ['SPD', unit.speed, 0],
       ['LCK', unit.luck, 0],

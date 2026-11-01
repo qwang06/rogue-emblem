@@ -100,7 +100,7 @@ describe('describeItem', () => {
     });
     expect(describeItem(FISTS).numbers?.uses).toBeNull();
     expect(describeItem(HEAL_STAFF)).toMatchObject({
-      description: 'Staff · 2H · Heals 2 + MAG',
+      description: 'Staff · 2H · Heals 2 + INT',
       numbers: { range: formatWeaponRange(HEAL_STAFF), uses: HEAL_STAFF.uses },
     });
     expect(describeItem(WOODEN_SHIELD).numbers).toBeUndefined();

@@ -404,7 +404,7 @@ export function toUnitView(unit: Unit | null | undefined): UnitView | null {
 // The stats on the unit info screen, in display order (HP and MP show as bars).
 const DETAIL_STATS: readonly (readonly [Exclude<GrowthStat, 'health' | 'mana'>, string])[] = Object.freeze([
   ['strength', 'STR'],
-  ['magic', 'MAG'],
+  ['magic', 'INT'],
   ['skill', 'SKL'],
   ['speed', 'SPD'],
   ['luck', 'LCK'],
@@ -675,7 +675,7 @@ const LEVEL_UP_STATS: readonly (readonly [GrowthStat, string])[] = Object.freeze
   ['health', 'HP'],
   ['mana', 'MP'],
   ['strength', 'STR'],
-  ['magic', 'MAG'],
+  ['magic', 'INT'],
   ['skill', 'SKL'],
   ['speed', 'SPD'],
   ['luck', 'LCK'],
@@ -798,7 +798,7 @@ export function toRewardAction(reward: Reward, index: number, run: RunState | nu
           [
             ['HP', unit.maxHealth],
             ['STR', unit.strength],
-            ['MAG', unit.magic],
+            ['INT', unit.magic],
             ['SKL', unit.skill],
             ['SPD', unit.speed],
             ['DEF', unit.defense],

@@ -44,7 +44,7 @@ describe('isBoonEligible', () => {
     expect(isBoonEligible(unit, boon('stat-speed'))).toBe(false);
   });
 
-  it('offers STR to physical fighters and MAG to casters', () => {
+  it('offers STR to physical fighters and INT to casters', () => {
     expect(isBoonEligible(soldier(), boon('stat-strength'))).toBe(true);
     expect(isBoonEligible(soldier(), boon('stat-magic'))).toBe(false);
     const acolyte = new Acolyte({ team: 'player' });
