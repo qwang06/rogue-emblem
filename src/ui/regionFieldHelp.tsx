@@ -92,6 +92,16 @@ const HELP: Record<string, FieldHelp> = {
     title: 'Palette',
     body: <p>The color scheme every building and wall on the map is drawn in.</p>,
   },
+  season: {
+    title: 'Season',
+    body: (
+      <p>
+        The art the map is drawn in: summer&apos;s green grass (the default when unset), autumn&apos;s golden grass and
+        rust-red woods, or winter&apos;s snow, buildings included. Autumn scatters gold ginkgos instead of green ones;
+        winter has no scattered trees.
+      </p>
+    ),
+  },
   treeChance: {
     title: 'Tree chance',
     body: (

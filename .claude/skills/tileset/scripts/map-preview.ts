@@ -7,7 +7,7 @@
 // the middle deployment tile (the zone tinted blue) and skeletons on the
 // enemies' tiles (from the archetype's enemy zones).
 // Needs Node 22.6+ (runs TypeScript by stripping types). Usage (from the repo root):
-//   node .claude/skills/tileset/scripts/map-preview.ts [--scale 2] [--palette a-stone] [--size 16x14] \
+//   node .claude/skills/tileset/scripts/map-preview.ts [--scale 2] [--palette a-stone] [--season summer] [--size 16x14] \
 //     [--archetype islands] [--terrain '{"lakes":1}'] [--units 4] out.png seed [seed...]
 // Several seeds render side by side, a tile apart. --terrain adds generator
 // options (as a region's "terrain" would); --archetype sets the layout and
@@ -54,15 +54,17 @@ const [mapWidth, mapHeight] = option('--size', '16x14').split('x').map(Number);
 const archetype = option('--archetype', '') as MapArchetype | '';
 const extra = JSON.parse(option('--terrain', '{}'));
 const unitCount = Number(option('--units', '0'));
+// --season autumn|winter draws the map from that season's sheet.
+const season = option('--season', 'summer');
 const [output, ...seeds] = args;
 const palette = BUILDING_PALETTES[paletteName];
 if (!palette) throw new Error(`Unknown palette ${paletteName}`);
 
-const sheet = decode('src/assets/overworld.png');
+const sheet = decode(season === 'summer' ? 'src/assets/overworld.png' : `src/assets/overworld-${season}.png`);
 const props = decode('src/assets/map-props.png');
 const units = {
-  player: decode('src/assets/units/Warrior_02_Idle.png'),
-  enemy: decode('src/assets/units/Skeleton_01_Idle.png'),
+  player: decode('src/assets/units/Soldier_01_Idle.png'),
+  enemy: decode('src/assets/units/Soldier_05_Idle.png'),
 };
 const columns = TERRAIN_SHEET.columns;
 const width = seeds.length * (mapWidth + 1) * TILE - TILE;

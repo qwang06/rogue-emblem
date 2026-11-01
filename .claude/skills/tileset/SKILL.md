@@ -73,6 +73,15 @@ The sheet comes from a pack drawn at 3x (every art pixel is a 3x3 block, so it's
 
 Terrain is **blob-autotiled on the map's own cells** (not a dual grid). Grass (`TERRAIN_BASE_TILE`) fills every cell; each terrain in `TERRAIN_AUTOTILES` is drawn over it, with its border inside its own edge cells. Every set uses the same 7-column layout (strip, notched 3x3, plain 3x3), which the catalog diagrams. Water, sand beach and deep water come in **6 animation frames** laid 7 columns apart. The **dirt** path (`TERRAIN_AUTOTILES.dirt`) is the peach sand-patch set, which only has a _notched_ 3x3 (`block: [1, 3]`, `inner: [2, 4]`): its outer corners and edges are clean, but every quarter that would be `'full'` has a ~8x6px notch in its inner corner, so dirt two or more tiles wide shows grass holes in its middle. One-tile-wide paths (only `'outer'` and `'vertical'`/`'horizontal'` quarters) are clean. A wider path needs a full sand tile added to the sheet (e.g. in the empty row 7) and a `full` option in `autotile.ts`.
 
+## Seasonal terrain sheets: overworld-autumn.png, overworld-winter.png
+
+Two more copies of the overworld sheet, 1344x2016 with **exactly the same layout** as `overworld.png`, so every `[column, row]` and frame number works on all three. `SEASON_TERRAIN_SHEETS` in `tileset.ts` names their texture keys (`overworld-autumn`, `overworld-winter`), `TERRAIN_SHEET_URLS` in `sprites.ts` their files; a level's `season` (from its region) picks the one GridScene draws terrain, forests, mountains and buildings from. The cursor and movement arrow always come from the summer sheet. `map-props.png` (bridges, gates, fords, spikes) has no seasonal copy.
+
+- **Winter** (`overworld-winter.png`): the pack's snow tilesheet (`Tactical RPG Overworld Pack - Snow Tilesheet.png`, 3072x3072 at 3x, same used area as the green one), rescaled with the same `rescale-png.js --from 3 --to 2 --crop 672x1008` command. Snow grass, icy lavender water, grey-blue pines and round trees, a pink dirt path, and snow-roofed buildings in every palette.
+- **Autumn** (`overworld-autumn.png`): rows 0–32 (grass, trees, mountains, sand, puddle, dark grass, all the water sets) are an autumn redraw: golden grass (`#de9f4e` / `#e9ab51`), a golden sand path, rust-red woods and dark grass, deeper blue water. Rows 33–62 (buildings, walls, UI) are the summer sheet's, with its building/wall grass lip `#84b14d` turned rust `#be7940`. The upload was a blurry, resampled image (1415x1111, ~2.11x the native art, white background, cropped by ~2px on the right and bottom), so `rebuild-autumn.py` (project files `art/seasons/raw/`, with both raw uploads) rebuilt it: it samples the upload at each native pixel (scale 2.111 x 2.115, offset 0, 1), takes the summer sheet's alpha, quantizes to 48 colors, makes static water pixels the same in every animation frame, fills the cropped edge from matching pixels, and snaps the base grass tile to its two colors so it tiles without seams. Expect a little dithery noise in the water and dark grass.
+
+`map-preview.ts --season autumn|winter` renders maps from these sheets.
+
 ## Inspecting art
 
 Images this small are unreadable when viewed directly — dump them as ASCII:
@@ -101,7 +110,7 @@ node .claude/skills/tileset/scripts/autotile-preview.ts --block 1,33 --inner 2,3
 To judge the procedural map generator's output, `map-preview.ts` renders `generateMap` maps for some seeds side by side, drawn the way GridScene draws them (terrain, walls, crossings, forests, mountains and buildings in one palette; no ginkgos). `--archetype <type>` picks a map type (`mapArchetypes.ts`), `--terrain '<json>'` sets other terrain options, and `--units N` stands N warriors on the deployment zone (tinted) and N skeletons on enemy spots:
 
 ```sh
-node .claude/skills/tileset/scripts/map-preview.ts --scale 1 --palette a-stone <scratchpad>/maps.png 1 2 3
+node .claude/skills/tileset/scripts/map-preview.ts --scale 1 --palette a-stone [--season winter] <scratchpad>/maps.png 1 2 3
 ```
 
 `realm-preview.ts` does the same for the Warband overworld (`generateRealm` in `src/game/warband/realm/`): it renders whole realms for some seeds the way the overworld screen paints them (the parchment map from `getRealmInk` and `paintRealmInk`, with each site's icon stood on its tile), one under the other, and prints each realm's sites (id, kind, biome, region) and the names lettered on it:

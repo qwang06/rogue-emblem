@@ -10,7 +10,7 @@ import { setUnit, type Point } from './grid.ts';
 import { Soldier } from './Soldier.ts';
 import { Villager } from './Villager.ts';
 import { parseTerrainMap } from './terrainMap.ts';
-import type { BuildingPaletteName } from './tileset.ts';
+import type { BuildingPaletteName, Season } from './tileset.ts';
 import type { Level } from './trainingLevel.ts';
 
 export interface TreePlacement extends Point {
@@ -29,6 +29,9 @@ export interface DemoLevel extends Level {
   // They default to none and DEFAULT_BUILDING_PALETTE (tileset.ts).
   buildings?: BuildingPlacement[];
   palette?: BuildingPaletteName;
+  // The season the map is drawn in (SEASON_TERRAIN_SHEETS); DEFAULT_SEASON
+  // when unset.
+  season?: Season;
   // The tile a seize objective should mark, when the map was planned
   // around one (see mapArchetypes.ts).
   seizeTile?: Point;

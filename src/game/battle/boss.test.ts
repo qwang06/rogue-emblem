@@ -51,7 +51,7 @@ const ofType = <T extends BattleEvent['type']>(events: readonly BattleEvent[], t
 
 describe("the Warlord's Hold", () => {
   it("fights the run's final stage by the Warlord's rules", () => {
-    const state = createBattle({ mode: 'warband', seed: 7, stage: 11 }, 7);
+    const state = createBattle({ mode: 'warband', seed: 7, stage: 13 }, 7);
     expect(state.objective).toMatchObject({ kind: 'boss', name: 'Orc Warlord' });
     expect(state.boss).toMatchObject({ rulesId: ORC_WARLORD.id, enraged: false, incoming: null, called: 0 });
     expect(state.boss!.unitId).toBe(state.objective.kind === 'boss' ? state.objective.unitId : null);
@@ -59,8 +59,8 @@ describe("the Warlord's Hold", () => {
 });
 
 describe("the Dragon's Roost", () => {
-  it('fights stage 10 against the Red Dragon, by its rules', () => {
-    const state = createBattle({ mode: 'warband', seed: 7, stage: 10 }, 7);
+  it('fights stage 12 against the Red Dragon, by its rules', () => {
+    const state = createBattle({ mode: 'warband', seed: 7, stage: 12 }, 7);
     expect(state.objective).toMatchObject({ kind: 'boss', name: 'Red Dragon' });
     expect(state.boss).toMatchObject({ rulesId: RED_DRAGON.id, enraged: false, incoming: null, called: 0 });
     const dragon = state.units.get(state.boss!.unitId)!;

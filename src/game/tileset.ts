@@ -38,6 +38,34 @@ export const TERRAIN_SHEET = {
   rows: 63,
 };
 
+// The seasons a map can be drawn in. Each has its own copy of the terrain
+// sheet with the same layout (so every frame number below works on all of
+// them): summer is the green overworld sheet; autumn (overworld-autumn.png)
+// is it with golden grass, rust-red woods and darker water over the top 33
+// rows, buildings left as they are; winter (overworld-winter.png) is the
+// pack's snow sheet, snowy buildings included.
+export const SEASONS = ['summer', 'autumn', 'winter'] as const;
+export type Season = (typeof SEASONS)[number];
+export const DEFAULT_SEASON: Season = 'summer';
+
+// The terrain sheet a map in `season` draws its terrain, crossings,
+// forests, mountains and buildings from. The cursor and the movement arrow
+// always use TERRAIN_SHEET.
+export const SEASON_TERRAIN_SHEETS: Readonly<Record<Season, typeof TERRAIN_SHEET>> = {
+  summer: TERRAIN_SHEET,
+  autumn: { ...TERRAIN_SHEET, key: 'overworld-autumn' },
+  winter: { ...TERRAIN_SHEET, key: 'overworld-winter' },
+};
+
+// The decorative tree (TREE_SPRITES) a generated map in `season` scatters
+// over its grass, or null for none: the ginkgos stand on a patch of green
+// grass, which would show on snow.
+export const SEASON_TREES: Readonly<Record<Season, string | null>> = {
+  summer: 'green_ginkgo',
+  autumn: 'gold_ginkgo',
+  winter: null,
+};
+
 // Plain grass fills every cell under the other terrain, as a [column, row]
 // tile on the terrain sheet.
 export const TERRAIN_BASE_TILE: SheetTile = [0, 0];
