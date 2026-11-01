@@ -58,7 +58,6 @@ export function getBoonSeed(runSeed: number, unitId: string, level: number, roll
 // a stage's battle and those owed after it, until the next battle), and
 // BOON_BANISHES boons can be banished from the run's offers, each banish
 // drawing the offer anew.
-export const FREE_BOON_REROLLS = 1;
 export const BOON_BANISHES = 2;
 
 // How a pick may still be redrawn: whether its stage's free reroll is

@@ -105,16 +105,3 @@ export function getRegionStages(index: number, settings: RegionSpanSettings): { 
   const first = index * per + 1;
   return { first, last: isLast ? null : first + per - 1 };
 }
-
-// The region for stage `stage` (1 is the first): stages 1 to
-// `stagesPerRegion` use regions[0], the next `stagesPerRegion` use
-// regions[1], and so on, sticking on the last region once they run out.
-export function getRegionConfig(stage: number, regions: readonly RegionConfig[], stagesPerRegion = 1): RegionConfig {
-  if (!Number.isInteger(stage) || stage < 1) throw new Error(`Stages start at 1, got ${stage}`);
-  if (!Number.isInteger(stagesPerRegion) || stagesPerRegion < 1) {
-    throw new Error(`Stages per region must be a whole number of at least 1, got ${stagesPerRegion}`);
-  }
-  if (regions.length === 0) throw new Error('No regions to pick from');
-  const index = Math.floor((stage - 1) / stagesPerRegion);
-  return regions[Math.min(index, regions.length - 1)];
-}
