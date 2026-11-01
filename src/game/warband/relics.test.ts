@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canTakeRelic,
+  countRelic,
   findRelic,
+  getOfferableRelics,
+  getRelicDescription,
+  isStackingRelic,
+  MAX_RELIC_COPIES,
+  rollOfferableRelics,
   getRelicModifiers,
   getUnownedRelics,
   hasRelic,
@@ -76,5 +83,63 @@ describe('rollStartingRelics', () => {
         .join(),
     );
     expect(new Set(seeds).size).toBeGreaterThan(1);
+  });
+});
+
+describe('relic stage scaling', () => {
+  it('grows flat damage, guard and healing with the stage, but not rates, MOV or XP', () => {
+    expect(getRelicModifiers(['duelists-gauntlet'], 1)).toEqual(findRelic('duelists-gauntlet')!.modifiers);
+    expect(getRelicModifiers(['duelists-gauntlet', 'bloodpact', 'hawk-lens', 'winged-boots'], 20)).toEqual([
+      { kind: 'combat', term: 'damage', amount: 5, when: 'attacking' },
+      { kind: 'kill-heal', amount: 10 },
+      { kind: 'combat', term: 'hit', amount: 15 },
+      { kind: 'movement', amount: 1 },
+    ]);
+  });
+
+  it('describes a relic with its number at the stage and its copies added up', () => {
+    const crest = findRelic('bulwark-crest')!;
+    expect(getRelicDescription(crest)).toBe(crest.description);
+    expect(getRelicDescription(crest, 20)).toBe('Units take 5 less damage when attacked.');
+    expect(getRelicDescription(crest, 1, 2)).toBe('Units take 4 less damage when attacked.');
+    const whetstone = findRelic('whetstone')!;
+    expect(getRelicDescription(whetstone, 1, 2)).toBe(`${whetstone.description} (×2)`);
+  });
+});
+
+describe('relic copies', () => {
+  it('stacks only relics made of modifiers that add up', () => {
+    expect(isStackingRelic(findRelic('hawk-lens')!)).toBe(true);
+    expect(isStackingRelic(findRelic('scholars-quill')!)).toBe(true);
+    expect(isStackingRelic(findRelic('whetstone')!)).toBe(false);
+    expect(isStackingRelic(findRelic('field-kitchen')!)).toBe(false);
+  });
+
+  it(`offers another copy of a stacking relic until the run holds ${MAX_RELIC_COPIES}`, () => {
+    expect(countRelic(['hawk-lens', 'whetstone', 'hawk-lens'], 'hawk-lens')).toBe(2);
+    expect(canTakeRelic(['hawk-lens'], 'hawk-lens')).toBe(true);
+    expect(canTakeRelic(['hawk-lens', 'hawk-lens'], 'hawk-lens')).toBe(false);
+    expect(canTakeRelic(['whetstone'], 'whetstone')).toBe(false);
+    expect(canTakeRelic([], 'nope')).toBe(false);
+    const ids = getOfferableRelics(['hawk-lens', 'whetstone']).map((relic) => relic.id);
+    expect(ids).toContain('hawk-lens');
+    expect(ids).not.toContain('whetstone');
+  });
+
+  it('counts each copy in the modifiers', () => {
+    expect(getRelicModifiers(['hawk-lens', 'hawk-lens'])).toEqual([
+      ...findRelic('hawk-lens')!.modifiers,
+      ...findRelic('hawk-lens')!.modifiers,
+    ]);
+  });
+
+  it('rolls different offerable relics', () => {
+    const held = ['hawk-lens', 'hawk-lens', 'whetstone'];
+    for (let seed = 0; seed < 20; seed++) {
+      const offers = rollOfferableRelics(createSeededRng(seed), held, 4);
+      expect(offers).toHaveLength(4);
+      expect(new Set(offers).size).toBe(4);
+      for (const relic of offers) expect(['hawk-lens', 'whetstone']).not.toContain(relic.id);
+    }
   });
 });
