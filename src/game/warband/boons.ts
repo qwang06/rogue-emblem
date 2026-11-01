@@ -495,9 +495,9 @@ export function rollBoonRarity(rng: Rng, stage: number, luck = 0): BoonRarity {
 // from whatever is left when a kind runs dry. The passive slot offers the
 // next rank of one the unit has OWNED_PASSIVE_CHANCE of the time. Each
 // stat and passive offer then rolls its rarity and grows with the stage.
-// Up to BOON_CHOICES, all different.
-export function rollBoons(unit: Unit, rng: Rng, stage = 1): Boon[] {
-  const eligible = BOONS.filter((boon) => isBoonEligible(unit, boon));
+// Up to BOON_CHOICES, all different, never one of the `banished` ids.
+export function rollBoons(unit: Unit, rng: Rng, stage = 1, banished: readonly string[] = []): Boon[] {
+  const eligible = BOONS.filter((boon) => !banished.includes(boon.id) && isBoonEligible(unit, boon));
   const pool = (kind: BoonKind) =>
     shuffle(
       rng,

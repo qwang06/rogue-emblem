@@ -30,7 +30,14 @@ import {
   type RewardLevelUp,
   type Reward,
 } from './rewards.ts';
-import { getBoonOffer, pickBoon, queueLevelUpBoons } from './levelUpPicks.ts';
+import {
+  banishBoonPick,
+  getBoonOffer,
+  getBoonRedraws,
+  pickBoon,
+  queueLevelUpBoons,
+  rerollBoonPick,
+} from './levelUpPicks.ts';
 import { getPromotions } from '../promotions.ts';
 import { canPromoteInRun, getPromotionCandidates, promoteInRun } from './promotion.ts';
 import { canLearnSecondary, getLessons, learnSecondary } from './mentors.ts';
@@ -75,6 +82,10 @@ export type RunCommand =
   | { type: 'pick-relic'; index: number }
   // Takes boon `index` of the first level-up pick owed (see getBoonOffer).
   | { type: 'pick-boon'; index: number }
+  // Redraws that pick with its stage's free reroll, or without its boon
+  // `index`, banished from the run (see getBoonRedraws).
+  | { type: 'reroll-boons' }
+  | { type: 'banish-boon'; index: number }
   // Takes recruit `index` of the guest's or the draft's offers (see
   // getRecruitOffers).
   | { type: 'pick-recruit'; index: number }
@@ -296,7 +307,9 @@ export function applyRunCommand(
   if (session.phase === 'reward' && !REWARD_COMMANDS.has(command.type)) fail(`${command.type} isn't a reward pick`);
   if (session.phase === 'recruit' && !RECRUIT_COMMANDS.has(command.type)) fail(`${command.type} isn't a recruit pick`);
   if (session.phase === 'relic' && command.type !== 'pick-relic') fail(`${command.type} isn't a relic pick`);
-  if (session.phase === 'boon' && command.type !== 'pick-boon') fail(`${command.type} isn't a boon pick`);
+  const boonCommand = command.type === 'pick-boon' || command.type === 'reroll-boons' || command.type === 'banish-boon';
+  if (session.phase === 'boon' && !boonCommand) fail(`${command.type} isn't a boon pick`);
+  if (session.phase !== 'boon' && boonCommand && command.type !== 'pick-boon') fail('No boon pick is owed');
   if (session.phase !== 'relic' && command.type === 'pick-relic') fail('The starting relic is already picked');
   if (session.phase !== 'boon' && command.type === 'pick-boon') fail('No boon pick is owed');
   if (session.phase === 'travel' && command.type !== 'travel') fail(`${command.type} isn't done while travelling`);
@@ -329,6 +342,15 @@ export function applyRunCommand(
       const offer = getBoonOffer(run);
       if (!offer?.boons[command.index]) return fail(`No boon offer ${command.index}`);
       return onward(pickBoon(run, command.index));
+    }
+    case 'reroll-boons': {
+      if (!getBoonRedraws(run).reroll) return fail('The free reroll is spent');
+      return onward(rerollBoonPick(run));
+    }
+    case 'banish-boon': {
+      if (!getBoonOffer(run)?.boons[command.index]) return fail(`No boon offer ${command.index}`);
+      if (getBoonRedraws(run).banishes <= 0) return fail('No banish is left');
+      return onward(banishBoonPick(run, command.index));
     }
     case 'pick-recruit': {
       const offer = getRecruitOffers(session)[command.index];

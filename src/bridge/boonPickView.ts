@@ -48,6 +48,8 @@ export interface BoonPickView {
   // Labels of the skills this level up taught the unit.
   skills: readonly string[];
   boons: readonly BoonChoiceView[];
+  // Whether the screen is choosing a boon to banish (see toBoonActions).
+  banishing: boolean;
 }
 
 // The stats the screen lists, in the GBA's order; health is max HP and mana
@@ -66,7 +68,11 @@ const STATS: readonly (readonly [GrowthStat, string])[] = [
 
 // `offer` as the level-up screen shows it, with evolutions judged against
 // the warband's `relics` (see warband/evolutions.ts).
-export function toBoonPickView(offer: BoonOffer, relics: readonly string[] = []): BoonPickView {
+export function toBoonPickView(
+  offer: BoonOffer,
+  relics: readonly string[] = [],
+  redraws?: { banishing: boolean },
+): BoonPickView {
   const { unit: snapshot, level } = offer;
   const unit = restoreUnit(snapshot);
   const learned = [
@@ -109,5 +115,6 @@ export function toBoonPickView(offer: BoonOffer, relics: readonly string[] = [])
         });
       }),
     ),
+    banishing: redraws?.banishing ?? false,
   });
 }

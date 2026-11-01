@@ -84,6 +84,9 @@ export interface PendingBoon {
   // run's current stage when absent).
   stage?: number;
   gains?: Partial<Record<GrowthStat, number>>;
+  // How many times its offer has been rerolled (0 when absent), which it
+  // rolls from.
+  roll?: number;
 }
 
 // A wayside event still owed a choice (see events.ts).
@@ -141,6 +144,12 @@ export interface RunState {
   origin?: string;
   // The Heat level it's played at (see heat.ts); absent at no Heat.
   heat?: number;
+  // Boons banished from the run's level-up offers, by boon id (see
+  // levelUpPicks.ts); absent when none are.
+  banishedBoons?: readonly string[];
+  // The last stage whose battle's free level-up reroll was spent (see
+  // getBoonRedraws); absent when none has been.
+  boonRerollStage?: number;
 }
 
 // A reward pick still owed after a won stage: the stage cleared, how many
@@ -169,6 +178,10 @@ export interface BattleResult {
   // The level-up boon picks units already took during the battle (see
   // levelUpPicks.ts), so the run doesn't owe them again.
   boonsTaken?: readonly { unitId: string; level: number }[];
+  // Whether a level-up pick in the battle spent the stage's free reroll,
+  // and the boons banished in it (see levelUpPicks.ts).
+  boonRerolled?: boolean;
+  banishedBoons?: readonly string[];
 }
 
 // The stats a snapshot stores besides its identity and inventory.
@@ -314,7 +327,17 @@ export function applyBattleResult(run: RunState, result: BattleResult): RunState
     bossDefeated: result.bossDefeated ?? false,
     elapsedMs: result.elapsedMs ?? 0,
   });
-  return freezeRun({ ...run, roster, fallen, relics, convoy: [...run.convoy, ...(result.convoy ?? [])], chronicle });
+  const banishedBoons = [...(run.banishedBoons ?? []), ...(result.banishedBoons ?? [])];
+  return freezeRun({
+    ...run,
+    roster,
+    fallen,
+    relics,
+    convoy: [...run.convoy, ...(result.convoy ?? [])],
+    chronicle,
+    ...(banishedBoons.length > 0 && { banishedBoons: [...new Set(banishedBoons)] }),
+    ...(result.boonRerolled && { boonRerollStage: run.stage }),
+  });
 }
 
 // The run moved on to its next stage.
@@ -412,6 +435,8 @@ export function parseRun(
     scrolls,
     origin,
     heat,
+    banishedBoons,
+    boonRerollStage,
   } = data;
   const itemIds = new Set(items.map((item) => item.id));
   const classIds = new Set(classes.map((unitClass) => unitClass.id));
@@ -443,7 +468,10 @@ export function parseRun(
     (chronicle !== undefined && parseChronicle(chronicle) === null) ||
     (scrolls !== undefined && !isWholeNumber(scrolls)) ||
     (origin !== undefined && typeof origin !== 'string') ||
-    (heat !== undefined && (!isWholeNumber(heat) || heat < 1 || heat > MAX_HEAT))
+    (heat !== undefined && (!isWholeNumber(heat) || heat < 1 || heat > MAX_HEAT)) ||
+    (banishedBoons !== undefined &&
+      !(Array.isArray(banishedBoons) && banishedBoons.every((id) => typeof id === 'string'))) ||
+    (boonRerollStage !== undefined && !isWholeNumber(boonRerollStage))
   ) {
     return null;
   }
@@ -469,6 +497,8 @@ export function parseRun(
     ...(scrolls !== undefined && scrolls > 0 && { scrolls }),
     ...(origin !== undefined && { origin }),
     ...(heat !== undefined && { heat }),
+    ...(banishedBoons !== undefined && banishedBoons.length > 0 && { banishedBoons }),
+    ...(boonRerollStage !== undefined && { boonRerollStage }),
   });
 }
 
@@ -519,7 +549,8 @@ function isPendingBoons(value: unknown): value is PendingBoon[] {
         isWholeNumber(entry.level) &&
         entry.level >= 1 &&
         (entry.stage === undefined || (isWholeNumber(entry.stage) && entry.stage >= 1)) &&
-        (entry.gains === undefined || isStatGains(entry.gains)),
+        (entry.gains === undefined || isStatGains(entry.gains)) &&
+        (entry.roll === undefined || isWholeNumber(entry.roll)),
     )
   );
 }
@@ -613,6 +644,7 @@ function freezeRun(run: RunState): RunState {
     }),
     ...(run.pendingEvent && { pendingEvent: Object.freeze({ ...run.pendingEvent }) }),
     ...(run.seenEvents && { seenEvents: Object.freeze([...run.seenEvents]) }),
+    ...(run.banishedBoons && { banishedBoons: Object.freeze([...run.banishedBoons]) }),
     ...(run.pendingBoons && {
       pendingBoons: Object.freeze(
         run.pendingBoons.map((pending) =>
