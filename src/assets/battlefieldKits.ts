@@ -27,6 +27,8 @@ const piece = (key: string, width: number, height: number): KitPiece => ({ key: 
 const PLAINS = {
   ground: piece('ground-grass', 1024, 1024),
   horizon: piece('horizon', 1916, 558),
+  // Where the treeline's bushes meet the meadow.
+  horizonFoot: 0.75,
   patches: [
     { texture: piece('ground-grass-dry', 1024, 1024), every: 120000, width: [380, 760] as const },
     { texture: piece('ground-dirt', 1024, 1024), every: 260000, width: [260, 520] as const },
