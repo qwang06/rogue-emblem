@@ -993,8 +993,8 @@ kbd {
 .menu-icon {
   flex: none;
   display: inline-flex;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
 }
 
 .action-menu__item--disabled .menu-icon {
@@ -1242,12 +1242,13 @@ kbd {
   image-rendering: auto;
 }
 
-/* PixelIcon's bitmaps (StatIcon, GlyphIcon) at two screen pixels per art
-   pixel, sitting on the text's middle when inline. */
+/* StatIcon and GlyphIcon at 20px: the UI sheet's outlined 10x10 icons at
+   two screen pixels per art pixel (painted 16px ones have a 2px margin),
+   sitting on the text's middle when inline. */
 .pixel-icon {
   flex: none;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   vertical-align: middle;
 }
 
