@@ -1,6 +1,6 @@
 // Level-up boons, Vampire Survivors style: each level a Warband unit gains
 // (in battle, from a stage clear or from a Veteran's Lesson) also lets it
-// pick one of three boons, on top of the level's growth rolls. A boon is
+// pick one of three boons, on top of the level's growth gains. A boon is
 // one of:
 // - a stat boon: +2 to a stat (+4 max HP), taken as often as offered;
 // - a skill boon: one of the skills its own class can learn this way

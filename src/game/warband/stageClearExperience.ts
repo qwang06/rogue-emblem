@@ -48,7 +48,7 @@ export function applyStageClearExperience(
   const roster = run.roster.map((snapshot) => {
     if (!fought.includes(snapshot.id)) return snapshot;
     const unit = restoreUnit(snapshot, classes);
-    const result = unit.gainExperience(getStageClearExperience(stage, unit.level), rng);
+    const result = unit.gainExperience(getStageClearExperience(stage, unit.level));
     levelUps.push(...result.levelUps.map((levelUp) => ({ name: unit.name, unitClass: unit.unitClass, levelUp })));
     return Object.freeze(snapshotUnit(snapshot.id, unit));
   });

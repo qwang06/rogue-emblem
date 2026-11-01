@@ -15,7 +15,7 @@ Reference for every unit class: base stats, growth rates, weapons and skills. Ke
 - **Healing:** a unit carrying a staff gets a **Heal** action. It restores the staff's power + the healer's `INT` to a wounded ally in the staff's range, capped at the ally's missing HP, spends one use of the staff (a staff with none left breaks), and earns the healer 10 XP. Staves aren't weapons: they can't attack or counter.
 - **Uses:** every strike, hit or miss, spends one use of the striker's weapon. A weapon with no uses left breaks and is gone, and a unit whose weapon breaks mid-exchange stops striking. Fists never break (`∞`).
 - **Tomes:** a tome is a magical weapon that teaches its spell. Each strike with it counts towards learning the spell (Fire Tome: 5); on the strike that reaches the count the spell takes the tome's slot and never breaks, and the tome keeps its remaining uses in the next free slot (or goes to the convoy when there's none) so another unit can learn from it. A unit that already knows the spell just uses the tome up. Progress is kept per unit, per tome, between stages.
-- **Growths** are the % chance a stat rises by 1 on each level up. Stats have no caps and there is no level cap. Level 1 to 2 takes 50 XP, every level after 100 XP.
+- **Growths** are fixed, with no dice: a growth of 100% raises the stat by 1 every level, 50% every second level, 25% every fourth. Each level hands out the points the class's growths have earned by then, staggered so every level gives about the same number and each stat stays within a point of its share (`getLevelUpGains` in `experience.ts`); two units of the same class and level have the same stats, boons aside. Stats have no caps and there is no level cap. Level 1 to 2 takes 50 XP, every level after 100 XP.
 - **XP rate** scales every XP gain (combat, skills, healing): a unit with a 150% rate earns 15 XP where others earn 10, rounded to the nearest point and never below 1.
 - **Skills** always hit, never crit, and the target can't counter. Their damage is the user's regular hit (weapon might included) with any bonus `STR` added, then scaled; scaled damage rounds up. Using one costs mana, earns XP like a landed hit, and spends no weapon uses. A healing skill (Mend) instead restores its power + the user's `INT` to a wounded ally in range, capped at the ally's missing HP, and earns 10 XP like a staff heal.
 - **Area skills** reach past the foe they're aimed at: the tiles on either side of it (Cleave), the tile behind it as seen from the user (Piercing Shot, Skewer), or the four tiles around it (Shrapnel, Barrage, and Prayer around the user itself). Each foe there takes the skill's damage too, worked out against it, and the user earns XP for whichever foe gives the most. Shrapnel strikes allies in its blast as well. **Tandem Strike** strikes its target twice, the second blow for half the first's damage, rounded up.
@@ -67,14 +67,14 @@ The starting unit, a townsperson in a plain tunic with no armor: Warband Mode's 
 
 | Stat | Base | Growth |
 | ---- | ---- | ------ |
-| HP   | 10   | 85%    |
-| MP   | 5    | 45%    |
-| STR  | 3    | 60%    |
-| INT  | 0    | 10%    |
-| SKL  | 3    | 55%    |
-| SPD  | 3    | 55%    |
+| HP   | 10   | 100%   |
+| MP   | 5    | 50%    |
+| STR  | 3    | 50%    |
+| INT  | 0    | 0%     |
+| SKL  | 3    | 50%    |
+| SPD  | 3    | 50%    |
 | LCK  | 2    | 50%    |
-| DEF  | 2    | 45%    |
+| DEF  | 2    | 50%    |
 | RES  | 0    | 25%    |
 | MOV  | 5    | –      |
 
@@ -109,15 +109,15 @@ The ranged infantry: frail but accurate. Its bow only reaches two tiles away, so
 
 | Stat | Base | Growth |
 | ---- | ---- | ------ |
-| HP   | 9    | 60%    |
-| MP   | 5    | 40%    |
-| STR  | 3    | 40%    |
-| INT  | 0    | 5%     |
-| SKL  | 5    | 55%    |
-| SPD  | 4    | 45%    |
-| LCK  | 2    | 35%    |
-| DEF  | 1    | 20%    |
-| RES  | 1    | 20%    |
+| HP   | 9    | 50%    |
+| MP   | 5    | 25%    |
+| STR  | 3    | 50%    |
+| INT  | 0    | 0%     |
+| SKL  | 5    | 100%   |
+| SPD  | 4    | 50%    |
+| LCK  | 2    | 25%    |
+| DEF  | 1    | 25%    |
+| RES  | 1    | 25%    |
 | MOV  | 5    | –      |
 
 | Weapon types | Starting weapon | XP rate |
@@ -139,15 +139,15 @@ The spear-and-shield infantry: the enemy in the demo battle. Villagers become on
 
 | Stat | Base | Growth |
 | ---- | ---- | ------ |
-| HP   | 10   | 70%    |
-| MP   | 5    | 40%    |
-| STR  | 4    | 45%    |
-| INT  | 0    | 5%     |
-| SKL  | 3    | 40%    |
-| SPD  | 3    | 40%    |
-| LCK  | 2    | 30%    |
-| DEF  | 2    | 30%    |
-| RES  | 0    | 15%    |
+| HP   | 10   | 75%    |
+| MP   | 5    | 25%    |
+| STR  | 4    | 50%    |
+| INT  | 0    | 0%     |
+| SKL  | 3    | 25%    |
+| SPD  | 3    | 25%    |
+| LCK  | 2    | 25%    |
+| DEF  | 2    | 100%   |
+| RES  | 0    | 25%    |
 | MOV  | 5    | –      |
 
 | Weapon types | Starting weapon | XP rate |
@@ -170,15 +170,15 @@ The axe-wielding front line: high HP and strength, low skill, speed and luck. It
 
 | Stat | Base | Growth |
 | ---- | ---- | ------ |
-| HP   | 12   | 85%    |
-| MP   | 5    | 30%    |
-| STR  | 5    | 55%    |
+| HP   | 12   | 100%   |
+| MP   | 5    | 25%    |
+| STR  | 5    | 100%   |
 | INT  | 0    | 0%     |
-| SKL  | 2    | 30%    |
-| SPD  | 2    | 30%    |
-| LCK  | 1    | 25%    |
-| DEF  | 2    | 30%    |
-| RES  | 0    | 10%    |
+| SKL  | 2    | 50%    |
+| SPD  | 2    | 25%    |
+| LCK  | 1    | 0%     |
+| DEF  | 2    | 25%    |
+| RES  | 0    | 0%     |
 | MOV  | 5    | –      |
 
 | Weapon types | Starting weapon | XP rate |
@@ -200,15 +200,15 @@ Promoted from the Villager. Hauls a powder keg on its back and throws it up to t
 
 | Stat | Base | Growth |
 | ---- | ---- | ------ |
-| HP   | 10   | 65%    |
-| MP   | 5    | 40%    |
-| STR  | 4    | 45%    |
-| INT  | 0    | 5%     |
-| SKL  | 3    | 40%    |
-| SPD  | 3    | 35%    |
-| LCK  | 2    | 30%    |
+| HP   | 10   | 75%    |
+| MP   | 5    | 50%    |
+| STR  | 4    | 50%    |
+| INT  | 0    | 0%     |
+| SKL  | 3    | 100%   |
+| SPD  | 3    | 25%    |
+| LCK  | 2    | 0%     |
 | DEF  | 1    | 25%    |
-| RES  | 0    | 15%    |
+| RES  | 0    | 0%     |
 | MOV  | 5    | –      |
 
 | Weapon types    | Starting weapon | XP rate |
@@ -231,13 +231,13 @@ A specialized unit that doesn't promote, recruited or brought by the Sellswords 
 | Stat | Base | Growth |
 | ---- | ---- | ------ |
 | HP   | 8    | 50%    |
-| MP   | 5    | 40%    |
-| STR  | 2    | 30%    |
-| INT  | 0    | 10%    |
-| SKL  | 4    | 45%    |
-| SPD  | 6    | 60%    |
-| LCK  | 4    | 50%    |
-| DEF  | 1    | 15%    |
+| MP   | 5    | 25%    |
+| STR  | 2    | 25%    |
+| INT  | 0    | 0%     |
+| SKL  | 4    | 25%    |
+| SPD  | 6    | 100%   |
+| LCK  | 4    | 100%   |
+| DEF  | 1    | 0%     |
 | RES  | 2    | 25%    |
 | MOV  | 7    | –      |
 
@@ -258,15 +258,15 @@ A specialized unit, recruited on its own (or raised by the Beast Tamer origin): 
 
 | Stat | Base | Growth |
 | ---- | ---- | ------ |
-| HP   | 13   | 80%    |
-| MP   | 2    | 20%    |
-| STR  | 5    | 55%    |
+| HP   | 13   | 100%   |
+| MP   | 2    | 25%    |
+| STR  | 5    | 100%   |
 | INT  | 0    | 0%     |
-| SKL  | 2    | 35%    |
-| SPD  | 4    | 45%    |
-| LCK  | 1    | 25%    |
-| DEF  | 2    | 35%    |
-| RES  | 1    | 15%    |
+| SKL  | 2    | 25%    |
+| SPD  | 4    | 50%    |
+| LCK  | 1    | 0%     |
+| DEF  | 2    | 25%    |
+| RES  | 1    | 25%    |
 | MOV  | 6    | –      |
 
 | Weapon types | Starting weapon | XP rate |
@@ -287,15 +287,15 @@ A special unit of its own kind: a rider on the faction's winged beast, strong, f
 
 | Stat | Base | Growth |
 | ---- | ---- | ------ |
-| HP   | 12   | 70%    |
-| MP   | 5    | 40%    |
+| HP   | 12   | 75%    |
+| MP   | 5    | 25%    |
 | STR  | 5    | 50%    |
-| INT  | 0    | 5%     |
-| SKL  | 4    | 45%    |
-| SPD  | 5    | 50%    |
-| LCK  | 3    | 35%    |
-| DEF  | 3    | 30%    |
-| RES  | 2    | 20%    |
+| INT  | 0    | 0%     |
+| SKL  | 4    | 50%    |
+| SPD  | 5    | 100%   |
+| LCK  | 3    | 25%    |
+| DEF  | 3    | 25%    |
+| RES  | 2    | 25%    |
 | MOV  | 7    | –      |
 
 | Weapon types | Starting weapon | XP rate |
@@ -315,15 +315,15 @@ A specialized unit that doesn't promote: a siege engine on wheels (crystal canno
 
 | Stat | Base | Growth |
 | ---- | ---- | ------ |
-| HP   | 12   | 60%    |
-| MP   | 4    | 35%    |
-| STR  | 5    | 45%    |
+| HP   | 12   | 50%    |
+| MP   | 4    | 50%    |
+| STR  | 5    | 100%   |
 | INT  | 0    | 0%     |
-| SKL  | 3    | 35%    |
-| SPD  | 1    | 10%    |
-| LCK  | 0    | 10%    |
-| DEF  | 3    | 35%    |
-| RES  | 0    | 10%    |
+| SKL  | 3    | 50%    |
+| SPD  | 1    | 0%     |
+| LCK  | 0    | 0%     |
+| DEF  | 3    | 25%    |
+| RES  | 0    | 0%     |
 | MOV  | 3    | –      |
 
 | Weapon types | Starting weapon | XP rate |
@@ -344,15 +344,15 @@ A specialized unit that doesn't promote: a covered battering ram, the most HP an
 
 | Stat | Base | Growth |
 | ---- | ---- | ------ |
-| HP   | 16   | 80%    |
-| MP   | 4    | 35%    |
+| HP   | 16   | 100%   |
+| MP   | 4    | 25%    |
 | STR  | 6    | 50%    |
 | INT  | 0    | 0%     |
-| SKL  | 1    | 25%    |
-| SPD  | 0    | 5%     |
-| LCK  | 0    | 5%     |
-| DEF  | 5    | 45%    |
-| RES  | 0    | 10%    |
+| SKL  | 1    | 0%     |
+| SPD  | 0    | 0%     |
+| LCK  | 0    | 0%     |
+| DEF  | 5    | 100%   |
+| RES  | 0    | 0%     |
 | MOV  | 4    | –      |
 
 | Weapon types | Starting weapon | XP rate |
@@ -373,14 +373,14 @@ A specialized unit that doesn't promote. The healer and the warband's magic user
 | Stat | Base | Growth |
 | ---- | ---- | ------ |
 | HP   | 8    | 50%    |
-| MP   | 6    | 50%    |
-| STR  | 1    | 10%    |
-| INT  | 3    | 50%    |
-| SKL  | 2    | 30%    |
-| SPD  | 3    | 40%    |
-| LCK  | 4    | 50%    |
-| DEF  | 1    | 15%    |
-| RES  | 4    | 45%    |
+| MP   | 6    | 75%    |
+| STR  | 1    | 0%     |
+| INT  | 3    | 100%   |
+| SKL  | 2    | 25%    |
+| SPD  | 3    | 25%    |
+| LCK  | 4    | 25%    |
+| DEF  | 1    | 25%    |
+| RES  | 4    | 50%    |
 | MOV  | 5    | –      |
 
 | Weapon types | Starting weapon | XP rate |

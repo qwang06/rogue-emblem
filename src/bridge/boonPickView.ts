@@ -17,7 +17,7 @@ export interface BoonStatView {
   stat: GrowthStat;
   label: string;
   value: number;
-  // What this level up's growth roll added to the stat (0 when it didn't rise).
+  // What this level up's growth added to the stat (0 when it didn't rise).
   gain: number;
 }
 

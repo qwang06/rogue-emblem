@@ -16,17 +16,19 @@ export const SOLDIER_STATS = Object.freeze({
   movement: 5,
 });
 
-// Percent chance per level up that each stat rises (see experience.ts).
+// How fast each stat grows, on a fixed schedule with no dice: 100 is a
+// point every level, 50 every second level, 25 every fourth (see
+// getLevelUpGains in experience.ts).
 export const SOLDIER_GROWTHS = Object.freeze({
-  health: 70,
-  mana: 40,
-  strength: 45,
-  intelligence: 5,
-  skill: 40,
-  speed: 40,
-  luck: 30,
-  defense: 30,
-  resistance: 15,
+  health: 75,
+  mana: 25,
+  strength: 50,
+  intelligence: 0,
+  skill: 25,
+  speed: 25,
+  luck: 25,
+  defense: 100,
+  resistance: 25,
 });
 
 // The weapon types a soldier can wield.

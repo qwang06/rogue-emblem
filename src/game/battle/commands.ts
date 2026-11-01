@@ -605,7 +605,7 @@ function grantExperience(draft: Draft, unitId: string, { amount, scaled }: Exper
   if (amount <= 0) return;
   const unit = draft.edit(unitId);
   const from = { level: unit.level, experience: unit.experience };
-  const result = unit.gainExperience(amount, draft.rng, scaled);
+  const result = unit.gainExperience(amount, scaled);
   draft.events.push({ type: 'experience', unitId, from, result });
 }
 

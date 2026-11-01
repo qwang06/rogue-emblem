@@ -8,7 +8,7 @@
 import { HEALTH_POTION, MASTER_SEAL, MAX_INVENTORY_SLOTS } from '../items.ts';
 import { getPromotions, PROMOTION_LEVEL } from '../promotions.ts';
 import { countSeals } from './promotion.ts';
-import { getExperienceToNextLevel, rollLevelUp, type LevelUpResult } from '../experience.ts';
+import { getExperienceToNextLevel, getLevelUpGains, type LevelUpResult } from '../experience.ts';
 import type { Rng } from '../combatStats.ts';
 import { createSeededRng, randomInt, randomItem, shuffle } from '../rng.ts';
 import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
@@ -338,7 +338,7 @@ export function eligibleWeapons(run: RunState, classes: readonly UnitClass[] = U
 
 // A recruit for `run`: a `classId` unit (a random RECRUIT_CLASS_IDS class
 // when none is given) at the roster's average level (rounded down, at least
-// 1), its level ups rolled from its growths, named from WARBAND_NAMES (one
+// 1), its level ups from its growths (getLevelUpGains), named from WARBAND_NAMES (one
 // nobody in the run has and that isn't in `takenNames`; "Recruit" once
 // they've all been used), with an id no unit in the run has and that isn't
 // in `takenIds`, and a random quirk (quirks.ts; one not in `takenQuirks`
@@ -368,7 +368,7 @@ export function rollRecruit(
   const totalLevel = run.roster.reduce((sum, unit) => sum + unit.level, 0);
   const level = Math.max(1, Math.floor(totalLevel / Math.max(1, run.roster.length)));
   const unit = createUnitOfClass(classId, { name, team: 'player' }, classes);
-  while (unit.level < level) unit.levelUp(rollLevelUp(unit.growths, rng));
+  while (unit.level < level) unit.levelUp(getLevelUpGains(unit.growths, unit.level));
   const usedIds = new Set([...everyone.map((snapshot) => snapshot.id), ...takenIds]);
   let id = `recruit-${stage}`;
   while (usedIds.has(id)) id = `recruit-${stage}-${randomInt(rng, 0, 9999)}`;
@@ -453,7 +453,7 @@ export function applyLessonReward(
   const levelUps: RewardLevelUp[] = [];
   const roster = run.roster.map((snapshot) => {
     const unit = restoreUnit(snapshot, classes);
-    const result = unit.gainExperience(getExperienceToNextLevel(unit.level, unit.experience), rng, false);
+    const result = unit.gainExperience(getExperienceToNextLevel(unit.level, unit.experience), false);
     levelUps.push(...result.levelUps.map((levelUp) => ({ name: unit.name, unitClass: unit.unitClass, levelUp })));
     return snapshotUnit(snapshot.id, unit);
   });

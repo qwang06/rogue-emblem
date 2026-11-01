@@ -18,17 +18,19 @@ export const BEAST_RIDER_STATS = Object.freeze({
   movement: 7,
 });
 
-// Percent chance per level up that each stat rises (see experience.ts).
+// How fast each stat grows, on a fixed schedule with no dice: 100 is a
+// point every level, 50 every second level, 25 every fourth (see
+// getLevelUpGains in experience.ts).
 export const BEAST_RIDER_GROWTHS = Object.freeze({
-  health: 70,
-  mana: 40,
+  health: 75,
+  mana: 25,
   strength: 50,
-  intelligence: 5,
-  skill: 45,
-  speed: 50,
-  luck: 35,
-  defense: 30,
-  resistance: 20,
+  intelligence: 0,
+  skill: 50,
+  speed: 100,
+  luck: 25,
+  defense: 25,
+  resistance: 25,
 });
 
 // The weapon types it can wield.
