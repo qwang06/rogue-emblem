@@ -13,7 +13,7 @@ import type { Rng } from '../combatStats.ts';
 import { createSeededRng, randomInt, randomItem, shuffle } from '../rng.ts';
 import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
 import { FIRE, IRON_AXE, IRON_BOW, IRON_SPEAR, canWield, type Weapon } from '../weapons.ts';
-import { addScrolls, getSecondaryClassIds } from './mentors.ts';
+import { addScrolls, getSecondaryClassIds, MENTORS_ENABLED } from './mentors.ts';
 import { WARBAND_NAMES } from './names.ts';
 import { findQuirk, rollQuirk } from './quirks.ts';
 import { ALL_STARTING_CLASSES } from './startingClasses.ts';
@@ -233,7 +233,8 @@ export function getPendingRewardOffer(run: RunState): (PendingReward & { rewards
 // - lesson, while anyone is below the max level
 // - seal, while the warband holds none and someone is a level short of
 //   promoting or past it (see promotion.ts)
-// - scroll, from stage 2 on, while anyone has a skill set to learn
+// - scroll, from stage 2 on, while anyone has a skill set to learn, and
+//   only while the camp has Mentors (MENTORS_ENABLED) to spend it at
 // - gold, always
 export function rollRewards(
   run: RunState,
@@ -254,7 +255,9 @@ export function rollRewards(
   if (getUnownedRelics(run.relics).length > 0) kinds.push('relic');
   if (run.roster.some((unit) => unit.level < MAX_LEVEL)) kinds.push('lesson');
   if (wantsSeal(run)) kinds.push('seal');
-  if (stage !== 1 && run.roster.some((unit) => getSecondaryClassIds(unit).length > 0)) kinds.push('scroll');
+  if (MENTORS_ENABLED && stage !== 1 && run.roster.some((unit) => getSecondaryClassIds(unit).length > 0)) {
+    kinds.push('scroll');
+  }
   kinds.push('gold');
   const size = Math.max(0, count);
   const picked =

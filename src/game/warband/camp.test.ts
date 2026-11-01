@@ -5,6 +5,7 @@ import { Villager } from '../Villager.ts';
 import { canRest, canTakeLesson, getCampActions, getRestCost, needsRest, REST_COST, restAtCamp } from './camp.ts';
 import { MASTER_SEAL } from '../items.ts';
 import { PROMOTION_LEVEL } from '../promotions.ts';
+import { MENTORS_ENABLED } from './mentors.ts';
 import { createRun, type RunState } from './run.ts';
 import { HOME_SITE_ID, type RunSite } from './travel.ts';
 
@@ -22,24 +23,23 @@ function campRun(gold: number, hurt = true): RunState {
 
 describe('getCampActions', () => {
   it('offers the roster, the merchant and rest before moving on', () => {
-    expect(getCampActions(campRun(100)).map((action) => action.id)).toEqual([
-      'roster',
-      'merchant',
-      'rest',
-      'mentors',
-      'march',
-    ]);
+    expect(getCampActions(campRun(100)).map((action) => action.id)).toEqual(['roster', 'merchant', 'rest', 'march']);
   });
 
-  it('disables Mentors while nobody can take a lesson', () => {
+  it('leaves Mentors out while MENTORS_ENABLED is off', () => {
+    expect(MENTORS_ENABLED).toBe(false);
+    expect(getCampActions(campRun(100)).some((action) => action.id === 'mentors')).toBe(false);
+  });
+
+  it('disables Mentors, when on, while nobody can take a lesson', () => {
     // Alden the soldier knows Shove from level 1, so he can teach Cato the
     // soldier's set for the fee.
     const run = campRun(100);
     expect(canTakeLesson(run)).toBe(true);
     const broke = { ...run, gold: 0 };
-    expect(getCampActions(broke)[3]).toMatchObject({ id: 'mentors', disabled: true });
+    expect(getCampActions(broke, true)[3]).toMatchObject({ id: 'mentors', disabled: true });
     expect(canTakeLesson(broke)).toBe(false);
-    expect(getCampActions({ ...broke, scrolls: 1 })[3].disabled).toBe(false);
+    expect(getCampActions({ ...broke, scrolls: 1 }, true)[3].disabled).toBe(false);
   });
 
   it('names the cost of resting', () => {
@@ -66,7 +66,6 @@ describe('the Promote action', () => {
       'merchant',
       'promote',
       'rest',
-      'mentors',
       'march',
     ]);
   });
@@ -144,7 +143,6 @@ describe('camp on the realm', () => {
       ['roster', 'Manage Roster'],
       ['merchant', 'Merchant'],
       ['rest', 'Rest (free)'],
-      ['mentors', 'Mentors'],
       ['march', 'Travel'],
     ]);
     expect(canRest(town)).toBe(true);
@@ -153,7 +151,7 @@ describe('camp on the realm', () => {
 
   it('has no merchant after a battle, and rest costs gold', () => {
     const field = onRealm(campRun(100), 'battle');
-    expect(getCampActions(field).map((action) => action.id)).toEqual(['roster', 'rest', 'mentors', 'march']);
+    expect(getCampActions(field).map((action) => action.id)).toEqual(['roster', 'rest', 'march']);
     expect(restAtCamp(field).gold).toBe(100 - REST_COST);
   });
 });

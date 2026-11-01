@@ -45,6 +45,7 @@ import {
   type Reward,
   isEliteClear,
 } from './rewards.ts';
+import { MENTORS_ENABLED } from './mentors.ts';
 import { findQuirk, QUIRKS } from './quirks.ts';
 import { WARBAND_NAMES } from './names.ts';
 import { STARTING_CLASSES } from './startingClasses.ts';
@@ -194,10 +195,11 @@ describe('rollRewards', () => {
     ).not.toContainEqual(expect.objectContaining({ kind: 'lesson' }));
   });
 
-  it("offers a Mentor's Scroll after stage 1, never on it", () => {
+  it("never offers a Mentor's Scroll while the camp has no Mentors", () => {
     const offers = (stage: number) =>
       Array.from({ length: 60 }, (_, seed) => rollRewards(fullRun(), stage, createSeededRng(seed))).flat();
-    expect(kinds(offers(2))).toContain('scroll');
+    expect(MENTORS_ENABLED).toBe(false);
+    expect(kinds(offers(2))).not.toContain('scroll');
     expect(kinds(offers(1))).not.toContain('scroll');
   });
 

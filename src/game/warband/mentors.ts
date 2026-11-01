@@ -18,6 +18,11 @@ import { getLearnedSkills, hasSkillTree, SKILL_TREES, type Skill, type SkillTree
 import { UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
 import type { RunState, UnitSnapshot } from './run.ts';
 
+// Whether the camp offers Mentors at all. Off for now: the camp menu has no
+// Mentors entry and stage clears offer no Mentor's Scroll, so nothing in a
+// run reaches the lessons below. Flip it back on to restore both.
+export const MENTORS_ENABLED = false;
+
 // What a mentor charges for a lesson.
 export const MENTOR_FEE = 20;
 
