@@ -18,6 +18,7 @@ import {
   type ForecastSide,
   type SkillFighter,
 } from './combat.ts';
+import type { Point } from './grid.ts';
 import { getModifierSkills, type Modifier } from './modifiers.ts';
 
 // A skill: { id, label, manaCost, range, animation, might?, damageScale?,
@@ -29,7 +30,16 @@ import { getModifierSkills, type Modifier } from './modifiers.ts';
 // shoves a target it leaves standing one tile away from the user (see
 // push.ts). A skill whose `effect` is 'heal' deals no damage: it mends a
 // wounded ally instead, restoring its `power` plus the user's intelligence (like
-// a staff, see healing.ts).
+// a staff, see healing.ts), or `intelligenceScale` of it.
+//
+// An `area` skill reaches past the tile it's aimed at (getSkillAreaTiles):
+// 'sides' also strikes the tiles on either side of the target, 'line' the
+// tile behind it (seen from the user), 'burst' the four tiles around it. A
+// healing area skill mends every wounded ally there instead. It strikes
+// only foes there unless it has `friendlyFire`, which strikes every unit
+// but the user. A skill with range 0 is aimed at the user's own tile (an
+// area around itself). `followUp` strikes the target a second time, at that
+// fraction of the first blow's damage.
 
 export interface Skill {
   id: string;
@@ -42,7 +52,13 @@ export interface Skill {
   push?: boolean;
   effect?: 'heal';
   power?: number;
+  intelligenceScale?: number;
+  area?: SkillArea;
+  friendlyFire?: boolean;
+  followUp?: number;
 }
+
+export type SkillArea = 'sides' | 'line' | 'burst';
 
 export interface SkillTreeEntry {
   level: number;
@@ -94,15 +110,88 @@ export const LONG_SHOT: Skill = Object.freeze({
   animation: 'stone',
 });
 
-// A wild overhead swing against an adjacent foe: the user's regular
-// attack with 2 more power behind it.
+// A wide swing of the axe: the user's regular attack on an adjacent foe
+// and on any foe on either side of it.
 export const CLEAVE: Skill = Object.freeze({
   id: 'cleave',
   label: 'Cleave',
-  manaCost: 2,
+  manaCost: 3,
   range: 1,
-  might: 2,
+  area: 'sides',
   animation: 'strike',
+});
+
+// An arrow driven clean through: the user's regular attack on a foe up to
+// 3 tiles away and on a foe right behind it.
+export const PIERCING_SHOT: Skill = Object.freeze({
+  id: 'piercing-shot',
+  label: 'Piercing Shot',
+  manaCost: 3,
+  range: 3,
+  area: 'line',
+  animation: 'stone',
+});
+
+// The rider's spear run through two foes: the user's regular attack with
+// 1 more power on an adjacent foe and on a foe right behind it.
+export const SKEWER: Skill = Object.freeze({
+  id: 'skewer',
+  label: 'Skewer',
+  manaCost: 3,
+  range: 1,
+  might: 1,
+  area: 'line',
+  animation: 'strike',
+});
+
+// Rider and beast together: the rider's spear, then the beast's bite, on
+// one adjacent foe. The bite deals half the spear's damage.
+export const TANDEM_STRIKE: Skill = Object.freeze({
+  id: 'tandem-strike',
+  label: 'Tandem Strike',
+  manaCost: 3,
+  range: 1,
+  followUp: 0.5,
+  animation: 'strike',
+});
+
+// A keg packed with nails: half the user's regular attack on a tile up to
+// 2 tiles away and the four around it, striking allies there too.
+export const SHRAPNEL: Skill = Object.freeze({
+  id: 'shrapnel',
+  label: 'Shrapnel',
+  manaCost: 4,
+  range: 2,
+  damageScale: 0.5,
+  area: 'burst',
+  friendlyFire: true,
+  animation: 'stone',
+});
+
+// A volley from the siege engine: half its regular attack on a foe up to
+// 3 tiles away and on any foe on the four tiles around it.
+export const BARRAGE: Skill = Object.freeze({
+  id: 'barrage',
+  label: 'Barrage',
+  manaCost: 3,
+  range: 3,
+  damageScale: 0.5,
+  area: 'burst',
+  animation: 'stone',
+});
+
+// A prayer over the wounded around the user: every wounded ally next to it
+// regains 1 plus half the user's intelligence.
+export const PRAYER: Skill = Object.freeze({
+  id: 'prayer',
+  label: 'Prayer',
+  manaCost: 5,
+  range: 0,
+  effect: 'heal',
+  power: 1,
+  intelligenceScale: 0.5,
+  area: 'burst',
+  animation: 'mend',
 });
 
 // A shove with the tower shield behind the spear: the user's regular
@@ -164,12 +253,6 @@ export const SUNDER = promotionSkill('sunder', 'Sunder', { might: 4 });
 export const FRENZY = promotionSkill('frenzy', 'Frenzy', { manaCost: 4, might: 6 });
 export const IMPALE = promotionSkill('impale', 'Impale', { might: 5 });
 export const LUNGE = promotionSkill('lunge', 'Lunge', { manaCost: 2, range: 2, might: 2 });
-export const PIERCING_SHOT = promotionSkill('piercing-shot', 'Piercing Shot', {
-  range: 4,
-  might: 2,
-  animation: 'stone',
-});
-export const BOMBARD = promotionSkill('bombard', 'Bombard', { range: 3, might: 3, animation: 'stone' });
 export const CRUSHING_BLOW = promotionSkill('crushing-blow', 'Crushing Blow', { might: 5 });
 export const BLAST = promotionSkill('blast', 'Blast', { range: 2, might: 3, animation: 'stone' });
 export const BULWARK_BASH = promotionSkill('bulwark-bash', 'Bulwark Bash', { might: 3 });
@@ -219,15 +302,19 @@ export const SKILL_TREES: SkillTrees = Object.freeze({
   vanguard: promotedTree({ level: SKILL_UNLOCK_LEVEL, skill: CLEAVE }),
   sapper: promotedTree({ level: SKILL_UNLOCK_LEVEL, skill: BLAST }),
   acolyte: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: MEND })]),
+  siege: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: BARRAGE })]),
 });
 
 // unitClass -> the skills a level up can offer a unit of the class to
 // learn (a skill boon, see warband/boons.ts): its own, never another
 // class's. Classes without an entry are offered none.
 export const CLASS_SKILL_PICKS: Readonly<Record<string, readonly Skill[]>> = Object.freeze({
+  archer: Object.freeze([PIERCING_SHOT]),
   soldier: Object.freeze([LUNGE]),
-  acolyte: Object.freeze([SMITE]),
+  sapper: Object.freeze([SHRAPNEL]),
+  acolyte: Object.freeze([SMITE, PRAYER]),
   beast: Object.freeze([WING_BUFFET]),
+  'beast-rider': Object.freeze([SKEWER, TANDEM_STRIKE]),
   siege: Object.freeze([DEADEYE]),
 });
 
@@ -326,6 +413,13 @@ export function calculateSkillDamage(skill: Skill, user: SkillFighter, defender:
   return Math.ceil(calculateDamage(boosted, guarded) * (skill.damageScale ?? 1));
 }
 
+// The damage of a `followUp` skill's second blow after a first one that
+// dealt `first`: that fraction of it, rounded up (0 without one, or after
+// a blow that dealt none).
+export function getFollowUpDamage(skill: Pick<Skill, 'followUp'>, first: number): number {
+  return skill.followUp && first > 0 ? Math.ceil(first * skill.followUp) : 0;
+}
+
 export type SkillForecastFighter = SkillFighter & {
   health: number;
   maxHealth: number;
@@ -335,14 +429,16 @@ export type SkillForecastFighter = SkillFighter & {
 // shape as getCombatForecast so the combat forecast window can display it:
 // a skill always lands once, never crits, and can't be countered. For a push
 // skill, `push` adds the shove's damage (or all the target's remaining HP if
-// it drowns).
+// it drowns), and a `followUp` skill its second blow's. An area skill's
+// forecast is for the foe it's aimed at.
 export function getSkillForecast(
   skill: Skill,
   user: SkillForecastFighter,
   defender: SkillForecastFighter,
   push: { damage: number; drowned: boolean } | null = null,
 ): Record<CombatSide, ForecastSide> {
-  const struck = calculateSkillDamage(skill, user, defender);
+  const first = calculateSkillDamage(skill, user, defender);
+  const struck = first + (defender.health - first > 0 ? getFollowUpDamage(skill, first) : 0);
   const survived = defender.health - struck > 0;
   const pushDamage = skill.push && push && survived ? (push.drowned ? defender.health - struck : push.damage) : 0;
   return {
@@ -367,6 +463,41 @@ export function getSkillForecast(
   };
 }
 
+// The tiles past `target` an area skill used from `from` also reaches, as
+// [{ x, y }] (none for a skill without one), in or out of the map: the
+// caller keeps the ones it has. 'sides' and 'line' read the direction from
+// `from` to `target` along its longer axis (x on a tie); 'burst' is the
+// four tiles around `target`. Never `from` itself.
+export function getSkillAreaTiles(skill: Pick<Skill, 'area'>, from: Point, target: Point): Point[] {
+  if (!skill.area) return [];
+  const dx = target.x - from.x;
+  const dy = target.y - from.y;
+  const step = Math.abs(dx) >= Math.abs(dy) ? { x: Math.sign(dx), y: 0 } : { x: 0, y: Math.sign(dy) };
+  let tiles: Point[];
+  switch (skill.area) {
+    case 'sides':
+      tiles = [
+        { x: target.x + step.y, y: target.y + step.x },
+        { x: target.x - step.y, y: target.y - step.x },
+      ];
+      break;
+    case 'line':
+      tiles = [{ x: target.x + step.x, y: target.y + step.y }];
+      break;
+    case 'burst':
+      tiles = [
+        { x: target.x, y: target.y - 1 },
+        { x: target.x + 1, y: target.y },
+        { x: target.x, y: target.y + 1 },
+        { x: target.x - 1, y: target.y },
+      ];
+      break;
+  }
+  return tiles.filter(
+    (tile) => (tile.x !== from.x || tile.y !== from.y) && (tile.x !== target.x || tile.y !== target.y),
+  );
+}
+
 // Whether `skill` mends an ally rather than striking a foe.
 export function isHealingSkill(skill: Skill): boolean {
   return skill.effect === 'heal';
@@ -380,19 +511,35 @@ export function getSkillHealAmount(
   patient: { health: number; maxHealth: number },
 ): number {
   const missing = Math.max(0, patient.maxHealth - patient.health);
-  return Math.max(0, Math.min((skill.power ?? 0) + user.intelligence, missing));
+  const intelligence = Math.floor(user.intelligence * (skill.intelligenceScale ?? 1));
+  return Math.max(0, Math.min((skill.power ?? 0) + intelligence, missing));
 }
 
 // One line on what `skill` does, e.g. for a lesson's or a boon's offer.
+const AREA_PHRASES: Readonly<Record<SkillArea, string>> = Object.freeze({
+  sides: 'and those on either side of it',
+  line: 'and the one behind it',
+  burst: 'and the four tiles around it',
+});
+
 export function describeSkill(skill: Skill): string {
   const reach = skill.range === 1 ? 'next to it' : `up to ${skill.range} tiles away`;
-  if (isHealingSkill(skill)) return `Heals an ally ${reach} for ${skill.power ?? 0} + INT.`;
+  const int = skill.intelligenceScale === 0.5 ? 'half INT' : 'INT';
+  if (isHealingSkill(skill)) {
+    if (skill.range === 0) return `Heals every wounded ally next to it for ${skill.power ?? 0} + ${int}.`;
+    return `Heals an ally ${reach} for ${skill.power ?? 0} + ${int}.`;
+  }
   const scale = skill.damageScale ?? 1;
   if (scale === 0 && skill.push) return `Pushes a foe ${reach} a tile away.`;
   const hit = scale === 1 ? 'Its regular hit' : scale === 0.5 ? 'Half its regular hit' : `${scale}× its regular hit`;
   const might = skill.might ? ` with +${skill.might} power` : '';
+  const area = skill.area ? ` ${AREA_PHRASES[skill.area]}` : '';
+  const allies = skill.friendlyFire ? ', allies included' : '';
   const push = skill.push ? ', then pushes it a tile away' : '';
-  return `${hit}${might} on a foe ${reach}${push}.`;
+  const followUp = skill.followUp
+    ? `, then a second hit for ${skill.followUp === 0.5 ? 'half' : `${skill.followUp}×`} that`
+    : '';
+  return `${hit}${might} on a foe ${reach}${area}${allies}${push}${followUp}.`;
 }
 
 export function canUseSkill(unit: { mana: number }, skill: Skill): boolean {
