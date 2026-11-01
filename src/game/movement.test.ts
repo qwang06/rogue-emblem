@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createGrid, setTerrain, setUnit, type Point } from './grid.ts';
 import {
+  BLINK_MOVEMENT,
   canMoveAlongPath,
   extendMovePath,
   getMoveCost,
@@ -130,6 +131,22 @@ function isStepByStep(path: readonly Point[]) {
     return Math.abs(tile.x - prev.x) + Math.abs(tile.y - prev.y) === 1;
   });
 }
+
+describe('BLINK_MOVEMENT', () => {
+  it('crosses walls, water and units at 1 MOV a tile but stops only on open ground', () => {
+    let grid = createGrid(5, 1, 'grass');
+    grid = setTerrain(grid, 1, 0, 'water');
+    grid = setTerrain(grid, 2, 0, 'wall');
+    grid = setUnit(grid, 3, 0, 'foe');
+    const reach = getMovementRange(grid, { x: 0, y: 0 }, 4, BLINK_MOVEMENT).map(({ x, cost }) => [x, cost]);
+    expect(reach.sort()).toEqual([
+      [0, 0],
+      [4, 4],
+    ]);
+    expect(getMovePath(grid, { x: 0, y: 0 }, { x: 1, y: 0 }, 4, BLINK_MOVEMENT)).toBeNull();
+    expect(getMovePath(grid, { x: 0, y: 0 }, { x: 4, y: 0 }, 4, BLINK_MOVEMENT)).toHaveLength(5);
+  });
+});
 
 describe('getMovePath', () => {
   it('returns just the origin when the destination is the origin', () => {

@@ -19,6 +19,9 @@ export type TerrainCosts = Readonly<Record<string, number>>;
 export interface MovementOptions {
   terrainCosts?: TerrainCosts;
   canPassThrough?: (unitId: string) => boolean;
+  // Whether the mover may end its move on a tile of `terrain`; anywhere it
+  // can reach when unset. (A blinking unit crosses water it can't stand in.)
+  canStopOn?: (terrain: Terrain) => boolean;
 }
 
 // A reachable tile and the cheapest total cost to get there.
@@ -46,6 +49,12 @@ export const TERRAIN_MOVE_COSTS: TerrainCosts = Object.freeze({
   // hurts (see hazards.ts).
   spikes: 1,
 });
+
+// Every terrain at 1 MOV a tile, walls and water included: what a
+// blinking unit pays (see BLINK_MOVEMENT).
+export const BLINK_TERRAIN_COSTS: TerrainCosts = Object.freeze(
+  Object.fromEntries(Object.keys(TERRAIN_MOVE_COSTS).map((terrain) => [terrain, 1])),
+);
 
 export function getMoveCost(terrain: Terrain, terrainCosts: TerrainCosts = TERRAIN_MOVE_COSTS): number {
   return (terrain !== null ? terrainCosts[terrain] : undefined) ?? 1;
@@ -102,10 +111,19 @@ function explore(grid: Grid, origin: Point, movement: number, options: MovementO
 
 // A tile the mover may end on: anywhere reached, except tiles holding
 // another unit. The origin is always fine — the mover is the one on it.
-function isDestination(grid: Grid, origin: Point, x: number, y: number): boolean {
+function isDestination(grid: Grid, origin: Point, x: number, y: number, options: MovementOptions = {}): boolean {
   if (x === origin.x && y === origin.y) return true;
-  return !getCell(grid, x, y)!.unitId;
+  const cell = getCell(grid, x, y)!;
+  return !cell.unitId && (options.canStopOn?.(cell.terrain) ?? true);
 }
+
+// Movement options for a blinking unit (the Blink evolution): every
+// terrain at 1 MOV, through any unit, ending only where it could stand.
+export const BLINK_MOVEMENT: MovementOptions = Object.freeze({
+  terrainCosts: BLINK_TERRAIN_COSTS,
+  canPassThrough: () => true,
+  canStopOn: (terrain: Terrain) => getMoveCost(terrain) < Infinity,
+});
 
 // Returns every tile the unit at origin can end its move on, as
 // [{ x, y, cost }] where cost is the cheapest total to get there. The
@@ -126,7 +144,7 @@ export function getMovementRange(
   const range: RangeTile[] = [];
   for (const [k, cost] of best) {
     const { x, y } = keyToTile(grid, k);
-    if (isDestination(grid, origin, x, y)) range.push({ x, y, cost });
+    if (isDestination(grid, origin, x, y, options)) range.push({ x, y, cost });
   }
   return range;
 }
@@ -145,7 +163,7 @@ export function getMovePath(
 ): Point[] | null {
   if (!isInBounds(grid, origin.x, origin.y)) return null;
   if (!isInBounds(grid, destination.x, destination.y)) return null;
-  if (!isDestination(grid, origin, destination.x, destination.y)) return null;
+  if (!isDestination(grid, origin, destination.x, destination.y, options)) return null;
 
   const { best, cameFrom } = explore(grid, origin, movement, options);
   let k = tileKey(grid, destination.x, destination.y);
