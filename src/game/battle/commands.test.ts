@@ -19,6 +19,9 @@ import { createTestBattle, makeTestUnit } from './testLevel.ts';
 import type { Modifier } from '../modifiers.ts';
 import {
   AIRLIFT,
+  BREACH,
+  BREACHING_SHOT,
+  LAY_MINE,
   BATTERING_CHARGE,
   CHARGE,
   HIT_AND_RUN,
@@ -982,6 +985,87 @@ describe('movement skills', () => {
     });
     const grid = setTerrain(start.grid, 1, 0, 'water');
     expect(getSkillTargets(grid, start.units, 'hero', { x: 0, y: 0 }, LEND_A_HAND)).toEqual([]);
+  });
+});
+
+describe('terrain skills', () => {
+  const user = (skill: Skill) => {
+    const hero = makeTestUnit({ team: 'player', mana: 20 });
+    hero.modifiers = [{ kind: 'skill', skill }];
+    return hero;
+  };
+
+  it('lays a mine that goes off under the first foe to walk onto it, never for its last HP', () => {
+    const start = createTestBattle({
+      hero: { unit: user(LAY_MINE), at: { x: 0, y: 0 } },
+      foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 4, y: 0 } },
+    });
+    expect(getSkillTargets(start.grid, start.units, 'hero', { x: 0, y: 0 }, LAY_MINE)).toEqual([
+      { x: 1, y: 0, unitId: '' },
+    ]);
+    const laid = run(start, { type: 'skill', unitId: 'hero', skillId: 'lay-mine', target: { x: 1, y: 0 } });
+    expect(laid.events).toContainEqual({ type: 'mine-laid', unitId: 'hero', at: { x: 1, y: 0 } });
+    expect(laid.state.mines).toEqual([{ x: 1, y: 0, team: 'player', damage: 6 }]);
+    expect(laid.state.turnState?.team).toBe('enemy');
+
+    const path = [4, 3, 2, 1].map((x) => ({ x, y: 0 }));
+    const tripped = run(laid.state, { type: 'move', unitId: 'foe', to: { x: 1, y: 0 }, path });
+    expect(tripped.events).toContainEqual({
+      type: 'mine-tripped',
+      unitId: 'foe',
+      at: { x: 1, y: 0 },
+      damage: 6,
+      health: 14,
+    });
+    expect(tripped.state.mines).toEqual([]);
+    expect(findUnit(tripped.state.grid, 'foe')).toEqual({ x: 1, y: 0 });
+  });
+
+  it("lets the mine's own side walk over it", () => {
+    const start = createTestBattle(
+      {
+        hero: { unit: user(LAY_MINE), at: { x: 0, y: 0 } },
+        friend: { unit: makeTestUnit({ team: 'player' }), at: { x: 0, y: 1 } },
+        foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 4, y: 1 } },
+      },
+      { height: 2 },
+    );
+    const laid = run(start, { type: 'skill', unitId: 'hero', skillId: 'lay-mine', target: { x: 1, y: 0 } });
+    const walked = run(laid.state, {
+      type: 'move',
+      unitId: 'friend',
+      to: { x: 1, y: 0 },
+      path: [
+        { x: 0, y: 1 },
+        { x: 1, y: 1 },
+        { x: 1, y: 0 },
+      ],
+    });
+    expect(walked.events.some((event) => event.type === 'mine-tripped')).toBe(false);
+    expect(walked.state.mines).toHaveLength(1);
+  });
+
+  it('breaches a wall next to the user, and a siege breaches one from range', () => {
+    const walled = (skill: Skill) => {
+      const start = createTestBattle({
+        hero: { unit: user(skill), at: { x: 0, y: 0 } },
+        foe: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 7, y: 0 } },
+      });
+      return { ...start, grid: setTerrain(setTerrain(start.grid, 1, 0, 'wall'), 3, 0, 'mountain') };
+    };
+    const near = walled(BREACH);
+    expect(getSkillTargets(near.grid, near.units, 'hero', { x: 0, y: 0 }, BREACH)).toEqual([
+      { x: 1, y: 0, unitId: '' },
+    ]);
+    const { state, events } = run(near, { type: 'skill', unitId: 'hero', skillId: 'breach', target: { x: 1, y: 0 } });
+    expect(events).toContainEqual({ type: 'breached', unitId: 'hero', at: { x: 1, y: 0 }, terrain: 'dirt' });
+    expect(state.grid.cells[1].terrain).toBe('dirt');
+
+    const far = walled(BREACHING_SHOT);
+    expect(getSkillTargets(far.grid, far.units, 'hero', { x: 0, y: 0 }, BREACHING_SHOT)).toEqual([
+      { x: 1, y: 0, unitId: '' },
+      { x: 3, y: 0, unitId: '' },
+    ]);
   });
 });
 
