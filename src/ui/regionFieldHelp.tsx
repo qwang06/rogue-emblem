@@ -98,8 +98,8 @@ const HELP: Record<string, FieldHelp> = {
     body: (
       <p>
         The art the map is drawn in: summer&apos;s green grass (the default when unset), autumn&apos;s golden grass and
-        bare woods, winter&apos;s snow, buildings included, or underworld&apos;s dead ground and lava. Autumn scatters
-        gold ginkgos instead of green ones; winter has no scattered trees.
+        bare woods, winter&apos;s snow, buildings included, underworld&apos;s dead ground and lava, or a starship&apos;s
+        steel deck. Autumn scatters gold ginkgos instead of green ones; winter has no scattered trees.
       </p>
     ),
   },

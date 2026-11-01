@@ -399,7 +399,7 @@ describe('a region season', () => {
 
   it('refuses a season it does not know', () => {
     expect(() => parseRegionSettings(file([region({ season: 'spring' })]))).toThrow(
-      /^regions\[0\]\.season must be one of summer, autumn, winter, underworld/,
+      /^regions\[0\]\.season must be one of summer, autumn, winter, underworld, starship/,
     );
   });
 });
