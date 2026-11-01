@@ -30,19 +30,6 @@ export const GOBLIN_GROWTHS = Object.freeze({
   resistance: 10,
 });
 
-// The most each stat can reach through level ups.
-export const GOBLIN_CAPS = Object.freeze({
-  health: 40,
-  mana: 0,
-  strength: 20,
-  intelligence: 20,
-  skill: 20,
-  speed: 20,
-  luck: 20,
-  defense: 20,
-  resistance: 20,
-});
-
 // The weapon types a goblin can wield.
 export const GOBLIN_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
 
@@ -66,7 +53,6 @@ export class Goblin extends Unit {
       items,
       weaponTypes: GOBLIN_WEAPON_TYPES,
       growths: GOBLIN_GROWTHS,
-      caps: GOBLIN_CAPS,
       ...GOBLIN_STATS,
     });
   }

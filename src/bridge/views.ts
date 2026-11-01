@@ -13,13 +13,7 @@ import {
 } from '../game/combat.ts';
 import { getAttackSpeed, getAvoid, getCrit, getHit } from '../game/combatStats.ts';
 import type { Dialog, DialogSide } from '../game/dialog.ts';
-import {
-  getExperienceForLevel,
-  MAX_LEVEL,
-  type ExperienceGain,
-  type GrowthStat,
-  type LevelUpResult,
-} from '../game/experience.ts';
+import { getExperienceForLevel, type ExperienceGain, type GrowthStat, type LevelUpResult } from '../game/experience.ts';
 import type { ObjectiveText } from '../game/objectives.ts';
 import type { Point } from '../game/grid.ts';
 import type { Team, TurnState } from '../game/turns.ts';
@@ -62,8 +56,8 @@ export interface UnitView {
   team: Team;
   level: number;
   experience: number;
-  // The XP its current level takes to finish, or null at the level cap.
-  experienceToLevel: number | null;
+  // The XP its current level takes to finish.
+  experienceToLevel: number;
   health: number;
   maxHealth: number;
   mana: number;
@@ -85,13 +79,11 @@ export interface UnitView {
   rank: UnitRank | null;
 }
 
-// One stat on the unit info screen: its value and the most its class can
-// raise it to (null when the class sets no cap).
+// One stat on the unit info screen and its value (stats have no caps).
 export interface StatLineView {
   id: GrowthStat;
   label: string;
   value: number;
-  cap: number | null;
 }
 
 // The equipped weapon's full numbers, for the unit info screen.
@@ -123,14 +115,13 @@ export interface SkillView {
 }
 
 // The unit info screen's full stat sheet: everything the hover panel shows
-// plus the class name, stat caps, the rates it fights with, its equipped
+// plus the class name, its stats, the rates it fights with, its equipped
 // weapon's numbers, the weapon types it can wield, the skills it knows and
 // its passives: its promoted class's passive (promotions.ts), the passive
 // boons it has taken (see warband/boons.ts), its elite affixes and its
 // evolutions (warband/evolutions.ts), and the quirk it joined with
 // (warband/quirks.ts).
 export interface UnitDetailView extends UnitView {
-  maxLevel: boolean;
   stats: readonly StatLineView[];
   damageType: DamageType;
   attack: number;
@@ -307,10 +298,9 @@ export interface TeamUnitView {
   // The unit's art name (getUnitSprite), for its sprite in the tile.
   sprite: string;
   level: number;
-  // XP toward the next level, and how much that level takes; null at
-  // MAX_LEVEL.
+  // XP toward the next level, and how much that level takes.
   experience: number;
-  experienceForLevel: number | null;
+  experienceForLevel: number;
   health: number;
   maxHealth: number;
 }
@@ -370,7 +360,7 @@ export function toUnitView(unit: Unit | null | undefined): UnitView | null {
     team: unit.team,
     level: unit.level,
     experience: unit.experience,
-    experienceToLevel: unit.level >= MAX_LEVEL ? null : getExperienceForLevel(unit.level),
+    experienceToLevel: getExperienceForLevel(unit.level),
     health: unit.health,
     maxHealth: unit.maxHealth,
     mana: unit.mana,
@@ -413,11 +403,11 @@ const DETAIL_STATS: readonly (readonly [Exclude<GrowthStat, 'health' | 'mana'>, 
 ]);
 
 // Snapshot of a unit for the unit info screen: toUnitView's fields plus
-// its class's display name, each stat with its cap, the rates it fights
+// its class's display name, each stat, the rates it fights
 // with before any opponent is counted (attack is its power stat plus its
 // weapon's might; hit, avoid, crit and attack speed from combatStats.ts),
 // its equipped weapon's numbers, the weapon types it can wield and the
-// skills it has learned. `maxLevel` is set once it can't level any more.
+// skills it has learned.
 export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView | null {
   const view = toUnitView(unit);
   if (!unit || !view) return null;
@@ -437,10 +427,7 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
   };
   return Object.freeze({
     ...view,
-    maxLevel: unit.level >= MAX_LEVEL,
-    stats: Object.freeze(
-      DETAIL_STATS.map(([id, label]) => Object.freeze({ id, label, value: unit[id], cap: unit.caps[id] ?? null })),
-    ),
+    stats: Object.freeze(DETAIL_STATS.map(([id, label]) => Object.freeze({ id, label, value: unit[id] }))),
     damageType,
     attack: unit[DAMAGE_TYPES[damageType].power] + (weapon?.might ?? 0) + bonus.damage,
     hit: getHit({ ...rates, bonus }),
@@ -913,7 +900,7 @@ export function toTeamView(roster: readonly UnitSnapshot[]): readonly TeamUnitVi
         sprite: getUnitSprite(unit.classId),
         level: unit.level,
         experience: unit.experience,
-        experienceForLevel: unit.level >= MAX_LEVEL ? null : getExperienceForLevel(unit.level),
+        experienceForLevel: getExperienceForLevel(unit.level),
         health: unit.health,
         maxHealth: unit.maxHealth,
       }),

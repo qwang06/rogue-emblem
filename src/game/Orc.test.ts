@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getLearnedSkills } from './skills.ts';
-import { ORC_CAPS, ORC_GROWTHS, ORC_ITEMS, ORC_STATS, Orc } from './Orc.ts';
+import { ORC_GROWTHS, ORC_ITEMS, ORC_STATS, Orc } from './Orc.ts';
 import { Unit } from './Unit.ts';
 import { GREAT_AXE } from './weapons.ts';
 
@@ -36,10 +36,9 @@ describe('Orc', () => {
     expect(orc.items).toHaveLength(1);
   });
 
-  it('levels up with the orc growth rates and caps', () => {
+  it('levels up with the orc growth rates', () => {
     const orc = new Orc({ team: 'enemy' });
     expect(orc.growths).toBe(ORC_GROWTHS);
-    expect(orc.caps).toBe(ORC_CAPS);
   });
 
   it('learns no skills', () => {

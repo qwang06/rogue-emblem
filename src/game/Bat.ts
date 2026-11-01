@@ -30,19 +30,6 @@ export const BAT_GROWTHS = Object.freeze({
   resistance: 20,
 });
 
-// The most each stat can reach through level ups.
-export const BAT_CAPS = Object.freeze({
-  health: 40,
-  mana: 0,
-  strength: 20,
-  intelligence: 20,
-  skill: 20,
-  speed: 20,
-  luck: 20,
-  defense: 20,
-  resistance: 20,
-});
-
 // The weapon types a bat can wield.
 export const BAT_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
 
@@ -66,7 +53,6 @@ export class Bat extends Unit {
       items,
       weaponTypes: BAT_WEAPON_TYPES,
       growths: BAT_GROWTHS,
-      caps: BAT_CAPS,
       ...BAT_STATS,
     });
   }

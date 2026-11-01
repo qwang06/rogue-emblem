@@ -55,10 +55,13 @@ describe('toBoonPickView', () => {
     expect(view.boons.map((boon) => boon.gain)).toEqual([{ stat: 'health', amount: 4 }, null, null]);
   });
 
-  it("cuts a stat boon's raise to the class's cap", () => {
+  it("gives a stat boon's full raise however high the stat is (no caps)", () => {
     const unit = { ...soldierRun().roster[0], speed: 1000 };
     const view = toBoonPickView({ unit, level: 2, boons: [findBoon('stat-speed')!, findBoon('stat-defense')!] });
-    expect(view.boons.map((boon) => boon.gain)).toEqual([null, { stat: 'defense', amount: 2 }]);
+    expect(view.boons.map((boon) => boon.gain)).toEqual([
+      { stat: 'speed', amount: 2 },
+      { stat: 'defense', amount: 2 },
+    ]);
   });
 
   it('marks a boon that would complete an evolution', () => {

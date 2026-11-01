@@ -17,7 +17,7 @@ describe('Elemental', () => {
     expect(unit.level).toBe(1);
   });
 
-  it("uses its element's stat line, growths and caps", () => {
+  it("uses its element's stat line, growths", () => {
     for (const kind of ELEMENTAL_KINDS) {
       const unit = new Elemental(kind, { team: 'enemy' });
       const line = ELEMENTALS[kind];
@@ -25,7 +25,6 @@ describe('Elemental', () => {
       expect(unit.intelligence, kind).toBe(line.stats.intelligence);
       expect(unit.movement, kind).toBe(line.stats.movement);
       expect(unit.growths, kind).toBe(line.growths);
-      expect(unit.caps, kind).toBe(line.caps);
     }
   });
 

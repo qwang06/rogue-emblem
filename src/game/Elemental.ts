@@ -26,23 +26,10 @@ export interface ElementalLine {
     movement: number;
   };
   growths: GrowthTable;
-  caps: GrowthTable;
   weapon: Weapon;
 }
 
-const CAPS: GrowthTable = Object.freeze({
-  health: 40,
-  mana: 30,
-  strength: 20,
-  intelligence: 20,
-  skill: 20,
-  speed: 20,
-  luck: 20,
-  defense: 20,
-  resistance: 20,
-});
-
-// Each element's stat line, growths, caps and weapon.
+// Each element's stat line, growths and weapon.
 export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object.freeze({
   // Water: steady and hard to hurt with spells, it mends nothing yet but
   // strikes with light from two tiles.
@@ -71,7 +58,6 @@ export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object
       defense: 15,
       resistance: 45,
     }),
-    caps: CAPS,
     weapon: LIGHT,
   }),
   // Fire: the hardest hitter, with fire from two tiles, but frail.
@@ -100,7 +86,6 @@ export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object
       defense: 10,
       resistance: 35,
     }),
-    caps: CAPS,
     weapon: FIRE_SPELL,
   }),
   // Air: the quickest and most elusive.
@@ -129,7 +114,6 @@ export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object
       defense: 10,
       resistance: 35,
     }),
-    caps: CAPS,
     weapon: LIGHT,
   }),
   // Earth: a slow, heavy body that slams up close.
@@ -158,7 +142,6 @@ export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object
       defense: 45,
       resistance: 15,
     }),
-    caps: CAPS,
     weapon: TACKLE,
   }),
 });
@@ -192,7 +175,6 @@ export class Elemental extends Unit {
       items: items ?? getElementalItems(kind),
       weaponTypes,
       growths: line.growths,
-      caps: line.caps,
       ...line.stats,
     });
     this.kind = kind;

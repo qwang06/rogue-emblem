@@ -1,6 +1,6 @@
 # UNITS.md
 
-Reference for every unit class: base stats, growth rates, caps, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Villager.ts`, `src/game/Archer.ts`, `src/game/Soldier.ts`, `src/game/Vanguard.ts`, `src/game/Sapper.ts`, `src/game/Scout.ts`, `src/game/Beast.ts`, `src/game/BeastRider.ts`, `src/game/Siege.ts`, `src/game/Ram.ts`, `src/game/Acolyte.ts`, `src/game/Elemental.ts`, `src/game/promotions.ts`, `src/game/Slime.ts`, `src/game/Goblin.ts`, `src/game/Skeleton.ts`, `src/game/Bat.ts`, `src/game/Orc.ts`, `src/game/Dragon.ts`, `src/game/healing.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
+Reference for every unit class: base stats, growth rates, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Villager.ts`, `src/game/Archer.ts`, `src/game/Soldier.ts`, `src/game/Vanguard.ts`, `src/game/Sapper.ts`, `src/game/Scout.ts`, `src/game/Beast.ts`, `src/game/BeastRider.ts`, `src/game/Siege.ts`, `src/game/Ram.ts`, `src/game/Acolyte.ts`, `src/game/Elemental.ts`, `src/game/promotions.ts`, `src/game/Slime.ts`, `src/game/Goblin.ts`, `src/game/Skeleton.ts`, `src/game/Bat.ts`, `src/game/Orc.ts`, `src/game/Dragon.ts`, `src/game/healing.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
 
 ## How the numbers work
 
@@ -15,7 +15,7 @@ Reference for every unit class: base stats, growth rates, caps, weapons and skil
 - **Healing:** a unit carrying a staff gets a **Heal** action. It restores the staff's power + the healer's `INT` to a wounded ally in the staff's range, capped at the ally's missing HP, spends one use of the staff (a staff with none left breaks), and earns the healer 10 XP. Staves aren't weapons: they can't attack or counter.
 - **Uses:** every strike, hit or miss, spends one use of the striker's weapon. A weapon with no uses left breaks and is gone, and a unit whose weapon breaks mid-exchange stops striking. Fists never break (`∞`).
 - **Tomes:** a tome is a magical weapon that teaches its spell. Each strike with it counts towards learning the spell (Fire Tome: 5); on the strike that reaches the count the spell takes the tome's slot and never breaks, and the tome keeps its remaining uses in the next free slot (or goes to the convoy when there's none) so another unit can learn from it. A unit that already knows the spell just uses the tome up. Progress is kept per unit, per tome, between stages.
-- **Growths** are the % chance a stat rises by 1 on each level up. A stat never grows past its cap. Max level is 20. Level 1 to 2 takes 50 XP, every level after 100 XP.
+- **Growths** are the % chance a stat rises by 1 on each level up. Stats have no caps and there is no level cap. Level 1 to 2 takes 50 XP, every level after 100 XP.
 - **XP rate** scales every XP gain (combat, skills, healing): a unit with a 150% rate earns 15 XP where others earn 10, rounded to the nearest point and never below 1.
 - **Skills** always hit, never crit, and the target can't counter. Their damage is the user's regular hit (weapon might included) with any bonus `STR` added, then scaled; scaled damage rounds up. Using one costs mana, earns XP like a landed hit, and spends no weapon uses. A healing skill (Mend) instead restores its power + the user's `INT` to a wounded ally in range, capped at the ally's missing HP, and earns 10 XP like a staff heal.
 - **Secondary skill sets** (Warband Mode): a unit can learn one other class's skill set at camp and knows that class's skills as it reaches their levels, as if they were its own. A mentor (a roster unit of that class that knows its skills) teaches it for 20 gold; a Mentor's Scroll, a stage reward, teaches any class's set for free. A new set replaces the old one.
@@ -60,20 +60,20 @@ The wooden set is the basic gear: lighter and weaker than iron, and it breaks af
 
 ## Villager
 
-The starting unit, a townsperson in a plain tunic with no armor: Warband Mode's only starting class, the player's units in the demo battle, and a recruit. A villager starts a point of strength below a soldier and swings only a wooden sword, so it's the weakest unit early on. In exchange it has the highest growth total and the highest caps of any class and earns XP half again as fast, and at level 5 it promotes into an Archer, Soldier, Vanguard or Sapper (see Promotions below).
+The starting unit, a townsperson in a plain tunic with no armor: Warband Mode's only starting class, the player's units in the demo battle, and a recruit. A villager starts a point of strength below a soldier and swings only a wooden sword, so it's the weakest unit early on. In exchange it has the highest growth total of any class and earns XP half again as fast, and at level 5 it promotes into an Archer, Soldier, Vanguard or Sapper (see Promotions below).
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 10   | 85%    | 50  |
-| MP   | 5    | 45%    | 35  |
-| STR  | 3    | 60%    | 25  |
-| INT  | 0    | 10%    | 20  |
-| SKL  | 3    | 55%    | 25  |
-| SPD  | 3    | 55%    | 25  |
-| LCK  | 2    | 50%    | 25  |
-| DEF  | 2    | 45%    | 25  |
-| RES  | 0    | 25%    | 25  |
-| MOV  | 5    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 10   | 85%    |
+| MP   | 5    | 45%    |
+| STR  | 3    | 60%    |
+| INT  | 0    | 10%    |
+| SKL  | 3    | 55%    |
+| SPD  | 3    | 55%    |
+| LCK  | 2    | 50%    |
+| DEF  | 2    | 45%    |
+| RES  | 0    | 25%    |
+| MOV  | 5    | –      |
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
@@ -89,8 +89,8 @@ Carries a Wooden Sword, its Fists for when the sword breaks, a Health Potion (+5
 
 In Warband Mode a villager that has reached **level 5** can promote at camp by spending a **Master Seal** (60 gold from the merchant, or a stage reward offered once someone is a level short of promoting and the warband holds none). It picks one of four classes, defined in `src/game/promotions.ts`. A promotion:
 
-- makes the unit that class: its growths, caps, weapon types, XP rate and skill tree;
-- adds whatever stats the class starts above a villager, on the spot, each up to the new cap (a max HP or MP gain raises the current value too), and changes MOV by the difference;
+- makes the unit that class: its growths, weapon types, XP rate and skill tree;
+- adds whatever stats the class starts above a villager, on the spot, in full (a max HP or MP gain raises the current value too), and changes MOV by the difference;
 - carries the class's passive into every battle;
 - hands over the class's weapon (in its inventory, or the convoy when it's full).
 
@@ -104,18 +104,18 @@ Level, XP, items, boons and tome progress carry over. The promoted classes are n
 
 The ranged infantry: frail but accurate. Its bow only reaches two tiles away, so it can't strike or counter a foe on the next tile, and Long Shot is how it hits from further off (or up close). Villagers become one by promoting (see Promotions); a fresh one (an enemy) starts on the stat line below.
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 9    | 60%    | 40  |
-| MP   | 5    | 40%    | 30  |
-| STR  | 3    | 40%    | 20  |
-| INT  | 0    | 5%     | 20  |
-| SKL  | 5    | 55%    | 20  |
-| SPD  | 4    | 45%    | 20  |
-| LCK  | 2    | 35%    | 20  |
-| DEF  | 1    | 20%    | 20  |
-| RES  | 1    | 20%    | 20  |
-| MOV  | 5    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 9    | 60%    |
+| MP   | 5    | 40%    |
+| STR  | 3    | 40%    |
+| INT  | 0    | 5%     |
+| SKL  | 5    | 55%    |
+| SPD  | 4    | 45%    |
+| LCK  | 2    | 35%    |
+| DEF  | 1    | 20%    |
+| RES  | 1    | 20%    |
+| MOV  | 5    | –      |
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
@@ -131,18 +131,18 @@ Passive, **Steady Aim**: +10 hit. Carries an Iron Bow, a Health Potion (+5 HP) a
 
 The spear-and-shield infantry: the enemy in the demo battle. Villagers become one by promoting (see Promotions); a fresh one (an enemy) starts on the stat line below.
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 10   | 70%    | 40  |
-| MP   | 5    | 40%    | 30  |
-| STR  | 4    | 45%    | 20  |
-| INT  | 0    | 5%     | 20  |
-| SKL  | 3    | 40%    | 20  |
-| SPD  | 3    | 40%    | 20  |
-| LCK  | 2    | 30%    | 20  |
-| DEF  | 2    | 30%    | 20  |
-| RES  | 0    | 15%    | 20  |
-| MOV  | 5    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 10   | 70%    |
+| MP   | 5    | 40%    |
+| STR  | 4    | 45%    |
+| INT  | 0    | 5%     |
+| SKL  | 3    | 40%    |
+| SPD  | 3    | 40%    |
+| LCK  | 2    | 30%    |
+| DEF  | 2    | 30%    |
+| RES  | 0    | 15%    |
+| MOV  | 5    | –      |
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
@@ -159,18 +159,18 @@ Passive, **Shield Wall**: takes 1 less damage when attacked. Carries an Iron Spe
 
 The axe-wielding front line: high HP and strength, low skill, speed and luck. Its strength matches the Iron Axe's weight, so the axe doesn't slow it, but the axe's low hit makes it the least accurate class. Villagers become one by promoting (see Promotions); a fresh one (an enemy) starts on the stat line below.
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 12   | 85%    | 40  |
-| MP   | 5    | 30%    | 30  |
-| STR  | 5    | 55%    | 20  |
-| INT  | 0    | 0%     | 20  |
-| SKL  | 2    | 30%    | 20  |
-| SPD  | 2    | 30%    | 20  |
-| LCK  | 1    | 25%    | 20  |
-| DEF  | 2    | 30%    | 20  |
-| RES  | 0    | 10%    | 20  |
-| MOV  | 5    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 12   | 85%    |
+| MP   | 5    | 30%    |
+| STR  | 5    | 55%    |
+| INT  | 0    | 0%     |
+| SKL  | 2    | 30%    |
+| SPD  | 2    | 30%    |
+| LCK  | 1    | 25%    |
+| DEF  | 2    | 30%    |
+| RES  | 0    | 10%    |
+| MOV  | 5    | –      |
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
@@ -186,18 +186,18 @@ Passive, **Heavy Swing**: +1 damage. Carries an Iron Axe, a Health Potion (+5 HP
 
 Promoted from the Villager. Hauls a powder keg on its back and throws it up to two tiles, or blasts a foe next to it: a heavy hit with few kegs to spare. Lightly armored. Villagers become one by promoting (see Promotions); a fresh one starts on the stat line below.
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 10   | 65%    | 40  |
-| MP   | 5    | 40%    | 30  |
-| STR  | 4    | 45%    | 20  |
-| INT  | 0    | 5%     | 20  |
-| SKL  | 3    | 40%    | 20  |
-| SPD  | 3    | 35%    | 20  |
-| LCK  | 2    | 30%    | 20  |
-| DEF  | 1    | 25%    | 20  |
-| RES  | 0    | 15%    | 20  |
-| MOV  | 5    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 10   | 65%    |
+| MP   | 5    | 40%    |
+| STR  | 4    | 45%    |
+| INT  | 0    | 5%     |
+| SKL  | 3    | 40%    |
+| SPD  | 3    | 35%    |
+| LCK  | 2    | 30%    |
+| DEF  | 1    | 25%    |
+| RES  | 0    | 15%    |
+| MOV  | 5    | –      |
 
 | Weapon types    | Starting weapon | XP rate |
 | --------------- | --------------- | ------- |
@@ -213,18 +213,18 @@ Passive, **Demolitions**: +5 crit. Carries a Powder Keg, a Health Potion (+5 HP)
 
 A specialized unit that doesn't promote, recruited or brought by the Sellswords origin: a flier (a flying carpet, hot-air balloon, giant bird or gyrocopter, by faction) that ranges furthest of any class, quick and lucky but frail. What it does beyond moving far comes later.
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 8    | 50%    | 35  |
-| MP   | 5    | 40%    | 30  |
-| STR  | 2    | 30%    | 20  |
-| INT  | 0    | 10%    | 20  |
-| SKL  | 4    | 45%    | 20  |
-| SPD  | 6    | 60%    | 25  |
-| LCK  | 4    | 50%    | 25  |
-| DEF  | 1    | 15%    | 20  |
-| RES  | 2    | 25%    | 20  |
-| MOV  | 7    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 8    | 50%    |
+| MP   | 5    | 40%    |
+| STR  | 2    | 30%    |
+| INT  | 0    | 10%    |
+| SKL  | 4    | 45%    |
+| SPD  | 6    | 60%    |
+| LCK  | 4    | 50%    |
+| DEF  | 1    | 15%    |
+| RES  | 2    | 25%    |
+| MOV  | 7    | –      |
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
@@ -239,18 +239,18 @@ Carries a Wooden Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
 A specialized unit, recruited on its own (or raised by the Beast Tamer origin): a riderless winged beast (wyvern, griffin, pegasus or drake, by faction) with lots of HP and strength. It fights with its Bite and carries nothing else.
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 13   | 80%    | 45  |
-| MP   | 2    | 20%    | 20  |
-| STR  | 5    | 55%    | 22  |
-| INT  | 0    | 0%     | 20  |
-| SKL  | 2    | 35%    | 20  |
-| SPD  | 4    | 45%    | 22  |
-| LCK  | 1    | 25%    | 20  |
-| DEF  | 2    | 35%    | 22  |
-| RES  | 1    | 15%    | 20  |
-| MOV  | 6    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 13   | 80%    |
+| MP   | 2    | 20%    |
+| STR  | 5    | 55%    |
+| INT  | 0    | 0%     |
+| SKL  | 2    | 35%    |
+| SPD  | 4    | 45%    |
+| LCK  | 1    | 25%    |
+| DEF  | 2    | 35%    |
+| RES  | 1    | 15%    |
+| MOV  | 6    | –      |
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
@@ -265,18 +265,18 @@ It carries no potions.
 
 A special unit of its own kind: a rider on the faction's winged beast, strong, fast and far-ranging, with a spear.
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 12   | 70%    | 45  |
-| MP   | 5    | 40%    | 30  |
-| STR  | 5    | 50%    | 22  |
-| INT  | 0    | 5%     | 20  |
-| SKL  | 4    | 45%    | 22  |
-| SPD  | 5    | 50%    | 22  |
-| LCK  | 3    | 35%    | 20  |
-| DEF  | 3    | 30%    | 22  |
-| RES  | 2    | 20%    | 20  |
-| MOV  | 7    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 12   | 70%    |
+| MP   | 5    | 40%    |
+| STR  | 5    | 50%    |
+| INT  | 0    | 5%     |
+| SKL  | 4    | 45%    |
+| SPD  | 5    | 50%    |
+| LCK  | 3    | 35%    |
+| DEF  | 3    | 30%    |
+| RES  | 2    | 20%    |
+| MOV  | 7    | –      |
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
@@ -291,18 +291,18 @@ Carries an Iron Spear, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
 A specialized unit that doesn't promote: a siege engine on wheels (crystal cannon, mortar, ballista or catapult, by faction). It strikes from two or three tiles away and can't strike or counter a foe next to it; slow and plodding.
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 12   | 60%    | 40  |
-| MP   | 0    | 0%     | 0   |
-| STR  | 5    | 45%    | 22  |
-| INT  | 0    | 0%     | 20  |
-| SKL  | 3    | 35%    | 20  |
-| SPD  | 1    | 10%    | 15  |
-| LCK  | 0    | 10%    | 15  |
-| DEF  | 3    | 35%    | 22  |
-| RES  | 0    | 10%    | 20  |
-| MOV  | 3    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 12   | 60%    |
+| MP   | 0    | 0%     |
+| STR  | 5    | 45%    |
+| INT  | 0    | 0%     |
+| SKL  | 3    | 35%    |
+| SPD  | 1    | 10%    |
+| LCK  | 0    | 10%    |
+| DEF  | 3    | 35%    |
+| RES  | 0    | 10%    |
+| MOV  | 3    | –      |
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
@@ -317,18 +317,18 @@ It carries only its Ballista.
 
 A specialized unit that doesn't promote: a covered battering ram, the most HP and DEF of any class, that slams whatever stands in front of it. Slow.
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 16   | 80%    | 50  |
-| MP   | 0    | 0%     | 0   |
-| STR  | 6    | 50%    | 24  |
-| INT  | 0    | 0%     | 20  |
-| SKL  | 1    | 25%    | 20  |
-| SPD  | 0    | 5%     | 15  |
-| LCK  | 0    | 5%     | 15  |
-| DEF  | 5    | 45%    | 25  |
-| RES  | 0    | 10%    | 20  |
-| MOV  | 4    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 16   | 80%    |
+| MP   | 0    | 0%     |
+| STR  | 6    | 50%    |
+| INT  | 0    | 0%     |
+| SKL  | 1    | 25%    |
+| SPD  | 0    | 5%     |
+| LCK  | 0    | 5%     |
+| DEF  | 5    | 45%    |
+| RES  | 0    | 10%    |
+| MOV  | 4    | –      |
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
@@ -343,18 +343,18 @@ It fights with its Tackle and carries nothing else.
 
 A specialized unit that doesn't promote. The healer and the warband's magic user: it mends a wounded ally next to it with its Heal staff, and fights with Light, a weak spell it knows from the start that strikes from one or two tiles away and never runs out. At level 1 a heal restores 5 HP (the staff's 2 power + 3 INT) and Light hits a soldier for 3 (2 through its Shield Wall). A tome it finds (see Tomes above) teaches it a stronger spell. Frail, but its RES and LCK make it hard to hurt with magic or crit.
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 8    | 50%    | 40  |
-| MP   | 6    | 50%    | 30  |
-| STR  | 1    | 10%    | 20  |
-| INT  | 3    | 50%    | 20  |
-| SKL  | 2    | 30%    | 20  |
-| SPD  | 3    | 40%    | 20  |
-| LCK  | 4    | 50%    | 20  |
-| DEF  | 1    | 15%    | 20  |
-| RES  | 4    | 45%    | 20  |
-| MOV  | 5    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 8    | 50%    |
+| MP   | 6    | 50%    |
+| STR  | 1    | 10%    |
+| INT  | 3    | 50%    |
+| SKL  | 2    | 30%    |
+| SPD  | 3    | 40%    |
+| LCK  | 4    | 50%    |
+| DEF  | 1    | 15%    |
+| RES  | 4    | 45%    |
+| MOV  | 5    | –      |
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
@@ -374,18 +374,18 @@ Mend heals like the Heal staff without needing one, so another class that learns
 
 A neutral unit, belonging to no faction (the pack's teal water spirit). Steady and hard to hurt with spells; strikes with Light from one or two tiles. Elementals aren't recruits or Training choices yet.
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 11   | 60%    | 40  |
-| MP   | 6    | 50%    | 30  |
-| STR  | 0    | 0%     | 20  |
-| INT  | 3    | 45%    | 20  |
-| SKL  | 3    | 35%    | 20  |
-| SPD  | 3    | 35%    | 20  |
-| LCK  | 3    | 35%    | 20  |
-| DEF  | 1    | 15%    | 20  |
-| RES  | 4    | 45%    | 20  |
-| MOV  | 5    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 11   | 60%    |
+| MP   | 6    | 50%    |
+| STR  | 0    | 0%     |
+| INT  | 3    | 45%    |
+| SKL  | 3    | 35%    |
+| SPD  | 3    | 35%    |
+| LCK  | 3    | 35%    |
+| DEF  | 1    | 15%    |
+| RES  | 4    | 45%    |
+| MOV  | 5    | –      |
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
@@ -400,18 +400,18 @@ It fights with its natural weapon and carries nothing else.
 
 A neutral unit (the pack's fire spirit). The hardest-hitting elemental, with Fire from one or two tiles, but frail. Elementals aren't recruits or Training choices yet.
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 9    | 50%    | 40  |
-| MP   | 6    | 50%    | 30  |
-| STR  | 0    | 0%     | 20  |
-| INT  | 4    | 55%    | 20  |
-| SKL  | 3    | 40%    | 20  |
-| SPD  | 4    | 45%    | 20  |
-| LCK  | 2    | 25%    | 20  |
-| DEF  | 0    | 10%    | 20  |
-| RES  | 3    | 35%    | 20  |
-| MOV  | 5    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 9    | 50%    |
+| MP   | 6    | 50%    |
+| STR  | 0    | 0%     |
+| INT  | 4    | 55%    |
+| SKL  | 3    | 40%    |
+| SPD  | 4    | 45%    |
+| LCK  | 2    | 25%    |
+| DEF  | 0    | 10%    |
+| RES  | 3    | 35%    |
+| MOV  | 5    | –      |
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
@@ -426,18 +426,18 @@ It fights with its natural weapon and carries nothing else.
 
 A neutral unit (the pack's white air spirit). The quickest and most elusive elemental; strikes with Light. Elementals aren't recruits or Training choices yet.
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 8    | 45%    | 40  |
-| MP   | 6    | 50%    | 30  |
-| STR  | 0    | 0%     | 20  |
-| INT  | 3    | 40%    | 20  |
-| SKL  | 4    | 45%    | 20  |
-| SPD  | 6    | 60%    | 20  |
-| LCK  | 4    | 45%    | 20  |
-| DEF  | 0    | 10%    | 20  |
-| RES  | 3    | 35%    | 20  |
-| MOV  | 6    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 8    | 45%    |
+| MP   | 6    | 50%    |
+| STR  | 0    | 0%     |
+| INT  | 3    | 40%    |
+| SKL  | 4    | 45%    |
+| SPD  | 6    | 60%    |
+| LCK  | 4    | 45%    |
+| DEF  | 0    | 10%    |
+| RES  | 3    | 35%    |
+| MOV  | 6    | –      |
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
@@ -452,18 +452,18 @@ It fights with its natural weapon and carries nothing else.
 
 A neutral unit (the pack's brown rock spirit). Slow and heavy, it slams a foe next to it. Elementals aren't recruits or Training choices yet.
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 15   | 80%    | 40  |
-| MP   | 2    | 20%    | 30  |
-| STR  | 5    | 50%    | 20  |
-| INT  | 0    | 0%     | 20  |
-| SKL  | 2    | 30%    | 20  |
-| SPD  | 1    | 10%    | 20  |
-| LCK  | 1    | 15%    | 20  |
-| DEF  | 4    | 45%    | 20  |
-| RES  | 1    | 15%    | 20  |
-| MOV  | 4    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 15   | 80%    |
+| MP   | 2    | 20%    |
+| STR  | 5    | 50%    |
+| INT  | 0    | 0%     |
+| SKL  | 2    | 30%    |
+| SPD  | 1    | 10%    |
+| LCK  | 1    | 15%    |
+| DEF  | 4    | 45%    |
+| RES  | 1    | 15%    |
+| MOV  | 4    | –      |
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
@@ -478,18 +478,18 @@ It fights with its natural weapon and carries nothing else.
 
 The weakest monster and Warband Mode's first fight: a slow blob of jelly that deals 1 damage to a level-1 villager and falls to two sword swings. It carries nothing but its Tackle.
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 6    | 60%    | 40  |
-| MP   | 0    | 0%     | 0   |
-| STR  | 3    | 30%    | 20  |
-| INT  | 0    | 0%     | 20  |
-| SKL  | 1    | 20%    | 20  |
-| SPD  | 1    | 20%    | 20  |
-| LCK  | 0    | 10%    | 20  |
-| DEF  | 0    | 20%    | 20  |
-| RES  | 2    | 30%    | 20  |
-| MOV  | 3    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 6    | 60%    |
+| MP   | 0    | 0%     |
+| STR  | 3    | 30%    |
+| INT  | 0    | 0%     |
+| SKL  | 1    | 20%    |
+| SPD  | 1    | 20%    |
+| LCK  | 0    | 10%    |
+| DEF  | 0    | 20%    |
+| RES  | 2    | 30%    |
+| MOV  | 3    | –      |
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
@@ -504,18 +504,18 @@ It learns no skills and carries no potions.
 
 A quick, scrappy monster: as fast as anything at level 1 and hits about as hard as a soldier, but frail. It carries nothing but its Club.
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 8    | 60%    | 40  |
-| MP   | 0    | 0%     | 0   |
-| STR  | 3    | 40%    | 20  |
-| INT  | 0    | 0%     | 20  |
-| SKL  | 4    | 45%    | 20  |
-| SPD  | 5    | 50%    | 20  |
-| LCK  | 1    | 25%    | 20  |
-| DEF  | 1    | 20%    | 20  |
-| RES  | 0    | 10%    | 20  |
-| MOV  | 5    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 8    | 60%    |
+| MP   | 0    | 0%     |
+| STR  | 3    | 40%    |
+| INT  | 0    | 0%     |
+| SKL  | 4    | 45%    |
+| SPD  | 5    | 50%    |
+| LCK  | 1    | 25%    |
+| DEF  | 1    | 20%    |
+| RES  | 0    | 10%    |
+| MOV  | 5    | –      |
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
@@ -530,18 +530,18 @@ It learns no skills and carries no potions.
 
 The sturdy monster: slow and unlucky, but its bones shrug off weak hits and its claws hit harder than a spear. It carries nothing but its Bone Claws.
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 10   | 70%    | 40  |
-| MP   | 0    | 0%     | 0   |
-| STR  | 4    | 45%    | 20  |
-| INT  | 0    | 0%     | 20  |
-| SKL  | 3    | 35%    | 20  |
-| SPD  | 2    | 25%    | 20  |
-| LCK  | 0    | 5%     | 20  |
-| DEF  | 3    | 40%    | 20  |
-| RES  | 0    | 10%    | 20  |
-| MOV  | 4    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 10   | 70%    |
+| MP   | 0    | 0%     |
+| STR  | 4    | 45%    |
+| INT  | 0    | 0%     |
+| SKL  | 3    | 35%    |
+| SPD  | 2    | 25%    |
+| LCK  | 0    | 5%     |
+| DEF  | 3    | 40%    |
+| RES  | 0    | 10%    |
+| MOV  | 4    | –      |
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
@@ -556,18 +556,18 @@ It learns no skills and carries no potions.
 
 The nimblest monster: hard to hit and quick enough to strike twice, but frail and weak. It carries nothing but its Fangs.
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 7    | 50%    | 40  |
-| MP   | 0    | 0%     | 0   |
-| STR  | 2    | 30%    | 20  |
-| INT  | 0    | 0%     | 20  |
-| SKL  | 3    | 40%    | 20  |
-| SPD  | 6    | 55%    | 20  |
-| LCK  | 3    | 35%    | 20  |
-| DEF  | 0    | 10%    | 20  |
-| RES  | 1    | 20%    | 20  |
-| MOV  | 5    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 7    | 50%    |
+| MP   | 0    | 0%     |
+| STR  | 2    | 30%    |
+| INT  | 0    | 0%     |
+| SKL  | 3    | 40%    |
+| SPD  | 6    | 55%    |
+| LCK  | 3    | 35%    |
+| DEF  | 0    | 10%    |
+| RES  | 1    | 20%    |
+| MOV  | 5    | –      |
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
@@ -582,18 +582,18 @@ It learns no skills and carries no potions.
 
 The heavy monster: slow, but tough enough to take several hits, and it hits harder than any other monster with its Great Axe, which never breaks. It carries nothing else.
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 14   | 80%    | 40  |
-| MP   | 0    | 0%     | 0   |
-| STR  | 5    | 55%    | 20  |
-| INT  | 0    | 0%     | 20  |
-| SKL  | 2    | 30%    | 20  |
-| SPD  | 2    | 20%    | 20  |
-| LCK  | 1    | 15%    | 20  |
-| DEF  | 2    | 35%    | 20  |
-| RES  | 0    | 10%    | 20  |
-| MOV  | 4    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 14   | 80%    |
+| MP   | 0    | 0%     |
+| STR  | 5    | 55%    |
+| INT  | 0    | 0%     |
+| SKL  | 2    | 30%    |
+| SPD  | 2    | 20%    |
+| LCK  | 1    | 15%    |
+| DEF  | 2    | 35%    |
+| RES  | 0    | 10%    |
+| MOV  | 4    | –      |
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
@@ -608,18 +608,18 @@ It learns no skills and carries no potions.
 
 The Red Dragon, boss of the Dragon's Roost (the run's stage 10, before the Hold; its rules are in `src/game/bosses.ts`). The most HP and armor of any monster, and its Fire Breath reaches a tile further than a bite, so archers can't pick at it from range unanswered. Slow, so quick units can strike it twice. It carries nothing else.
 
-| Stat | Base | Growth | Cap |
-| ---- | ---- | ------ | --- |
-| HP   | 22   | 90%    | 60  |
-| MP   | 0    | 0%     | 0   |
-| STR  | 7    | 50%    | 25  |
-| INT  | 0    | 0%     | 20  |
-| SKL  | 4    | 30%    | 20  |
-| SPD  | 3    | 20%    | 20  |
-| LCK  | 2    | 15%    | 20  |
-| DEF  | 5    | 40%    | 25  |
-| RES  | 3    | 30%    | 20  |
-| MOV  | 4    | –      | –   |
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 22   | 90%    |
+| MP   | 0    | 0%     |
+| STR  | 7    | 50%    |
+| INT  | 0    | 0%     |
+| SKL  | 4    | 30%    |
+| SPD  | 3    | 20%    |
+| LCK  | 2    | 15%    |
+| DEF  | 5    | 40%    |
+| RES  | 3    | 30%    |
+| MOV  | 4    | –      |
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |

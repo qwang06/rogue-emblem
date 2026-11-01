@@ -32,19 +32,6 @@ export const SAPPER_GROWTHS = Object.freeze({
   resistance: 15,
 });
 
-// The most each stat can reach through level ups.
-export const SAPPER_CAPS = Object.freeze({
-  health: 40,
-  mana: 30,
-  strength: 20,
-  intelligence: 20,
-  skill: 20,
-  speed: 20,
-  luck: 20,
-  defense: 20,
-  resistance: 20,
-});
-
 // The weapon types it can wield.
 export const SAPPER_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical', 'siege']);
 
@@ -60,7 +47,7 @@ export const SAPPER_PASSIVE: { name: string; description: string; modifiers: rea
 });
 
 // Starts at level 1 with the stat line above; its skills come from the
-// 'sapper' skill tree. Levels up with the growth rates and caps above.
+// 'sapper' skill tree. Levels up with the growth rates above.
 export class Sapper extends Unit {
   constructor({ name = 'Sapper', team, level = 1, items = SAPPER_ITEMS, faction }: ClassUnitOptions) {
     super({
@@ -72,7 +59,6 @@ export class Sapper extends Unit {
       items,
       weaponTypes: SAPPER_WEAPON_TYPES,
       growths: SAPPER_GROWTHS,
-      caps: SAPPER_CAPS,
       ...SAPPER_STATS,
     });
     applyModifiers(this, SAPPER_PASSIVE.modifiers);

@@ -8,7 +8,7 @@
 import { HEALTH_POTION, MASTER_SEAL, MAX_INVENTORY_SLOTS } from '../items.ts';
 import { getPromotions, PROMOTION_LEVEL } from '../promotions.ts';
 import { countSeals } from './promotion.ts';
-import { getExperienceToNextLevel, MAX_LEVEL, rollLevelUp, type LevelUpResult } from '../experience.ts';
+import { getExperienceToNextLevel, rollLevelUp, type LevelUpResult } from '../experience.ts';
 import type { Rng } from '../combatStats.ts';
 import { createSeededRng, randomInt, randomItem, shuffle } from '../rng.ts';
 import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
@@ -230,7 +230,7 @@ export function getPendingRewardOffer(run: RunState): (PendingReward & { rewards
 // - supplies, when anyone has room for a Health Potion
 // - arms, when anyone can wield an Arms Cache weapon
 // - relic, while there's a relic the run doesn't hold
-// - lesson, while anyone is below the max level
+// - lesson, whenever there's a roster (there's no level cap)
 // - seal, while the warband holds none and someone is a level short of
 //   promoting or past it (see promotion.ts)
 // - scroll, from stage 2 on, while anyone has a skill set to learn
@@ -252,7 +252,7 @@ export function rollRewards(
   if (run.roster.some((unit) => canTakeItem(unit, HEALTH_POTION.id))) kinds.push('supplies');
   if (eligibleWeapons(run, classes).length > 0) kinds.push('arms');
   if (getUnownedRelics(run.relics).length > 0) kinds.push('relic');
-  if (run.roster.some((unit) => unit.level < MAX_LEVEL)) kinds.push('lesson');
+  if (run.roster.length > 0) kinds.push('lesson');
   if (wantsSeal(run)) kinds.push('seal');
   if (stage !== 1 && run.roster.some((unit) => getSecondaryClassIds(unit).length > 0)) kinds.push('scroll');
   kinds.push('gold');
@@ -338,7 +338,7 @@ export function rollRecruit(
   const totalLevel = run.roster.reduce((sum, unit) => sum + unit.level, 0);
   const level = Math.max(1, Math.floor(totalLevel / Math.max(1, run.roster.length)));
   const unit = createUnitOfClass(classId, { name, team: 'player' }, classes);
-  while (unit.level < level) unit.levelUp(rollLevelUp(unit, unit.growths, rng, unit.caps));
+  while (unit.level < level) unit.levelUp(rollLevelUp(unit.growths, rng));
   const usedIds = new Set([...everyone.map((snapshot) => snapshot.id), ...takenIds]);
   let id = `recruit-${stage}`;
   while (usedIds.has(id)) id = `recruit-${stage}-${randomInt(rng, 0, 9999)}`;

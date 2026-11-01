@@ -29,19 +29,6 @@ export const SOLDIER_GROWTHS = Object.freeze({
   resistance: 15,
 });
 
-// The most each stat can reach through level ups.
-export const SOLDIER_CAPS = Object.freeze({
-  health: 40,
-  mana: 30,
-  strength: 20,
-  intelligence: 20,
-  skill: 20,
-  speed: 20,
-  luck: 20,
-  defense: 20,
-  resistance: 20,
-});
-
 // The weapon types a soldier can wield.
 export const SOLDIER_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
 
@@ -59,7 +46,7 @@ export const SOLDIER_PASSIVE: { name: string; description: string; modifiers: re
 // The basic spear-and-shield infantry. Starts at level 1 with the soldier
 // stat line; its skills come from the 'soldier' skill tree, it wields
 // physical weapons, and it carries an Iron Spear and the potions unless
-// given other items. Levels up with the soldier growth rates and caps.
+// given other items. Levels up with the soldier growth rates.
 export class Soldier extends Unit {
   constructor({ name = 'Soldier', team, level = 1, items = SOLDIER_ITEMS, faction }: ClassUnitOptions) {
     super({
@@ -71,7 +58,6 @@ export class Soldier extends Unit {
       items,
       weaponTypes: SOLDIER_WEAPON_TYPES,
       growths: SOLDIER_GROWTHS,
-      caps: SOLDIER_CAPS,
       ...SOLDIER_STATS,
     });
     applyModifiers(this, SOLDIER_PASSIVE.modifiers);

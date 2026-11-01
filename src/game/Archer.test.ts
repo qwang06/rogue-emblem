@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ARCHER_CAPS, ARCHER_GROWTHS, ARCHER_ITEMS, ARCHER_STATS, Archer } from './Archer.ts';
+import { ARCHER_GROWTHS, ARCHER_ITEMS, ARCHER_STATS, Archer } from './Archer.ts';
 import { getCombatForecast } from './combat.ts';
 import { HEALTH_POTION, MANA_POTION } from './items.ts';
 import { getLearnedSkills, LONG_SHOT } from './skills.ts';
@@ -31,10 +31,9 @@ describe('Archer', () => {
     expect(archer.movement).toBe(ARCHER_STATS.movement);
   });
 
-  it('levels up with the archer growth rates and caps', () => {
+  it('levels up with the archer growth rates', () => {
     const archer = new Archer({ team: 'player' });
     expect(archer.growths).toBe(ARCHER_GROWTHS);
-    expect(archer.caps).toBe(ARCHER_CAPS);
   });
 
   it('wields physical weapons only', () => {

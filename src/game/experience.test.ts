@@ -5,7 +5,6 @@ import {
   EXPERIENCE_PER_LEVEL,
   FIRST_LEVEL_EXPERIENCE,
   getExperienceForLevel,
-  MAX_LEVEL,
   MISS_EXPERIENCE,
   addExperience,
   getCombatAward,
@@ -118,8 +117,8 @@ describe('getCombatExperience', () => {
     expect(getCombatExperience(1, 30, 'kill')).toBe(FIRST_LEVEL_EXPERIENCE);
   });
 
-  it('gives nothing at the max level', () => {
-    expect(getCombatExperience(MAX_LEVEL, 30, 'kill')).toBe(0);
+  it('keeps earning past level 20 (there is no level cap)', () => {
+    expect(getCombatExperience(25, 25, 'kill')).toBe(getKillExperience(25, 25));
   });
 });
 
@@ -128,7 +127,7 @@ describe('getExperienceForLevel', () => {
     expect(getExperienceForLevel(1)).toBe(FIRST_LEVEL_EXPERIENCE);
     expect(FIRST_LEVEL_EXPERIENCE).toBeLessThan(EXPERIENCE_PER_LEVEL);
     expect(getExperienceForLevel(2)).toBe(EXPERIENCE_PER_LEVEL);
-    expect(getExperienceForLevel(MAX_LEVEL - 1)).toBe(EXPERIENCE_PER_LEVEL);
+    expect(getExperienceForLevel(40)).toBe(EXPERIENCE_PER_LEVEL);
   });
 });
 
@@ -156,13 +155,9 @@ describe('addExperience', () => {
     expect(addExperience(1, 20, 260)).toEqual({ level: 4, experience: 30, levelsGained: 3 });
   });
 
-  it('stops at the max level with no XP left over', () => {
-    expect(addExperience(MAX_LEVEL - 1, 90, 50)).toEqual({ level: MAX_LEVEL, experience: 0, levelsGained: 1 });
-    expect(addExperience(MAX_LEVEL, 0, 50)).toEqual({ level: MAX_LEVEL, experience: 0, levelsGained: 0 });
-  });
-
-  it('honors a custom max level', () => {
-    expect(addExperience(4, 0, 300, 5)).toEqual({ level: 5, experience: 0, levelsGained: 1 });
+  it('keeps levelling past level 20 (there is no level cap)', () => {
+    expect(addExperience(19, 90, 50)).toEqual({ level: 20, experience: 40, levelsGained: 1 });
+    expect(addExperience(20, 0, 250)).toEqual({ level: 22, experience: 50, levelsGained: 2 });
   });
 
   it('changes nothing for 0 XP', () => {
@@ -181,78 +176,51 @@ describe('getGrowthStatValue', () => {
 });
 
 describe('rollLevelUp', () => {
-  const stats = {
-    maxHealth: 10,
-    maxMana: 5,
-    strength: 4,
-    intelligence: 0,
-    skill: 3,
-    speed: 3,
-    luck: 2,
-    defense: 2,
-    resistance: 0,
-  };
-
   it('raises nothing at 0% growths', () => {
-    expect(rollLevelUp(stats, allGrowths(0), () => 0)).toEqual(noGains);
+    expect(rollLevelUp(allGrowths(0), () => 0)).toEqual(noGains);
   });
 
   it('raises everything at 100% growths', () => {
-    const gains = rollLevelUp(stats, allGrowths(100), () => 0.999);
+    const gains = rollLevelUp(allGrowths(100), () => 0.999);
     for (const stat of GROWTH_STATS) expect(gains[stat]).toBe(1);
   });
 
   it('rolls each stat in order against its growth', () => {
     // health 50% rolls 49 (up), mana 50% rolls 50 (no), strength 50% rolls 0 (up), rest roll 99.
-    const gains = rollLevelUp(stats, allGrowths(50), rolls(0.49, 0.5, 0, 0.99));
+    const gains = rollLevelUp(allGrowths(50), rolls(0.49, 0.5, 0, 0.99));
     expect(gains).toEqual({ ...noGains, health: 1, strength: 1 });
   });
 
   it('treats missing growths as 0%', () => {
-    expect(rollLevelUp(stats, { strength: 100 }, () => 0)).toEqual({ ...noGains, strength: 1 });
+    expect(rollLevelUp({ strength: 100 }, () => 0)).toEqual({ ...noGains, strength: 1 });
   });
 
   it('gives a guaranteed point per 100% and rolls the rest', () => {
-    expect(rollLevelUp(stats, { health: 150 }, () => 0.4).health).toBe(2);
-    expect(rollLevelUp(stats, { health: 150 }, () => 0.6).health).toBe(1);
+    expect(rollLevelUp({ health: 150 }, () => 0.4).health).toBe(2);
+    expect(rollLevelUp({ health: 150 }, () => 0.6).health).toBe(1);
   });
 
-  it('never raises a stat past its cap', () => {
-    // @ts-expect-error maxHealth isn't a growth stat, so it can't be capped
-    const gains = rollLevelUp(stats, allGrowths(200), () => 0, { strength: 5, skill: 3, maxHealth: 0 });
-    expect(gains.strength).toBe(1);
-    expect(gains.skill).toBe(0);
-    expect(gains.health).toBe(2); // caps are keyed by growth stat, not maxHealth
-  });
-
-  it('caps health and mana by their maximums', () => {
-    expect(rollLevelUp(stats, { health: 100, mana: 100 }, () => 0, { health: 10, mana: 6 })).toMatchObject({
-      health: 0,
-      mana: 1,
-    });
-  });
-
-  it('does not mutate the stats', () => {
-    const copy = { ...stats };
-    rollLevelUp(copy, allGrowths(100), () => 0);
-    expect(copy).toEqual(stats);
+  it('does not mutate the growths', () => {
+    const growths = allGrowths(100);
+    const copy = { ...growths };
+    rollLevelUp(growths, () => 0);
+    expect(growths).toEqual(copy);
   });
 });
 
 describe('getAverageLevelUp', () => {
-  const stats = { maxHealth: 10, maxMana: 5, strength: 4, defense: 2 };
   const total = (growth: number, steps: number) =>
-    Array.from({ length: steps }, (_, i) => getAverageLevelUp(stats, { strength: growth }, i + 1).strength).reduce(
+    Array.from({ length: steps }, (_, i) => getAverageLevelUp({ strength: growth }, i + 1).strength).reduce(
       (sum, gain) => sum + gain,
       0,
     );
 
   it('raises nothing at 0% growths', () => {
-    expect(getAverageLevelUp(stats, allGrowths(0), 1)).toEqual(noGains);
+    expect(getAverageLevelUp(allGrowths(0), 1)).toEqual(noGains);
   });
 
   it('carries the fractions, so a 50% growth rises every second level', () => {
-    expect([1, 2, 3, 4].map((step) => getAverageLevelUp(stats, { strength: 50 }, step).strength)).toEqual([0, 1, 0, 1]);
+    expect([1, 2, 3, 4].map((step) => getAverageLevelUp({ strength: 50 }, step).strength)).toEqual([0, 1, 0, 1]);
   });
 
   it('adds up to floor(levels × growth / 100)', () => {
@@ -262,12 +230,8 @@ describe('getAverageLevelUp', () => {
     expect(total(150, 2)).toBe(3);
   });
 
-  it('never raises a stat past its cap', () => {
-    expect(getAverageLevelUp(stats, { strength: 100, health: 100 }, 1, { strength: 4, health: 10 })).toEqual(noGains);
-  });
-
   it('treats missing growths as 0%', () => {
-    expect(getAverageLevelUp(stats, { defense: 100 }, 3)).toEqual({ ...noGains, defense: 1 });
+    expect(getAverageLevelUp({ defense: 100 }, 3)).toEqual({ ...noGains, defense: 1 });
   });
 });
 
@@ -310,7 +274,6 @@ describe('resolveExperienceGain', () => {
     defense: 2,
     resistance: 0,
     growths: allGrowths(100),
-    caps: {},
     ...overrides,
   });
 
@@ -339,9 +302,9 @@ describe('resolveExperienceGain', () => {
     expect(result.levelUps[1].stats).toMatchObject({ health: 12, strength: 6, resistance: 2 });
   });
 
-  it('applies caps across consecutive level ups', () => {
-    const result = resolveExperienceGain(unit({ caps: { strength: 5 } }), 200, () => 0);
-    expect(result.levelUps.map((l) => l.gains.strength)).toEqual([1, 0]);
+  it('keeps raising stats over consecutive level ups (there are no caps)', () => {
+    const result = resolveExperienceGain(unit({ strength: 50 }), 200, () => 0);
+    expect(result.levelUps.map((l) => l.gains.strength)).toEqual([1, 1]);
   });
 
   it('lists the skills learned at each new level', () => {
@@ -369,8 +332,8 @@ describe('getExperienceToNextLevel', () => {
     expect(getExperienceToNextLevel(4, 73)).toBe(27);
   });
 
-  it('is 0 at the top level', () => {
-    expect(getExperienceToNextLevel(MAX_LEVEL, 0)).toBe(0);
+  it('is a full level past level 20 (there is no level cap)', () => {
+    expect(getExperienceToNextLevel(25, 0)).toBe(EXPERIENCE_PER_LEVEL);
   });
 });
 
@@ -409,7 +372,7 @@ describe('getCombatAward', () => {
     expect(getCombatAward({ level: 1 }, opponent, 'died')).toEqual({ amount: 0, scaled: true });
   });
 
-  it('gives nothing at the top level', () => {
-    expect(getCombatAward({ level: MAX_LEVEL }, { level: 1, levelUpOnKill: true }, 'kill').amount).toBe(0);
+  it('still levels a unit past level 20 up exactly', () => {
+    expect(getCombatAward({ level: 25 }, { level: 1, levelUpOnKill: true }, 'kill').amount).toBe(EXPERIENCE_PER_LEVEL);
   });
 });

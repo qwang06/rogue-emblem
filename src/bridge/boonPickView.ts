@@ -93,7 +93,7 @@ export function toBoonPickView(offer: BoonOffer, relics: readonly string[] = [])
     skills: Object.freeze(skills),
     boons: Object.freeze(
       offer.boons.map((boon) => {
-        const amount = getStatBoonGain(unit, boon);
+        const amount = getStatBoonGain(boon);
         return Object.freeze({
           id: boon.id,
           name: boon.name,

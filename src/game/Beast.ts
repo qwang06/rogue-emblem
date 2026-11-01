@@ -31,19 +31,6 @@ export const BEAST_GROWTHS = Object.freeze({
   resistance: 15,
 });
 
-// The most each stat can reach through level ups.
-export const BEAST_CAPS = Object.freeze({
-  health: 45,
-  mana: 20,
-  strength: 22,
-  intelligence: 20,
-  skill: 20,
-  speed: 22,
-  luck: 20,
-  defense: 22,
-  resistance: 20,
-});
-
 // The weapon types it can wield.
 export const BEAST_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
 
@@ -51,7 +38,7 @@ export const BEAST_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physica
 export const BEAST_ITEMS: Inventory = Object.freeze([weaponEntry(BITE)]);
 
 // Starts at level 1 with the stat line above; its skills come from the
-// 'beast' skill tree. Levels up with the growth rates and caps above.
+// 'beast' skill tree. Levels up with the growth rates above.
 export class Beast extends Unit {
   constructor({ name = 'Beast', team, level = 1, items = BEAST_ITEMS, faction }: ClassUnitOptions) {
     super({
@@ -63,7 +50,6 @@ export class Beast extends Unit {
       items,
       weaponTypes: BEAST_WEAPON_TYPES,
       growths: BEAST_GROWTHS,
-      caps: BEAST_CAPS,
       ...BEAST_STATS,
     });
   }

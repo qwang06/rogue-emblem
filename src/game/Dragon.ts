@@ -31,19 +31,6 @@ export const DRAGON_GROWTHS = Object.freeze({
   resistance: 30,
 });
 
-// The most each stat can reach through level ups.
-export const DRAGON_CAPS = Object.freeze({
-  health: 60,
-  mana: 0,
-  strength: 25,
-  intelligence: 20,
-  skill: 20,
-  speed: 20,
-  luck: 20,
-  defense: 25,
-  resistance: 20,
-});
-
 // The weapon types a dragon can wield.
 export const DRAGON_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
 
@@ -67,7 +54,6 @@ export class Dragon extends Unit {
       items,
       weaponTypes: DRAGON_WEAPON_TYPES,
       growths: DRAGON_GROWTHS,
-      caps: DRAGON_CAPS,
       ...DRAGON_STATS,
     });
   }

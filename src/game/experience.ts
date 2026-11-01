@@ -1,7 +1,7 @@
 // Pure experience and growth rules, Fire Emblem style: a unit earns XP
 // from each combat it survives (more for hitting, most for killing, scaled
 // by how its level compares with its opponent's), every 100 XP is a level
-// (only 50 for the first, from level 1 to 2), and each level rolls the unit's growth rates to decide which stats rise.
+// (only 50 for the first, from level 1 to 2), with no level cap, and each level rolls the unit's growth rates to decide which stats rise.
 // No Phaser, no hidden state; randomness comes in through an injected
 // `rng` (() => [0, 1)). Applying the result to a Unit is the caller's job.
 
@@ -14,7 +14,6 @@ export const EXPERIENCE_PER_LEVEL = 100;
 // The XP from level 1 to 2, less than the rest so a new unit's first
 // level, and its first skill, come quickly.
 export const FIRST_LEVEL_EXPERIENCE = 50;
-export const MAX_LEVEL = 20;
 // XP for a combat in which the unit landed no damage (a miss, a 0-damage
 // hit, or never getting to strike).
 export const MISS_EXPERIENCE = 1;
@@ -42,7 +41,7 @@ export type GrowthStat = (typeof GROWTH_STATS)[number];
 // Growth stats other than health and mana, which are plain unit fields.
 export type PlainGrowthStat = Exclude<GrowthStat, 'health' | 'mana'>;
 
-// Per-stat numbers: growth rates (percent), caps, or gains.
+// Per-stat numbers: growth rates (percent) or gains.
 export type GrowthTable = Partial<Record<GrowthStat, number>>;
 export type StatGains = Record<GrowthStat, number>;
 
@@ -61,7 +60,6 @@ export interface Experienced extends GrowthSource {
   level: number;
   experience?: number;
   growths?: GrowthTable;
-  caps?: GrowthTable;
   // Percent of each XP gain the unit actually earns (default
   // DEFAULT_EXPERIENCE_RATE); see scaleExperience.
   experienceRate?: number;
@@ -114,9 +112,9 @@ export function getCombatOutcome(strikes: readonly Strike[], side: CombatSide): 
 
 // XP a unit of `level` earns from a combat against an opponent of
 // `enemyLevel` that ended in `outcome` (see getCombatOutcome). Never more
-// than one level's worth, and nothing at MAX_LEVEL or for a unit that died.
+// than one level's worth, and nothing for a unit that died.
 export function getCombatExperience(level: number, enemyLevel: number, outcome: CombatOutcome): number {
-  if (level >= MAX_LEVEL || outcome === 'died') return 0;
+  if (outcome === 'died') return 0;
   const amount =
     outcome === 'kill'
       ? getKillExperience(level, enemyLevel)
@@ -127,9 +125,9 @@ export function getCombatExperience(level: number, enemyLevel: number, outcome: 
 }
 
 // The XP a unit at `level` with `experience` still needs for its next
-// level; 0 at MAX_LEVEL.
+// level.
 export function getExperienceToNextLevel(level: number, experience: number): number {
-  return level >= MAX_LEVEL ? 0 : Math.max(0, getExperienceForLevel(level) - experience);
+  return Math.max(0, getExperienceForLevel(level) - experience);
 }
 
 // XP to give a unit, and whether its XP rate scales it (see
@@ -172,22 +170,18 @@ export function scaleExperience(amount: number, rate: number = DEFAULT_EXPERIENC
 
 // Adds `amount` XP to a unit at `level` with `experience`, carrying the
 // overflow past each level's getExperienceForLevel into the next level.
-// Stops at maxLevel, where experience stays 0. Returns { level,
-// experience, levelsGained }.
+// There's no level cap. Returns { level, experience, levelsGained }.
 export function addExperience(
   level: number,
   experience: number,
   amount: number,
-  maxLevel = MAX_LEVEL,
 ): { level: number; experience: number; levelsGained: number } {
-  if (level >= maxLevel) return { level, experience: 0, levelsGained: 0 };
   let newLevel = level;
   let newExperience = experience + amount;
-  while (newLevel < maxLevel && newExperience >= getExperienceForLevel(newLevel)) {
+  while (newExperience >= getExperienceForLevel(newLevel)) {
     newExperience -= getExperienceForLevel(newLevel);
     newLevel++;
   }
-  if (newLevel >= maxLevel) newExperience = 0;
   return { level: newLevel, experience: newExperience, levelsGained: newLevel - level };
 }
 
@@ -202,17 +196,14 @@ export function getGrowthStatValue(unit: GrowthSource, stat: GrowthStat): number
 // The stat gains for one level up, as { health, mana, strength, ... } (every
 // GROWTH_STATS key, 0 when it didn't grow). Each stat rolls once, in
 // GROWTH_STATS order: a growth rate of g% gains floor(g / 100) for sure plus
-// one more with a (g mod 100)% chance. A stat with a cap in `caps` never
-// rises past it. `stats` is the unit (see getGrowthStatValue); missing
+// one more with a (g mod 100)% chance. Stats have no caps. Missing
 // growths count as 0%.
-export function rollLevelUp(stats: GrowthSource, growths: GrowthTable, rng: Rng, caps: GrowthTable = {}): StatGains {
+export function rollLevelUp(growths: GrowthTable, rng: Rng): StatGains {
   const gains = {} as StatGains;
   for (const stat of GROWTH_STATS) {
     const growth = growths[stat] ?? 0;
     const roll = Math.min(99, Math.floor(rng() * 100));
-    const rolled = Math.floor(growth / 100) + (roll < growth % 100 ? 1 : 0);
-    const room = Math.max(0, (caps[stat] ?? Infinity) - getGrowthStatValue(stats, stat));
-    gains[stat] = Math.min(rolled, room);
+    gains[stat] = Math.floor(growth / 100) + (roll < growth % 100 ? 1 : 0);
   }
   return gains;
 }
@@ -221,20 +212,12 @@ export function rollLevelUp(stats: GrowthSource, growths: GrowthTable, rng: Rng,
 // average growths instead of rolls, for enemies fielded above level 1: a
 // growth of g% adds g/100 of a point per level with the fractions carried,
 // so after `step` level ups a stat has risen floor(step × g / 100) in all.
-// Same shape and caps as rollLevelUp, and always the same for the same
-// inputs.
-export function getAverageLevelUp(
-  stats: GrowthSource,
-  growths: GrowthTable,
-  step: number,
-  caps: GrowthTable = {},
-): StatGains {
+// Same shape as rollLevelUp, and always the same for the same inputs.
+export function getAverageLevelUp(growths: GrowthTable, step: number): StatGains {
   const gains = {} as StatGains;
   for (const stat of GROWTH_STATS) {
     const growth = growths[stat] ?? 0;
-    const due = Math.floor((step * growth) / 100) - Math.floor(((step - 1) * growth) / 100);
-    const room = Math.max(0, (caps[stat] ?? Infinity) - getGrowthStatValue(stats, stat));
-    gains[stat] = Math.min(due, room);
+    gains[stat] = Math.floor((step * growth) / 100) - Math.floor(((step - 1) * growth) / 100);
   }
   return gains;
 }
@@ -243,7 +226,7 @@ export function getAverageLevelUp(
 // experienceRate (scaleExperience) unless `scaled` is false; `amount` in
 // the result is what it actually earned: its new level and experience, and one entry per level gained, in order, as { level, gains,
 // stats, skills } — the level reached, the stat gains rolled for it (see
-// rollLevelUp, against the unit's `growths` and `caps`), the growth stats'
+// rollLevelUp, against the unit's `growths`), the growth stats'
 // values after it, and the skills its class learns at it (from `trees`).
 // Nothing is mutated. Returns { amount, level, experience, levelUps }.
 export function resolveExperienceGain(
@@ -257,8 +240,7 @@ export function resolveExperienceGain(
   const stats = Object.fromEntries(GROWTH_STATS.map((stat) => [stat, getGrowthStatValue(unit, stat)])) as StatGains;
   const levelUps: LevelUpResult[] = [];
   for (let level = unit.level + 1; level <= result.level; level++) {
-    const current = { ...stats, maxHealth: stats.health, maxMana: stats.mana };
-    const gains = rollLevelUp(current, unit.growths ?? {}, rng, unit.caps ?? {});
+    const gains = rollLevelUp(unit.growths ?? {}, rng);
     for (const stat of GROWTH_STATS) stats[stat] += gains[stat];
     const skills = getSkillsLearnedBetween(unit.unitClass, level - 1, level, trees);
     levelUps.push({ level, gains, stats: { ...stats }, skills });
@@ -271,6 +253,6 @@ export function resolveExperienceGain(
 // level every time. Does nothing when it's already there.
 export function growToLevel(unit: Unit, level: number): void {
   for (let step = unit.level; step < level; step = unit.level) {
-    unit.levelUp(getAverageLevelUp(unit, unit.growths, step, unit.caps));
+    unit.levelUp(getAverageLevelUp(unit.growths, step));
   }
 }

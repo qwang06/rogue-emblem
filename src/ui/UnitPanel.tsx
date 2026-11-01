@@ -46,7 +46,7 @@ export function UnitPanel() {
   if (!unit || forecastOpen || infoOpen) return null;
 
   const corner = pickCornerAwayFromTile(anchor);
-  const showExperience = unit.team !== 'enemy' && unit.experienceToLevel !== null;
+  const showExperience = unit.team !== 'enemy';
   return (
     <section
       className={`panel unit-panel unit-panel--${unit.team} unit-panel--${corner}`}
@@ -78,7 +78,7 @@ export function UnitPanel() {
       <div className="unit-panel__bars">
         <Meter label="HP" value={unit.health} max={unit.maxHealth} kind="hp" />
         <Meter label="MP" value={unit.mana} max={unit.maxMana} kind="mp" />
-        {showExperience && <Meter label="EXP" value={unit.experience} max={unit.experienceToLevel ?? 0} kind="exp" />}
+        {showExperience && <Meter label="EXP" value={unit.experience} max={unit.experienceToLevel} kind="exp" />}
       </div>
 
       <dl className="unit-panel__stats">

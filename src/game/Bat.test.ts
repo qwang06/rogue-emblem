@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getLearnedSkills } from './skills.ts';
-import { BAT_CAPS, BAT_GROWTHS, BAT_ITEMS, BAT_STATS, Bat } from './Bat.ts';
+import { BAT_GROWTHS, BAT_ITEMS, BAT_STATS, Bat } from './Bat.ts';
 import { Unit } from './Unit.ts';
 import { FANGS } from './weapons.ts';
 
@@ -36,10 +36,9 @@ describe('Bat', () => {
     expect(bat.items).toHaveLength(1);
   });
 
-  it('levels up with the bat growth rates and caps', () => {
+  it('levels up with the bat growth rates', () => {
     const bat = new Bat({ team: 'enemy' });
     expect(bat.growths).toBe(BAT_GROWTHS);
-    expect(bat.caps).toBe(BAT_CAPS);
   });
 
   it('learns no skills', () => {

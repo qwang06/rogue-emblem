@@ -1,27 +1,20 @@
 // Pure promotion rules: the class tree's second tier. A villager (the
 // starting unit) that has reached PROMOTION_LEVEL can become an Archer,
 // Soldier, Vanguard or Sapper. Promoting makes the unit that class: it
-// takes the class's growths, caps, weapon types, XP rate and skill tree,
-// gains whatever stats the class starts above a villager (each up to the
-// new cap), carries the class's passive modifier (modifiers.ts) into every
+// takes the class's growths, weapon types, XP rate and skill tree,
+// gains whatever stats the class starts above a villager, carries the class's passive modifier (modifiers.ts) into every
 // battle and is handed the class's weapon. The level, XP, items, boons and
 // tome progress are kept, so a promotion is a step up rather than a fresh
 // start. No Phaser, no hidden state: promoteUnit changes the unit it's
 // given, like levelUp does.
 
-import { ARCHER_CAPS, ARCHER_GROWTHS, ARCHER_PASSIVE, ARCHER_STATS, ARCHER_WEAPON_TYPES } from './Archer.ts';
+import { ARCHER_GROWTHS, ARCHER_PASSIVE, ARCHER_STATS, ARCHER_WEAPON_TYPES } from './Archer.ts';
 import { DEFAULT_EXPERIENCE_RATE, GROWTH_STATS, type GrowthStat, type GrowthTable } from './experience.ts';
 import { applyModifiers, type Modifier } from './modifiers.ts';
-import { SAPPER_CAPS, SAPPER_GROWTHS, SAPPER_PASSIVE, SAPPER_STATS, SAPPER_WEAPON_TYPES } from './Sapper.ts';
-import { SOLDIER_CAPS, SOLDIER_GROWTHS, SOLDIER_PASSIVE, SOLDIER_STATS, SOLDIER_WEAPON_TYPES } from './Soldier.ts';
+import { SAPPER_GROWTHS, SAPPER_PASSIVE, SAPPER_STATS, SAPPER_WEAPON_TYPES } from './Sapper.ts';
+import { SOLDIER_GROWTHS, SOLDIER_PASSIVE, SOLDIER_STATS, SOLDIER_WEAPON_TYPES } from './Soldier.ts';
 import type { Unit } from './Unit.ts';
-import {
-  VANGUARD_CAPS,
-  VANGUARD_GROWTHS,
-  VANGUARD_PASSIVE,
-  VANGUARD_STATS,
-  VANGUARD_WEAPON_TYPES,
-} from './Vanguard.ts';
+import { VANGUARD_GROWTHS, VANGUARD_PASSIVE, VANGUARD_STATS, VANGUARD_WEAPON_TYPES } from './Vanguard.ts';
 import { VILLAGER_STATS } from './Villager.ts';
 import { IRON_AXE, IRON_BOW, IRON_SPEAR, POWDER_KEG, type Weapon, type WeaponType } from './weapons.ts';
 
@@ -43,7 +36,6 @@ export interface Promotion {
   description: string;
   bonuses: PromotionBonuses;
   growths: GrowthTable;
-  caps: GrowthTable;
   // Percent of each XP gain the class earns (see scaleExperience).
   experienceRate: number;
   weaponTypes: readonly WeaponType[];
@@ -92,7 +84,6 @@ export const PROMOTIONS: readonly Promotion[] = Object.freeze([
     description: 'Takes up the bow: accurate and quick from two tiles away, but frail up close.',
     stats: ARCHER_STATS,
     growths: ARCHER_GROWTHS,
-    caps: ARCHER_CAPS,
     experienceRate: DEFAULT_EXPERIENCE_RATE,
     weaponTypes: ARCHER_WEAPON_TYPES,
     passive: ARCHER_PASSIVE,
@@ -104,7 +95,6 @@ export const PROMOTIONS: readonly Promotion[] = Object.freeze([
     description: 'Spear and shield: sturdy infantry that holds the line.',
     stats: SOLDIER_STATS,
     growths: SOLDIER_GROWTHS,
-    caps: SOLDIER_CAPS,
     experienceRate: DEFAULT_EXPERIENCE_RATE,
     weaponTypes: SOLDIER_WEAPON_TYPES,
     passive: SOLDIER_PASSIVE,
@@ -116,7 +106,6 @@ export const PROMOTIONS: readonly Promotion[] = Object.freeze([
     description: 'A polearm and raw strength: hits hardest and soaks blows, but slow and easy to hit.',
     stats: VANGUARD_STATS,
     growths: VANGUARD_GROWTHS,
-    caps: VANGUARD_CAPS,
     experienceRate: DEFAULT_EXPERIENCE_RATE,
     weaponTypes: VANGUARD_WEAPON_TYPES,
     passive: VANGUARD_PASSIVE,
@@ -128,7 +117,6 @@ export const PROMOTIONS: readonly Promotion[] = Object.freeze([
     description: 'Hauls a powder keg: a heavy blast near or thrown, with few to spare.',
     stats: SAPPER_STATS,
     growths: SAPPER_GROWTHS,
-    caps: SAPPER_CAPS,
     experienceRate: DEFAULT_EXPERIENCE_RATE,
     weaponTypes: SAPPER_WEAPON_TYPES,
     passive: SAPPER_PASSIVE,
@@ -164,27 +152,24 @@ export function canPromote(unit: { classId: string; level: number }): boolean {
   return unit.level >= PROMOTION_LEVEL && getPromotions(unit.classId).length > 0;
 }
 
-// The stats promoteUnit would add to `unit` for `promotion`: each bonus,
-// cut to what the new cap leaves (health and mana read their maximums).
-// Stats it wouldn't raise are left out.
+// The stats promoteUnit would add to `unit` for `promotion`: each bonus
+// in full (there are no stat caps). Stats it wouldn't raise are left out.
 export function getPromotionGains(unit: Unit, promotion: Promotion): Partial<Record<GrowthStat, number>> {
   const gains: Partial<Record<GrowthStat, number>> = {};
   for (const stat of GROWTH_STATS) {
     const bonus = promotion.bonuses[stat] ?? 0;
-    const value = stat === 'health' ? unit.maxHealth : stat === 'mana' ? unit.maxMana : unit[stat];
-    const gain = Math.max(0, Math.min(bonus, (promotion.caps[stat] ?? Infinity) - value));
+    const gain = Math.max(0, bonus);
     if (gain > 0) gains[stat] = gain;
   }
   return gains;
 }
 
-// Makes `unit` a unit of `promotion`'s class: its class id, growths, caps,
+// Makes `unit` a unit of `promotion`'s class: its class id, growths,
 // XP rate and weapon types, MOV changed by the MOV bonus, and the passive's
 // modifiers added. Stats are left alone. Changes `unit` itself.
 export function becomePromotedClass(unit: Unit, promotion: Promotion): Unit {
   unit.unitClass = promotion.id;
   unit.growths = promotion.growths;
-  unit.caps = promotion.caps;
   unit.weaponTypes = promotion.weaponTypes;
   unit.experienceRate = promotion.experienceRate;
   unit.movement += promotion.bonuses.movement ?? 0;

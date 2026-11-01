@@ -31,19 +31,6 @@ export const BEAST_RIDER_GROWTHS = Object.freeze({
   resistance: 20,
 });
 
-// The most each stat can reach through level ups.
-export const BEAST_RIDER_CAPS = Object.freeze({
-  health: 45,
-  mana: 30,
-  strength: 22,
-  intelligence: 20,
-  skill: 22,
-  speed: 22,
-  luck: 20,
-  defense: 22,
-  resistance: 20,
-});
-
 // The weapon types it can wield.
 export const BEAST_RIDER_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
 
@@ -51,7 +38,7 @@ export const BEAST_RIDER_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['p
 export const BEAST_RIDER_ITEMS: Inventory = Object.freeze([weaponEntry(IRON_SPEAR), ...STARTING_ITEMS]);
 
 // Starts at level 1 with the stat line above; its skills come from the
-// 'beast-rider' skill tree. Levels up with the growth rates and caps above.
+// 'beast-rider' skill tree. Levels up with the growth rates above.
 export class BeastRider extends Unit {
   constructor({ name = 'Beast Rider', team, level = 1, items = BEAST_RIDER_ITEMS, faction }: ClassUnitOptions) {
     super({
@@ -63,7 +50,6 @@ export class BeastRider extends Unit {
       items,
       weaponTypes: BEAST_RIDER_WEAPON_TYPES,
       growths: BEAST_RIDER_GROWTHS,
-      caps: BEAST_RIDER_CAPS,
       ...BEAST_RIDER_STATS,
     });
   }

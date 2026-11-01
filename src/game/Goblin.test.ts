@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getLearnedSkills } from './skills.ts';
-import { GOBLIN_CAPS, GOBLIN_GROWTHS, GOBLIN_ITEMS, GOBLIN_STATS, Goblin } from './Goblin.ts';
+import { GOBLIN_GROWTHS, GOBLIN_ITEMS, GOBLIN_STATS, Goblin } from './Goblin.ts';
 import { Unit } from './Unit.ts';
 import { CLUB } from './weapons.ts';
 
@@ -36,10 +36,9 @@ describe('Goblin', () => {
     expect(goblin.items).toHaveLength(1);
   });
 
-  it('levels up with the goblin growth rates and caps', () => {
+  it('levels up with the goblin growth rates', () => {
     const goblin = new Goblin({ team: 'enemy' });
     expect(goblin.growths).toBe(GOBLIN_GROWTHS);
-    expect(goblin.caps).toBe(GOBLIN_CAPS);
   });
 
   it('learns no skills', () => {

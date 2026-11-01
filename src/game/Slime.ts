@@ -30,19 +30,6 @@ export const SLIME_GROWTHS = Object.freeze({
   resistance: 30,
 });
 
-// The most each stat can reach through level ups.
-export const SLIME_CAPS = Object.freeze({
-  health: 40,
-  mana: 0,
-  strength: 20,
-  intelligence: 20,
-  skill: 20,
-  speed: 20,
-  luck: 20,
-  defense: 20,
-  resistance: 20,
-});
-
 // The weapon types a slime can wield.
 export const SLIME_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
 
@@ -66,7 +53,6 @@ export class Slime extends Unit {
       items,
       weaponTypes: SLIME_WEAPON_TYPES,
       growths: SLIME_GROWTHS,
-      caps: SLIME_CAPS,
       ...SLIME_STATS,
     });
   }

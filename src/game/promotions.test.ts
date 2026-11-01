@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ARCHER_CAPS, ARCHER_GROWTHS } from './Archer.ts';
+import { ARCHER_GROWTHS } from './Archer.ts';
 import { GROWTH_STATS } from './experience.ts';
 import { getStandingCombatBonus } from './modifiers.ts';
 import {
@@ -28,9 +28,8 @@ describe('PROMOTIONS', () => {
     expect(getPromotions(null)).toEqual([]);
   });
 
-  it("takes the promoted class's own growths and caps", () => {
+  it("takes the promoted class's own growths", () => {
     expect(archer.growths).toEqual(ARCHER_GROWTHS);
-    expect(archer.caps).toEqual(ARCHER_CAPS);
   });
 
   it('adds what the class starts above a villager, and MOV either way', () => {
@@ -87,29 +86,25 @@ describe('canPromote', () => {
 });
 
 describe('getPromotionGains', () => {
-  it('gives each bonus in full under the new cap, leaving out stats it doesn’t raise', () => {
+  it('gives each bonus in full, leaving out stats it doesn’t raise', () => {
     const unit = new Villager({ team: 'player' });
     expect(getPromotionGains(unit, archer)).toEqual({ skill: 2, speed: 1, resistance: 1 });
   });
 
-  it('cuts a bonus to what the new cap leaves, and to nothing at it', () => {
+  it('gives the full bonus however high the stat already is (no caps)', () => {
     const unit = new Villager({ team: 'player' });
-    unit.skill = archer.caps.skill! - 1;
-    unit.speed = archer.caps.speed!;
-    const gains = getPromotionGains(unit, archer);
-    expect(gains.skill).toBe(1);
-    expect(gains.speed).toBeUndefined();
+    unit.skill = 99;
+    expect(getPromotionGains(unit, archer).skill).toBe(2);
   });
 });
 
 describe('promoteUnit', () => {
-  it('changes the class, growths, caps, weapon types and XP rate, and adds the bonuses', () => {
+  it('changes the class, growths, weapon types and XP rate, and adds the bonuses', () => {
     const unit = new Villager({ team: 'player', level: 6 });
     unit.health = 3;
     promoteUnit(unit, vanguard);
     expect(unit.unitClass).toBe('vanguard');
     expect(unit.level).toBe(6);
-    expect(unit.caps).toEqual(vanguard.caps);
     expect(unit.growths).toEqual(vanguard.growths);
     expect(unit.experienceRate).toBe(100);
     expect(unit.maxHealth).toBe(12);

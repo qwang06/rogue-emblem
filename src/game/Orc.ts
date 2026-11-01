@@ -30,19 +30,6 @@ export const ORC_GROWTHS = Object.freeze({
   resistance: 10,
 });
 
-// The most each stat can reach through level ups.
-export const ORC_CAPS = Object.freeze({
-  health: 40,
-  mana: 0,
-  strength: 20,
-  intelligence: 20,
-  skill: 20,
-  speed: 20,
-  luck: 20,
-  defense: 20,
-  resistance: 20,
-});
-
 // The weapon types an orc can wield.
 export const ORC_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
 
@@ -66,7 +53,6 @@ export class Orc extends Unit {
       items,
       weaponTypes: ORC_WEAPON_TYPES,
       growths: ORC_GROWTHS,
-      caps: ORC_CAPS,
       ...ORC_STATS,
     });
   }

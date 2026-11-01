@@ -89,15 +89,14 @@ describe('UNITS.md', () => {
       const unit = createUnitOfClass(id, { team: 'player' });
       const text = section(label);
 
-      it('lists the base stats, growths and caps', () => {
+      it('lists the base stats, growths', () => {
         const rows = tableWithHeader(text, 'Stat');
         expect(rows.map(([stat]) => stat)).toEqual(Object.keys(STAT_ROWS));
-        for (const [stat, base, growth, cap] of rows) {
+        for (const [stat, base, growth] of rows) {
           expect(Number(base), `${label} ${stat} base`).toBe(STAT_ROWS[stat](unit));
           const key = GROWTH_KEYS[stat];
           if (!key) continue;
           expect(growth, `${label} ${stat} growth`).toBe(`${unit.growths[key] ?? 0}%`);
-          expect(cap, `${label} ${stat} cap`).toBe(String(unit.caps[key] ?? '–'));
         }
       });
 
