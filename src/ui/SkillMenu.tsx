@@ -4,6 +4,7 @@ import { useMenuBesideUnit } from './useMenuBesideUnit.ts';
 
 // Displays the active unit's skills, opened from the action menu. Each
 // entry shows its mana cost; skills the unit can't afford are greyed out.
+// Below the list, the highlighted skill's description says what it does.
 // Selection is driven by GridScene; the mouse is forwarded to it.
 export function SkillMenu() {
   const menu = useGameStore((state) => state.skillMenu);
@@ -32,6 +33,21 @@ export function SkillMenu() {
           );
         })}
       </ul>
+      {/* Every description sits in the same grid cell, only the highlighted
+          one visible, so the box is as tall as the longest and never
+          changes size as the selection moves. */}
+      <div className="skill-menu__descriptions">
+        {menu.actions.map((skill, index) => (
+          <p
+            key={skill.id}
+            className="skill-menu__description"
+            aria-hidden={index === menu.selectedIndex ? undefined : 'true'}
+            data-visible={index === menu.selectedIndex ? 'true' : undefined}
+          >
+            {skill.description}
+          </p>
+        ))}
+      </div>
     </nav>
   );
 }

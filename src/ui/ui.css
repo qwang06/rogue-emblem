@@ -1530,6 +1530,30 @@ kbd {
   color: var(--cyan);
 }
 
+/* The highlighted skill's description, under the list. The descriptions
+   share one grid cell so the box keeps the height of the longest. */
+.skill-menu__descriptions {
+  display: grid;
+  width: 13rem;
+  max-width: 100%;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: var(--rule);
+}
+
+.skill-menu__description {
+  grid-area: 1 / 1;
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--fg-dim);
+  visibility: hidden;
+}
+
+.skill-menu__description[data-visible] {
+  visibility: visible;
+}
+
 /* ---- Item and weapon menus ------------------------------------------- */
 
 /* The item menu: icon, name, then the count against the right edge. */
