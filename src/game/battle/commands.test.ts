@@ -19,6 +19,7 @@ import { createTestBattle, makeTestUnit } from './testLevel.ts';
 import type { Modifier } from '../modifiers.ts';
 import {
   AIRLIFT,
+  TAUNT,
   BREACH,
   BREACHING_SHOT,
   LAY_MINE,
@@ -985,6 +986,25 @@ describe('movement skills', () => {
     });
     const grid = setTerrain(start.grid, 1, 0, 'water');
     expect(getSkillTargets(grid, start.units, 'hero', { x: 0, y: 0 }, LEND_A_HAND)).toEqual([]);
+  });
+});
+
+describe('taunt', () => {
+  it('leaves every foe within 2 tiles Taunted and the user Taunting, through the enemy phase', () => {
+    const hero = makeTestUnit({ team: 'player', mana: 20 });
+    hero.modifiers = [{ kind: 'skill', skill: TAUNT }];
+    const start = createTestBattle({
+      hero: { unit: hero, at: { x: 0, y: 0 } },
+      near: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 2, y: 0 } },
+      far: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 3, y: 0 } },
+    });
+    const { state, events } = run(start, { type: 'skill', unitId: 'hero', skillId: 'taunt', target: { x: 0, y: 0 } });
+    expect(events).toContainEqual({ type: 'status', unitId: 'hero', targetId: 'near', status: 'taunted' });
+    expect(events).toContainEqual({ type: 'status', unitId: 'hero', targetId: 'hero', status: 'taunting' });
+    expect(state.units.get('far')!.statuses).toEqual([]);
+    expect(state.turnState?.team).toBe('enemy');
+    expect(state.units.get('hero')!.statuses).toEqual(['taunting']);
+    expect(state.units.get('near')!.health).toBe(20);
   });
 });
 

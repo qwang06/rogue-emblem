@@ -11,6 +11,7 @@ import { getTeamUnitIds } from '../teams.ts';
 import { isDone } from '../turns.ts';
 import { getMovementOptions, hostileTo, type BattleCommand } from './commands.ts';
 import type { BattleState } from './state.ts';
+import type { Unit } from '../Unit.ts';
 
 // One unit's whole action, planned with planRushAction: walk its route
 // (just its own tile to stay put), then attack the planned target, or wait.
@@ -22,7 +23,7 @@ export function planUnitTurn(state: BattleState, unitId: string): BattleCommand[
     state.grid,
     from,
     { movement: getPhaseMovement(unit), weapon: unit.weapon },
-    hostileTo(state.units, unit),
+    getTargetFilter(state, unit),
     getMovementOptions(state.units, unit),
     createAttackScorer(unit, (id) => state.units.get(id)!),
   );
@@ -30,6 +31,15 @@ export function planUnitTurn(state: BattleState, unitId: string): BattleCommand[
   const move: BattleCommand = { type: 'move', unitId, to: point(to), path: path.map(point) };
   const act: BattleCommand = target ? { type: 'attack', unitId, target: point(target) } : { type: 'wait', unitId };
   return [move, act];
+}
+
+// Who `unit` goes after: any hostile unit, or, while it's Taunted
+// (statuses.ts), only the Taunting ones, as long as one is in play.
+export function getTargetFilter(state: BattleState, unit: Unit): (unitId: string) => boolean {
+  const hostile = hostileTo(state.units, unit);
+  if (!unit.statuses.includes('taunted')) return hostile;
+  const taunting = (unitId: string) => hostile(unitId) && state.units.get(unitId)!.statuses.includes('taunting');
+  return [...state.units.keys()].some(taunting) ? taunting : hostile;
 }
 
 // The next unit's planned action in the current phase: the first unit of

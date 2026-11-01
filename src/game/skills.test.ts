@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   AIRLIFT,
+  TAUNT,
   BREACH,
   BREACHING_SHOT,
   DISENGAGE,
@@ -417,7 +418,7 @@ describe('PRAYER', () => {
 
 describe('getClassSkillPicks', () => {
   it("is the class's own level-up skill picks, and none for a class without any", () => {
-    expect(getClassSkillPicks('soldier')).toEqual([LUNGE, PHALANX]);
+    expect(getClassSkillPicks('soldier')).toEqual([LUNGE, PHALANX, TAUNT]);
     expect(getClassSkillPicks('acolyte')).toEqual([SMITE, PRAYER, WARD]);
     expect(getClassSkillPicks('beast-rider')).toEqual([SKEWER, TANDEM_STRIKE, STRAFING_RUN]);
     expect(getClassSkillPicks('beast')).toEqual([WING_BUFFET, ROAR, POUNCE]);
