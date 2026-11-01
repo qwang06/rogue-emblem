@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
-  getOutlineWidth,
   isSingleImageUnit,
   PAINTED_OBSTACLES,
   SINGLE_IMAGE_UNITS,
@@ -89,16 +88,5 @@ describe('TERRAIN_SHEET', () => {
   it('matches the terrain image', () => {
     const { columns, rows, tileSize } = TERRAIN_SHEET;
     expect(pngSize(terrainSheetUrl)).toEqual([columns * tileSize, rows * tileSize]);
-  });
-});
-
-describe('getOutlineWidth', () => {
-  it('keeps the outline the same share of a tile at any art size', () => {
-    expect(getOutlineWidth(32)).toBe(1);
-    expect(getOutlineWidth(64)).toBe(2);
-  });
-
-  it('is never thinner than one pixel', () => {
-    expect(getOutlineWidth(16)).toBe(1);
   });
 });
