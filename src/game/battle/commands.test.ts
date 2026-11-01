@@ -10,13 +10,14 @@ import {
   BattleCommandError,
   findEvent,
   getSkillTargets,
+  getSkillVictims,
   type BattleCommand,
   type BattleEvent,
 } from './commands.ts';
 import { createBattleState, getDeployedUnits, getRunBattleResult, type BattleState } from './state.ts';
 import { createTestBattle, makeTestUnit } from './testLevel.ts';
 import type { Modifier } from '../modifiers.ts';
-import { MEND, POWER_STRIKE, SHOVE, type Skill } from '../skills.ts';
+import { CLEAVE, MEND, POWER_STRIKE, PRAYER, SHOVE, SHRAPNEL, TANDEM_STRIKE, type Skill } from '../skills.ts';
 import { isDone } from '../turns.ts';
 import { setTerrain } from '../grid.ts';
 import { BUMP_DAMAGE } from '../push.ts';
@@ -464,6 +465,120 @@ describe('modifiers', () => {
     });
     const { events } = run(start, { type: 'skill', unitId: 'hero', skillId: 'power-strike', target: { x: 1, y: 0 } });
     expect(events[0]).toMatchObject({ type: 'skill', damage: 9 });
+  });
+});
+
+describe('area and follow-up skills', () => {
+  // A hero taught `skill` with plenty of mana.
+  const user = (skill: Skill, options = {}) => {
+    const hero = makeTestUnit({ team: 'player', mana: 20, ...options });
+    hero.modifiers = [{ kind: 'skill', skill }];
+    return hero;
+  };
+  const foe = () => makeTestUnit({ team: 'enemy' });
+  const skillEvents = (events: readonly BattleEvent[]) => events.filter((event) => event.type === 'skill');
+
+  it('lets Cleave strike the foe it is aimed at and those on either side, but not allies', () => {
+    const start = createTestBattle(
+      {
+        hero: { unit: user(CLEAVE), at: { x: 1, y: 1 } },
+        north: { unit: foe(), at: { x: 2, y: 0 } },
+        aimed: { unit: foe(), at: { x: 2, y: 1 } },
+        ally: { unit: makeTestUnit({ team: 'player' }), at: { x: 2, y: 2 } },
+        behind: { unit: foe(), at: { x: 3, y: 1 } },
+      },
+      { width: 4, height: 3 },
+    );
+    expect(getSkillVictims(start.grid, start.units, 'hero', { x: 1, y: 1 }, CLEAVE, { x: 2, y: 1 })).toEqual([
+      { x: 2, y: 1, unitId: 'aimed' },
+      { x: 2, y: 0, unitId: 'north' },
+    ]);
+    const { state, events } = run(start, { type: 'skill', unitId: 'hero', skillId: 'cleave', target: { x: 2, y: 1 } });
+    expect(skillEvents(events)).toEqual([
+      expect.objectContaining({ targetId: 'aimed', damage: 6, health: 14 }),
+      expect.objectContaining({ targetId: 'north', damage: 6, health: 14, splash: true }),
+    ]);
+    expect(state.units.get('ally')!.health).toBe(20);
+    expect(state.units.get('behind')!.health).toBe(20);
+    expect(state.units.get('hero')!.mana).toBe(20 - CLEAVE.manaCost);
+  });
+
+  it('lets Shrapnel strike allies in the blast too, and defeats whoever it drops', () => {
+    const weak = makeTestUnit({ team: 'enemy', health: 2 });
+    const start = createTestBattle(
+      {
+        hero: { unit: user(SHRAPNEL), at: { x: 0, y: 1 } },
+        aimed: { unit: foe(), at: { x: 2, y: 1 } },
+        ally: { unit: makeTestUnit({ team: 'player' }), at: { x: 2, y: 0 } },
+        weak: { unit: weak, at: { x: 3, y: 1 } },
+      },
+      { width: 4, height: 3 },
+    );
+    const { state, events } = run(start, {
+      type: 'skill',
+      unitId: 'hero',
+      skillId: 'shrapnel',
+      target: { x: 2, y: 1 },
+    });
+    expect(skillEvents(events).map((event) => event.targetId)).toEqual(['aimed', 'ally', 'weak']);
+    expect(state.units.get('ally')!.health).toBe(17);
+    expect(state.units.has('weak')).toBe(false);
+    expect(events).toContainEqual(expect.objectContaining({ type: 'defeated', unitId: 'weak' }));
+  });
+
+  it("strikes a Tandem Strike's target twice, the second blow at half damage", () => {
+    const start = createTestBattle({
+      hero: { unit: user(TANDEM_STRIKE), at: { x: 0, y: 0 } },
+      foe: { unit: foe(), at: { x: 1, y: 0 } },
+    });
+    const { state, events } = run(start, {
+      type: 'skill',
+      unitId: 'hero',
+      skillId: 'tandem-strike',
+      target: { x: 1, y: 0 },
+    });
+    expect(skillEvents(events)).toEqual([
+      expect.objectContaining({ targetId: 'foe', damage: 6, health: 14 }),
+      expect.objectContaining({ targetId: 'foe', damage: 3, health: 11, followUp: true }),
+    ]);
+    expect(state.units.get('foe')!.health).toBe(11);
+  });
+
+  it('aims Prayer at the user itself and mends every wounded ally around it', () => {
+    const hurt = (health: number) => {
+      const unit = makeTestUnit({ team: 'player' });
+      unit.takeDamage(20 - health);
+      return unit;
+    };
+    const start = createTestBattle(
+      {
+        hero: { unit: user(PRAYER, { intelligence: 4 }), at: { x: 1, y: 1 } },
+        west: { unit: hurt(10), at: { x: 0, y: 1 } },
+        east: { unit: hurt(19), at: { x: 2, y: 1 } },
+        north: { unit: makeTestUnit({ team: 'player' }), at: { x: 1, y: 0 } },
+        far: { unit: hurt(10), at: { x: 3, y: 1 } },
+        foe: { unit: foe(), at: { x: 3, y: 2 } },
+      },
+      { width: 4, height: 3 },
+    );
+    expect(getSkillTargets(start.grid, start.units, 'hero', { x: 1, y: 1 }, PRAYER)).toEqual([
+      { x: 1, y: 1, unitId: 'hero' },
+    ]);
+    const { state, events } = run(start, { type: 'skill', unitId: 'hero', skillId: 'prayer', target: { x: 1, y: 1 } });
+    expect(events.filter((event) => event.type === 'healed')).toEqual([
+      { type: 'healed', unitId: 'hero', targetId: 'east', amount: 1, skill: PRAYER },
+      { type: 'healed', unitId: 'hero', targetId: 'west', amount: 3, skill: PRAYER },
+    ]);
+    expect(state.units.get('far')!.health).toBe(10);
+  });
+
+  it('offers Prayer nowhere when no ally around is wounded', () => {
+    const start = createTestBattle({
+      hero: { unit: user(PRAYER), at: { x: 0, y: 0 } },
+      ally: { unit: makeTestUnit({ team: 'player' }), at: { x: 1, y: 0 } },
+      foe: { unit: foe(), at: { x: 7, y: 0 } },
+    });
+    expect(getSkillTargets(start.grid, start.units, 'hero', { x: 0, y: 0 }, PRAYER)).toEqual([]);
   });
 });
 

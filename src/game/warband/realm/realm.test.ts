@@ -6,7 +6,6 @@ import {
   BATTLE_SITES,
   FORT_FROM,
   generateRealm,
-  getHomeSite,
   getNextSites,
   getRealm,
   getRealmDepth,
@@ -39,7 +38,7 @@ describe('generateRealm', () => {
     for (const realm of REALMS) {
       expect(realm.depth).toBe(getRealmDepth(SETTINGS));
       expect(realm.grid.height).toBe(REALM_HEIGHT);
-      expect(getHomeSite(realm)).toMatchObject({ id: '0-0', kind: 'home', depth: 0 });
+      expect(realm.sites.find((site) => site.depth === 0)).toMatchObject({ id: '0-0', kind: 'home', depth: 0 });
       const holds = realm.sites.filter((site) => site.kind === 'hold');
       expect(holds).toHaveLength(1);
       expect(holds[0].depth).toBe(realm.depth);
@@ -138,7 +137,7 @@ describe('generateRealm', () => {
 
   it('puts the realm on buildings: a camp at home, a castle at the Hold', () => {
     for (const realm of REALMS.slice(0, 4)) {
-      const home = getHomeSite(realm);
+      const home = realm.sites.find((site) => site.kind === 'home')!;
       const hold = realm.sites.find((site) => site.kind === 'hold')!;
       expect(realm.buildings.some((b) => b.x === home.x && b.y === home.y)).toBe(true);
       expect(realm.buildings.some((b) => b.x === hold.x && b.y === hold.y)).toBe(true);

@@ -140,12 +140,6 @@ export function isPromotedClass(classId: string | null): boolean {
   return classId !== null && findPromotion(classId) !== null;
 }
 
-// The base class `classId` promoted from, or `classId` itself when it
-// isn't a promoted class.
-export function getBaseClassId(classId: string): string {
-  return findPromotion(classId)?.from ?? classId;
-}
-
 // Whether a unit of `classId` at `level` can promote: its class has
 // promotions and it has reached PROMOTION_LEVEL.
 export function canPromote(unit: { classId: string; level: number }): boolean {

@@ -8,8 +8,6 @@ import {
   getBattleBoonOffer,
   getBoonOffer,
   getBoonSeed,
-  getTakenBoons,
-  owesBoons,
   pickBoon,
   queueLevelUpBoons,
   settleBoons,
@@ -43,7 +41,6 @@ describe('queueLevelUpBoons', () => {
       { unitId: 'alden', level: 3, stage: 1 },
       { unitId: 'bryn', level: 2, stage: 1 },
     ]);
-    expect(owesBoons(after)).toBe(true);
   });
 
   it('queues after picks already owed, and owes nothing without level ups', () => {
@@ -56,7 +53,6 @@ describe('queueLevelUpBoons', () => {
     ]);
     const none = queueLevelUpBoons(run, run);
     expect(none.pendingBoons).toBeUndefined();
-    expect(owesBoons(none)).toBe(false);
   });
 
   it('skips the picks already taken in battle', () => {
@@ -129,7 +125,6 @@ describe('pickBoon', () => {
     const after = pickBoon(run, 2);
     const alden = after.roster.find((unit) => unit.id === 'alden')!;
     expect(alden.boons).toEqual([boon.entry]);
-    expect(getTakenBoons(alden).map(({ entry }) => entry)).toEqual([boon.entry]);
     expect(after.pendingBoons).toEqual([{ unitId: 'bryn', level: 2, stage: 1 }]);
     expect(run.roster[0].boons).toBeUndefined();
   });

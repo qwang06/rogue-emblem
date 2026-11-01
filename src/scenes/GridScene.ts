@@ -55,7 +55,14 @@ import {
   type CarriedStaff,
   type Staff,
 } from '../game/healing.ts';
-import { findUnitSkill, getSkillActions, getSkillForecast, getUnitSkills, isHealingSkill } from '../game/skills.ts';
+import {
+  findUnitSkill,
+  getSkillActions,
+  getSkillAreaTiles,
+  getSkillForecast,
+  getUnitSkills,
+  isHealingSkill,
+} from '../game/skills.ts';
 import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange } from '../game/combat.ts';
 import { getFitZoom } from '../game/camera.ts';
 import { createCursor, moveCursor } from '../game/cursor.ts';
@@ -151,7 +158,16 @@ import {
   isDeploymentComplete,
   isPlaced,
 } from '../game/deployment.ts';
-import { findTileAt, findUnit, getCell, getDistance, gridToWorld, isSameTile, worldToTile } from '../game/grid.ts';
+import {
+  findTileAt,
+  findUnit,
+  getCell,
+  getDistance,
+  gridToWorld,
+  isInBounds,
+  isSameTile,
+  worldToTile,
+} from '../game/grid.ts';
 import { areAllied, getTeamUnitIds, isAllyOf, isHostileTo } from '../game/teams.ts';
 import { advanceDialog, createDialog, DIALOG_CHARS_PER_SECOND, getCurrentLine } from '../game/dialog.ts';
 import { getTriggeredDialog, turnTrigger } from '../game/dialogScript.ts';
@@ -290,6 +306,9 @@ const INTENT_PULSE_MS = 600;
 // Where an aimed Shove would leave its target.
 const PUSH_PREVIEW_COLOR = 0x3858b0;
 const PUSH_PREVIEW_ALPHA = 0.5;
+// The tiles past its target an aimed area skill also reaches.
+const AREA_PREVIEW_COLOR = 0xdc2626;
+const AREA_PREVIEW_ALPHA = 0.35;
 // A shoved unit's slide onto its new tile, and the nudge of one that's
 // stopped (in px).
 const PUSH_SLIDE_MS = 160;
@@ -1138,11 +1157,18 @@ export class GridScene extends Phaser.Scene {
       this.publishMenu('skillMenu', null);
       const { unit, unitId, x, y } = this.activeUnit!;
       this.activeSkill = findUnitSkill(unit, skill.id);
-      // A healing skill's reach shows in green, like a staff's.
+      // A healing skill's reach shows in green, like a staff's. A range-0
+      // skill, aimed at the unit itself, shows the area around it.
       const healing = isHealingSkill(this.activeSkill!);
+      const reach =
+        this.activeSkill!.range === 0
+          ? getSkillAreaTiles(this.activeSkill!, { x, y }, { x, y }).filter((tile) =>
+              isInBounds(this.grid, tile.x, tile.y),
+            )
+          : getAttackRange(this.grid, { x, y }, this.activeSkill!.range);
       this.showRange(
         'skill',
-        getAttackRange(this.grid, { x, y }, this.activeSkill!.range),
+        reach,
         healing ? HEAL_RANGE_COLOR : SKILL_RANGE_COLOR,
         healing ? HEAL_RANGE_ALPHA : SKILL_RANGE_ALPHA,
       );
@@ -3010,10 +3036,17 @@ export class GridScene extends Phaser.Scene {
   }
 
   // A skill's animation (see playSkillAnimation); the HUD shows the mana
-  // spent and the damage dealt once it lands.
-  playSkill({ unitId, targetId, skill, damage, health }: BattleEventOf<'skill'>, next: () => void) {
+  // spent and the damage dealt once it lands. An area skill's blows past
+  // its target (`splash`) land with the first: just a flash and the damage.
+  playSkill({ unitId, targetId, skill, damage, health, splash }: BattleEventOf<'skill'>, next: () => void) {
     const userSprite = this.unitSprites.get(unitId)!;
     const targetSprite = this.unitSprites.get(targetId)!;
+    if (splash) {
+      this.showStats(targetId, { health });
+      this.showDamagePopup(targetSprite, damage);
+      playHitFlash(this, targetSprite, next);
+      return;
+    }
     const mana = this.units.get(unitId)!.mana - skill.manaCost;
     const onImpact = () => {
       this.showStats(unitId, { mana });
@@ -3241,12 +3274,21 @@ export class GridScene extends Phaser.Scene {
     return findTileAt(targets, this.cursor);
   }
 
-  // While aiming a Shove (a push skill) at a foe, shades the tile the shove
-  // would leave it on (src/game/push.ts) and has React tag it with what
-  // happens there; clears both otherwise.
+  // While aiming an area skill, shades the other tiles it reaches
+  // (getSkillAreaTiles). While aiming a Shove (a push skill) at a foe,
+  // shades the tile the shove would leave it on (src/game/push.ts) and has
+  // React tag it with what happens there; clears both otherwise.
   updatePushPreview() {
     for (const tile of this.pushPreviewTiles) tile.destroy();
     this.pushPreviewTiles = [];
+    const aimed = this.rangeMode === 'skill' && this.activeSkill?.area ? this.getSkillTargetUnderCursor() : null;
+    if (aimed) {
+      const { x, y } = this.activeUnit!;
+      const area = getSkillAreaTiles(this.activeSkill!, { x, y }, aimed).filter((tile) =>
+        isInBounds(this.grid, tile.x, tile.y),
+      );
+      this.pushPreviewTiles = this.drawTileHighlights(area, AREA_PREVIEW_COLOR, AREA_PREVIEW_ALPHA);
+    }
     const target = this.rangeMode === 'skill' && this.activeSkill?.push ? this.getSkillTargetUnderCursor() : null;
     if (!target) {
       gameStore.setState({ pushTag: null });
@@ -3254,7 +3296,7 @@ export class GridScene extends Phaser.Scene {
     }
     const { x, y } = this.activeUnit!;
     const push = getPushResult(this.grid, this.units, target, getPushDirection({ x, y }, target))!;
-    this.pushPreviewTiles = this.drawTileHighlights([push.to], PUSH_PREVIEW_COLOR, PUSH_PREVIEW_ALPHA);
+    this.pushPreviewTiles.push(...this.drawTileHighlights([push.to], PUSH_PREVIEW_COLOR, PUSH_PREVIEW_ALPHA));
     const health = this.units.get(push.unitId)!.health;
     gameStore.setState({ pushTag: toPushTagView(push, health, this.getTileAnchor(push.to)) });
   }

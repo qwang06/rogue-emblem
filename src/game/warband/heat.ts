@@ -84,11 +84,6 @@ export function getRunHeatRules(run: Pick<RunState, 'heat'>): HeatRules {
   return getHeatRules(getRunHeat(run));
 }
 
-// The Heat level `level`, or null.
-export function findHeatLevel(level: number): HeatLevel | null {
-  return HEAT_LEVELS.find((candidate) => candidate.level === level) ?? null;
-}
-
 // `gold` from a stage clear as Heat `heat` pays it, rounded down.
 export function applyHeatToClearGold(gold: number, heat: number): number {
   return Math.floor((gold * getHeatRules(heat).clearGoldPercent) / 100);

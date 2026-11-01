@@ -1,7 +1,9 @@
-// Recolors the summer overworld sheet into the autumn one: only its greens
-// change (grass, tree bodies and shade, mountain tufts, the dark-grass
-// meadow set, and the grass lip under buildings and walls). The green
-// building palette keeps its greens. Run from the repo root:
+// Makes the autumn overworld sheet from the summer one: its greens are
+// recolored (grass, mountain tufts, the dark-grass meadow set, and the grass
+// lip under buildings and walls; the green building palette keeps its
+// greens), and the forest tiles are redrawn as bare trees, each standing
+// where a leafy one stood (3 conifers, 3 round trees, 2 big round trees),
+// over a little pile of its fallen leaves. Run from the repo root:
 //
 //   node .claude/skills/tileset/scripts/recolor-autumn.js src/assets/overworld.png src/assets/overworld-autumn.png
 
@@ -37,5 +39,85 @@ const rows = decode(input).map((row, y) =>
     return swap ? [...rgb(swap), px[3]] : px;
   }),
 );
+// The forest tiles (FOREST_ART in src/game/tileset.ts), as 16px art drawn
+// at 2x: T trunk, D branch, L and l fallen leaves.
+const BARE_TREES = [
+  [
+    '................',
+    '...D............',
+    '...D........D...',
+    '..DTD.......D...',
+    '.D.T........TD..',
+    '...TD...D..DT...',
+    '.DDT....D...T.D.',
+    '...T.D.DTD.DT...',
+    '..DT....T...TDD.',
+    '.D.TD..DT..DT...',
+    '...T.D..TD..T.D.',
+    '..lTL..DT...T...',
+    '..LlL...T..lTL..',
+    '........T..LlL..',
+    '.......lTL......',
+    '.......LlL......',
+  ],
+  [
+    '................',
+    '.........D......',
+    '.......D.D.D....',
+    '........DDD.....',
+    '....D....D......',
+    '..D.D.D..T.D....',
+    '...DDD...TD.....',
+    '....T....T......',
+    '....T....T.D.D..',
+    '....T....T..D...',
+    '....T....T.DDD.D',
+    '....T....T..T.D.',
+    '...lTL..LTl.T...',
+    '...LlL..lLL.T...',
+    '...........lTL..',
+    '...........LlL..',
+  ],
+  [
+    '...D............',
+    '.D.D.D..........',
+    '..DD.D...D.D....',
+    'D..DD...D..D..D.',
+    '.D.TD.D..D.D.D..',
+    '..DTDD....DDD...',
+    '...TD....D.TD.D.',
+    '...TD.....DTDD..',
+    '...TD......TD...',
+    '...TD......TD...',
+    '...TD......TD...',
+    '..lTDL.....TD...',
+    '..LllL.....TD...',
+    '...........TD...',
+    '..........lTDL..',
+    '..........LllL..',
+  ],
+];
+const BARE_COLORS = { T: '8f4d57', D: '5e2f36', L: 'c06a32', l: '8a3424' };
+// Each forest tile, and its variant with a mountain peak poking up from the
+// cell below, whose peak (these colors) is kept over the bare trees.
+const FOREST_TILES = [
+  [0, 8],
+  [1, 9],
+  [2, 10],
+];
+const PEAK_COLORS = new Set(['a47d72', '865757', 'f5ffe8', 'a3a7c2']);
+FOREST_TILES.forEach(([plain, peaked], i) => {
+  for (const column of [plain, peaked]) {
+    for (let y = 0; y < TILE; y++) {
+      for (let x = 0; x < TILE; x++) {
+        const px = rows[TILE + y][column * TILE + x];
+        if (column === peaked && px[3] > 0 && PEAK_COLORS.has(hex(px))) continue;
+        const art = BARE_TREES[i][y >> 1][x >> 1];
+        rows[TILE + y][column * TILE + x] = art === '.' ? [0, 0, 0, 0] : [...rgb(BARE_COLORS[art]), 255];
+      }
+    }
+  }
+});
+
 encode(output, rows);
 console.log(`${input} -> ${output}`);

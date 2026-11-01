@@ -38,6 +38,8 @@ import {
   calculateSkillDamage,
   canUseSkill,
   findUnitSkill,
+  getFollowUpDamage,
+  getSkillAreaTiles,
   getSkillHealAmount,
   isHealingSkill,
   type Skill,
@@ -93,8 +95,6 @@ export type BattleCommand =
   // isn't an action: it ends no turn and can follow the battle's last blow.
   | { type: 'take-boon'; unitId: string; level: number; boonId: string };
 
-export type BattleCommandType = BattleCommand['type'];
-
 // What a command did, in the order it happened, for the scene to play.
 export type BattleEvent =
   | { type: 'placed'; unitId: string; to: Point }
@@ -115,7 +115,19 @@ export type BattleEvent =
       broke: boolean;
       learned: Weapon | null;
     }
-  | { type: 'skill'; unitId: string; targetId: string; skill: Skill; damage: number; health: number }
+  // A skill's blow. `splash`: one of an area skill's blows past the tile it
+  // was aimed at, which lands with the first blow rather than with an
+  // animation of its own. `followUp`: a followUp skill's second blow.
+  | {
+      type: 'skill';
+      unitId: string;
+      targetId: string;
+      skill: Skill;
+      damage: number;
+      health: number;
+      splash?: boolean;
+      followUp?: boolean;
+    }
   // A push skill shoved `push.unitId` (see push.ts). `health` is the shoved
   // unit's health after it, `collidedHealth` that of the unit it slammed
   // into, if any. A unit it left at 0 health (or drowned) is `defeated` next.
@@ -247,8 +259,20 @@ export function woundedAllyOf(units: ReadonlyMap<string, Unit>, healerId: string
   };
 }
 
+// Whether `skill`, used by `unitId`, affects the unit `otherId`: a wounded
+// ally for a healing skill; for any other, a foe, or for a friendlyFire
+// one anyone but the user.
+function affectedBy(units: ReadonlyMap<string, Unit>, unitId: string, skill: Skill) {
+  const user = units.get(unitId)!;
+  if (isHealingSkill(skill)) return woundedAllyOf(units, unitId);
+  if (skill.friendlyFire) return (otherId: string) => otherId !== unitId && units.has(otherId);
+  return hostileTo(units, user);
+}
+
 // The tiles the unit `unitId` can use `skill` on from `from`: hostile units
-// in its range, or wounded allies for a healing skill.
+// in its range, or wounded allies for a healing skill. A skill with range 0
+// is aimed at the user's own tile, which it can use when its area holds
+// anyone it affects (getSkillVictims).
 export function getSkillTargets(
   grid: Grid,
   units: ReadonlyMap<string, Unit>,
@@ -258,8 +282,37 @@ export function getSkillTargets(
 ): TargetTile[] {
   const user = units.get(unitId);
   if (!user) return [];
+  if (skill.range === 0) {
+    const self = { x: from.x, y: from.y, unitId };
+    return getSkillVictims(grid, units, unitId, from, skill, self).length > 0 ? [self] : [];
+  }
   const canTarget = isHealingSkill(skill) ? woundedAllyOf(units, unitId) : hostileTo(units, user);
   return getAttackTargets(grid, from, skill.range, canTarget);
+}
+
+// Everyone `skill`, used by `unitId` from `from` and aimed at `target`,
+// lands on, as [{ x, y, unitId }]: the unit on `target` (never the user,
+// for a range-0 skill), then each unit it affects on the tiles its area
+// reaches (getSkillAreaTiles), in that order. Doesn't check that `target`
+// is in reach (getSkillTargets does).
+export function getSkillVictims(
+  grid: Grid,
+  units: ReadonlyMap<string, Unit>,
+  unitId: string,
+  from: Point,
+  skill: Skill,
+  target: Point,
+): TargetTile[] {
+  if (!units.has(unitId)) return [];
+  const affects = affectedBy(units, unitId, skill);
+  const victims: TargetTile[] = [];
+  const aimed = getCell(grid, target.x, target.y)?.unitId;
+  if (aimed && aimed !== unitId) victims.push({ x: target.x, y: target.y, unitId: aimed });
+  for (const tile of getSkillAreaTiles(skill, from, target)) {
+    const other = getCell(grid, tile.x, tile.y)?.unitId;
+    if (other && affects(other)) victims.push({ x: tile.x, y: tile.y, unitId: other });
+  }
+  return victims;
 }
 
 // The state being built from the last one: the parts a command changes,
@@ -527,8 +580,11 @@ function grantExperience(draft: Draft, unitId: string, { amount, scaled }: Exper
   draft.events.push({ type: 'experience', unitId, from, result });
 }
 
-// A skill always lands: mana is spent and its damage dealt, and it earns XP
-// like a single strike that hit. A healing skill mends instead (mendWith).
+// A skill always lands: mana is spent and its damage dealt to the foe it's
+// aimed at, then to everyone else its area reaches (getSkillVictims), and
+// it earns XP like a single strike that hit the one it rewards most. A
+// followUp skill strikes its target again; a push skill shoves it. A
+// healing skill mends instead (mendWith).
 function useSkill(draft: Draft, unitId: string, skillId: string, target: Point) {
   const user = requireActor(draft, unitId);
   const skill = findUnitSkill(user, skillId) ?? draft.fail(`${unitId} doesn't know ${skillId}`);
@@ -540,23 +596,64 @@ function useSkill(draft: Draft, unitId: string, skillId: string, target: Point) 
   const from = draft.tileOf(unitId);
   const targets = getSkillTargets(draft.grid, draft.units, unitId, from, skill);
   const tile = findTileAt(targets, target) ?? draft.fail(`no foe in reach on (${target.x}, ${target.y})`);
-
-  const defender = draft.edit(tile.unitId);
-  const struck = calculateSkillDamage(skill, user, defender);
+  const victims = getSkillVictims(draft.grid, draft.units, unitId, from, skill, tile);
   draft.edit(unitId).spendMana(skill.manaCost);
-  defender.takeDamage(struck);
-  draft.events.push({ type: 'skill', unitId, targetId: tile.unitId, skill, damage: struck, health: defender.health });
-  const shoved = skill.push && defender.isAlive() ? push(draft, unitId, from, tile) : null;
-  const damage = struck + (shoved?.damage ?? 0);
-  const lethal = !defender.isAlive();
-  if (lethal) {
-    dropLoot(draft, tile.unitId, unitId);
-    defeat(draft, tile.unitId, unitId);
-    healOnKill(draft, unitId);
+
+  // Every blow lands before anyone falls, so a defeat doesn't change who
+  // the area reaches.
+  const blows = victims.map((victim, i) => {
+    const defender = draft.edit(victim.unitId);
+    let damage = calculateSkillDamage(skill, draft.unit(unitId), defender);
+    defender.takeDamage(damage);
+    const splash = i > 0;
+    draft.events.push({
+      type: 'skill',
+      unitId,
+      targetId: victim.unitId,
+      skill,
+      damage,
+      health: defender.health,
+      ...(splash && { splash }),
+    });
+    if (!splash && defender.isAlive()) {
+      const second = getFollowUpDamage(skill, damage);
+      if (second > 0) {
+        defender.takeDamage(second);
+        damage += second;
+        draft.events.push({
+          type: 'skill',
+          unitId,
+          targetId: victim.unitId,
+          skill,
+          damage: second,
+          health: defender.health,
+          followUp: true,
+        });
+      }
+    }
+    return { victim, defender, damage };
+  });
+
+  const [aimed] = blows;
+  const shoved = skill.push && aimed.defender.isAlive() ? push(draft, unitId, from, aimed.victim) : null;
+  if (shoved) aimed.damage += shoved.damage;
+
+  let award: ExperienceAward | null = null;
+  for (const { victim, defender, damage } of blows) {
+    const lethal = !defender.isAlive();
+    const hostile = !areAllied(defender.team, draft.unit(unitId).team);
+    if (lethal) {
+      if (hostile) dropLoot(draft, victim.unitId, unitId);
+      defeat(draft, victim.unitId, hostile ? unitId : null);
+      if (hostile) healOnKill(draft, unitId);
+    }
+    if (!hostile) continue;
+    const strikes: Strike[] = [{ by: 'attacker', target: 'defender', damage, hit: true, crit: false, lethal }];
+    const earned = getCombatAward(draft.unit(unitId), defender, getCombatOutcome(strikes, 'attacker'));
+    if (!award || earned.amount > award.amount) award = earned;
   }
   if (shoved?.collidedId) knockOut(draft, shoved.collidedId, unitId);
-  const strikes: Strike[] = [{ by: 'attacker', target: 'defender', damage, hit: true, crit: false, lethal }];
-  grantExperience(draft, unitId, getCombatAward(draft.unit(unitId), defender, getCombatOutcome(strikes, 'attacker')));
+  if (award) grantExperience(draft, unitId, award);
   finishAction(draft, unitId);
 }
 
@@ -592,17 +689,22 @@ function knockOut(draft: Draft, unitId: string, shoverId: string) {
   if (hostile) healOnKill(draft, shoverId);
 }
 
-// A healing skill on the wounded ally on `target`: its mana is spent, the
-// ally regains getSkillHealAmount, and the user earns a heal's XP.
+// A healing skill on the wounded ally on `target` (or, for a range-0 one,
+// aimed at the user's own tile), and every wounded ally its area reaches
+// (getSkillVictims): its mana is spent, each regains getSkillHealAmount,
+// and the user earns a heal's XP once.
 function mendWith(draft: Draft, unitId: string, skill: Skill, target: Point) {
-  const targets = getSkillTargets(draft.grid, draft.units, unitId, draft.tileOf(unitId), skill);
+  const from = draft.tileOf(unitId);
+  const targets = getSkillTargets(draft.grid, draft.units, unitId, from, skill);
   const tile = findTileAt(targets, target) ?? draft.fail(`no wounded ally in reach on (${target.x}, ${target.y})`);
 
-  const patient = draft.edit(tile.unitId);
-  const amount = getSkillHealAmount(skill, draft.unit(unitId), patient);
-  patient.heal(amount);
   draft.edit(unitId).spendMana(skill.manaCost);
-  draft.events.push({ type: 'healed', unitId, targetId: tile.unitId, amount, skill });
+  for (const victim of getSkillVictims(draft.grid, draft.units, unitId, from, skill, tile)) {
+    const patient = draft.edit(victim.unitId);
+    const amount = getSkillHealAmount(skill, draft.unit(unitId), patient);
+    patient.heal(amount);
+    draft.events.push({ type: 'healed', unitId, targetId: victim.unitId, amount, skill });
+  }
   grantExperience(draft, unitId, { amount: HEAL_EXPERIENCE, scaled: true });
   finishAction(draft, unitId);
 }

@@ -7,6 +7,14 @@ import {
   CLEAVE,
   SHIELD_BASH,
   CLASS_SKILL_PICKS,
+  BARRAGE,
+  getFollowUpDamage,
+  getSkillAreaTiles,
+  PIERCING_SHOT,
+  PRAYER,
+  SHRAPNEL,
+  SKEWER,
+  TANDEM_STRIKE,
   DEADEYE,
   getClassSkillPicks,
   LUNGE,
@@ -15,7 +23,6 @@ import {
   SHOVE,
   calculateSkillDamage,
   canUseSkill,
-  findLearnedSkill,
   findUnitSkill,
   getUnitSkills,
   getLearnedSkills,
@@ -212,21 +219,6 @@ describe('THROW_STONES', () => {
   });
 });
 
-describe('findLearnedSkill', () => {
-  it('finds a known skill by id', () => {
-    expect(findLearnedSkill('fighter', 3, 'rally', trees)).toBe(rally);
-  });
-
-  it('returns null for a skill not learned yet', () => {
-    expect(findLearnedSkill('fighter', 2, 'rally', trees)).toBeNull();
-  });
-
-  it('returns null for an unknown id or class', () => {
-    expect(findLearnedSkill('fighter', 99, 'fireball', trees)).toBeNull();
-    expect(findLearnedSkill('dragon', 99, 'bash', trees)).toBeNull();
-  });
-});
-
 describe('POWER_STRIKE', () => {
   it('reaches adjacent tiles and costs mana', () => {
     expect(POWER_STRIKE.range).toBe(1);
@@ -350,10 +342,66 @@ describe('hasSkillTree', () => {
   });
 });
 
+describe('getSkillAreaTiles', () => {
+  const from = { x: 2, y: 2 };
+  it('is nothing for a skill without an area', () => {
+    expect(getSkillAreaTiles(TANDEM_STRIKE, from, { x: 3, y: 2 })).toEqual([]);
+  });
+
+  it('reaches either side of the target, across the line from the user', () => {
+    expect(getSkillAreaTiles(CLEAVE, from, { x: 3, y: 2 })).toEqual([
+      { x: 3, y: 3 },
+      { x: 3, y: 1 },
+    ]);
+    expect(getSkillAreaTiles(CLEAVE, from, { x: 2, y: 1 })).toEqual([
+      { x: 1, y: 1 },
+      { x: 3, y: 1 },
+    ]);
+  });
+
+  it('reaches the tile behind the target, along the longer axis', () => {
+    expect(getSkillAreaTiles(PIERCING_SHOT, from, { x: 2, y: 5 })).toEqual([{ x: 2, y: 6 }]);
+    expect(getSkillAreaTiles(PIERCING_SHOT, from, { x: 4, y: 3 })).toEqual([{ x: 5, y: 3 }]);
+    expect(getSkillAreaTiles(SKEWER, from, { x: 1, y: 2 })).toEqual([{ x: 0, y: 2 }]);
+  });
+
+  it('bursts to the four tiles around the target, never the user', () => {
+    expect(getSkillAreaTiles(BARRAGE, from, { x: 2, y: 4 })).toEqual([
+      { x: 2, y: 3 },
+      { x: 3, y: 4 },
+      { x: 2, y: 5 },
+      { x: 1, y: 4 },
+    ]);
+    expect(getSkillAreaTiles(SHRAPNEL, from, { x: 3, y: 2 })).toHaveLength(3);
+    expect(getSkillAreaTiles(PRAYER, from, from)).toHaveLength(4);
+  });
+});
+
+describe('getFollowUpDamage', () => {
+  it('is the followUp share of the first blow, rounded up, and nothing without one', () => {
+    expect(getFollowUpDamage(TANDEM_STRIKE, 5)).toBe(3);
+    expect(getFollowUpDamage(TANDEM_STRIKE, 0)).toBe(0);
+    expect(getFollowUpDamage(CLEAVE, 5)).toBe(0);
+  });
+
+  it('adds the second blow to the forecast while the first leaves the foe standing', () => {
+    const user = { strength: 5, health: 10, maxHealth: 10 };
+    expect(getSkillForecast(TANDEM_STRIKE, user, { defense: 0, health: 20, maxHealth: 20 }).attacker.damage).toBe(8);
+    expect(getSkillForecast(TANDEM_STRIKE, user, { defense: 0, health: 4, maxHealth: 20 }).attacker.damage).toBe(5);
+  });
+});
+
+describe('PRAYER', () => {
+  it("heals 1 plus half the user's INT, rounded down", () => {
+    expect(getSkillHealAmount(PRAYER, { intelligence: 5 }, { health: 1, maxHealth: 20 })).toBe(3);
+  });
+});
+
 describe('getClassSkillPicks', () => {
   it("is the class's own level-up skill picks, and none for a class without any", () => {
     expect(getClassSkillPicks('soldier')).toEqual([LUNGE]);
-    expect(getClassSkillPicks('acolyte')).toEqual([SMITE]);
+    expect(getClassSkillPicks('acolyte')).toEqual([SMITE, PRAYER]);
+    expect(getClassSkillPicks('beast-rider')).toEqual([SKEWER, TANDEM_STRIKE]);
     expect(getClassSkillPicks('beast')).toEqual([WING_BUFFET]);
     expect(getClassSkillPicks('siege')).toEqual([DEADEYE]);
     expect(getClassSkillPicks('scout')).toEqual([]);
@@ -383,6 +431,12 @@ describe('describeSkill', () => {
       'Its regular hit with +1 power on a foe next to it, then pushes it a tile away.',
     );
     expect(describeSkill(SHOVE)).toBe('Pushes a foe next to it a tile away.');
+    expect(describeSkill(CLEAVE)).toBe('Its regular hit on a foe next to it and those on either side of it.');
+    expect(describeSkill(SHRAPNEL)).toBe(
+      'Half its regular hit on a foe up to 2 tiles away and the four tiles around it, allies included.',
+    );
+    expect(describeSkill(TANDEM_STRIKE)).toBe('Its regular hit on a foe next to it, then a second hit for half that.');
+    expect(describeSkill(PRAYER)).toBe('Heals every wounded ally next to it for 1 + half INT.');
     expect(describeSkill(THROW_STONES)).toBe('Half its regular hit on a foe up to 4 tiles away.');
     expect(describeSkill({ ...THROW_STONES, damageScale: 1.5 })).toBe(
       '1.5× its regular hit on a foe up to 4 tiles away.',
