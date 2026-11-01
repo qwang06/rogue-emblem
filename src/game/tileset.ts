@@ -473,18 +473,15 @@ export const SOFT_UNIT_SHADOW: Shadow = {
 };
 
 // How every unit on the map shows its side without hiding the painted art:
-// a thin rim in a deep team color hugging the art's silhouette (`rim`,
-// `width` of the art's frame thick), a team-colored ring on the floor around
+// a team-colored ring on the floor around
 // its feet (`ring`, its size and center within the tile in fractions of a
 // tile, like a Shadow), and its blue accents (cloaks, tabards, shields)
 // turned to its team's hue (`accentHue`, in degrees; the player's blue art
 // stays as painted).
 export const UNIT_TEAM_MARKS: {
-  rim: { width: number; alpha: number; colors: Readonly<Record<Team, number>> };
   ring: Shadow & { colors: Readonly<Record<Team, number>> };
   accentHue: Readonly<Record<Team, number | null>>;
 } = {
-  rim: { width: 1 / 110, alpha: 0.95, colors: { player: 0x1f4fb8, enemy: 0xb01e1e, guest: 0x1e8a3a } },
   ring: {
     width: 29 / 32,
     height: 10 / 32,

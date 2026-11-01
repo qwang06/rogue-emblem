@@ -271,7 +271,7 @@ import {
 } from './effects.ts';
 import { CRIT_SHAKE, getLungeDistance, getStrikeJuice, type Shake } from './hitJuice.ts';
 import { addCastShadow, addTreeShadow, addUnitShadow } from './unitShadow.ts';
-import { addTeamRing, addUnitRim, getTeamTextureKey } from './unitTeamMarks.ts';
+import { addTeamRing, getTeamTextureKey } from './unitTeamMarks.ts';
 import { addUnitRig, faceRigToward, playRigAction, setRigMotion } from './unitRig.ts';
 import { addRankBadge } from './rankBadge.ts';
 import type { Menu } from '../game/actionMenu.ts';
@@ -3901,13 +3901,12 @@ export class GridScene extends Phaser.Scene {
         .setOrigin(origin.x, origin.y)
         .setDisplaySize(TILE_SIZE * PAINTED_UNIT_SCALE, TILE_SIZE * PAINTED_UNIT_SCALE);
     }
-    // Its side shows as a thin rim around the art and a ring at its feet.
-    const rim = addUnitRim(this, sprite, unit.team);
+    // Its side shows as a ring at its feet.
     addTeamRing(this, sprite, unit.team);
     if (painted) {
       const walk = getSingleImageWalk(art);
       const teamWalk = walk && { ...walk, key: getTeamTextureKey(this, walk.key, unit.team) };
-      addUnitRig(this, sprite, unit.team === 'enemy' ? -1 : 1, [rim], teamWalk);
+      addUnitRig(this, sprite, unit.team === 'enemy' ? -1 : 1, [], teamWalk);
     }
     // A battlefield's painted floor gets a soft shadow, a terrain map the crisp blob.
     if (this.battlefieldKind) addUnitShadow(this, sprite, SOFT_UNIT_SHADOW, true);
