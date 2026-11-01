@@ -26,11 +26,22 @@ import {
   type ExperienceAward,
   type ExperienceGain,
 } from '../experience.ts';
-import { findTileAt, findUnit, getCell, getDistance, moveUnit, setUnit, type Grid, type Point } from '../grid.ts';
+import {
+  findTileAt,
+  findUnit,
+  getCell,
+  getDistance,
+  isSameTile,
+  moveUnit,
+  setUnit,
+  type Grid,
+  type Point,
+} from '../grid.ts';
 import { getHealAmount, getHealTargets, HEAL_EXPERIENCE, isStaff, isWounded } from '../healing.ts';
 import { canUseItem, findItem, type Consumable, type Item } from '../items.ts';
 import { claimLoot, getLootQuantity } from '../loot.ts';
-import { getMovePath, getMovementRange, canMoveAlongPath, type MovementOptions } from '../movement.ts';
+import { getMoveCost, getMovePath, getMovementRange, canMoveAlongPath, type MovementOptions } from '../movement.ts';
+import { getLeapLanding, getRetreatTile, getStrafePath } from '../skillMoves.ts';
 import { getObjectiveOutcome } from '../objectives.ts';
 import { getPushDirection, getPushResult, type PushResult } from '../push.ts';
 import { createResumableRng } from '../rng.ts';
@@ -43,6 +54,7 @@ import {
   getSkillAreaTiles,
   getSkillHealAmount,
   isBuffSkill,
+  isSwapSkill,
   isHealingSkill,
   type Skill,
 } from '../skills.ts';
@@ -152,6 +164,9 @@ export type BattleEvent =
     }
   // A recoil skill cost its user `damage` HP, leaving it `health`.
   | { type: 'recoil'; unitId: string; damage: number; health: number }
+  // A skill moved `unitId` from one tile to another without walking: a
+  // leap, a strafing run, a retreat or a swap (see skillMoves.ts).
+  | { type: 'relocated'; unitId: string; from: Point; to: Point }
   // A defeated unit's loot went to `unitId`, or to the convoy when `stored`.
   | { type: 'loot'; unitId: string; item: Item; stored: boolean }
   | { type: 'defeated'; unitId: string; at: Point }
@@ -281,20 +296,23 @@ function allyOf(units: ReadonlyMap<string, Unit>, unitId: string) {
 }
 
 // Whether `skill`, used by `unitId`, affects the unit `otherId`: a wounded
-// ally for a healing skill, any ally for a buff; for any other, a foe, or
+// ally for a healing skill, any ally for a buff or a swap; for any other, a foe, or
 // for a friendlyFire one anyone but the user.
 function affectedBy(units: ReadonlyMap<string, Unit>, unitId: string, skill: Skill) {
   const user = units.get(unitId)!;
   if (isHealingSkill(skill)) return woundedAllyOf(units, unitId);
-  if (isBuffSkill(skill)) return allyOf(units, unitId);
+  if (isBuffSkill(skill) || isSwapSkill(skill)) return allyOf(units, unitId);
   if (skill.friendlyFire) return (otherId: string) => otherId !== unitId && units.has(otherId);
   return hostileTo(units, user);
 }
 
 // The tiles the unit `unitId` can use `skill` on from `from`: hostile units
-// in its range, or wounded allies for a healing skill, or allies for a buff. A skill with range 0
-// is aimed at the user's own tile, which it can use when its area holds
-// anyone it affects (getSkillVictims).
+// in its range, or wounded allies for a healing skill, or allies for a buff
+// or a swap. A skill with range 0 is aimed at the user's own tile, which it
+// can use when its area holds anyone it affects (getSkillVictims). A leap
+// needs a tile to land on next to its foe (getLeapLanding), a strafing run
+// a free tile past it (getStrafePath), and a swap ground both units can
+// stand on.
 export function getSkillTargets(
   grid: Grid,
   units: ReadonlyMap<string, Unit>,
@@ -308,13 +326,28 @@ export function getSkillTargets(
     const self = { x: from.x, y: from.y, unitId };
     return getSkillVictims(grid, units, unitId, from, skill, self).length > 0 ? [self] : [];
   }
-  return getAttackTargets(grid, from, skill.range, affectedBy(units, unitId, { ...skill, friendlyFire: false }));
+  const targets = getAttackTargets(
+    grid,
+    from,
+    skill.range,
+    affectedBy(units, unitId, { ...skill, friendlyFire: false }),
+  );
+  if (skill.leap) {
+    return targets.filter((target) => getLeapLanding(grid, unitId, from, target, skill.leap!, skill.straight));
+  }
+  if (skill.strafe) return targets.filter((target) => getStrafePath(grid, unitId, from, target, skill.strafe!));
+  if (isSwapSkill(skill)) {
+    const walkable = (tile: Point) => Number.isFinite(getMoveCost(getCell(grid, tile.x, tile.y)!.terrain));
+    return walkable(from) ? targets.filter(walkable) : [];
+  }
+  return targets;
 }
 
 // Everyone `skill`, used by `unitId` from `from` and aimed at `target`,
 // lands on, as [{ x, y, unitId }]: the unit on `target` (never the user,
 // for a range-0 skill), then each unit it affects on the tiles its area
-// reaches (getSkillAreaTiles), in that order. Doesn't check that `target`
+// reaches (getSkillAreaTiles), or, for a strafing run, on the tiles it
+// flies over (getStrafePath), in that order. Doesn't check that `target`
 // is in reach (getSkillTargets does).
 export function getSkillVictims(
   grid: Grid,
@@ -329,9 +362,10 @@ export function getSkillVictims(
   const victims: TargetTile[] = [];
   const aimed = getCell(grid, target.x, target.y)?.unitId;
   if (aimed && aimed !== unitId) victims.push({ x: target.x, y: target.y, unitId: aimed });
-  for (const tile of getSkillAreaTiles(skill, from, target)) {
+  const strafed = skill.strafe ? (getStrafePath(grid, unitId, from, target, skill.strafe)?.passed ?? []) : [];
+  for (const tile of [...getSkillAreaTiles(skill, from, target), ...strafed]) {
     const other = getCell(grid, tile.x, tile.y)?.unitId;
-    if (other && affects(other)) victims.push({ x: tile.x, y: tile.y, unitId: other });
+    if (other && other !== aimed && affects(other)) victims.push({ x: tile.x, y: tile.y, unitId: other });
   }
   return victims;
 }
@@ -483,6 +517,7 @@ function move(draft: Draft, unitId: string, to: Point, path?: readonly Point[]) 
   const route = path ?? getMovePath(draft.grid, from, to, movement, options) ?? [from];
   if (!findTileAt([route[0]], from) || !canMoveAlongPath(range, route, to)) draft.fail('the path does not lead there');
   draft.grid = moveUnit(draft.grid, from, to);
+  draft.edit(unitId).movedTiles = route.length - 1;
   draft.turnState = markMoved(draft.turnState!, unitId);
   draft.events.push({
     type: 'moved',
@@ -612,8 +647,11 @@ function grantExperience(draft: Draft, unitId: string, { amount, scaled }: Exper
 // A skill always lands: mana is spent and its damage dealt to the foe it's
 // aimed at, then to everyone else its area reaches (getSkillVictims), and
 // it earns XP like a single strike that hit the one it rewards most. A
-// followUp skill strikes its target again; a push skill shoves it. A
-// healing skill mends instead (mendWith).
+// followUp skill strikes its target again; a push skill shoves it. A leap
+// lands the user next to its target first and a strafing run flies it to
+// its landing; a retreat steps it back after. A healing skill mends
+// instead (mendWith), a buff buffs (buffWith), a swap trades places
+// (swapWith).
 function useSkill(draft: Draft, unitId: string, skillId: string, target: Point) {
   const user = requireActor(draft, unitId);
   const skill = findUnitSkill(user, skillId) ?? draft.fail(`${unitId} doesn't know ${skillId}`);
@@ -626,11 +664,18 @@ function useSkill(draft: Draft, unitId: string, skillId: string, target: Point) 
     buffWith(draft, unitId, skill, target);
     return;
   }
-  const from = draft.tileOf(unitId);
+  if (isSwapSkill(skill)) {
+    swapWith(draft, unitId, skill, target);
+    return;
+  }
+  let from = draft.tileOf(unitId);
   const targets = getSkillTargets(draft.grid, draft.units, unitId, from, skill);
   const tile = findTileAt(targets, target) ?? draft.fail(`no foe in reach on (${target.x}, ${target.y})`);
-  const victims = getSkillVictims(draft.grid, draft.units, unitId, from, skill, tile);
   draft.edit(unitId).spendMana(skill.manaCost);
+  if (skill.leap)
+    from = relocate(draft, unitId, getLeapLanding(draft.grid, unitId, from, tile, skill.leap, skill.straight)!);
+  const victims = getSkillVictims(draft.grid, draft.units, unitId, from, skill, tile);
+  if (skill.strafe) relocate(draft, unitId, getStrafePath(draft.grid, unitId, from, tile, skill.strafe)!.landing);
 
   // Every blow lands before anyone falls, so a defeat doesn't change who
   // the area reaches.
@@ -709,7 +754,35 @@ function useSkill(draft: Draft, unitId: string, skillId: string, target: Point) 
     if (!award || earned.amount > award.amount) award = earned;
   }
   if (shoved?.collidedId) knockOut(draft, shoved.collidedId, unitId);
+  if (skill.retreat) relocate(draft, unitId, getRetreatTile(draft.grid, unitId, from, tile, skill.retreat));
   if (award) grantExperience(draft, unitId, award);
+  finishAction(draft, unitId);
+}
+
+// Moves the unit `unitId` straight to `to` (a skill's leap, flight or
+// retreat), if it isn't there already, and returns `to`.
+function relocate(draft: Draft, unitId: string, to: Point): Point {
+  const from = draft.tileOf(unitId);
+  if (!isSameTile(from, to)) {
+    draft.grid = moveUnit(draft.grid, from, to);
+    draft.events.push({ type: 'relocated', unitId, from, to: { x: to.x, y: to.y } });
+  }
+  return to;
+}
+
+// A swap skill on the ally on `target`: its mana is spent, the two trade
+// tiles, and the user earns a heal's XP.
+function swapWith(draft: Draft, unitId: string, skill: Skill, target: Point) {
+  const from = draft.tileOf(unitId);
+  const targets = getSkillTargets(draft.grid, draft.units, unitId, from, skill);
+  const tile = findTileAt(targets, target) ?? draft.fail(`no ally in reach on (${target.x}, ${target.y})`);
+
+  draft.edit(unitId).spendMana(skill.manaCost);
+  draft.grid = setUnit(setUnit(draft.grid, from.x, from.y, tile.unitId), tile.x, tile.y, unitId);
+  const to = { x: tile.x, y: tile.y };
+  draft.events.push({ type: 'relocated', unitId, from, to });
+  draft.events.push({ type: 'relocated', unitId: tile.unitId, from: to, to: { x: from.x, y: from.y } });
+  grantExperience(draft, unitId, { amount: HEAL_EXPERIENCE, scaled: true });
   finishAction(draft, unitId);
 }
 
@@ -875,6 +948,9 @@ function startPhase(draft: Draft, turnState: TurnState) {
   const ended = draft.turnState?.team;
   if (ended) wearOff(ended, 'debuff');
   wearOff(turnState.team, 'buff');
+  for (const unitId of getTeamUnitIds(draft.units, turnState.team)) {
+    if (draft.unit(unitId).movedTiles !== 0) draft.edit(unitId).movedTiles = 0;
+  }
   draft.turnState = turnState;
   draft.events.push({ type: 'phase-started', turnState });
   if (checkOutcome(draft)) return;

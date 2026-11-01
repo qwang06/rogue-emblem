@@ -313,6 +313,8 @@ const AREA_PREVIEW_ALPHA = 0.35;
 // A shoved unit's slide onto its new tile, and the nudge of one that's
 // stopped (in px).
 const PUSH_SLIDE_MS = 160;
+// How long a skill's leap or flight takes for each tile it covers.
+const RELOCATE_TILE_MS = 90;
 const PUSH_BUMP_PX = 6;
 const DEPLOYMENT_ZONE_COLOR = 0xfacc15;
 const DEPLOYMENT_ZONE_ALPHA = 0.4;
@@ -2865,6 +2867,16 @@ export class GridScene extends Phaser.Scene {
         return;
       case 'pushed':
         this.playPush(event, next);
+        return;
+      // A leap, strafing run, retreat or swap: the unit sails straight there.
+      case 'relocated':
+        this.tweens.add({
+          targets: this.unitSprites.get(event.unitId)!,
+          ...gridToWorld(event.to.x, event.to.y, TILE_SIZE),
+          duration: RELOCATE_TILE_MS * Math.max(1, getDistance(event.from, event.to)),
+          ease: 'Quad.easeInOut',
+          onComplete: next,
+        });
         return;
       case 'healed':
         // A healing skill's mana goes as the heal lands.
