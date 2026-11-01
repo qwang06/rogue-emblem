@@ -106,14 +106,38 @@ export const CLEAVE: Skill = Object.freeze({
 });
 
 // A shove with the tower shield behind the spear: the user's regular
-// attack with 1 more power behind it, against an adjacent foe.
+// attack with 1 more power behind it, against an adjacent foe, which it
+// then pushes a tile away like Shove does (see push.ts).
 export const SHIELD_BASH: Skill = Object.freeze({
   id: 'shield-bash',
   label: 'Shield Bash',
-  manaCost: 2,
+  manaCost: 3,
   range: 1,
   might: 1,
+  push: true,
   animation: 'strike',
+});
+
+// A beat of the beast's wings: half its regular attack against an
+// adjacent foe, which it pushes a tile away (see push.ts).
+export const WING_BUFFET: Skill = Object.freeze({
+  id: 'wing-buffet',
+  label: 'Wing Buffet',
+  manaCost: 2,
+  range: 1,
+  damageScale: 0.5,
+  push: true,
+  animation: 'strike',
+});
+
+// A careful shot from the siege engine at its longest reach: its regular
+// attack from up to 5 tiles away.
+export const DEADEYE: Skill = Object.freeze({
+  id: 'deadeye',
+  label: 'Deadeye',
+  manaCost: 2,
+  range: 5,
+  animation: 'stone',
 });
 
 // A shove with no blow behind it: the adjacent foe is pushed one tile
@@ -139,7 +163,7 @@ function promotionSkill(id: string, label: string, fields: Partial<Skill>): Skil
 export const SUNDER = promotionSkill('sunder', 'Sunder', { might: 4 });
 export const FRENZY = promotionSkill('frenzy', 'Frenzy', { manaCost: 4, might: 6 });
 export const IMPALE = promotionSkill('impale', 'Impale', { might: 5 });
-export const LUNGE = promotionSkill('lunge', 'Lunge', { range: 2, might: 2 });
+export const LUNGE = promotionSkill('lunge', 'Lunge', { manaCost: 2, range: 2, might: 2 });
 export const PIERCING_SHOT = promotionSkill('piercing-shot', 'Piercing Shot', {
   range: 4,
   might: 2,
@@ -173,20 +197,47 @@ export const MEND: Skill = Object.freeze({
 // none (bar a Shove) and learns it on its first level up.
 export const SKILL_UNLOCK_LEVEL = 2;
 
-// unitClass -> [{ level, skill }]. Classes without an entry (the
-// specialized units, the elementals and the monsters, for now) know no
-// skills. A promoted class has its own tree, not the villager's.
+// The villager's tree, which its promotions keep: a villager that promotes
+// still knows what it learned as one.
+const VILLAGER_TREE: readonly SkillTreeEntry[] = Object.freeze([
+  Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: THROW_STONES }),
+]);
+
+// A promoted class's tree: the villager's, then its own skills.
+function promotedTree(...entries: SkillTreeEntry[]): readonly SkillTreeEntry[] {
+  return Object.freeze([...VILLAGER_TREE, ...entries.map((entry) => Object.freeze(entry))]);
+}
+
+// unitClass -> [{ level, skill }]: the skills a class learns by level,
+// its signature skill at SKILL_UNLOCK_LEVEL. Classes without an entry (the
+// specialized units bar the acolyte, the elementals and the monsters, for
+// now) learn none by level.
 export const SKILL_TREES: SkillTrees = Object.freeze({
-  villager: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: THROW_STONES })]),
-  archer: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: LONG_SHOT })]),
-  soldier: Object.freeze([
-    Object.freeze({ level: 1, skill: SHOVE }),
-    Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: POWER_STRIKE }),
-  ]),
-  vanguard: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: CLEAVE })]),
-  sapper: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: BLAST })]),
+  villager: VILLAGER_TREE,
+  archer: promotedTree({ level: SKILL_UNLOCK_LEVEL, skill: LONG_SHOT }),
+  soldier: promotedTree({ level: 1, skill: SHOVE }, { level: SKILL_UNLOCK_LEVEL, skill: SHIELD_BASH }),
+  vanguard: promotedTree({ level: SKILL_UNLOCK_LEVEL, skill: CLEAVE }),
+  sapper: promotedTree({ level: SKILL_UNLOCK_LEVEL, skill: BLAST }),
   acolyte: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: MEND })]),
 });
+
+// unitClass -> the skills a level up can offer a unit of the class to
+// learn (a skill boon, see warband/boons.ts): its own, never another
+// class's. Classes without an entry are offered none.
+export const CLASS_SKILL_PICKS: Readonly<Record<string, readonly Skill[]>> = Object.freeze({
+  soldier: Object.freeze([LUNGE]),
+  acolyte: Object.freeze([SMITE]),
+  beast: Object.freeze([WING_BUFFET]),
+  siege: Object.freeze([DEADEYE]),
+});
+
+// The skills a level up can offer a unit of `unitClass` (CLASS_SKILL_PICKS).
+export function getClassSkillPicks(
+  unitClass: string | null,
+  picks: Readonly<Record<string, readonly Skill[]>> = CLASS_SKILL_PICKS,
+): readonly Skill[] {
+  return (unitClass !== null && picks[unitClass]) || [];
+}
 
 // Whether `unitClass` has any skills to teach, e.g. as a secondary class.
 export function hasSkillTree(unitClass: string, trees: SkillTrees = SKILL_TREES): boolean {
@@ -347,9 +398,11 @@ export function describeSkill(skill: Skill): string {
   const reach = skill.range === 1 ? 'next to it' : `up to ${skill.range} tiles away`;
   if (isHealingSkill(skill)) return `Heals an ally ${reach} for ${skill.power ?? 0} + INT.`;
   const scale = skill.damageScale ?? 1;
+  if (scale === 0 && skill.push) return `Pushes a foe ${reach} a tile away.`;
   const hit = scale === 1 ? 'Its regular hit' : scale === 0.5 ? 'Half its regular hit' : `${scale}× its regular hit`;
   const might = skill.might ? ` with +${skill.might} power` : '';
-  return `${hit}${might} on a foe ${reach}.`;
+  const push = skill.push ? ', then pushes it a tile away' : '';
+  return `${hit}${might} on a foe ${reach}${push}.`;
 }
 
 export function canUseSkill(unit: { mana: number }, skill: Skill): boolean {
