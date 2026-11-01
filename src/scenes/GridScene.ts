@@ -253,7 +253,6 @@ import {
   TILE_SIZE,
   TREE_SPRITES,
   UNIT_ANIMATIONS,
-  UNIT_OUTLINE,
   UNIT_SHEET,
   getUnitSprite,
   getUnitTextureKey,
@@ -272,7 +271,7 @@ import {
 } from './effects.ts';
 import { CRIT_SHAKE, getLungeDistance, getStrikeJuice, type Shake } from './hitJuice.ts';
 import { addCastShadow, addTreeShadow, addUnitShadow } from './unitShadow.ts';
-import { addUnitOutline } from './unitOutline.ts';
+import { addTeamRing, addUnitRim, getTeamTextureKey } from './unitTeamMarks.ts';
 import { addUnitRig, faceRigToward, playRigAction, setRigMotion } from './unitRig.ts';
 import { addRankBadge } from './rankBadge.ts';
 import type { Menu } from '../game/actionMenu.ts';
@@ -3890,9 +3889,10 @@ export class GridScene extends Phaser.Scene {
     const unit = this.units.get(unitId)!;
     const art = getUnitSprite(unit.unitClass);
     const facing = getStartFacing(unit.team);
-    const sprite = this.addStandingSprite(gridX, gridY, getUnitTextureKey(art, 'idle'))
-      .setData('art', art)
-      .setData('facing', facing);
+    // A painted unit wears its team's hue on its blue accents.
+    const painted = isSingleImageUnit(art);
+    const key = painted ? getTeamTextureKey(this, art, unit.team) : getUnitTextureKey(art, 'idle');
+    const sprite = this.addStandingSprite(gridX, gridY, key).setData('art', art).setData('facing', facing);
     if (!isSingleImageUnit(art)) sprite.play(this.unitAnimation(art, 'idle', facing));
     // Painted units are drawn bigger, their feet kept on their cell.
     if (isSingleImageUnit(art)) {
@@ -3901,9 +3901,13 @@ export class GridScene extends Phaser.Scene {
         .setOrigin(origin.x, origin.y)
         .setDisplaySize(TILE_SIZE * PAINTED_UNIT_SCALE, TILE_SIZE * PAINTED_UNIT_SCALE);
     }
-    const outline = addUnitOutline(this, sprite, UNIT_OUTLINE.colors[unit.team]);
-    if (isSingleImageUnit(art)) {
-      addUnitRig(this, sprite, unit.team === 'enemy' ? -1 : 1, [outline], getSingleImageWalk(art));
+    // Its side shows as a thin rim around the art and a ring at its feet.
+    const rim = addUnitRim(this, sprite, unit.team);
+    addTeamRing(this, sprite, unit.team);
+    if (painted) {
+      const walk = getSingleImageWalk(art);
+      const teamWalk = walk && { ...walk, key: getTeamTextureKey(this, walk.key, unit.team) };
+      addUnitRig(this, sprite, unit.team === 'enemy' ? -1 : 1, [rim], teamWalk);
     }
     // A battlefield's painted floor gets a soft shadow, a terrain map the crisp blob.
     if (this.battlefieldKind) addUnitShadow(this, sprite, SOFT_UNIT_SHADOW, true);

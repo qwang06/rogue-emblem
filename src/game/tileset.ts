@@ -472,20 +472,29 @@ export const SOFT_UNIT_SHADOW: Shadow = {
   alpha: 0.55,
 };
 
-// The outline drawn around every unit on the map in its team's color, so
-// sides read at a glance without recoloring the sprite: `width` (a
-// fraction of a tile, see getOutlineWidth) thick, hugging the art's
-// silhouette within each frame.
-export const UNIT_OUTLINE: { width: number; colors: Readonly<Record<Team, number>> } = {
-  width: 1 / 32,
-  colors: { player: 0x4a8cff, enemy: 0xff4a4a, guest: 0x4ad860 },
+// How every unit on the map shows its side without hiding the painted art:
+// a thin rim in a deep team color hugging the art's silhouette (`rim`,
+// `width` of the art's frame thick), a team-colored ring on the floor around
+// its feet (`ring`, its size and center within the tile in fractions of a
+// tile, like a Shadow), and its blue accents (cloaks, tabards, shields)
+// turned to its team's hue (`accentHue`, in degrees; the player's blue art
+// stays as painted).
+export const UNIT_TEAM_MARKS: {
+  rim: { width: number; alpha: number; colors: Readonly<Record<Team, number>> };
+  ring: Shadow & { colors: Readonly<Record<Team, number>> };
+  accentHue: Readonly<Record<Team, number | null>>;
+} = {
+  rim: { width: 1 / 110, alpha: 0.95, colors: { player: 0x1f4fb8, enemy: 0xb01e1e, guest: 0x1e8a3a } },
+  ring: {
+    width: 29 / 32,
+    height: 10 / 32,
+    centerX: 16 / 32,
+    centerY: 27 / 32,
+    alpha: 0.9,
+    colors: { player: 0x4a8cff, enemy: 0xff4a4a, guest: 0x4ad860 },
+  },
+  accentHue: { player: null, enemy: 0, guest: 130 },
 };
-
-// How many of a sheet's own pixels thick the unit outline is on a sheet with
-// `frame`-pixel frames: UNIT_OUTLINE.width of a tile, at least one pixel.
-export function getOutlineWidth(frame: number): number {
-  return Math.max(1, Math.round(UNIT_OUTLINE.width * frame));
-}
 
 // The badge pinned to a boss's or an elite's tile on the map, and shown on
 // its portrait in the HUD, so the standouts read at a glance without
