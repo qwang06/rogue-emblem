@@ -1,6 +1,6 @@
 // The promotion screen at camp (see promotion.ts): one list of every
 // promotion the warband could make, each unit that can promote with its
-// class's two promotions one after the other, and the cursor on one of
+// class's promotions one after the other, and the cursor on one of
 // them. Up and down move it (wrapping), confirm promotes, spending a Master
 // Seal, and cancel closes the screen. Every option is disabled while the
 // warband holds no seal. Once nobody is left to promote the list is empty

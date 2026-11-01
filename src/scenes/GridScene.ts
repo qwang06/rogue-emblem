@@ -3606,7 +3606,7 @@ export class GridScene extends Phaser.Scene {
   addUnitSprite(unitId: string, gridX: number, gridY: number) {
     const unit = this.units.get(unitId)!;
     const { x, y } = gridToWorld(gridX, gridY, TILE_SIZE);
-    const art = getUnitSprite(unit.unitClass);
+    const art = getUnitSprite(unit.unitClass, unit.faction);
     const sprite = this.addTileSprite(x, y, unitSheetKey(art, 'idle'))
       .setDepth(0.75)
       .setData('art', art)

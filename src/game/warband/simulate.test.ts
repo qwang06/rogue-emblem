@@ -4,11 +4,11 @@ import { formatSummary, getSimStarts, simulate } from './simulate.ts';
 
 describe('getSimStarts', () => {
   it('seeds each starting class the same way', () => {
-    expect(getSimStarts(2, ['soldier', 'archer'])).toEqual([
-      { seed: 1, classId: 'soldier', name: 'Lead' },
-      { seed: 2, classId: 'soldier', name: 'Lead' },
-      { seed: 1, classId: 'archer', name: 'Lead' },
-      { seed: 2, classId: 'archer', name: 'Lead' },
+    expect(getSimStarts(2, ['villager', 'scout'])).toEqual([
+      { seed: 1, classId: 'villager', name: 'Lead' },
+      { seed: 2, classId: 'villager', name: 'Lead' },
+      { seed: 1, classId: 'scout', name: 'Lead' },
+      { seed: 2, classId: 'scout', name: 'Lead' },
     ]);
   });
 
@@ -18,10 +18,10 @@ describe('getSimStarts', () => {
 });
 
 describe('simulate', () => {
-  const { byClass, worst } = simulate(getSimStarts(2, ['soldier']), BASELINE_POLICY, { maxStages: 2 });
+  const { byClass, worst } = simulate(getSimStarts(2, ['villager']), BASELINE_POLICY, { maxStages: 2 });
 
   it('sums the runs up per class', () => {
-    const summary = byClass.soldier;
+    const summary = byClass.villager;
     expect(summary.runs).toBe(2);
     expect(summary.cleared).toHaveLength(2);
     expect(summary.cleared.every((won) => won >= 1 && won <= 2)).toBe(true);
@@ -31,13 +31,13 @@ describe('simulate', () => {
   });
 
   it('keeps the run that won the fewest stages', () => {
-    expect(worst?.script.start.classId).toBe('soldier');
+    expect(worst?.script.start.classId).toBe('villager');
   });
 
   it('prints a row per class under a header', () => {
     const lines = formatSummary(byClass).split('\n');
     expect(lines[0]).toMatch(/^class\s+runs/);
-    expect(lines[1]).toMatch(/^soldier\s+2\s/);
+    expect(lines[1]).toMatch(/^villager\s+2\s/);
     expect(lines.every((line) => line === line.trimEnd())).toBe(true);
   });
 });

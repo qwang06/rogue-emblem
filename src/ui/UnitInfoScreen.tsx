@@ -1,7 +1,6 @@
 import { gameCommands } from '../bridge/commands.ts';
 import type { UnitDetailView } from '../bridge/views.ts';
 import { getExperienceForLevel } from '../game/experience.ts';
-import { getUnitSprite } from '../game/tileset.ts';
 import { GlyphIcon } from './GlyphIcon.tsx';
 import { ItemIcon } from './ItemIcon.tsx';
 import { getRankLabel, RankBadge } from './RankBadge.tsx';
@@ -49,7 +48,7 @@ function Identity({ unit }: { unit: UnitDetailView }) {
     <div className="unit-info__identity">
       <div className="unit-info__portrait">
         <span className="unit-info__sprite">
-          <UnitSprite sprite={getUnitSprite(unit.unitClass)} scale={2} animated />
+          <UnitSprite sprite={unit.sprite} scale={2} animated />
           {unit.rank && <RankBadge rank={unit.rank} scale={2} className="rank-badge--portrait" />}
         </span>
       </div>

@@ -5,6 +5,7 @@ import { HEAL_STAFF } from '../healing.ts';
 import { MASTER_SEAL, WOODEN_SHIELD } from '../items.ts';
 import { PROMOTION_LEVEL } from '../promotions.ts';
 import { Soldier } from '../Soldier.ts';
+import { Villager } from '../Villager.ts';
 import type { Unit } from '../Unit.ts';
 import { IRON_BOW, IRON_SPEAR, WOODEN_SPEAR } from '../weapons.ts';
 import { REST_COST } from './camp.ts';
@@ -38,6 +39,7 @@ function makeRun(units: Record<string, Unit>, extra: Partial<RunState> = {}): Ru
 }
 
 const soldier = () => new Soldier({ name: 'Alden', team: 'player' });
+const villager = () => new Villager({ name: 'Alden', team: 'player' });
 const camp = (run: RunState): RunSession => ({ run, phase: 'camp' });
 const withUnit = (run: RunState, id: string, change: (unit: UnitSnapshot) => UnitSnapshot): RunState => ({
   ...run,
@@ -139,23 +141,23 @@ describe('planCamp', () => {
 
   it('promotes a unit that can, to its first promotion', () => {
     const run = withUnit(
-      makeRun({ a: soldier() }, { gold: 0, convoy: [{ itemId: MASTER_SEAL.id, quantity: 1 }] }),
+      makeRun({ a: villager() }, { gold: 0, convoy: [{ itemId: MASTER_SEAL.id, quantity: 1 }] }),
       'a',
       (unit) => ({
         ...unit,
         level: PROMOTION_LEVEL,
       }),
     );
-    expect(playCamp(run)).toEqual([{ type: 'promote', unitId: 'a', promotionId: 'general' }, { type: 'march' }]);
+    expect(playCamp(run)).toEqual([{ type: 'promote', unitId: 'a', promotionId: 'archer' }, { type: 'march' }]);
   });
 
   it('buys a seal for a unit that can promote when it has gold to spare', () => {
-    const run = withUnit(makeRun({ a: soldier() }, { gold: 200 }), 'a', (unit) => ({
+    const run = withUnit(makeRun({ a: villager() }, { gold: 200 }), 'a', (unit) => ({
       ...unit,
       level: PROMOTION_LEVEL,
     }));
     expect(playCamp(run).map((command) => command.type)).toEqual(['buy', 'promote', 'march']);
-    const poor = withUnit(makeRun({ a: soldier() }, { gold: 60 }), 'a', (unit) => ({
+    const poor = withUnit(makeRun({ a: villager() }, { gold: 60 }), 'a', (unit) => ({
       ...unit,
       level: PROMOTION_LEVEL,
     }));

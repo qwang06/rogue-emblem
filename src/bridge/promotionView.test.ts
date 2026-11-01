@@ -30,28 +30,26 @@ describe('toPromotionScreenView', () => {
     const view = toPromotionScreenView(pointPromotionCursor(openPromotionScreen(campRun()), 3));
     expect(view.seals).toBe(1);
     expect(view.options).toHaveLength(4);
+    // Bryn the archer has already promoted, so only Ada's four show.
     expect(view.detail).toMatchObject({
-      name: 'Bryn',
-      fromClass: 'Archer',
-      toClass: 'Arbalest',
-      movement: -1,
+      name: 'Ada',
+      fromClass: 'Villager',
+      toClass: 'Sapper',
+      movement: 0,
       weaponTypes: ['physical', 'siege'],
-      skill: { label: 'Bombard', manaCost: 3, range: 3 },
-      gift: 'Ballista',
+      skill: { label: 'Blast', manaCost: 3, range: 2 },
+      passive: { name: 'Demolitions', description: '+5 crit.' },
+      gift: 'Powder Keg',
       evolves: false,
     });
-    expect(view.detail!.gains).toEqual([
-      { label: 'HP', value: 5 },
-      { label: 'STR', value: 3 },
-      { label: 'DEF', value: 2 },
-    ]);
+    expect(view.detail!.gains).toEqual([{ label: 'STR', value: 1 }]);
   });
 
   it('flags a promotion that completes an evolution', () => {
     const run = campRun();
     const brawler = { ...run, roster: run.roster.map((u) => (u.id === 'ada' ? { ...u, boons: ['brawler'] } : u)) };
-    const view = toPromotionScreenView(pointPromotionCursor(openPromotionScreen(brawler), 1));
-    expect(view.detail?.toClass).toBe('Berserker');
+    const view = toPromotionScreenView(pointPromotionCursor(openPromotionScreen(brawler), 2));
+    expect(view.detail?.toClass).toBe('Vanguard');
     expect(view.detail?.evolves).toBe(true);
   });
 });

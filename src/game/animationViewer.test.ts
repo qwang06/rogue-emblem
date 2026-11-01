@@ -7,17 +7,17 @@ import {
   ONE_SHOT_HOLD_MS,
   stepFrame,
 } from './animationViewer.ts';
-import { getAllUnitSheets, getUnitSheet, getUnitSprite, TILE_SIZE } from './tileset.ts';
-import { UNIT_CLASSES } from './unitClasses.ts';
+import { getAllUnitArts, getAllUnitSheets, getUnitSheet, TILE_SIZE } from './tileset.ts';
 
 const idle = getUnitSheet('Soldier_03', 'idle')!;
 const attack = getUnitSheet('Red_Dragon', 'attack')!;
 
 describe('getViewerArts', () => {
-  it("offers every class's art once, the red dragon first", () => {
+  it("offers every art once, every faction's version included, the monsters' first", () => {
     const arts = getViewerArts();
-    expect(arts[0]).toEqual({ art: 'Red_Dragon', label: 'Dragon (Red_Dragon)' });
-    expect(new Set(arts.map(({ art }) => art))).toEqual(new Set(UNIT_CLASSES.map(({ id }) => getUnitSprite(id))));
+    expect(arts[0]).toEqual({ art: 'Slime', label: 'Slime (Slime)' });
+    expect(arts.find(({ art }) => art === 'Archer_03')?.label).toBe('Archer, Rose Court (Archer_03)');
+    expect(new Set(arts.map(({ art }) => art))).toEqual(new Set(getAllUnitArts()));
     expect(arts).toHaveLength(new Set(arts.map(({ art }) => art)).size);
   });
 });

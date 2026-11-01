@@ -2,7 +2,7 @@
 // slot: a Warband unit can learn one other class's skill set on top of its
 // own (`secondaryClass` on its snapshot), and knows that class's skills as
 // it reaches their levels, as if they were its own (see getSecondarySkills
-// in skills.ts). An Archer that learns the Acolyte's set can Mend; a Guard
+// in skills.ts). An Archer that learns the Acolyte's set can Mend; a Soldier
 // that learns the Vanguard's can Cleave.
 //
 // Lessons are taken at camp, in one of two ways:
@@ -14,9 +14,8 @@
 // Learning a set replaces the one the unit had. Everything here is pure:
 // each function returns a new frozen run and leaves its input alone.
 
-import { getBaseClassId } from '../promotions.ts';
 import { getLearnedSkills, hasSkillTree, SKILL_TREES, type Skill, type SkillTrees } from '../skills.ts';
-import { PLAYABLE_CLASSES, type UnitClass } from '../unitClasses.ts';
+import { UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
 import type { RunState, UnitSnapshot } from './run.ts';
 
 // What a mentor charges for a lesson.
@@ -44,7 +43,10 @@ export interface MentorRules {
   trees: SkillTrees;
 }
 
-const DEFAULT_RULES: MentorRules = Object.freeze({ classes: PLAYABLE_CLASSES, trees: SKILL_TREES });
+// Every class a warband unit can be (promoted ones included, not the
+// neutral ones or monsters).
+const WARBAND_CLASSES = UNIT_CLASSES.filter((unitClass) => !unitClass.monster && !unitClass.neutral);
+const DEFAULT_RULES: MentorRules = Object.freeze({ classes: WARBAND_CLASSES, trees: SKILL_TREES });
 
 // How many Mentor's Scrolls the run holds.
 export function getScrolls(run: Pick<RunState, 'scrolls'>): number {
@@ -58,19 +60,16 @@ export function addScrolls(run: RunState, count: number = 1): RunState {
 }
 
 // The classes `unit` could take a secondary skill set from: every class
-// with skills to teach but its own (a promoted unit's base class counts as
-// its own, see promotions.ts), in class order.
+// a warband unit can be, with skills to teach, but its own, in class order.
 export function getSecondaryClassIds(
   unit: Pick<UnitSnapshot, 'classId'>,
   rules: MentorRules = DEFAULT_RULES,
 ): string[] {
-  return rules.classes
-    .filter(({ id }) => id !== getBaseClassId(unit.classId) && hasSkillTree(id, rules.trees))
-    .map(({ id }) => id);
+  return rules.classes.filter(({ id }) => id !== unit.classId && hasSkillTree(id, rules.trees)).map(({ id }) => id);
 }
 
 // The roster unit that can teach `unitId` the `classId` skill set: the
-// first one of that class or a promotion of it, other than the learner,
+// first one of that class, other than the learner,
 // that knows at least one of its skills. Null when there's none.
 export function findMentor(
   run: RunState,
@@ -82,7 +81,7 @@ export function findMentor(
     run.roster.find(
       (other) =>
         other.id !== unitId &&
-        getBaseClassId(other.classId) === classId &&
+        other.classId === classId &&
         getLearnedSkills(classId, other.level, rules.trees).length > 0,
     ) ?? null
   );

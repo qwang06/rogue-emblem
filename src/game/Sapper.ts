@@ -1,4 +1,5 @@
 import { STARTING_ITEMS, type Inventory } from './items.ts';
+import { applyModifiers, type Modifier } from './modifiers.ts';
 import { Unit, type ClassUnitOptions } from './Unit.ts';
 import { POWDER_KEG, weaponEntry, type WeaponType } from './weapons.ts';
 
@@ -50,6 +51,14 @@ export const SAPPER_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physic
 // What it carries into battle: a Powder Keg and the potions.
 export const SAPPER_ITEMS: Inventory = Object.freeze([weaponEntry(POWDER_KEG), ...STARTING_ITEMS]);
 
+// The class's passive, carried into every battle (a villager gains it by
+// promoting, see promotions.ts).
+export const SAPPER_PASSIVE: { name: string; description: string; modifiers: readonly Modifier[] } = Object.freeze({
+  name: 'Demolitions',
+  description: '+5 crit.',
+  modifiers: Object.freeze([Object.freeze<Modifier>({ kind: 'combat', term: 'crit', amount: 5 })]),
+});
+
 // Starts at level 1 with the stat line above; its skills come from the
 // 'sapper' skill tree. Levels up with the growth rates and caps above.
 export class Sapper extends Unit {
@@ -66,5 +75,6 @@ export class Sapper extends Unit {
       caps: SAPPER_CAPS,
       ...SAPPER_STATS,
     });
+    applyModifiers(this, SAPPER_PASSIVE.modifiers);
   }
 }

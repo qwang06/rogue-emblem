@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { Archer } from '../Archer.ts';
 import { MASTER_SEAL } from '../items.ts';
 import { PROMOTION_LEVEL } from '../promotions.ts';
 import type { Unit } from '../Unit.ts';
@@ -22,7 +21,7 @@ function campRun(seals = 1): RunState {
     3,
     new Map<string, Unit>([
       ['ada', new Villager({ name: 'Ada', team: 'player' })],
-      ['bryn', new Archer({ name: 'Bryn', team: 'player' })],
+      ['bryn', new Villager({ name: 'Bryn', team: 'player' })],
     ]),
   );
   return {
@@ -33,12 +32,16 @@ function campRun(seals = 1): RunState {
 }
 
 describe('getPromotionOptions', () => {
-  it('lists each unit’s two promotions, in roster order', () => {
+  it('lists each unit’s four promotions, in roster order', () => {
     expect(getPromotionOptions(campRun()).map((option) => option.label)).toEqual([
-      'Ada: Villager → Hero',
-      'Ada: Villager → Berserker',
-      'Bryn: Archer → Sniper',
-      'Bryn: Archer → Arbalest',
+      'Ada: Villager → Archer',
+      'Ada: Villager → Soldier',
+      'Ada: Villager → Vanguard',
+      'Ada: Villager → Sapper',
+      'Bryn: Villager → Archer',
+      'Bryn: Villager → Soldier',
+      'Bryn: Villager → Vanguard',
+      'Bryn: Villager → Sapper',
     ]);
   });
 
@@ -51,15 +54,15 @@ describe('getPromotionOptions', () => {
 describe('the promotion screen', () => {
   it('moves and points the cursor, wrapping', () => {
     const open = openPromotionScreen(campRun());
-    expect(movePromotionCursor(open, -1).menu.selectedIndex).toBe(3);
+    expect(movePromotionCursor(open, -1).menu.selectedIndex).toBe(7);
     expect(pointPromotionCursor(open, 2).menu.selectedIndex).toBe(2);
     expect(pointPromotionCursor(open, 9)).toBe(open);
   });
 
   it('promotes on confirm and drops that unit’s options', () => {
     const after = confirmPromotion(movePromotionCursor(openPromotionScreen(campRun(2)), 1));
-    expect(after.run.roster[0].classId).toBe('berserker');
-    expect(after.menu.actions.map((option) => option.promotionId)).toEqual(['sniper', 'arbalest']);
+    expect(after.run.roster[0].classId).toBe('soldier');
+    expect(after.menu.actions.map((option) => option.promotionId)).toEqual(['archer', 'soldier', 'vanguard', 'sapper']);
     expect(after.menu.selectedIndex).toBe(1);
     expect(isPromotionScreenDone(after)).toBe(false);
   });
@@ -68,7 +71,7 @@ describe('the promotion screen', () => {
     const once = confirmPromotion(openPromotionScreen(campRun(2)));
     const twice = confirmPromotion(once);
     expect(isPromotionScreenDone(twice)).toBe(true);
-    expect(twice.run.roster.map((unit) => unit.classId)).toEqual(['hero', 'sniper']);
+    expect(twice.run.roster.map((unit) => unit.classId)).toEqual(['archer', 'archer']);
   });
 
   it('does nothing on a disabled option', () => {

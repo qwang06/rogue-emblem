@@ -4,7 +4,8 @@
 // DOM, no hidden state.
 
 import type { Facing } from './facing.ts';
-import { getAllUnitSheets, getUnitSprite, TILE_SIZE, UNIT_SHEET, type UnitSheet } from './tileset.ts';
+import { FACTIONS } from './factions.ts';
+import { FACTION_BODIES, getAllUnitSheets, getUnitSprite, TILE_SIZE, UNIT_SHEET, type UnitSheet } from './tileset.ts';
 import { UNIT_CLASSES } from './unitClasses.ts';
 
 // One art the viewer offers: its art name (UNIT_SPRITES) and a label naming
@@ -14,14 +15,17 @@ export interface ViewerArt {
   label: string;
 }
 
-// Every unit art a class wears, once each, in class order, labelled
-// "<Class> (<art>)"; the arts with the most animations come first, so the
-// viewer opens on the richest one.
+// Every unit art a class wears, once each, in class order (a faction
+// class's in every faction's version, labelled with the faction),
+// labelled "<Class> (<art>)"; the arts with the most animations come
+// first, so the viewer opens on the richest one.
 export function getViewerArts(): ViewerArt[] {
   const arts = new Map<string, string[]>();
   for (const { id, label } of UNIT_CLASSES) {
-    const art = getUnitSprite(id);
-    arts.set(art, [...(arts.get(art) ?? []), label]);
+    const versions = FACTION_BODIES[id]
+      ? FACTIONS.map((faction) => ({ art: getUnitSprite(id, faction.id), label: `${label}, ${faction.name}` }))
+      : [{ art: getUnitSprite(id), label }];
+    for (const version of versions) arts.set(version.art, [...(arts.get(version.art) ?? []), version.label]);
   }
   const entries = [...arts].map(([art, labels]) => ({ art, label: `${labels.join(', ')} (${art})` }));
   const count = (art: string) => getAllUnitSheets(art).length;

@@ -44,9 +44,9 @@ export interface Unlock {
 
 // The renown each unlockable origin opens at, in order.
 const ORIGIN_RENOWN: Readonly<Record<string, number>> = Object.freeze({
-  vanguard: 40,
+  militia: 40,
   sellswords: 80,
-  guard: 120,
+  'beast-tamer': 120,
   pilgrims: 200,
   'lone-wolf': 300,
 });

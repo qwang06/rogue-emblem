@@ -147,7 +147,8 @@ export function pickStageLayout(seed: number, region: RegionConfig, candidates =
 // - deploymentZone: the path's south end and the tiles either side of it
 // - roster: `roster`'s units (a run's warband), else createStartingWarband's,
 //   deploying up to `maxDeployed`
-// - enemies: a unit of its group's class (a soldier when unset) on each tile pickEnemyTiles finds for region.enemies
+// - enemies: a unit of its group's class (a soldier when unset), of the
+//   region's faction, on each tile pickEnemyTiles finds for region.enemies
 //   (fewer than asked when a group's limits leave too few tiles), at its
 //   group's level (growToLevel), starting on its group's health when it
 //   sets one, and levelling its killer up when the group sets
@@ -186,7 +187,7 @@ export function createStageLevel(
     const unitId = `enemy-${i + 1}`;
     const classId = group.unitClass ?? DEFAULT_ENEMY_CLASS;
     const label = UNIT_CLASSES.find((c) => c.id === classId)?.label ?? classId;
-    const enemy = createUnitOfClass(classId, { name: `Enemy ${label}`, team: 'enemy' });
+    const enemy = createUnitOfClass(classId, { name: `Enemy ${label}`, team: 'enemy', faction: region.faction });
     growToLevel(enemy, group.level ?? 1);
     if (group.health !== undefined) enemy.health = Math.min(group.health, enemy.maxHealth);
     enemy.levelUpOnKill = group.levelUpOnKill ?? false;

@@ -39,6 +39,7 @@ import { BUILDING_PALETTES, type BuildingPaletteName } from '../tileset.ts';
 import type { RegionConfig, RegionSettings } from './regions.ts';
 import { createStageLevel } from './stageLevel.ts';
 import { UNIT_CLASSES } from '../unitClasses.ts';
+import { FACTIONS, isFactionId } from '../factions.ts';
 
 // The bounds each number must fall in.
 export const REGION_LIMITS = Object.freeze({
@@ -84,6 +85,7 @@ const REGION_KEYS = [
   'enemyCount',
   'treeChance',
   'palette',
+  'faction',
   'objective',
   'biome',
 ];
@@ -271,6 +273,10 @@ function parseRegion(value: unknown, path: string): RegionConfig {
     treeChance: chance(json.treeChance, `${path}.treeChance`),
     palette: json.palette as BuildingPaletteName,
   };
+  if (json.faction !== undefined) {
+    if (!isFactionId(json.faction)) fail(`${path}.faction`, `must be one of ${FACTIONS.map((f) => f.id).join(', ')}`);
+    region.faction = json.faction;
+  }
   if (json.objective !== undefined) region.objective = parseObjective(json.objective, `${path}.objective`);
   if (json.biome !== undefined) {
     if (typeof json.biome !== 'string' || !(REGION_BIOMES as readonly string[]).includes(json.biome)) {

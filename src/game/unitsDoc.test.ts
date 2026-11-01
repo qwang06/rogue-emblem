@@ -12,7 +12,7 @@ import {
   CLEAVE,
   LONG_SHOT,
   POWER_STRIKE,
-  SHIELD_BASH,
+  BLAST,
   SKILL_TREES,
   THROW_STONES,
   type Skill,
@@ -146,7 +146,7 @@ describe('UNITS.md', () => {
       Soldier: createUnitOfClass('soldier', { team: 'enemy' }),
       Archer: createUnitOfClass('archer', { team: 'player' }),
       Vanguard: createUnitOfClass('vanguard', { team: 'player' }),
-      Guard: createUnitOfClass('guard', { team: 'player' }),
+      Sapper: createUnitOfClass('sapper', { team: 'player' }),
       Acolyte: createUnitOfClass('acolyte', { team: 'player' }),
     };
     const text = section('Matchups at level 1');
@@ -156,8 +156,7 @@ describe('UNITS.md', () => {
       'Soldier',
       'Archer',
       'Vanguard',
-      'Guard',
-      'Soldier',
+      'Sapper',
       'Acolyte',
     ]);
     for (const [attackerName, targetName, weapon, damage, hit, crit, strikes] of attacks) {
@@ -178,7 +177,7 @@ describe('UNITS.md', () => {
       'Power Strike': POWER_STRIKE,
       'Long Shot': LONG_SHOT,
       Cleave: CLEAVE,
-      'Shield Bash': SHIELD_BASH,
+      Blast: BLAST,
     };
     expect(skills.map(([name]) => name)).toEqual(Object.keys(SKILLS));
     for (const [name, user, target, damage] of skills) {

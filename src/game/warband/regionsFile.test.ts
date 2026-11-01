@@ -214,7 +214,7 @@ describe('parseRegionSettings', () => {
     [
       'an unknown enemy class',
       file([region({ enemies: [{ count: 1, unitClass: 'kraken' }] })]),
-      /enemies\[0\]\.unitClass must be one of villager, soldier, archer/,
+      /enemies\[0\]\.unitClass must be one of villager, archer, soldier/,
     ],
     [
       'an enemy level of 21',

@@ -33,7 +33,8 @@ describe('applyEliteAffixes', () => {
     expect(units.get('enemy-1')!.eliteAffixes).toEqual(['armored']);
     expect([...units.values()].map((u) => u.rank)).toEqual(['elite', 'elite', 'elite']);
     const context = { attacking: false, wounded: false, vsMonster: false };
-    expect(getCombatBonus(units.get('enemy-1')!.modifiers, context).guard).toBe(3);
+    // Armored's 3, on top of the soldier's own Shield Wall.
+    expect(getCombatBonus(units.get('enemy-1')!.modifiers, context).guard).toBe(3 + 1);
     expect(units.get('enemy-2')!.movement).toBe(plainMove + 1);
   });
 

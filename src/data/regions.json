@@ -51,7 +51,7 @@
     },
     {
       "name": "Deep Woods",
-      "description": "Thick woods and a twisting path: lots of cover, slow going, and a wolf on the prowl.",
+      "description": "Thick woods and a twisting path: lots of cover, slow going, and a winged beast on the prowl.",
       "terrain": {
         "generator": "planned",
         "width": 8,
@@ -68,10 +68,11 @@
       },
       "enemies": [
         { "count": 2, "unitClass": "slime", "area": { "y": [0, 0.34] } },
-        { "count": 1, "unitClass": "wolf", "area": { "y": [0, 0.34] } }
+        { "count": 1, "unitClass": "beast", "area": { "y": [0, 0.34] } }
       ],
       "treeChance": 0.1,
       "palette": "a-brown",
+      "faction": "verdant",
       "biome": "forest"
     },
     {
@@ -141,11 +142,12 @@
         "buildings": 1
       },
       "enemies": [
-        { "count": 2, "unitClass": "wolf", "area": { "y": [0, 0.34] }, "level": 3 },
+        { "count": 2, "unitClass": "beast", "area": { "y": [0, 0.34] }, "level": 3 },
         { "count": 2, "unitClass": "bat", "area": { "y": [0, 0.34] }, "level": 3 }
       ],
       "treeChance": 0.05,
       "palette": "b-green",
+      "faction": "rose",
       "biome": "lake"
     },
     {
@@ -200,6 +202,7 @@
       ],
       "treeChance": 0.04,
       "palette": "a-orange",
+      "faction": "crimson",
       "biome": "meadow"
     },
     {
@@ -221,11 +224,12 @@
       },
       "enemies": [
         { "count": 2, "unitClass": "orc", "area": { "y": [0, 0.34] }, "level": 4 },
-        { "count": 2, "unitClass": "wolf", "area": { "y": [0, 0.34] }, "level": 5 },
+        { "count": 2, "unitClass": "beast", "area": { "y": [0, 0.34] }, "level": 5 },
         { "count": 1, "unitClass": "goblin", "area": { "y": [0, 0.34] }, "level": 5 }
       ],
       "treeChance": 0.02,
       "palette": "a-brown",
+      "faction": "ironhold",
       "biome": "hills"
     },
     {
@@ -279,10 +283,11 @@
         { "count": 1, "unitClass": "orc", "area": { "y": [0, 0.5] }, "level": 7, "boss": "Orc Warlord" },
         { "count": 1, "unitClass": "orc", "area": { "y": [0, 0.5] }, "level": 5 },
         { "count": 1, "unitClass": "archer", "area": { "y": [0, 0.5] }, "level": 5 },
-        { "count": 2, "unitClass": "wolf", "area": { "y": [0, 0.5] }, "level": 5 }
+        { "count": 2, "unitClass": "beast", "area": { "y": [0, 0.5] }, "level": 5 }
       ],
       "treeChance": 0.02,
       "palette": "b-red",
+      "faction": "crimson",
       "objective": { "kind": "boss" }
     }
   ]

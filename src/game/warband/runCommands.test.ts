@@ -488,22 +488,22 @@ describe('promote', () => {
   });
 
   it('promotes a unit at camp, spending the seal', () => {
-    const session = apply(campWith(sealed(newRun())), { type: 'promote', unitId: 'cato', promotionId: 'hero' });
+    const session = apply(campWith(sealed(newRun())), { type: 'promote', unitId: 'cato', promotionId: 'vanguard' });
     expect(session.phase).toBe('camp');
-    expect(session.run.roster.find((unit) => unit.id === 'cato')!.classId).toBe('hero');
+    expect(session.run.roster.find((unit) => unit.id === 'cato')!.classId).toBe('vanguard');
     expect(session.run.convoy).toEqual([]);
   });
 
   it("refuses a promotion the unit can't make", () => {
     const camp = campWith(sealed(newRun()));
-    expect(() => applyRunCommand(camp, { type: 'promote', unitId: 'cato', promotionId: 'general' })).toThrow(
+    expect(() => applyRunCommand(camp, { type: 'promote', unitId: 'cato', promotionId: 'scout' })).toThrow(
       RunCommandError,
     );
     expect(() =>
       applyRunCommand(campWith({ ...sealed(newRun()), convoy: [] }), {
         type: 'promote',
         unitId: 'cato',
-        promotionId: 'hero',
+        promotionId: 'vanguard',
       }),
     ).toThrow(RunCommandError);
   });
@@ -511,10 +511,10 @@ describe('promote', () => {
   it('is legal at camp for each promotion the warband has a seal for', () => {
     const promotions = getLegalRunCommands(campWith(sealed(newRun()))).filter((c) => c.type === 'promote');
     expect(promotions).toEqual([
-      { type: 'promote', unitId: 'alden', promotionId: 'general' },
-      { type: 'promote', unitId: 'alden', promotionId: 'halberdier' },
-      { type: 'promote', unitId: 'cato', promotionId: 'hero' },
-      { type: 'promote', unitId: 'cato', promotionId: 'berserker' },
+      { type: 'promote', unitId: 'cato', promotionId: 'archer' },
+      { type: 'promote', unitId: 'cato', promotionId: 'soldier' },
+      { type: 'promote', unitId: 'cato', promotionId: 'vanguard' },
+      { type: 'promote', unitId: 'cato', promotionId: 'sapper' },
     ]);
     const unsealed = getLegalRunCommands(campWith({ ...sealed(newRun()), convoy: [] }));
     expect(unsealed.some((c) => c.type === 'promote')).toBe(false);

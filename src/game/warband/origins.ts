@@ -1,9 +1,9 @@
 // Warband Mode's origins: the warband a new run starts as, like Into the
 // Breach's squads. An origin is the units it starts with, the gold in its
-// purse and how many starting relics it picks. Each base starting class is
-// an origin of one unit (with the class's id, so older runs and scripts
-// naming a class still start the same), and renown unlocks the rest (see
-// meta.ts's UNLOCKS): two more lone classes and three bands with a twist.
+// purse and how many starting relics it picks. The starting class (the
+// villager) is an origin of one unit (with the class's id, so older runs
+// and scripts naming it still start the same), and renown unlocks the
+// rest (see meta.ts's UNLOCKS): bands that bring a second unit or a twist.
 // Pure: createOriginRun builds a new run from one.
 
 import { createUnitOfClass } from '../unitClasses.ts';
@@ -11,7 +11,7 @@ import type { Unit } from '../Unit.ts';
 import { createSeededRng } from '../rng.ts';
 import { generateName } from './names.ts';
 import { createRun, type RunState } from './run.ts';
-import { STARTING_CLASSES, UNLOCKABLE_STARTING_CLASSES, type StartingClass } from './startingClasses.ts';
+import { STARTING_CLASSES, type StartingClass } from './startingClasses.ts';
 
 export interface Origin {
   id: string;
@@ -36,18 +36,31 @@ function classOrigin({ id, label, description }: StartingClass): Origin {
 // The origins every player can start as: one per base starting class.
 export const BASE_ORIGINS: readonly Origin[] = Object.freeze(STARTING_CLASSES.map(classOrigin));
 
+export const MILITIA = origin({
+  id: 'militia',
+  label: 'Militia',
+  description: 'Two Villagers from the same village, with 20 gold in the purse.',
+  units: ['villager', 'villager'],
+  gold: 20,
+});
 export const SELLSWORDS = origin({
   id: 'sellswords',
   label: 'Sellswords',
-  description: 'A Soldier and an Archer for hire, with 30 gold in the purse.',
-  units: ['soldier', 'archer'],
+  description: 'A Villager and a hired Scout, with 30 gold in the purse.',
+  units: ['villager', 'scout'],
   gold: 30,
+});
+export const BEAST_TAMER = origin({
+  id: 'beast-tamer',
+  label: 'Beast Tamer',
+  description: 'A Villager and the winged Beast it raised, but not a coin between them.',
+  units: ['villager', 'beast'],
 });
 export const PILGRIMS = origin({
   id: 'pilgrims',
   label: 'Pilgrims',
-  description: 'A Guard escorting an Acolyte who heals, but not a coin between them.',
-  units: ['guard', 'acolyte'],
+  description: 'A Villager escorting an Acolyte who heals, but not a coin between them.',
+  units: ['villager', 'acolyte'],
 });
 export const LONE_WOLF = origin({
   id: 'lone-wolf',
@@ -59,9 +72,9 @@ export const LONE_WOLF = origin({
 
 // The origins renown unlocks, in the order they unlock (see meta.ts).
 export const UNLOCKABLE_ORIGINS: readonly Origin[] = Object.freeze([
-  classOrigin(UNLOCKABLE_STARTING_CLASSES[0]),
+  MILITIA,
   SELLSWORDS,
-  classOrigin(UNLOCKABLE_STARTING_CLASSES[1]),
+  BEAST_TAMER,
   PILGRIMS,
   LONE_WOLF,
 ]);

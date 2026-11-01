@@ -1,56 +1,14 @@
 # Unit sprite catalog
 
 What's in `src/assets/units/`: every unit sheet from the source pack, read
-from the pixels. `Soldier_03`, `Vanguard_04`, `Soldier_04` and
-`Acolyte_02` (the base classes) and the promoted classes' twelve variants
-(listed under "Variants are team colors and races" below) are wired into the
-game (`UNIT_SPRITES` in `src/game/tileset.ts`); everything else is ready to import
-in `src/assets/sprites.ts` when a class needs art.
-
-## Warrior and Amazon (generated, not from the pack)
-
-Two PixelLab recreations of Tactics Ogre's Warrior and Amazon, made from the
-original sprites (cut out at 1:1 into 32x32 frames as the reference). Like the
-pack they are 128x128 sheets (rows down/left/right/up, 4 frames, RGBA, alpha
-fully on or off), but they are **true 32px art, not 16px doubled**, with the
-originals' dark brown outline and their palettes. Footprint about x 8–24,
-y 3–30; feet on y 30 (29–30 in the walks' passing frames), a row lower than
-the pack's.
-
-- `Warrior_02` is the warrior class's art (`UNIT_SPRITES.warrior`, also
-  `DEFAULT_UNIT_SPRITE`): a foot soldier in a big round pale-blue steel kettle
-  helmet, blue tunic with a belt, grey mail collar (seen from behind), tan
-  gloves and boots, small face in the helmet's shadow. No weapon shows.
-- `Amazon_01` is the archer class's art (`UNIT_SPRITES.archer`, replacing
-  `Archer_02`): a woman with a big blonde mane and a green headband, light
-  blue top, white short skirt, bare tan arms and legs, green boots. No weapon
-  shows.
-
-Made with PixelLab `create_character_pro_flash` / `create_image_pro` at 32x32
-with the original sprite as the style image and its palette, 6 attempts each,
-scored by a separate judging agent (likeness: Amazon 7/10, Warrior 6.5/10;
-the warrior's body reads leaner and his face darker than the original's).
-Animations are PixelLab skeleton-v3 (`animate_character`), which poses the
-still without redrawing it: Idle is a 4-frame breathing idle; Move picks 4 of
-an 8-frame walk, and the Amazon's side and back walks are rebuilt as still,
-stride, still, stride (her back stride mirrored for the other leg) because the
-generated ones thinned and leaned. The judge scored the finished animations
-7–7.5/10. The left and right rows are true side profiles at the same scale as the
-down and up rows, the right row a mirror of the left (round 2: the Warrior's
-from PixelLab, the Amazon's hand-drawn pixel by pixel in her palette because
-PixelLab kept turning her toward the camera; their idles are a 1px bob of the
-still, their walks skeleton-v3 legs under the still's upper body). The
-Amazon's hair is recolored to one bright blonde ramp in every row (the
-generated dark brown side was only shading). The Warrior's front view was hand-edited to
-look straight ahead with two eyes, the Amazon's profile eye is a white pixel
-with the pupil in front, and her front walk widens her hair 1px to one side on
-the first stride and to the other on the second, so it sways. Sources,
-attempts, judge logs and the sheet build script are in the project files under
-`art/to-sprites/`, and on the art machine under `pixellab/to-sprites/`.
-
-`Warrior_01` (the earlier generated warrior: dark spiky hair, red headband,
-cream tunic, iron sword; `art/warrior/` in the project files) and
-`Villager_01` before it stay in the folder but are no longer loaded.
+from the pixels, plus the monsters and the red dragon. The pack's six
+versions of each unit are the six factions (see "Versions are factions"
+below): a faction class (`FACTION_BODIES` in `src/game/tileset.ts`) wears
+its faction's version, so every version of the villager, archer, soldier,
+vanguard, sapper, scout, beast, beast rider, siege engine, ram and acolyte
+is in use, and the four elementals are the neutral elemental classes
+(`UNIT_SPRITES`). `src/assets/sprites.ts` loads every sheet in the folder
+but the ships, which no class uses yet.
 
 ## Red dragon (not from the pack)
 
@@ -81,40 +39,38 @@ biggest. The animation viewer (`#/animations`) plays every sheet.
 
 ## Monsters (not from the pack)
 
-Six enemy monsters, the art of the monster classes (`UNIT_SPRITES.slime` and
-so on, all in `SPRITE_URLS`). Same layout and scale as the pack (128x128, rows
-down/left/right/up, 4 frames, 16px art doubled), RGBA instead of color-keyed,
-colors from the pack's palette, no baked shadow, lowest pixels on y 28–29
-(the bat hovers above that).
+Five enemy monsters, the art of the monster classes (`UNIT_SPRITES.slime`
+and so on): `Slime`, `Goblin`, `Skeleton`, `Bat` and `Orc`. The user's
+source sheets were 3x upscales of 16px art (every art pixel an exact 3x3
+block), redrawn at 2x like the pack (every art pixel a 2x2 block); the 3x
+originals are in the project files under `art/monsters-v2/raw/`. Rows are
+down/left/right/up like the pack. RGBA, with a **baked shadow** (a dark
+ellipse at alpha 100 under the feet), so the map adds none
+(`UNIT_ART.<name>.bakedShadow`). Each has seven sheets, listed in
+`UNIT_ART` (built by `monsterArt` in `tileset.ts`):
 
-`Slime_01` and `Goblin_01` were made with PixelLab (Pro Flash at 16x16,
-styled on the villager) and assembled by `scripts/build-unit-sheet.js`. Only
-the four facing stills were generated; idle sinks the body 1px onto the feet
-for frames 2–3, and move hops 1px up on frames 1 and 3. To redo one, save
-PixelLab's four rotation images as `<name>_{south,west,east,north}.png` and run
-`node .claude/skills/tileset/scripts/build-unit-sheet.js <dir> <Name>`.
-PixelLab's 16px output comes on a 32px canvas with pure black outlines and
-dozens of near-duplicate tones, which the script crops and remaps.
+| Sheet                 | Frames | Frame size (Orc) | Tile at      | What it shows                                                                         |
+| --------------------- | ------ | ---------------- | ------------ | ------------------------------------------------------------------------------------- |
+| `<name>_Idle`         | 4      | 32x32 (32x48)    | 0, 0 (0, 16) | standing, a small bob                                                                 |
+| `<name>_Move`         | 4      | 32x32 (32x48)    | 0, 0 (0, 16) | walking (the bat flying, the slime hopping)                                           |
+| `<name>_Attack`       | 5      | 96x96 (96x112)   | 32, 32       | a lunge with its swipe or slash (frame 0 the wind-up)                                 |
+| `<name>_AttackBody`   | 5      | 96x96 (96x112)   | 32, 32       | the attack without the swipe (viewer only)                                            |
+| `<name>_AttackEffect` | 5      | 96x96 (96x112)   | 32, 32       | the swipe alone, frame 0 empty (viewer only; the source had 4 frames, for frames 1–4) |
+| `<name>_Hit`          | 2      | 32x32 (32x48)    | 0, 0 (0, 16) | struck                                                                                |
+| `<name>_Die`          | 1      | 32x32 (32x48)    | 0, 0 (0, 16) | fallen                                                                                |
 
-`Skeleton_01`, `Bat_01`, `Wolf_01` and `Orc_01` are drawn pixel by pixel in
-`scripts/draw-monsters.js`: each facing is a 16x16 grid of palette keys, with
-the animation frames derived from it (step frames swap the leg rows, the bat's
-flap swaps whole poses). Run `node .claude/skills/tileset/scripts/draw-monsters.js`
-from the repo root after editing a grid; it rewrites their sheets. East is the
-west grids mirrored. Each went through up to three review passes against the pack's units.
-
-| Art           | What it shows                                                                                                                                                                                       | Animation                                                      |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `Slime_01`    | Green jelly blob with two eyes, a mouth and a top-left highlight. Side views have a small pointed tail.                                                                                             | idle squash, move hop                                          |
-| `Goblin_01`   | Green goblin with wide pointed ears, orange eyes, a brown tunic and a club in its right hand.                                                                                                       | idle squash, move hop                                          |
-| `Skeleton_01` | Bone-white skeleton: big skull with red eye glints and a row of teeth, ribs over a spine and pelvis, thin legs, a rusty sword (orange hilt, rust flecks) held up, in front when walking left/right. | idle squash; move steps each foot in turn                      |
-| `Bat_01`      | Purple cave bat, wings spread: pointed ears, yellow eyes, open mouth with two fangs, lit leading wing edges and scalloped trailing edges. Hovers, lowest pixel y ~26.                               | idle and move flap mid, up, mid, down (lifted 1px on the down) |
-| `Wolf_01`     | Grey wolf: side view a full-length quadruped with an upright tail; front view a wedge head with a long pale muzzle and black nose; back view a dark saddle and bushy dark-tipped tail.              | idle squash; move trots (legs alternate)                       |
-| `Orc_01`      | Hulking dark-green orc: heavy brow over red eyes, white tusks, leather vest with shoulder straps and a gold buckle, plum trousers, a big iron axe in its right hand.                                | idle squash; move steps each foot in turn                      |
+The orc stands a tile and a half tall (its frames are 48px high with the
+tile at their foot); the attack frames have 16 more rows under the tile
+for its swing. The blow lands on attack frame 1 for the goblin, skeleton
+and orc, frame 2 for the slime and bat (`impactFrame`). The slime is a
+green blob, the goblin a green goblin with a club, the skeleton a bone
+warrior with a sword, the bat a purple bat, the orc a hulking red-brown
+orc in a horned helmet. The animation viewer (`#/animations`) plays every
+sheet.
 
 ## Files and layout
 
-- **Names:** `{Unit}_{NN}_{Idle|Move}.png`, `NN` = variant `01`–`06`
+- **Names:** `{Unit}_{NN}_{Idle|Move}.png`, `NN` = version `01`–`06`
   (`Elemental` has only `01`–`04`). 16 units, 94 arts, 188 files.
 - **Every file has the same layout:** 128x128, a 4x4 grid of 32px frames,
   all 16 frames filled. Rows are facings, top to bottom **down, left, right,
@@ -131,37 +87,30 @@ west grids mirrored. Each went through up to three review passes against the pac
   carts. Most move rows have 3 distinct frames (one repeats), and some idle
   rows do too, so `UNIT_ANIMATIONS` timing works unchanged.
 
-## Variants are team colors and races
+## Versions are factions
 
-The six variants of each unit are the same unit for six factions. Each has its
-own color, and the races pair up:
+The six versions of each unit are the same unit for six factions
+(`src/game/factions.ts`). Each has its own color, and the peoples pair up:
 
-| Variant | Color         | Look (people)                                                                   |
-| ------- | ------------- | ------------------------------------------------------------------------------- |
-| `01`    | blue / teal   | Pointed wizard hats, teal accents                                               |
-| `02`    | orange / gold | Humans with hair buns or topknots, green eyes                                   |
-| `03`    | pink / purple | Pale or lavender skin, crested helmets, yellow or red eyes                      |
-| `04`    | brown / tan   | Banded helmets or hoods that hide the face, tower shields                       |
-| `05`    | green         | Same design as `03`, recolored                                                  |
-| `06`    | red           | Same design as `04`, recolored (ginger beard shows on some, e.g. `Vanguard_06`) |
+| Version | Faction         | Color         | Look (people)                                                                   |
+| ------- | --------------- | ------------- | ------------------------------------------------------------------------------- |
+| `01`    | Azure Conclave  | blue / teal   | Pointed wizard hats, teal accents                                               |
+| `02`    | Sunward Kingdom | orange / gold | Humans with hair buns or topknots, green eyes (the player's warband)            |
+| `03`    | Rose Court      | pink / purple | Pale or lavender skin, crested helmets, yellow or red eyes                      |
+| `04`    | Ironhold Clans  | brown / tan   | Banded helmets or hoods that hide the face, tower shields                       |
+| `05`    | Verdant Wardens | green         | Same design as `03`, recolored                                                  |
+| `06`    | Crimson Legion  | red           | Same design as `04`, recolored (ginger beard shows on some, e.g. `Vanguard_06`) |
 
 Vehicles and fliers follow the same pairing: `03`/`05` share a design, `04`/`06`
-share a design, and `01` and `02` are each unique. Units with no team design
-(acolytes, boats, rams) are only recolored.
-
-The game currently gives a class the same art on both teams, so the variant is
-a look rather than a team marker. `Soldier_03` (pink),
-`Vanguard_04` (brown, axe), `Soldier_04` (brown tower shield, the guard class) and `Acolyte_02` (orange
-robe, the acolyte class) are what's in use for the base classes; the warrior and archer wear the generated `Warrior_02` and `Amazon_01`.
-
-The promoted classes (`src/game/promotions.ts`) each wear another variant, close to their base
-class's look: Hero `Vanguard_02` (gold spear), Berserker `Vanguard_06` (red, axe, ginger beard),
-General `Soldier_05` (green crested helm, the soldier's design recolored), Halberdier `Soldier_02`
-(topknot), Sniper `Archer_03` (crested helm), Arbalest `Siege_03` (a ballista, no rider), Champion
-`Vanguard_03` (gold-tipped spear), Bombardier `Sapper_04` (keg on the back), Bastion `Soldier_06`
-(red tower shield, the guard's design recolored), Templar `Vanguard_01` (wizard with a staff),
-Bishop `Acolyte_01` (blue robe) and Sage `Acolyte_03` (pink robe). Checked as a contact sheet of
-each down-facing idle frame; none brings its own ground shadow.
+share a design, and `01` and `02` are each unique. Units with no people's
+design (acolytes, boats, rams) are only recolored. A unit's art is
+`getUnitSprite(unitClass, faction)`: its class's body (`FACTION_BODIES`)
+in its faction's version, e.g. a Rose Court archer is `Archer_03`. The
+player's warband is Sunward (`PLAYER_FACTION`); enemies are their region's
+faction, the Crimson Legion by default. Elementals and monsters belong to no
+faction and look the same on any side. Checked as a contact sheet of each
+down-facing idle frame (project files `art/factions/unit-variants.png`);
+none of the people brings its own ground shadow.
 
 ## Units
 

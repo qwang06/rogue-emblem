@@ -45,8 +45,8 @@ function evolution(
   });
 }
 
-const ARCHERS = ['archer', 'sniper', 'arbalest'];
-const CASTERS = ['acolyte', 'bishop', 'sage', 'templar'];
+const ARCHERS = ['archer', 'siege'];
+const CASTERS = ['acolyte'];
 
 // Every evolution, in the order the unit info screen lists them.
 export const EVOLUTIONS: readonly Evolution[] = Object.freeze([
@@ -72,7 +72,7 @@ export const EVOLUTIONS: readonly Evolution[] = Object.freeze([
     name: 'Earthshaker',
     description: 'Learns Earthshaker, a 4 MP blow with +8 power against an adjacent foe.',
     boons: ['brawler'],
-    classes: ['berserker', 'champion'],
+    classes: ['vanguard', 'beast-rider'],
     modifiers: [{ kind: 'skill', skill: EARTHSHAKER }],
   }),
   evolution({

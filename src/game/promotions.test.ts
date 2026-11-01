@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Acolyte } from './Acolyte.ts';
-import { Archer } from './Archer.ts';
+import { ARCHER_CAPS, ARCHER_GROWTHS } from './Archer.ts';
 import { GROWTH_STATS } from './experience.ts';
 import { getStandingCombatBonus } from './modifiers.ts';
 import {
@@ -15,30 +14,28 @@ import {
   PROMOTION_LEVEL,
   PROMOTIONS,
 } from './promotions.ts';
-import { PLAYABLE_CLASSES, createUnitOfClass } from './unitClasses.ts';
-import { Villager, VILLAGER_CAPS } from './Villager.ts';
-import { BALLISTA } from './weapons.ts';
+import { createUnitOfClass, UNIT_CLASSES } from './unitClasses.ts';
+import { Villager } from './Villager.ts';
+import { IRON_BOW } from './weapons.ts';
 
-const hero = findPromotion('hero')!;
+const archer = findPromotion('archer')!;
+const vanguard = findPromotion('vanguard')!;
 
 describe('PROMOTIONS', () => {
-  it('gives every playable class exactly two promotions, and promoted classes none', () => {
-    for (const { id } of PLAYABLE_CLASSES) expect(getPromotions(id), id).toHaveLength(2);
-    for (const promotion of PROMOTIONS) expect(getPromotions(promotion.id), promotion.id).toEqual([]);
-    expect(getPromotions('slime')).toEqual([]);
+  it('gives the villager the four tier-2 classes, and nothing else any', () => {
+    expect(getPromotions('villager').map(({ id }) => id)).toEqual(['archer', 'soldier', 'vanguard', 'sapper']);
+    for (const { id } of UNIT_CLASSES) if (id !== 'villager') expect(getPromotions(id), id).toEqual([]);
     expect(getPromotions(null)).toEqual([]);
-    expect(PROMOTIONS).toHaveLength(12);
   });
 
-  it('raises every cap by 5, HP by 10, over the base class', () => {
-    for (const promotion of PROMOTIONS) {
-      const base = createUnitOfClass(promotion.from, { team: 'player' });
-      for (const [stat, cap] of Object.entries(base.caps)) {
-        expect(promotion.caps[stat as keyof typeof promotion.caps], `${promotion.id} ${stat}`).toBe(
-          cap + (stat === 'health' ? 10 : 5),
-        );
-      }
-    }
+  it("takes the promoted class's own growths and caps", () => {
+    expect(archer.growths).toEqual(ARCHER_GROWTHS);
+    expect(archer.caps).toEqual(ARCHER_CAPS);
+  });
+
+  it('adds what the class starts above a villager, and MOV either way', () => {
+    expect(archer.bonuses).toEqual({ skill: 2, speed: 1, resistance: 1 });
+    expect(vanguard.bonuses).toEqual({ health: 2, strength: 2 });
   });
 
   it('keeps every growth at 0% or more', () => {
@@ -61,16 +58,17 @@ describe('PROMOTIONS', () => {
 
 describe('lookups', () => {
   it('finds a promotion by id', () => {
-    expect(findPromotion('sage')?.from).toBe('acolyte');
+    expect(findPromotion('sapper')?.from).toBe('villager');
     expect(findPromotion('villager')).toBeNull();
   });
 
   it('tells promoted classes apart and names their base class', () => {
-    expect(isPromotedClass('general')).toBe(true);
-    expect(isPromotedClass('soldier')).toBe(false);
+    expect(isPromotedClass('soldier')).toBe(true);
+    expect(isPromotedClass('villager')).toBe(false);
+    expect(isPromotedClass('scout')).toBe(false);
     expect(isPromotedClass(null)).toBe(false);
-    expect(getBaseClassId('general')).toBe('soldier');
-    expect(getBaseClassId('soldier')).toBe('soldier');
+    expect(getBaseClassId('soldier')).toBe('villager');
+    expect(getBaseClassId('scout')).toBe('scout');
   });
 });
 
@@ -81,8 +79,9 @@ describe('canPromote', () => {
     expect(canPromote({ classId: 'villager', level: 20 })).toBe(true);
   });
 
-  it('is false for a promoted class or a monster at any level', () => {
-    expect(canPromote({ classId: 'hero', level: 20 })).toBe(false);
+  it('is false for a promoted class, a specialized unit or a monster at any level', () => {
+    expect(canPromote({ classId: 'archer', level: 20 })).toBe(false);
+    expect(canPromote({ classId: 'scout', level: 20 })).toBe(false);
     expect(canPromote({ classId: 'orc', level: 20 })).toBe(false);
   });
 });
@@ -90,67 +89,50 @@ describe('canPromote', () => {
 describe('getPromotionGains', () => {
   it('gives each bonus in full under the new cap, leaving out stats it doesn’t raise', () => {
     const unit = new Villager({ team: 'player' });
-    expect(getPromotionGains(unit, hero)).toEqual({
-      health: 4,
-      strength: 2,
-      skill: 2,
-      speed: 2,
-      defense: 1,
-      resistance: 1,
-    });
+    expect(getPromotionGains(unit, archer)).toEqual({ skill: 2, speed: 1, resistance: 1 });
   });
 
   it('cuts a bonus to what the new cap leaves, and to nothing at it', () => {
     const unit = new Villager({ team: 'player' });
-    unit.strength = hero.caps.strength! - 1;
-    unit.skill = hero.caps.skill!;
-    const gains = getPromotionGains(unit, hero);
-    expect(gains.strength).toBe(1);
-    expect(gains.skill).toBeUndefined();
+    unit.skill = archer.caps.skill! - 1;
+    unit.speed = archer.caps.speed!;
+    const gains = getPromotionGains(unit, archer);
+    expect(gains.skill).toBe(1);
+    expect(gains.speed).toBeUndefined();
   });
 });
 
 describe('promoteUnit', () => {
-  it('changes the class, growths, caps and weapon types, and adds the bonuses', () => {
+  it('changes the class, growths, caps, weapon types and XP rate, and adds the bonuses', () => {
     const unit = new Villager({ team: 'player', level: 6 });
     unit.health = 3;
-    promoteUnit(unit, hero);
-    expect(unit.unitClass).toBe('hero');
+    promoteUnit(unit, vanguard);
+    expect(unit.unitClass).toBe('vanguard');
     expect(unit.level).toBe(6);
-    expect(unit.caps).toEqual(hero.caps);
-    expect(unit.caps.health).toBe(VILLAGER_CAPS.health + 10);
-    expect(unit.growths).toEqual(hero.growths);
-    expect(unit.maxHealth).toBe(14);
-    expect(unit.health).toBe(7);
+    expect(unit.caps).toEqual(vanguard.caps);
+    expect(unit.growths).toEqual(vanguard.growths);
+    expect(unit.experienceRate).toBe(100);
+    expect(unit.maxHealth).toBe(12);
+    expect(unit.health).toBe(5);
     expect(unit.strength).toBe(5);
   });
 
   it('carries the passive into battle', () => {
-    const unit = promoteUnit(new Villager({ team: 'player' }), hero);
-    expect(getStandingCombatBonus(unit.modifiers).crit).toBe(10);
+    const unit = promoteUnit(new Villager({ team: 'player' }), archer);
+    expect(getStandingCombatBonus(unit.modifiers).hit).toBe(10);
   });
 
-  it('adds a second weapon type and changes MOV by its bonus', () => {
-    const unit = promoteUnit(new Archer({ team: 'player' }), findPromotion('arbalest')!);
+  it('adds a weapon type, and leaves handing over the gift to the caller', () => {
+    const unit = promoteUnit(new Villager({ team: 'player' }), findPromotion('sapper')!);
     expect(unit.weaponTypes).toEqual(['physical', 'siege']);
-    expect(unit.movement).toBe(4);
-    // The gift is handed over by the caller, not here.
-    expect(unit.items.some(({ item }) => item.id === BALLISTA.id)).toBe(false);
-  });
-
-  it('raises current MP with max MP', () => {
-    const unit = new Acolyte({ team: 'player' });
-    unit.mana = 0;
-    promoteUnit(unit, findPromotion('bishop')!);
-    expect(unit.maxMana).toBe(9);
-    expect(unit.mana).toBe(3);
+    expect(unit.items.some(({ item }) => item.id === IRON_BOW.id)).toBe(false);
   });
 
   it('keeps items and boons', () => {
     const unit = new Villager({ team: 'player' });
     unit.boons = ['keen-eye'];
     const items = unit.items;
-    promoteUnit(unit, hero);
+    promoteUnit(unit, archer);
     expect(unit.items).toBe(items);
     expect(unit.boons).toEqual(['keen-eye']);
   });
@@ -158,18 +140,19 @@ describe('promoteUnit', () => {
 
 describe('becomePromotedClass', () => {
   it('changes the class but leaves the stats alone', () => {
-    const unit = becomePromotedClass(new Villager({ team: 'player' }), hero);
-    expect(unit.unitClass).toBe('hero');
+    const unit = becomePromotedClass(new Villager({ team: 'player' }), vanguard);
+    expect(unit.unitClass).toBe('vanguard');
     expect(unit.strength).toBe(3);
   });
 });
 
 describe('promoted classes as unit classes', () => {
-  it('builds a fresh unit with the base stats plus the bonuses', () => {
-    const unit = createUnitOfClass('general', { team: 'enemy' });
-    expect(unit.unitClass).toBe('general');
-    expect(unit.defense).toBe(2 + 4);
-    expect(unit.movement).toBe(5);
+  it("builds a fresh unit with its own class's stats, carrying the passive", () => {
+    const unit = createUnitOfClass('soldier', { team: 'enemy' });
+    expect(unit.unitClass).toBe('soldier');
+    expect(unit.strength).toBe(4);
     expect(unit.weapon?.label).toBe('Iron Spear');
+    expect(getStandingCombatBonus(unit.modifiers).guard).toBe(0);
+    expect(unit.modifiers).toHaveLength(1);
   });
 });

@@ -13,13 +13,13 @@ import {
   UNLOCKABLE_ORIGINS,
 } from './origins.ts';
 import { parseRun, serializeRun } from './run.ts';
-import { STARTING_CLASSES, UNLOCKABLE_STARTING_CLASSES } from './startingClasses.ts';
+import { STARTING_CLASSES } from './startingClasses.ts';
 import { createStartingWarband } from './stageLevel.ts';
 import { UNIT_CLASSES } from '../unitClasses.ts';
 
 describe('ORIGINS', () => {
   it('has a lone-unit origin for every starting class, by its id', () => {
-    for (const { id } of [...STARTING_CLASSES, ...UNLOCKABLE_STARTING_CLASSES]) {
+    for (const { id } of STARTING_CLASSES) {
       expect(findOrigin(id)?.units).toEqual([id]);
     }
     expect(BASE_ORIGINS.map(({ id }) => id)).toEqual(STARTING_CLASSES.map(({ id }) => id));
@@ -44,15 +44,15 @@ describe('ORIGINS', () => {
 
 describe('createOriginWarband', () => {
   it('starts a lone class just as createStartingWarband does', () => {
-    const warband = createOriginWarband(findOrigin('soldier')!, 'Alden', 3);
-    const expected = createStartingWarband('soldier', 'Alden');
+    const warband = createOriginWarband(findOrigin('villager')!, 'Alden', 3);
+    const expected = createStartingWarband('villager', 'Alden');
     expect([...warband.keys()]).toEqual([...expected.keys()]);
-    expect(warband.get('soldier-1')!.name).toBe('Alden');
+    expect(warband.get('villager-1')!.name).toBe('Alden');
   });
 
   it('names the leader and gives the rest different names, the same for the same seed', () => {
     const warband = createOriginWarband(SELLSWORDS, 'Alden', 3);
-    expect([...warband.keys()]).toEqual(['soldier-1', 'archer-1']);
+    expect([...warband.keys()]).toEqual(['villager-1', 'scout-1']);
     const names = [...warband.values()].map((unit) => unit.name);
     expect(names[0]).toBe('Alden');
     expect(names[1]).not.toBe('Alden');
@@ -69,7 +69,7 @@ describe('createOriginWarband', () => {
 describe('createOriginRun', () => {
   it("starts with the origin's warband, gold and id, and its Heat", () => {
     const run = createOriginRun(9, 'sellswords', 'Alden', 2);
-    expect(run.roster.map((unit) => unit.classId)).toEqual(['soldier', 'archer']);
+    expect(run.roster.map((unit) => unit.classId)).toEqual(['villager', 'scout']);
     expect(run.gold).toBe(SELLSWORDS.gold);
     expect(run.origin).toBe('sellswords');
     expect(run.heat).toBe(2);

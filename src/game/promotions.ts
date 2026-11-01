@@ -9,13 +9,19 @@
 // start. No Phaser, no hidden state: promoteUnit changes the unit it's
 // given, like levelUp does.
 
-import { ARCHER_CAPS, ARCHER_GROWTHS, ARCHER_STATS, ARCHER_WEAPON_TYPES } from './Archer.ts';
+import { ARCHER_CAPS, ARCHER_GROWTHS, ARCHER_PASSIVE, ARCHER_STATS, ARCHER_WEAPON_TYPES } from './Archer.ts';
 import { DEFAULT_EXPERIENCE_RATE, GROWTH_STATS, type GrowthStat, type GrowthTable } from './experience.ts';
 import { applyModifiers, type Modifier } from './modifiers.ts';
-import { SAPPER_CAPS, SAPPER_GROWTHS, SAPPER_STATS, SAPPER_WEAPON_TYPES } from './Sapper.ts';
-import { SOLDIER_CAPS, SOLDIER_GROWTHS, SOLDIER_STATS, SOLDIER_WEAPON_TYPES } from './Soldier.ts';
+import { SAPPER_CAPS, SAPPER_GROWTHS, SAPPER_PASSIVE, SAPPER_STATS, SAPPER_WEAPON_TYPES } from './Sapper.ts';
+import { SOLDIER_CAPS, SOLDIER_GROWTHS, SOLDIER_PASSIVE, SOLDIER_STATS, SOLDIER_WEAPON_TYPES } from './Soldier.ts';
 import type { Unit } from './Unit.ts';
-import { VANGUARD_CAPS, VANGUARD_GROWTHS, VANGUARD_STATS, VANGUARD_WEAPON_TYPES } from './Vanguard.ts';
+import {
+  VANGUARD_CAPS,
+  VANGUARD_GROWTHS,
+  VANGUARD_PASSIVE,
+  VANGUARD_STATS,
+  VANGUARD_WEAPON_TYPES,
+} from './Vanguard.ts';
 import { VILLAGER_STATS } from './Villager.ts';
 import { IRON_AXE, IRON_BOW, IRON_SPEAR, POWDER_KEG, type Weapon, type WeaponType } from './weapons.ts';
 
@@ -89,11 +95,7 @@ export const PROMOTIONS: readonly Promotion[] = Object.freeze([
     caps: ARCHER_CAPS,
     experienceRate: DEFAULT_EXPERIENCE_RATE,
     weaponTypes: ARCHER_WEAPON_TYPES,
-    passive: {
-      name: 'Steady Aim',
-      description: '+10 hit.',
-      modifiers: [{ kind: 'combat', term: 'hit', amount: 10 }],
-    },
+    passive: ARCHER_PASSIVE,
     gift: IRON_BOW,
   }),
   promotion({
@@ -105,11 +107,7 @@ export const PROMOTIONS: readonly Promotion[] = Object.freeze([
     caps: SOLDIER_CAPS,
     experienceRate: DEFAULT_EXPERIENCE_RATE,
     weaponTypes: SOLDIER_WEAPON_TYPES,
-    passive: {
-      name: 'Shield Wall',
-      description: 'Takes 1 less damage when attacked.',
-      modifiers: [{ kind: 'combat', term: 'guard', amount: 1, when: 'defending' }],
-    },
+    passive: SOLDIER_PASSIVE,
     gift: IRON_SPEAR,
   }),
   promotion({
@@ -121,11 +119,7 @@ export const PROMOTIONS: readonly Promotion[] = Object.freeze([
     caps: VANGUARD_CAPS,
     experienceRate: DEFAULT_EXPERIENCE_RATE,
     weaponTypes: VANGUARD_WEAPON_TYPES,
-    passive: {
-      name: 'Heavy Swing',
-      description: '+1 damage.',
-      modifiers: [{ kind: 'combat', term: 'damage', amount: 1 }],
-    },
+    passive: VANGUARD_PASSIVE,
     gift: IRON_AXE,
   }),
   promotion({
@@ -137,11 +131,7 @@ export const PROMOTIONS: readonly Promotion[] = Object.freeze([
     caps: SAPPER_CAPS,
     experienceRate: DEFAULT_EXPERIENCE_RATE,
     weaponTypes: SAPPER_WEAPON_TYPES,
-    passive: {
-      name: 'Demolitions',
-      description: '+5 crit.',
-      modifiers: [{ kind: 'combat', term: 'crit', amount: 5 }],
-    },
+    passive: SAPPER_PASSIVE,
     gift: POWDER_KEG,
   }),
 ]);

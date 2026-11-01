@@ -53,13 +53,16 @@ export const DRAFT_CHOICES = 3;
 // The most units a warband can hold.
 export const MAX_ROSTER_SIZE = 8;
 
-// The classes a recruit can be: every class but the villager, which is
-// only ever a starting pick.
+// The classes a recruit can be: villagers, who promote like the starting
+// unit, and the specialized units, which don't promote. Promoted classes
+// are only ever reached by promoting.
 export const RECRUIT_CLASS_IDS: readonly string[] = Object.freeze([
-  'soldier',
-  'archer',
-  'vanguard',
-  'guard',
+  'villager',
+  'scout',
+  'beast',
+  'beast-rider',
+  'siege',
+  'ram',
   'acolyte',
 ]);
 

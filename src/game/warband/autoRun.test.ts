@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT } from '../battleSetup.ts';
 import { BASELINE_POLICY, playRun, replayRun, startRun, type RunPolicy, type RunStart } from './autoRun.ts';
 
-const START: RunStart = { seed: 11, classId: 'soldier', name: 'Alden' };
+const START: RunStart = { seed: 11, classId: 'villager', name: 'Alden' };
 
 describe('startRun', () => {
   it('starts on the relic pick, at home on its realm, with a lone unit of the class', () => {
     const session = startRun(START);
     expect(session.phase).toBe('relic');
     expect(session.run.route?.visited).toEqual(['0-0']);
-    expect(session.run.roster.map((unit) => [unit.name, unit.classId])).toEqual([['Alden', 'soldier']]);
+    expect(session.run.roster.map((unit) => [unit.name, unit.classId])).toEqual([['Alden', 'villager']]);
   });
 });
 

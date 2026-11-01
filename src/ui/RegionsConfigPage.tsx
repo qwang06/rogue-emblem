@@ -3,6 +3,7 @@ import { customRegionsStore, readRegionsUpload } from '../data/customRegions.ts'
 import { CAN_SAVE_TO_PROJECT, saveConfigToProject } from '../data/projectSave.ts';
 import { REGION_SETTINGS, REGIONS_TEXT } from '../data/regions.ts';
 import { randomSeed } from '../game/rng.ts';
+import { DEFAULT_ENEMY_FACTION, FACTIONS, findFaction } from '../game/factions.ts';
 import { BUILDING_PALETTES } from '../game/tileset.ts';
 import { getRegionStages, type RegionSettings } from '../game/warband/regions.ts';
 import { formatRegionSettings, parseRegionSettings, REGION_LIMITS } from '../game/warband/regionsFile.ts';
@@ -423,6 +424,11 @@ function RegionsFormat() {
         </li>
         <li>
           <code>palette</code>: one of {Object.keys(BUILDING_PALETTES).join(', ')}.
+        </li>
+        <li>
+          <code>faction</code>: optional, the faction its enemies fight for (which version of their class&apos;s art
+          they wear): one of {FACTIONS.map((faction) => faction.id).join(', ')}. Unset, they&apos;re the{' '}
+          {findFaction(DEFAULT_ENEMY_FACTION)!.name}.
         </li>
         <li>
           <code>description</code>: optional notes on the region, shown on its card.

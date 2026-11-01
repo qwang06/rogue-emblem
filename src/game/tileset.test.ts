@@ -24,17 +24,20 @@ import {
   getUnitSheetFrameSizes,
   hasBakedShadow,
   UNIT_SPRITES,
+  FACTION_BODIES,
+  getAllUnitArts,
   DEFAULT_UNIT_SPRITE,
   getUnitSprite,
   unitSheetKey,
 } from './tileset.ts';
 import { UNIT_CLASSES } from './unitClasses.ts';
+import { FACTIONS } from './factions.ts';
 import { WOODEN_ARMOR, WOODEN_SHIELD } from './items.ts';
 import { WOODEN_AXE, WOODEN_SPEAR, WOODEN_SWORD } from './weapons.ts';
 
 describe('sprite keys', () => {
   it('names an image for every unit animation and viewer sheet', () => {
-    for (const sprite of Object.values(UNIT_SPRITES)) {
+    for (const sprite of getAllUnitArts()) {
       for (const { key } of getAllUnitSheets(sprite)) expect(SPRITE_URLS).toHaveProperty([key]);
     }
   });
@@ -69,24 +72,32 @@ describe('sprite keys', () => {
     }
   });
 
-  it('gives every unit class its own sprite', () => {
-    const sprites = UNIT_CLASSES.map(({ id }) => UNIT_SPRITES[id]);
-    expect(sprites.every(Boolean)).toBe(true);
-    expect(new Set(sprites).size).toBe(sprites.length);
+  it('gives every unit class art of its own, a faction class one per faction', () => {
+    for (const { id } of UNIT_CLASSES) expect(FACTION_BODIES[id] ?? UNIT_SPRITES[id], id).toBeTruthy();
+    const arts = UNIT_CLASSES.flatMap(({ id }) => FACTIONS.map((faction) => getUnitSprite(id, faction.id)));
+    expect(new Set(arts).size).toBe(
+      UNIT_CLASSES.filter(({ id }) => FACTION_BODIES[id]).length * FACTIONS.length +
+        UNIT_CLASSES.filter(({ id }) => !FACTION_BODIES[id]).length,
+    );
   });
 });
 
 describe('getUnitSprite', () => {
-  it('picks the art by unit class', () => {
-    expect(getUnitSprite('villager')).toBe('Warrior_02');
-    expect(getUnitSprite('soldier')).toBe('Soldier_03');
-    expect(getUnitSprite('archer')).toBe('Amazon_01');
-    expect(getUnitSprite('vanguard')).toBe('Vanguard_04');
-    expect(getUnitSprite('guard')).toBe('Soldier_04');
-    expect(getUnitSprite('acolyte')).toBe('Acolyte_02');
-    expect(getUnitSprite('slime')).toBe('Slime_01');
-    expect(getUnitSprite('goblin')).toBe('Goblin_01');
-    expect(getUnitSprite('skeleton')).toBe('Skeleton_01');
+  it("picks a faction class's art by faction, the player's by default", () => {
+    expect(getUnitSprite('villager')).toBe('Villager_02');
+    expect(getUnitSprite('soldier', 'azure')).toBe('Soldier_01');
+    expect(getUnitSprite('archer', 'rose')).toBe('Archer_03');
+    expect(getUnitSprite('vanguard', 'ironhold')).toBe('Vanguard_04');
+    expect(getUnitSprite('beast-rider', 'verdant')).toBe('BeastRider_05');
+    expect(getUnitSprite('siege', 'crimson')).toBe('Siege_06');
+    expect(getUnitSprite('acolyte', null)).toBe('Acolyte_02');
+  });
+
+  it('picks the same art for a faction-free class whatever the faction', () => {
+    expect(getUnitSprite('fire-elemental', 'azure')).toBe('Elemental_02');
+    expect(getUnitSprite('slime', 'crimson')).toBe('Slime');
+    expect(getUnitSprite('orc')).toBe('Orc');
+    expect(getUnitSprite('dragon')).toBe('Red_Dragon');
   });
 
   it('falls back to the default art for an unknown or missing class', () => {

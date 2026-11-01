@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Acolyte } from '../Acolyte.ts';
 import { Archer } from '../Archer.ts';
 import { HEALTH_POTION, MANA_POTION } from '../items.ts';
-import { Soldier } from '../Soldier.ts';
+import { Soldier, SOLDIER_PASSIVE } from '../Soldier.ts';
 import { Unit } from '../Unit.ts';
 import { UNIT_CLASSES } from '../unitClasses.ts';
 import { Villager } from '../Villager.ts';
@@ -455,7 +455,7 @@ describe('a saved route', () => {
 
 describe('boons and relics on the roster', () => {
   it('round-trips a unit with boons, giving it their modifiers', () => {
-    const unit = new Soldier({ name: 'Alden', team: 'player' });
+    const unit = new Villager({ name: 'Alden', team: 'player' });
     unit.boons = ['fleet', 'stat-speed'];
     const snapshot = snapshotUnit('alden', unit);
     expect(snapshot.boons).toEqual(['fleet', 'stat-speed']);
@@ -479,6 +479,7 @@ describe('boons and relics on the roster', () => {
     const units = restoreRoster(relicRun);
     for (const [id, unit] of units) expect(unit.movement).toBe(plain.get(id)!.movement + 1);
     expect(units.get('alden')!.modifiers).toEqual([
+      ...SOLDIER_PASSIVE.modifiers,
       { kind: 'combat', term: 'hit', amount: 15 },
       { kind: 'movement', amount: 1 },
       { kind: 'combat', term: 'hit', amount: 15 },
@@ -502,7 +503,7 @@ describe('boons and relics on the roster', () => {
 
 describe('quirks on the roster', () => {
   it("round-trips a unit's quirk, giving it the quirk's modifiers", () => {
-    const unit = new Soldier({ name: 'Alden', team: 'player' });
+    const unit = new Villager({ name: 'Alden', team: 'player' });
     unit.quirk = 'lucky';
     const snapshot = snapshotUnit('alden', unit);
     expect(snapshot.quirk).toBe('lucky');

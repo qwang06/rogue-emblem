@@ -1,4 +1,3 @@
-import { getUnitSprite } from '../game/tileset.ts';
 import type { Team } from '../game/turns.ts';
 import { ItemIcon } from './ItemIcon.tsx';
 import { pickCornerAwayFromTile } from './menuPlacement.ts';
@@ -55,7 +54,7 @@ export function UnitPanel() {
     >
       <div className="unit-panel__header">
         <span className="unit-panel__portrait">
-          <UnitSprite sprite={getUnitSprite(unit.unitClass)} scale={2} />
+          <UnitSprite sprite={unit.sprite} scale={2} />
           {unit.rank && <RankBadge rank={unit.rank} scale={2} className="rank-badge--portrait" />}
         </span>
         <dl className="unit-panel__lines">

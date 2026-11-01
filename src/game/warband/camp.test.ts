@@ -57,7 +57,7 @@ describe('the Promote action', () => {
   const promotable = (run: RunState, seals: number): RunState => ({
     ...run,
     convoy: Array.from({ length: seals }, () => ({ itemId: MASTER_SEAL.id, quantity: 1 })),
-    roster: run.roster.map((unit, i) => (i === 0 ? { ...unit, level: PROMOTION_LEVEL } : unit)),
+    roster: run.roster.map((unit, i) => (i === 1 ? { ...unit, level: PROMOTION_LEVEL } : unit)),
   });
 
   it('shows once someone could promote, after the merchant', () => {

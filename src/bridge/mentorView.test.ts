@@ -33,7 +33,7 @@ describe('toMentorScreenView', () => {
       level: 2,
       secondary: null,
     });
-    expect(view.lessons.map(({ label }) => label)).toEqual(['Villager', 'Soldier', 'Vanguard', 'Guard', 'Acolyte']);
+    expect(view.lessons.map(({ label }) => label)).toEqual(['Villager', 'Soldier', 'Vanguard', 'Sapper', 'Acolyte']);
     expect(view.lessons[ACOLYTE_LESSON]).toEqual({
       key: 'acolyte',
       label: 'Acolyte',

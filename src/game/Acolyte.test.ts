@@ -51,12 +51,12 @@ describe('Acolyte', () => {
     expect(acolyte.weapon).toBe(FIRE);
   });
 
-  it('casts Light from one or two tiles away, hitting a soldier for 3', () => {
+  it('casts Light from one or two tiles away, hitting a soldier for 2 (its Shield Wall takes 1 off)', () => {
     for (const distance of [1, 2]) {
       const forecast = getCombatForecast(new Acolyte({ team: 'player' }), new Soldier({ team: 'enemy' }), {
         distance,
       });
-      expect(forecast.attacker.damage).toBe(3);
+      expect(forecast.attacker.damage).toBe(2);
       expect(forecast.attacker.strikes).toBe(1);
     }
     expect([LIGHT.minRange, LIGHT.maxRange]).toEqual([1, 2]);

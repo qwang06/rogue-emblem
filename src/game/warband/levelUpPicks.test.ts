@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { findPromotion } from '../promotions.ts';
 import { Archer } from '../Archer.ts';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
@@ -140,7 +141,8 @@ describe('pickBoon', () => {
     const index = getBoonOffer(run)!.boons.findIndex((boon) => boon.kind === 'passive');
     const boon = getBoonOffer(run)!.boons[index];
     const unit = restoreUnit(pickBoon(run, index).roster[0]);
-    expect(unit.modifiers).toEqual(findBoon(boon.id)!.modifiers);
+    // On top of the soldier's own passive.
+    expect(unit.modifiers).toEqual([...findPromotion('soldier')!.passive.modifiers, ...findBoon(boon.id)!.modifiers]);
   });
 
   it('throws when nothing is owed or the index is off', () => {

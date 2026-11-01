@@ -246,8 +246,8 @@ const HELP: Record<string, FieldHelp> = {
     title: 'Class',
     body: (
       <p>
-        The unit class these enemies are, e.g. villagers (wooden swords) for an easy early stage, soldiers or archers for
-        a harder one. Blank: soldiers.
+        The unit class these enemies are, e.g. villagers (wooden swords) for an easy early stage, soldiers or archers
+        for a harder one. Blank: soldiers.
       </p>
     ),
   },

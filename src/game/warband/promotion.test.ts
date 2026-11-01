@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { Archer } from '../Archer.ts';
 import { MASTER_SEAL, MAX_INVENTORY_SLOTS } from '../items.ts';
 import { PROMOTION_LEVEL } from '../promotions.ts';
 import type { Unit } from '../Unit.ts';
 import { Villager } from '../Villager.ts';
-import { BALLISTA } from '../weapons.ts';
+import { POWDER_KEG } from '../weapons.ts';
 import { canPromoteInRun, countSeals, getPromotionCandidates, promoteInRun } from './promotion.ts';
 import { createRun, restoreUnit, type ItemSnapshot, type RunState } from './run.ts';
 
@@ -15,7 +14,7 @@ function campRun({ convoy = [SEAL], level = PROMOTION_LEVEL } = {}): RunState {
     3,
     new Map<string, Unit>([
       ['ada', new Villager({ name: 'Ada', team: 'player' })],
-      ['bryn', new Archer({ name: 'Bryn', team: 'player' })],
+      ['bryn', new Villager({ name: 'Bryn', team: 'player' })],
     ]),
   );
   return { ...run, convoy, roster: run.roster.map((unit) => ({ ...unit, level })) };
@@ -41,28 +40,28 @@ describe('getPromotionCandidates', () => {
   });
 
   it('leaves out a unit that has already promoted', () => {
-    const run = promoteInRun(campRun(), 'ada', 'hero');
+    const run = promoteInRun(campRun(), 'ada', 'vanguard');
     expect(getPromotionCandidates(run).map((unit) => unit.id)).toEqual(['bryn']);
   });
 });
 
 describe('canPromoteInRun', () => {
   it('needs a seal, the level and one of its own class’s promotions', () => {
-    expect(canPromoteInRun(campRun(), 'ada', 'hero')).toBe(true);
-    expect(canPromoteInRun(campRun({ convoy: [] }), 'ada', 'hero')).toBe(false);
-    expect(canPromoteInRun(campRun({ level: PROMOTION_LEVEL - 1 }), 'ada', 'hero')).toBe(false);
-    expect(canPromoteInRun(campRun(), 'ada', 'sniper')).toBe(false);
-    expect(canPromoteInRun(campRun(), 'nobody', 'hero')).toBe(false);
+    expect(canPromoteInRun(campRun(), 'ada', 'vanguard')).toBe(true);
+    expect(canPromoteInRun(campRun({ convoy: [] }), 'ada', 'vanguard')).toBe(false);
+    expect(canPromoteInRun(campRun({ level: PROMOTION_LEVEL - 1 }), 'ada', 'vanguard')).toBe(false);
+    expect(canPromoteInRun(campRun(), 'ada', 'scout')).toBe(false);
+    expect(canPromoteInRun(campRun(), 'nobody', 'vanguard')).toBe(false);
   });
 });
 
 describe('promoteInRun', () => {
   it('promotes the unit and spends the convoy’s seal', () => {
     const before = campRun();
-    const after = promoteInRun(before, 'ada', 'hero');
-    expect(ada(after).classId).toBe('hero');
+    const after = promoteInRun(before, 'ada', 'vanguard');
+    expect(ada(after).classId).toBe('vanguard');
     expect(ada(after).level).toBe(PROMOTION_LEVEL);
-    expect(ada(after).maxHealth).toBe(ada(before).maxHealth + 4);
+    expect(ada(after).maxHealth).toBe(ada(before).maxHealth + 2);
     expect(after.convoy).toEqual([]);
     expect(bryn(after)).toEqual(bryn(before));
     expect(Object.isFrozen(after)).toBe(true);
@@ -74,7 +73,7 @@ describe('promoteInRun', () => {
       ...run,
       roster: run.roster.map((u) => (u.id === 'ada' ? { ...u, items: [...u.items, SEAL] } : u)),
     };
-    const after = promoteInRun(carrying, 'ada', 'hero');
+    const after = promoteInRun(carrying, 'ada', 'vanguard');
     expect(after.convoy).toEqual([SEAL]);
     expect(ada(after).items.some((entry) => entry.itemId === MASTER_SEAL.id)).toBe(false);
   });
@@ -85,14 +84,14 @@ describe('promoteInRun', () => {
       ...run,
       roster: run.roster.map((u) => (u.id === 'bryn' ? { ...u, items: [...u.items, SEAL] } : u)),
     };
-    const after = promoteInRun(carrying, 'ada', 'berserker');
+    const after = promoteInRun(carrying, 'ada', 'archer');
     expect(countSeals(after)).toBe(0);
-    expect(ada(after).classId).toBe('berserker');
+    expect(ada(after).classId).toBe('archer');
   });
 
   it('hands over the gift weapon, or sends it to the convoy without room', () => {
-    const after = promoteInRun(campRun(), 'bryn', 'arbalest');
-    expect(bryn(after).items.at(-1)).toEqual({ itemId: BALLISTA.id, quantity: BALLISTA.uses });
+    const after = promoteInRun(campRun(), 'bryn', 'sapper');
+    expect(bryn(after).items.at(-1)).toEqual({ itemId: POWDER_KEG.id, quantity: POWDER_KEG.uses });
     expect(restoreUnit(bryn(after)).weaponTypes).toContain('siege');
 
     const run = campRun();
@@ -103,16 +102,16 @@ describe('promoteInRun', () => {
         u.id === 'bryn' ? { ...u, items: Array.from({ length: MAX_INVENTORY_SLOTS }, () => filler) } : u,
       ),
     };
-    const sent = promoteInRun(full, 'bryn', 'arbalest');
-    expect(sent.convoy).toEqual([{ itemId: BALLISTA.id, quantity: BALLISTA.uses }]);
+    const sent = promoteInRun(full, 'bryn', 'sapper');
+    expect(sent.convoy).toEqual([{ itemId: POWDER_KEG.id, quantity: POWDER_KEG.uses }]);
   });
 
   it('keeps a promoted unit’s new class through a save', () => {
-    const after = promoteInRun(campRun(), 'ada', 'hero');
-    expect(restoreUnit(ada(after)).unitClass).toBe('hero');
+    const after = promoteInRun(campRun(), 'ada', 'vanguard');
+    expect(restoreUnit(ada(after)).unitClass).toBe('vanguard');
   });
 
   it('throws when the unit can’t promote', () => {
-    expect(() => promoteInRun(campRun({ convoy: [] }), 'ada', 'hero')).toThrow();
+    expect(() => promoteInRun(campRun({ convoy: [] }), 'ada', 'vanguard')).toThrow();
   });
 });

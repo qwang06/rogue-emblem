@@ -1,4 +1,5 @@
 import { STARTING_ITEMS, type Inventory } from './items.ts';
+import { applyModifiers, type Modifier } from './modifiers.ts';
 import { Unit, type ClassUnitOptions } from './Unit.ts';
 import { IRON_AXE, weaponEntry, type WeaponType } from './weapons.ts';
 
@@ -49,6 +50,14 @@ export const VANGUARD_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['phys
 // What a vanguard carries into battle: its axe and the potions.
 export const VANGUARD_ITEMS: Inventory = Object.freeze([weaponEntry(IRON_AXE), ...STARTING_ITEMS]);
 
+// The class's passive, carried into every battle (a villager gains it by
+// promoting, see promotions.ts).
+export const VANGUARD_PASSIVE: { name: string; description: string; modifiers: readonly Modifier[] } = Object.freeze({
+  name: 'Heavy Swing',
+  description: '+1 damage.',
+  modifiers: Object.freeze([Object.freeze<Modifier>({ kind: 'combat', term: 'damage', amount: 1 })]),
+});
+
 // The axe-wielding front line. Starts at level 1 with the vanguard stat
 // line; its skills come from the 'vanguard' skill tree, it wields physical
 // weapons, and it carries an Iron Axe (hard-hitting but inaccurate) and
@@ -68,5 +77,6 @@ export class Vanguard extends Unit {
       caps: VANGUARD_CAPS,
       ...VANGUARD_STATS,
     });
+    applyModifiers(this, VANGUARD_PASSIVE.modifiers);
   }
 }

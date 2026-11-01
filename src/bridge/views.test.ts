@@ -1,4 +1,4 @@
-import { getItemSprite, getUnitSprite } from '../game/tileset.ts';
+import { DEFAULT_UNIT_SPRITE, getItemSprite, getUnitSprite } from '../game/tileset.ts';
 import { describe, expect, it } from 'vitest';
 import { Unit } from '../game/Unit.ts';
 import {
@@ -57,6 +57,7 @@ describe('toUnitView', () => {
       name: 'Soldier',
       unitClass: null,
       classLabel: null,
+      sprite: DEFAULT_UNIT_SPRITE,
       team: 'player',
       level: 1,
       experience: 0,
@@ -827,6 +828,7 @@ describe('toUnitDetailView with modifiers', () => {
     expect(after.hit).toBe(before.hit + 15);
     expect(after.avoid).toBe(before.avoid);
     expect(after.skills.map((skill) => skill.id)).toEqual(['shove', 'power-strike', 'cleave']);
-    expect(after.passives.map((passive) => passive.id)).toEqual(['keen-eye', 'stalwart']);
+    // The soldier's own passive, then its boons'.
+    expect(after.passives.map((passive) => passive.id)).toEqual(['class', 'keen-eye', 'stalwart']);
   });
 });

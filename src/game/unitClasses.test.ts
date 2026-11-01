@@ -2,60 +2,53 @@ import { describe, expect, it } from 'vitest';
 import { Soldier } from './Soldier.ts';
 import { createUnitOfClass, PLAYABLE_CLASSES, UNIT_CLASSES } from './unitClasses.ts';
 import type { ClassUnitOptions, Unit } from './Unit.ts';
+import { DEFAULT_ENEMY_FACTION, PLAYER_FACTION } from './factions.ts';
 
 describe('UNIT_CLASSES', () => {
-  it('lists the six player classes, then the twelve promoted classes, then the seven monsters', () => {
+  it('lists the villager, its four promotions, the specialized units, the elementals, then the monsters', () => {
     expect(UNIT_CLASSES.map((c) => c.id)).toEqual([
       'villager',
-      'soldier',
       'archer',
+      'soldier',
       'vanguard',
-      'guard',
+      'sapper',
+      'scout',
+      'beast',
+      'beast-rider',
+      'siege',
+      'ram',
       'acolyte',
-      'hero',
-      'berserker',
-      'general',
-      'halberdier',
-      'sniper',
-      'arbalest',
-      'champion',
-      'bombardier',
-      'bastion',
-      'templar',
-      'bishop',
-      'sage',
+      'water-elemental',
+      'fire-elemental',
+      'air-elemental',
+      'earth-elemental',
       'slime',
       'goblin',
       'skeleton',
       'bat',
-      'wolf',
       'orc',
       'dragon',
     ]);
     expect(UNIT_CLASSES.map((c) => c.label)).toEqual([
       'Villager',
-      'Soldier',
       'Archer',
+      'Soldier',
       'Vanguard',
-      'Guard',
+      'Sapper',
+      'Scout',
+      'Beast',
+      'Beast Rider',
+      'Siege',
+      'Ram',
       'Acolyte',
-      'Hero',
-      'Berserker',
-      'General',
-      'Halberdier',
-      'Sniper',
-      'Arbalest',
-      'Champion',
-      'Bombardier',
-      'Bastion',
-      'Templar',
-      'Bishop',
-      'Sage',
+      'Water Elemental',
+      'Fire Elemental',
+      'Air Elemental',
+      'Earth Elemental',
       'Slime',
       'Goblin',
       'Skeleton',
       'Bat',
-      'Wolf',
       'Orc',
       'Dragon',
     ]);
@@ -71,39 +64,52 @@ describe('UNIT_CLASSES', () => {
       expect(createUnitOfClass(id, { team: 'player' }).unitClass).toBe(id);
     }
   });
+
+  it("gives faction units their team's faction or the one asked for, and neutral units and monsters none", () => {
+    expect(createUnitOfClass('archer', { team: 'player' }).faction).toBe(PLAYER_FACTION);
+    expect(createUnitOfClass('archer', { team: 'enemy' }).faction).toBe(DEFAULT_ENEMY_FACTION);
+    expect(createUnitOfClass('ram', { team: 'enemy', faction: 'azure' }).faction).toBe('azure');
+    expect(createUnitOfClass('fire-elemental', { team: 'enemy', faction: 'azure' }).faction).toBeNull();
+    expect(createUnitOfClass('orc', { team: 'enemy' }).faction).toBeNull();
+  });
 });
 
 describe('PLAYABLE_CLASSES', () => {
-  it('lists the six player classes and none of the promoted classes or monsters', () => {
-    expect(PLAYABLE_CLASSES.map((c) => c.id)).toEqual(['villager', 'soldier', 'archer', 'vanguard', 'guard', 'acolyte']);
+  it('lists the villager and the specialized units, none of the promoted, neutral or monster classes', () => {
+    expect(PLAYABLE_CLASSES.map((c) => c.id)).toEqual([
+      'villager',
+      'scout',
+      'beast',
+      'beast-rider',
+      'siege',
+      'ram',
+      'acolyte',
+    ]);
   });
 
-  it('marks exactly the seven monsters as monsters', () => {
+  it('marks exactly the monsters as monsters, and the elementals as neutral', () => {
     expect(UNIT_CLASSES.filter((c) => c.monster).map((c) => c.id)).toEqual([
       'slime',
       'goblin',
       'skeleton',
       'bat',
-      'wolf',
       'orc',
       'dragon',
+    ]);
+    expect(UNIT_CLASSES.filter((c) => c.neutral).map((c) => c.id)).toEqual([
+      'water-elemental',
+      'fire-elemental',
+      'air-elemental',
+      'earth-elemental',
     ]);
   });
 
   it('marks each promoted class with the class it promotes from', () => {
     expect(UNIT_CLASSES.filter((c) => c.promotedFrom).map((c) => [c.id, c.promotedFrom])).toEqual([
-      ['hero', 'villager'],
-      ['berserker', 'villager'],
-      ['general', 'soldier'],
-      ['halberdier', 'soldier'],
-      ['sniper', 'archer'],
-      ['arbalest', 'archer'],
-      ['champion', 'vanguard'],
-      ['bombardier', 'vanguard'],
-      ['bastion', 'guard'],
-      ['templar', 'guard'],
-      ['bishop', 'acolyte'],
-      ['sage', 'acolyte'],
+      ['archer', 'villager'],
+      ['soldier', 'villager'],
+      ['vanguard', 'villager'],
+      ['sapper', 'villager'],
     ]);
   });
 

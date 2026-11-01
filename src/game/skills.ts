@@ -173,44 +173,20 @@ export const MEND: Skill = Object.freeze({
 // none (bar a Shove) and learns it on its first level up.
 export const SKILL_UNLOCK_LEVEL = 2;
 
-// The base classes' trees, which the promoted classes build on.
-const BASE_SKILL_TREES: SkillTrees = Object.freeze({
+// unitClass -> [{ level, skill }]. Classes without an entry (the
+// specialized units, the elementals and the monsters, for now) know no
+// skills. A promoted class has its own tree, not the villager's.
+export const SKILL_TREES: SkillTrees = Object.freeze({
   villager: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: THROW_STONES })]),
+  archer: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: LONG_SHOT })]),
   soldier: Object.freeze([
     Object.freeze({ level: 1, skill: SHOVE }),
     Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: POWER_STRIKE }),
   ]),
-  archer: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: LONG_SHOT })]),
   vanguard: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: CLEAVE })]),
-  guard: Object.freeze([
-    Object.freeze({ level: 1, skill: SHOVE }),
-    Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: SHIELD_BASH }),
-  ]),
+  sapper: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: BLAST })]),
   acolyte: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: MEND })]),
 });
-
-// unitClass -> [{ level, skill }]. Classes without an entry know no skills.
-export const SKILL_TREES: SkillTrees = Object.freeze({
-  ...BASE_SKILL_TREES,
-  hero: promotedTree('villager', SUNDER),
-  berserker: promotedTree('villager', FRENZY),
-  general: promotedTree('soldier', IMPALE),
-  halberdier: promotedTree('soldier', LUNGE),
-  sniper: promotedTree('archer', PIERCING_SHOT),
-  arbalest: promotedTree('archer', BOMBARD),
-  champion: promotedTree('vanguard', CRUSHING_BLOW),
-  bombardier: promotedTree('vanguard', BLAST),
-  bastion: promotedTree('guard', BULWARK_BASH),
-  templar: promotedTree('guard', HOLY_STRIKE),
-  bishop: promotedTree('acolyte', SMITE),
-  sage: promotedTree('acolyte', FLARE),
-});
-
-// A promoted class's tree: the tree of the class it promotes from, then
-// `skill`, known from level 1 (a unit promotes well past it).
-function promotedTree(from: string, skill: Skill): readonly SkillTreeEntry[] {
-  return Object.freeze([...(BASE_SKILL_TREES[from] ?? []), Object.freeze({ level: 1, skill })]);
-}
 
 // Whether `unitClass` has any skills to teach, e.g. as a secondary class.
 export function hasSkillTree(unitClass: string, trees: SkillTrees = SKILL_TREES): boolean {

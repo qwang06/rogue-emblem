@@ -296,7 +296,7 @@ export const FANGS = weapon({
   uses: null,
 });
 
-// The wolf's bite, the one natural weapon that can crit.
+// The beast's bite, the one natural weapon that can crit.
 export const BITE = weapon({
   id: 'bite',
   label: 'Bite',

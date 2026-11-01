@@ -57,6 +57,8 @@ export interface UnitView {
   unitClass: string | null;
   // The class's display name (see UNIT_CLASSES), or its id if it has none.
   classLabel: string | null;
+  // Its art name in its faction (getUnitSprite), for its portrait.
+  sprite: string;
   team: Team;
   level: number;
   experience: number;
@@ -364,6 +366,7 @@ export function toUnitView(unit: Unit | null | undefined): UnitView | null {
     name: unit.name,
     unitClass: unit.unitClass,
     classLabel: getClassLabel(unit.unitClass),
+    sprite: getUnitSprite(unit.unitClass, unit.faction),
     team: unit.team,
     level: unit.level,
     experience: unit.experience,

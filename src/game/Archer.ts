@@ -1,4 +1,5 @@
 import { STARTING_ITEMS, type Inventory } from './items.ts';
+import { applyModifiers, type Modifier } from './modifiers.ts';
 import { Unit, type ClassUnitOptions } from './Unit.ts';
 import { IRON_BOW, weaponEntry, type WeaponType } from './weapons.ts';
 
@@ -49,6 +50,14 @@ export const ARCHER_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physic
 // What an archer carries into battle: its bow and the potions.
 export const ARCHER_ITEMS: Inventory = Object.freeze([weaponEntry(IRON_BOW), ...STARTING_ITEMS]);
 
+// The class's passive, carried into every battle (a villager gains it by
+// promoting, see promotions.ts).
+export const ARCHER_PASSIVE: { name: string; description: string; modifiers: readonly Modifier[] } = Object.freeze({
+  name: 'Steady Aim',
+  description: '+10 hit.',
+  modifiers: Object.freeze([Object.freeze<Modifier>({ kind: 'combat', term: 'hit', amount: 10 })]),
+});
+
 // The ranged infantry. Starts at level 1 with the archer stat line; its
 // skills come from the 'archer' skill tree, it wields physical weapons,
 // and it carries an Iron Bow (range 2 only, so it can't strike or counter
@@ -68,5 +77,6 @@ export class Archer extends Unit {
       caps: ARCHER_CAPS,
       ...ARCHER_STATS,
     });
+    applyModifiers(this, ARCHER_PASSIVE.modifiers);
   }
 }

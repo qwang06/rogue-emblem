@@ -15,7 +15,7 @@ import {
   getLearnedSkills,
   getSkillActions,
   getSkillsLearnedBetween,
-  SUNDER,
+  BLAST,
   describeSkill,
   getSecondarySkills,
   getSkillForecast,
@@ -73,21 +73,13 @@ describe('SKILL_TREES', () => {
     expect(SKILL_UNLOCK_LEVEL).toBe(2);
   });
 
-  it("gives every promoted class its base class's tree, then a skill of its own from level 1", () => {
+  it('gives every promoted class a tree of its own, learned from level 1 or 2', () => {
     for (const promotion of PROMOTIONS) {
-      const base = SKILL_TREES[promotion.from] ?? [];
       const tree = SKILL_TREES[promotion.id];
-      expect(tree.slice(0, -1), promotion.id).toEqual(base);
-      const own = tree[tree.length - 1];
-      expect(own.level, promotion.id).toBe(1);
-      expect(
-        base.some(({ skill }) => skill.id === own.skill.id),
-        promotion.id,
-      ).toBe(false);
-      const knownAtOne = base.filter(({ level }) => level <= 1).map(({ skill }) => skill);
-      expect(getLearnedSkills(promotion.id, 1), promotion.id).toEqual([...knownAtOne, own.skill]);
+      expect(tree.length, promotion.id).toBeGreaterThan(0);
+      for (const { level } of tree) expect(level, promotion.id).toBeLessThanOrEqual(SKILL_UNLOCK_LEVEL);
     }
-    expect(getLearnedSkills('hero', SKILL_UNLOCK_LEVEL)).toEqual([THROW_STONES, SUNDER]);
+    expect(getLearnedSkills('sapper', SKILL_UNLOCK_LEVEL)).toEqual([BLAST]);
   });
 
   it('keeps each skill to its own class', () => {
@@ -327,11 +319,11 @@ describe('getSecondarySkills', () => {
   });
 
   it("joins getUnitSkills after the class's own and before taught ones, without repeats", () => {
-    const guard = { unitClass: 'guard', level: 2, secondaryClass: 'vanguard' };
-    expect(getUnitSkills(guard)).toEqual([SHOVE, SHIELD_BASH, CLEAVE]);
-    const taught = { ...guard, modifiers: [{ kind: 'skill', skill: CLEAVE } as const] };
-    expect(getUnitSkills(taught)).toEqual([SHOVE, SHIELD_BASH, CLEAVE]);
-    expect(findUnitSkill(guard, 'cleave')).toBe(CLEAVE);
+    const soldier = { unitClass: 'soldier', level: 2, secondaryClass: 'vanguard' };
+    expect(getUnitSkills(soldier)).toEqual([SHOVE, POWER_STRIKE, CLEAVE]);
+    const taught = { ...soldier, modifiers: [{ kind: 'skill', skill: CLEAVE } as const] };
+    expect(getUnitSkills(taught)).toEqual([SHOVE, POWER_STRIKE, CLEAVE]);
+    expect(findUnitSkill(soldier, 'cleave')).toBe(CLEAVE);
   });
 });
 

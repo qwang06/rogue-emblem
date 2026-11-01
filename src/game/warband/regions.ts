@@ -6,6 +6,7 @@
 // src/data/regions.json (loaded by src/data/regions.ts); this module holds
 // their shape and the rules for picking a stage's region.
 
+import type { FactionId } from '../factions.ts';
 import type { EnemyGroup } from '../enemySpawns.ts';
 import type { MapGenOptions } from '../mapGen.ts';
 import type { ObjectiveSpec } from '../objectives.ts';
@@ -26,6 +27,9 @@ export interface RegionConfig {
   treeChance: number;
   // The building and wall colors.
   palette: BuildingPaletteName;
+  // The faction its enemies fight for (factions.ts), whose version of
+  // their classes' art they wear; DEFAULT_ENEMY_FACTION when unset.
+  faction?: FactionId;
   // The objective every stage in the region plays (placed on each map by
   // stageObjective.ts); if unset, each stage draws its own.
   objective?: ObjectiveSpec;

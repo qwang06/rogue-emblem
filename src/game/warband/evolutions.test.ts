@@ -55,9 +55,9 @@ describe('hasEvolution', () => {
     expect(hasEvolution({ classId: 'archer' }, [], volley)).toBe(false);
   });
 
-  it('needs the class, a promoted one counting', () => {
+  it('needs one of its classes', () => {
     expect(hasEvolution({ classId: 'villager', boons: ['keen-eye', 'deadly'] }, [], volley)).toBe(false);
-    expect(hasEvolution({ classId: 'sniper', boons: ['keen-eye', 'deadly'] }, [], volley)).toBe(true);
+    expect(hasEvolution({ classId: 'siege', boons: ['keen-eye', 'deadly'] }, [], volley)).toBe(true);
   });
 
   it('needs every relic, and any class does when none is named', () => {
@@ -98,8 +98,8 @@ describe('completesEvolution', () => {
 
   it('flags a promotion that finishes a recipe', () => {
     const unit = { classId: 'villager', boons: ['brawler'] };
-    expect(completesEvolution(unit, [], { classId: 'berserker' })).toBe(true);
-    expect(completesEvolution(unit, [], { classId: 'hero' })).toBe(false);
+    expect(completesEvolution(unit, [], { classId: 'vanguard' })).toBe(true);
+    expect(completesEvolution(unit, [], { classId: 'archer' })).toBe(false);
   });
 
   it('doesn’t flag an evolution the unit already has', () => {

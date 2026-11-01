@@ -14,6 +14,7 @@ import type { ArrowPiece } from './moveArrow.ts';
 import type { PixelArt } from './pixelShapes.ts';
 import type { Team } from './turns.ts';
 import type { UnitRank } from './Unit.ts';
+import { FACTIONS, findFaction, PLAYER_FACTION, type FactionId } from './factions.ts';
 
 // What a unit can be seen doing. Every unit art has `idle` and `move`;
 // some (UNIT_ART) also have `attack`, `hit` and `die`.
@@ -203,46 +204,68 @@ export const FORD_ART: SheetTile = [10, 0];
 // (src/game/hazards.ts).
 export const SPIKES_ART: SheetTile = [10, 1];
 
-// Unit art keyed by unit class, so every unit of a class looks alike
-// whichever side it's on. Each names a set of sheets, one per animation in
+// The art body each faction class wears (factions.ts): a unit of the class
+// wears its faction's version of the body, e.g. a Sunward archer
+// 'Archer_02'. Each names a set of sheets, one per animation in
 // UNIT_ANIMATIONS (see unitSheetKey).
-export const UNIT_SPRITES: Record<string, string> = {
-  villager: 'Warrior_02',
-  soldier: 'Soldier_03',
-  archer: 'Amazon_01',
-  vanguard: 'Vanguard_04',
-  guard: 'Soldier_04',
-  acolyte: 'Acolyte_02',
-  // The promoted classes (promotions.ts) wear other variants of the pack's
-  // units, close to their base class's look.
-  hero: 'Vanguard_02',
-  berserker: 'Vanguard_06',
-  general: 'Soldier_05',
-  halberdier: 'Soldier_02',
-  sniper: 'Archer_03',
-  arbalest: 'Siege_03',
-  champion: 'Vanguard_03',
-  bombardier: 'Sapper_04',
-  bastion: 'Soldier_06',
-  templar: 'Vanguard_01',
-  bishop: 'Acolyte_01',
-  sage: 'Acolyte_03',
-  slime: 'Slime_01',
-  goblin: 'Goblin_01',
-  skeleton: 'Skeleton_01',
-  bat: 'Bat_01',
-  wolf: 'Wolf_01',
-  orc: 'Orc_01',
+export const FACTION_BODIES: Readonly<Record<string, string>> = Object.freeze({
+  villager: 'Villager',
+  archer: 'Archer',
+  soldier: 'Soldier',
+  vanguard: 'Vanguard',
+  sapper: 'Sapper',
+  scout: 'Scout',
+  beast: 'Beast',
+  'beast-rider': 'BeastRider',
+  siege: 'Siege',
+  ram: 'Ram',
+  acolyte: 'Acolyte',
+});
+
+// Unit art for the classes that look the same whatever side they're on:
+// the neutral elementals (one version of the pack's Elemental per element)
+// and the monsters.
+export const UNIT_SPRITES: Readonly<Record<string, string>> = Object.freeze({
+  'water-elemental': 'Elemental_01',
+  'fire-elemental': 'Elemental_02',
+  'air-elemental': 'Elemental_03',
+  'earth-elemental': 'Elemental_04',
+  slime: 'Slime',
+  goblin: 'Goblin',
+  skeleton: 'Skeleton',
+  bat: 'Bat',
+  orc: 'Orc',
   dragon: 'Red_Dragon',
-};
+});
 
-// Art for a unit whose class has none of its own (or no class).
-export const DEFAULT_UNIT_SPRITE = UNIT_SPRITES.villager;
+// The art of a faction class's body for `faction`, e.g. ('Archer',
+// 'sunward') -> 'Archer_02'.
+export function factionArt(body: string, faction: FactionId): string {
+  return `${body}_${findFaction(faction)!.variant}`;
+}
 
-// The unit art for a unit class (a key of UNIT_SPRITES), falling back to
-// DEFAULT_UNIT_SPRITE.
-export function getUnitSprite(unitClass: string | null | undefined): string {
-  return (unitClass != null ? UNIT_SPRITES[unitClass] : undefined) ?? DEFAULT_UNIT_SPRITE;
+// Art for a unit whose class has none of its own (or no class): the
+// player's villager.
+export const DEFAULT_UNIT_SPRITE = factionArt(FACTION_BODIES.villager, PLAYER_FACTION);
+
+// The unit art for a unit of `unitClass` in `faction`: a faction class's
+// body in that faction's version (the player's when `faction` is null or
+// unset), the class's own art for the others, DEFAULT_UNIT_SPRITE for an
+// unknown class.
+export function getUnitSprite(unitClass: string | null | undefined, faction?: FactionId | null): string {
+  if (unitClass == null) return DEFAULT_UNIT_SPRITE;
+  const body = FACTION_BODIES[unitClass];
+  if (body) return factionArt(body, faction ?? PLAYER_FACTION);
+  return UNIT_SPRITES[unitClass] ?? DEFAULT_UNIT_SPRITE;
+}
+
+// Every unit art the game can show: each faction body in all six
+// versions, then the faction-free art.
+export function getAllUnitArts(): string[] {
+  return [
+    ...Object.values(FACTION_BODIES).flatMap((body) => FACTIONS.map((faction) => factionArt(body, faction.id))),
+    ...Object.values(UNIT_SPRITES),
+  ];
 }
 
 // Item icons keyed by item id (weapons.ts, items.ts): each is a one-tile
@@ -310,7 +333,7 @@ export const UNIT_ANIMATIONS: Record<UnitAnimation, { sheet: string; frameMs: nu
   };
 
 // The texture key of a unit's sheet for an animation, e.g.
-// ('Warrior_02', 'move') -> 'Warrior_02_Move'.
+// ('Soldier_02', 'move') -> 'Soldier_02_Move'.
 export function unitSheetKey(sprite: string, animation: UnitAnimation): string {
   return `${sprite}_${UNIT_ANIMATIONS[animation].sheet}`;
 }
@@ -360,7 +383,45 @@ const RED_DRAGON_ATTACK: UnitSheetLayout = Object.freeze({
   tileX: 40,
   tileY: 32,
 });
+// The monsters (src/assets/units/{Slime,Goblin,Skeleton,Bat,Orc}_*.png):
+// 16px art doubled, like the pack, standing on one tile (the orc a tile
+// and a half tall, its frames 48px high with the tile at their foot),
+// with a struck pose (2 frames), a fall (1 frame) and an attack in 96px
+// frames (the orc's 112px high) with the tile in the middle. Each draws
+// its own shadow. The attack's swipe is also a sheet of its own
+// (AttackEffect, frame 0 empty), as is the body without it (AttackBody).
+function monsterArt(height: number, impactFrame: number): UnitArt {
+  const tile = (frames: number): UnitSheetLayout =>
+    Object.freeze({ frameWidth: TILE_SIZE, frameHeight: height, frames, tileX: 0, tileY: height - TILE_SIZE });
+  const attack: UnitSheetLayout = Object.freeze({
+    frameWidth: 3 * TILE_SIZE,
+    frameHeight: 2 * TILE_SIZE + height,
+    frames: 5,
+    tileX: TILE_SIZE,
+    tileY: TILE_SIZE,
+  });
+  return Object.freeze({
+    sheets: Object.freeze({ idle: tile(4), move: tile(4), attack, hit: tile(2), die: tile(1) }),
+    extras: Object.freeze([
+      Object.freeze({ sheet: 'AttackBody', label: 'Attack (body only)', layout: attack, animation: 'attack' as const }),
+      Object.freeze({
+        sheet: 'AttackEffect',
+        label: 'Attack (swipe only)',
+        layout: attack,
+        animation: 'attack' as const,
+      }),
+    ]),
+    impactFrame,
+    bakedShadow: true,
+  });
+}
+
 export const UNIT_ART: Readonly<Record<string, UnitArt>> = Object.freeze({
+  Slime: monsterArt(TILE_SIZE, 2),
+  Goblin: monsterArt(TILE_SIZE, 1),
+  Skeleton: monsterArt(TILE_SIZE, 1),
+  Bat: monsterArt(TILE_SIZE, 2),
+  Orc: monsterArt(TILE_SIZE + TILE_SIZE / 2, 1),
   Red_Dragon: Object.freeze({
     sheets: Object.freeze({
       idle: PACK_SHEET_LAYOUT,

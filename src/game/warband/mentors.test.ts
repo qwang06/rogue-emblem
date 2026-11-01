@@ -33,13 +33,19 @@ function campRun({ gold = 50, levels = [2, 2, 1] } = {}): RunState {
 const unit = (run: RunState, id: string) => run.roster.find((snapshot) => snapshot.id === id)!;
 
 describe('getSecondaryClassIds', () => {
-  it('is every playable class with skills but its own, in class order', () => {
-    expect(getSecondaryClassIds({ classId: 'archer' })).toEqual(['villager', 'soldier', 'vanguard', 'guard', 'acolyte']);
+  it('is every warband class with skills but its own, in class order', () => {
+    expect(getSecondaryClassIds({ classId: 'archer' })).toEqual([
+      'villager',
+      'soldier',
+      'vanguard',
+      'sapper',
+      'acolyte',
+    ]);
     expect(getSecondaryClassIds({ classId: 'acolyte' })).not.toContain('acolyte');
   });
 
-  it("counts a promoted unit's base class as its own", () => {
-    expect(getSecondaryClassIds({ classId: 'sniper' })).toEqual(getSecondaryClassIds({ classId: 'archer' }));
+  it('leaves out the specialized units, which have no skills yet', () => {
+    expect(getSecondaryClassIds({ classId: 'villager' })).not.toContain('scout');
   });
 
   it('leaves out classes with no skills to teach', () => {
@@ -53,15 +59,15 @@ describe('findMentor', () => {
     expect(findMentor(campRun(), 'wren', 'acolyte')?.id).toBe('iris');
   });
 
-  it('can be a promotion of the class', () => {
+  it("isn't a unit of another class, its promotion's base included", () => {
     const run = campRun();
-    const promoted = { ...run, roster: run.roster.map((u) => (u.id === 'iris' ? { ...u, classId: 'bishop' } : u)) };
-    expect(findMentor(promoted, 'wren', 'acolyte')?.id).toBe('iris');
+    const villager = { ...run, roster: run.roster.map((u) => (u.id === 'bram' ? { ...u, level: 3 } : u)) };
+    expect(findMentor(villager, 'wren', 'villager')).toBeNull();
   });
 
   it("is nobody below the set's first level, for the learner itself, or for a class nobody has", () => {
     expect(findMentor(campRun(), 'wren', 'vanguard')).toBeNull();
-    expect(findMentor(campRun(), 'wren', 'guard')).toBeNull();
+    expect(findMentor(campRun(), 'wren', 'sapper')).toBeNull();
     expect(findMentor(campRun(), 'wren', 'archer')).toBeNull();
     expect(findMentor(campRun(), 'wren', 'soldier')).toBeNull();
   });
@@ -118,12 +124,12 @@ describe('learnSecondary', () => {
   });
 
   it('replaces the set the unit had', () => {
-    const run = learnSecondary(addScrolls(learnSecondary(campRun(), 'wren', 'acolyte')), 'wren', 'guard');
-    expect(unit(run, 'wren').secondaryClass).toBe('guard');
+    const run = learnSecondary(addScrolls(learnSecondary(campRun(), 'wren', 'acolyte')), 'wren', 'sapper');
+    expect(unit(run, 'wren').secondaryClass).toBe('sapper');
   });
 
   it('throws when the lesson cannot be taken', () => {
-    expect(() => learnSecondary(campRun(), 'wren', 'guard')).toThrow(/guard/);
+    expect(() => learnSecondary(campRun(), 'wren', 'sapper')).toThrow(/sapper/);
     expect(() => learnSecondary(campRun(), 'wren', 'archer')).toThrow();
     expect(() => learnSecondary(campRun(), 'nobody', 'acolyte')).toThrow();
   });

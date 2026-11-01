@@ -86,7 +86,7 @@ describe('confirmMentor', () => {
   });
 
   it('does nothing for a lesson that cannot be taken', () => {
-    const state = onLesson('guard');
+    const state = onLesson('sapper');
     expect(confirmMentor(state)).toBe(state);
     const known = confirmMentor(onLesson('acolyte'));
     expect(confirmMentor(known)).toBe(known);
