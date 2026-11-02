@@ -639,9 +639,29 @@ function attack(draft: Draft, unitId: string, target: Point) {
     weapon.minRange,
   );
   const tile = findTileAt(targets, target) ?? draft.fail(`no foe in reach on (${target.x}, ${target.y})`);
+  const struck = draft.events.length;
   const killed = resolveAttack(draft, unitId, tile, from);
+  if (!killed) shoveAfterAttack(draft, unitId, from, tile, draft.events.slice(struck));
   if (killed && grantMomentum(draft, unitId)) return;
   finishAction(draft, unitId);
+}
+
+// A unit whose attacks shove (a 'shove-on-attack' modifier, the slime's
+// Bounce) pushes the foe it attacked a tile away once the exchange is
+// over, when one of its strikes landed and both still stand. A shove that
+// fells the foe (spikes, deep water) or a unit it slams into is a kill
+// for the attacker.
+function shoveAfterAttack(draft: Draft, unitId: string, from: Point, target: TargetTile, events: BattleEvent[]) {
+  const attacker = draft.units.get(unitId);
+  const defender = draft.units.get(target.unitId);
+  if (!attacker?.isAlive() || !defender?.isAlive()) return;
+  if (!hasModifier(attacker.modifiers, 'shove-on-attack')) return;
+  const landed = events.some((event) => event.type === 'strike' && event.strikerId === unitId && event.hit);
+  if (!landed) return;
+  const shoved = push(draft, unitId, from, target);
+  if (!shoved) return;
+  knockOut(draft, shoved.unitId, unitId);
+  if (shoved.collidedId) knockOut(draft, shoved.collidedId, unitId);
 }
 
 // After `unitId` fells a foe with an attack, its `momentum` (see

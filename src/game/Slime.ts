@@ -1,4 +1,5 @@
 import type { Inventory } from './items.ts';
+import { applyModifiers, type Modifier } from './modifiers.ts';
 import { Unit, type ClassUnitOptions } from './Unit.ts';
 import { TACKLE, weaponEntry, type WeaponType } from './weapons.ts';
 
@@ -39,9 +40,18 @@ export const SLIME_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physica
 // Monsters carry no potions.
 export const SLIME_ITEMS: Inventory = Object.freeze([weaponEntry(TACKLE)]);
 
+// The slime's passive: its Tackle bounces whoever it lands on a tile back,
+// onto spikes or into deep water if they're there (see push.ts).
+export const SLIME_PASSIVE: { name: string; description: string; modifiers: readonly Modifier[] } = Object.freeze({
+  name: 'Bounce',
+  description: 'A hit in its own attack shoves the target a tile back.',
+  modifiers: Object.freeze([Object.freeze<Modifier>({ kind: 'shove-on-attack' })]),
+});
+
 // A monster, met as an enemy in Warband Mode. Starts at level 1 with the
 // slime stat line and no mana; it has no skill tree, wields physical
-// weapons, and fights with its Tackle unless given other items.
+// weapons, and fights with its Tackle unless given other items; its hits
+// shove (SLIME_PASSIVE).
 export class Slime extends Unit {
   override monster = true;
 
@@ -57,5 +67,6 @@ export class Slime extends Unit {
       growths: SLIME_GROWTHS,
       ...SLIME_STATS,
     });
+    applyModifiers(this, SLIME_PASSIVE.modifiers);
   }
 }

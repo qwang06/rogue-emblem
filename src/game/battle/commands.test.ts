@@ -1355,3 +1355,56 @@ describe('take-boon', () => {
     );
   });
 });
+
+describe('an attack that shoves (shove-on-attack, the slime’s Bounce)', () => {
+  // A bouncer next to a 20 HP foe on a 6x1 strip, `terrain` behind the foe.
+  function bounceAt(terrain = 'grass', bouncerOptions = {}) {
+    const bouncer = makeTestUnit({ team: 'player', strength: 1, ...bouncerOptions });
+    bouncer.modifiers = [{ kind: 'shove-on-attack' }];
+    const start = createTestBattle(
+      {
+        hero: { unit: bouncer, at: { x: 1, y: 0 } },
+        foe: { unit: makeTestUnit({ team: 'enemy', strength: 0 }), at: { x: 2, y: 0 } },
+        far: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 5, y: 0 } },
+      },
+      { width: 6 },
+    );
+    return { ...start, grid: setTerrain(start.grid, 3, 0, terrain) };
+  }
+  const attack = { type: 'attack', unitId: 'hero', target: { x: 2, y: 0 } } as const;
+
+  it('pushes the foe a tile back once the exchange is over', () => {
+    const { state, events } = run(bounceAt(), attack);
+    expect(findUnit(state.grid, 'foe')).toEqual({ x: 3, y: 0 });
+    const kinds = types(events);
+    expect(kinds.lastIndexOf('strike')).toBeLessThan(kinds.indexOf('pushed'));
+  });
+
+  it('impales the foe on spikes', () => {
+    const { state } = run(bounceAt(SPIKES), attack);
+    const struck = 20 - state.units.get('foe')!.health;
+    expect(struck).toBeGreaterThanOrEqual(HAZARDS[SPIKES].damage + 1);
+  });
+
+  it('drowns the foe in deep water, a kill for the attacker', () => {
+    const { state } = run(bounceAt('water'), attack);
+    expect(state.units.has('foe')).toBe(false);
+    expect(state.kills.get('hero')).toBe(1);
+  });
+
+  it("doesn't shove when every strike misses", () => {
+    const { state, events } = run(bounceAt('grass', { skill: -1000 }), attack);
+    expect(findUnit(state.grid, 'foe')).toEqual({ x: 2, y: 0 });
+    expect(types(events)).not.toContain('pushed');
+  });
+
+  it('only shoves on its own attack, not on a counter', () => {
+    const start = bounceAt();
+    const { state } = run(
+      { ...start, turnState: { ...start.turnState!, team: 'enemy' } },
+      { type: 'attack', unitId: 'foe', target: { x: 1, y: 0 } },
+    );
+    expect(findUnit(state.grid, 'hero')).toEqual({ x: 1, y: 0 });
+    expect(findUnit(state.grid, 'foe')).toEqual({ x: 2, y: 0 });
+  });
+});

@@ -7,7 +7,8 @@
 
 import { getCombatForecast, type TargetTile } from '../combat.ts';
 import { getCell, getDistance, moveUnit, type Point } from '../grid.ts';
-import { getTeamUnitIds } from '../teams.ts';
+import { findUnitSkill, getSkillForecast, isSupportSkill, isTileSkill } from '../skills.ts';
+import { areAllied, getTeamUnitIds } from '../teams.ts';
 import { planUnitTurn } from './ai.ts';
 import type { BattleState } from './state.ts';
 
@@ -15,7 +16,8 @@ export interface EnemyIntent {
   unitId: string;
   // The route it walks, from where it stands (just that tile to stay put).
   path: readonly Point[];
-  // The unit it attacks from the end of its route, or null if it only moves.
+  // The foe it attacks (or aims a skill at) from the end of its route, or
+  // null if it only moves (or heals, buffs or lays a mine).
   target: TargetTile | null;
   // Per landed strike (no crit), how many strikes it gets, and its hit
   // chance, as the combat forecast has them; 0 with no target.
@@ -37,15 +39,23 @@ export function getEnemyIntents(state: BattleState): EnemyIntent[] {
     const from = path[0];
     const end = path[path.length - 1];
     planned = { ...planned, grid: moveUnit(planned.grid, from, end) };
-    const target = act?.type === 'attack' ? findTarget(planned, act.target) : null;
+    const unit = state.units.get(unitId)!;
+    const aimed = act?.type === 'attack' || act?.type === 'skill' ? findTarget(planned, act.target) : null;
+    const foe = aimed && state.units.get(aimed.unitId);
+    const target = foe && !areAllied(foe.team, unit.team) ? aimed : null;
     const intent: EnemyIntent = { unitId, path, target, damage: 0, strikes: 0, hit: 0 };
-    if (target) {
-      const forecast = getCombatForecast(state.units.get(unitId)!, state.units.get(target.unitId)!, {
-        distance: getDistance(end, target),
-      }).attacker;
+    if (target && foe && act?.type === 'attack') {
+      const forecast = getCombatForecast(unit, foe, { distance: getDistance(end, target) }).attacker;
       intent.damage = forecast.damage ?? 0;
       intent.strikes = forecast.strikes;
       intent.hit = forecast.hit ?? 0;
+    }
+    // A skill always lands once (an area skill's other blows aside).
+    const skill = act?.type === 'skill' ? findUnitSkill(unit, act.skillId) : null;
+    if (target && foe && skill && !isSupportSkill(skill) && !isTileSkill(skill)) {
+      intent.damage = getSkillForecast(skill, unit, foe).attacker.damage ?? 0;
+      intent.strikes = 1;
+      intent.hit = 100;
     }
     intents.push(intent);
   }

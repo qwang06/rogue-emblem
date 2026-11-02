@@ -3,7 +3,7 @@
 // for the objective and keeps its units alive. For each unit that hasn't
 // acted it scores every action it could take from every tile it could
 // reach: attacking (by the forecast's expected damage and kill chance),
-// healing a wounded ally, drinking a potion, or waiting, plus what the tile
+// using a skill (played out, see skillActs.ts), healing a wounded ally, drinking a potion, or waiting, plus what the tile
 // itself is worth: how much the enemy could hit it there next phase and
 // how much closer it is to the objective. The best-scoring unit acts first.
 // It plans from the forecast, never from the dice. Every weight is a named
@@ -24,6 +24,7 @@ import { isDone } from '../turns.ts';
 import type { Unit } from '../Unit.ts';
 import { getMovementOptions, hostileTo, type BattleCommand } from './commands.ts';
 import { LOOKAHEAD, pickByLookahead, type LookaheadOptions } from './lookahead.ts';
+import { getSkillActs } from './skillActs.ts';
 import type { BattleState } from './state.ts';
 
 export const PLAYER_AI_WEIGHTS = Object.freeze({
@@ -93,17 +94,23 @@ export function planPlayerTurn(state: BattleState, options: PlayerAIOptions = {}
   const plans = getPlayerPlans(state, weights);
   if (plans.length === 0) return [];
   if (!lookahead || !isContested(plans.slice(0, lookahead.candidates))) return plans[0].commands;
-  const rest = (next: BattleState) => getPlayerPlans(next, weights)[0]?.commands ?? [];
+  // The rest of a play-out's phase is planned without skills, which are
+  // slow to weigh (each is played out), so the lookahead stays quick.
+  const rest = (next: BattleState) => getPlayerPlans(next, weights, { skills: false })[0]?.commands ?? [];
   return pickByLookahead(state, plans.slice(0, lookahead.candidates), lookahead, rest).commands;
 }
 
 // Every unit's best plan for each different act it could take (attacking
-// each foe in reach, healing each ally, a potion, waiting), over the units
-// yet to act, best first.
-export function getPlayerPlans(state: BattleState, weights: PlayerAIWeights = PLAYER_AI_WEIGHTS): PlayerPlan[] {
+// each foe in reach, using a skill unless `skills` is false, healing each
+// ally, a potion, waiting), over the units yet to act, best first.
+export function getPlayerPlans(
+  state: BattleState,
+  weights: PlayerAIWeights = PLAYER_AI_WEIGHTS,
+  { skills = true }: { skills?: boolean } = {},
+): PlayerPlan[] {
   const { turnState } = state;
   if (state.stage !== 'battle' || state.outcome || !turnState || turnState.team !== 'player') return [];
-  const context = createContext(state, weights);
+  const context = { ...createContext(state, weights), skills };
   const plans: PlayerPlan[] = [];
   for (const unitId of getTeamUnitIds(state.units, 'player')) {
     // (A unit on a canto has acted; another's order ends it.)
@@ -163,6 +170,8 @@ interface Context {
   goal: Map<string, number>;
   seize: Point | null;
   bossId: string | null;
+  // Whether skills are among the acts weighed.
+  skills?: boolean;
 }
 
 function createContext(state: BattleState, weights: PlayerAIWeights): Context {
@@ -263,8 +272,8 @@ interface Action {
   removes?: string;
 }
 
-// What the unit could do from `tile`: attack each foe in reach, heal each
-// wounded ally in a staff's reach, drink a potion at half health or under,
+// What the unit could do from `tile`: attack each foe in reach, use each
+// skill it can (skillActs.ts), heal each wounded ally in a staff's reach, drink a potion at half health or under,
 // or wait.
 function getActions(state: BattleState, context: Context, unitId: string, unit: Unit, tile: Point): Action[] {
   const actions: Action[] = [{ commands: [{ type: 'wait', unitId }], score: 0, engages: false }];
@@ -309,6 +318,13 @@ function getActions(state: BattleState, context: Context, unitId: string, unit: 
         engages: true,
       });
     }
+  }
+  // Skills, scored by playing them out (skillActs.ts); staves are scored
+  // above.
+  const skillActs = context.skills ? getSkillActs(state, unitId, tile, { staves: false }) : [];
+  for (const { command, score } of skillActs) {
+    if (score <= 0) continue;
+    actions.push({ commands: [command], score, engages: true });
   }
   if (unit.health <= unit.maxHealth / 2) {
     for (const { item } of getConsumables(unit.items)) {
