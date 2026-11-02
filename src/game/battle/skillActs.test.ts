@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { setTerrain } from '../grid.ts';
 import { HEAL_STAFF, staffEntry } from '../healing.ts';
 import { HAZARDS, SPIKES } from '../hazards.ts';
-import { LAY_MINE, POWER_STRIKE, SHOVE, type Skill } from '../skills.ts';
+import { LAY_MINE, MEND, POWER_STRIKE, SHIELD_BASH, SHOVE, SUNDER, type Skill } from '../skills.ts';
 import { weaponEntry, IRON_SPEAR } from '../weapons.ts';
 import { planUnitTurn } from './ai.ts';
-import { getSkillActs, SKILL_ACT_WEIGHTS } from './skillActs.ts';
+import { applyCommand, type BattleCommand } from './commands.ts';
+import { getSkillActs, SKILL_ACT_WEIGHTS, weighEvents } from './skillActs.ts';
+import type { BattleState } from './state.ts';
 import { createTestBattle, makeTestUnit } from './testLevel.ts';
 
 // An enemy that knows `skills` (with mana to spare) next to a player unit
@@ -155,5 +157,55 @@ describe('planUnitTurn for a unit whose attacks shove', () => {
     expect(planUnitTurn(state, 'slime')[1]).toEqual({ type: 'attack', unitId: 'slime', target: { x: 3, y: 0 } });
     slime.modifiers = [];
     expect(planUnitTurn(state, 'slime')[1]).toEqual({ type: 'attack', unitId: 'slime', target: { x: 1, y: 0 } });
+  });
+});
+
+describe('the worked-out scores of plain skills', () => {
+  // What playing `act` out for real is worth, less its mana.
+  function playedOut(state: BattleState, act: { command: BattleCommand }, manaCost: number) {
+    const { state: after, events } = applyCommand(state, act.command);
+    return weighEvents(state, after, 'foe', events) - SKILL_ACT_WEIGHTS.mana * manaCost;
+  }
+
+  const cases: [string, Skill, Parameters<typeof enemyWith>[1]][] = [
+    ['a Shove onto spikes', SHOVE, { terrain: SPIKES }],
+    ['a Shove into deep water', SHOVE, { terrain: 'water' }],
+    ['a Shove into a wall', SHOVE, { terrain: 'wall' }],
+    ['a Shield Bash that kills before it shoves', SHIELD_BASH, { terrain: 'water', heroHealth: 2 }],
+    ['a Power Strike', POWER_STRIKE, {}],
+    ['a lethal Power Strike', POWER_STRIKE, { heroHealth: 3 }],
+    ['a Sunder', SUNDER, {}],
+  ];
+  for (const [name, skill, options] of cases) {
+    it(`match playing out ${name}`, () => {
+      const state = enemyWith([skill], options);
+      const [act] = getSkillActs(state, 'foe', { x: 1, y: 0 });
+      expect(act.score).toBeCloseTo(playedOut(state, act, skill.manaCost));
+    });
+  }
+
+  it('match playing out a shove into another foe', () => {
+    const base = enemyWith([SHOVE]);
+    const other = makeTestUnit({ team: 'player', health: 1 });
+    const state = {
+      ...base,
+      grid: { ...base.grid, cells: base.grid.cells.map((c) => (c.x === 3 ? { ...c, unitId: 'other' } : c)) },
+      units: new Map(base.units).set('other', other),
+    };
+    const [act] = getSkillActs(state, 'foe', { x: 1, y: 0 });
+    expect(act.score).toBeCloseTo(playedOut(state, act, SHOVE.manaCost));
+  });
+
+  it('match playing out a Mend', () => {
+    const base = enemyWith([MEND]);
+    const ally = makeTestUnit({ team: 'enemy' });
+    ally.health = 6;
+    const state = {
+      ...base,
+      grid: { ...base.grid, cells: base.grid.cells.map((c) => (c.x === 0 ? { ...c, unitId: 'ally' } : c)) },
+      units: new Map(base.units).set('ally', ally),
+    };
+    const act = getSkillActs(state, 'foe', { x: 1, y: 0 }).find(({ command }) => command.type === 'skill')!;
+    expect(act.score).toBeCloseTo(playedOut(state, act, MEND.manaCost));
   });
 });

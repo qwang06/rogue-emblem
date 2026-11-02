@@ -1,17 +1,35 @@
 // The acts a battle AI can take besides attacking: using a skill or a
-// staff. Skills and heals roll no dice, so each one is played out for real
-// (applyCommand) on a copy of the battle, and what it did, read off its
-// events, is weighed: damage and kills on foes (a shove onto spikes or
+// staff. Skills and heals roll no dice, so what each does can be known
+// exactly: the plain ones (one target: a blow with a follow-up, shove or
+// status, a heal, a buff, a mine) are worked out with the same pure rules
+// the battle uses (estimateAct), and the rest (an area, a leap, a strafing
+// run, a retreat, a drain, a recoil, a charge) are played out for real
+// (applyCommand) on a copy of the battle and read off their events. Either
+// way it's weighed: damage and kills on foes (a shove onto spikes or
 // into deep water included), HP healed and buffs on allies, debuffs on
 // foes, a mine laid near a foe, against harm to its own side and the mana
 // it costs. The AI never sees what it isn't meant to: foes' hidden mines
 // are taken off the copy first. Used by the enemy's planner (ai.ts) and
 // the player's (playerAI.ts). Pure: reads a state and returns commands.
 
-import { getDistance, findUnit, isSameTile, moveUnit, type Point } from '../grid.ts';
+import { getDistance, findUnit, isSameTile, moveUnit, type Grid, type Point } from '../grid.ts';
 import { KILL_BONUS } from '../aiScoring.ts';
-import { getHealTargets, getStaves, isWounded } from '../healing.ts';
-import { canUseSkill, getUnitSkills, isSupportSkill, isSwapSkill, isTileSkill, type Skill } from '../skills.ts';
+import { getHealAmount, getHealTargets, getStaves, isWounded } from '../healing.ts';
+import { getPushDirection, getPushResult } from '../push.ts';
+import {
+  calculateSkillDamage,
+  canUseSkill,
+  getFollowUpDamage,
+  getSkillHealAmount,
+  getUnitSkills,
+  isBuffSkill,
+  isHealingSkill,
+  isSupportSkill,
+  isSwapSkill,
+  isTileSkill,
+  type Skill,
+} from '../skills.ts';
+import type { StatusId } from '../statuses.ts';
 import { areAllied } from '../teams.ts';
 import type { Unit } from '../Unit.ts';
 import { applyCommand, getSkillTargets, type BattleCommand, type BattleEvent } from './commands.ts';
@@ -80,16 +98,20 @@ export function getSkillActs(
   // there, before anything is played out.
   const grid = isSameTile(from, tile) ? state.grid : moveUnit(state.grid, from, tile);
   const aimable = isTarget ?? ((otherId: string) => isFoe(state, unit, otherId));
-  const commands: { command: BattleCommand; manaCost: number }[] = [];
+  const acts: SkillAct[] = [];
+  const playedOut: { command: BattleCommand; manaCost: number }[] = [];
   for (const skill of getUsableSkills(unit)) {
     for (const target of getSkillTargets(grid, state.units, unitId, tile, skill)) {
       // An offensive skill goes at a unit the AI may target.
       const offensive = !isSupportSkill(skill) && !isTileSkill(skill);
       if (offensive && target.unitId !== unitId && !aimable(target.unitId)) continue;
-      commands.push({
-        command: { type: 'skill', unitId, skillId: skill.id, target: point(target) },
-        manaCost: skill.manaCost,
-      });
+      const command: BattleCommand = { type: 'skill', unitId, skillId: skill.id, target: point(target) };
+      if (needsPlayOut(skill)) {
+        playedOut.push({ command, manaCost: skill.manaCost });
+        continue;
+      }
+      const score = estimateSkill(state, grid, unit, tile, skill, target, weights);
+      acts.push({ command, score: score - weights.mana * skill.manaCost });
     }
   }
   if (staves) {
@@ -99,21 +121,96 @@ export function getSkillActs(
         return otherId !== unitId && !!other && areAllied(other.team, unit.team) && isWounded(other);
       };
       for (const target of getHealTargets(grid, tile, staff, canHeal)) {
-        commands.push({ command: { type: 'heal', unitId, staffIndex: index, target: point(target) }, manaCost: 0 });
+        const patient = state.units.get(target.unitId)!;
+        acts.push({
+          command: { type: 'heal', unitId, staffIndex: index, target: point(target) },
+          score: weighHeal(patient, getHealAmount(unit, staff, patient), weights),
+        });
       }
     }
   }
-  if (commands.length === 0) return [];
+  if (playedOut.length === 0) return acts;
 
   // Only its own side's mines are known to it.
   const known: BattleState = { ...state, mines: state.mines.filter((mine) => areAllied(mine.team, unit.team)) };
   const moved = isSameTile(from, tile) ? known : placeAt(known, unitId, grid, getDistance(from, tile));
-  const acts: SkillAct[] = [];
-  for (const { command, manaCost } of commands) {
+  for (const { command, manaCost } of playedOut) {
     const score = scoreAct(moved, unitId, command, weights);
     if (score !== null) acts.push({ command, score: score - weights.mana * manaCost });
   }
   return acts;
+}
+
+// Whether what `skill` does takes playing out: it reaches more than the
+// unit it's aimed at, moves its user, or changes its user's HP, or its
+// damage reads how far the user walked.
+function needsPlayOut(skill: Skill): boolean {
+  return (
+    skill.range === 0 ||
+    !!skill.area ||
+    !!skill.friendlyFire ||
+    !!skill.leap ||
+    !!skill.strafe ||
+    !!skill.retreat ||
+    !!skill.drain ||
+    !!skill.recoil ||
+    !!skill.chargeMight
+  );
+}
+
+// What a plain skill used by `user` from `tile` on `target` does, worked
+// out as useSkill in commands.ts would (`grid` has the user on `tile`),
+// weighed as weighEvents would its events: a heal or a buff on an ally, a
+// mine near a foe, or a blow (and its follow-up) on a foe, then the status
+// it leaves and the shove, onto spikes, into water or into another unit.
+function estimateSkill(
+  state: BattleState,
+  grid: Grid,
+  user: Unit,
+  tile: Point,
+  skill: Skill,
+  target: Point & { unitId: string },
+  weights: SkillActWeights,
+): number {
+  if (isTileSkill(skill)) {
+    const near = [...state.units].some(([id]) => {
+      const at = isFoe(state, user, id) ? findUnit(grid, id) : null;
+      return at !== null && getDistance(at, target) <= MINE_REACH;
+    });
+    return near && skill.mine ? weights.mine * skill.mine : 0;
+  }
+  const other = state.units.get(target.unitId)!;
+  if (isHealingSkill(skill)) return weighHeal(other, getSkillHealAmount(skill, user, other), weights);
+  if (isBuffSkill(skill)) return weighStatus(other, skill.status, weights.buff);
+
+  let score = weighStatus(user, skill.selfStatus, weights.buff);
+  const first = calculateSkillDamage(skill, user, other);
+  let health = Math.max(0, other.health - first);
+  if (health > 0) health = Math.max(0, health - getFollowUpDamage(skill, first));
+  if (health > 0) score += weighStatus(other, skill.status, weights.debuff);
+  const shove =
+    skill.push && health > 0 ? getPushResult(grid, state.units, target, getPushDirection(tile, target)) : null;
+  if (shove) health = shove.drowned ? 0 : Math.max(0, health - shove.damage);
+  score += weights.damage * (other.health - health) + (health === 0 ? weights.kill : 0);
+  const collided = shove?.collidedId ? state.units.get(shove.collidedId) : undefined;
+  if (shove && collided) {
+    const lost = Math.min(collided.health, shove.collisionDamage);
+    const fell = lost >= collided.health;
+    score += areAllied(collided.team, user.team)
+      ? -weights.allyDamage * lost - (fell ? weights.allyLost : 0)
+      : weights.damage * lost + (fell ? weights.kill : 0);
+  }
+  return score;
+}
+
+// A heal of `amount` on `patient`, twice over for one under half health.
+function weighHeal(patient: Unit, amount: number, weights: SkillActWeights): number {
+  return weights.heal * amount * (patient.health < patient.maxHealth / 2 ? 2 : 1);
+}
+
+// `status` left on `unit`, worth `worth` unless it has it already.
+function weighStatus(unit: Unit, status: StatusId | undefined, worth: number): number {
+  return status && !unit.statuses.includes(status) ? worth : 0;
 }
 
 // The skills the AI would use: the ones the unit knows and can afford,
