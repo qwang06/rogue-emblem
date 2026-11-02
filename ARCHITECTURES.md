@@ -311,7 +311,7 @@ The Training mode's practice battle. `getTrainingActions()` lists one `{ id, lab
 
 ### `src/game/camera.ts`
 
-`getFitZoom(mapSize, tileSize, canvasSize, maxZoom, step = 1)` — the largest zoom, in steps of `step`, at which the map fits the canvas, capped at `maxZoom` and never below 1. GridScene zooms in half steps (`ZOOM_STEP`) capped at 2.5x (`MAX_ZOOM`) and re-fits whenever the canvas resizes, so how far a map zooms depends on the window as well as the map: an 8x8 Warband map reaches 2.5x on a stage of 640x640 or more, the 16x14 demo map reaches 2x on a stage of 1024x896 or more, and a map too big for the stage at 1x stays at 1x. Tested in `src/game/camera.test.ts`.
+`getFitZoom(mapSize, tileSize, canvasSize, maxZoom, step = 1)` — the largest zoom, in steps of `step`, at which the map fits the canvas, capped at `maxZoom` and never below 1. GridScene zooms in whole steps capped at 2x (`MAX_ZOOM`) and re-fits whenever the canvas resizes, so how far a map zooms depends on the window as well as the map: an 8x8 Warband map reaches 2x on a stage of 512x512 or more, the 16x14 demo map reaches 2x on a stage of 1024x896 or more, and a map too big for the stage at 1x stays at 1x. Tested in `src/game/camera.test.ts`.
 
 ### `src/game/pauseMenu.ts`
 
