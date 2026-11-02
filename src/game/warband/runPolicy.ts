@@ -51,8 +51,9 @@ export const REWARD_SCORES = Object.freeze({
   restPerMissing: 100,
   supplies: 10,
   gold: 20,
-  // A skill set (a scroll). Kept low from when the battle AI used no
-  // skills; it does now (battle/skillActs.ts), so this is worth retuning.
+  // A skill set (a scroll). Never offered while Mentors are off
+  // (MENTORS_ENABLED), and the policy doesn't learn secondary skill sets
+  // at camp yet, so it stays low until it does.
   scroll: 5,
 });
 
@@ -70,6 +71,7 @@ export const RELIC_PREFERENCE: readonly string[] = Object.freeze([
 ]);
 
 // How much the policy wants each kind of boon (higher is better).
+// (Sims with skill at 2.5 or 4 came out no better, so skills stay last.)
 export const BOON_SCORES: Readonly<Record<BoonKind, number>> = Object.freeze({ passive: 3, stat: 2, skill: 1 });
 
 // The starting relic pick: the offer highest in RELIC_PREFERENCE, else the
