@@ -6,6 +6,7 @@ import { createRun, type ItemSnapshot, type RunState } from './run.ts';
 import {
   cancelRoster,
   confirmRoster,
+  confirmsOnClick,
   getItemActions,
   getPickedUnit,
   moveRosterCursor,
@@ -101,6 +102,19 @@ describe('tabs', () => {
 
   it('opens the Items tab when pointing at an item', () => {
     expect(pointRosterCursor(openRosterScreen(campRun()), 'items', 1)).toMatchObject({ tab: 'items', column: 'items' });
+  });
+});
+
+describe('clicking', () => {
+  it('only picks a unit or opens a tab, keeping the open tab', () => {
+    expect(confirmsOnClick('units')).toBe(false);
+    expect(confirmsOnClick('tabs')).toBe(false);
+  });
+
+  it('acts on an item, a convoy entry or an action', () => {
+    expect(confirmsOnClick('items')).toBe(true);
+    expect(confirmsOnClick('convoy')).toBe(true);
+    expect(confirmsOnClick('actions')).toBe(true);
   });
 });
 
