@@ -130,6 +130,14 @@ export function pointRosterCursor(state: RosterScreenState, target: RosterTarget
   return clampIndices(freeze({ ...state, tab, column: target, [INDEX_FIELDS[target]]: index, actions: null }));
 }
 
+// Whether clicking an entry of `target` also confirms it, as Enter would.
+// Clicking a unit only picks it and clicking a tab only opens it, so
+// paging through the units keeps the open tab; clicking an item or an
+// action acts on it.
+export function confirmsOnClick(target: RosterTarget): boolean {
+  return target !== 'units' && target !== 'tabs';
+}
+
 // Confirm on whatever's under the cursor (see the top of this file).
 // Disabled actions and convoy items the unit has no room for do nothing.
 export function confirmRoster(state: RosterScreenState, rules: RosterRules = DEFAULT_RULES): RosterScreenState {

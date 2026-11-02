@@ -5,6 +5,7 @@ import type { RunState } from '../game/warband/run.ts';
 import {
   cancelRoster,
   confirmRoster,
+  confirmsOnClick,
   moveRosterCursor,
   openRosterScreen,
   pointRosterCursor,
@@ -54,8 +55,7 @@ export function OverworldRoster({
     hover: (target, index) => apply(pointRosterCursor(state, target, index)),
     select: (target, index) => {
       const pointed = pointRosterCursor(state, target, index);
-      // Clicking a tab only opens it.
-      apply(target === 'tabs' ? pointed : confirmRoster(pointed));
+      apply(confirmsOnClick(target) ? confirmRoster(pointed) : pointed);
     },
     cancel: () => apply(cancelRoster(state)),
   };
