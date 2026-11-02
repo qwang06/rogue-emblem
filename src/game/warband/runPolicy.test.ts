@@ -4,7 +4,7 @@ import { Acolyte } from '../Acolyte.ts';
 import { Archer } from '../Archer.ts';
 import { HEAL_STAFF } from '../healing.ts';
 import { MASTER_SEAL, WOODEN_SHIELD } from '../items.ts';
-import { PROMOTION_LEVEL } from '../promotions.ts';
+import { getPromotions, PROMOTION_LEVEL } from '../promotions.ts';
 import { Soldier } from '../Soldier.ts';
 import { Villager } from '../Villager.ts';
 import type { Unit } from '../Unit.ts';
@@ -28,6 +28,7 @@ import {
   pickRecruit,
   pickReward,
   pickStartingRelic,
+  pickPromotion,
   planCamp,
   RELIC_PREFERENCE,
   REWARD_SCORES,
@@ -141,7 +142,7 @@ describe('planCamp', () => {
     expect(playCamp(makeRun({ a: soldier() }, { gold: 100 }))).toEqual([{ type: 'march' }]);
   });
 
-  it('promotes a unit that can, to its first promotion', () => {
+  it('promotes a unit that can, to a promotion picked at random, the same each time', () => {
     const run = withUnit(
       makeRun({ a: villager() }, { gold: 0, convoy: [{ itemId: MASTER_SEAL.id, quantity: 1 }] }),
       'a',
@@ -150,7 +151,35 @@ describe('planCamp', () => {
         level: PROMOTION_LEVEL,
       }),
     );
-    expect(playCamp(run)).toEqual([{ type: 'promote', unitId: 'a', promotionId: 'archer' }, { type: 'march' }]);
+    const [promote, march] = playCamp(run);
+    expect(promote).toMatchObject({ type: 'promote', unitId: 'a' });
+    expect(getPromotions('villager').map(({ id }) => id)).toContain(
+      (promote as Extract<RunCommand, { type: 'promote' }>).promotionId,
+    );
+    expect(march).toEqual({ type: 'march' });
+    expect(playCamp(run)).toEqual([promote, march]);
+  });
+
+  it('picks every promotion over different runs', () => {
+    const picked = new Set<string | null>();
+    for (let seed = 1; seed <= 40; seed++) {
+      const run = withUnit(
+        makeRun({ a: villager() }, { gold: 0, convoy: [{ itemId: MASTER_SEAL.id, quantity: 1 }] }),
+        'a',
+        (unit) => ({ ...unit, level: PROMOTION_LEVEL }),
+      );
+      picked.add(pickPromotion({ ...run, seed }, run.roster[0]));
+    }
+    expect([...picked].sort()).toEqual(
+      getPromotions('villager')
+        .map(({ id }) => id)
+        .sort(),
+    );
+  });
+
+  it("doesn't pick a promotion without a seal", () => {
+    const run = withUnit(makeRun({ a: villager() }, { gold: 0 }), 'a', (unit) => ({ ...unit, level: PROMOTION_LEVEL }));
+    expect(pickPromotion(run, run.roster[0])).toBeNull();
   });
 
   it('buys a seal for a unit that can promote when it has gold to spare', () => {
