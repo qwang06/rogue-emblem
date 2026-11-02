@@ -1,4 +1,5 @@
-import type { MouseEvent } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { SPRITE_URLS } from '../assets/sprites.ts';
 import { gameCommands } from '../bridge/commands.ts';
 import type { RosterItemView, RosterScreenView } from '../bridge/rosterView.ts';
@@ -6,6 +7,7 @@ import { ROSTER_TABS, type RosterTab, type RosterTarget } from '../game/warband/
 import { ItemCount } from './ItemCount.tsx';
 import { ItemDetailLine } from './ItemDetailLine.tsx';
 import { KeyHint } from './KeyHint.tsx';
+import { placeMenuBesideTile } from './menuPlacement.ts';
 import { RosterSkillsPage, RosterStatsPage } from './RosterUnitSheet.tsx';
 import { ScrollList } from './ScrollList.tsx';
 import { UnitSprite } from './UnitSprite.tsx';
@@ -31,6 +33,91 @@ function rowClass(selected: boolean, focused: boolean, disabled = false) {
   else if (selected) classes.push('roster-screen__row--picked');
   if (disabled) classes.push('action-menu__item--disabled');
   return classes.join(' ');
+}
+
+type PointerProps = (
+  target: RosterTarget,
+  index: number,
+) => { onMouseEnter: () => void; onClick: (event: MouseEvent) => void };
+
+// An item's Equip / Store actions. They open beside the item's row, over
+// the convoy, but are drawn in a layer of their own over the whole page
+// (a portal with fixed coordinates), so no scrolling list or panel can
+// clip them: by the last item they move up to stay on screen, and where
+// there's no room to the row's right they cover its right end instead.
+function ItemActionsMenu({
+  label,
+  actions,
+  pointerProps,
+}: {
+  label: string;
+  actions: NonNullable<RosterScreenView['actions']>;
+  pointerProps: PointerProps;
+}) {
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  const menuRef = useRef<HTMLElement>(null);
+  const [style, setStyle] = useState<CSSProperties>({ visibility: 'hidden' });
+
+  useLayoutEffect(() => {
+    function place() {
+      const row = anchorRef.current?.parentElement;
+      const menu = menuRef.current;
+      if (!row || !menu) return;
+      const rect = row.getBoundingClientRect();
+      // Hang 4px over the row's right edge, as it always has.
+      const tile = { left: rect.left, top: rect.top, right: rect.right - 12, bottom: rect.bottom };
+      const size = { width: menu.offsetWidth, height: menu.offsetHeight };
+      const viewport = { width: window.innerWidth, height: window.innerHeight };
+      const { side, left, top } = placeMenuBesideTile(tile, size, viewport);
+      // No room to the right: cover the row's right end instead.
+      const inside = Math.max(8, Math.min(rect.right - 8 - size.width, viewport.width - 8 - size.width));
+      setStyle({ left: side === 'right' ? left : inside, top });
+    }
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, []);
+
+  return (
+    <>
+      <span ref={anchorRef} hidden />
+      {createPortal(
+        <div className="roster-actions-layer">
+          <nav
+            ref={menuRef}
+            className="panel action-menu roster-screen__actions"
+            style={style}
+            aria-label={`${label} actions`}
+          >
+            <ul className="action-menu__list">
+              {actions.actions.map((action, actionIndex) => {
+                const picked = actionIndex === actions.selectedIndex;
+                const classes = ['action-menu__item'];
+                if (picked) classes.push('action-menu__item--selected');
+                if (action.disabled) classes.push('action-menu__item--disabled');
+                return (
+                  <li
+                    key={action.id}
+                    className={classes.join(' ')}
+                    aria-current={picked ? 'true' : undefined}
+                    aria-disabled={action.disabled ? 'true' : undefined}
+                    {...pointerProps('actions', actionIndex)}
+                  >
+                    {action.label}
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+        </div>,
+        document.body,
+      )}
+    </>
+  );
 }
 
 const TAB_LABELS: Record<RosterTab, string> = { stats: 'Stats', skills: 'Skills', items: 'Items' };
@@ -177,30 +264,11 @@ export function RosterScreenPanel({ view, pointer }: { view: RosterScreenView; p
                               <span className="roster-screen__label">{item.label}</span>
                               <ItemCount item={item} />
                               {showActions && (
-                                <nav
-                                  className="panel action-menu roster-screen__actions"
-                                  aria-label={`${item.label} actions`}
-                                >
-                                  <ul className="action-menu__list">
-                                    {view.actions!.actions.map((action, actionIndex) => {
-                                      const picked = actionIndex === view.actions!.selectedIndex;
-                                      const classes = ['action-menu__item'];
-                                      if (picked) classes.push('action-menu__item--selected');
-                                      if (action.disabled) classes.push('action-menu__item--disabled');
-                                      return (
-                                        <li
-                                          key={action.id}
-                                          className={classes.join(' ')}
-                                          aria-current={picked ? 'true' : undefined}
-                                          aria-disabled={action.disabled ? 'true' : undefined}
-                                          {...pointerProps('actions', actionIndex)}
-                                        >
-                                          {action.label}
-                                        </li>
-                                      );
-                                    })}
-                                  </ul>
-                                </nav>
+                                <ItemActionsMenu
+                                  label={item.label}
+                                  actions={view.actions!}
+                                  pointerProps={pointerProps}
+                                />
                               )}
                             </li>
                           );
