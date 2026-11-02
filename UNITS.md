@@ -569,6 +569,8 @@ It fights with its natural weapon and carries nothing else.
 
 The weakest monster and Warband Mode's first fight: a slow blob of jelly that deals 1 damage to a level-1 villager and falls to two sword swings. It carries nothing but its Tackle.
 
+Passive, **Bounce**: a hit in its own attack shoves the target a tile back once the exchange is over (onto spikes or into deep water if they're there, a bump if something's in the way; see `src/game/push.ts`). Not on a counter.
+
 | Stat | Base | Growth |
 | ---- | ---- | ------ |
 | HP   | 6    | 60%    |

@@ -78,6 +78,9 @@ export type Modifier =
   | { kind: 'momentum'; amount: number }
   // It strikes twice in every exchange, fast enough or not.
   | { kind: 'always-double' }
+  // A hit in its own attack shoves the target a tile away (see push.ts),
+  // once the exchange is over, if both still stand.
+  | { kind: 'shove-on-attack' }
   // Its strikes never miss.
   | { kind: 'sure-hit' }
   // Its crits deal this many times the damage instead of CRIT_MULTIPLIER
