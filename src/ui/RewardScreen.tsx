@@ -17,7 +17,9 @@ import type { RewardAction } from '../bridge/views.ts';
 // The same screen shows a surviving guest's recruitment and a Recruit
 // reward's draft of recruits to pick one from. A level up's boon pick
 // (`boonPick`) shares its menu but has a screen of its own
-// (BoonPickScreen).
+// (BoonPickScreen). A lone card (a guest's recruitment) lies across the
+// screen's width, its picture, text and stats side by side, so the screen
+// stays short enough to show its buttons without scrolling.
 export function RewardScreen() {
   const menu = useGameStore((state) => state.rewardMenu);
   const stageClear = useGameStore((state) => state.stageClear);
@@ -67,7 +69,7 @@ export function RewardScreen() {
         {team && team.length > 0 && (
           <RewardTeam team={team} preview={menu.actions[menu.selectedIndex]?.healthAfter ?? null} />
         )}
-        <ul className="reward-screen__choices">
+        <ul className={`reward-screen__choices${cards.length === 1 ? ' reward-screen__choices--single' : ''}`}>
           {cards.map(({ action: reward, index, selected }) => {
             return (
               <li

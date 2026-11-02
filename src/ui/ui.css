@@ -3900,7 +3900,7 @@ textarea.draft-input {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 12px;
+  gap: 10px;
   container-type: inline-size;
 }
 
@@ -3935,23 +3935,69 @@ textarea.draft-input {
   list-style: none;
 }
 
+/* A lone card (a guest's recruitment) takes the whole row and lies on
+   its side: the picture, then the name and description, then the stats,
+   so the card is a few lines tall instead of a narrow tower. Too narrow
+   for that, it stacks like any card. */
+.reward-screen__choices--single {
+  grid-template-columns: 1fr;
+}
+
+@container (width > 34rem) {
+  .reward-screen__choices--single .reward-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto 1fr;
+    align-items: start;
+    gap: 4px 16px;
+  }
+
+  .reward-screen__choices--single .reward-card__kind {
+    grid-column: 1 / -1;
+  }
+
+  .reward-screen__choices--single .reward-card__sprite {
+    grid-column: 1;
+    grid-row: 2 / 4;
+    align-self: center;
+  }
+
+  .reward-screen__choices--single .reward-card__label {
+    grid-column: 2;
+  }
+
+  .reward-screen__choices--single .reward-card__description {
+    grid-column: 2;
+  }
+
+  .reward-screen__choices--single .reward-card__stats {
+    grid-column: 3;
+    grid-row: 2 / 4;
+    align-self: center;
+    margin: 0;
+    padding: 0 0 0 12px;
+    border-top: none;
+    border-left: var(--rule);
+  }
+}
+
 /* Side by side while three fit, else one column: never two and one. */
 @container (max-width: 34rem) {
   .reward-screen__choices {
     grid-template-columns: 1fr;
   }
+}
 
-  /* Stacked, the cards run past the stage: Skip and Reroll stay pinned
-     to the bottom of the scroll box on a dark band, so they're never
-     below the fold. */
-  .reward-screen .reward-screen__buttons {
-    position: sticky;
-    bottom: -8px;
-    z-index: 1;
-    margin: 0 -8px -8px;
-    padding: 10px 8px;
-    background: rgb(20 14 10 / 92%);
-  }
+/* Skip, Reroll and Decline stay pinned to the bottom of the scroll box on
+   a dark band whenever the cards run past the stage, so they're never
+   below the fold. */
+.reward-screen .reward-screen__buttons {
+  position: sticky;
+  bottom: -8px;
+  z-index: 1;
+  margin: 0 -8px -8px;
+  padding: 10px 8px;
+  background: rgb(20 14 10 / 92%);
 }
 
 .reward-card {
@@ -4016,7 +4062,7 @@ textarea.draft-input {
 .reward-card__description {
   margin: 0;
   font-size: 0.8125rem;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .reward-card__stats {
@@ -4309,13 +4355,6 @@ textarea.draft-input {
   .roster-screen .roster-screen__list--convoy {
     height: calc(5 * var(--row));
   }
-
-  /* No column beside the items to hang over: drop below the row. */
-  .roster-screen .roster-screen__actions {
-    top: calc(100% - 4px);
-    right: 8px;
-    left: auto;
-  }
 }
 
 .roster-screen__column {
@@ -4472,12 +4511,20 @@ textarea.draft-input {
   background: var(--hp);
 }
 
-/* An item's actions hang off the right of its row, over the convoy. */
+/* An item's actions hang off the right of its row, over the convoy, in a
+   layer over the whole page (RosterScreen's ItemActionsMenu places them
+   with fixed coordinates), so no list or panel clips them. The layer
+   brings the HUD's type, since it sits outside it. */
+.roster-actions-layer {
+  font-family: var(--sans);
+  line-height: normal;
+  user-select: none;
+}
+
 .roster-screen__actions {
-  position: absolute;
-  z-index: 1;
-  top: 0;
-  left: calc(100% - 4px);
+  position: fixed;
+  z-index: 1000;
+  right: auto;
   min-width: 7rem;
   box-shadow: var(--lift);
   cursor: default;

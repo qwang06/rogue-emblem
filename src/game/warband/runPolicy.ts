@@ -10,6 +10,7 @@ import type { BattleState } from '../battle/state.ts';
 import { isStaff } from '../healing.ts';
 import { isArmor, MASTER_SEAL, type Item } from '../items.ts';
 import { getPromotions } from '../promotions.ts';
+import { createSeededRng, randomItem } from '../rng.ts';
 import type { Unit } from '../Unit.ts';
 import { createUnitOfClass } from '../unitClasses.ts';
 import { canWield, isWeapon } from '../weapons.ts';
@@ -50,7 +51,8 @@ export const REWARD_SCORES = Object.freeze({
   restPerMissing: 100,
   supplies: 10,
   gold: 20,
-  // The battle AI never uses skills, so a skill set is worth little to it.
+  // A skill set (a scroll). Kept low from when the battle AI used no
+  // skills; it does now (battle/skillActs.ts), so this is worth retuning.
   scroll: 5,
 });
 
@@ -167,8 +169,9 @@ export function pickRecruit(session: RunSession): RunCommand {
 }
 
 // Camp, one command at a time, in this order:
-// 0. promote the first unit that can, to its class's first promotion, or
-//    buy a seal for it when there's a merchant and gold to spare
+// 0. promote the first unit that can, to one of its class's promotions
+//    picked at random (pickPromotion), or buy a seal for it when there's
+//    a merchant and gold to spare
 // 1. rest if anyone deploying is badly hurt (REST_BELOW_HEALTH)
 // 2. each deploying unit armed: equip its best carried weapon (or staff)
 //    if what it holds is about to break, else take one from the convoy,
@@ -180,10 +183,8 @@ export function planCamp(session: RunSession, stock: readonly string[] = MERCHAN
   const deploying = getDeployingUnits(run);
   const [candidate] = getPromotionCandidates(run);
   if (candidate) {
-    const [promotion] = getPromotions(candidate.classId);
-    if (canPromoteInRun(run, candidate.id, promotion.id)) {
-      return { type: 'promote', unitId: candidate.id, promotionId: promotion.id };
-    }
+    const promotionId = pickPromotion(run, candidate);
+    if (promotionId) return { type: 'promote', unitId: candidate.id, promotionId };
     const price = getItemPrice(MASTER_SEAL);
     if (hasMerchant(run) && canBuy(run, MASTER_SEAL.id, stock) && run.gold >= price + REST_COST) {
       return { type: 'buy', itemId: MASTER_SEAL.id };
@@ -198,6 +199,23 @@ export function planCamp(session: RunSession, stock: readonly string[] = MERCHAN
   }
   if (canRest(run) && getMissingHealthShare(deploying) >= REST_MISSING_HEALTH) return { type: 'rest' };
   return { type: 'march' };
+}
+
+// The promotion `unit` takes, one of its class's it can take now picked at
+// random, or null when it can't promote (no seal). The dice are seeded by
+// the run's seed, the unit and its level, so a run replays the same.
+export function pickPromotion(run: RunState, unit: UnitSnapshot): string | null {
+  const options = getPromotions(unit.classId).filter((promotion) => canPromoteInRun(run, unit.id, promotion.id));
+  if (options.length === 0) return null;
+  const rng = createSeededRng((run.seed ^ Math.imul(hashText(unit.id) + unit.level, 0x9e3779b1)) >>> 0);
+  return randomItem(rng, options).id;
+}
+
+// A 32-bit hash of `text` (FNV-1a), to seed dice from a name.
+function hashText(text: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 0x01000193);
+  return hash >>> 0;
 }
 
 // How much the policy wants to travel to each kind of site (higher is

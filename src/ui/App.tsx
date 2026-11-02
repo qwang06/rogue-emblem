@@ -1,4 +1,5 @@
 import type { MouseEvent } from 'react';
+import { scrollOverlayOnWheel } from './overlayWheel.ts';
 import { gameCommands } from '../bridge/commands.ts';
 import { ActionMenu } from './ActionMenu.tsx';
 import { BattleResult } from './BattleResult.tsx';
@@ -102,8 +103,8 @@ export function App() {
         <BossBar />
         {/* The stage fills this area, and the canvas fills the stage (see ui.css). */}
         <div className="stage-area">
-          {/* Right click anywhere on the map or its menus cancels, like Esc. */}
-          <div className="stage" onContextMenu={cancelOnRightClick}>
+          {/* Right click anywhere on the map or its menus cancels, like Esc. A wheel over the map around an overlay's window scrolls the window. */}
+          <div className="stage" onContextMenu={cancelOnRightClick} onWheel={scrollOverlayOnWheel}>
             <div id="game" role="img" aria-label="Battle map" />
             <div className="hud">
               {/* First, so every other overlay paints over it. */}
