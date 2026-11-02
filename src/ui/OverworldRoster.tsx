@@ -57,6 +57,7 @@ export function OverworldRoster({
       // Clicking a tab only opens it.
       apply(target === 'tabs' ? pointed : confirmRoster(pointed));
     },
+    cancel: () => apply(cancelRoster(state)),
   };
 
   useEffect(() => {

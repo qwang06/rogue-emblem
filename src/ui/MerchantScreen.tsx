@@ -1,3 +1,4 @@
+import { MenuExitButton } from './MenuExitButton.tsx';
 import type { MouseEvent } from 'react';
 import { SPRITE_URLS } from '../assets/sprites.ts';
 import { gameCommands } from '../bridge/commands.ts';
@@ -124,6 +125,7 @@ export function MerchantScreen() {
       <div className="roster-screen__scroll merchant-screen__scroll">
         <section className="panel roster-screen merchant-screen" aria-label="Merchant">
           <h2 className="roster-screen__title">Merchant</h2>
+          <MenuExitButton kind={view.recipients ? 'back' : 'close'} />
           <p className="merchant-screen__gold" title={`${view.gold} gold`}>
             <GlyphIcon kind="gold" />
             {view.gold}

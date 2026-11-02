@@ -1,3 +1,4 @@
+import { MenuExitButton } from './MenuExitButton.tsx';
 import { gameCommands } from '../bridge/commands.ts';
 import type { UnitDetailView } from '../bridge/views.ts';
 import { getExperienceForLevel } from '../game/experience.ts';
@@ -31,12 +32,15 @@ export function UnitInfoScreen() {
 
   return (
     <div className="pause-overlay unit-info-layer" onClick={() => gameCommands.send({ type: 'cancel' })}>
-      <section className={`panel unit-info unit-info--${unit.team}`} role="dialog" aria-labelledby="unit-info-name">
-        <Identity unit={unit} />
-        <Stats unit={unit} />
-        <Combat unit={unit} />
-        <KeyHint className="unit-info__hint" entries={[['I', 'Close']]} />
-      </section>
+      <div className="unit-info-window">
+        <section className={`panel unit-info unit-info--${unit.team}`} role="dialog" aria-labelledby="unit-info-name">
+          <Identity unit={unit} />
+          <Stats unit={unit} />
+          <Combat unit={unit} />
+          <KeyHint className="unit-info__hint" entries={[['I', 'Close']]} />
+        </section>
+        <MenuExitButton kind="close" />
+      </div>
     </div>
   );
 }

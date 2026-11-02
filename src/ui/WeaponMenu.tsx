@@ -1,3 +1,4 @@
+import { MenuExitButton } from './MenuExitButton.tsx';
 import { ItemIcon } from './ItemIcon.tsx';
 import { StatIcon } from './StatIcon.tsx';
 import { useGameStore } from './useGameStore.ts';
@@ -20,6 +21,7 @@ export function WeaponMenu() {
   const highlighted = menu.actions[menu.selectedIndex];
   return (
     <nav className="panel action-menu action-menu--beside-unit weapon-menu" aria-label="Weapons" {...placement}>
+      <MenuExitButton kind="back" />
       <ul className="action-menu__list weapon-menu__list">
         {menu.actions.map((weapon, index) => {
           const selected = index === menu.selectedIndex;

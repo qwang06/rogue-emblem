@@ -85,6 +85,8 @@
   --exp-fill: linear-gradient(#ffee83 50%, #f0b541 50%);
   /* Text on the sheet's rose buttons (.header-button). */
   --button-fg: #fff1e0;
+  /* A window's Back / Close tab (.menu-exit), wide enough for either. */
+  --menu-exit-width: 4.5rem;
 }
 
 /* Windows set the parchment tokens again, so one opened from the header
@@ -577,6 +579,47 @@ a.header-button {
   border-width: 0 calc(8 * var(--px));
   border-image: url('../assets/ui/name-plate.png') 0 8 fill / 0 calc(8 * var(--px)) stretch;
   image-rendering: pixelated;
+}
+
+/* A window's Back / Close tab (MenuExitButton): the rose button, small,
+   hung off the top-right of the frame opposite the name plate, so it takes
+   no room in the window. One fixed width fits either word, so switching
+   between them never moves it. */
+.menu-exit {
+  position: absolute;
+  top: 0;
+  right: 10px;
+  z-index: 1;
+  transform: translateY(-80%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  box-sizing: border-box;
+  width: var(--menu-exit-width);
+  height: calc(13 * var(--px));
+  padding: 0 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.menu-exit .pixel-icon {
+  width: calc(8 * var(--px));
+  height: calc(8 * var(--px));
+}
+
+/* The map's own Back button (MapBackButton), while picking a tile with no
+   window open: in the bottom-left corner, clear of the docked unit panel. */
+.menu-exit.map-back {
+  top: auto;
+  right: auto;
+  bottom: 8px;
+  left: 8px;
+  transform: none;
+  pointer-events: auto;
 }
 
 /* ---- Unit panel (docked in a top corner of the map) ----------------- */
@@ -1710,7 +1753,8 @@ kbd {
 }
 
 .roster-menu {
-  min-width: 11rem;
+  /* Room for the name plate and the Back tab side by side. */
+  min-width: 12.5rem;
   padding-top: 12px;
 }
 
@@ -1822,7 +1866,8 @@ kbd {
 
 .pause-menu {
   position: relative;
-  min-width: 11rem;
+  /* Room for the name plate and the Close tab side by side. */
+  min-width: 12rem;
   padding-top: 12px;
 }
 
@@ -2679,6 +2724,21 @@ kbd {
 /* Room under the submenu's name plate. */
 .title-menu:has(.title-menu__heading) {
   padding-top: 16px;
+}
+
+/* An invisible line set like the name plate's text, widening the menu to
+   fit the plate (its pointed ends included) and the Back tab beside it. */
+.title-menu__plate-room {
+  display: block;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  padding-right: calc(16 * var(--px) + 12px + var(--menu-exit-width));
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  text-transform: uppercase;
 }
 
 .title-menu__list {
@@ -4500,7 +4560,8 @@ textarea.draft-input {
 .camp-menu__gold,
 .merchant-screen__gold {
   position: absolute;
-  right: 10px;
+  /* Left of the window's Close tab, which takes the corner. */
+  right: calc(10px + var(--menu-exit-width) + 6px);
   display: flex;
   align-items: center;
   gap: 4px;

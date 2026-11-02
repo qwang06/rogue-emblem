@@ -9,6 +9,7 @@ import { AnimationViewer } from './AnimationViewer.tsx';
 import { ConfigEditor } from './ConfigEditor.tsx';
 import { ControlsButton } from './ControlsButton.tsx';
 import { DamagePopups } from './DamagePopups.tsx';
+import { MapBackButton } from './MapBackButton.tsx';
 import { MapTags } from './MapTags.tsx';
 import { AutoPlayButton } from './AutoPlayButton.tsx';
 import { AutoCommandQueue } from './AutoCommandQueue.tsx';
@@ -110,6 +111,7 @@ export function App() {
               <UnitPanel />
               {generator && <MapGeneratorPanel {...generator} />}
               <MapTags />
+              <MapBackButton />
               <AutoCommandQueue />
               <DeploymentMenu />
               <RosterMenu />

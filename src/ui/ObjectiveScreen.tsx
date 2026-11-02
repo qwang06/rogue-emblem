@@ -1,3 +1,4 @@
+import { MenuExitButton } from './MenuExitButton.tsx';
 import { gameCommands } from '../bridge/commands.ts';
 import { useGameStore } from './useGameStore.ts';
 import { GlyphIcon } from './GlyphIcon.tsx';
@@ -17,6 +18,7 @@ export function ObjectiveScreen() {
         <h2 className="objective__title" id="objective-title">
           Objective
         </h2>
+        <MenuExitButton kind="close" />
         <p className="objective__goal">
           <GlyphIcon kind={objective.kind} />
           {objective.goal}

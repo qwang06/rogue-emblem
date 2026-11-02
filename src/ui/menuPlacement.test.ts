@@ -38,6 +38,14 @@ describe('placeMenuBesideTile', () => {
   it('uses the given gap', () => {
     expect(placeMenuBesideTile(tileAt(100, 100), menu, stage, 0)).toEqual({ side: 'right', left: 164, top: 100 });
   });
+
+  it('keeps a top inset clear for a tab hanging off the menu', () => {
+    // Near the top the menu drops below the inset; lower down it still lines up with the tile.
+    expect(placeMenuBesideTile(tileAt(100, 0), menu, stage, 8, 22).top).toBe(30);
+    expect(placeMenuBesideTile(tileAt(100, 100), menu, stage, 8, 22).top).toBe(100);
+    // The bottom edge is unaffected.
+    expect(placeMenuBesideTile(tileAt(100, 330), menu, stage, 8, 22).top).toBe(400 - 8 - 150);
+  });
 });
 
 describe('pickCornerAwayFromTile', () => {

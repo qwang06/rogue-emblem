@@ -1,3 +1,4 @@
+import { MenuExitButton } from './MenuExitButton.tsx';
 import { UnitSprite } from './UnitSprite.tsx';
 import { useGameStore } from './useGameStore.ts';
 import { menuItemPointerProps } from './menuPointer.ts';
@@ -23,6 +24,7 @@ export function RosterMenu() {
           </span>
         )}
       </h2>
+      <MenuExitButton kind="back" />
       <ul className="action-menu__list">
         {menu.actions.map((entry, index) => {
           const selected = index === menu.selectedIndex;
