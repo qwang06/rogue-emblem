@@ -4249,13 +4249,6 @@ textarea.draft-input {
   .roster-screen .roster-screen__list--convoy {
     height: calc(5 * var(--row));
   }
-
-  /* No column beside the items to hang over: drop below the row. */
-  .roster-screen .roster-screen__actions {
-    top: calc(100% - 4px);
-    right: 8px;
-    left: auto;
-  }
 }
 
 .roster-screen__column {
@@ -4412,12 +4405,20 @@ textarea.draft-input {
   background: var(--hp);
 }
 
-/* An item's actions hang off the right of its row, over the convoy. */
+/* An item's actions hang off the right of its row, over the convoy, in a
+   layer over the whole page (RosterScreen's ItemActionsMenu places them
+   with fixed coordinates), so no list or panel clips them. The layer
+   brings the HUD's type, since it sits outside it. */
+.roster-actions-layer {
+  font-family: var(--sans);
+  line-height: normal;
+  user-select: none;
+}
+
 .roster-screen__actions {
-  position: absolute;
-  z-index: 1;
-  top: 0;
-  left: calc(100% - 4px);
+  position: fixed;
+  z-index: 1000;
+  right: auto;
   min-width: 7rem;
   box-shadow: var(--lift);
   cursor: default;
