@@ -20,6 +20,9 @@ export type GlyphKind =
   | 'item'
   | 'wait'
   | 'undo'
+  // Leaving a menu: a step back, or shut.
+  | 'back'
+  | 'close'
   // Camp commands.
   | 'roster'
   | 'promote'
@@ -55,6 +58,8 @@ const GLYPHS: Record<GlyphKind, readonly string[]> = {
   promote: ['...gg...', '..gggg..', '.gggggg.', 'gggggggg', '..gggg..', '..gggg..', '..gggg..', '..gggg..'],
   book: ['oooooo..', 'obbbbbo.', 'obwwwbo.', 'obbbbbo.', 'obwwwbo.', 'obbbbbo.', 'oooooooo', '.owwwwwo'],
   undo: ['..o.....', '.oo.....', 'ooooooo.', '.oo....o', '..o....o', '.......o', '...oooo.', '........'],
+  back: ['........', '...c....', '..cc....', '.cccccc.', '.cccccc.', '..cc....', '...c....', '........'],
+  close: ['........', '.cc..cc.', '..cccc..', '...cc...', '...cc...', '..cccc..', '.cc..cc.', '........'],
   rout: ['s......s', '.s....s.', '..s..s..', '...ss...', '...ss...', '..g..g..', '.gg..gg.', 'g......g'],
   seize: ['.orrrr..', '.orrrrr.', '.orrrr..', '.o......', '.o......', '.o......', '.o......', 'ooo.....'],
   survive: ['oooooooo', '.o....o.', '..oyyo..', '...oo...', '...oo...', '..o..o..', '.oyyyyo.', 'oooooooo'],

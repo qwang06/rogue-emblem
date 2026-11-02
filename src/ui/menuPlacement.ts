@@ -13,13 +13,21 @@ export interface MenuPlacement {
 // rect `tile` ({ left, top, right, bottom }) inside a stage of size `stage`
 // ({ width, height }). It opens to the tile's right when it fits there
 // (keeping `gap` from the tile and the stage edge), otherwise to its left.
-// Its top lines up with the tile's, moved up or down to stay on the stage.
+// Its top lines up with the tile's, moved up or down to stay on the stage,
+// and at least `topInset` further down from the stage's top for anything
+// hanging off the menu's top edge (its Back tab).
 // Returns { side: 'right' | 'left', left, top }.
-export function placeMenuBesideTile(tile: TileAnchorView, menu: Size, stage: Size, gap = 8): MenuPlacement {
+export function placeMenuBesideTile(
+  tile: TileAnchorView,
+  menu: Size,
+  stage: Size,
+  gap = 8,
+  topInset = 0,
+): MenuPlacement {
   const rightLeft = tile.right + gap;
   const side: MenuPlacement['side'] = rightLeft + menu.width + gap <= stage.width ? 'right' : 'left';
   const left = side === 'right' ? rightLeft : Math.max(gap, tile.left - gap - menu.width);
-  const top = clamp(tile.top, gap, stage.height - gap - menu.height);
+  const top = clamp(tile.top, gap + topInset, stage.height - gap - menu.height);
   return { side, left, top };
 }
 

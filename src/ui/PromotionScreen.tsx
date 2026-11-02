@@ -1,3 +1,4 @@
+import { MenuExitButton } from './MenuExitButton.tsx';
 import type { MouseEvent } from 'react';
 import { gameCommands } from '../bridge/commands.ts';
 import type { PromotionDetailView } from '../bridge/promotionView.ts';
@@ -73,6 +74,7 @@ export function PromotionScreen() {
       <div className="roster-screen__scroll promotion-screen__scroll">
         <section className="panel roster-screen promotion-screen" aria-label="Promote">
           <h2 className="roster-screen__title">Promote</h2>
+          <MenuExitButton kind="close" />
           <p className="merchant-screen__gold">
             {view.seals} {view.seals === 1 ? 'seal' : 'seals'}
           </p>

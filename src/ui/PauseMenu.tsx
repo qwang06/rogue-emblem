@@ -1,3 +1,4 @@
+import { MenuExitButton } from './MenuExitButton.tsx';
 import { useGameStore } from './useGameStore.ts';
 import { menuItemPointerProps } from './menuPointer.ts';
 import { MenuIcon } from './MenuIcon.tsx';
@@ -12,6 +13,7 @@ export function PauseMenu() {
     <div className="pause-overlay">
       <nav className="panel action-menu pause-menu" aria-label="Pause menu">
         <h2 className="pause-menu__title">Paused</h2>
+        <MenuExitButton kind="close" />
         <ul className="action-menu__list">
           {menu.actions.map((action, index) => {
             const selected = index === menu.selectedIndex;

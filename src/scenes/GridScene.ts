@@ -278,7 +278,7 @@ import type { LevelUpResult } from '../game/experience.ts';
 import type { Unit } from '../game/Unit.ts';
 import type { ItemAction, RestoreStat } from '../game/items.ts';
 import type { SkillAction } from '../game/skills.ts';
-import type { RosterMenuEntry } from '../bridge/gameStore.ts';
+import type { RosterMenuEntry, TargetingMode } from '../bridge/gameStore.ts';
 
 // The canvas is sized by the page (see main.ts); maps are zoomed to fit it,
 // in whole steps (crisp pixel art) up to MAX_ZOOM, and centered.
@@ -371,7 +371,7 @@ const DONE_TINT = 0x808080;
 
 type Sprite = Phaser.GameObjects.Sprite;
 type ActionKey = 'confirm' | 'confirmAlt' | 'cancel' | 'cancelAlt' | 'dangerZone' | 'autoPlay';
-type RangeMode = 'move' | 'attack' | 'skill' | 'heal';
+type RangeMode = TargetingMode;
 
 // The unit whose menu or range is open, where it stands, and (after a move)
 // where it came from and how many commands the battle had before it.
@@ -2614,7 +2614,7 @@ export class GridScene extends Phaser.Scene {
       : this.drawUnitReach(unit, { x, y });
     this.moveRange = moveRange;
     this.movePath = [{ x, y }];
-    this.rangeMode = 'move';
+    this.setRangeMode('move');
     this.rangeTiles = tiles;
   }
 
@@ -2757,7 +2757,7 @@ export class GridScene extends Phaser.Scene {
   }
 
   showRange(mode: RangeMode, tiles: readonly Point[], color: number, alpha: number) {
-    this.rangeMode = mode;
+    this.setRangeMode(mode);
     this.rangeTiles = this.drawTileHighlights(tiles, color, alpha);
   }
 
@@ -2770,10 +2770,17 @@ export class GridScene extends Phaser.Scene {
     });
   }
 
+  // What the player is picking a tile for, published so the map's Back
+  // button shows while there's a step to back out of.
+  setRangeMode(mode: RangeMode | null) {
+    this.rangeMode = mode;
+    gameStore.setState({ targeting: mode });
+  }
+
   hideRange() {
     for (const tile of this.rangeTiles ?? []) tile.destroy();
     this.rangeTiles = null;
-    this.rangeMode = null;
+    this.setRangeMode(null);
     this.activeSkill = null;
     this.activeStaff = null;
     this.updateCombatForecast();

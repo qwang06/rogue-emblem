@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from 'react';
+import { MenuExitButton } from './MenuExitButton.tsx';
 import { usePopover } from './usePopover.ts';
 
 // A header button that drops a panel down over the page (Settings,
@@ -37,6 +38,7 @@ export function HeaderPopover({
       {open && (
         <section id={panelId} className="panel header-popover__panel" aria-label={title}>
           <h2 className="header-popover__title">{title}</h2>
+          <MenuExitButton kind="close" onClick={() => setOpen(false)} />
           {children}
         </section>
       )}

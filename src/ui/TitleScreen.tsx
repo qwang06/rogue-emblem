@@ -34,6 +34,7 @@ import { routeHash } from './route.ts';
 import { UnitSprite } from './UnitSprite.tsx';
 import { Frame } from './Frame.tsx';
 import { KeyHint } from './KeyHint.tsx';
+import { MenuExitButton } from './MenuExitButton.tsx';
 import { NameField } from './NameField.tsx';
 
 const MENU_KEYS = [
@@ -306,6 +307,14 @@ export function TitleScreen() {
 
       <Frame as="nav" className="title-menu" aria-label={submenu?.label ?? 'Main menu'}>
         {submenu && <h2 className="title-menu__heading">{heading}</h2>}
+        {submenu && (
+          // Never seen: as wide as the name plate and the Back tab side by
+          // side, so the menu always has room for both on its top edge.
+          <span className="title-menu__plate-room" aria-hidden="true">
+            {heading}
+          </span>
+        )}
+        {submenu && !editingName && <MenuExitButton kind="back" onClick={goBack} />}
         <ul className="title-menu__list" ref={listRef}>
           {menu.actions.map((action, index) => {
             const selected = index === menu.selectedIndex;

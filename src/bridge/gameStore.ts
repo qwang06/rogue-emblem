@@ -39,6 +39,9 @@ import type {
 export type Screen = 'title' | 'battle' | 'preview' | 'overworld';
 export type BattlePhase = 'deployment' | 'battle';
 export type DeploymentStep = 'menu' | 'roster' | 'placing';
+// What the player is picking a tile for: where the active unit moves, or
+// the target of its attack, skill or staff.
+export type TargetingMode = 'move' | 'attack' | 'skill' | 'heal';
 export type { BattleSetup };
 
 // A roster entry as a menu entry: RosterEntryViews carry their own label.
@@ -50,6 +53,7 @@ export interface BattleState {
   mapReady: boolean;
   phase: BattlePhase | null;
   deploymentStep: DeploymentStep | null;
+  targeting: TargetingMode | null;
   deploymentLimit: number | null;
   deploymentMenu: Menu | null;
   rosterMenu: Menu<RosterMenuEntry> | null;
@@ -115,6 +119,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   mapReady: false, // true once the map scene has loaded and built the map, lifting the loading screen
   phase: null, // 'deployment' (placing units) | 'battle' while the map runs, else null
   deploymentStep: null, // 'menu' | 'roster' | 'placing' during deployment, else null
+  targeting: null, // TargetingMode while the player picks a tile for the active unit (cancel backs out a step), else null
   deploymentLimit: null, // how many units can be deployed (getDeploymentLimit) during deployment, else null
   deploymentMenu: null, // frozen Place Units / Start menu while open, or null
   rosterMenu: null, // frozen menu of RosterEntryViews while picking a unit to place, or null

@@ -1,3 +1,4 @@
+import { MenuExitButton } from './MenuExitButton.tsx';
 import { useGameStore } from './useGameStore.ts';
 import { menuItemPointerProps } from './menuPointer.ts';
 import { MenuIcon } from './MenuIcon.tsx';
@@ -14,6 +15,7 @@ export function ActionMenu() {
 
   return (
     <nav className="panel action-menu action-menu--beside-unit" aria-label="Unit actions" {...placement}>
+      <MenuExitButton kind="back" />
       <ul className="action-menu__list">
         {menu.actions.map((action, index) => {
           const selected = index === menu.selectedIndex;

@@ -1,3 +1,4 @@
+import { MenuExitButton } from './MenuExitButton.tsx';
 import type { MouseEvent } from 'react';
 import { gameCommands } from '../bridge/commands.ts';
 import type { MentorColumn } from '../game/warband/mentorScreen.ts';
@@ -46,6 +47,7 @@ export function MentorScreen() {
       <div className="roster-screen__scroll merchant-screen__scroll">
         <section className="panel roster-screen merchant-screen mentor-screen" aria-label="Mentors">
           <h2 className="roster-screen__title">Mentors</h2>
+          <MenuExitButton kind={view.column === 'units' ? 'close' : 'back'} />
           <p className="merchant-screen__gold">
             {view.gold} gold · {view.scrolls} {view.scrolls === 1 ? 'scroll' : 'scrolls'}
           </p>

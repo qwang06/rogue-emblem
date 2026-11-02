@@ -1,3 +1,4 @@
+import { MenuExitButton } from './MenuExitButton.tsx';
 import { useGameStore } from './useGameStore.ts';
 import { menuItemPointerProps } from './menuPointer.ts';
 import { useMenuBesideUnit } from './useMenuBesideUnit.ts';
@@ -13,6 +14,7 @@ export function SkillMenu() {
 
   return (
     <nav className="panel action-menu action-menu--beside-unit" aria-label="Skills" {...placement}>
+      <MenuExitButton kind="back" />
       <ul className="action-menu__list">
         {menu.actions.map((skill, index) => {
           const selected = index === menu.selectedIndex;

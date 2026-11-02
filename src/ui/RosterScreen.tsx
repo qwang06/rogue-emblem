@@ -1,3 +1,4 @@
+import { MenuExitButton } from './MenuExitButton.tsx';
 import type { MouseEvent } from 'react';
 import { SPRITE_URLS } from '../assets/sprites.ts';
 import { gameCommands } from '../bridge/commands.ts';
@@ -17,12 +18,15 @@ import './RosterScreen.css';
 export interface RosterPointer {
   hover(target: RosterTarget, index: number): void;
   select(target: RosterTarget, index: number): void;
+  // The Back / Close tab, as Esc: a step back, or out of the screen.
+  cancel(): void;
 }
 
 // Between stages GridScene runs the screen, so the mouse is forwarded to it.
 const SCENE_POINTER: RosterPointer = {
   hover: (target, index) => gameCommands.send({ type: 'hover-roster', target, index }),
   select: (target, index) => gameCommands.send({ type: 'select-roster', target, index }),
+  cancel: () => gameCommands.send({ type: 'cancel' }),
 };
 
 function rowClass(selected: boolean, focused: boolean, disabled = false) {
@@ -93,6 +97,7 @@ export function RosterScreenPanel({ view, pointer }: { view: RosterScreenView; p
       <div className="roster-screen__scroll roster-screen__scroll--wide">
         <section className="panel roster-screen roster-screen--sheet" aria-label="Roster">
           <h2 className="roster-screen__title">Roster</h2>
+          <MenuExitButton kind={focus === 'units' ? 'close' : 'back'} onClick={pointer.cancel} />
           <div className="roster-layout">
             <section
               className={`roster-screen__column roster-layout__units${focus === 'units' ? ' roster-screen__column--focused' : ''}`}
