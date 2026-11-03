@@ -105,7 +105,7 @@ import { recordRun } from '../game/warband/meta.ts';
 import { getRunHeat } from '../game/warband/heat.ts';
 import { summarizeRun } from '../game/warband/runSummary.ts';
 import { toRunSummaryView, type RunSummaryView } from '../bridge/runSummaryView.ts';
-import { getBestBoonIndex, pickBoonOffer, pickReward, planCamp } from '../game/warband/runPolicy.ts';
+import { getBestOfferIndex, pickBoonOffer, pickReward, planCamp } from '../game/warband/runPolicy.ts';
 import { planPlayerDeployment, planPlayerTurn } from '../game/battle/playerAI.ts';
 import { getCampActions } from '../game/warband/camp.ts';
 import {
@@ -2228,7 +2228,7 @@ export class GridScene extends Phaser.Scene {
 
   autoReward() {
     if (this.battleBoon) {
-      this.takeBattleBoon(getBestBoonIndex(this.battleBoon.offer.boons));
+      this.takeBattleBoon(getBestOfferIndex(this.battleBoon.offer));
       return;
     }
     if (this.boonRun) {

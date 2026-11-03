@@ -20,7 +20,7 @@
 import type { Rng } from '../combatStats.ts';
 import type { GrowthStat } from '../experience.ts';
 import type { Modifier } from '../modifiers.ts';
-import { shuffle } from '../rng.ts';
+import { weightedShuffle } from '../rng.ts';
 import {
   CLASS_SKILL_PICKS,
   CLEAVE,
@@ -33,6 +33,7 @@ import {
   type Skill,
 } from '../skills.ts';
 import type { Unit } from '../Unit.ts';
+import { getAffinityWeight, getBoonTags, getUnitTagCounts, type BoonTag } from './boonTags.ts';
 import { WEAPON_DAMAGE_TYPES } from '../weapons.ts';
 
 export type BoonKind = 'stat' | 'skill' | 'passive';
@@ -73,6 +74,8 @@ export interface Boon {
   rank: number;
   // How it's kept on the unit once taken (encodeBoonEntry).
   entry: string;
+  // The builds it belongs to (boonTags.ts).
+  tags: readonly BoonTag[];
 }
 
 // How many boons a level up offers.
@@ -382,6 +385,7 @@ function makeBoon(definition: BoonDefinition, entry: BoonEntry, rank: number): B
     stagePercent,
     rank: shownRank,
     entry: encodeBoonEntry({ id: definition.id, rarity, stagePercent }),
+    tags: getBoonTags(definition.id),
   });
 }
 
@@ -492,16 +496,20 @@ export function rollBoonRarity(rng: Rng, stage: number, luck = 0): BoonRarity {
 // The boons a level up at `stage` offers `unit`, rolled from `rng`: a stat
 // boon, a skill (a second passive when it has none to learn) and a
 // passive, each drawn at random from the ones it could take, topped up
-// from whatever is left when a kind runs dry. The passive slot offers the
+// from whatever is left when a kind runs dry. Each draw leans toward the
+// boons sharing tags with the unit's class and the passives and skills it
+// has taken (getAffinityWeight in boonTags.ts), so builds form. The passive slot offers the
 // next rank of one the unit has OWNED_PASSIVE_CHANCE of the time. Each
 // stat and passive offer then rolls its rarity and grows with the stage.
 // Up to BOON_CHOICES, all different, never one of the `banished` ids.
 export function rollBoons(unit: Unit, rng: Rng, stage = 1, banished: readonly string[] = []): Boon[] {
   const eligible = BOONS.filter((boon) => !banished.includes(boon.id) && isBoonEligible(unit, boon));
+  const tagCounts = getUnitTagCounts(unit.unitClass, unit.boons);
   const pool = (kind: BoonKind) =>
-    shuffle(
+    weightedShuffle(
       rng,
       eligible.filter((boon) => boon.kind === kind),
+      (boon) => getAffinityWeight(boon.id, tagCounts),
     );
   const stats = pool('stat');
   const skills = pool('skill');

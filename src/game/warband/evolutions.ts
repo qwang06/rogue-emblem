@@ -14,7 +14,7 @@
 
 import type { Modifier } from '../modifiers.ts';
 import { EARTHSHAKER, INFERNO, VOLLEY } from '../skills.ts';
-import { getBoonIds, getBoonRank, MAX_BOON_RANK } from './boons.ts';
+import { getBoonIds, getBoonRank } from './boons.ts';
 
 export interface Evolution {
   id: string;
@@ -52,8 +52,9 @@ function evolution(
 }
 
 const ARCHERS = ['archer', 'siege'];
-// The rank a rank evolution's passive must reach: its top one.
-export const RANK_EVOLUTION_RANK = MAX_BOON_RANK;
+// The rank a rank evolution's passive must reach: III, well short of its
+// top rank (MAX_BOON_RANK), so a build pays off by mid-run.
+export const RANK_EVOLUTION_RANK = 3;
 const CASTERS = ['acolyte', 'mage', 'bishop'];
 
 // Every evolution, in the order the unit info screen lists them.
@@ -138,7 +139,7 @@ export const EVOLUTIONS: readonly Evolution[] = Object.freeze([
     relics: ['scholars-quill'],
     modifiers: [{ kind: 'experience', percent: 50 }],
   }),
-  // Rank evolutions: a passive at its top rank and the relic that matches.
+  // Rank evolutions: a passive at rank RANK_EVOLUTION_RANK and the relic that matches.
   evolution({
     id: 'berserk',
     name: 'Berserk',

@@ -24,7 +24,8 @@ import { restoreUnit, type RunState, type UnitSnapshot } from './run.ts';
 import type { Realm, Site } from './realm/realm.ts';
 import { getTravelChoices } from './travel.ts';
 import { RARITY_PERCENT, type Boon, type BoonKind } from './boons.ts';
-import { getBoonOffer } from './levelUpPicks.ts';
+import { getBoonOffer, type BoonOffer } from './levelUpPicks.ts';
+import { getAffinityWeight, getUnitTagCounts, type TagCounts } from './boonTags.ts';
 import { getRecruitOffers, getRelicOffers, getRewardOffers, type RunCommand, type RunSession } from './runCommands.ts';
 
 // A weapon or staff with this many uses or fewer is about to break: the
@@ -92,15 +93,29 @@ export function pickStartingRelic(session: RunSession): RunCommand {
 // A boon pick: the offer whose kind scores highest in BOON_SCORES (the
 // first of equals).
 export function pickBoonOffer(session: RunSession): RunCommand {
-  return { type: 'pick-boon', index: getBestBoonIndex(getBoonOffer(session.run)?.boons ?? []) };
+  const offer = getBoonOffer(session.run);
+  return { type: 'pick-boon', index: offer ? getBestOfferIndex(offer) : 0 };
+}
+
+// Which boon of `offer` the policy takes (getBestBoonIndex, leaning toward
+// the offered unit's tags).
+export function getBestOfferIndex(offer: Pick<BoonOffer, 'unit' | 'boons'>): number {
+  return getBestBoonIndex(offer.boons, getUnitTagCounts(offer.unit.classId, offer.unit.boons ?? []));
 }
 
 // Which of `boons` the policy takes: the one whose kind's BOON_SCORES
 // times its rarity's RARITY_PERCENT is highest (the first of equals), so a
-// rarer offer can beat a better kind.
-export function getBestBoonIndex(boons: readonly Pick<Boon, 'kind' | 'rarity'>[]): number {
-  const score = (boon: Pick<Boon, 'kind' | 'rarity'>) =>
-    BOON_SCORES[boon.kind] * RARITY_PERCENT[boon.rarity ?? 'common'];
+// rarer offer can beat a better kind. With the unit's `tagCounts`
+// (boonTags.ts), a boon fitting its build scores up to half its offer
+// weight's lean more, so the policy builds toward a plan too.
+export function getBestBoonIndex(
+  boons: readonly (Pick<Boon, 'kind' | 'rarity'> & { id?: string })[],
+  tagCounts: TagCounts = {},
+): number {
+  const score = (boon: Pick<Boon, 'kind' | 'rarity'> & { id?: string }) =>
+    BOON_SCORES[boon.kind] *
+    RARITY_PERCENT[boon.rarity ?? 'common'] *
+    (1 + (getAffinityWeight(boon.id ?? '', tagCounts) - 1) / 2);
   let best = 0;
   boons.forEach((boon, index) => {
     if (score(boon) > score(boons[best])) best = index;

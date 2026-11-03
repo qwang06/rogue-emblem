@@ -156,6 +156,13 @@ export function BoonPickScreen() {
                     {selected.rarityLabel}
                   </p>
                   <p className="boon-pick__detail-description">{selected.description}</p>
+                  <p className="boon-pick__detail-tags">
+                    {selected.tags.map((tag) => (
+                      <span key={tag.label} className={`boon-pick__tag${tag.owned ? ' boon-pick__tag--owned' : ''}`}>
+                        {tag.label}
+                      </span>
+                    ))}
+                  </p>
                   <p className="boon-pick__detail-evolves">{selected.evolves ? '✦ Completes an evolution!' : ''}</p>
                 </div>
               </>

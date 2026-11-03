@@ -9,6 +9,7 @@ import { getSkillsLearnedBetween } from '../game/skills.ts';
 import { getUnitSprite } from '../game/tileset.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
 import { getStatBoonGain, RARITY_LABELS, type BoonKind, type BoonRarity } from '../game/warband/boons.ts';
+import { BOON_TAG_LABELS, getUnitTagCounts } from '../game/warband/boonTags.ts';
 import { completesEvolution } from '../game/warband/evolutions.ts';
 import type { BoonOffer } from '../game/warband/levelUpPicks.ts';
 import { restoreUnit } from '../game/warband/run.ts';
@@ -34,6 +35,9 @@ export interface BoonChoiceView {
   rarityLabel: string;
   // A stat boon's raise, else null.
   gain: { stat: GrowthStat; amount: number } | null;
+  // Its build tags (warband/boonTags.ts), each flagged when the unit
+  // already leans toward it (its class or a boon it has taken).
+  tags: readonly { label: string; owned: boolean }[];
 }
 
 export interface BoonPickView {
@@ -81,6 +85,7 @@ export function toBoonPickView(
       ? getSkillsLearnedBetween(snapshot.secondaryClass, level - 1, level)
       : []),
   ];
+  const tagCounts = getUnitTagCounts(snapshot.classId, snapshot.boons ?? []);
   const skills: string[] = [];
   for (const skill of learned) if (!skills.includes(skill.label)) skills.push(skill.label);
   return Object.freeze({
@@ -112,6 +117,9 @@ export function toBoonPickView(
           rarity: boon.rarity,
           rarityLabel: boon.rarity === 'common' ? '' : RARITY_LABELS[boon.rarity],
           gain: boon.stat && amount > 0 ? Object.freeze({ stat: boon.stat.stat, amount }) : null,
+          tags: Object.freeze(
+            boon.tags.map((tag) => Object.freeze({ label: BOON_TAG_LABELS[tag], owned: (tagCounts[tag] ?? 0) > 0 })),
+          ),
         });
       }),
     ),
