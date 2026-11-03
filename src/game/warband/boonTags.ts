@@ -41,7 +41,7 @@ const TAGS_BY_BOON: Readonly<Record<string, readonly BoonTag[]>> = Object.freeze
   'stat-health': ['guard', 'blood'],
   'stat-strength': ['power'],
   'stat-intelligence': ['power', 'mana'],
-  'stat-skill': ['precision'],
+  'stat-dexterity': ['precision'],
   'stat-speed': ['evasion'],
   'stat-luck': ['precision'],
   'stat-defense': ['guard'],

@@ -857,7 +857,7 @@ describe('gear effects', () => {
     maxHealth: 20,
     strength: 6,
     defense: 1,
-    skill: 5,
+    dexterity: 5,
     speed: 3,
     luck: 2,
     weapon: arms({ power: 2, crit: 5 }),
