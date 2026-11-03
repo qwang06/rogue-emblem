@@ -24,7 +24,7 @@ describe('Acolyte', () => {
     expect(acolyte.maxMana).toBe(ACOLYTE_STATS.mana);
     expect(acolyte.strength).toBe(ACOLYTE_STATS.strength);
     expect(acolyte.intelligence).toBe(ACOLYTE_STATS.intelligence);
-    expect(acolyte.skill).toBe(ACOLYTE_STATS.skill);
+    expect(acolyte.dexterity).toBe(ACOLYTE_STATS.dexterity);
     expect(acolyte.speed).toBe(ACOLYTE_STATS.speed);
     expect(acolyte.luck).toBe(ACOLYTE_STATS.luck);
     expect(acolyte.defense).toBe(ACOLYTE_STATS.defense);

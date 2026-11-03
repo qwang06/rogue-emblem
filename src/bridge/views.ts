@@ -65,7 +65,7 @@ export interface UnitView {
   maxMana: number;
   strength: number;
   intelligence: number;
-  skill: number;
+  dexterity: number;
   speed: number;
   luck: number;
   defense: number;
@@ -376,7 +376,7 @@ export function toUnitView(unit: Unit | null | undefined): UnitView | null {
     maxMana: unit.maxMana,
     strength: unit.strength,
     intelligence: unit.intelligence,
-    skill: unit.skill,
+    dexterity: unit.dexterity,
     speed: unit.speed,
     luck: unit.luck,
     defense: unit.defense + unit.armorDefense,
@@ -410,7 +410,7 @@ export function toUnitView(unit: Unit | null | undefined): UnitView | null {
 const DETAIL_STATS: readonly (readonly [Exclude<GrowthStat, 'health' | 'mana'>, string])[] = Object.freeze([
   ['strength', 'STR'],
   ['intelligence', 'INT'],
-  ['skill', 'SKL'],
+  ['dexterity', 'DEX'],
   ['speed', 'SPD'],
   ['luck', 'LCK'],
   ['defense', 'DEF'],
@@ -433,7 +433,7 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
   const bonus = getStandingCombatBonus([...unit.modifiers, ...getStatusModifiers(unit.statuses)]);
   const quirk = unit.quirk ? findQuirk(unit.quirk) : null;
   const rates = {
-    skill: unit.skill,
+    dexterity: unit.dexterity,
     luck: unit.luck,
     speed: unit.speed,
     strength: unit.strength,
@@ -679,7 +679,7 @@ const LEVEL_UP_STATS: readonly (readonly [GrowthStat, string])[] = Object.freeze
   ['mana', 'MP'],
   ['strength', 'STR'],
   ['intelligence', 'INT'],
-  ['skill', 'SKL'],
+  ['dexterity', 'DEX'],
   ['speed', 'SPD'],
   ['luck', 'LCK'],
   ['defense', 'DEF'],
@@ -802,7 +802,7 @@ export function toRewardAction(reward: Reward, index: number, run: RunState | nu
             ['HP', unit.maxHealth],
             ['STR', unit.strength],
             ['INT', unit.intelligence],
-            ['SKL', unit.skill],
+            ['DEX', unit.dexterity],
             ['SPD', unit.speed],
             ['DEF', unit.defense],
             ['RES', unit.resistance],

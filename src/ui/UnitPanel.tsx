@@ -9,7 +9,7 @@ import { useGameStore } from './useGameStore.ts';
 const STATS = [
   ['STR', 'strength'],
   ['INT', 'intelligence'],
-  ['SKL', 'skill'],
+  ['DEX', 'dexterity'],
   ['SPD', 'speed'],
   ['LCK', 'luck'],
   ['DEF', 'defense'],

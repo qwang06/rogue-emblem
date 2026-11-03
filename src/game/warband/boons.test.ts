@@ -118,7 +118,7 @@ describe('rollBoons', () => {
     for (const passive of BOONS.filter((b) => b.kind === 'passive')) {
       while (isBoonEligible(unit, passive)) takeBoon(unit, passive);
     }
-    for (const stat of ['maxHealth', 'strength', 'skill', 'speed', 'luck', 'defense', 'resistance'] as const) {
+    for (const stat of ['maxHealth', 'strength', 'dexterity', 'speed', 'luck', 'defense', 'resistance'] as const) {
       unit[stat] = 99;
     }
     for (const id of ['skill-lunge', 'skill-phalanx', 'skill-taunt']) applyModifiers(unit, boon(id).modifiers);

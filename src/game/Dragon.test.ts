@@ -20,7 +20,7 @@ describe('Dragon', () => {
     expect(dragon.health).toBe(DRAGON_STATS.health);
     expect(dragon.maxMana).toBe(0);
     expect(dragon.strength).toBe(DRAGON_STATS.strength);
-    expect(dragon.skill).toBe(DRAGON_STATS.skill);
+    expect(dragon.dexterity).toBe(DRAGON_STATS.dexterity);
     expect(dragon.speed).toBe(DRAGON_STATS.speed);
     expect(dragon.luck).toBe(DRAGON_STATS.luck);
     expect(dragon.defense).toBe(DRAGON_STATS.defense);

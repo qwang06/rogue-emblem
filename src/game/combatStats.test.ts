@@ -16,9 +16,9 @@ import {
 const weapon = (overrides = {}) => ({ hit: 80, crit: 0, weight: 0, ...overrides });
 
 describe('getHit', () => {
-  it('is weapon hit + skill × 2 + luck / 2, rounded down', () => {
-    expect(getHit({ skill: 3, luck: 3, weapon: weapon() })).toBe(80 + 6 + 1);
-    expect(getHit({ skill: 3, luck: 3, weapon: weapon({ hit: 65 }) })).toBe(65 + 6 + 1);
+  it('is weapon hit + dexterity × 2 + luck / 2, rounded down', () => {
+    expect(getHit({ dexterity: 3, luck: 3, weapon: weapon() })).toBe(80 + 6 + 1);
+    expect(getHit({ dexterity: 3, luck: 3, weapon: weapon({ hit: 65 }) })).toBe(65 + 6 + 1);
   });
 
   it('is the weapon hit with no stats', () => {
@@ -26,8 +26,8 @@ describe('getHit', () => {
   });
 
   it('has no weapon hit without a weapon', () => {
-    expect(getHit({ skill: 3, luck: 3 })).toBe(7);
-    expect(getHit({ skill: 3, weapon: null })).toBe(6);
+    expect(getHit({ dexterity: 3, luck: 3 })).toBe(7);
+    expect(getHit({ dexterity: 3, weapon: null })).toBe(6);
   });
 });
 
@@ -75,13 +75,13 @@ describe('getAvoid', () => {
 });
 
 describe('getCrit and getDodge', () => {
-  it('crit is skill / 2, rounded down', () => {
-    expect(getCrit({ skill: 7 })).toBe(3);
+  it('crit is dexterity / 2, rounded down', () => {
+    expect(getCrit({ dexterity: 7 })).toBe(3);
     expect(getCrit({})).toBe(0);
   });
 
   it("crit adds the weapon's crit", () => {
-    expect(getCrit({ skill: 7, weapon: weapon({ crit: 10 }) })).toBe(13);
+    expect(getCrit({ dexterity: 7, weapon: weapon({ crit: 10 }) })).toBe(13);
   });
 
   it('dodge is luck', () => {
@@ -93,7 +93,7 @@ describe('getCrit and getDodge', () => {
 describe('getHitChance', () => {
   it('is hit minus avoid', () => {
     // 80 weapon hit + 6 + 1 = 87 vs 3 × 2 + 2 = 8.
-    expect(getHitChance({ skill: 3, luck: 2, weapon: weapon() }, { speed: 3, luck: 2 })).toBe(79);
+    expect(getHitChance({ dexterity: 3, luck: 2, weapon: weapon() }, { speed: 3, luck: 2 })).toBe(79);
   });
 
   it('clamps at 0', () => {
@@ -101,21 +101,21 @@ describe('getHitChance', () => {
   });
 
   it('clamps at 100', () => {
-    expect(getHitChance({ skill: 30, weapon: weapon() }, {})).toBe(100);
+    expect(getHitChance({ dexterity: 30, weapon: weapon() }, {})).toBe(100);
   });
 });
 
 describe('getCritChance', () => {
   it('is crit minus dodge', () => {
-    expect(getCritChance({ skill: 10 }, { luck: 2 })).toBe(3);
+    expect(getCritChance({ dexterity: 10 }, { luck: 2 })).toBe(3);
   });
 
   it('clamps at 0 when luck outweighs skill', () => {
-    expect(getCritChance({ skill: 3 }, { luck: 2 })).toBe(0);
+    expect(getCritChance({ dexterity: 3 }, { luck: 2 })).toBe(0);
   });
 
   it('clamps at 100', () => {
-    expect(getCritChance({ skill: 400 }, {})).toBe(100);
+    expect(getCritChance({ dexterity: 400 }, {})).toBe(100);
   });
 });
 

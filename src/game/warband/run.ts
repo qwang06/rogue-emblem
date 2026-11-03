@@ -64,7 +64,7 @@ export interface UnitSnapshot {
   maxMana: number;
   strength: number;
   intelligence: number;
-  skill: number;
+  dexterity: number;
   speed: number;
   luck: number;
   defense: number;
@@ -195,7 +195,7 @@ const STAT_FIELDS = Object.freeze([
   'maxMana',
   'strength',
   'intelligence',
-  'skill',
+  'dexterity',
   'speed',
   'luck',
   'defense',
@@ -392,13 +392,20 @@ export function serializeRun(run: RunState): string {
 }
 
 // Saves from before the magic stat was renamed intelligence store a
-// unit's `magic` and the `stat-magic` boon; a JSON.parse reviver that
-// reads them under their new names, so those runs still load.
-function renameMagicStat(_key: string, value: unknown): unknown {
+// unit's `magic` and the `stat-magic` boon, and saves from before skill
+// was renamed dexterity its `skill` (a number, unlike a skill) and the
+// `stat-skill` boon; a JSON.parse reviver that reads them under their new
+// names, so those runs still load.
+function renameOldStats(_key: string, value: unknown): unknown {
   if (value === 'stat-magic') return 'stat-intelligence';
+  if (value === 'stat-skill') return 'stat-dexterity';
   if (isRecord(value) && 'magic' in value && !('intelligence' in value)) {
     const { magic, ...rest } = value;
-    return { ...rest, intelligence: magic };
+    return renameOldStats(_key, { ...rest, intelligence: magic });
+  }
+  if (isRecord(value) && typeof value.skill === 'number' && !('dexterity' in value)) {
+    const { skill, ...rest } = value;
+    return { ...rest, dexterity: skill };
   }
   return value;
 }
@@ -413,7 +420,7 @@ export function parseRun(
 ): RunState | null {
   let data: unknown;
   try {
-    data = JSON.parse(text, renameMagicStat);
+    data = JSON.parse(text, renameOldStats);
   } catch {
     return null;
   }

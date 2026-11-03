@@ -208,7 +208,7 @@ describe('getLevelUpGains', () => {
   });
 
   it('is the same every time for the same growths and step', () => {
-    const growths = { health: 100, mana: 25, strength: 100, skill: 50, speed: 25, defense: 25 };
+    const growths = { health: 100, mana: 25, strength: 100, dexterity: 50, speed: 25, defense: 25 };
     expect(getLevelUpGains(growths, 5)).toEqual(getLevelUpGains(growths, 5));
   });
 
@@ -217,7 +217,7 @@ describe('getLevelUpGains', () => {
       health: 50,
       mana: 75,
       intelligence: 100,
-      skill: 25,
+      dexterity: 25,
       speed: 25,
       luck: 25,
       defense: 25,
@@ -229,7 +229,7 @@ describe('getLevelUpGains', () => {
   });
 
   it('keeps every stat within a point of its share', () => {
-    const growths = { health: 100, mana: 25, strength: 100, skill: 50, speed: 25, defense: 25 };
+    const growths = { health: 100, mana: 25, strength: 100, dexterity: 50, speed: 25, defense: 25 };
     for (const steps of [1, 3, 4, 7, 12, 30]) {
       const got = totals(growths, steps);
       for (const stat of GROWTH_STATS) {
@@ -240,7 +240,7 @@ describe('getLevelUpGains', () => {
 
   it('adds up to floor(levels × growth total / 100)', () => {
     expect(sum(totals({ strength: 45 }, 9))).toBe(4);
-    expect(sum(totals({ strength: 85, skill: 40 }, 4))).toBe(5);
+    expect(sum(totals({ strength: 85, dexterity: 40 }, 4))).toBe(5);
   });
 
   it('treats missing and negative growths as 0', () => {
@@ -288,7 +288,7 @@ describe('resolveExperienceGain', () => {
     maxMana: 5,
     strength: 4,
     intelligence: 0,
-    skill: 3,
+    dexterity: 3,
     speed: 3,
     luck: 2,
     defense: 2,

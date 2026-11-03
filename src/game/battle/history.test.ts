@@ -17,7 +17,7 @@ function battle() {
     {
       hero: { unit: makeTestUnit({ team: 'player' }), at: { x: 0, y: 0 } },
       ally: { unit: makeTestUnit({ team: 'player' }), at: { x: 0, y: 1 } },
-      foe: { unit: makeTestUnit({ team: 'enemy', skill: 0 }), at: { x: 4, y: 0 } },
+      foe: { unit: makeTestUnit({ team: 'enemy', dexterity: 0 }), at: { x: 4, y: 0 } },
     },
     { height: 2 },
   );

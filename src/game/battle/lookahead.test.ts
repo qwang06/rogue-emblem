@@ -13,7 +13,7 @@ const wait = (unitId: string, x: number): BattleCommand[] => [
 ];
 
 // A unit that misses often, so the dice decide what happens.
-const unsure = (team: 'player' | 'enemy') => makeTestUnit({ team, skill: 0, speed: 0, luck: 0 });
+const unsure = (team: 'player' | 'enemy') => makeTestUnit({ team, dexterity: 0, speed: 0, luck: 0 });
 
 // A unit that stays put on its phase, like a boss.
 const holding = (unit: Unit): Unit => {

@@ -20,7 +20,7 @@ describe('Minotaur', () => {
     expect(minotaur.health).toBe(MINOTAUR_STATS.health);
     expect(minotaur.maxMana).toBe(0);
     expect(minotaur.strength).toBe(MINOTAUR_STATS.strength);
-    expect(minotaur.skill).toBe(MINOTAUR_STATS.skill);
+    expect(minotaur.dexterity).toBe(MINOTAUR_STATS.dexterity);
     expect(minotaur.speed).toBe(MINOTAUR_STATS.speed);
     expect(minotaur.luck).toBe(MINOTAUR_STATS.luck);
     expect(minotaur.defense).toBe(MINOTAUR_STATS.defense);

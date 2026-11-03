@@ -4,13 +4,13 @@ import { Unit, type ClassUnitOptions } from './Unit.ts';
 import { IRON_AXE, weaponEntry, type WeaponType } from './weapons.ts';
 
 // Brawny and wild: more health and strength than a soldier (enough to
-// swing an Iron Axe unslowed), less skill, speed and luck.
+// swing an Iron Axe unslowed), less dexterity, speed and luck.
 export const VANGUARD_STATS = Object.freeze({
   health: 12,
   mana: 5,
   strength: 5,
   intelligence: 0,
-  skill: 2,
+  dexterity: 2,
   speed: 2,
   luck: 1,
   defense: 2,
@@ -26,7 +26,7 @@ export const VANGUARD_GROWTHS = Object.freeze({
   mana: 25,
   strength: 100,
   intelligence: 0,
-  skill: 50,
+  dexterity: 50,
   speed: 25,
   luck: 0,
   defense: 25,
