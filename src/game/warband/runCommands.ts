@@ -7,13 +7,14 @@
 // script or an AI (see runner.ts), so both take the same path. Pure: each command takes a session to a new one and
 // leaves the old one alone.
 
+import { GEAR_SLOT_ORDER, type GearSlot } from '../equipment.ts';
 import type { BattleOutcome } from '../turns.ts';
 import { canRest, hasMerchant, restAtCamp } from './camp.ts';
 import {
-  canEquipInRoster,
+  canUnequip,
   canGiveFromConvoy,
   canStoreInConvoy,
-  equipInRoster,
+  unequipToConvoy,
   giveFromConvoy,
   storeInConvoy,
 } from './convoy.ts';
@@ -104,12 +105,13 @@ export type RunCommand =
   | { type: 'buy'; itemId: string; unitId?: string }
   // Camp: sells the convoy entry at `convoyIndex`.
   | { type: 'sell'; convoyIndex: number }
-  // Camp: hands the convoy entry at `convoyIndex` to a unit.
+  // Camp: hands the convoy entry at `convoyIndex` to a unit: a consumable
+  // into its bag, gear into its slot (see convoy.ts).
   | { type: 'give'; unitId: string; convoyIndex: number }
-  // Camp: puts a unit's item at `itemIndex` in the convoy.
+  // Camp: puts one of a unit's bag item at `itemIndex` in the convoy.
   | { type: 'store'; unitId: string; itemIndex: number }
-  // Camp: equips (or wears) a unit's item at `itemIndex`.
-  | { type: 'equip'; unitId: string; itemIndex: number }
+  // Camp: takes off a unit's gear in `slot`, into the convoy.
+  | { type: 'unequip'; unitId: string; slot: GearSlot }
   // Camp: spends a Master Seal to promote a unit to `promotionId` (see
   // promotion.ts).
   | { type: 'promote'; unitId: string; promotionId: string }
@@ -156,7 +158,7 @@ const CAMP_COMMANDS: ReadonlySet<RunCommandType> = new Set([
   'sell',
   'give',
   'store',
-  'equip',
+  'unequip',
   'promote',
   'learn-secondary',
   'march',
@@ -408,11 +410,11 @@ export function applyRunCommand(
         return fail(`Can't store ${command.unitId}'s item ${command.itemIndex}`);
       }
       return camp(storeInConvoy(run, command.unitId, command.itemIndex));
-    case 'equip':
-      if (!canEquipInRoster(run, command.unitId, command.itemIndex)) {
-        return fail(`Can't equip ${command.unitId}'s item ${command.itemIndex}`);
+    case 'unequip':
+      if (!canUnequip(run, command.unitId, command.slot)) {
+        return fail(`${command.unitId} wears nothing in ${command.slot}`);
       }
-      return camp(equipInRoster(run, command.unitId, command.itemIndex));
+      return camp(unequipToConvoy(run, command.unitId, command.slot));
     case 'promote':
       if (!canPromoteInRun(run, command.unitId, command.promotionId)) {
         return fail(`Can't promote ${command.unitId} to ${command.promotionId}`);
@@ -499,8 +501,10 @@ export function getLegalRunCommands(
     });
     unit.items.forEach((_, itemIndex) => {
       if (canStoreInConvoy(run, unitId, itemIndex)) commands.push({ type: 'store', unitId, itemIndex });
-      if (canEquipInRoster(run, unitId, itemIndex)) commands.push({ type: 'equip', unitId, itemIndex });
     });
+    for (const slot of GEAR_SLOT_ORDER) {
+      if (canUnequip(run, unitId, slot)) commands.push({ type: 'unequip', unitId, slot });
+    }
     for (const { classId, source } of getLessons(run, unitId)) {
       if (source) commands.push({ type: 'learn-secondary', unitId, classId });
     }

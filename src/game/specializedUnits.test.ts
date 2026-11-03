@@ -91,9 +91,9 @@ describe.each(CLASSES)('%s', (id, label, create, stats, growths, weaponTypes, it
     expect(unit.weaponTypes).toEqual(weaponTypes);
   });
 
-  it('carries its starting items and can wield its weapon', () => {
+  it('carries its starting potions in its bag and fights with its weapon', () => {
     const unit = build({ team: 'player' });
-    expect(unit.items).toEqual(items);
+    expect(unit.items).toEqual(items.filter(({ item }) => item.kind === 'consumable'));
     expect(unit.weapon).toEqual(items[0].item);
   });
 

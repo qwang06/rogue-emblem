@@ -8,11 +8,12 @@
 // (see experience.ts), which decide what a level up raises, and the weapon
 // types they master; the skills a unit knows come from its class's skill
 // tree and its level, and from its secondary class's (see skills.ts).
-// Items it carries — consumables and weapons — are an inventory from
-// items.ts; the first weapon in it the unit can wield is the one it fights
-// with (see weapons.ts), which sets its range and the kind of damage it
-// deals, and it wears the first armor of each slot it carries, which adds
-// to its defense (see items.ts).
+// It wears gear in slots (see equipment.ts): a weapon or staff in its main
+// hand, armor elsewhere; its bag holds consumables (items.ts), and the
+// weapons its body comes with (fists, natural weapons, spells it knows) are
+// its innate attacks. It fights with one of its attacks — the main-hand
+// weapon or an innate one — which sets its range and the kind of damage it
+// deals (see weapons.ts), and its worn armor adds to its defense.
 // Striking with a tome often enough teaches its spell (see tomes.ts).
 
 import type { Rng } from './combatStats.ts';
@@ -24,38 +25,37 @@ import {
   type GrowthTable,
   type StatGains,
 } from './experience.ts';
-import { spendStaffUse, type Staff } from './healing.ts';
+import type { CarriedStaff } from './healing.ts';
 import {
-  canUseShield,
   createInventory,
   findItem,
-  getArmorDefense,
-  getArmorWeight,
-  getWornArmor,
-  wearArmor,
-  type Armor,
   getItemRecovery,
   removeItem,
+  type Armor,
   type Inventory,
   type InventoryEntry,
   type Consumable,
   type Item,
 } from './items.ts';
+import {
+  createLoadout,
+  getArmorDefense,
+  getArmorWeight,
+  getGearLayout,
+  getMainStaff,
+  getMainWeapon,
+  getWornArmor,
+  hasHandFree,
+  type Equipment,
+  type GearLayout,
+} from './equipment.ts';
 import { getDefaultFaction, type FactionId } from './factions.ts';
 import type { Modifier } from './modifiers.ts';
 import type { StatusId } from './statuses.ts';
 import type { Curse } from './curses.ts';
-import { getTomeSpell, isTome, knowsSpell, learnSpell, recordTomeUse, type TomeProgress } from './tomes.ts';
+import { getTomeSpell, isTome, knowsSpell, recordTomeUse, type TomeProgress } from './tomes.ts';
 import type { Team } from './turns.ts';
-import {
-  equipWeapon,
-  getEquippedWeapon,
-  getWieldableWeapons,
-  spendWeaponUse,
-  type EquippedWeapon,
-  type Weapon,
-  type WeaponType,
-} from './weapons.ts';
+import type { EquippedWeapon, Weapon, WeaponType } from './weapons.ts';
 
 // A standout enemy: its stage's boss, or an elite at an elite lair.
 export type UnitRank = 'boss' | 'elite';
@@ -77,7 +77,13 @@ export interface UnitOptions {
   movement: number;
   weaponTypes?: readonly WeaponType[];
   team: Team;
+  // Its kit as one list (a class's starting kit): sorted into equipment,
+  // innate attacks and the bag by createLoadout (see equipment.ts), and
+  // anything that doesn't fit is dropped. `equipment` and `innate`, when
+  // given, replace what the list would put there.
   items?: readonly InventoryEntry[];
+  equipment?: Equipment;
+  innate?: readonly Weapon[];
   growths?: GrowthTable;
   // Percent of each XP gain the unit earns (see scaleExperience).
   experienceRate?: number;
@@ -120,7 +126,16 @@ export class Unit {
   team: Team;
   // Its faction (factions.ts), or null for a neutral unit or a monster.
   faction: FactionId | null;
+  // Its bag: consumables only (see items.ts).
   items: Inventory;
+  // The gear it wears, by slot (see equipment.ts).
+  equipment: Equipment;
+  // The weapons its body comes with: fists, natural weapons, spells it
+  // knows. Never gear: they can't be taken off or handed over.
+  innate: readonly Weapon[];
+  // Which of its attacks (see attacks) it fights with, by attack index.
+  // Picked in battle; never saved.
+  attackIndex = 0;
   growths: GrowthTable;
   experienceRate: number;
   tomeProgress: TomeProgress;
@@ -190,6 +205,8 @@ export class Unit {
     weaponTypes = [],
     team,
     items = [],
+    equipment,
+    innate,
     growths = {},
     experienceRate = DEFAULT_EXPERIENCE_RATE,
     tomeProgress = {},
@@ -214,7 +231,10 @@ export class Unit {
     this.weaponTypes = Object.freeze([...weaponTypes]);
     this.team = team;
     this.faction = faction === undefined ? getDefaultFaction(team) : faction;
-    this.items = createInventory(items);
+    const loadout = createLoadout(createInventory(items, Infinity), getGearLayout(unitClass), unitClass);
+    this.items = loadout.bag;
+    this.equipment = equipment ?? loadout.equipment;
+    this.innate = Object.freeze([...(innate ?? loadout.innate)]);
     this.growths = growths;
     this.experienceRate = experienceRate;
     this.tomeProgress = Object.freeze({ ...tomeProgress });
@@ -255,97 +275,86 @@ export class Unit {
     return this.mana;
   }
 
-  // The weapon it fights with — the first in its inventory it can wield —
-  // or null if it has none (then it can't attack or counter).
+  // The slots it has: a humanoid's paper doll or a monster's.
+  get gearLayout(): GearLayout {
+    return getGearLayout(this.unitClass);
+  }
+
+  // The weapon it fights with — its picked attack — or null if it has none
+  // (then it can't attack or counter).
   get weapon(): Weapon | null {
     return this.equippedWeapon?.weapon ?? null;
   }
 
-  // Uses the equipped weapon has left, or null if it never breaks (or
-  // there's no weapon).
-  get weaponUses(): number | null {
-    return this.equippedWeapon?.uses ?? null;
+  // Its attacks in their fixed order, by index: the main-hand weapon, then
+  // its innate weapons.
+  private get attackList(): EquippedWeapon[] {
+    const main = getMainWeapon(this.equipment);
+    return [...(main ? [main] : []), ...this.innate].map((weapon, index) => ({ weapon, index }));
   }
 
-  // The equipped weapon with its inventory slot and uses left, or null.
+  // The attack it fights with, or null if it has none.
   get equippedWeapon(): EquippedWeapon | null {
-    return getEquippedWeapon(this.items, this.weaponTypes);
+    const list = this.attackList;
+    return list.find(({ index }) => index === this.attackIndex) ?? list[0] ?? null;
   }
 
-  // The armor it wears (the first of each slot it carries, a shield only
-  // with a hand free for it), with slots.
-  get wornArmor(): { armor: Armor; index: number }[] {
-    return getWornArmor(this.items, this.weaponTypes);
+  // Every attack it can make, the one it fights with first.
+  get wieldableWeapons(): EquippedWeapon[] {
+    const picked = this.equippedWeapon;
+    const rest = this.attackList.filter(({ index }) => index !== picked?.index);
+    return picked ? [picked, ...rest] : rest;
   }
 
-  // Whether it has a hand free for a shield: its equipped weapon takes one
-  // hand and it carries no staff (see canUseShield).
+  // The staves it can heal with: the one in its main hand, if any.
+  get staves(): CarriedStaff[] {
+    const staff = getMainStaff(this.equipment);
+    return staff ? [{ staff, index: 0 }] : [];
+  }
+
+  // The armor it wears, in slot order.
+  get wornArmor(): Armor[] {
+    return getWornArmor(this.equipment);
+  }
+
+  // Whether its off hand is free for a shield (see hasHandFree).
   get canUseShield(): boolean {
-    return canUseShield(this.items, this.weaponTypes);
+    return hasHandFree(this.equipment);
   }
 
   // What its worn armor adds to its defense against physical hits.
   get armorDefense(): number {
-    return getArmorDefense(this.items, this.weaponTypes);
+    return getArmorDefense(this.equipment);
   }
 
   // What its worn armor weighs; it slows the unit along with its weapon.
   get armorWeight(): number {
-    return getArmorWeight(this.items, this.weaponTypes);
+    return getArmorWeight(this.equipment);
   }
 
-  // Wears the armor in inventory slot `index` (moving it to the front).
-  // Throws if there's no armor there.
-  wear(index: number): Armor {
-    const armor = this.items[index]?.item;
-    this.items = wearArmor(this.items, index);
-    return armor as Armor;
-  }
-
-  // Every weapon it carries and can wield, equipped first.
-  get wieldableWeapons(): EquippedWeapon[] {
-    return getWieldableWeapons(this.items, this.weaponTypes);
-  }
-
-  // Equips the weapon in inventory slot `index` (moving it to the front).
-  // Throws if there's no weapon it can wield there.
+  // Fights with attack `index` (see wieldableWeapons) from now on. Throws if
+  // it has no such attack.
   equip(index: number): Weapon {
-    this.items = equipWeapon(this.items, index, this.weaponTypes);
-    return this.weapon!;
+    const attack = this.attackList.find((candidate) => candidate.index === index);
+    if (!attack) throw new Error(`${this.name} has no attack ${index}`);
+    this.attackIndex = index;
+    return attack.weapon;
   }
 
-  // Spends one use of the equipped weapon, for a strike made with it.
-  // Returns { weapon, broke, learned, leftover }: a weapon that runs out is
-  // removed from the inventory, and the next one it can wield (if any) is
-  // equipped. A strike with a tome whose spell it doesn't know counts
-  // towards learning it; the strike that learns it puts the spell in the
-  // tome's slot (`learned` is the spell, else null) and keeps the tome if
-  // there's room, else hands it back as `leftover` (see learnSpell).
-  // Throws if it has no weapon.
-  spendWeaponUse(): { weapon: Weapon; broke: boolean; learned: Weapon | null; leftover: InventoryEntry | null } {
-    const equipped = this.equippedWeapon;
-    if (!equipped) throw new Error(`${this.name} has no weapon`);
-    const { weapon } = equipped;
-    const { inventory, broke } = spendWeaponUse(this.items, equipped.index);
-    this.items = inventory;
-    if (!isTome(weapon) || knowsSpell(this.items, weapon)) return { weapon, broke, learned: null, leftover: null };
+  // Records a strike with the weapon it fights with. Weapons never break;
+  // a strike with a tome whose spell it doesn't know counts towards
+  // learning it, and the strike that learns it adds the spell to its innate
+  // attacks (`learned` is the spell, else null). Throws if it has no weapon.
+  recordStrike(): { weapon: Weapon; learned: Weapon | null } {
+    const weapon = this.weapon;
+    if (!weapon) throw new Error(`${this.name} has no weapon`);
+    if (!isTome(weapon) || knowsSpell(this.innate, weapon)) return { weapon, learned: null };
     const { progress, learned } = recordTomeUse(this.tomeProgress, weapon);
     this.tomeProgress = progress;
-    if (!learned) return { weapon, broke, learned: null, leftover: null };
+    if (!learned) return { weapon, learned: null };
     const spell = getTomeSpell(weapon);
-    const taught = learnSpell(this.items, broke ? null : equipped.index, spell);
-    this.items = taught.inventory;
-    return { weapon, broke, learned: spell, leftover: taught.leftover };
-  }
-
-  // Spends one use of the staff in inventory slot `index`, for a heal made
-  // with it. Returns { staff, broke }: a staff that runs out is removed
-  // from the inventory. Throws if there's no staff there.
-  spendStaffUse(index: number): { staff: Staff; broke: boolean } {
-    const staff = this.items[index]?.item as Staff | undefined;
-    const { inventory, broke } = spendStaffUse(this.items, index);
-    this.items = inventory;
-    return { staff: staff!, broke };
+    this.innate = Object.freeze([...this.innate, spell]);
+    return { weapon, learned: spell };
   }
 
   // Uses one of the consumable itemId from the inventory, restoring its

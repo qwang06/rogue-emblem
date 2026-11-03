@@ -8,7 +8,7 @@
 import { planPlayerDeployment, planPlayerTurn } from '../battle/playerAI.ts';
 import type { BattleState } from '../battle/state.ts';
 import { isStaff } from '../healing.ts';
-import { isArmor, MASTER_SEAL, type Item } from '../items.ts';
+import { MASTER_SEAL, type Item } from '../items.ts';
 import { getPromotions } from '../promotions.ts';
 import { createSeededRng, randomItem } from '../rng.ts';
 import type { Unit } from '../Unit.ts';
@@ -28,9 +28,6 @@ import { getBoonOffer, type BoonOffer } from './levelUpPicks.ts';
 import { getAffinityWeight, getUnitTagCounts, type TagCounts } from './boonTags.ts';
 import { getRecruitOffers, getRelicOffers, getRewardOffers, type RunCommand, type RunSession } from './runCommands.ts';
 
-// A weapon or staff with this many uses or fewer is about to break: the
-// unit wants a spare.
-export const LOW_USES = 5;
 // Rest at once when anyone deploying is under this share of their HP...
 export const REST_BELOW_HEALTH = 0.5;
 // ...and otherwise when the deploying units are missing this share of
@@ -331,49 +328,22 @@ function getMissingHealthShare(units: readonly UnitSnapshot[]): number {
 
 // What arms `snapshot` for the next stage, or null when it already is (or
 // nothing can). A healer (isHealer) is armed with a staff, anyone else
-// with a weapon it can wield.
+// with a weapon its class is trained in, in the main hand.
 function armUnit(run: RunState, snapshot: UnitSnapshot, stock: readonly string[]): RunCommand | null {
   const unit = restoreUnit(snapshot);
   const heals = isHealer(snapshot.classId);
+  if (unit.gearLayout !== 'humanoid') return null;
   const fits = (item: Item) => (heals ? isStaff(item) : isWeapon(item) && canWield(unit.weaponTypes, item));
-  // A unit carrying a shield would rather equip a one-handed weapon, so it
-  // keeps the shield's defense (see canUseShield).
-  const shielded = unit.items.some((entry) => isArmor(entry.item) && entry.item.slot === 'shield');
-  const carried = unit.items
-    .map((entry, index) => ({
-      index,
-      uses: usesOf(entry.item, entry.quantity),
-      fits: fits(entry.item),
-      freesHand: !shielded || !isWeapon(entry.item) || entry.item.hands === 1,
-    }))
-    .filter((entry) => entry.fits);
-  const held = carried.find((entry) => entry.index === getHeldIndex(unit, heals));
-  if (held && held.uses > LOW_USES) return null;
-  // The one with the most uses, a one-handed one first among those that
-  // won't run out soon.
-  const rank = (entry: (typeof carried)[number]) => [
-    entry.uses > LOW_USES ? 1 : 0,
-    entry.freesHand ? 1 : 0,
-    entry.uses,
-  ];
-  const best = carried.reduce<(typeof carried)[number] | null>(
-    (top, entry) => (!top || compareRanks(rank(entry), rank(top)) > 0 ? entry : top),
-    null,
-  );
-  if (best && best.uses > LOW_USES) {
-    // A staff is used from anywhere in the inventory; only weapons equip.
-    return heals ? null : { type: 'equip', unitId: snapshot.id, itemIndex: best.index };
-  }
-  const convoyIndex = run.convoy.findIndex(
-    (entry, index) =>
-      fits(lookUpItem(entry.itemId)) &&
-      usesOf(lookUpItem(entry.itemId), entry.quantity) > LOW_USES &&
-      canGiveFromConvoy(run, snapshot.id, index),
-  );
-  if (convoyIndex >= 0) return { type: 'give', unitId: snapshot.id, convoyIndex };
-  // Only buy what the unit has room to take, or it would sit in the
-  // convoy and be bought again; and only where there's a merchant.
-  if (!canTakeOneMore(run, snapshot) || !hasMerchant(run)) return null;
+  const main = unit.equipment.main;
+  if (main && fits(main)) return null;
+  // A unit wearing a shield would rather take a one-handed weapon.
+  const shielded = unit.equipment.off !== undefined;
+  const ranked = run.convoy
+    .map((entry, index) => ({ item: lookUpItem(entry.itemId), index }))
+    .filter(({ item, index }) => fits(item) && canGiveFromConvoy(run, snapshot.id, index))
+    .sort((a, b) => Number(freesHand(b.item, shielded)) - Number(freesHand(a.item, shielded)));
+  if (ranked.length > 0) return { type: 'give', unitId: snapshot.id, convoyIndex: ranked[0].index };
+  if (!hasMerchant(run)) return null;
   const [buy] = stock
     .filter((itemId) => fits(lookUpItem(itemId)) && canBuy(run, itemId, stock))
     .sort(
@@ -384,30 +354,15 @@ function armUnit(run: RunState, snapshot: UnitSnapshot, stock: readonly string[]
   return buy ? { type: 'buy', itemId: buy } : null;
 }
 
-// Compares two ranks element by element: positive when `a` is higher.
-function compareRanks(a: readonly number[], b: readonly number[]): number {
-  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] - b[i];
-  return 0;
+// Whether `item` leaves a shield on: anything but a two-handed weapon.
+function freesHand(item: Item, shielded: boolean): boolean {
+  return !shielded || !isWeapon(item) || item.hands === 1;
 }
 
 // Whether units of `classId` heal rather than fight: their class starts
 // with a staff.
 function isHealer(classId: string): boolean {
-  return createUnitOfClass(classId, { name: '', team: 'player' }).items.some((entry) => isStaff(entry.item));
-}
-
-// The inventory slot of what the unit fights or heals with: its equipped
-// weapon, or for a healer its first staff.
-function getHeldIndex(unit: Unit, heals: boolean): number | null {
-  if (!heals) return unit.equippedWeapon?.index ?? null;
-  const index = unit.items.findIndex((entry) => isStaff(entry.item));
-  return index >= 0 ? index : null;
-}
-
-// Uses left of a carried item; a weapon that never breaks counts as endless.
-function usesOf(item: Item, quantity: number): number {
-  if (isWeapon(item)) return item.uses === null ? Infinity : quantity;
-  return isStaff(item) ? quantity : 0;
+  return createUnitOfClass(classId, { name: '', team: 'player' }).staves.length > 0;
 }
 
 // How much a unit of `classId` would rather buy `itemId`: what its class
@@ -416,15 +371,8 @@ function usesOf(item: Item, quantity: number): number {
 function preference(classId: string, itemId: string): number {
   const starter = createUnitOfClass(classId, { name: '', team: 'player' });
   const item = lookUpItem(itemId);
-  const own = starter.items.some((entry) => entry.item.id === itemId);
+  const own = starter.equipment.main?.id === itemId;
   const ranged = isWeapon(item) && item.maxRange > 1;
   const startsRanged = (starter.weapon?.maxRange ?? 1) > 1;
   return (own ? 2 : 0) + (ranged === startsRanged ? 1 : 0);
-}
-
-// Whether the unit has room for one more item from the convoy (a bought
-// one arrives at the convoy's end).
-function canTakeOneMore(run: RunState, snapshot: UnitSnapshot): boolean {
-  const probe = { ...run, convoy: [...run.convoy, { itemId: MERCHANT_STOCK[0], quantity: 1 }] };
-  return canGiveFromConvoy(probe, snapshot.id, probe.convoy.length - 1);
 }

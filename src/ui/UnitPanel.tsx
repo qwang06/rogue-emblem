@@ -104,9 +104,7 @@ export function UnitPanel() {
               <span className="unit-panel__item-label" title={item.equipped ? `${item.label} (equipped)` : item.label}>
                 {item.label}
               </span>
-              <span className="unit-panel__item-quantity">
-                {item.weapon ? (item.quantity ?? '∞') : `×${item.quantity}`}
-              </span>
+              <span className="unit-panel__item-quantity">{item.quantity === null ? '' : `×${item.quantity}`}</span>
             </li>
           ))}
         </ul>

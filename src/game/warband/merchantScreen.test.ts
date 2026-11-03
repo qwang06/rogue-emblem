@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
-import { FISTS, IRON_BOW, IRON_SPEAR, WOODEN_SPEAR, WOODEN_SWORD } from '../weapons.ts';
+import { FISTS, IRON_BOW, IRON_SPEAR, WOODEN_SWORD } from '../weapons.ts';
 import { MERCHANT_STOCK } from './merchant.ts';
 import {
   cancelMerchant,
@@ -78,19 +78,19 @@ describe('confirmMerchant', () => {
     const after = confirmMerchant(asking);
     expect(after.recipients).toBeNull();
     expect(after.run.gold).toBe(0);
-    expect(after.run.convoy).toEqual([{ itemId: IRON_BOW.id, quantity: 40 }]);
+    expect(after.run.convoy).toEqual([{ itemId: IRON_BOW.id, quantity: 1 }]);
   });
 
-  it('opens on a unit the item suits, and buys it straight into its inventory', () => {
+  it('opens on a unit the item suits, and equips it straight on that unit', () => {
     const asking = confirmMerchant(openMerchantScreen(campRun(25)));
     expect(asking.recipients!.selectedIndex).toBe(0);
     const after = confirmMerchant(asking);
     expect(after.run.gold).toBe(5);
-    expect(after.run.convoy).toEqual([]);
-    expect(after.run.roster[0].items.at(-1)).toEqual({ itemId: WOODEN_SWORD.id, quantity: 20 });
+    expect(after.run.roster[0].equipment).toEqual({ main: WOODEN_SWORD.id });
+    expect(after.run.convoy).toEqual([{ itemId: IRON_SPEAR.id, quantity: 1 }]);
   });
 
-  it('opens a weapon on the suited unit whose own weapon has the fewest uses left', () => {
+  it('opens on the first suited unit that can take it', () => {
     const run = createRun(
       7,
       new Map<string, Unit>([
@@ -98,16 +98,14 @@ describe('confirmMerchant', () => {
         ['bram', new Soldier({ name: 'Bram', team: 'player' })],
       ]),
     );
-    const worn = {
+    // Alden holds a bow, so a shield can't go on him.
+    const bowed = {
       ...run,
       gold: 25,
-      roster: run.roster.map((unit) =>
-        unit.id === 'bram'
-          ? { ...unit, items: unit.items.map((entry, i) => (i === 0 ? { ...entry, quantity: 2 } : entry)) }
-          : unit,
-      ),
+      roster: run.roster.map((unit) => (unit.id === 'alden' ? { ...unit, equipment: { main: IRON_BOW.id } } : unit)),
     };
-    const asking = confirmMerchant(openMerchantScreen(worn));
+    const shield = pointMerchantCursor(openMerchantScreen(bowed), 'stock', MERCHANT_STOCK.indexOf('wooden-shield'));
+    const asking = confirmMerchant(shield);
     expect(asking.recipients!.actions[asking.recipients!.selectedIndex].id).toBe('bram');
   });
 
@@ -123,17 +121,11 @@ describe('confirmMerchant', () => {
     expect(cancelMerchant(backedOut)).toBeNull();
   });
 
-  it("won't buy for a unit with no room", () => {
+  it("won't buy for a unit that can't wear it", () => {
     const run = campRun(25);
-    const full = {
-      ...run,
-      roster: run.roster.map((unit) => ({
-        ...unit,
-        items: Array.from({ length: 6 }, () => ({ itemId: IRON_SPEAR.id, quantity: 1 })),
-      })),
-    };
-    const spear = pointMerchantCursor(openMerchantScreen(full), 'stock', MERCHANT_STOCK.indexOf(WOODEN_SPEAR.id));
-    const asking = confirmMerchant(spear);
+    const bowed = { ...run, roster: run.roster.map((unit) => ({ ...unit, equipment: { main: IRON_BOW.id } })) };
+    const shield = pointMerchantCursor(openMerchantScreen(bowed), 'stock', MERCHANT_STOCK.indexOf('wooden-shield'));
+    const asking = confirmMerchant(shield);
     expect(asking.recipients!.actions[0].disabled).toBe(true);
     expect(asking.recipients!.selectedIndex).toBe(1);
     const onUnit = pointMerchantCursor(asking, 'recipients', 0);
@@ -147,13 +139,13 @@ describe('confirmMerchant', () => {
 
   it('sells the highlighted convoy item and keeps the cursor in range', () => {
     const convoy = [
-      { itemId: IRON_SPEAR.id, quantity: 5 },
-      { itemId: WOODEN_SWORD.id, quantity: 20 },
+      { itemId: IRON_SPEAR.id, quantity: 1 },
+      { itemId: WOODEN_SWORD.id, quantity: 1 },
     ];
     const state = pointMerchantCursor(openMerchantScreen(campRun(0, convoy)), 'convoy', 1);
     const after = confirmMerchant(state);
     expect(after.run.gold).toBe(10);
-    expect(after.run.convoy).toEqual([{ itemId: IRON_SPEAR.id, quantity: 5 }]);
+    expect(after.run.convoy).toEqual([{ itemId: IRON_SPEAR.id, quantity: 1 }]);
     expect(after.convoyIndex).toBe(0);
   });
 

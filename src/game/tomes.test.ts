@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { createInventory, HEALTH_POTION, MAX_INVENTORY_SLOTS } from './items.ts';
-import { getTomeSpell, isTome, knowsSpell, learnSpell, recordTomeUse, type Tome } from './tomes.ts';
-import { FIRE, FIRE_SPELL, IRON_SPEAR, NATURAL_WEAPON_IDS, WEAPONS, weaponEntry } from './weapons.ts';
+import { getTomeSpell, isTome, knowsSpell, recordTomeUse, type Tome } from './tomes.ts';
+import { FIRE, FIRE_SPELL, IRON_SPEAR, NATURAL_WEAPON_IDS, WEAPONS } from './weapons.ts';
 
 const FIRE_TOME = FIRE as Tome;
-const potion = { item: HEALTH_POTION, quantity: 1 };
 
 describe('the Fire tome', () => {
   it('is a tome that teaches Fire after 5 strikes', () => {
@@ -13,9 +11,9 @@ describe('the Fire tome', () => {
     expect(getTomeSpell(FIRE_TOME)).toBe(FIRE_SPELL);
   });
 
-  it('teaches a spell with its numbers that never breaks and stays with its learner', () => {
+  it('teaches a spell with its numbers that stays with its learner', () => {
     const { power, hit, crit, weight, minRange, maxRange, type } = FIRE;
-    expect(FIRE_SPELL).toMatchObject({ power, hit, crit, weight, minRange, maxRange, type, uses: null });
+    expect(FIRE_SPELL).toMatchObject({ power, hit, crit, weight, minRange, maxRange, type });
     expect(isTome(FIRE_SPELL)).toBe(false);
     expect(WEAPONS).toContain(FIRE_SPELL);
     expect(NATURAL_WEAPON_IDS.has(FIRE_SPELL.id)).toBe(true);
@@ -36,9 +34,9 @@ describe('getTomeSpell', () => {
 });
 
 describe('knowsSpell', () => {
-  it('is true only when the spell is carried', () => {
-    expect(knowsSpell(createInventory([weaponEntry(FIRE)]), FIRE_TOME)).toBe(false);
-    expect(knowsSpell(createInventory([weaponEntry(FIRE_SPELL)]), FIRE_TOME)).toBe(true);
+  it('is true only when the spell is among the innate attacks', () => {
+    expect(knowsSpell([IRON_SPEAR], FIRE_TOME)).toBe(false);
+    expect(knowsSpell([FIRE_SPELL], FIRE_TOME)).toBe(true);
   });
 });
 
@@ -65,37 +63,5 @@ describe('recordTomeUse', () => {
   it('learns on the first strike from a tome that teaches after one', () => {
     const quick = { ...FIRE_TOME, teaches: { spellId: 'fire-spell', afterUses: 1 } };
     expect(recordTomeUse({}, quick).learned).toBe(true);
-  });
-});
-
-describe('learnSpell', () => {
-  it("puts the spell in the tome's slot and moves the tome to the end", () => {
-    const tome = { item: FIRE, quantity: 25 };
-    const { inventory, leftover } = learnSpell(createInventory([tome, potion]), 0, FIRE_SPELL);
-    expect(inventory).toEqual([weaponEntry(FIRE_SPELL), potion, tome]);
-    expect(leftover).toBeNull();
-    expect(Object.isFrozen(inventory)).toBe(true);
-  });
-
-  it('hands the tome back when there is no room to keep it', () => {
-    const tome = { item: FIRE, quantity: 25 };
-    const fillers = Array.from({ length: MAX_INVENTORY_SLOTS - 1 }, () => weaponEntry(IRON_SPEAR));
-    const { inventory, leftover } = learnSpell(
-      createInventory([...fillers, tome]),
-      MAX_INVENTORY_SLOTS - 1,
-      FIRE_SPELL,
-    );
-    expect(inventory).toEqual([...fillers, weaponEntry(FIRE_SPELL)]);
-    expect(leftover).toEqual(tome);
-  });
-
-  it('adds the spell at the end when the tome broke teaching it', () => {
-    const { inventory, leftover } = learnSpell(createInventory([potion]), null, FIRE_SPELL);
-    expect(inventory).toEqual([potion, weaponEntry(FIRE_SPELL)]);
-    expect(leftover).toBeNull();
-  });
-
-  it('throws when there is no tome at the slot', () => {
-    expect(() => learnSpell(createInventory([potion]), 3, FIRE_SPELL)).toThrow('No tome at slot 3');
   });
 });

@@ -71,49 +71,28 @@ describe('Unit', () => {
     describe('learning from a tome', () => {
       const mage = (items: InventoryEntry[]) => armed(items, ['magical']);
 
-      it('learns Fire on the fifth strike with the Fire tome and keeps the tome', () => {
+      it('learns Fire on the fifth strike with the Fire tome and keeps the tome in hand', () => {
         const unit = mage([weaponEntry(FIRE)]);
         for (let strike = 1; strike < 5; strike++) {
-          expect(unit.spendWeaponUse()).toMatchObject({ weapon: FIRE, learned: null });
+          expect(unit.recordStrike()).toEqual({ weapon: FIRE, learned: null });
           expect(unit.tomeProgress).toEqual({ fire: strike });
         }
-        expect(unit.spendWeaponUse()).toEqual({ weapon: FIRE, broke: false, learned: FIRE_SPELL, leftover: null });
+        expect(unit.recordStrike()).toEqual({ weapon: FIRE, learned: FIRE_SPELL });
         expect(unit.tomeProgress).toEqual({});
-        expect(unit.items).toEqual([weaponEntry(FIRE_SPELL), { item: FIRE, quantity: 25 }]);
-        expect(unit.weapon).toBe(FIRE_SPELL);
+        expect(unit.innate).toEqual([FIRE_SPELL]);
+        expect(unit.equipment.main).toBe(FIRE);
+        expect(unit.wieldableWeapons.map(({ weapon }) => weapon)).toEqual([FIRE, FIRE_SPELL]);
       });
 
       it('picks up where it left off', () => {
         const unit = makeUnit({ items: [weaponEntry(FIRE)], weaponTypes: ['magical'], tomeProgress: { fire: 4 } });
-        expect(unit.spendWeaponUse().learned).toBe(FIRE_SPELL);
-      });
-
-      it('learns even when the strike that teaches it breaks the tome', () => {
-        const unit = mage([{ item: FIRE, quantity: 1 }]);
-        unit.tomeProgress = { fire: 4 };
-        expect(unit.spendWeaponUse()).toEqual({ weapon: FIRE, broke: true, learned: FIRE_SPELL, leftover: null });
-        expect(unit.items).toEqual([weaponEntry(FIRE_SPELL)]);
-      });
-
-      it('hands the tome back when its bag is full', () => {
-        const fillers = Array.from({ length: 5 }, () => ({ item: HEALTH_POTION, quantity: 1 }));
-        const unit = mage([weaponEntry(FIRE), ...fillers]);
-        unit.tomeProgress = { fire: 4 };
-        expect(unit.spendWeaponUse().leftover).toEqual({ item: FIRE, quantity: 29 });
-        expect(unit.items[0]).toEqual(weaponEntry(FIRE_SPELL));
-        expect(unit.items).toHaveLength(6);
+        expect(unit.recordStrike().learned).toBe(FIRE_SPELL);
       });
 
       it('makes no progress once it knows the spell', () => {
         const unit = mage([weaponEntry(FIRE), weaponEntry(FIRE_SPELL)]);
-        expect(unit.spendWeaponUse()).toEqual({ weapon: FIRE, broke: false, learned: null, leftover: null });
+        expect(unit.recordStrike()).toEqual({ weapon: FIRE, learned: null });
         expect(unit.tomeProgress).toEqual({});
-      });
-
-      it('never wears out the learned spell', () => {
-        const unit = mage([weaponEntry(FIRE_SPELL)]);
-        expect(unit.spendWeaponUse()).toMatchObject({ weapon: FIRE_SPELL, broke: false, learned: null });
-        expect(unit.items).toEqual([weaponEntry(FIRE_SPELL)]);
       });
     });
 
@@ -121,58 +100,43 @@ describe('Unit', () => {
       const unit = makeUnit();
       expect(unit.weaponTypes).toEqual([]);
       expect(unit.weapon).toBeNull();
-      expect(unit.weaponUses).toBeNull();
       expect(unit.equippedWeapon).toBeNull();
+      expect(() => unit.recordStrike()).toThrow(/no weapon/);
     });
 
-    it('fights with the first weapon it can wield', () => {
-      const unit = armed([{ item: HEALTH_POTION, quantity: 1 }, weaponEntry(FIRE), weaponEntry(IRON_BOW)]);
+    it('holds the first weapon of its kit in its main hand and its potions in its bag', () => {
+      const unit = armed([{ item: HEALTH_POTION, quantity: 1 }, weaponEntry(IRON_BOW), weaponEntry(IRON_SPEAR)]);
+      expect(unit.equipment.main).toBe(IRON_BOW);
       expect(unit.weapon).toBe(IRON_BOW);
-      expect(unit.weaponUses).toBe(40);
-      expect(unit.equippedWeapon?.index).toBe(2);
+      expect(unit.equippedWeapon).toEqual({ weapon: IRON_BOW, index: 0 });
+      expect(unit.items).toEqual([{ item: HEALTH_POTION, quantity: 1 }]);
     });
 
-    it("can't fight with a weapon it hasn't mastered", () => {
-      expect(armed([weaponEntry(FIRE)]).weapon).toBeNull();
-      expect(armed([weaponEntry(FIRE)], ['magical']).weapon).toBe(FIRE);
+    it('wields any weapon, mastered or not', () => {
+      expect(armed([weaponEntry(FIRE)]).weapon).toBe(FIRE);
     });
 
-    it('lists every weapon it can wield, equipped first', () => {
-      const unit = armed([weaponEntry(IRON_SPEAR), weaponEntry(FIRE), weaponEntry(IRON_BOW)]);
-      expect(unit.wieldableWeapons.map(({ weapon }) => weapon)).toEqual([IRON_SPEAR, IRON_BOW]);
-    });
-
-    it('equips another weapon by moving it to the front', () => {
-      const unit = armed([weaponEntry(IRON_SPEAR), { item: HEALTH_POTION, quantity: 1 }, weaponEntry(IRON_BOW)]);
-      expect(unit.equip(2)).toBe(IRON_BOW);
-      expect(unit.weapon).toBe(IRON_BOW);
-      expect(unit.items.map((e) => e.item.id)).toEqual(['iron-bow', 'iron-spear', 'health-potion']);
-    });
-
-    it("throws when equipping something that isn't a weapon it can wield", () => {
-      const unit = armed([{ item: HEALTH_POTION, quantity: 1 }, weaponEntry(FIRE)]);
-      expect(() => unit.equip(0)).toThrow();
-      expect(() => unit.equip(1)).toThrow();
-    });
-
-    it('wears the equipped weapon down one use per strike', () => {
-      const unit = armed([weaponEntry(IRON_SPEAR)]);
-      expect(unit.spendWeaponUse()).toEqual({ weapon: IRON_SPEAR, broke: false, learned: null, leftover: null });
-      expect(unit.weaponUses).toBe(39);
-    });
-
-    it('loses a weapon that breaks and falls back on the next one', () => {
-      const unit = armed([{ item: IRON_SPEAR, quantity: 1 }, weaponEntry(FISTS)]);
-      expect(unit.spendWeaponUse()).toEqual({ weapon: IRON_SPEAR, broke: true, learned: null, leftover: null });
-      expect(unit.items).toEqual([weaponEntry(FISTS)]);
+    it('lists its main-hand weapon and its innate attacks, the one it fights with first', () => {
+      const unit = armed([weaponEntry(FISTS), weaponEntry(IRON_SPEAR)]);
+      expect(unit.innate).toEqual([FISTS]);
+      expect(unit.wieldableWeapons).toEqual([
+        { weapon: IRON_SPEAR, index: 0 },
+        { weapon: FISTS, index: 1 },
+      ]);
+      expect(unit.equip(1)).toBe(FISTS);
       expect(unit.weapon).toBe(FISTS);
+      expect(unit.wieldableWeapons.map(({ weapon }) => weapon)).toEqual([FISTS, IRON_SPEAR]);
+      expect(unit.equipment.main).toBe(IRON_SPEAR);
     });
 
-    it('is left unarmed when its last weapon breaks', () => {
-      const unit = armed([{ item: IRON_SPEAR, quantity: 1 }]);
-      unit.spendWeaponUse();
-      expect(unit.weapon).toBeNull();
-      expect(() => unit.spendWeaponUse()).toThrow(/no weapon/);
+    it('throws when picking an attack it lacks', () => {
+      expect(() => armed([weaponEntry(IRON_SPEAR)]).equip(1)).toThrow();
+    });
+
+    it('never wears its weapon down', () => {
+      const unit = armed([weaponEntry(IRON_SPEAR)]);
+      for (let strike = 0; strike < 50; strike++) unit.recordStrike();
+      expect(unit.weapon).toBe(IRON_SPEAR);
     });
   });
 
@@ -327,7 +291,7 @@ describe('Unit', () => {
     it('throws for a weapon, which is fought with rather than used', () => {
       const unit = makeUnit({ items: [weaponEntry(IRON_SPEAR)], weaponTypes: ['physical'] });
       expect(() => unit.useItem('iron-spear')).toThrow(/iron-spear/);
-      expect(unit.weaponUses).toBe(40);
+      expect(unit.weapon).toBe(IRON_SPEAR);
     });
   });
 
@@ -387,39 +351,22 @@ describe('Unit', () => {
   });
 
   describe('armor', () => {
-    it('wears the first armor of each slot, adding its defense apart from the stat', () => {
+    it('wears its armor in its slots, adding its defense apart from the stat', () => {
       const unit = makeUnit({
         items: [weaponEntry(IRON_SPEAR), { item: WOODEN_SHIELD, quantity: 1 }, { item: WOODEN_ARMOR, quantity: 1 }],
       });
-      expect(unit.wornArmor.map(({ armor }) => armor.id)).toEqual(['wooden-shield', 'wooden-armor']);
+      expect(unit.equipment).toEqual({ main: IRON_SPEAR, off: WOODEN_SHIELD, body: WOODEN_ARMOR });
+      expect(unit.wornArmor.map((armor) => armor.id)).toEqual(['wooden-shield', 'wooden-armor']);
       expect(unit.armorDefense).toBe(2);
       expect(unit.armorWeight).toBe(3);
       expect(unit.defense).toBe(2);
     });
 
-    it('wears a piece by moving it to the front, keeping the equipped weapon', () => {
-      const unit = makeUnit({
-        weaponTypes: ['physical'],
-        items: [weaponEntry(IRON_SPEAR), { item: WOODEN_SHIELD, quantity: 1 }],
-      });
-      expect(unit.wear(1)).toBe(WOODEN_SHIELD);
-      expect(unit.items[0].item).toBe(WOODEN_SHIELD);
-      expect(unit.weapon).toBe(IRON_SPEAR);
-      expect(() => unit.wear(1)).toThrow(/No armor/);
-    });
-
-    it('takes its shield off while it fights two-handed', () => {
-      const unit = makeUnit({
-        weaponTypes: ['physical'],
-        items: [weaponEntry(IRON_SPEAR), weaponEntry(IRON_BOW), { item: WOODEN_SHIELD, quantity: 1 }],
-      });
-      expect(unit.canUseShield).toBe(true);
-      expect(unit.armorDefense).toBe(1);
-      unit.equip(1);
+    it('has no hand free for a shield with a two-handed weapon', () => {
+      const unit = makeUnit({ items: [weaponEntry(IRON_BOW), { item: WOODEN_SHIELD, quantity: 1 }] });
       expect(unit.canUseShield).toBe(false);
-      expect(unit.wornArmor).toEqual([]);
+      expect(unit.equipment.off).toBeUndefined();
       expect(unit.armorDefense).toBe(0);
-      expect(unit.armorWeight).toBe(0);
     });
 
     it('wears nothing without armor', () => {

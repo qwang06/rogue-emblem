@@ -33,16 +33,15 @@ describe('Soldier', () => {
     expect(soldier.movement).toBe(SOLDIER_STATS.movement);
   });
 
-  it('wields physical weapons only', () => {
+  it('is trained in physical weapons and wields any', () => {
     const soldier = new Soldier({ team: 'enemy', items: [weaponEntry(FIRE)] });
     expect(soldier.weaponTypes).toEqual(['physical']);
-    expect(soldier.weapon).toBeNull();
+    expect(soldier.weapon).toBe(FIRE);
   });
 
   it('fights with an Iron Spear', () => {
     const soldier = new Soldier({ team: 'enemy' });
     expect(soldier.weapon).toBe(IRON_SPEAR);
-    expect(soldier.weaponUses).toBe(IRON_SPEAR.uses);
   });
 
   it('levels up with the soldier growth rates', () => {
@@ -59,8 +58,9 @@ describe('Soldier', () => {
 
   it('carries its spear, a health potion and a mana potion', () => {
     const soldier = new Soldier({ team: 'player' });
-    expect(soldier.items).toEqual(SOLDIER_ITEMS);
-    expect(soldier.items.map((entry) => entry.item)).toEqual([IRON_SPEAR, HEALTH_POTION, MANA_POTION]);
+    expect(SOLDIER_ITEMS.map((entry) => entry.item)).toEqual([IRON_SPEAR, HEALTH_POTION, MANA_POTION]);
+    expect(soldier.equipment).toEqual({ main: IRON_SPEAR });
+    expect(soldier.items.map((entry) => entry.item)).toEqual([HEALTH_POTION, MANA_POTION]);
   });
 
   it('can be given other items', () => {
@@ -72,7 +72,6 @@ describe('Soldier', () => {
     const b = new Soldier({ team: 'player' });
     a.health = 1;
     a.useItem('health-potion');
-    a.spendWeaponUse();
-    expect(b.items).toEqual(SOLDIER_ITEMS);
+    expect(b.items.map((entry) => entry.item.id)).toEqual(['health-potion', 'mana-potion']);
   });
 });

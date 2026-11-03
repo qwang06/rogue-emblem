@@ -9,11 +9,10 @@
 // cancel steps back:
 //   - units: confirm opens the Items tab, in that unit's items; cancel
 //     closes the screen
-//   - items: confirm opens the item's actions (Equip for weapons and
-//     armor, Store); cancel goes
-//     back to the units
-//   - convoy: confirm gives that item to the picked unit; cancel goes back
-//     to the units
+//   - items (its bag): confirm opens the item's actions (Store); cancel
+//     goes back to the units
+//   - convoy: confirm gives that item to the picked unit (a consumable to
+//     its bag, gear worn in its slot); cancel goes back to the units
 //   - actions: confirm takes the action; cancel closes them
 // The camp menu shown after a stage's reward offers the screen (see
 // camp.ts). Everything here is pure: each function returns a new
@@ -21,17 +20,8 @@
 
 import { createActionMenu, moveSelection, selectIndex, type Menu, type MenuAction } from '../actionMenu.ts';
 import { UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
-import { isArmor, type Item } from '../items.ts';
-import { isWeapon } from '../weapons.ts';
-import {
-  canEquipInRoster,
-  canGiveFromConvoy,
-  canStoreInConvoy,
-  equipInRoster,
-  giveFromConvoy,
-  lookUpItem,
-  storeInConvoy,
-} from './convoy.ts';
+import type { Item } from '../items.ts';
+import { canGiveFromConvoy, canStoreInConvoy, giveFromConvoy, storeInConvoy } from './convoy.ts';
 import { RUN_ITEMS, type RunState } from './run.ts';
 
 export type RosterColumn = 'units' | 'items' | 'convoy';
@@ -45,7 +35,7 @@ export const ROSTER_TABS: readonly RosterTab[] = Object.freeze(['stats', 'skills
 // Where the pointer can point: a column, the open item actions, or a tab.
 export type RosterTarget = RosterColumn | 'actions' | 'tabs';
 
-export type RosterItemActionId = 'equip' | 'store';
+export type RosterItemActionId = 'store';
 
 export interface RosterItemAction extends MenuAction {
   id: RosterItemActionId;
@@ -146,13 +136,8 @@ export function confirmRoster(state: RosterScreenState, rules: RosterRules = DEF
   if (state.actions) {
     const action = state.actions.actions[state.actions.selectedIndex];
     if (!action || action.disabled) return state;
-    const run =
-      action.id === 'equip'
-        ? equipInRoster(state.run, unit.id, state.itemIndex, rules.classes, rules.items)
-        : storeInConvoy(state.run, unit.id, state.itemIndex, rules.items);
-    // Equipping moves the weapon to the front, so the cursor follows it.
-    const itemIndex = action.id === 'equip' ? 0 : state.itemIndex;
-    return clampIndices(freeze({ ...state, run, itemIndex, actions: null }));
+    const run = storeInConvoy(state.run, unit.id, state.itemIndex, rules.items);
+    return clampIndices(freeze({ ...state, run, actions: null }));
   }
   switch (state.column) {
     case 'units':
@@ -177,23 +162,13 @@ export function cancelRoster(state: RosterScreenState): RosterScreenState | null
   return null;
 }
 
-// The actions for the picked unit's highlighted item: Equip for a weapon
-// or armor (disabled when its class can't wield the weapon or it's already
-// equipped or worn), and
-// Store (disabled for a natural weapon). None when there's no item there.
+// The actions for the picked unit's highlighted bag item: Store. None when
+// there's no item there.
 export function getItemActions(state: RosterScreenState, rules: RosterRules = DEFAULT_RULES): RosterItemAction[] {
   const unit = getPickedUnit(state);
   const entry = unit?.items[state.itemIndex];
   if (!unit || !entry) return [];
-  const item = lookUpItem(entry.itemId, rules.items);
   const actions: RosterItemAction[] = [];
-  if (isWeapon(item) || isArmor(item)) {
-    actions.push({
-      id: 'equip',
-      label: 'Equip',
-      disabled: !canEquipInRoster(state.run, unit.id, state.itemIndex, rules.classes, rules.items),
-    });
-  }
   actions.push({
     id: 'store',
     label: 'Store',

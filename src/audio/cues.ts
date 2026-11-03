@@ -60,7 +60,6 @@ const POPUP_CUES: Readonly<Record<PopupKind, SoundCue>> = Object.freeze({
   miss: 'miss',
   health: 'heal',
   mana: 'heal',
-  broke: 'break',
   loot: 'loot',
   stored: 'loot',
   learned: 'learn',

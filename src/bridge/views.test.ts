@@ -31,7 +31,7 @@ import { POWER_STRIKE, SHIELD_BASH, SHOVE, THROW_STONES, type Skill } from '../g
 import { Soldier } from '../game/Soldier.ts';
 import { Acolyte } from '../game/Acolyte.ts';
 import { advanceDialog, createDialog } from '../game/dialog.ts';
-import { HEALTH_POTION, WOODEN_SHIELD } from '../game/items.ts';
+import { HEALTH_POTION, WOODEN_ARMOR, WOODEN_SHIELD } from '../game/items.ts';
 import { FIRE, FISTS, IRON_SPEAR, weaponEntry } from '../game/weapons.ts';
 import { createTurnState, markDone } from '../game/turns.ts';
 import { applyBattleResult, createRun, restoreRoster, restoreUnit, snapshotUnit } from '../game/warband/run.ts';
@@ -130,17 +130,17 @@ describe('toUnitView', () => {
       weaponTypes: ['physical'],
       items: [
         { item: HEALTH_POTION, quantity: 2 },
-        weaponEntry(FIRE),
-        { item: IRON_SPEAR, quantity: 7 },
+        weaponEntry(IRON_SPEAR),
+        { item: WOODEN_SHIELD, quantity: 1 },
         weaponEntry(FISTS),
       ],
     });
     const view = toUnitView(unit);
+    // Worn gear first, without a count, then the bag.
     expect(view!.items).toEqual([
+      { id: 'iron-spear', label: 'Iron Spear', quantity: null, weapon: true, equipped: true },
+      { id: 'wooden-shield', label: 'Wooden Shield', quantity: null, weapon: false, equipped: true },
       { id: 'health-potion', label: 'Health Potion', quantity: 2, weapon: false, equipped: false },
-      { id: 'fire', label: 'Fire Tome', quantity: 30, weapon: true, equipped: false },
-      { id: 'iron-spear', label: 'Iron Spear', quantity: 7, weapon: true, equipped: true },
-      { id: 'fists', label: 'Fists', quantity: null, weapon: true, equipped: false },
     ]);
     expect(Object.isFrozen(view!.items)).toBe(true);
     expect(Object.isFrozen(view!.items[0])).toBe(true);
@@ -156,12 +156,12 @@ describe('toUnitView', () => {
       team: 'player',
       items: [
         { item: WOODEN_SHIELD, quantity: 1 },
-        { item: WOODEN_SHIELD, quantity: 1 },
+        { item: WOODEN_ARMOR, quantity: 1 },
       ],
     });
     const view = toUnitView(unit)!;
-    expect(view.defense).toBe(3);
-    expect(view.items.map((item) => item.equipped)).toEqual([true, false]);
+    expect(view.defense).toBe(2 + WOODEN_SHIELD.defense + WOODEN_ARMOR.defense);
+    expect(view.items.map((item) => item.equipped)).toEqual([true, true]);
   });
 
   it('is a detached, frozen snapshot', () => {
@@ -208,7 +208,7 @@ describe('toUnitDetailView', () => {
       movement: 5,
       team: 'player',
       weaponTypes: ['physical'],
-      items: [{ item: IRON_SPEAR, quantity: 7 }],
+      items: [weaponEntry(IRON_SPEAR)],
     });
     expect(toUnitDetailView(unit)).toMatchObject({
       damageType: 'physical',
@@ -226,8 +226,6 @@ describe('toUnitDetailView', () => {
         crit: IRON_SPEAR.crit,
         weight: IRON_SPEAR.weight,
         range: '1',
-        uses: 7,
-        maxUses: IRON_SPEAR.uses,
       },
       weaponTypes: ['physical'],
     });
@@ -359,7 +357,6 @@ describe('toDamagePopupView', () => {
   it('calls out crits and misses', () => {
     expect(toDamagePopupView({ id: 1, amount: 9, kind: 'crit', x: 0, y: 0, durationMs: 700 }).text).toBe('Crit! 9');
     expect(toDamagePopupView({ id: 1, amount: 0, kind: 'miss', x: 0, y: 0, durationMs: 700 }).text).toBe('Miss');
-    expect(toDamagePopupView({ id: 1, amount: 0, kind: 'broke', x: 0, y: 0, durationMs: 700 }).text).toBe('Broke!');
     expect(
       toDamagePopupView({ id: 1, amount: 0, kind: 'learned', label: 'Fire', x: 0, y: 0, durationMs: 700 }).text,
     ).toBe('Learned Fire!');
@@ -717,7 +714,7 @@ describe('toRewardAction', () => {
   });
 
   it('carries the icon of the item a reward gives, and none for other rewards', () => {
-    expect(toRewardAction({ kind: 'arms', itemId: 'iron-axe', label: 'Iron Axe', uses: 40 }, 0).itemIcon).toBe(
+    expect(toRewardAction({ kind: 'arms', itemId: 'iron-axe', label: 'Iron Axe' }, 0).itemIcon).toBe(
       getItemSprite('iron-axe'),
     );
     expect(toRewardAction({ kind: 'supplies', itemId: 'health-potion', label: 'Health Potion' }, 0).itemIcon).toBe(

@@ -98,7 +98,7 @@ export const RELICS: readonly Relic[] = Object.freeze([
   relic('mana-spring', 'Mana Spring', 'Units recover {n} MP at the start of each of your phases.', [
     { kind: 'phase-mana', amount: 1 },
   ]),
-  relic('whetstone', 'Whetstone', 'A killing blow doesn’t wear the weapon.', [{ kind: 'spare-weapon-on-kill' }]),
+  relic('whetstone', 'Whetstone', 'Units have +{n} crit.', [{ kind: 'combat', term: 'crit', amount: 10 }]),
   relic('scholars-quill', "Scholar's Quill", 'Every unit earns {n}% more XP.', [{ kind: 'experience', percent: 50 }]),
   BOUNTY_LEDGER,
   PHOENIX_FEATHER,

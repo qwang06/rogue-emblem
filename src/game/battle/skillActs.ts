@@ -14,7 +14,7 @@
 
 import { getDistance, findUnit, isSameTile, moveUnit, type Grid, type Point } from '../grid.ts';
 import { KILL_BONUS } from '../aiScoring.ts';
-import { getHealAmount, getHealTargets, getStaves, isWounded } from '../healing.ts';
+import { getHealAmount, getHealTargets, isWounded } from '../healing.ts';
 import { getPushDirection, getPushResult } from '../push.ts';
 import {
   calculateSkillDamage,
@@ -79,7 +79,7 @@ export interface SkillActOptions {
 // Whether the unit could use a skill or a staff at all: it knows a skill it
 // can afford (other than the ones the AI leaves alone) or carries a staff.
 export function hasSkillActs(unit: Unit): boolean {
-  return getUsableSkills(unit).length > 0 || getStaves(unit.items).length > 0;
+  return getUsableSkills(unit).length > 0 || unit.staves.length > 0;
 }
 
 // Every skill and staff use the unit `unitId` could make after moving to
@@ -115,7 +115,7 @@ export function getSkillActs(
     }
   }
   if (staves) {
-    for (const { staff, index } of getStaves(unit.items)) {
+    for (const { staff, index } of unit.staves) {
       const canHeal = (otherId: string) => {
         const other = state.units.get(otherId);
         return otherId !== unitId && !!other && areAllied(other.team, unit.team) && isWounded(other);

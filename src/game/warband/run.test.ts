@@ -70,22 +70,20 @@ describe('snapshotUnit and restoreUnit', () => {
     },
   );
 
-  it('round-trips a leveled, wounded unit with a worn weapon and a used potion', () => {
+  it('round-trips a leveled, wounded unit with its gear and a used potion', () => {
     const soldier = new Soldier({ name: 'Alden', team: 'player' });
     soldier.gainExperience(200);
     soldier.takeDamage(4);
     soldier.spendMana(1);
-    soldier.spendWeaponUse();
     soldier.useItem(MANA_POTION.id);
 
     const snapshot = snapshotUnit('alden', soldier);
     expect(snapshot.level).toBe(3);
     expect(snapshot.experience).toBe(50);
     expect(snapshot.health).toBe(soldier.maxHealth - 4);
-    expect(snapshot.items).toEqual([
-      { itemId: IRON_SPEAR.id, quantity: IRON_SPEAR.uses! - 1 },
-      { itemId: HEALTH_POTION.id, quantity: 1 },
-    ]);
+    expect(snapshot.items).toEqual([{ itemId: HEALTH_POTION.id, quantity: 1 }]);
+    expect(snapshot.equipment).toEqual({ main: IRON_SPEAR.id });
+    expect(snapshot.innate).toEqual([]);
 
     const restored = restoreUnit(snapshot);
     expect(restored).toEqual(soldier);
@@ -95,22 +93,20 @@ describe('snapshotUnit and restoreUnit', () => {
 
   it('round-trips tome progress and a learned spell, through a save too', () => {
     const acolyte = new Acolyte({ name: 'Iris', team: 'player', items: [weaponEntry(FIRE)] });
-    acolyte.spendWeaponUse();
-    acolyte.spendWeaponUse();
+    acolyte.recordStrike();
+    acolyte.recordStrike();
     const snapshot = snapshotUnit('iris', acolyte);
     expect(snapshot.tomeProgress).toEqual({ fire: 2 });
     expect(restoreUnit(snapshot).tomeProgress).toEqual({ fire: 2 });
     const saved = parseRun(serializeRun(createRun(1, new Map([['iris', acolyte]]))));
     expect(saved?.roster[0].tomeProgress).toEqual({ fire: 2 });
 
-    for (let strike = 0; strike < 3; strike++) acolyte.spendWeaponUse();
+    for (let strike = 0; strike < 3; strike++) acolyte.recordStrike();
     const learned = snapshotUnit('iris', acolyte);
     expect(learned.tomeProgress).toBeUndefined();
-    expect(learned.items).toEqual([
-      { itemId: FIRE_SPELL.id, quantity: 1 },
-      { itemId: FIRE.id, quantity: FIRE.uses! - 5 },
-    ]);
-    expect(restoreUnit(learned).weapon).toBe(FIRE_SPELL);
+    expect(learned.innate).toEqual([FIRE_SPELL.id]);
+    expect(learned.equipment).toEqual({ main: FIRE.id });
+    expect(restoreUnit(learned).wieldableWeapons.map(({ weapon }) => weapon)).toEqual([FIRE, FIRE_SPELL]);
   });
 
   it('reads a save from before tomes as no progress, and refuses bad progress', () => {
@@ -131,6 +127,35 @@ describe('snapshotUnit and restoreUnit', () => {
     expect(restored.growths).toBe(new Archer({ team: 'player' }).growths);
   });
 
+  it('sorts a snapshot from before equipment slots into its slots, the rest to the convoy', () => {
+    const run = createRun(1, new Map([['a', new Soldier({ team: 'player' })]]));
+    const old = {
+      ...run,
+      roster: [
+        {
+          ...run.roster[0],
+          equipment: undefined,
+          innate: undefined,
+          items: [
+            { itemId: IRON_SPEAR.id, quantity: 12 },
+            { itemId: WOODEN_SWORD.id, quantity: 20 },
+            { itemId: HEALTH_POTION.id, quantity: 2 },
+            { itemId: FISTS.id, quantity: 1 },
+          ],
+        },
+      ],
+      convoy: [{ itemId: IRON_BOW.id, quantity: 30 }],
+    };
+    const loaded = parseRun(JSON.stringify(old))!;
+    expect(loaded.roster[0].equipment).toEqual({ main: IRON_SPEAR.id });
+    expect(loaded.roster[0].innate).toEqual([FISTS.id]);
+    expect(loaded.roster[0].items).toEqual([{ itemId: HEALTH_POTION.id, quantity: 2 }]);
+    expect(loaded.convoy).toEqual([
+      { itemId: IRON_BOW.id, quantity: 1 },
+      { itemId: WOODEN_SWORD.id, quantity: 1 },
+    ]);
+  });
+
   it('refuses a unit without a class', () => {
     const unit = new Unit({ name: 'Nobody', health: 5, strength: 1, defense: 0, movement: 4, team: 'player' });
     expect(() => snapshotUnit('n', unit)).toThrow(/no class/);
@@ -144,13 +169,12 @@ describe('snapshotUnit and restoreUnit', () => {
 });
 
 describe('applyBattleResult', () => {
-  it('writes XP, level ups, HP and weapon uses back to the units that fought', () => {
+  it('writes XP, level ups, HP and items back to the units that fought', () => {
     const run = startingRun();
     const units = restoreRoster(run);
     const alden = units.get('alden')!;
     alden.gainExperience(80);
     alden.takeDamage(3);
-    alden.spendWeaponUse();
     const bryn = units.get('bryn')!;
     bryn.useItem(HEALTH_POTION.id);
 
@@ -160,8 +184,9 @@ describe('applyBattleResult', () => {
     expect(aldenAfter.level).toBe(2);
     expect(aldenAfter.experience).toBe(30);
     expect(aldenAfter.health).toBe(alden.maxHealth - 3);
-    expect(aldenAfter.items[0]).toEqual({ itemId: IRON_SPEAR.id, quantity: IRON_SPEAR.uses! - 1 });
-    expect(brynAfter.items.map((item) => item.itemId)).toEqual([IRON_BOW.id, MANA_POTION.id]);
+    expect(aldenAfter.equipment).toEqual({ main: IRON_SPEAR.id });
+    expect(brynAfter.items.map((item) => item.itemId)).toEqual([MANA_POTION.id]);
+    expect(brynAfter.equipment).toEqual({ main: IRON_BOW.id });
   });
 
   it("records the battle's kills, the fallen's stage, a boss and the time in the chronicle", () => {
@@ -215,14 +240,10 @@ describe('applyBattleResult', () => {
     expect(applyBattleResult(run, { units: restoreRoster(run) }).convoy).toEqual(run.convoy);
   });
 
-  it('drops a weapon that broke', () => {
+  it('keeps worn gear through a battle: it never breaks', () => {
     const run = startingRun();
-    const units = restoreRoster(run);
-    const bryn = units.get('bryn')!;
-    for (let i = 0; i < IRON_BOW.uses!; i++) bryn.spendWeaponUse();
-
-    const after = applyBattleResult(run, { units });
-    expect(after.roster[1].items.map((item) => item.itemId)).not.toContain(IRON_BOW.id);
+    const after = applyBattleResult(run, { units: restoreRoster(run) });
+    expect(after.roster[1].equipment?.main).toBe(IRON_BOW.id);
   });
 
   it('moves the dead to fallen for good and keeps roster order', () => {

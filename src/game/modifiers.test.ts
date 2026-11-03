@@ -102,7 +102,7 @@ describe('sumModifiers and hasModifier', () => {
     { kind: 'kill-heal', amount: 4 },
     { kind: 'kill-heal', amount: 3 },
     { kind: 'experience', percent: 50 },
-    { kind: 'spare-weapon-on-kill' },
+    { kind: 'encore' },
   ];
 
   it('totals a kind, 0 when there is none', () => {
@@ -113,7 +113,7 @@ describe('sumModifiers and hasModifier', () => {
   });
 
   it('finds a kind', () => {
-    expect(hasModifier(modifiers, 'spare-weapon-on-kill')).toBe(true);
+    expect(hasModifier(modifiers, 'encore')).toBe(true);
     expect(hasModifier(modifiers, 'phase-mana')).toBe(false);
     expect(hasModifier(undefined, 'skill')).toBe(false);
   });

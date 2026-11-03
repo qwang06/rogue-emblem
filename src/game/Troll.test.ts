@@ -31,9 +31,8 @@ describe('Troll', () => {
   it('fights with its Stone Maul, which never breaks, and carries nothing else', () => {
     const troll = new Troll({ team: 'enemy' });
     expect(troll.weapon).toBe(STONE_MAUL);
-    expect(troll.weaponUses).toBeNull();
-    expect(troll.items).toEqual(TROLL_ITEMS);
-    expect(troll.items).toHaveLength(1);
+    expect(troll.innate).toEqual(TROLL_ITEMS.map(({ item }) => item));
+    expect(troll.items).toEqual([]);
   });
 
   it('levels up with the troll growth rates', () => {

@@ -56,7 +56,7 @@ export function toMerchantScreenView(
 ): MerchantScreenView {
   const { run } = state;
   const toItem = (item: Item, key: string, quantity: number, price: number, disabled: boolean) => {
-    const uncounted = (item.kind === 'weapon' && item.uses === null) || item.kind === 'armor';
+    const uncounted = item.kind !== 'consumable';
     return Object.freeze<MerchantItemView>({
       key,
       label: item.label,

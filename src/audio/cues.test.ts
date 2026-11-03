@@ -49,7 +49,6 @@ describe('getSoundCues', () => {
     expect(getSoundCues(base, { ...base, damagePopups: [popup(1, 'stored')] })).toEqual(['loot']);
     expect(getSoundCues(base, { ...base, damagePopups: [popup(1, 'horn')] })).toEqual(['warHorn']);
     expect(getSoundCues(base, { ...base, damagePopups: [popup(1, 'enraged')] })).toEqual(['enrage']);
-    expect(getSoundCues(base, { ...base, damagePopups: [popup(1, 'broke')] })).toEqual(['break']);
     expect(getSoundCues(base, { ...base, damagePopups: [popup(1, 'learned')] })).toEqual(['learn']);
   });
 

@@ -1,8 +1,9 @@
-// Pure rules for items. A unit carries an inventory — a frozen list of
-// { item, quantity } entries — of consumables, weapons, staves and armor. Using a
-// consumable restores one of its stats and uses one up; weapons are
-// fought with (see weapons.ts) and staves heal allies (see healing.ts),
-// and a weapon or staff entry's quantity is the uses it has left. No Phaser, no rendering, no hidden state.
+// Pure rules for items: consumables, weapons (weapons.ts), staves
+// (healing.ts), armor and seals. A unit's bag is an inventory — a frozen
+// list of { item, quantity } entries — of consumables; using one restores
+// one of its stats and uses one up. Gear is worn in slots instead (see
+// equipment.ts) and the convoy holds the rest. No Phaser, no rendering, no
+// hidden state.
 
 // A consumable: { kind: 'consumable', id, label, stat, amount }. `stat` is
 // what it restores ('health' or 'mana') and `amount` the most it restores
@@ -10,7 +11,7 @@
 
 import type { MenuAction } from './actionMenu.ts';
 import type { Staff } from './healing.ts';
-import type { Weapon, WeaponType } from './weapons.ts';
+import type { Weapon } from './weapons.ts';
 
 export type RestoreStat = 'health' | 'mana';
 
@@ -23,14 +24,13 @@ export interface Consumable {
 }
 
 // Armor: { kind: 'armor', id, label, slot, defense, weight }. `slot` is
-// where it's worn ('shield' on the arm, 'body' on the chest; a shield only
-// with a one-handed weapon, see canUseShield), `defense` what
-// it adds to the wearer's defense against physical hits and `weight` what
-// it weighs (it slows a wearer weaker than it, along with the weapon; see
-// getAttackSpeed in combatStats.ts). It's carried like any other item (a slot
-// each, never stacking), and a unit wears the first armor of each slot in
-// its inventory (getWornArmor); wearing another moves it to the front.
-export type ArmorSlot = 'shield' | 'body';
+// where it's worn (see equipment.ts): 'shield' in the off hand (only with a
+// one-handed weapon or none), 'head', 'body', 'accessory', or 'special', a
+// monster's slot, which only takes gear made for its class (`forClass`).
+// `defense` is what it adds to the wearer's defense against physical hits
+// and `weight` what it weighs (it slows a wearer weaker than it, along with
+// the weapon; see getAttackSpeed in combatStats.ts).
+export type ArmorSlot = 'shield' | 'head' | 'body' | 'accessory' | 'special';
 
 export interface Armor {
   kind: 'armor';
@@ -39,6 +39,8 @@ export interface Armor {
   slot: ArmorSlot;
   defense: number;
   weight: number;
+  // For 'special' gear: the class id it's made for.
+  forClass?: string;
 }
 
 // A seal: { kind: 'seal', id, label }. Spent at camp to promote a unit
@@ -114,54 +116,6 @@ export function isArmor(item: { kind: string }): item is Armor {
   return item.kind === 'armor';
 }
 
-// Whether a unit that masters `weaponTypes` has a hand free for a shield:
-// its equipped weapon (the first in its inventory it can wield, see
-// weapons.ts), if any, takes one hand, and it carries no staff, which
-// takes both. Bare-handed counts as one-handed.
-export function canUseShield(inventory: Inventory, weaponTypes: readonly WeaponType[]): boolean {
-  const equipped = inventory.find(({ item }) => item.kind === 'weapon' && weaponTypes.includes(item.type));
-  if (equipped && equipped.item.kind === 'weapon' && equipped.item.hands === 2) return false;
-  return !inventory.some(({ item }) => item.kind === 'staff' && item.hands === 2);
-}
-
-// The armor a unit that masters `weaponTypes` wears, as [{ armor, index }]
-// in inventory order: the first armor of each slot it carries, except a
-// shield when it has no hand free for one (canUseShield).
-export function getWornArmor(
-  inventory: Inventory,
-  weaponTypes: readonly WeaponType[],
-): { armor: Armor; index: number }[] {
-  const shield = canUseShield(inventory, weaponTypes);
-  const worn: { armor: Armor; index: number }[] = [];
-  inventory.forEach(({ item }, index) => {
-    if (!isArmor(item) || (item.slot === 'shield' && !shield)) return;
-    if (!worn.some(({ armor }) => armor.slot === item.slot)) worn.push({ armor: item, index });
-  });
-  return worn;
-}
-
-// What the worn armor adds to defense, all slots together.
-export function getArmorDefense(inventory: Inventory, weaponTypes: readonly WeaponType[]): number {
-  return getWornArmor(inventory, weaponTypes).reduce((total, { armor }) => total + armor.defense, 0);
-}
-
-// What the worn armor weighs, all slots together. A shield it can't use
-// is carried, not worn, and weighs nothing here.
-export function getArmorWeight(inventory: Inventory, weaponTypes: readonly WeaponType[]): number {
-  return getWornArmor(inventory, weaponTypes).reduce((total, { armor }) => total + armor.weight, 0);
-}
-
-// Wears the armor at `index` by moving its entry to the front of the
-// inventory, so it's the first of its slot; everything else keeps its
-// order (the equipped weapon is the first one the unit can wield, wherever
-// it sits). Throws if there's no armor there.
-export function wearArmor(inventory: Inventory, index: number): Inventory {
-  const entry = inventory[index];
-  if (!entry || !isArmor(entry.item)) throw new Error(`No armor to wear at slot ${index}`);
-  if (index === 0) return inventory;
-  return Object.freeze([entry, ...inventory.filter((_, i) => i !== index)]);
-}
-
 // The potions every unit carries into battle (each class adds its weapon).
 export const STARTING_ITEMS: Inventory = Object.freeze([
   Object.freeze({ item: HEALTH_POTION, quantity: 1 }),
@@ -174,26 +128,25 @@ const STAT_FIELDS: Readonly<Record<RestoreStat, { current: keyof Restorable; max
   mana: Object.freeze({ current: 'mana', max: 'maxMana' }),
 });
 
-// How many different items a unit can carry: each entry (one item, any
-// quantity) takes a slot.
-export const MAX_INVENTORY_SLOTS = 6;
+// How many different consumables a unit's bag holds: each entry (one item,
+// any quantity) takes a slot. Gear is worn, not carried (equipment.ts).
+export const MAX_INVENTORY_SLOTS = 4;
 
 // A frozen inventory from [{ item, quantity }], dropping empty entries.
-// Throws if more than MAX_INVENTORY_SLOTS entries are left.
-export function createInventory(entries: readonly InventoryEntry[] = []): Inventory {
+// Throws if more than `limit` (MAX_INVENTORY_SLOTS) entries are left.
+export function createInventory(entries: readonly InventoryEntry[] = [], limit = MAX_INVENTORY_SLOTS): Inventory {
   const kept = entries.filter((entry) => entry.quantity > 0);
-  if (kept.length > MAX_INVENTORY_SLOTS) {
-    throw new Error(`An inventory holds at most ${MAX_INVENTORY_SLOTS} items, got ${kept.length}`);
+  if (kept.length > limit) {
+    throw new Error(`An inventory holds at most ${limit} items, got ${kept.length}`);
   }
   return Object.freeze(kept.map(({ item, quantity }) => Object.freeze({ item, quantity })));
 }
 
-// Whether item fits: a consumable stacks onto an entry already holding it;
-// otherwise (and always for a weapon, which never stacks) it needs a free
-// slot.
+// Whether item fits in a bag: only consumables go in one, stacking onto
+// an entry already holding it or taking a free slot.
 export function canAddItem(inventory: Inventory, item: Item): boolean {
-  const stacks = item.kind === 'consumable' && findItem(inventory, item.id) !== null;
-  return stacks || inventory.length < MAX_INVENTORY_SLOTS;
+  if (item.kind !== 'consumable') return false;
+  return findItem(inventory, item.id) !== null || inventory.length < MAX_INVENTORY_SLOTS;
 }
 
 // Adds quantity (default 1) of item and returns the new inventory: a

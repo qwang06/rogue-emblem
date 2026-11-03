@@ -177,7 +177,7 @@ describe('move', () => {
 });
 
 describe('attack', () => {
-  it('plays out the exchange, wearing weapons and dealing damage both ways', () => {
+  it('plays out the exchange, dealing damage both ways', () => {
     const { state, events } = run(
       duel(),
       { type: 'move', unitId: 'hero', to: { x: 3, y: 0 } },
@@ -189,7 +189,7 @@ describe('attack', () => {
       expect.objectContaining({ strikerId: 'foe', targetId: 'hero', hit: true, damage: 6, health: 14 }),
     ]);
     expect(state.units.get('hero')!.health).toBe(14);
-    expect(state.units.get('foe')!.weaponUses).toBe(IRON_SPEAR.uses! - 1);
+    expect(state.units.get('foe')!.weapon).toBe(IRON_SPEAR);
     expect(types(events)).toContain('experience');
   });
 
@@ -458,13 +458,6 @@ describe('modifiers', () => {
     expect(run(start, strike).state.units.get('hero')!.health).toBe(20);
     const full = run(finisher([{ kind: 'kill-heal', amount: 4 }]), strike);
     expect(types(full.events)).not.toContain('recovered');
-  });
-
-  it('spares the weapon on a killing blow with spare-weapon-on-kill', () => {
-    const uses = (state: BattleState) => state.units.get('hero')!.weaponUses;
-    const before = uses(finisher([]));
-    expect(uses(run(finisher([]), strike).state)).toBe(before! - 1);
-    expect(uses(run(finisher([{ kind: 'spare-weapon-on-kill' }]), strike).state)).toBe(before);
   });
 
   it('heals a lifesteal striker its share of the HP it took, as a drain', () => {
@@ -1416,7 +1409,7 @@ describe('heal and items', () => {
     const { state, events } = run(start, { type: 'heal', unitId: 'healer', staffIndex: 0, target: { x: 1, y: 0 } });
     expect(events[0]).toEqual({ type: 'healed', unitId: 'healer', targetId: 'ally', amount: 5 });
     expect(state.units.get('ally')!.health).toBe(15);
-    expect(state.units.get('healer')!.items[0].quantity).toBe(HEAL_STAFF.uses - 1);
+    expect(state.units.get('healer')!.staves).toEqual([{ staff: HEAL_STAFF, index: 0 }]);
   });
 
   it('uses a potion, but not one that would restore nothing', () => {

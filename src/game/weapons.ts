@@ -1,18 +1,15 @@
-// Pure rules for weapons. A weapon is an item a unit carries in its
-// inventory (see items.ts) and fights with: it sets the unit's attack
-// range, the kind of damage it deals, and adds its power, hit and crit to
-// the combat formulas (combat.ts, combatStats.ts). Each class masters some
-// weapon types and can only wield those. The equipped weapon is the first
-// one in the inventory the unit can wield; equipping another moves it to
-// the front. A weapon entry's `quantity` is the uses it has left, one
-// spent per strike, and a weapon that runs out breaks and is gone —
-// unless its `uses` is null, which never breaks. A tome is a magical
-// weapon that teaches its spell to a unit that fights with it often enough
-// (see tomes.ts). No Phaser, no rendering, no hidden state.
+// Pure rules for weapons. A weapon is worn in a unit's main hand (see
+// equipment.ts) or comes with its body (fists, natural weapons, spells)
+// and is fought with: it sets the unit's attack range, the kind of damage
+// it deals, and adds its power, hit and crit to the combat formulas
+// (combat.ts, combatStats.ts). Any class can wield any weapon; the types a
+// class masters are the ones it's trained in. Weapons never break. A tome
+// is a magical weapon that teaches its spell to a unit that fights with it
+// often enough (see tomes.ts). No Phaser, no rendering, no hidden state.
 
 import type { MenuAction } from './actionMenu.ts';
 import type { DamageType } from './combat.ts';
-import type { Inventory, InventoryEntry } from './items.ts';
+import type { InventoryEntry } from './items.ts';
 
 // What a class can master. Physical and siege weapons hit with strength
 // against defense, magical ones with intelligence against resistance; siege
@@ -25,10 +22,9 @@ export type WeaponType = 'physical' | 'magical' | 'siege';
 export type Hands = 1 | 2;
 
 // A weapon: { kind: 'weapon', id, label, type, hands, power, hit, crit,
-// weight, minRange, maxRange, uses }. `hands` is 1 or 2 (see Hands); `power` adds to the wielder's attack power,
+// weight, minRange, maxRange }. `hands` is 1 or 2 (see Hands); `power` adds to the wielder's attack power,
 // `hit` and `crit` to its hit and crit rates, `weight` slows a wielder
-// weaker than it (see getAttackSpeed in combatStats.ts). `uses` is how
-// many strikes a fresh one has, or null for one that never breaks.
+// weaker than it (see getAttackSpeed in combatStats.ts).
 // `teaches` makes it a tome: a unit that strikes with it `afterUses` times
 // learns the spell weapon `spellId` (see tomes.ts).
 export interface Weapon {
@@ -43,7 +39,6 @@ export interface Weapon {
   weight: number;
   minRange: number;
   maxRange: number;
-  uses: number | null;
   teaches?: TomeLesson;
 }
 
@@ -54,11 +49,11 @@ export interface TomeLesson {
   afterUses: number;
 }
 
-// The equipped weapon and where it sits in the inventory.
+// One of a unit's attacks: its main-hand weapon or an innate one (see
+// Unit.attacks), and its place in the unit's attack list.
 export interface EquippedWeapon {
   weapon: Weapon;
   index: number;
-  uses: number | null;
 }
 
 export interface WeaponAction extends MenuAction {
@@ -66,9 +61,6 @@ export interface WeaponAction extends MenuAction {
   itemId: string;
   index: number;
   type: WeaponType;
-  uses: number | null;
-  // The uses it started with, null for one that never breaks.
-  maxUses: number | null;
   power: number;
   hit: number;
   crit: number;
@@ -107,7 +99,6 @@ export const FISTS = weapon({
   weight: 0,
   minRange: 1,
   maxRange: 1,
-  uses: null,
 });
 
 // The soldier's spear.
@@ -122,7 +113,6 @@ export const IRON_SPEAR = weapon({
   weight: 3,
   minRange: 1,
   maxRange: 1,
-  uses: 40,
 });
 
 // The vanguard's axe: hits hard, misses more, and is heavy.
@@ -137,7 +127,6 @@ export const IRON_AXE = weapon({
   weight: 5,
   minRange: 1,
   maxRange: 1,
-  uses: 40,
 });
 
 // The archer's bow: two tiles away only, so it can't strike adjacent foes.
@@ -153,7 +142,6 @@ export const IRON_BOW = weapon({
   weight: 2,
   minRange: 2,
   maxRange: 2,
-  uses: 40,
 });
 
 // The Fire tome: intelligence against resistance, near or one tile further. A
@@ -169,7 +157,6 @@ export const FIRE = weapon({
   weight: 1,
   minRange: 1,
   maxRange: 2,
-  uses: 30,
   teaches: { spellId: 'fire-spell', afterUses: 5 },
 });
 
@@ -185,7 +172,6 @@ export const FIRE_SPELL = weapon({
   weight: 1,
   minRange: 1,
   maxRange: 2,
-  uses: null,
 });
 
 // The acolyte's own spell: a weak flash of holy light, near or one tile
@@ -202,7 +188,6 @@ export const LIGHT = weapon({
   weight: 0,
   minRange: 1,
   maxRange: 2,
-  uses: null,
 });
 
 // The sapper's bomb: a heavy blast, near or thrown, with few to spare.
@@ -217,7 +202,6 @@ export const POWDER_KEG = weapon({
   weight: 6,
   minRange: 1,
   maxRange: 2,
-  uses: 5,
 });
 
 // The siege engine's bolt thrower: long range, nothing up close.
@@ -232,7 +216,6 @@ export const BALLISTA = weapon({
   weight: 8,
   minRange: 2,
   maxRange: 3,
-  uses: 10,
 });
 
 // The monsters' natural weapons, which never break. The slime's body slam:
@@ -248,7 +231,6 @@ export const TACKLE = weapon({
   weight: 0,
   minRange: 1,
   maxRange: 1,
-  uses: null,
 });
 
 // The goblin's club.
@@ -263,7 +245,6 @@ export const CLUB = weapon({
   weight: 2,
   minRange: 1,
   maxRange: 1,
-  uses: null,
 });
 
 // The skeleton's claws.
@@ -278,7 +259,6 @@ export const BONE_CLAWS = weapon({
   weight: 1,
   minRange: 1,
   maxRange: 1,
-  uses: null,
 });
 
 // The bat's fangs: weak, but it rarely misses.
@@ -293,7 +273,6 @@ export const FANGS = weapon({
   weight: 0,
   minRange: 1,
   maxRange: 1,
-  uses: null,
 });
 
 // The beast's bite, the one natural weapon that can crit.
@@ -308,7 +287,6 @@ export const BITE = weapon({
   weight: 1,
   minRange: 1,
   maxRange: 1,
-  uses: null,
 });
 
 // The orc's axe: heavy, wild and two-handed, but it never breaks.
@@ -323,7 +301,6 @@ export const GREAT_AXE = weapon({
   weight: 4,
   minRange: 1,
   maxRange: 1,
-  uses: null,
 });
 
 // The troll's maul, a boulder lashed to a branch: the hardest-hitting
@@ -339,7 +316,6 @@ export const STONE_MAUL = weapon({
   weight: 5,
   minRange: 1,
   maxRange: 1,
-  uses: null,
 });
 
 // The red dragon's breath: a gout of flame that reaches a tile further
@@ -355,7 +331,6 @@ export const FIRE_BREATH = weapon({
   weight: 0,
   minRange: 1,
   maxRange: 2,
-  uses: null,
 });
 
 // The wooden set: basic practice arms, lighter and weaker than iron and
@@ -372,7 +347,6 @@ export const WOODEN_SWORD = weapon({
   weight: 1,
   minRange: 1,
   maxRange: 1,
-  uses: 20,
 });
 
 // A sharpened pole: the iron spear's power, less sure to land.
@@ -387,7 +361,6 @@ export const WOODEN_SPEAR = weapon({
   weight: 2,
   minRange: 1,
   maxRange: 1,
-  uses: 20,
 });
 
 // Hits hardest of the three and misses most.
@@ -402,7 +375,6 @@ export const WOODEN_AXE = weapon({
   weight: 3,
   minRange: 1,
   maxRange: 1,
-  uses: 20,
 });
 
 export const WEAPONS: readonly Weapon[] = Object.freeze([
@@ -444,71 +416,18 @@ export const NATURAL_WEAPON_IDS: ReadonlySet<string> = new Set([
   LIGHT.id,
 ]);
 
-// A fresh inventory entry for weapon, with all its uses (1 for one that
-// never breaks — its count is never spent).
+// An inventory entry for weapon (one of it).
 export function weaponEntry(weapon: Weapon): InventoryEntry {
-  return Object.freeze({ item: weapon, quantity: weapon.uses ?? 1 });
+  return Object.freeze({ item: weapon, quantity: 1 });
 }
 
 export function isWeapon(item: { kind: string }): item is Weapon {
   return item.kind === 'weapon';
 }
 
-// Whether a unit that masters `weaponTypes` can wield weapon.
+// Whether a class that masters `weaponTypes` is trained in weapon.
 export function canWield(weaponTypes: readonly WeaponType[], weapon: Weapon): boolean {
   return weaponTypes.includes(weapon.type);
-}
-
-// The uses an entry's weapon has left: its quantity, or null if it never
-// breaks.
-function usesLeft(entry: InventoryEntry & { item: Weapon }): number | null {
-  return entry.item.uses === null ? null : entry.quantity;
-}
-
-// Every weapon in the inventory the unit can wield, in inventory order, as
-// [{ weapon, index, uses }]. The first is the equipped one.
-export function getWieldableWeapons(inventory: Inventory, weaponTypes: readonly WeaponType[]): EquippedWeapon[] {
-  const result: EquippedWeapon[] = [];
-  inventory.forEach((entry, index) => {
-    const { item } = entry;
-    if (isWeapon(item) && canWield(weaponTypes, item)) {
-      result.push({ weapon: item, index, uses: usesLeft({ ...entry, item }) });
-    }
-  });
-  return result;
-}
-
-// The weapon the unit fights with: the first one in its inventory it can
-// wield, as { weapon, index, uses }, or null if it has none.
-export function getEquippedWeapon(inventory: Inventory, weaponTypes: readonly WeaponType[]): EquippedWeapon | null {
-  return getWieldableWeapons(inventory, weaponTypes)[0] ?? null;
-}
-
-// Equips the weapon at `index` by moving its entry to the front of the
-// inventory; everything else keeps its order. Throws if there's no weapon
-// the unit can wield there.
-export function equipWeapon(inventory: Inventory, index: number, weaponTypes: readonly WeaponType[]): Inventory {
-  const entry = inventory[index];
-  if (!entry || !isWeapon(entry.item) || !canWield(weaponTypes, entry.item)) {
-    throw new Error(`No weapon to equip at slot ${index}`);
-  }
-  if (index === 0) return inventory;
-  return Object.freeze([entry, ...inventory.filter((_, i) => i !== index)]);
-}
-
-// Spends one use of the weapon at `index` and returns { inventory, broke }:
-// a weapon that runs out is removed (broke is true), and one that never
-// breaks is left as it was. Throws if there's no weapon there.
-export function spendWeaponUse(inventory: Inventory, index: number): { inventory: Inventory; broke: boolean } {
-  const entry = inventory[index];
-  if (!entry || !isWeapon(entry.item)) throw new Error(`No weapon at slot ${index}`);
-  if (entry.item.uses === null) return { inventory, broke: false };
-  const quantity = entry.quantity - 1;
-  if (quantity > 0) {
-    const next = inventory.map((e, i) => (i === index ? Object.freeze({ ...e, quantity }) : e));
-    return { inventory: Object.freeze(next), broke: false };
-  }
-  return { inventory: Object.freeze(inventory.filter((_, i) => i !== index)), broke: true };
 }
 
 // The span of tiles any of `weapons` can strike, as { minRange, maxRange }
@@ -527,25 +446,22 @@ export function formatWeaponRange(weapon: Pick<Weapon, 'minRange' | 'maxRange'>)
   return weapon.minRange === weapon.maxRange ? `${weapon.minRange}` : `${weapon.minRange}–${weapon.maxRange}`;
 }
 
-// Entries for the weapon menu shown after choosing Attack: every weapon
-// the unit can wield (equipped first), with its uses left and the uses
-// it started with (both null for one that never breaks) and its numbers. One is disabled when hasTarget(weapon)
-// says nothing is in its range from where the unit stands.
+// Entries for the weapon menu shown after choosing Attack: each of the
+// unit's attacks (the one it fights with first) with its numbers. One is
+// disabled when hasTarget(weapon) says nothing is in its range from where
+// the unit stands.
 export function getWeaponActions(
-  inventory: Inventory,
-  weaponTypes: readonly WeaponType[],
+  attacks: readonly EquippedWeapon[],
   hasTarget: (weapon: Weapon) => boolean,
 ): readonly WeaponAction[] {
   return Object.freeze(
-    getWieldableWeapons(inventory, weaponTypes).map(({ weapon, index, uses }) =>
+    attacks.map(({ weapon, index }) =>
       Object.freeze({
         id: `${weapon.id}@${index}`,
         itemId: weapon.id,
         label: weapon.label,
         index,
         type: weapon.type,
-        uses,
-        maxUses: weapon.uses,
         power: weapon.power,
         hit: weapon.hit,
         crit: weapon.crit,

@@ -37,18 +37,18 @@ describe('Vanguard', () => {
     expect(vanguard.growths).toBe(VANGUARD_GROWTHS);
   });
 
-  it('wields physical weapons only', () => {
+  it('is trained in physical weapons and wields any', () => {
     const vanguard = new Vanguard({ team: 'player', items: [weaponEntry(FIRE)] });
     expect(vanguard.weaponTypes).toEqual(['physical']);
-    expect(vanguard.weapon).toBeNull();
+    expect(vanguard.weapon).toBe(FIRE);
   });
 
   it('carries an Iron Axe, a health potion and a mana potion', () => {
     const vanguard = new Vanguard({ team: 'player' });
-    expect(vanguard.items).toEqual(VANGUARD_ITEMS);
-    expect(vanguard.items.map((entry) => entry.item)).toEqual([IRON_AXE, HEALTH_POTION, MANA_POTION]);
+    expect(VANGUARD_ITEMS.map((entry) => entry.item)).toEqual([IRON_AXE, HEALTH_POTION, MANA_POTION]);
+    expect(vanguard.equipment).toEqual({ main: IRON_AXE });
+    expect(vanguard.items.map((entry) => entry.item)).toEqual([HEALTH_POTION, MANA_POTION]);
     expect(vanguard.weapon).toBe(IRON_AXE);
-    expect(vanguard.weaponUses).toBe(IRON_AXE.uses);
   });
 
   it("learns Cleave at level 2, keeping the villager's Throw Stones", () => {

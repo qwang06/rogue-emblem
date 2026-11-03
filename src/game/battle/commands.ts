@@ -143,8 +143,7 @@ export type BattleEvent =
   | { type: 'moved'; unitId: string; from: Point; to: Point; path: readonly Point[] }
   | { type: 'equipped'; unitId: string; weapon: Weapon }
   // One strike of an exchange. `health` is the struck unit's health after
-  // it. `broke` / `learned`: the strike wore out the striker's weapon /
-  // taught the spell of the tome it struck with.
+  // it. `learned`: the strike taught the spell of the tome it struck with.
   | {
       type: 'strike';
       strikerId: string;
@@ -153,7 +152,6 @@ export type BattleEvent =
       crit: boolean;
       damage: number;
       health: number;
-      broke: boolean;
       learned: Weapon | null;
     }
   // A skill's blow. `splash`: one of an area skill's blows past the tile it
@@ -640,8 +638,7 @@ function equip(draft: Draft, unitId: string, index: number) {
 }
 
 // One unit attacks another with its equipped weapon (see resolveCombat):
-// the exchange is rolled, every strike wears the striker's weapon (and a
-// tome strike can teach its spell), hits are applied in turn, a unit
+// the exchange is rolled, a tome strike can teach its spell, hits are applied in turn, a unit
 // brought to 0 health leaves the map (dropping its loot to a player
 // killer), and the player unit in the fight, if it lived, earns its XP.
 function attack(draft: Draft, unitId: string, target: Point) {
@@ -750,8 +747,8 @@ function resolveAttack(draft: Draft, attackerId: string, target: TargetTile, fro
   return killedByAttacker;
 }
 
-// Applies one strike of an exchange between `ids`: it wears the striker's
-// weapon (and a tome strike can teach its spell), a hit lands, a lifesteal
+// Applies one strike of an exchange between `ids`: a tome strike can
+// teach its spell, a hit lands, a lifesteal
 // strike heals its striker, a cleave-through hit splashes the target's
 // neighbours, a thorns or reflect recoil hurts the striker, and a unit
 // brought to 0 health leaves the map (dropping its loot to a player
@@ -764,13 +761,7 @@ function applyStrike(
 ): 'struck' | 'striker' | null {
   const strikerId = ids[strike.by];
   const struckId = ids[strike.target];
-  const striker = draft.edit(strikerId);
-  // A killing blow can spare the weapon (a Whetstone).
-  const spared = strike.lethal && hasModifier(striker.modifiers, 'spare-weapon-on-kill');
-  const { broke, learned, leftover } = spared ? SPARED_STRIKE : striker.spendWeaponUse();
-  if (learned && leftover && areAllied(striker.team, 'player')) {
-    draft.convoyLoot.push({ itemId: leftover.item.id, quantity: leftover.quantity });
-  }
+  const { learned } = draft.edit(strikerId).recordStrike();
   const struck = draft.edit(struckId);
   if (strike.hit) struck.takeDamage(strike.damage);
   draft.events.push({
@@ -781,7 +772,6 @@ function applyStrike(
     crit: strike.crit,
     damage: strike.hit ? strike.damage : 0,
     health: struck.health,
-    broke,
     learned,
   });
   // A lifesteal strike heals its striker (see resolveCombat).
@@ -912,9 +902,6 @@ function chainKill(draft: Draft, unitId: string) {
   applyStrike(draft, strike, ids);
   awardCombatExperience(draft, ids, [strike]);
 }
-
-// What spendWeaponUse would say for a strike that didn't wear the weapon.
-const SPARED_STRIKE = Object.freeze({ broke: false, learned: null, leftover: null });
 
 // A unit that defeated a foe heals its kill-heal modifiers' HP and its
 // kill-heal-percent share of its max HP, and its kill-stack modifiers add
@@ -1212,8 +1199,7 @@ function buffWith(draft: Draft, unitId: string, skill: Skill, target: Point) {
 
 function heal(draft: Draft, unitId: string, staffIndex: number, target: Point) {
   const healer = requireActor(draft, unitId);
-  const staff = healer.items[staffIndex]?.item;
-  if (!staff || !isStaff(staff)) draft.fail(`${unitId} has no staff in slot ${staffIndex}`);
+  const staff = healer.staves[staffIndex]?.staff ?? draft.fail(`${unitId} has no staff ${staffIndex}`);
   const from = draft.tileOf(unitId);
   const targets = getHealTargets(draft.grid, from, staff, woundedAllyOf(draft.units, unitId));
   const tile = findTileAt(targets, target) ?? draft.fail(`no wounded ally in reach on (${target.x}, ${target.y})`);
@@ -1221,7 +1207,6 @@ function heal(draft: Draft, unitId: string, staffIndex: number, target: Point) {
   const patient = draft.edit(tile.unitId);
   const amount = getHealAmount(healer, staff, patient);
   patient.heal(amount);
-  draft.edit(unitId).spendStaffUse(staffIndex);
   draft.events.push({ type: 'healed', unitId, targetId: tile.unitId, amount });
   grantExperience(draft, unitId, { amount: HEAL_EXPERIENCE, scaled: true });
   finishAction(draft, unitId);

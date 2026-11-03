@@ -37,15 +37,17 @@ describe('Acolyte', () => {
     expect(acolyte.growths).toBe(ACOLYTE_GROWTHS);
   });
 
-  it('knows Light and carries a Heal staff, a health potion and a mana potion', () => {
+  it('knows Light, holds a Heal staff and carries a health potion and a mana potion', () => {
     const acolyte = new Acolyte({ team: 'player' });
-    expect(acolyte.items).toEqual(ACOLYTE_ITEMS);
-    expect(acolyte.items.map((entry) => entry.item)).toEqual([LIGHT, HEAL_STAFF, HEALTH_POTION, MANA_POTION]);
+    expect(ACOLYTE_ITEMS.map((entry) => entry.item)).toEqual([LIGHT, HEAL_STAFF, HEALTH_POTION, MANA_POTION]);
+    expect(acolyte.innate).toEqual([LIGHT]);
+    expect(acolyte.equipment).toEqual({ main: HEAL_STAFF });
+    expect(acolyte.items.map((entry) => entry.item)).toEqual([HEALTH_POTION, MANA_POTION]);
   });
 
-  it('wields magical weapons only, starting with Light', () => {
+  it('is trained in magical weapons, and fights with Light', () => {
     expect(new Acolyte({ team: 'player' }).weapon).toBe(LIGHT);
-    const acolyte = new Acolyte({ team: 'player', items: [weaponEntry(IRON_SPEAR), weaponEntry(FIRE)] });
+    const acolyte = new Acolyte({ team: 'player', items: [weaponEntry(FIRE), weaponEntry(IRON_SPEAR)] });
     expect(acolyte.weaponTypes).toEqual(['magical']);
     expect(acolyte.weapon).toBe(FIRE);
   });
@@ -70,7 +72,7 @@ describe('Acolyte', () => {
 
   it('never wears Light out', () => {
     const acolyte = new Acolyte({ team: 'player' });
-    for (let strike = 0; strike < 50; strike++) acolyte.spendWeaponUse();
+    for (let strike = 0; strike < 50; strike++) acolyte.recordStrike();
     expect(acolyte.weapon).toBe(LIGHT);
     expect(NATURAL_WEAPON_IDS.has(LIGHT.id)).toBe(true);
   });
@@ -90,16 +92,7 @@ describe('Acolyte', () => {
     expect(acolyte.level).toBe(4);
   });
 
-  it('spends a staff use per heal', () => {
-    const acolyte = new Acolyte({ team: 'player' });
-    expect(acolyte.spendStaffUse(1)).toEqual({ staff: HEAL_STAFF, broke: false });
-    expect(acolyte.items[1].quantity).toBe(HEAL_STAFF.uses - 1);
-    expect(ACOLYTE_ITEMS[1].quantity).toBe(HEAL_STAFF.uses);
-  });
-
-  it('loses a staff on its last use', () => {
-    const acolyte = new Acolyte({ team: 'player', items: [{ item: HEAL_STAFF, quantity: 1 }] });
-    expect(acolyte.spendStaffUse(0)).toEqual({ staff: HEAL_STAFF, broke: true });
-    expect(acolyte.items).toEqual([]);
+  it('heals with the staff in its main hand', () => {
+    expect(new Acolyte({ team: 'player' }).staves).toEqual([{ staff: HEAL_STAFF, index: 0 }]);
   });
 });

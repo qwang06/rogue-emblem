@@ -102,8 +102,8 @@ describe('relic stage scaling', () => {
     expect(getRelicDescription(crest)).toBe(crest.description);
     expect(getRelicDescription(crest, 20)).toBe('Units take 5 less damage when attacked.');
     expect(getRelicDescription(crest, 1, 2)).toBe('Units take 4 less damage when attacked.');
-    const whetstone = findRelic('whetstone')!;
-    expect(getRelicDescription(whetstone, 1, 2)).toBe(`${whetstone.description} (×2)`);
+    const kitchen = findRelic('field-kitchen')!;
+    expect(getRelicDescription(kitchen, 1, 2)).toBe(`${kitchen.description} (×2)`);
   });
 });
 
@@ -111,19 +111,19 @@ describe('relic copies', () => {
   it('stacks only relics made of modifiers that add up', () => {
     expect(isStackingRelic(findRelic('hawk-lens')!)).toBe(true);
     expect(isStackingRelic(findRelic('scholars-quill')!)).toBe(true);
-    expect(isStackingRelic(findRelic('whetstone')!)).toBe(false);
+    expect(isStackingRelic(findRelic('field-kitchen')!)).toBe(false);
     expect(isStackingRelic(findRelic('field-kitchen')!)).toBe(false);
   });
 
   it(`offers another copy of a stacking relic until the run holds ${MAX_RELIC_COPIES}`, () => {
-    expect(countRelic(['hawk-lens', 'whetstone', 'hawk-lens'], 'hawk-lens')).toBe(2);
+    expect(countRelic(['hawk-lens', 'field-kitchen', 'hawk-lens'], 'hawk-lens')).toBe(2);
     expect(canTakeRelic(['hawk-lens'], 'hawk-lens')).toBe(true);
     expect(canTakeRelic(['hawk-lens', 'hawk-lens'], 'hawk-lens')).toBe(false);
-    expect(canTakeRelic(['whetstone'], 'whetstone')).toBe(false);
+    expect(canTakeRelic(['field-kitchen'], 'field-kitchen')).toBe(false);
     expect(canTakeRelic([], 'nope')).toBe(false);
-    const ids = getOfferableRelics(['hawk-lens', 'whetstone']).map((relic) => relic.id);
+    const ids = getOfferableRelics(['hawk-lens', 'field-kitchen']).map((relic) => relic.id);
     expect(ids).toContain('hawk-lens');
-    expect(ids).not.toContain('whetstone');
+    expect(ids).not.toContain('field-kitchen');
   });
 
   it('counts each copy in the modifiers', () => {
@@ -134,12 +134,12 @@ describe('relic copies', () => {
   });
 
   it('rolls different offerable relics', () => {
-    const held = ['hawk-lens', 'hawk-lens', 'whetstone'];
+    const held = ['hawk-lens', 'hawk-lens', 'field-kitchen'];
     for (let seed = 0; seed < 20; seed++) {
       const offers = rollOfferableRelics(createSeededRng(seed), held, 4);
       expect(offers).toHaveLength(4);
       expect(new Set(offers).size).toBe(4);
-      for (const relic of offers) expect(['hawk-lens', 'whetstone']).not.toContain(relic.id);
+      for (const relic of offers) expect(['hawk-lens', 'field-kitchen']).not.toContain(relic.id);
     }
   });
 });

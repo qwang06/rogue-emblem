@@ -32,28 +32,28 @@ Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.m
 
 One starter weapon per armed unit in the unit catalog. Fists, the Wooden Sword, the Wooden Spear, the Iron Spear, the Iron Bow, the Iron Axe, the Powder Keg and the Ballista are carried by a class; the monsters, the Beast, the Ram and the elementals fight with natural weapons (Tackle, Club, Bone Claws, Fangs, Bite, Great Axe, Stone Maul, Fire Breath, Fire, Light), which never break; the rest of the wooden set is basic gear no class starts with; the Acolyte and the Bishop know Light from the start; the Mage knows Fire; and the Fire Tome drops as loot for an Acolyte to learn Fire from (and is the Mage's promotion gift).
 
-| Weapon       | Type     | Hands | Pow | Hit | Crit | Wt  | Rng | Uses | For (catalog art)                                                |
-| ------------ | -------- | ----- | --- | --- | ---- | --- | --- | ---- | ---------------------------------------------------------------- |
-| Fists        | physical | 1     | 0   | 80  | 0    | 0   | 1   | ∞    | Villager (once its sword breaks)                                 |
-| Iron Spear   | physical | 1     | 1   | 80  | 0    | 3   | 1   | 40   | Soldier, Beast Rider                                             |
-| Iron Axe     | physical | 1     | 3   | 65  | 0    | 5   | 1   | 40   | Vanguard (axe)                                                   |
-| Iron Bow     | physical | 2     | 2   | 80  | 0    | 2   | 2   | 40   | Archer                                                           |
-| Fire Tome    | magical  | 1     | 2   | 85  | 0    | 1   | 1–2 | 30   | Loot (teaches Fire)                                              |
-| Fire         | magical  | 1     | 2   | 85  | 0    | 1   | 1–2 | ∞    | Mage; learned from the Fire Tome; Fire Elemental                 |
-| Light        | magical  | 1     | 0   | 90  | 0    | 0   | 1–2 | ∞    | Acolyte, Bishop (known from the start), Water and Air Elementals |
-| Powder Keg   | siege    | 2     | 5   | 70  | 0    | 6   | 1–2 | 5    | Sapper                                                           |
-| Ballista     | siege    | 2     | 6   | 70  | 0    | 8   | 2–3 | 10   | Siege                                                            |
-| Tackle       | physical | 1     | 0   | 75  | 0    | 0   | 1   | ∞    | Slime, Ram, Earth Elemental                                      |
-| Club         | physical | 1     | 2   | 75  | 0    | 2   | 1   | ∞    | Goblin                                                           |
-| Bone Claws   | physical | 1     | 2   | 80  | 0    | 1   | 1   | ∞    | Skeleton                                                         |
-| Fangs        | physical | 1     | 1   | 85  | 0    | 0   | 1   | ∞    | Bat                                                              |
-| Bite         | physical | 1     | 2   | 75  | 5    | 1   | 1   | ∞    | Beast, Whelp                                                     |
-| Great Axe    | physical | 2     | 3   | 65  | 0    | 4   | 1   | ∞    | Orc, Minotaur                                                    |
-| Stone Maul   | physical | 2     | 4   | 60  | 0    | 5   | 1   | ∞    | Troll                                                            |
-| Fire Breath  | physical | 1     | 4   | 75  | 0    | 0   | 1–2 | ∞    | Dragon                                                           |
-| Wooden Sword | physical | 1     | 1   | 90  | 0    | 1   | 1   | 20   | Villager                                                         |
-| Wooden Spear | physical | 1     | 1   | 75  | 0    | 2   | 1   | 20   | Scout                                                            |
-| Wooden Axe   | physical | 1     | 2   | 60  | 0    | 3   | 1   | 20   | –                                                                |
+| Weapon       | Type     | Hands | Pow | Hit | Crit | Wt  | Rng | For (catalog art)                                                |
+| ------------ | -------- | ----- | --- | --- | ---- | --- | --- | ---------------------------------------------------------------- |
+| Fists        | physical | 1     | 0   | 80  | 0    | 0   | 1   | Villager (once its sword breaks)                                 |
+| Iron Spear   | physical | 1     | 1   | 80  | 0    | 3   | 1   | Soldier, Beast Rider                                             |
+| Iron Axe     | physical | 1     | 3   | 65  | 0    | 5   | 1   | Vanguard (axe)                                                   |
+| Iron Bow     | physical | 2     | 2   | 80  | 0    | 2   | 2   | Archer                                                           |
+| Fire Tome    | magical  | 1     | 2   | 85  | 0    | 1   | 1–2 | Loot (teaches Fire)                                              |
+| Fire         | magical  | 1     | 2   | 85  | 0    | 1   | 1–2 | Mage; learned from the Fire Tome; Fire Elemental                 |
+| Light        | magical  | 1     | 0   | 90  | 0    | 0   | 1–2 | Acolyte, Bishop (known from the start), Water and Air Elementals |
+| Powder Keg   | siege    | 2     | 5   | 70  | 0    | 6   | 1–2 | Sapper                                                           |
+| Ballista     | siege    | 2     | 6   | 70  | 0    | 8   | 2–3 | Siege                                                            |
+| Tackle       | physical | 1     | 0   | 75  | 0    | 0   | 1   | Slime, Ram, Earth Elemental                                      |
+| Club         | physical | 1     | 2   | 75  | 0    | 2   | 1   | Goblin                                                           |
+| Bone Claws   | physical | 1     | 2   | 80  | 0    | 1   | 1   | Skeleton                                                         |
+| Fangs        | physical | 1     | 1   | 85  | 0    | 0   | 1   | Bat                                                              |
+| Bite         | physical | 1     | 2   | 75  | 5    | 1   | 1   | Beast, Whelp                                                     |
+| Great Axe    | physical | 2     | 3   | 65  | 0    | 4   | 1   | Orc, Minotaur                                                    |
+| Stone Maul   | physical | 2     | 4   | 60  | 0    | 5   | 1   | Troll                                                            |
+| Fire Breath  | physical | 1     | 4   | 75  | 0    | 0   | 1–2 | Dragon                                                           |
+| Wooden Sword | physical | 1     | 1   | 90  | 0    | 1   | 1   | Villager                                                         |
+| Wooden Spear | physical | 1     | 1   | 75  | 0    | 2   | 1   | Scout                                                            |
+| Wooden Axe   | physical | 1     | 2   | 60  | 0    | 3   | 1   | –                                                                |
 
 The wooden set is the basic gear: lighter and weaker than iron, and it breaks after 20 strikes. The villager starts with the sword and the scout with the spear. It comes with two pieces of armor. A unit wears the first shield and the first body armor it carries (equip another on the camp's roster screen; a shield only with a hand free for it, see Hands above), and each adds its DEF against physical hits. Its weight adds to the weapon's: a unit loses SPD (for avoid and doubling) by however much weapon and armor weight together exceed its STR:
 

@@ -1,7 +1,7 @@
 // Loot: items enemies carry and drop when they're defeated. A stage hands
 // some of its enemies an item each (assignLoot); defeating one gives the
 // item to the unit that dealt the blow, or sends it to the convoy when that
-// unit's bag is full (claimLoot). Which stages drop how many items is a
+// unit's bag is full or it's gear (claimLoot). Which stages drop how many items is a
 // table (STAGE_LOOT_DROPS), so later stages can be tuned on their own. A
 // loot item isn't part of the enemy's inventory: it never fights with it.
 // No Phaser, no rendering, no hidden state.
@@ -44,15 +44,14 @@ export function assignLoot(
   return new Map(carriers.map((id) => [id, randomItem(rng, pool)]));
 }
 
-// How many of an item a drop is: a weapon or staff comes with all its uses
-// (1 for one that never breaks), anything else is one.
-export function getLootQuantity(item: Item): number {
-  return 'uses' in item ? (item.uses ?? 1) : 1;
+// How many of an item a drop is: always one.
+export function getLootQuantity(_item: Item): number {
+  return 1;
 }
 
-// Where a dropped item goes: into the killer's inventory if it has room
-// (`stored` false), else the killer's inventory is unchanged and the item
-// goes to the convoy (`stored` true).
+// Where a dropped item goes: a consumable into the killer's bag if it has
+// room (`stored` false); gear, or anything without room, to the convoy
+// (`stored` true), the bag unchanged.
 export function claimLoot(inventory: Inventory, item: Item): { inventory: Inventory; stored: boolean } {
   if (!canAddItem(inventory, item)) return { inventory, stored: true };
   return { inventory: addItem(inventory, item, getLootQuantity(item)), stored: false };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { HEAL_STAFF } from '../game/healing.ts';
-import { HEALTH_POTION, WOODEN_ARMOR, WOODEN_SHIELD } from '../game/items.ts';
+import { HEALTH_POTION, MAX_INVENTORY_SLOTS, WOODEN_ARMOR, WOODEN_SHIELD } from '../game/items.ts';
 import { Soldier } from '../game/Soldier.ts';
 import type { Unit } from '../game/Unit.ts';
 import { Villager } from '../game/Villager.ts';
@@ -22,25 +22,25 @@ function campRun(convoy: ItemSnapshot[] = []): RunState {
 
 describe('toRosterScreenView', () => {
   it('lists the units, the picked unit’s items and the convoy', () => {
-    const view = toRosterScreenView(openRosterScreen(campRun([{ itemId: 'iron-axe', quantity: 12 }])));
+    const view = toRosterScreenView(openRosterScreen(campRun([{ itemId: 'iron-axe', quantity: 1 }])));
     expect(view.units.map((u) => [u.name, u.classLabel, u.level])).toEqual([
       ['Alden', 'Soldier', 1],
       ['Cato', 'Villager', 1],
     ]);
     expect(view.unitName).toBe('Alden');
+    // The bag: worn gear is on the Equipment screen.
     expect(view.items.map((i) => [i.label, i.quantity, i.equipped])).toEqual([
-      ['Iron Spear', 40, true],
       ['Health Potion', 1, false],
       ['Mana Potion', 1, false],
     ]);
-    expect(view.slots).toBe(6);
+    expect(view.slots).toBe(MAX_INVENTORY_SLOTS);
     expect(view.convoy).toEqual([
       {
         key: 'iron-axe@0',
         label: 'Iron Axe',
         icon: 'iron-axe',
         kind: 'weapon',
-        quantity: 12,
+        quantity: null,
         equipped: false,
         disabled: false,
       },
@@ -67,20 +67,17 @@ describe('toRosterScreenView', () => {
     expect(toRosterScreenView(openRosterScreen(run)).unit).toBeNull();
   });
 
-  it('shows a weapon that never breaks without a count', () => {
-    const state = pointRosterCursor(openRosterScreen(campRun()), 'units', 1);
-    expect(toRosterScreenView(state).items[1]).toMatchObject({ label: 'Fists', quantity: null, equipped: false });
-  });
-
-  it('disables convoy items the picked unit has no room for', () => {
-    const run = campRun([{ itemId: 'iron-axe', quantity: 40 }]);
-    const full = Array.from({ length: 6 }, () => ({ itemId: 'iron-bow', quantity: 40 }));
-    const packed = { ...run, roster: [{ ...run.roster[0], items: full }] };
-    expect(toRosterScreenView(openRosterScreen(packed)).convoy[0].disabled).toBe(true);
+  it('disables convoy items the picked unit has no use for', () => {
+    const run = campRun([
+      { itemId: 'master-seal', quantity: 1 },
+      { itemId: 'iron-axe', quantity: 1 },
+    ]);
+    const convoy = toRosterScreenView(openRosterScreen(run)).convoy;
+    expect(convoy.map((item) => item.disabled)).toEqual([true, false]);
   });
 
   it('describes the highlighted item and carries the open actions', () => {
-    const state = confirmRoster(pointRosterCursor(openRosterScreen(campRun()), 'items', 1));
+    const state = confirmRoster(pointRosterCursor(openRosterScreen(campRun()), 'items', 0));
     const view = toRosterScreenView(state);
     expect(view.detail).toEqual({ label: 'Health Potion', description: 'Restores up to 5 HP.' });
     expect(view.actions!.actions.map((a) => a.id)).toEqual(['store']);
@@ -92,20 +89,15 @@ describe('toRosterScreenView', () => {
   });
 });
 
-describe('armor and icons', () => {
-  it('shows worn armor as equipped, without a count, with its icon', () => {
+describe('icons', () => {
+  it('shows convoy gear with its icon and no count', () => {
     const run = campRun([
       { itemId: 'wooden-shield', quantity: 1 },
-      { itemId: 'wooden-sword', quantity: 20 },
+      { itemId: 'wooden-sword', quantity: 1 },
     ]);
-    const view = toRosterScreenView(confirmRoster(pointRosterCursor(openRosterScreen(run), 'convoy', 0)));
-    expect(view.items[3]).toMatchObject({
-      label: 'Wooden Shield',
-      icon: 'wooden-shield',
-      quantity: null,
-      equipped: true,
-    });
-    expect(view.convoy[0]).toMatchObject({ icon: 'wooden-sword', quantity: 20 });
+    const view = toRosterScreenView(openRosterScreen(run));
+    expect(view.convoy[0]).toMatchObject({ icon: 'wooden-shield', quantity: null });
+    expect(view.convoy[1]).toMatchObject({ icon: 'wooden-sword', quantity: null });
   });
 });
 
@@ -114,12 +106,12 @@ describe('describeItem', () => {
     expect(describeItem(IRON_AXE)).toEqual({
       label: IRON_AXE.label,
       description: 'Physical weapon · 1H',
-      numbers: { power: 3, hit: 65, crit: 0, weight: 5, range: '1', uses: 40 },
+      numbers: { power: 3, hit: 65, crit: 0, weight: 5, range: '1' },
     });
-    expect(describeItem(FISTS).numbers?.uses).toBeNull();
+    expect(describeItem(FISTS).numbers?.range).toBe('1');
     expect(describeItem(HEAL_STAFF)).toMatchObject({
       description: 'Staff · 2H · Heals 2 + INT',
-      numbers: { range: formatWeaponRange(HEAL_STAFF), uses: HEAL_STAFF.uses },
+      numbers: { range: formatWeaponRange(HEAL_STAFF) },
     });
     expect(describeItem(WOODEN_SHIELD).numbers).toBeUndefined();
     expect(describeItem(WOODEN_SHIELD).description).toBe(

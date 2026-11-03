@@ -31,9 +31,8 @@ describe('Minotaur', () => {
   it('fights with its Great Axe, which never breaks, and carries nothing else', () => {
     const minotaur = new Minotaur({ team: 'enemy' });
     expect(minotaur.weapon).toBe(GREAT_AXE);
-    expect(minotaur.weaponUses).toBeNull();
-    expect(minotaur.items).toEqual(MINOTAUR_ITEMS);
-    expect(minotaur.items).toHaveLength(1);
+    expect(minotaur.innate).toEqual(MINOTAUR_ITEMS.map(({ item }) => item));
+    expect(minotaur.items).toEqual([]);
   });
 
   it('levels up with the minotaur growth rates', () => {

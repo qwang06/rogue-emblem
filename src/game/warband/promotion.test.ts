@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MASTER_SEAL, MAX_INVENTORY_SLOTS } from '../items.ts';
+import { MASTER_SEAL } from '../items.ts';
 import { PROMOTION_LEVEL } from '../promotions.ts';
 import type { Unit } from '../Unit.ts';
 import { Villager } from '../Villager.ts';
@@ -62,7 +62,9 @@ describe('promoteInRun', () => {
     expect(ada(after).classId).toBe('vanguard');
     expect(ada(after).level).toBe(PROMOTION_LEVEL);
     expect(ada(after).maxHealth).toBe(ada(before).maxHealth + 2);
-    expect(after.convoy).toEqual([]);
+    // The Vanguard's gift axe replaces the wooden sword, which goes to the convoy.
+    expect(ada(after).equipment).toEqual({ main: 'iron-axe' });
+    expect(after.convoy).toEqual([{ itemId: 'wooden-sword', quantity: 1 }]);
     expect(bryn(after)).toEqual(bryn(before));
     expect(Object.isFrozen(after)).toBe(true);
   });
@@ -74,7 +76,7 @@ describe('promoteInRun', () => {
       roster: run.roster.map((u) => (u.id === 'ada' ? { ...u, items: [...u.items, SEAL] } : u)),
     };
     const after = promoteInRun(carrying, 'ada', 'vanguard');
-    expect(after.convoy).toEqual([SEAL]);
+    expect(after.convoy).toEqual([SEAL, { itemId: 'wooden-sword', quantity: 1 }]);
     expect(ada(after).items.some((entry) => entry.itemId === MASTER_SEAL.id)).toBe(false);
   });
 
@@ -89,21 +91,22 @@ describe('promoteInRun', () => {
     expect(ada(after).classId).toBe('archer');
   });
 
-  it('hands over the gift weapon, or sends it to the convoy without room', () => {
-    const after = promoteInRun(campRun(), 'bryn', 'sapper');
-    expect(bryn(after).items.at(-1)).toEqual({ itemId: POWDER_KEG.id, quantity: POWDER_KEG.uses });
-    expect(restoreUnit(bryn(after)).weaponTypes).toContain('siege');
-
+  it('puts the gift weapon in the main hand, sending what it displaces to the convoy', () => {
     const run = campRun();
-    const filler = { itemId: 'health-potion', quantity: 1 };
-    const full = {
+    const shielded = {
       ...run,
       roster: run.roster.map((u) =>
-        u.id === 'bryn' ? { ...u, items: Array.from({ length: MAX_INVENTORY_SLOTS }, () => filler) } : u,
+        u.id === 'bryn' ? { ...u, equipment: { main: 'wooden-sword', off: 'wooden-shield' } } : u,
       ),
     };
-    const sent = promoteInRun(full, 'bryn', 'sapper');
-    expect(sent.convoy).toEqual([{ itemId: POWDER_KEG.id, quantity: POWDER_KEG.uses }]);
+    const after = promoteInRun(shielded, 'bryn', 'sapper');
+    expect(bryn(after).equipment).toEqual({ main: POWDER_KEG.id });
+    expect(restoreUnit(bryn(after)).weaponTypes).toContain('siege');
+    // The keg takes both hands, so the shield comes off too.
+    expect(after.convoy).toEqual([
+      { itemId: 'wooden-sword', quantity: 1 },
+      { itemId: 'wooden-shield', quantity: 1 },
+    ]);
   });
 
   it('keeps a promoted unit’s new class through a save', () => {

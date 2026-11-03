@@ -47,14 +47,7 @@ import {
   moveSelection,
   selectIndex,
 } from '../game/actionMenu.ts';
-import {
-  findUsableStaff,
-  getHealTargets,
-  getStaves,
-  isWounded,
-  type CarriedStaff,
-  type Staff,
-} from '../game/healing.ts';
+import { findUsableStaff, getHealTargets, isWounded, type CarriedStaff, type Staff } from '../game/healing.ts';
 import {
   findUnitSkill,
   getSkillActions,
@@ -1175,7 +1168,7 @@ export class GridScene extends Phaser.Scene {
     const hasWeapons = unit.wieldableWeapons.length > 0;
     const hasSkills = getUnitSkills(unit).length > 0;
     const hasItems = getConsumables(unit.items).length > 0;
-    const canHeal = getStaves(unit.items).length > 0 ? this.findHealingStaff() !== null : undefined;
+    const canHeal = unit.staves.length > 0 ? this.findHealingStaff() !== null : undefined;
     const actions = getUnitActions({ hasSkills, hasItems, hasWeapons, canHeal });
     const { x, y } = this.activeUnit!;
     const hasTarget = unit.wieldableWeapons.some(
@@ -1198,7 +1191,7 @@ export class GridScene extends Phaser.Scene {
   // The first staff the active unit carries with a wounded ally in reach.
   findHealingStaff() {
     const { unit } = this.activeUnit!;
-    return findUsableStaff(unit.items, (staff) => this.getHealTargetsFor(staff).length > 0);
+    return findUsableStaff(unit.staves, (staff) => this.getHealTargetsFor(staff).length > 0);
   }
 
   // After choosing Heal: shows the staff's reach in green to pick the ally.
@@ -1223,7 +1216,7 @@ export class GridScene extends Phaser.Scene {
     const { unit, x, y } = this.activeUnit!;
     const hasTarget = (weapon: Weapon) => this.getWeaponTargets(unit, { x, y }, weapon).length > 0;
     this.publishMenuAnchor();
-    this.publishMenu('weaponMenu', createActionMenu(getWeaponActions(unit.items, unit.weaponTypes, hasTarget)));
+    this.publishMenu('weaponMenu', createActionMenu(getWeaponActions(unit.wieldableWeapons, hasTarget)));
   }
 
   // While the weapon menu is open it owns input: up/down move the
@@ -3184,7 +3177,6 @@ export class GridScene extends Phaser.Scene {
 
     const onImpact = () => {
       if (strike.learned) this.showDamagePopup(strikerSprite, 0, 'learned', strike.learned.label);
-      else if (strike.broke) this.showDamagePopup(strikerSprite, 0, 'broke');
       if (!strike.hit) {
         this.showDamagePopup(sprite, 0, 'miss');
         this.time.delayedCall(MISS_PAUSE_MS, land);

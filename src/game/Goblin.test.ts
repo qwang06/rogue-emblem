@@ -31,9 +31,8 @@ describe('Goblin', () => {
   it('fights with its Club, which never breaks, and carries nothing else', () => {
     const goblin = new Goblin({ team: 'enemy' });
     expect(goblin.weapon).toBe(CLUB);
-    expect(goblin.weaponUses).toBeNull();
-    expect(goblin.items).toEqual(GOBLIN_ITEMS);
-    expect(goblin.items).toHaveLength(1);
+    expect(goblin.innate).toEqual(GOBLIN_ITEMS.map(({ item }) => item));
+    expect(goblin.items).toEqual([]);
   });
 
   it('levels up with the goblin growth rates', () => {
