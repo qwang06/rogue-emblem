@@ -17,9 +17,13 @@
 //   starts, and 'spare-weapon-on-kill' keeps a killing strike from
 //   wearing the weapon.
 // - 'skill' teaches the unit a skill on top of its class's (skills.ts).
+// - The combat procs and gear effects (twin-strike through overkill-heal)
+//   are read by resolveCombat and getFighterBonus in combat.ts, or by the
+//   battle's commands for the map procs.
 // No Phaser, no hidden state.
 
 import type { Skill } from './skills.ts';
+import type { StatusId } from './statuses.ts';
 
 // The combat terms a modifier can add to: hit, avoid and crit rates,
 // damage dealt by each hit, `guard`, damage taken off each hit, and the
@@ -38,9 +42,12 @@ export type CombatTerm = (typeof COMBAT_TERMS)[number];
 
 // When a combat modifier applies: on the unit's own attack (`attacking`),
 // on a foe's (`defending`), while it's under half its max HP (`wounded`),
-// or against a monster (`vs-monster`). Checked once per exchange, as it
-// starts.
-export type ModifierCondition = 'attacking' | 'defending' | 'wounded' | 'vs-monster';
+// against a monster (`vs-monster`), against a foe under half its max HP
+// (`vs-wounded`) or at full HP (`vs-unhurt`), or against a foe with any
+// debuff (`vs-debuffed`) or Marked (`vs-marked`; see statuses.ts).
+// Checked once per exchange, as it starts.
+export type ModifierCondition =
+  'attacking' | 'defending' | 'wounded' | 'vs-monster' | 'vs-wounded' | 'vs-unhurt' | 'vs-debuffed' | 'vs-marked';
 
 export type Modifier =
   | { kind: 'combat'; term: CombatTerm; amount: number; when?: ModifierCondition }
@@ -81,11 +88,24 @@ export type Modifier =
   // A hit in its own attack shoves the target a tile away (see push.ts),
   // once the exchange is over, if both still stand.
   | { kind: 'shove-on-attack' }
-  // Its strikes never miss.
-  | { kind: 'sure-hit' }
+  // Its strikes never miss (only `when` the condition holds, if it has one).
+  | { kind: 'sure-hit'; when?: ModifierCondition }
   // Its crits deal this many times the damage instead of CRIT_MULTIPLIER
   // (the highest one counts).
-  | { kind: 'crit-multiplier'; amount: number };
+  | { kind: 'crit-multiplier'; amount: number }
+  // Gear effects (see combat.ts). `amount` more crit for each debuff its
+  // foe carries (`crit-per-foe-debuff`); `amount` more of `term` for each
+  // full tenth of its max HP it's missing (`missing-health-bonus`); a foe
+  // whose strike lands on it from the next tile takes `amount` damage
+  // (`thorns`); `percent` of the damage a strike deals it goes back to the
+  // striker, only while it has `status` if one is named (`reflect`); a
+  // crit that fells a foe heals it by the damage past the foe's HP
+  // (`overkill-heal`).
+  | { kind: 'crit-per-foe-debuff'; amount: number }
+  | { kind: 'missing-health-bonus'; term: CombatTerm; amount: number }
+  | { kind: 'thorns'; amount: number }
+  | { kind: 'reflect'; percent: number; status?: StatusId }
+  | { kind: 'overkill-heal' };
 
 export type ModifierKind = Modifier['kind'];
 
@@ -104,11 +124,16 @@ export const NO_COMBAT_BONUS: CombatBonus = Object.freeze({
   'guard-percent': 0,
 });
 
-// Where a unit stands as an exchange starts, for the conditions.
+// Where a unit stands as an exchange starts, for the conditions. The foe
+// fields are left out where there's no foe to read (they count as false).
 export interface CombatContext {
   attacking: boolean;
   wounded: boolean;
   vsMonster: boolean;
+  foeWounded?: boolean;
+  foeUnhurt?: boolean;
+  foeDebuffed?: boolean;
+  foeMarked?: boolean;
 }
 
 // Whether `condition` holds in `context`; no condition always holds.
@@ -124,6 +149,14 @@ export function isConditionMet(condition: ModifierCondition | undefined, context
       return context.wounded;
     case 'vs-monster':
       return context.vsMonster;
+    case 'vs-wounded':
+      return context.foeWounded === true;
+    case 'vs-unhurt':
+      return context.foeUnhurt === true;
+    case 'vs-debuffed':
+      return context.foeDebuffed === true;
+    case 'vs-marked':
+      return context.foeMarked === true;
   }
 }
 
