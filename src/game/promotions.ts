@@ -1,7 +1,7 @@
 // Pure promotion rules: the class tree's upper tiers. A villager (the
 // starting unit, tier 1) that has reached PROMOTION_LEVEL can become an
 // Archer, Soldier, Vanguard or Sapper (tier 2); an acolyte can become a
-// Mage (tier 3, for now the only one). Promoting makes the unit that class: it
+// Mage or a Bishop (tier 3). Promoting makes the unit that class: it
 // takes the class's growths, weapon types, XP rate and skill tree,
 // gains whatever stats the class starts above the class it promotes from, carries the class's passive modifier (modifiers.ts) into every
 // battle and is handed the class's weapon. The level, XP, items, boons and
@@ -10,6 +10,7 @@
 // given, like levelUp does.
 
 import { ACOLYTE_STATS } from './Acolyte.ts';
+import { BISHOP_GROWTHS, BISHOP_PASSIVE, BISHOP_STATS, BISHOP_WEAPON_TYPES } from './Bishop.ts';
 import { ARCHER_GROWTHS, ARCHER_PASSIVE, ARCHER_STATS, ARCHER_WEAPON_TYPES } from './Archer.ts';
 import { DEFAULT_EXPERIENCE_RATE, GROWTH_STATS, type GrowthStat, type GrowthTable } from './experience.ts';
 import { MAGE_GROWTHS, MAGE_PASSIVE, MAGE_STATS, MAGE_WEAPON_TYPES } from './Mage.ts';
@@ -91,7 +92,7 @@ function promotion(
 }
 
 // Every promotion, in UNIT_CLASSES order: the villager's four, then the
-// acolyte's one.
+// acolyte's two.
 export const PROMOTIONS: readonly Promotion[] = Object.freeze([
   promotion({
     id: 'archer',
@@ -149,6 +150,20 @@ export const PROMOTIONS: readonly Promotion[] = Object.freeze([
     weaponTypes: MAGE_WEAPON_TYPES,
     passive: MAGE_PASSIVE,
     gift: FIRE,
+  }),
+  promotion({
+    id: 'bishop',
+    label: 'Bishop',
+    from: 'acolyte',
+    tier: 3,
+    description: 'Deepens the prayers: heals several allies at once and shrugs off magic, but strikes no harder.',
+    stats: BISHOP_STATS,
+    growths: BISHOP_GROWTHS,
+    experienceRate: DEFAULT_EXPERIENCE_RATE,
+    weaponTypes: BISHOP_WEAPON_TYPES,
+    passive: BISHOP_PASSIVE,
+    // It keeps the acolyte's Light and Heal staff, so it needs no weapon.
+    gift: null,
   }),
 ]);
 

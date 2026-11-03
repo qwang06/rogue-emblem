@@ -493,6 +493,20 @@ export const FROST_LANCE = promotionSkill('frost-lance', 'Frost Lance', {
 // healing it for half the damage dealt.
 export const SIPHON = promotionSkill('siphon', 'Siphon', { manaCost: 2, range: 2, drain: 0.5, animation: 'stone' });
 
+// The bishop's signature: a blessing on a wounded ally up to 2 tiles
+// away that also mends every wounded ally on the four tiles around it,
+// each for 2 plus the user's intelligence.
+export const SANCTUARY: Skill = Object.freeze({
+  id: 'sanctuary',
+  label: 'Sanctuary',
+  manaCost: 5,
+  range: 2,
+  effect: 'heal',
+  power: 2,
+  area: 'burst',
+  animation: 'mend',
+});
+
 // The skills an evolution teaches (see warband/evolutions.ts).
 export const VOLLEY = promotionSkill('volley', 'Volley', { range: 3, might: 3, animation: 'stone' });
 export const INFERNO = promotionSkill('inferno', 'Inferno', { manaCost: 4, range: 3, might: 5, animation: 'stone' });
@@ -524,8 +538,8 @@ function promotedTree(...entries: SkillTreeEntry[]): readonly SkillTreeEntry[] {
   return Object.freeze([...VILLAGER_TREE, ...entries.map((entry) => Object.freeze(entry))]);
 }
 
-// The acolyte's tree, which the mage keeps: a promoted acolyte still knows
-// Mend.
+// The acolyte's tree, which the mage and the bishop keep: a promoted
+// acolyte still knows Mend.
 const ACOLYTE_TREE: readonly SkillTreeEntry[] = Object.freeze([
   Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: MEND }),
 ]);
@@ -542,6 +556,7 @@ export const SKILL_TREES: SkillTrees = Object.freeze({
   sapper: promotedTree({ level: SKILL_UNLOCK_LEVEL, skill: BLAST }),
   acolyte: ACOLYTE_TREE,
   mage: Object.freeze([...ACOLYTE_TREE, Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: FLARE })]),
+  bishop: Object.freeze([...ACOLYTE_TREE, Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: SANCTUARY })]),
   siege: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: BARRAGE })]),
   beast: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: SAVAGE_BITE })]),
   scout: Object.freeze([Object.freeze({ level: SKILL_UNLOCK_LEVEL, skill: HIT_AND_RUN })]),
@@ -560,6 +575,8 @@ export const CLASS_SKILL_PICKS: Readonly<Record<string, readonly Skill[]>> = Obj
   sapper: Object.freeze([SHRAPNEL, LAY_MINE, BREACH]),
   acolyte: Object.freeze([SMITE, PRAYER, WARD]),
   mage: Object.freeze([FIREBALL, FROST_LANCE, SIPHON]),
+  // The bishop deepens the acolyte's prayers rather than learning new ones.
+  bishop: Object.freeze([SMITE, PRAYER, WARD]),
   scout: Object.freeze([MARK, TAILWIND, AIRLIFT]),
   beast: Object.freeze([WING_BUFFET, ROAR, POUNCE]),
   'beast-rider': Object.freeze([SKEWER, TANDEM_STRIKE, STRAFING_RUN]),
@@ -809,7 +826,8 @@ export function describeSkill(skill: Skill): string {
   const int = skill.intelligenceScale === 0.5 ? 'half INT' : 'INT';
   if (isHealingSkill(skill)) {
     if (skill.range === 0) return `Heals every wounded ally next to it for ${skill.power ?? 0} + ${int}.`;
-    return `Heals an ally ${reach} for ${skill.power ?? 0} + ${int}.`;
+    const around = skill.area ? ` ${AREA_PHRASES[skill.area].replace('and ', 'and every wounded ally on ')}` : '';
+    return `Heals an ally ${reach}${around} for ${skill.power ?? 0} + ${int}.`;
   }
   const status = skill.status && STATUSES[skill.status];
   const effect = status?.description.replace(/\.$/, '') ?? '';
