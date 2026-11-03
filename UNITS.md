@@ -5,7 +5,7 @@ Reference for every unit class: base stats, growth rates, weapons and skills. Ke
 ## How the numbers work
 
 - **Weapons:** every attack is made with the unit's equipped weapon — the first weapon in its inventory it can wield. A class masters weapon types (`physical`, `magical`, `siege`) and can only wield those. Picking a weapon in the Attack menu equips it. A unit with no weapon it can wield can't attack or counter.
-- **Damage** of a regular hit = `STR + Mt − DEF` for physical and siege weapons (`INT + Mt − RES` for magical ones), never below 0.
+- **Damage** of a regular hit = `STR + Pow − DEF` for physical and siege weapons (`INT + Pow − RES` for magical ones), never below 0.
 - **Attack speed** = `SPD − max(0, Wt − STR)`: a weapon heavier than the wielder's strength slows it down.
 - **Hit chance** = (weapon `Hit` + `SKL × 2` + `LCK / 2`) − (attack speed `× 2` + `LCK` of the target), clamped to 0–100%.
 - **Crit chance** = (weapon `Crit` + `SKL / 2`) − target's `LCK`, clamped to 0–100%. A crit deals ×3 damage.
@@ -17,7 +17,7 @@ Reference for every unit class: base stats, growth rates, weapons and skills. Ke
 - **Tomes:** a tome is a magical weapon that teaches its spell. Each strike with it counts towards learning the spell (Fire Tome: 5); on the strike that reaches the count the spell takes the tome's slot and never breaks, and the tome keeps its remaining uses in the next free slot (or goes to the convoy when there's none) so another unit can learn from it. A unit that already knows the spell just uses the tome up. Progress is kept per unit, per tome, between stages.
 - **Growths** are fixed, with no dice: a growth of 100% raises the stat by 1 every level, 50% every second level, 25% every fourth. Each level hands out the points the class's growths have earned by then, staggered so every level gives about the same number and each stat stays within a point of its share (`getLevelUpGains` in `experience.ts`); two units of the same class and level have the same stats, boons aside. Stats have no caps and there is no level cap. Level 1 to 2 takes 50 XP, every level after 100 XP.
 - **XP rate** scales every XP gain (combat, skills, healing): a unit with a 150% rate earns 15 XP where others earn 10, rounded to the nearest point and never below 1.
-- **Skills** always hit, never crit, and the target can't counter. Their damage is the user's regular hit (weapon might included) with any bonus `STR` added, then scaled; scaled damage rounds up. Using one costs mana, earns XP like a landed hit, and spends no weapon uses. A healing skill (Mend) instead restores its power + the user's `INT` to a wounded ally in range, capped at the ally's missing HP, and earns 10 XP like a staff heal.
+- **Skills** always hit, never crit, and the target can't counter. Their damage is the user's regular hit (weapon power included) with any bonus `STR` added, then scaled; scaled damage rounds up. Using one costs mana, earns XP like a landed hit, and spends no weapon uses. A healing skill (Mend) instead restores its power + the user's `INT` to a wounded ally in range, capped at the ally's missing HP, and earns 10 XP like a staff heal.
 - **Area skills** reach past the foe they're aimed at: the tiles on either side of it (Cleave), the tile behind it as seen from the user (Piercing Shot, Skewer), or the four tiles around it (Shrapnel, Barrage, and Prayer around the user itself). Each foe there takes the skill's damage too, worked out against it, and the user earns XP for whichever foe gives the most. Shrapnel strikes allies in its blast as well. **Tandem Strike** strikes its target twice, the second blow for half the first's damage, rounded up.
 - **Statuses** a skill leaves on a foe last until the end of that foe's team's next phase: **Rooted** can't move, **Sundered** takes 3 more damage from every hit, **Marked** has 15 less avoid. A status doesn't stack with itself. **Buffs** a skill gives an ally last until the start of that ally's next phase, so one given in the player phase holds through the enemy phase: **Guarded** takes 2 less damage from every hit, **Warded** 4 less, **Hastened** moves 2 more tiles.
 - **Learning skills:** a class learns its tree's skills (the tables below) by level. A promoted villager keeps the villager's Throw Stones. On top of that, a level up in Warband Mode can offer a skill pick (a skill boon), and only from the unit's own class: the "Level-up skill pick" lines below. A class without one is offered a second passive instead.
@@ -32,7 +32,7 @@ Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.m
 
 One starter weapon per armed unit in the unit catalog. Fists, the Wooden Sword, the Wooden Spear, the Iron Spear, the Iron Bow, the Iron Axe, the Powder Keg and the Ballista are carried by a class; the monsters, the Beast, the Ram and the elementals fight with natural weapons (Tackle, Club, Bone Claws, Fangs, Bite, Great Axe, Stone Maul, Fire Breath, Fire, Light), which never break; the rest of the wooden set is basic gear no class starts with; the Acolyte and the Bishop know Light from the start; the Mage knows Fire; and the Fire Tome drops as loot for an Acolyte to learn Fire from (and is the Mage's promotion gift).
 
-| Weapon       | Type     | Hands | Mt  | Hit | Crit | Wt  | Rng | Uses | For (catalog art)                                                |
+| Weapon       | Type     | Hands | Pow | Hit | Crit | Wt  | Rng | Uses | For (catalog art)                                                |
 | ------------ | -------- | ----- | --- | --- | ---- | --- | --- | ---- | ---------------------------------------------------------------- |
 | Fists        | physical | 1     | 0   | 80  | 0    | 0   | 1   | ∞    | Villager (once its sword breaks)                                 |
 | Iron Spear   | physical | 1     | 1   | 80  | 0    | 3   | 1   | 40   | Soldier, Beast Rider                                             |
@@ -808,7 +808,7 @@ It learns no skills and carries no potions.
 
 ## Matchups at level 1
 
-The Villager and the Soldier differ by a point of strength and their weapons: the wooden sword has the spear's might but lands more often. Each attack is from as close as the attacker's weapon reaches (2 tiles for the bow). Damage is before passives (the Soldier's Shield Wall takes 1 off each hit it takes).
+The Villager and the Soldier differ by a point of strength and their weapons: the wooden sword has the spear's power but lands more often. Each attack is from as close as the attacker's weapon reaches (2 tiles for the bow). Damage is before passives (the Soldier's Shield Wall takes 1 off each hit it takes).
 
 | Attacker | Target   | Weapon       | Damage | Hit | Crit | Strikes |
 | -------- | -------- | ------------ | ------ | --- | ---- | ------- |

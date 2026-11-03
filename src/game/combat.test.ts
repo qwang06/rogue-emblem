@@ -20,10 +20,10 @@ import {
 import { createGrid, setTerrain, setUnit, type Point } from './grid.ts';
 import type { WeaponType } from './weapons.ts';
 
-// A plain test weapon: physical, no might, 80 hit, no crit, no weight,
+// A plain test weapon: physical, no power, 80 hit, no crit, no weight,
 // range 1 — so a fighter with it reads like its bare stats.
 function arms(overrides: Partial<CombatWeapon> = {}): CombatWeapon {
-  return { type: 'physical', might: 0, hit: 80, crit: 0, weight: 0, minRange: 1, maxRange: 1, ...overrides };
+  return { type: 'physical', power: 0, hit: 80, crit: 0, weight: 0, minRange: 1, maxRange: 1, ...overrides };
 }
 
 // Rolls 0 every time: every strike with a hit chance above 0 lands, and
@@ -183,9 +183,9 @@ describe('calculateDamage', () => {
     expect(calculateDamage({ strength: 7, intelligence: 9, weapon: arms({ type: 'siege' }) }, defender)).toBe(5);
   });
 
-  it("adds the weapon's might to the attack power", () => {
-    expect(calculateDamage({ strength: 5, weapon: arms({ might: 3 }) }, { defense: 2 })).toBe(6);
-    expect(calculateDamage({ intelligence: 6, weapon: arms({ type: 'magical', might: 2 }) }, defender)).toBe(3);
+  it("adds the weapon's power to the attack power", () => {
+    expect(calculateDamage({ strength: 5, weapon: arms({ power: 3 }) }, { defense: 2 })).toBe(6);
+    expect(calculateDamage({ intelligence: 6, weapon: arms({ type: 'magical', power: 2 }) }, defender)).toBe(3);
   });
 
   it('never goes below zero', () => {
@@ -579,11 +579,11 @@ describe('getCombatForecast', () => {
 
   it('changes with the weapon the attacker fights with', () => {
     const defender = unit({ speed: 3 });
-    const spear = getCombatForecast(unit({ weapon: arms({ might: 1, hit: 80 }) }), defender, { distance: 1 });
-    const axe = getCombatForecast(unit({ weapon: arms({ might: 3, hit: 65, weight: 7 }) }), defender, {
+    const spear = getCombatForecast(unit({ weapon: arms({ power: 1, hit: 80 }) }), defender, { distance: 1 });
+    const axe = getCombatForecast(unit({ weapon: arms({ power: 3, hit: 65, weight: 7 }) }), defender, {
       distance: 1,
     });
-    const bow = getCombatForecast(unit({ weapon: arms({ might: 2, minRange: 2, maxRange: 2 }) }), defender, {
+    const bow = getCombatForecast(unit({ weapon: arms({ power: 2, minRange: 2, maxRange: 2 }) }), defender, {
       distance: 2,
     });
     expect([spear.attacker.damage, spear.attacker.hit, spear.defender.hit]).toEqual([4, 74, 80]);
@@ -692,7 +692,7 @@ describe('combat with modifiers', () => {
     skill: 5,
     speed: 3,
     luck: 2,
-    weapon: arms({ might: 2, crit: 5 }),
+    weapon: arms({ power: 2, crit: 5 }),
     ...overrides,
   });
 
@@ -788,7 +788,7 @@ describe('combat procs', () => {
     skill: 5,
     speed: 3,
     luck: 2,
-    weapon: arms({ might: 2, crit: 5 }),
+    weapon: arms({ power: 2, crit: 5 }),
     ...overrides,
   });
   const sides = (strikes: readonly { by: CombatSide }[]) => strikes.map(({ by }) => by);

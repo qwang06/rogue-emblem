@@ -55,7 +55,7 @@ export function WeaponMenu() {
             <StatIcon kind="crit" />
           </div>
           <dl className="weapon-menu__stats" aria-label={`${highlighted.label}'s numbers`}>
-            <Stat label="Mt" value={highlighted.might} />
+            <Stat label="Pow" value={highlighted.power} />
             <Stat label="Hit" value={highlighted.hit} />
             <Stat label="Crt" value={highlighted.crit} />
             <Stat label="Wt" value={highlighted.weight} />

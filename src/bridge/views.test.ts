@@ -212,7 +212,7 @@ describe('toUnitDetailView', () => {
     });
     expect(toUnitDetailView(unit)).toMatchObject({
       damageType: 'physical',
-      attack: 2 + IRON_SPEAR.might,
+      attack: 2 + IRON_SPEAR.power,
       hit: IRON_SPEAR.hit + 3 * 2 + 2,
       crit: IRON_SPEAR.crit + 1,
       // The spear's weight (3) is 1 more than the unit's strength (2).
@@ -221,7 +221,7 @@ describe('toUnitDetailView', () => {
       equippedWeapon: {
         label: 'Iron Spear',
         type: 'physical',
-        might: IRON_SPEAR.might,
+        power: IRON_SPEAR.power,
         hit: IRON_SPEAR.hit,
         crit: IRON_SPEAR.crit,
         weight: IRON_SPEAR.weight,
@@ -247,7 +247,7 @@ describe('toUnitDetailView', () => {
     });
     const view = toUnitDetailView(unit)!;
     expect(view.damageType).toBe('magical');
-    expect(view.attack).toBe(unit.intelligence + FIRE.might);
+    expect(view.attack).toBe(unit.intelligence + FIRE.power);
     expect(view.equippedWeapon).toMatchObject({ label: 'Fire Tome', range: '1–2' });
   });
 

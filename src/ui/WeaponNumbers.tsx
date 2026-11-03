@@ -1,15 +1,15 @@
 import { GlyphIcon, type GlyphKind } from './GlyphIcon.tsx';
 import { StatIcon, type StatIconKind } from './StatIcon.tsx';
 
-// A weapon's numbers as icon chips instead of "Mt 1 Hit 90 Crit 0 Wt 1":
-// a sword for might, the crosshair for hit, the star for crits (the
+// A weapon's numbers as icon chips instead of "Pow 1 Hit 90 Crit 0 Wt 1":
+// a sword for power, the crosshair for hit, the star for crits (the
 // forecast's own icons), a kettlebell for weight, a dashed arrow for range
 // and a gauge for the uses left (∞ for a weapon that never breaks). Each
 // chip's name is its tooltip and is read out, so the icons never stand in
 // for the word alone. Leave a number out to skip its chip; uses reads
 // "12/40" with maxUses and just the count without.
 export interface WeaponNumbersProps {
-  might?: number;
+  power?: number;
   hit?: number;
   crit?: number;
   weight?: number;
@@ -20,9 +20,9 @@ export interface WeaponNumbersProps {
 
 type Icon = { stat: StatIconKind } | { glyph: GlyphKind };
 
-export function WeaponNumbers({ might, hit, crit, weight, range, uses, maxUses }: WeaponNumbersProps) {
+export function WeaponNumbers({ power, hit, crit, weight, range, uses, maxUses }: WeaponNumbersProps) {
   const chips: [string, Icon, string | number | undefined][] = [
-    ['Might', { stat: 'attack' }, might],
+    ['Power', { stat: 'attack' }, power],
     ['Hit', { stat: 'hit' }, hit],
     ['Crit', { stat: 'crit' }, crit],
     ['Weight', { glyph: 'weight' }, weight],

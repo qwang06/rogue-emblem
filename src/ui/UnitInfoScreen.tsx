@@ -164,7 +164,7 @@ function Combat({ unit }: { unit: UnitDetailView }) {
         <p className="unit-info__weapon">
           <span className="unit-info__weapon-name">{weapon.label}</span>
           <WeaponNumbers
-            might={weapon.might}
+            power={weapon.power}
             hit={weapon.hit}
             crit={weapon.crit}
             weight={weapon.weight}

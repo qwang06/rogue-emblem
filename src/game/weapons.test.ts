@@ -44,8 +44,8 @@ describe('the starter weapons', () => {
     }
   });
 
-  it('give fists no might and no limit on uses', () => {
-    expect(FISTS).toMatchObject({ type: 'physical', might: 0, hit: 80, weight: 0, uses: null });
+  it('give fists no power and no limit on uses', () => {
+    expect(FISTS).toMatchObject({ type: 'physical', power: 0, hit: 80, weight: 0, uses: null });
   });
 
   it('take both hands for bows, the great axe, the stone maul and siege weapons, and one for the rest', () => {
@@ -68,7 +68,7 @@ describe('the starter weapons', () => {
     }
     expect(WOODEN_SPEAR.weight).toBeLessThan(IRON_SPEAR.weight);
     expect(WOODEN_AXE.weight).toBeLessThan(IRON_AXE.weight);
-    expect(WOODEN_AXE.might).toBeLessThan(IRON_AXE.might);
+    expect(WOODEN_AXE.power).toBeLessThan(IRON_AXE.power);
     expect(WOODEN_SWORD.hit).toBeGreaterThan(WOODEN_SPEAR.hit);
     expect(WOODEN_SPEAR.hit).toBeGreaterThan(WOODEN_AXE.hit);
   });
@@ -251,7 +251,7 @@ describe('getWeaponActions', () => {
       type: 'physical',
       uses: 5,
       maxUses: IRON_BOW.uses,
-      might: 2,
+      power: 2,
       hit: 80,
       crit: 0,
       weight: 2,
