@@ -18,6 +18,9 @@ export interface TurnState {
   // A unit that may still move `movement` tiles after acting (a Momentum
   // kill), or null/missing for none. It isn't done until it moves or waits.
   canto?: Canto | null;
+  // The units an Encore kill (see modifiers.ts) let act again this phase,
+  // which can't again until the next.
+  encored?: readonly string[];
 }
 
 export interface Canto {
@@ -57,6 +60,23 @@ export function markDone(state: TurnState, unitId: string): TurnState {
 // (see Canto).
 export function startCanto(state: TurnState, unitId: string, movement: number): TurnState {
   return Object.freeze({ ...state, canto: Object.freeze({ unitId, movement }) });
+}
+
+// Lets `unitId` move and act again this phase (an Encore), once: it's no
+// longer moved or done, and it's marked as encored (see hasEncored).
+export function grantEncore(state: TurnState, unitId: string): TurnState {
+  return Object.freeze({
+    ...state,
+    moved: Object.freeze(state.moved.filter((id) => id !== unitId)),
+    done: Object.freeze(state.done.filter((id) => id !== unitId)),
+    canto: state.canto?.unitId === unitId ? null : state.canto,
+    encored: withId(state.encored ?? [], unitId),
+  });
+}
+
+// Whether `unitId` has had its Encore this phase.
+export function hasEncored(state: TurnState, unitId: string): boolean {
+  return state.encored?.includes(unitId) ?? false;
 }
 
 // The canto `unitId` is on, or null.

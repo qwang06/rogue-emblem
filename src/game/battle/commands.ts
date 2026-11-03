@@ -59,7 +59,7 @@ import {
 import { getObjectiveOutcome } from '../objectives.ts';
 import { getPushDirection, getPushResult, type PushResult } from '../push.ts';
 import { createResumableRng } from '../rng.ts';
-import { addStatus, clearStatuses, type StatusId, type StatusKind } from '../statuses.ts';
+import { addStatus, clearStatuses, STATUSES, type StatusId, type StatusKind } from '../statuses.ts';
 import {
   calculateSkillDamage,
   canUseSkill,
@@ -73,7 +73,7 @@ import {
   isHealingSkill,
   type Skill,
 } from '../skills.ts';
-import { hasModifier, sumModifiers } from '../modifiers.ts';
+import { hasModifier, sumModifiers, type Modifier } from '../modifiers.ts';
 import {
   createArrival,
   createWaveArrival,
@@ -86,6 +86,8 @@ import { areAllied, getTeamUnitIds, isAllyOf, isHostileTo } from '../teams.ts';
 import {
   getFirstPhase,
   getCanto,
+  grantEncore,
+  hasEncored,
   hasMoved,
   isDone,
   isPhaseOver,
@@ -186,6 +188,8 @@ export type BattleEvent =
       amount: number;
       trigger: 'kill' | 'phase' | 'drain';
     }
+  // An Encore kill lets `unitId` move and act again this phase (turns.ts).
+  | { type: 'encore'; unitId: string }
   // A Momentum kill lets `unitId` move `movement` more tiles before it's
   // done (a canto: see turns.ts).
   | { type: 'momentum'; unitId: string; movement: number }
@@ -284,6 +288,7 @@ export function applyCommand(state: BattleState, command: BattleCommand): Comman
       break;
     case 'wait':
       requireActor(draft, command.unitId, { canto: true });
+      veilOnWait(draft, command.unitId);
       finishAction(draft, command.unitId);
       break;
     case 'end-phase':
@@ -643,8 +648,44 @@ function attack(draft: Draft, unitId: string, target: Point) {
   const struck = draft.events.length;
   const killed = resolveAttack(draft, unitId, tile, from);
   if (!killed) shoveAfterAttack(draft, unitId, from, tile, draft.events.slice(struck));
+  if (killed && encore(draft, unitId)) return;
   if (killed && grantMomentum(draft, unitId)) return;
   finishAction(draft, unitId);
+}
+
+// After `unitId` fells a foe with an attack, an `encore` modifier (see
+// modifiers.ts) lets it move and act again, once a phase (an `encore`
+// event), unless the kill decided the battle. Returns whether it did.
+function encore(draft: Draft, unitId: string): boolean {
+  const unit = draft.units.get(unitId);
+  if (!unit || !hasModifier(unit.modifiers, 'encore') || getDraftOutcome(draft)) return false;
+  if (hasEncored(draft.turnState!, unitId)) return false;
+  draft.turnState = grantEncore(draft.turnState!, unitId);
+  draft.events.push({ type: 'encore', unitId });
+  return true;
+}
+
+// A unit with `veil-on-wait` that waits is Veiled (statuses.ts) until its
+// next phase.
+function veilOnWait(draft: Draft, unitId: string) {
+  if (!hasModifier(draft.unit(unitId).modifiers, 'veil-on-wait')) return;
+  layStatus(draft, unitId, unitId, 'veiled');
+}
+
+// Lays `status` on `targetId` for `unitId`, with a `status` event, unless
+// it's there already. A debuff lingers (Unit.lingering) when it's laid on
+// the target's own phase, which would otherwise end it at once, or by a
+// `linger-debuffs` unit.
+function layStatus(draft: Draft, unitId: string, targetId: string, status: StatusId) {
+  const target = draft.unit(targetId);
+  if (target.statuses.includes(status)) return;
+  const edited = draft.edit(targetId);
+  edited.statuses = addStatus(target.statuses, status);
+  const lingers =
+    STATUSES[status].kind === 'debuff' &&
+    (draft.turnState?.team === target.team || hasModifier(draft.unit(unitId).modifiers, 'linger-debuffs'));
+  if (lingers) edited.lingering = addStatus(target.lingering, status);
+  draft.events.push({ type: 'status', unitId, targetId, status });
 }
 
 // A unit whose attacks shove (a 'shove-on-attack' modifier, the slime's
@@ -736,21 +777,63 @@ function applyStrike(
   if (strike.drain) recover(draft, strikerId, 'health', strike.drain, 'drain');
   if (strike.hit) cleaveThrough(draft, strikerId, struckId, strike.damage);
   if (!struck.isAlive()) {
-    dropLoot(draft, struckId, strikerId);
-    defeat(draft, struckId, strikerId);
-    healOnKill(draft, strikerId);
+    fell(draft, struckId, strikerId);
     return 'struck';
   }
+  if (strike.hit) statusOnHit(draft, strikerId, struckId, strike.crit);
   if (!strike.recoil) return null;
   // The struck unit's thorns or reflect (see getRecoil in combat.ts).
   const hurt = draft.edit(strikerId);
   hurt.takeDamage(strike.recoil);
   draft.events.push({ type: 'recoil', unitId: strikerId, damage: strike.recoil, health: hurt.health });
-  if (hurt.isAlive()) return null;
-  dropLoot(draft, strikerId, struckId);
-  defeat(draft, strikerId, struckId);
-  healOnKill(draft, struckId);
-  return 'striker';
+  if (!hurt.isAlive()) {
+    fell(draft, strikerId, struckId);
+    return 'striker';
+  }
+  for (const modifier of draft.unit(struckId).modifiers) {
+    if (modifier.kind === 'status-on-recoil') layStatus(draft, struckId, strikerId, modifier.status);
+  }
+  return null;
+}
+
+// A landed strike by `strikerId` lays its `status-on-hit` statuses on
+// `struckId`: those `on` a hit always, those `on` a crit only on a crit.
+// (They count from the next exchange: this one was rolled already.)
+function statusOnHit(draft: Draft, strikerId: string, struckId: string, crit: boolean) {
+  for (const modifier of draft.unit(strikerId).modifiers) {
+    if (modifier.kind !== 'status-on-hit' || (modifier.on === 'crit' && !crit)) continue;
+    layStatus(draft, strikerId, struckId, modifier.status);
+  }
+}
+
+// A unit brought to 0 health by `killerId` leaves the map: its loot drops
+// to a player killer, a `contagion` killer passes its debuffs on, and the
+// killer's kill triggers fire.
+function fell(draft: Draft, deadId: string, killerId: string) {
+  dropLoot(draft, deadId, killerId);
+  spreadContagion(draft, deadId, killerId);
+  defeat(draft, deadId, killerId);
+  onKill(draft, killerId);
+}
+
+// When a `contagion` unit fells a foe carrying debuffs, they pass to the
+// killer's other foe nearest the fallen one (the first found on a tie),
+// with a `status` event each.
+function spreadContagion(draft: Draft, deadId: string, killerId: string) {
+  const killer = draft.unit(killerId);
+  if (!hasModifier(killer.modifiers, 'contagion')) return;
+  const debuffs = draft.unit(deadId).statuses.filter((id) => STATUSES[id].kind === 'debuff');
+  if (debuffs.length === 0) return;
+  const at = draft.tileOf(deadId);
+  const isFoe = hostileTo(draft.units, killer);
+  let nearest: { unitId: string; distance: number } | null = null;
+  for (const unitId of draft.units.keys()) {
+    if (unitId === deadId || !isFoe(unitId)) continue;
+    const distance = getDistance(at, draft.tileOf(unitId));
+    if (!nearest || distance < nearest.distance) nearest = { unitId, distance };
+  }
+  if (!nearest) return;
+  for (const status of debuffs) layStatus(draft, killerId, nearest.unitId, status);
 }
 
 // A cleave-through hit (see modifiers.ts) of `damage` on `struckId` also
@@ -771,9 +854,7 @@ function cleaveThrough(draft: Draft, strikerId: string, struckId: string, damage
     victim.takeDamage(splash);
     draft.events.push({ type: 'splash', unitId, damage: splash, health: victim.health });
     if (victim.isAlive()) continue;
-    dropLoot(draft, unitId, strikerId);
-    defeat(draft, unitId, strikerId);
-    healOnKill(draft, strikerId);
+    fell(draft, unitId, strikerId);
   }
 }
 
@@ -824,9 +905,17 @@ function chainKill(draft: Draft, unitId: string) {
 // What spendWeaponUse would say for a strike that didn't wear the weapon.
 const SPARED_STRIKE = Object.freeze({ broke: false, learned: null, leftover: null });
 
-// A unit that defeated a foe heals its kill-heal modifiers' HP.
-function healOnKill(draft: Draft, unitId: string) {
-  recover(draft, unitId, 'health', sumModifiers(draft.unit(unitId).modifiers, 'kill-heal'), 'kill');
+// A unit that defeated a foe heals its kill-heal modifiers' HP and its
+// kill-heal-percent share of its max HP, and its kill-stack modifiers add
+// to their terms for the rest of the battle.
+function onKill(draft: Draft, unitId: string) {
+  const { modifiers, maxHealth } = draft.unit(unitId);
+  const percent = Math.floor((maxHealth * sumModifiers(modifiers, 'kill-heal-percent')) / 100);
+  recover(draft, unitId, 'health', sumModifiers(modifiers, 'kill-heal') + percent, 'kill');
+  const stacks = modifiers.flatMap((modifier): Modifier[] =>
+    modifier.kind === 'kill-stack' ? [{ kind: 'combat', term: modifier.term, amount: modifier.amount }] : [],
+  );
+  if (stacks.length > 0) draft.edit(unitId).modifiers = Object.freeze([...modifiers, ...stacks]);
 }
 
 // Restores up to `amount` of a unit's HP or MP for a modifier, with a
@@ -978,7 +1067,7 @@ function useSkill(draft: Draft, unitId: string, skillId: string, target: Point) 
     if (lethal) {
       if (hostile) dropLoot(draft, victim.unitId, unitId);
       defeat(draft, victim.unitId, hostile ? unitId : null);
-      if (hostile) healOnKill(draft, unitId);
+      if (hostile) onKill(draft, unitId);
     }
     if (!hostile) continue;
     const strikes: Strike[] = [{ by: 'attacker', target: 'defender', damage, hit: true, crit: false, lethal }];
@@ -1068,7 +1157,7 @@ function knockOut(draft: Draft, unitId: string, shoverId: string) {
   const hostile = !areAllied(draft.unit(unitId).team, draft.unit(shoverId).team);
   if (hostile) dropLoot(draft, unitId, shoverId);
   defeat(draft, unitId, hostile ? shoverId : null);
-  if (hostile) healOnKill(draft, shoverId);
+  if (hostile) onKill(draft, shoverId);
 }
 
 // A healing skill on the wounded ally on `target` (or, for a range-0 one,
@@ -1193,9 +1282,12 @@ function hasGuests(draft: Draft): boolean {
 function startPhase(draft: Draft, turnState: TurnState) {
   const wearOff = (team: TurnState['team'], kind: StatusKind) => {
     for (const unitId of getTeamUnitIds(draft.units, team)) {
-      const { statuses } = draft.unit(unitId);
-      const left = clearStatuses(statuses, kind);
+      const { statuses, lingering } = draft.unit(unitId);
+      // A lingering debuff outlasts this wear-off, once.
+      const keep = kind === 'debuff' ? lingering : [];
+      const left = Object.freeze(clearStatuses(statuses, kind).concat(statuses.filter((id) => keep.includes(id))));
       if (left.length !== statuses.length) draft.edit(unitId).statuses = left;
+      if (kind === 'debuff' && lingering.length > 0) draft.edit(unitId).lingering = Object.freeze([]);
     }
   };
   const ended = draft.turnState?.team;
@@ -1218,6 +1310,22 @@ function startPhase(draft: Draft, turnState: TurnState) {
     recover(draft, unitId, 'health', sumModifiers(modifiers, 'phase-heal') + percentHeal, 'phase');
     recover(draft, unitId, 'mana', sumModifiers(modifiers, 'phase-mana'), 'phase');
   }
+  for (const unitId of getTeamUnitIds(draft.units, turnState.team)) tauntAura(draft, unitId);
+}
+
+// A `taunt-aura` unit Taunts the foes beside it as its phase starts, and is
+// Taunting while any were.
+function tauntAura(draft: Draft, unitId: string) {
+  const unit = draft.unit(unitId);
+  if (!hasModifier(unit.modifiers, 'taunt-aura')) return;
+  const at = draft.tileOf(unitId);
+  const isFoe = hostileTo(draft.units, unit);
+  const foes = getNeighbors(draft.grid, at.x, at.y)
+    .map(({ x, y }) => getCell(draft.grid, x, y)?.unitId)
+    .filter((id): id is string => id !== undefined && id !== null && isFoe(id));
+  if (foes.length === 0) return;
+  for (const foeId of foes) layStatus(draft, unitId, foeId, 'taunted');
+  layStatus(draft, unitId, unitId, 'taunting');
 }
 
 function checkOutcome(draft: Draft): boolean {
