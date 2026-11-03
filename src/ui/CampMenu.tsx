@@ -21,6 +21,7 @@ export function CampMenu() {
     (state) =>
       state.rosterScreen !== null ||
       state.merchantScreen !== null ||
+      state.equipmentScreen !== null ||
       state.promotionScreen !== null ||
       state.mentorScreen !== null,
   );

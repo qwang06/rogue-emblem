@@ -26,7 +26,8 @@ describe('toMerchantScreenView', () => {
       ['Heal', 40, true],
       ['Master Seal', 60, true],
     ]);
-    expect(view.stock[0].quantity).toBe(20);
+    // Gear never wears out, so it shows no count.
+    expect(view.stock[0].quantity).toBeNull();
     expect(view.stock[4].quantity).toBeNull();
   });
 
@@ -34,14 +35,14 @@ describe('toMerchantScreenView', () => {
     const view = toMerchantScreenView(
       openMerchantScreen(
         campRun(0, [
-          { itemId: WOODEN_SWORD.id, quantity: 10 },
+          { itemId: WOODEN_SWORD.id, quantity: 1 },
           { itemId: WOODEN_ARMOR.id, quantity: 1 },
           { itemId: FISTS.id, quantity: 1 },
         ]),
       ),
     );
     expect(view.convoy.map((item) => [item.label, item.quantity, item.price, item.disabled])).toEqual([
-      ['Wooden Sword', 10, 5, false],
+      ['Wooden Sword', null, 10, false],
       ['Wooden Armor', null, 12, false],
       ['Fists', null, 0, true],
     ]);

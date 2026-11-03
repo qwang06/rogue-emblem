@@ -3,31 +3,26 @@ import { StatIcon, type StatIconKind } from './StatIcon.tsx';
 
 // A weapon's numbers as icon chips instead of "Pow 1 Hit 90 Crit 0 Wt 1":
 // a sword for power, the crosshair for hit, the star for crits (the
-// forecast's own icons), a kettlebell for weight, a dashed arrow for range
-// and a gauge for the uses left (∞ for a weapon that never breaks). Each
-// chip's name is its tooltip and is read out, so the icons never stand in
-// for the word alone. Leave a number out to skip its chip; uses reads
-// "12/40" with maxUses and just the count without.
+// forecast's own icons), a kettlebell for weight and a dashed arrow for
+// range. Each chip's name is its tooltip and is read out, so the icons
+// never stand in for the word alone. Leave a number out to skip its chip.
 export interface WeaponNumbersProps {
   power?: number;
   hit?: number;
   crit?: number;
   weight?: number;
   range?: string | number;
-  uses?: number | null;
-  maxUses?: number | null;
 }
 
 type Icon = { stat: StatIconKind } | { glyph: GlyphKind };
 
-export function WeaponNumbers({ power, hit, crit, weight, range, uses, maxUses }: WeaponNumbersProps) {
+export function WeaponNumbers({ power, hit, crit, weight, range }: WeaponNumbersProps) {
   const chips: [string, Icon, string | number | undefined][] = [
     ['Power', { stat: 'attack' }, power],
     ['Hit', { stat: 'hit' }, hit],
     ['Crit', { stat: 'crit' }, crit],
     ['Weight', { glyph: 'weight' }, weight],
     ['Range', { glyph: 'range' }, range],
-    ['Uses', { glyph: 'uses' }, formatUses(uses, maxUses)],
   ];
   return (
     <span className="weapon-numbers">
@@ -42,10 +37,4 @@ export function WeaponNumbers({ power, hit, crit, weight, range, uses, maxUses }
       )}
     </span>
   );
-}
-
-function formatUses(uses: number | null | undefined, maxUses: number | null | undefined): string | number | undefined {
-  if (uses === undefined) return undefined;
-  if (uses === null) return '∞';
-  return maxUses == null ? uses : `${uses}/${maxUses}`;
 }

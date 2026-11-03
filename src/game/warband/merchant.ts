@@ -76,22 +76,14 @@ export function getItemPrice(item: Item): number {
   return ITEM_PRICES[item.id] ?? DEFAULT_PRICES[item.kind];
 }
 
-// What the merchant pays for the convoy entry `entry`: half the price, for
-// one of a consumable, or, for a weapon or staff that wears out, in
-// proportion to the uses it has left (rounded down). 0 for a natural
-// weapon.
+// What the merchant pays for one of the convoy entry `entry`: half the
+// price, rounded down. 0 for a natural weapon.
 export function getSellPrice(entry: ItemSnapshot, items: readonly Item[] = RUN_ITEMS): number {
-  const item = lookUpItem(entry.itemId, items);
-  const half = getItemPrice(item) / 2;
-  const uses = item.kind === 'weapon' || item.kind === 'staff' ? item.uses : null;
-  if (uses === null) return Math.floor(half);
-  return Math.floor((half * Math.min(entry.quantity, uses)) / uses);
+  return Math.floor(getItemPrice(lookUpItem(entry.itemId, items)) / 2);
 }
 
-// How many of `item` one purchase adds to the convoy: one consumable, or
-// a weapon or staff with all its uses, or one piece of armor.
-export function getPurchaseQuantity(item: Item): number {
-  if (item.kind === 'weapon' || item.kind === 'staff') return item.uses ?? 1;
+// How many of `item` one purchase adds to the convoy: one.
+export function getPurchaseQuantity(_item: Item): number {
   return 1;
 }
 

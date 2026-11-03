@@ -82,8 +82,8 @@ function spend(run: RunState, gold: number): RunState {
   return freeze({ ...run, gold: run.gold - gold });
 }
 
-// `quantity` of item `itemId` (a weapon or staff with all its uses) added
-// to the convoy, a consumable stacking onto one already there.
+// `quantity` of item `itemId` added to the convoy (one of a piece of gear),
+// a consumable stacking onto one already there.
 export function addToConvoy(run: RunState, itemId: string, quantity = 1): RunState {
   const item = lookUpItem(itemId);
   const index = isStackable(item) ? run.convoy.findIndex((entry) => entry.itemId === itemId) : -1;

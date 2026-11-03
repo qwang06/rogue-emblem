@@ -31,10 +31,9 @@ describe('Dragon', () => {
   it('breathes fire up to two tiles away, never running out, and carries nothing else', () => {
     const dragon = new Dragon({ team: 'enemy' });
     expect(dragon.weapon).toBe(FIRE_BREATH);
-    expect(dragon.weaponUses).toBeNull();
     expect([dragon.weapon!.minRange, dragon.weapon!.maxRange]).toEqual([1, 2]);
-    expect(dragon.items).toEqual(DRAGON_ITEMS);
-    expect(dragon.items).toHaveLength(1);
+    expect(dragon.innate).toEqual(DRAGON_ITEMS.map(({ item }) => item));
+    expect(dragon.items).toEqual([]);
   });
 
   it('levels up with the dragon growth rates', () => {

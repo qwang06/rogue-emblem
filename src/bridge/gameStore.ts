@@ -12,6 +12,7 @@ import type { MapTagView } from './mapTagView.ts';
 import type { MerchantScreenView } from './merchantView.ts';
 import type { PromotionScreenView } from './promotionView.ts';
 import type { RosterScreenView } from './rosterView.ts';
+import type { EquipmentScreenView } from './equipmentView.ts';
 import type { RunSummaryView } from './runSummaryView.ts';
 import { createStore } from './store.ts';
 import type { AutoSpeed } from '../game/autoSpeed.ts';
@@ -99,6 +100,7 @@ export interface BattleState {
   campRelics: readonly RelicView[] | null;
   rosterScreen: RosterScreenView | null;
   merchantScreen: MerchantScreenView | null;
+  equipmentScreen: EquipmentScreenView | null;
   promotionScreen: PromotionScreenView | null;
   mentorScreen: MentorScreenView | null;
 }
@@ -162,6 +164,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   campGold: null, // the warband's gold while at camp (shown on the camp menu), or null
   campRelics: null, // RelicViews from toRelicViews() of the warband's relics while at camp (listed on the camp menu), or null
   rosterScreen: null, // RosterScreenView from toRosterScreenView() while the roster screen is open between stages, or null
+  equipmentScreen: null, // EquipmentScreenView from toEquipmentScreenView() while the camp's equipment screen is open, or null
   merchantScreen: null, // MerchantScreenView from toMerchantScreenView() while the camp's merchant screen is open, or null
   promotionScreen: null, // PromotionScreenView from toPromotionScreenView() while the camp's promotion screen is open, or null
   mentorScreen: null, // MentorScreenView from toMentorScreenView() while the camp's mentor screen is open, or null

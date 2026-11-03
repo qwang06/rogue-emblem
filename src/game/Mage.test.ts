@@ -22,8 +22,9 @@ describe('Mage', () => {
 
   it('knows Fire and carries the potions', () => {
     const mage = new Mage({ team: 'player' });
-    expect(mage.items).toEqual(MAGE_ITEMS);
-    expect(mage.items.map((entry) => entry.item)).toEqual([FIRE_SPELL, HEALTH_POTION, MANA_POTION]);
+    expect(MAGE_ITEMS.map((entry) => entry.item)).toEqual([FIRE_SPELL, HEALTH_POTION, MANA_POTION]);
+    expect(mage.innate).toEqual([FIRE_SPELL]);
+    expect(mage.items.map((entry) => entry.item)).toEqual([HEALTH_POTION, MANA_POTION]);
     expect(mage.weapon).toBe(FIRE_SPELL);
     expect(mage.weaponTypes).toEqual(['magical']);
   });

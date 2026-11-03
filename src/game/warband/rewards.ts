@@ -103,7 +103,7 @@ export type Reward =
   // A relic the warband doesn't hold yet (see relics.ts).
   | { kind: 'relic'; relicId: string }
   // A fresh weapon in the convoy.
-  | { kind: 'arms'; itemId: string; label: string; uses: number }
+  | { kind: 'arms'; itemId: string; label: string }
   // Every unit gains exactly the XP to its next level; `seed` rolls the
   // level ups' stat gains, so picking it always gives the same ones.
   | { kind: 'lesson'; seed: number }
@@ -320,7 +320,7 @@ function createReward(kind: RewardKind, run: RunState, stage: number, rng: Rng, 
       return { kind, relicId: randomItem(rng, getOfferableRelics(run.relics)).id };
     case 'arms': {
       const weapon = randomItem(rng, eligibleWeapons(run, classes));
-      return { kind, itemId: weapon.id, label: weapon.label, uses: weapon.uses! };
+      return { kind, itemId: weapon.id, label: weapon.label };
     }
     case 'lesson':
       return { kind, seed: Math.floor(rng() * 2 ** 32) };
@@ -424,7 +424,7 @@ function applyRewardEffect(run: RunState, reward: Reward, classes: readonly Unit
         ? freeze({ ...run, relics: [...run.relics, reward.relicId] })
         : run;
     case 'arms':
-      return freeze({ ...run, convoy: [...run.convoy, { itemId: reward.itemId, quantity: reward.uses }] });
+      return freeze({ ...run, convoy: [...run.convoy, { itemId: reward.itemId, quantity: 1 }] });
     case 'lesson':
       return applyLessonReward(run, reward, classes).run;
     case 'seal':
@@ -528,7 +528,7 @@ export function describeReward(
       };
     }
     case 'arms':
-      return { label: 'Arms Cache', description: `A fresh ${reward.label} goes to the convoy (${reward.uses} uses).` };
+      return { label: 'Arms Cache', description: `A ${reward.label} goes to the convoy.` };
     case 'lesson':
       return { label: "Veteran's Lesson", description: 'Every unit gains enough XP to reach its next level.' };
     case 'seal':
@@ -577,7 +577,11 @@ function freeze(run: RunState): RunState {
     ...run,
     roster: Object.freeze(
       run.roster.map((unit) =>
-        Object.freeze({ ...unit, items: Object.freeze(unit.items.map((item) => Object.freeze({ ...item }))) }),
+        Object.freeze({
+          ...unit,
+          items: Object.freeze(unit.items.map((item) => Object.freeze({ ...item }))),
+          ...(unit.equipment && { equipment: Object.freeze({ ...unit.equipment }) }),
+        }),
       ),
     ),
     relics: Object.freeze([...run.relics]),

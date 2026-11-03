@@ -31,9 +31,8 @@ describe('Bat', () => {
   it('fights with its Fangs, which never breaks, and carries nothing else', () => {
     const bat = new Bat({ team: 'enemy' });
     expect(bat.weapon).toBe(FANGS);
-    expect(bat.weaponUses).toBeNull();
-    expect(bat.items).toEqual(BAT_ITEMS);
-    expect(bat.items).toHaveLength(1);
+    expect(bat.innate).toEqual(BAT_ITEMS.map(({ item }) => item));
+    expect(bat.items).toEqual([]);
   });
 
   it('levels up with the bat growth rates', () => {

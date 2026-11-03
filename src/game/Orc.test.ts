@@ -31,9 +31,8 @@ describe('Orc', () => {
   it('fights with its Great Axe, which never breaks, and carries nothing else', () => {
     const orc = new Orc({ team: 'enemy' });
     expect(orc.weapon).toBe(GREAT_AXE);
-    expect(orc.weaponUses).toBeNull();
-    expect(orc.items).toEqual(ORC_ITEMS);
-    expect(orc.items).toHaveLength(1);
+    expect(orc.innate).toEqual(ORC_ITEMS.map(({ item }) => item));
+    expect(orc.items).toEqual([]);
   });
 
   it('levels up with the orc growth rates', () => {

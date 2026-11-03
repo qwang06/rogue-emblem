@@ -31,9 +31,8 @@ describe('Slime', () => {
   it('fights with its Tackle, which never breaks, and carries nothing else', () => {
     const slime = new Slime({ team: 'enemy' });
     expect(slime.weapon).toBe(TACKLE);
-    expect(slime.weaponUses).toBeNull();
-    expect(slime.items).toEqual(SLIME_ITEMS);
-    expect(slime.items).toHaveLength(1);
+    expect(slime.innate).toEqual(SLIME_ITEMS.map(({ item }) => item));
+    expect(slime.items).toEqual([]);
   });
 
   it('levels up with the slime growth rates', () => {

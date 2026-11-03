@@ -9,7 +9,7 @@ import { PROMOTION_LEVEL } from '../game/promotions.ts';
 import { getItemSprite, getUnitSprite } from '../game/tileset.ts';
 import { UNIT_CLASSES, type UnitClass } from '../game/unitClasses.ts';
 import { formatWeaponRange, type Hands } from '../game/weapons.ts';
-import { canGiveFromConvoy, getEquippedIndex, getWornIndices, lookUpItem } from '../game/warband/convoy.ts';
+import { canGiveFromConvoy, lookUpItem } from '../game/warband/convoy.ts';
 import { restoreRoster, RUN_ITEMS, type ItemSnapshot } from '../game/warband/run.ts';
 import { toUnitDetailView, type UnitDetailView } from './views.ts';
 import {
@@ -30,11 +30,11 @@ export interface RosterUnitView {
   sprite: string;
 }
 
-// An item in a unit's inventory or the convoy. `icon` is its sprite key
-// (null for items with no icon yet); `quantity` is how many (a weapon's or
-// staff's uses left), or null for a weapon that never breaks or armor;
-// `equipped` marks the weapon the unit fights with and the armor it wears;
-// `disabled` marks a convoy item the picked unit has no room for.
+// An item in a unit's bag or the convoy. `icon` is its sprite key (null
+// for items with no icon yet); `quantity` is how many of a consumable, or
+// null for gear; `equipped` is always false here (gear is shown on the
+// equipment screen); `disabled` marks a convoy item the picked unit can't
+// take.
 export interface RosterItemView {
   key: string;
   label: string;
@@ -73,11 +73,9 @@ export function toRosterScreenView(
   items: readonly Item[] = RUN_ITEMS,
 ): RosterScreenView {
   const unit = getPickedUnit(state);
-  const equipped = unit ? getEquippedIndex(state.run, unit.id, classes, items) : null;
-  const worn = unit ? getWornIndices(state.run, unit.id, classes, items) : [];
   const toItem = (entry: ItemSnapshot, index: number, extra: Partial<RosterItemView>): RosterItemView => {
     const item = lookUpItem(entry.itemId, items);
-    const uncounted = (item.kind === 'weapon' && item.uses === null) || item.kind === 'armor';
+    const uncounted = item.kind !== 'consumable';
     return Object.freeze({
       key: `${entry.itemId}@${index}`,
       label: item.label,
@@ -89,9 +87,7 @@ export function toRosterScreenView(
       ...extra,
     });
   };
-  const unitItems = (unit?.items ?? []).map((entry, index) =>
-    toItem(entry, index, { equipped: index === equipped || worn.includes(index) }),
-  );
+  const unitItems = (unit?.items ?? []).map((entry, index) => toItem(entry, index, {}));
   const convoy = state.run.convoy.map((entry, index) =>
     toItem(entry, index, { disabled: !unit || !canGiveFromConvoy(state.run, unit.id, index, items) }),
   );
@@ -133,15 +129,13 @@ export function toRosterScreenView(
 }
 
 // A weapon's or staff's numbers, which the roster and merchant show as
-// icon chips (WeaponNumbers) after the line. Uses is null for one that
-// never breaks.
+// icon chips (WeaponNumbers) after the line.
 export interface ItemNumbers {
   power?: number;
   hit?: number;
   crit?: number;
   weight?: number;
   range: string;
-  uses: number | null;
 }
 
 export interface ItemDetail {
@@ -169,23 +163,29 @@ export function describeItem(item: Item): ItemDetail {
       crit: item.crit,
       weight: item.weight,
       range: formatWeaponRange(item),
-      uses: item.uses,
     });
   }
   if (item.kind === 'staff') {
     return describe(`Staff · ${formatHands(item.hands)} · Heals ${item.power} + INT`, {
       range: formatWeaponRange(item),
-      uses: item.uses,
     });
   }
   if (item.kind === 'armor') {
     const stats = `DEF +${item.defense} against physical hits · Wt ${item.weight}`;
     if (item.slot === 'shield') return describe(`Shield · ${stats} · With a 1H weapon only`);
-    return describe(`Body armor · ${stats}`);
+    return describe(`${ARMOR_SLOT_LABELS[item.slot]} · ${stats}`);
   }
   if (item.kind === 'seal') return describe(`Spent at camp to promote a unit of level ${PROMOTION_LEVEL} or more.`);
   return describe(`Restores up to ${item.amount} ${item.stat === 'health' ? 'HP' : 'mana'}.`);
 }
+
+const ARMOR_SLOT_LABELS = Object.freeze({
+  shield: 'Shield',
+  head: 'Headgear',
+  body: 'Body armor',
+  accessory: 'Accessory',
+  special: 'Special gear',
+});
 
 // "1H" or "2H": how many hands a weapon or staff takes.
 function formatHands(hands: Hands): string {

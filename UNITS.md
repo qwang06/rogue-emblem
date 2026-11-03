@@ -4,20 +4,21 @@ Reference for every unit class: base stats, growth rates, weapons and skills. Ke
 
 ## How the numbers work
 
-- **Weapons:** every attack is made with the unit's equipped weapon — the first weapon in its inventory it can wield. A class masters weapon types (`physical`, `magical`, `siege`) and can only wield those. Picking a weapon in the Attack menu equips it. A unit with no weapon it can wield can't attack or counter.
+- **Equipment:** a unit wears its gear in slots apart from its bag (`src/game/equipment.ts`). A humanoid has a main hand (a weapon or a staff), an off hand (a shield), a head, a body and one accessory; a monster (the monster classes, the Beast, Whelp, Ram and the elementals) has a special slot, which takes only signature gear made for its class, and an accessory. Gear is set between battles on the camp's Equipment screen, from the convoy, and never swapped mid-battle. The bag holds up to 4 consumables.
+- **Weapons:** a unit attacks with the weapon in its main hand or one of its innate attacks: the weapons its body comes with (Fists, a monster's natural weapon) and the spells it knows. Picking one in the Attack menu fights with it. A class masters weapon types (`physical`, `magical`, `siege`), and only weapons of those types are offered. A unit with nothing to attack with can't attack or counter.
 - **Damage** of a regular hit = `STR + Pow − DEF` for physical and siege weapons (`INT + Pow − RES` for magical ones), never below 0.
 - **Attack speed** = `SPD − max(0, Wt − STR)`: a weapon heavier than the wielder's strength slows it down.
 - **Hit chance** = (weapon `Hit` + `DEX × 2` + `LCK / 2`) − (attack speed `× 2` + `LCK` of the target), clamped to 0–100%.
 - **Crit chance** = (weapon `Crit` + `DEX / 2`) − target's `LCK`, clamped to 0–100%. A crit deals ×3 damage.
 - **Doubling:** a unit strikes twice in an exchange when its attack speed beats the opponent's by 4 or more.
 - **Counters:** the defender strikes back if the attacker is within its weapon's range (`Rng`). Bows and siege engines can't strike adjacent foes.
-- **Hands:** every weapon is one-handed (`1`) or two-handed (`2`); bows, the Great Axe, siege weapons and every staff take both hands. A unit wears a shield only while its equipped weapon is one-handed (bare hands count) and it carries no staff, so equipping a two-handed weapon takes its shield off until it equips a one-handed one again. Body armor is worn whatever the unit holds.
-- **Healing:** a unit carrying a staff gets a **Heal** action. It restores the staff's power + the healer's `INT` to a wounded ally in the staff's range, capped at the ally's missing HP, spends one use of the staff (a staff with none left breaks), and earns the healer 10 XP. Staves aren't weapons: they can't attack or counter.
-- **Uses:** every strike, hit or miss, spends one use of the striker's weapon. A weapon with no uses left breaks and is gone, and a unit whose weapon breaks mid-exchange stops striking. Fists never break (`∞`).
-- **Tomes:** a tome is a magical weapon that teaches its spell. Each strike with it counts towards learning the spell (Fire Tome: 5); on the strike that reaches the count the spell takes the tome's slot and never breaks, and the tome keeps its remaining uses in the next free slot (or goes to the convoy when there's none) so another unit can learn from it. A unit that already knows the spell just uses the tome up. Progress is kept per unit, per tome, between stages.
+- **Hands:** every weapon is one-handed (`1`) or two-handed (`2`); bows, the Great Axe, siege weapons and every staff take both hands. The off hand takes a shield only while the main hand is empty or holds a one-handed weapon, so equipping a two-handed weapon or a staff sends the shield back to the convoy. Head, body and accessory gear is worn whatever the unit holds.
+- **Healing:** a unit carrying a staff gets a **Heal** action. It restores the staff's power + the healer's `INT` to a wounded ally in the staff's range, capped at the ally's missing HP, and earns the healer 10 XP. Staves aren't weapons: they can't attack or counter.
+- **Durability:** none. Weapons, staves and armor never wear out or break.
+- **Tomes:** a tome is a magical weapon, held in the main hand, that teaches its spell. Each strike with it counts towards learning the spell (Fire Tome: 5); on the strike that reaches the count the unit knows the spell for good, as an innate attack, and keeps the tome in hand (it can go back to the convoy for another unit to learn from). Progress is kept per unit, per tome, between stages.
 - **Growths** are fixed, with no dice: a growth of 100% raises the stat by 1 every level, 50% every second level, 25% every fourth. Each level hands out the points the class's growths have earned by then, staggered so every level gives about the same number and each stat stays within a point of its share (`getLevelUpGains` in `experience.ts`); two units of the same class and level have the same stats, boons aside. Stats have no caps and there is no level cap. Level 1 to 2 takes 50 XP, every level after 100 XP.
 - **XP rate** scales every XP gain (combat, skills, healing): a unit with a 150% rate earns 15 XP where others earn 10, rounded to the nearest point and never below 1.
-- **Skills** always hit, never crit, and the target can't counter. Their damage is the user's regular hit (weapon power included) with any bonus `STR` added, then scaled; scaled damage rounds up. Using one costs mana, earns XP like a landed hit, and spends no weapon uses. A healing skill (Mend) instead restores its power + the user's `INT` to a wounded ally in range, capped at the ally's missing HP, and earns 10 XP like a staff heal.
+- **Skills** always hit, never crit, and the target can't counter. Their damage is the user's regular hit (weapon power included) with any bonus `STR` added, then scaled; scaled damage rounds up. Using one costs mana, earns XP like a landed hit, and needs no weapon. A healing skill (Mend) instead restores its power + the user's `INT` to a wounded ally in range, capped at the ally's missing HP, and earns 10 XP like a staff heal.
 - **Area skills** reach past the foe they're aimed at: the tiles on either side of it (Cleave), the tile behind it as seen from the user (Piercing Shot, Skewer), or the four tiles around it (Shrapnel, Barrage, and Prayer around the user itself). Each foe there takes the skill's damage too, worked out against it, and the user earns XP for whichever foe gives the most. Shrapnel strikes allies in its blast as well. **Tandem Strike** strikes its target twice, the second blow for half the first's damage, rounded up.
 - **Statuses** a skill leaves on a foe last until the end of that foe's team's next phase: **Rooted** can't move, **Sundered** takes 3 more damage from every hit, **Marked** has 15 less avoid. A status doesn't stack with itself. **Buffs** a skill gives an ally last until the start of that ally's next phase, so one given in the player phase holds through the enemy phase: **Guarded** takes 2 less damage from every hit, **Warded** 4 less, **Hastened** moves 2 more tiles.
 - **Learning skills:** a class learns its tree's skills (the tables below) by level. A promoted villager keeps the villager's Throw Stones. On top of that, a level up in Warband Mode can offer a skill pick (a skill boon), and only from the unit's own class: the "Level-up skill pick" lines below. A class without one is offered a second passive instead.
@@ -30,32 +31,32 @@ Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.m
 
 ## Weapons
 
-One starter weapon per armed unit in the unit catalog. Fists, the Wooden Sword, the Wooden Spear, the Iron Spear, the Iron Bow, the Iron Axe, the Powder Keg and the Ballista are carried by a class; the monsters, the Beast, the Ram and the elementals fight with natural weapons (Tackle, Club, Bone Claws, Fangs, Bite, Great Axe, Stone Maul, Fire Breath, Fire, Light), which never break; the rest of the wooden set is basic gear no class starts with; the Acolyte and the Bishop know Light from the start; the Mage knows Fire; and the Fire Tome drops as loot for an Acolyte to learn Fire from (and is the Mage's promotion gift).
+One starter weapon per armed unit in the unit catalog. Fists, the Wooden Sword, the Wooden Spear, the Iron Spear, the Iron Bow, the Iron Axe, the Powder Keg and the Ballista are carried by a class; the monsters, the Beast, the Ram and the elementals fight with natural weapons (Tackle, Club, Bone Claws, Fangs, Bite, Great Axe, Stone Maul, Fire Breath, Fire, Light), which are innate and never leave them; the rest of the wooden set is basic gear no class starts with; the Acolyte and the Bishop know Light from the start; the Mage knows Fire; and the Fire Tome drops as loot for an Acolyte to learn Fire from (and is the Mage's promotion gift).
 
-| Weapon       | Type     | Hands | Pow | Hit | Crit | Wt  | Rng | Uses | For (catalog art)                                                |
-| ------------ | -------- | ----- | --- | --- | ---- | --- | --- | ---- | ---------------------------------------------------------------- |
-| Fists        | physical | 1     | 0   | 80  | 0    | 0   | 1   | ∞    | Villager (once its sword breaks)                                 |
-| Iron Spear   | physical | 1     | 1   | 80  | 0    | 3   | 1   | 40   | Soldier, Beast Rider                                             |
-| Iron Axe     | physical | 1     | 3   | 65  | 0    | 5   | 1   | 40   | Vanguard (axe)                                                   |
-| Iron Bow     | physical | 2     | 2   | 80  | 0    | 2   | 2   | 40   | Archer                                                           |
-| Fire Tome    | magical  | 1     | 2   | 85  | 0    | 1   | 1–2 | 30   | Loot (teaches Fire)                                              |
-| Fire         | magical  | 1     | 2   | 85  | 0    | 1   | 1–2 | ∞    | Mage; learned from the Fire Tome; Fire Elemental                 |
-| Light        | magical  | 1     | 0   | 90  | 0    | 0   | 1–2 | ∞    | Acolyte, Bishop (known from the start), Water and Air Elementals |
-| Powder Keg   | siege    | 2     | 5   | 70  | 0    | 6   | 1–2 | 5    | Sapper                                                           |
-| Ballista     | siege    | 2     | 6   | 70  | 0    | 8   | 2–3 | 10   | Siege                                                            |
-| Tackle       | physical | 1     | 0   | 75  | 0    | 0   | 1   | ∞    | Slime, Ram, Earth Elemental                                      |
-| Club         | physical | 1     | 2   | 75  | 0    | 2   | 1   | ∞    | Goblin                                                           |
-| Bone Claws   | physical | 1     | 2   | 80  | 0    | 1   | 1   | ∞    | Skeleton                                                         |
-| Fangs        | physical | 1     | 1   | 85  | 0    | 0   | 1   | ∞    | Bat                                                              |
-| Bite         | physical | 1     | 2   | 75  | 5    | 1   | 1   | ∞    | Beast, Whelp                                                     |
-| Great Axe    | physical | 2     | 3   | 65  | 0    | 4   | 1   | ∞    | Orc, Minotaur                                                    |
-| Stone Maul   | physical | 2     | 4   | 60  | 0    | 5   | 1   | ∞    | Troll                                                            |
-| Fire Breath  | physical | 1     | 4   | 75  | 0    | 0   | 1–2 | ∞    | Dragon                                                           |
-| Wooden Sword | physical | 1     | 1   | 90  | 0    | 1   | 1   | 20   | Villager                                                         |
-| Wooden Spear | physical | 1     | 1   | 75  | 0    | 2   | 1   | 20   | Scout                                                            |
-| Wooden Axe   | physical | 1     | 2   | 60  | 0    | 3   | 1   | 20   | –                                                                |
+| Weapon       | Type     | Hands | Pow | Hit | Crit | Wt  | Rng | For (catalog art)                                                |
+| ------------ | -------- | ----- | --- | --- | ---- | --- | --- | ---------------------------------------------------------------- |
+| Fists        | physical | 1     | 0   | 80  | 0    | 0   | 1   | Villager (innate, with or without a sword)                       |
+| Iron Spear   | physical | 1     | 1   | 80  | 0    | 3   | 1   | Soldier, Beast Rider                                             |
+| Iron Axe     | physical | 1     | 3   | 65  | 0    | 5   | 1   | Vanguard (axe)                                                   |
+| Iron Bow     | physical | 2     | 2   | 80  | 0    | 2   | 2   | Archer                                                           |
+| Fire Tome    | magical  | 1     | 2   | 85  | 0    | 1   | 1–2 | Loot (teaches Fire)                                              |
+| Fire         | magical  | 1     | 2   | 85  | 0    | 1   | 1–2 | Mage; learned from the Fire Tome; Fire Elemental                 |
+| Light        | magical  | 1     | 0   | 90  | 0    | 0   | 1–2 | Acolyte, Bishop (known from the start), Water and Air Elementals |
+| Powder Keg   | siege    | 2     | 5   | 70  | 0    | 6   | 1–2 | Sapper                                                           |
+| Ballista     | siege    | 2     | 6   | 70  | 0    | 8   | 2–3 | Siege                                                            |
+| Tackle       | physical | 1     | 0   | 75  | 0    | 0   | 1   | Slime, Ram, Earth Elemental                                      |
+| Club         | physical | 1     | 2   | 75  | 0    | 2   | 1   | Goblin                                                           |
+| Bone Claws   | physical | 1     | 2   | 80  | 0    | 1   | 1   | Skeleton                                                         |
+| Fangs        | physical | 1     | 1   | 85  | 0    | 0   | 1   | Bat                                                              |
+| Bite         | physical | 1     | 2   | 75  | 5    | 1   | 1   | Beast, Whelp                                                     |
+| Great Axe    | physical | 2     | 3   | 65  | 0    | 4   | 1   | Orc, Minotaur                                                    |
+| Stone Maul   | physical | 2     | 4   | 60  | 0    | 5   | 1   | Troll                                                            |
+| Fire Breath  | physical | 1     | 4   | 75  | 0    | 0   | 1–2 | Dragon                                                           |
+| Wooden Sword | physical | 1     | 1   | 90  | 0    | 1   | 1   | Villager                                                         |
+| Wooden Spear | physical | 1     | 1   | 75  | 0    | 2   | 1   | Scout                                                            |
+| Wooden Axe   | physical | 1     | 2   | 60  | 0    | 3   | 1   | –                                                                |
 
-The wooden set is the basic gear: lighter and weaker than iron, and it breaks after 20 strikes. The villager starts with the sword and the scout with the spear. It comes with two pieces of armor. A unit wears the first shield and the first body armor it carries (equip another on the camp's roster screen; a shield only with a hand free for it, see Hands above), and each adds its DEF against physical hits. Its weight adds to the weapon's: a unit loses SPD (for avoid and doubling) by however much weapon and armor weight together exceed its STR:
+The wooden set is the basic gear: lighter and weaker than iron. The villager starts with the sword and the scout with the spear. It comes with two pieces of armor: a shield for the off hand (only with a hand free for it, see Hands above) and body armor, each adding its DEF against physical hits. Its weight adds to the weapon's: a unit loses SPD (for avoid and doubling) by however much weapon and armor weight together exceed its STR:
 
 | Armor         | Slot   | DEF | Wt  |
 | ------------- | ------ | --- | --- |
@@ -89,7 +90,7 @@ The starting unit, a townsperson in a plain tunic with no armor: Warband Mode's 
 
 Level-up skill pick: **Lend a Hand** (1 MP, range 1: trades places with an ally). Promoted classes keep the villager's Throw Stones but are offered only their own class's picks.
 
-Carries a Wooden Sword, its Fists for when the sword breaks, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
+Carries a Wooden Sword (its Fists are innate), a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
 ## Promotions
 
@@ -98,7 +99,7 @@ In Warband Mode a villager or an acolyte that has reached **level 5** can promot
 - makes the unit that class: its growths, weapon types, XP rate and skill tree;
 - adds whatever stats the class starts above the class it promotes from, on the spot, in full (a max HP or MP gain raises the current value too), and changes MOV by the difference;
 - carries the class's passive into every battle;
-- hands over the class's weapon, if it has one (in its inventory, or the convoy when it's full).
+- hands over the class's weapon, if it has one, into its main hand (what that held, and a shield beside a two-handed gift, go to the convoy).
 
 Level, XP, items, boons and tome progress carry over. The promoted classes are never recruits, starting picks or Training choices; the other specialized units (Scout, Beast, Beast Rider, Siege, Ram) don't promote.
 
@@ -420,9 +421,9 @@ A specialized unit that promotes into a Mage or a Bishop at level 5 (see Promoti
 | ------------ | --------------- | ------- |
 | magical      | Light           | 100%    |
 
-| Staff | Power | Rng | Uses | Heals at level 1 |
-| ----- | ----- | --- | ---- | ---------------- |
-| Heal  | 2     | 1   | 20   | 5 HP             |
+| Staff | Power | Rng | Heals at level 1 |
+| ----- | ----- | --- | ---------------- |
+| Heal  | 2     | 1   | 5 HP             |
 
 | Skill | Learned at | Mana | Range | Damage                        |
 | ----- | ---------- | ---- | ----- | ----------------------------- |

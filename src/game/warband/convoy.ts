@@ -1,21 +1,32 @@
 // Warband Mode's convoy: the items a run holds for the whole warband rather
-// than for one unit (RunState.convoy). Between stages the roster screen
-// moves items between it and the units: giving a unit an item from the
-// convoy, storing a unit's item in it, and equipping a weapon or armor a
-// unit carries. Consumables move one at a time and stack, on both sides; every
-// other item (a weapon or staff with its uses left, or any gear) moves as
-// its whole entry. The convoy has no slot limit; a unit carries at most
-// MAX_INVENTORY_SLOTS entries. A natural weapon (fists, claws) belongs to
-// its body and never moves. Everything here is pure: each function returns
-// a new frozen run and leaves its input alone.
+// than for one unit (RunState.convoy), and the armory its units' gear
+// comes from. Between stages the roster and equipment screens move items
+// between it and the units: a consumable goes into a unit's bag (one at a
+// time, stacking on both sides) and back; gear is worn straight from the
+// convoy into its slot (equipment.ts), and whatever it displaces, or a
+// slot taken off, goes back to the convoy. The convoy has no slot limit; a
+// bag holds at most MAX_INVENTORY_SLOTS entries. A natural weapon (fists,
+// claws, a known spell) belongs to its body and never moves. Everything
+// here is pure: each function returns a new frozen run and leaves its
+// input alone.
 
-import { canUseShield, getWornArmor, isArmor, MAX_INVENTORY_SLOTS, wearArmor, type Item } from '../items.ts';
-import { UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
-import { equipWeapon, getEquippedWeapon, isWeapon, NATURAL_WEAPON_IDS } from '../weapons.ts';
 import {
-  restoreInventory,
+  canEquip,
+  equipGear,
+  getGearLayout,
+  isGear,
+  unequipGear,
+  type Equipment,
+  type GearSlot,
+} from '../equipment.ts';
+import { MAX_INVENTORY_SLOTS, type Item } from '../items.ts';
+import { UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
+import { isWeapon, NATURAL_WEAPON_IDS } from '../weapons.ts';
+import {
+  getSnapshotLoadout,
   restoreUnit,
   RUN_ITEMS,
+  snapshotEquipment,
   type ItemSnapshot,
   type RunState,
   type UnitSnapshot,
@@ -28,7 +39,7 @@ export function lookUpItem(itemId: string, items: readonly Item[] = RUN_ITEMS): 
   return item;
 }
 
-// Whether an item stacks: only consumables do, as in a unit's inventory.
+// Whether an item stacks: only consumables do, as in a unit's bag.
 export function isStackable(item: Item): boolean {
   return item.kind === 'consumable';
 }
@@ -39,8 +50,8 @@ export function isMovable(item: Item): boolean {
   return !NATURAL_WEAPON_IDS.has(item.id);
 }
 
-// Whether the unit `unitId` has room for the convoy entry at `convoyIndex`:
-// a consumable it already carries stacks, anything else needs a free slot.
+// Whether the unit `unitId` can take the convoy entry at `convoyIndex`
+// (see canCarry).
 export function canGiveFromConvoy(
   run: RunState,
   unitId: string,
@@ -51,21 +62,31 @@ export function canGiveFromConvoy(
   return entry !== undefined && canCarry(run, unitId, entry.itemId, items);
 }
 
-// Whether the unit `unitId` has room for one more `itemId`: a consumable it
-// already carries stacks, anything else needs a free slot.
+// Whether the unit `unitId` can take one more `itemId`: a consumable into
+// its bag (stacking, or a free slot), or gear it can wear (a slot its
+// layout has, a shield with a hand free; whatever's in the slot goes back
+// to the convoy). Seals stay in the convoy.
 export function canCarry(run: RunState, unitId: string, itemId: string, items: readonly Item[] = RUN_ITEMS): boolean {
   const unit = findUnit(run, unitId);
   if (!unit) return false;
   const item = lookUpItem(itemId, items);
-  const stacks = isStackable(item) && unit.items.some((held) => held.itemId === item.id);
-  return stacks || unit.items.length < MAX_INVENTORY_SLOTS;
+  if (isStackable(item)) {
+    return unit.items.some((held) => held.itemId === item.id) || unit.items.length < MAX_INVENTORY_SLOTS;
+  }
+  if (!isGear(item)) return false;
+  return canEquip(getUnitEquipment(unit, items), item, getGearLayout(unit.classId), unit.classId);
+}
+
+// The gear the unit wears, by slot.
+export function getUnitEquipment(unit: UnitSnapshot, items: readonly Item[] = RUN_ITEMS): Equipment {
+  return getSnapshotLoadout(unit, items).equipment;
 }
 
 // Whether `itemId` is gear for the unit `unitId`, so it's one to hand a new
-// one to: a weapon its class wields that strikes at the same range as the
-// one it fights with (a bow for an archer, not a spear), or any it wields
-// when it has none; a staff when it already heals with one; or armor for a
-// slot it has nothing in (a shield only with a hand free for it).
+// one to: a weapon its class is trained in that strikes at the same range
+// as its main-hand weapon (a bow for an archer, not a spear), or any it's
+// trained in when its main hand holds no weapon; a staff when it already
+// heals with one; or armor for an empty slot it can wear it in.
 // Consumables suit nobody in particular.
 export function isSuitedTo(
   run: RunState,
@@ -77,26 +98,25 @@ export function isSuitedTo(
   const unit = findUnit(run, unitId);
   if (!unit) return false;
   const item = lookUpItem(itemId, items);
-  const carried = unit.items.map((entry) => lookUpItem(entry.itemId, items));
+  if (!isGear(item)) return false;
+  const equipment = getUnitEquipment(unit, items);
+  if (!canEquip(equipment, item, getGearLayout(unit.classId), unit.classId)) return false;
+  const main = equipment.main;
   if (isWeapon(item)) {
-    const types = weaponTypesOf(unit, classes, items);
-    if (!isMovable(item) || !types.includes(item.type)) return false;
-    const equipped = getEquippedWeapon(restoreInventory(unit.items, items), types);
-    if (!equipped || !isMovable(equipped.weapon)) return true;
-    return equipped.weapon.minRange === item.minRange && equipped.weapon.maxRange === item.maxRange;
+    if (!restoreUnit(unit, classes, items).weaponTypes.includes(item.type)) return false;
+    if (main?.kind === 'staff') return false;
+    if (!main || !isWeapon(main)) return true;
+    return main.minRange === item.minRange && main.maxRange === item.maxRange;
   }
-  if (item.kind === 'staff') return carried.some((held) => held.kind === 'staff');
-  if (isArmor(item)) {
-    if (carried.some((held) => isArmor(held) && held.slot === item.slot)) return false;
-    return item.slot !== 'shield' || hasHandFree(unit, classes, items);
-  }
-  return false;
+  if (item.kind === 'staff') return main?.kind === 'staff';
+  return item.slot === 'shield' ? !equipment.off : !equipment[item.slot === 'special' ? 'special' : item.slot];
 }
 
 // The run with the convoy entry at `convoyIndex` given to the unit
-// `unitId`: one of a consumable (stacking onto the one it carries), or
-// the whole entry of anything else, added at the end of its inventory.
-// Throws if there's no such unit or entry, or the unit has no room.
+// `unitId`: one of a consumable into its bag (stacking onto the one it
+// carries), or gear worn in its slot, whatever that displaces going back
+// to the convoy. Throws if there's no such unit or entry, or the unit
+// can't take it.
 export function giveFromConvoy(
   run: RunState,
   unitId: string,
@@ -106,18 +126,51 @@ export function giveFromConvoy(
   const unit = requireUnit(run, unitId);
   const entry = run.convoy[convoyIndex];
   if (!entry) throw new Error(`No convoy item at ${convoyIndex}`);
-  if (!canGiveFromConvoy(run, unitId, convoyIndex, items)) throw new Error(`${unit.name} has no room`);
+  if (!canGiveFromConvoy(run, unitId, convoyIndex, items)) throw new Error(`${unit.name} can't take ${entry.itemId}`);
   const item = lookUpItem(entry.itemId, items);
-  const moved = isStackable(item) ? 1 : entry.quantity;
+  if (isStackable(item)) {
+    return freezeRun({
+      ...run,
+      convoy: takeFrom(run.convoy, convoyIndex, 1),
+      roster: replaceUnit(run, { ...unit, items: putInto(unit.items, entry.itemId, 1, true) }),
+    });
+  }
+  const { equipment, removed } = equipGear(
+    getUnitEquipment(unit, items),
+    item as Exclude<typeof item, { kind: 'consumable' | 'seal' }>,
+    getGearLayout(unit.classId),
+    unit.classId,
+  );
+  const convoy = removed.reduce((held, gear) => putInto(held, gear.id, 1, false), takeFrom(run.convoy, convoyIndex, 1));
+  return freezeRun({ ...run, convoy, roster: replaceUnit(run, withEquipment(unit, equipment, items)) });
+}
+
+// Whether the unit `unitId` has gear in `slot` to take off.
+export function canUnequip(run: RunState, unitId: string, slot: GearSlot, items: readonly Item[] = RUN_ITEMS): boolean {
+  const unit = findUnit(run, unitId);
+  return unit !== null && getUnitEquipment(unit, items)[slot] !== undefined;
+}
+
+// The run with the unit `unitId`'s gear in `slot` taken off and put in the
+// convoy. Throws if the slot is empty.
+export function unequipToConvoy(
+  run: RunState,
+  unitId: string,
+  slot: GearSlot,
+  items: readonly Item[] = RUN_ITEMS,
+): RunState {
+  const unit = requireUnit(run, unitId);
+  const { equipment, removed } = unequipGear(getUnitEquipment(unit, items), slot);
+  if (!removed) throw new Error(`${unit.name} wears nothing in ${slot}`);
   return freezeRun({
     ...run,
-    convoy: takeFrom(run.convoy, convoyIndex, moved),
-    roster: replaceUnit(run, { ...unit, items: putInto(unit.items, entry.itemId, moved, isStackable(item)) }),
+    convoy: putInto(run.convoy, removed.id, 1, false),
+    roster: replaceUnit(run, withEquipment(unit, equipment, items)),
   });
 }
 
-// Whether the unit `unitId`'s item at `itemIndex` can be stored: it has
-// one there and it isn't a natural weapon.
+// Whether the unit `unitId`'s bag item at `itemIndex` can be stored: it has
+// one there.
 export function canStoreInConvoy(
   run: RunState,
   unitId: string,
@@ -128,10 +181,9 @@ export function canStoreInConvoy(
   return entry !== undefined && isMovable(lookUpItem(entry.itemId, items));
 }
 
-// The run with the unit `unitId`'s item at `itemIndex` stored in the
-// convoy: one of a consumable (stacking onto the convoy's), or the whole
-// entry of anything else, added at the end. Throws if there's no such unit
-// or item, or it's a natural weapon.
+// The run with one of the unit `unitId`'s bag item at `itemIndex` stored
+// in the convoy (stacking onto the convoy's). Throws if there's no such
+// unit or item.
 export function storeInConvoy(
   run: RunState,
   unitId: string,
@@ -151,113 +203,16 @@ export function storeInConvoy(
   });
 }
 
-// The inventory slot of the weapon the unit `unitId` fights with, or null
-// if it carries none it can wield.
-export function getEquippedIndex(
-  run: RunState,
-  unitId: string,
-  classes: readonly UnitClass[] = UNIT_CLASSES,
-  items: readonly Item[] = RUN_ITEMS,
-): number | null {
-  const unit = findUnit(run, unitId);
-  if (!unit) return null;
-  return getEquippedWeapon(restoreInventory(unit.items, items), weaponTypesOf(unit, classes, items))?.index ?? null;
-}
-
-// The inventory slots of the armor the unit `unitId` wears (the first of
-// each slot it carries, a shield only with a hand free for it).
-export function getWornIndices(
-  run: RunState,
-  unitId: string,
-  classes: readonly UnitClass[] = UNIT_CLASSES,
-  items: readonly Item[] = RUN_ITEMS,
-): number[] {
-  const unit = findUnit(run, unitId);
-  if (!unit) return [];
-  return getWornArmor(restoreInventory(unit.items, items), weaponTypesOf(unit, classes, items)).map(
-    ({ index }) => index,
-  );
-}
-
-// How many uses the weapon the unit `unitId` fights with has left: null
-// for one that never breaks, or 0 when it carries none it can wield. The
-// unit with the fewest is the one most in need of a new weapon.
-export function getEquippedUses(
-  run: RunState,
-  unitId: string,
-  classes: readonly UnitClass[] = UNIT_CLASSES,
-  items: readonly Item[] = RUN_ITEMS,
-): number | null {
-  const unit = findUnit(run, unitId);
-  if (!unit) return 0;
-  const equipped = getEquippedWeapon(restoreInventory(unit.items, items), weaponTypesOf(unit, classes, items));
-  if (!equipped || !isMovable(equipped.weapon)) return 0;
-  return equipped.uses;
-}
-
-// Whether the unit `unitId` can equip its item at `itemIndex`: a weapon
-// its class wields that isn't already the equipped one, or armor it isn't
-// already wearing (any class wears armor, but a shield only with a hand
-// free for it: a one-handed weapon and no staff, see canUseShield).
-export function canEquipInRoster(
-  run: RunState,
-  unitId: string,
-  itemIndex: number,
-  classes: readonly UnitClass[] = UNIT_CLASSES,
-  items: readonly Item[] = RUN_ITEMS,
-): boolean {
-  const unit = findUnit(run, unitId);
-  const entry = unit?.items[itemIndex];
-  if (!unit || !entry) return false;
-  const item = lookUpItem(entry.itemId, items);
-  if (isArmor(item)) {
-    if (item.slot === 'shield' && !hasHandFree(unit, classes, items)) return false;
-    return !getWornIndices(run, unitId, classes, items).includes(itemIndex);
-  }
-  return (
-    isWeapon(item) &&
-    weaponTypesOf(unit, classes, items).includes(item.type) &&
-    getEquippedIndex(run, unitId, classes, items) !== itemIndex
-  );
-}
-
-// The run with the unit `unitId`'s weapon or armor at `itemIndex`
-// equipped, which moves it to the front of its inventory (see equipWeapon
-// and wearArmor). Throws if there's no armor there and no weapon it can
-// wield.
-export function equipInRoster(
-  run: RunState,
-  unitId: string,
-  itemIndex: number,
-  classes: readonly UnitClass[] = UNIT_CLASSES,
-  items: readonly Item[] = RUN_ITEMS,
-): RunState {
-  const unit = requireUnit(run, unitId);
-  const carried = restoreInventory(unit.items, items);
-  const inventory =
-    carried[itemIndex] && isArmor(carried[itemIndex].item)
-      ? wearArmor(carried, itemIndex)
-      : equipWeapon(carried, itemIndex, weaponTypesOf(unit, classes, items));
-  return freezeRun({
-    ...run,
-    roster: replaceUnit(run, {
-      ...unit,
-      items: inventory.map(({ item, quantity }) => ({ itemId: item.id, quantity })),
-    }),
-  });
-}
-
-// Whether the unit has a hand free for a shield (see canUseShield).
-export function hasHandFree(
-  unit: UnitSnapshot,
-  classes: readonly UnitClass[] = UNIT_CLASSES,
-  items: readonly Item[] = RUN_ITEMS,
-): boolean {
-  return canUseShield(restoreInventory(unit.items, items), weaponTypesOf(unit, classes, items));
-}
-
-function weaponTypesOf(unit: UnitSnapshot, classes: readonly UnitClass[], items: readonly Item[]) {
-  return restoreUnit(unit, classes, items).weaponTypes;
+// `unit` wearing `equipment`, its bag and innate attacks written out in
+// the equipment-slot shape (an old snapshot's sorted on the way).
+function withEquipment(unit: UnitSnapshot, equipment: Equipment, items: readonly Item[]): UnitSnapshot {
+  const loadout = getSnapshotLoadout(unit, items);
+  return {
+    ...unit,
+    items: loadout.bag.map(({ item, quantity }) => ({ itemId: item.id, quantity })),
+    equipment: snapshotEquipment(equipment),
+    ...(loadout.innate && { innate: loadout.innate.map((weapon) => weapon.id) }),
+  };
 }
 
 function findUnit(run: RunState, unitId: string): UnitSnapshot | null {
@@ -301,6 +256,14 @@ function freezeRun(run: RunState): RunState {
   return Object.freeze({
     ...run,
     convoy: freezeItems(run.convoy),
-    roster: Object.freeze(run.roster.map((unit) => Object.freeze({ ...unit, items: freezeItems(unit.items) }))),
+    roster: Object.freeze(
+      run.roster.map((unit) =>
+        Object.freeze({
+          ...unit,
+          items: freezeItems(unit.items),
+          ...(unit.equipment && { equipment: Object.freeze({ ...unit.equipment }) }),
+        }),
+      ),
+    ),
   });
 }

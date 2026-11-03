@@ -34,22 +34,19 @@ describe('Villager', () => {
     expect(villager.level).toBe(3);
   });
 
-  it('carries a wooden sword, its fists and the starting potions by default', () => {
+  it('holds a wooden sword, has its fists and carries the starting potions by default', () => {
     const villager = new Villager({ team: 'player' });
-    expect(villager.items).toEqual(VILLAGER_ITEMS);
-    expect(villager.items.slice(2)).toEqual(STARTING_ITEMS);
+    expect(VILLAGER_ITEMS.slice(2)).toEqual(STARTING_ITEMS);
+    expect(villager.equipment).toEqual({ main: WOODEN_SWORD });
+    expect(villager.innate).toEqual([FISTS]);
+    expect(villager.items).toEqual(STARTING_ITEMS);
   });
 
-  it('fights with its wooden sword, then its fists once the sword breaks', () => {
+  it('fights with its wooden sword, or its fists', () => {
     const villager = new Villager({ team: 'player' });
     expect(villager.weaponTypes).toEqual(['physical']);
     expect(villager.weapon).toBe(WOODEN_SWORD);
-    expect(villager.weaponUses).toBe(WOODEN_SWORD.uses);
-    for (let i = 1; i < (WOODEN_SWORD.uses ?? 0); i++) expect(villager.spendWeaponUse().broke).toBe(false);
-    expect(villager.spendWeaponUse().broke).toBe(true);
-    expect(villager.weapon).toBe(FISTS);
-    for (let i = 0; i < 100; i++) expect(villager.spendWeaponUse().broke).toBe(false);
-    expect(villager.weapon).toBe(FISTS);
+    expect(villager.wieldableWeapons.map(({ weapon }) => weapon)).toEqual([WOODEN_SWORD, FISTS]);
   });
 
   it('learns Throw Stones at level 2', () => {

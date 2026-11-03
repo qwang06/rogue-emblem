@@ -124,9 +124,9 @@ describe('UNITS.md', () => {
   it('lists every weapon with its hands and numbers', () => {
     const rows = tableWithHeader(section('Weapons'), 'Weapon');
     expect(rows.map(([label]) => label)).toEqual(WEAPONS.map((w) => w.label));
-    rows.forEach(([, type, hands, power, hit, crit, weight, range, uses], i) => {
+    rows.forEach(([, type, hands, power, hit, crit, weight, range], i) => {
       const weapon = WEAPONS[i];
-      expect([type, hands, power, hit, crit, weight, range, uses], weapon.label).toEqual([
+      expect([type, hands, power, hit, crit, weight, range], weapon.label).toEqual([
         weapon.type,
         String(weapon.hands),
         String(weapon.power),
@@ -134,7 +134,6 @@ describe('UNITS.md', () => {
         String(weapon.crit),
         String(weapon.weight),
         formatWeaponRange(weapon),
-        weapon.uses === null ? '∞' : String(weapon.uses),
       ]);
     });
   });

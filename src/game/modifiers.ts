@@ -14,8 +14,7 @@
 //   battle (applyModifiers bakes them in).
 // - 'kill-heal', 'phase-heal' and 'phase-mana' are triggers the battle's
 //   commands (battle/commands.ts) fire on a kill or as the unit's phase
-//   starts, and 'spare-weapon-on-kill' keeps a killing strike from
-//   wearing the weapon.
+//   starts.
 // - 'skill' teaches the unit a skill on top of its class's (skills.ts).
 // - The combat procs and gear effects (twin-strike through overkill-heal)
 //   are read by resolveCombat and getFighterBonus in combat.ts, or by the
@@ -61,7 +60,6 @@ export type Modifier =
   | { kind: 'phase-mana'; amount: number }
   // Also as a share of its max HP, in percent, rounded down.
   | { kind: 'phase-heal-percent'; percent: number }
-  | { kind: 'spare-weapon-on-kill' }
   | { kind: 'skill'; skill: Skill }
   // Combat procs (see resolveCombat in combat.ts). The percent chance each
   // of the unit's strikes is followed at once by another (`twin-strike`);

@@ -1,16 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { createInventory, HEALTH_POTION, MANA_POTION, type Inventory } from './items.ts';
 import {
   BALLISTA,
   canWield,
-  equipWeapon,
   FIRE,
   FISTS,
   formatWeaponRange,
-  getEquippedWeapon,
   getWeaponActions,
   getWeaponReach,
-  getWieldableWeapons,
   GREAT_AXE,
   STONE_MAUL,
   IRON_AXE,
@@ -18,7 +14,6 @@ import {
   IRON_SPEAR,
   isWeapon,
   POWDER_KEG,
-  spendWeaponUse,
   WEAPON_DAMAGE_TYPES,
   WEAPON_TYPES,
   WEAPONS,
@@ -28,9 +23,9 @@ import {
   weaponEntry,
   type Weapon,
 } from './weapons.ts';
+import { HEALTH_POTION } from './items.ts';
 
 const PHYSICAL = ['physical'] as const;
-const potion = { item: HEALTH_POTION, quantity: 1 };
 
 describe('the starter weapons', () => {
   it('each have a unique id, a known type, and a sane range', () => {
@@ -44,8 +39,8 @@ describe('the starter weapons', () => {
     }
   });
 
-  it('give fists no power and no limit on uses', () => {
-    expect(FISTS).toMatchObject({ type: 'physical', power: 0, hit: 80, weight: 0, uses: null });
+  it('give fists no power', () => {
+    expect(FISTS).toMatchObject({ type: 'physical', power: 0, hit: 80, weight: 0 });
   });
 
   it('take both hands for bows, the great axe, the stone maul and siege weapons, and one for the rest', () => {
@@ -64,7 +59,7 @@ describe('the starter weapons', () => {
   it('include a wooden sword, spear and axe that are lighter than iron and break sooner', () => {
     for (const wooden of [WOODEN_SWORD, WOODEN_SPEAR, WOODEN_AXE]) {
       expect(WEAPONS).toContain(wooden);
-      expect(wooden).toMatchObject({ type: 'physical', minRange: 1, maxRange: 1, uses: 20 });
+      expect(wooden).toMatchObject({ type: 'physical', minRange: 1, maxRange: 1 });
     }
     expect(WOODEN_SPEAR.weight).toBeLessThan(IRON_SPEAR.weight);
     expect(WOODEN_AXE.weight).toBeLessThan(IRON_AXE.weight);
@@ -85,11 +80,8 @@ describe('WEAPON_DAMAGE_TYPES', () => {
 });
 
 describe('weaponEntry', () => {
-  it('starts a weapon with all its uses', () => {
-    expect(weaponEntry(IRON_SPEAR)).toEqual({ item: IRON_SPEAR, quantity: 40 });
-  });
-
-  it('counts a weapon that never breaks as one', () => {
+  it('is one of the weapon', () => {
+    expect(weaponEntry(IRON_SPEAR)).toEqual({ item: IRON_SPEAR, quantity: 1 });
     expect(weaponEntry(FISTS)).toEqual({ item: FISTS, quantity: 1 });
   });
 });
@@ -110,101 +102,6 @@ describe('canWield', () => {
 
   it('wields nothing with no weapon types', () => {
     expect(canWield([], FISTS)).toBe(false);
-  });
-});
-
-describe('getEquippedWeapon', () => {
-  it('is the first weapon the unit can wield', () => {
-    const inventory = createInventory([potion, weaponEntry(FIRE), weaponEntry(IRON_SPEAR), weaponEntry(FISTS)]);
-    expect(getEquippedWeapon(inventory, PHYSICAL)).toEqual({ weapon: IRON_SPEAR, index: 2, uses: 40 });
-    expect(getEquippedWeapon(inventory, ['magical'])).toEqual({ weapon: FIRE, index: 1, uses: 30 });
-  });
-
-  it('reports null uses for a weapon that never breaks', () => {
-    const inventory = createInventory([weaponEntry(FISTS)]);
-    expect(getEquippedWeapon(inventory, PHYSICAL)).toEqual({ weapon: FISTS, index: 0, uses: null });
-  });
-
-  it('reads the uses left from the entry', () => {
-    const inventory = createInventory([{ item: IRON_SPEAR, quantity: 3 }]);
-    expect(getEquippedWeapon(inventory, PHYSICAL)?.uses).toBe(3);
-  });
-
-  it('is null with no weapon, or none the unit can wield', () => {
-    expect(getEquippedWeapon(createInventory([potion]), PHYSICAL)).toBeNull();
-    expect(getEquippedWeapon(createInventory([]), PHYSICAL)).toBeNull();
-    expect(getEquippedWeapon(createInventory([weaponEntry(FIRE)]), PHYSICAL)).toBeNull();
-  });
-});
-
-describe('getWieldableWeapons', () => {
-  it('lists the wieldable weapons in inventory order, skipping the rest', () => {
-    const inventory = createInventory([weaponEntry(IRON_SPEAR), potion, weaponEntry(FIRE), weaponEntry(IRON_BOW)]);
-    expect(getWieldableWeapons(inventory, PHYSICAL).map(({ weapon, index }) => [weapon.id, index])).toEqual([
-      ['iron-spear', 0],
-      ['iron-bow', 3],
-    ]);
-  });
-});
-
-describe('equipWeapon', () => {
-  const inventory = createInventory([weaponEntry(IRON_SPEAR), potion, weaponEntry(IRON_BOW)]);
-
-  it('moves the chosen weapon to the front, keeping the rest in order', () => {
-    const next = equipWeapon(inventory, 2, PHYSICAL);
-    expect(next.map((e) => e.item.id)).toEqual(['iron-bow', 'iron-spear', 'health-potion']);
-    expect(getEquippedWeapon(next, PHYSICAL)?.weapon).toBe(IRON_BOW);
-    expect(Object.isFrozen(next)).toBe(true);
-  });
-
-  it('leaves the inventory alone when the weapon is already first', () => {
-    expect(equipWeapon(inventory, 0, PHYSICAL)).toBe(inventory);
-  });
-
-  it('keeps the uses the weapon has left', () => {
-    const worn = createInventory([potion, { item: IRON_SPEAR, quantity: 7 }]);
-    expect(equipWeapon(worn, 1, PHYSICAL)[0]).toEqual({ item: IRON_SPEAR, quantity: 7 });
-  });
-
-  it('does not mutate the inventory', () => {
-    equipWeapon(inventory, 2, PHYSICAL);
-    expect(inventory.map((e) => e.item.id)).toEqual(['iron-spear', 'health-potion', 'iron-bow']);
-  });
-
-  it('throws for a consumable, an empty slot, or a weapon the unit cannot wield', () => {
-    expect(() => equipWeapon(inventory, 1, PHYSICAL)).toThrow(/slot 1/);
-    expect(() => equipWeapon(inventory, 9, PHYSICAL)).toThrow(/slot 9/);
-    expect(() => equipWeapon(inventory, 0, ['magical'])).toThrow(/slot 0/);
-  });
-});
-
-describe('spendWeaponUse', () => {
-  it('takes one use off the weapon', () => {
-    const inventory = createInventory([potion, weaponEntry(IRON_SPEAR)]);
-    const { inventory: next, broke } = spendWeaponUse(inventory, 1);
-    expect(broke).toBe(false);
-    expect(next[1]).toEqual({ item: IRON_SPEAR, quantity: 39 });
-    expect(inventory[1].quantity).toBe(40);
-  });
-
-  it('breaks a weapon on its last use and removes it', () => {
-    const inventory = createInventory([{ item: IRON_SPEAR, quantity: 1 }, potion]);
-    const { inventory: next, broke } = spendWeaponUse(inventory, 0);
-    expect(broke).toBe(true);
-    expect(next).toEqual([potion]);
-    expect(Object.isFrozen(next)).toBe(true);
-  });
-
-  it('never wears out a weapon that never breaks', () => {
-    const inventory = createInventory([weaponEntry(FISTS)]);
-    const result = spendWeaponUse(inventory, 0);
-    expect(result).toEqual({ inventory, broke: false });
-  });
-
-  it('throws when there is no weapon in the slot', () => {
-    const inventory = createInventory([potion]);
-    expect(() => spendWeaponUse(inventory, 0)).toThrow(/slot 0/);
-    expect(() => spendWeaponUse(inventory, 3)).toThrow(/slot 3/);
   });
 });
 
@@ -232,25 +129,17 @@ describe('formatWeaponRange', () => {
 });
 
 describe('getWeaponActions', () => {
-  const inventory: Inventory = createInventory([
-    weaponEntry(IRON_SPEAR),
-    { item: MANA_POTION, quantity: 2 },
-    weaponEntry(FIRE),
-    { item: IRON_BOW, quantity: 5 },
-    weaponEntry(FISTS),
-  ]);
+  const attacks = [IRON_SPEAR, IRON_BOW, FISTS].map((weapon, index) => ({ weapon, index }));
 
-  it('lists the wieldable weapons with their numbers and uses left', () => {
-    const actions = getWeaponActions(inventory, PHYSICAL, () => true);
+  it('lists the attacks with their numbers', () => {
+    const actions = getWeaponActions(attacks, () => true);
     expect(actions.map((a) => a.label)).toEqual(['Iron Spear', 'Iron Bow', 'Fists']);
     expect(actions[1]).toEqual({
-      id: 'iron-bow@3',
+      id: 'iron-bow@1',
       itemId: 'iron-bow',
       label: 'Iron Bow',
-      index: 3,
+      index: 1,
       type: 'physical',
-      uses: 5,
-      maxUses: IRON_BOW.uses,
       power: 2,
       hit: 80,
       crit: 0,
@@ -258,21 +147,20 @@ describe('getWeaponActions', () => {
       range: '2',
       disabled: false,
     });
-    expect(actions[2].uses).toBeNull();
   });
 
   it('disables a weapon with nothing in range', () => {
     const hasTarget = (weapon: Weapon) => weapon.minRange === 1;
-    expect(getWeaponActions(inventory, PHYSICAL, hasTarget).map((a) => a.disabled)).toEqual([false, true, false]);
+    expect(getWeaponActions(attacks, hasTarget).map((a) => a.disabled)).toEqual([false, true, false]);
   });
 
   it('gives each entry its own id, even for two of the same weapon', () => {
-    const pair = createInventory([weaponEntry(IRON_SPEAR), weaponEntry(IRON_SPEAR)]);
-    const ids = getWeaponActions(pair, PHYSICAL, () => true).map((a) => a.id);
+    const pair = [IRON_SPEAR, IRON_SPEAR].map((weapon, index) => ({ weapon, index }));
+    const ids = getWeaponActions(pair, () => true).map((a) => a.id);
     expect(new Set(ids).size).toBe(2);
   });
 
-  it('is empty with no weapon to wield', () => {
-    expect(getWeaponActions(createInventory([potion]), PHYSICAL, () => true)).toEqual([]);
+  it('is empty with no attack', () => {
+    expect(getWeaponActions([], () => true)).toEqual([]);
   });
 });

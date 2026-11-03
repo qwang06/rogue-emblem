@@ -7,7 +7,7 @@ import { StatIcon, type StatIconKind } from './StatIcon.tsx';
 // an hourglass to Wait, a red cross to Heal; a flag to End Turn, an arrow to
 // Undo, a house for the Main Menu and a gear for Settings; a boot to
 // Place Units and crossed swords to Start the battle; at camp, a pair of
-// heads for the roster, a coin for the Merchant, an arrow up to Promote, a
+// heads for the roster, a shield for Equipment, a coin for the Merchant, an arrow up to Promote, a
 // heart to Rest, a book for Mentors and a boot to march on. An entry with
 // no icon keeps the spot, so labels line up.
 const ICONS: Readonly<Record<string, { stat: StatIconKind } | { glyph: GlyphKind }>> = {
@@ -24,6 +24,7 @@ const ICONS: Readonly<Record<string, { stat: StatIconKind } | { glyph: GlyphKind
   start: { glyph: 'rout' },
   // The camp (getCampActions).
   roster: { glyph: 'roster' },
+  equipment: { stat: 'avoid' },
   merchant: { glyph: 'gold' },
   promote: { glyph: 'promote' },
   rest: { stat: 'health' },

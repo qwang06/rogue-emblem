@@ -13,20 +13,12 @@ import {
   canUseItem,
   createInventory,
   findItem,
-  getArmorDefense,
-  getArmorWeight,
   getConsumables,
-  getWornArmor,
-  canUseShield,
-  wearArmor,
   getItemActions,
   getItemRecovery,
   removeItem,
 } from './items.ts';
-import { HEAL_STAFF, staffEntry } from './healing.ts';
-import { FIRE, FISTS, GREAT_AXE, IRON_BOW, IRON_SPEAR, weaponEntry, type WeaponType } from './weapons.ts';
-
-const PHYSICAL: readonly WeaponType[] = ['physical'];
+import { FISTS, IRON_SPEAR, weaponEntry } from './weapons.ts';
 
 const unitAt = ({ health = 10, maxHealth = 10, mana = 5, maxMana = 5 } = {}) => ({
   health,
@@ -63,85 +55,15 @@ describe('armor', () => {
     expect(isArmor(HEALTH_POTION)).toBe(false);
   });
 
-  it('is carried in a slot of its own and never stacks', () => {
-    const inventory = addItem(addItem(createInventory(), WOODEN_SHIELD), WOODEN_SHIELD);
-    expect(inventory.map(({ item, quantity }) => [item.id, quantity])).toEqual([
-      ['wooden-shield', 1],
-      ['wooden-shield', 1],
-    ]);
+  it("doesn't go in a bag", () => {
+    expect(canAddItem(createInventory(), WOODEN_SHIELD)).toBe(false);
+    expect(() => addItem(createInventory(), WOODEN_SHIELD)).toThrow();
   });
 
   it("isn't a usable item: it restores nothing and stays out of the item menu", () => {
     const hurt = unitAt({ health: 1 });
     expect(canUseItem(hurt, WOODEN_ARMOR)).toBe(false);
     expect(getItemActions(hurt, createInventory([{ item: WOODEN_ARMOR, quantity: 1 }]))).toEqual([]);
-  });
-});
-
-describe('wearing armor', () => {
-  const entry = (item: typeof WOODEN_SHIELD) => ({ item, quantity: 1 });
-  const spare = { ...WOODEN_SHIELD, id: 'spare-shield', defense: 3, weight: 4 };
-
-  it('wears the first armor of each slot', () => {
-    const inventory = createInventory([
-      weaponEntry(IRON_SPEAR),
-      entry(WOODEN_SHIELD),
-      entry(spare),
-      entry(WOODEN_ARMOR),
-    ]);
-    expect(getWornArmor(inventory, PHYSICAL)).toEqual([
-      { armor: WOODEN_SHIELD, index: 1 },
-      { armor: WOODEN_ARMOR, index: 3 },
-    ]);
-    expect(getArmorDefense(inventory, PHYSICAL)).toBe(2);
-    expect(getArmorWeight(inventory, PHYSICAL)).toBe(3);
-  });
-
-  it('adds nothing without armor', () => {
-    expect(getWornArmor(STARTING_ITEMS, PHYSICAL)).toEqual([]);
-    expect(getArmorDefense(createInventory(), PHYSICAL)).toBe(0);
-    expect(getArmorWeight(createInventory(), PHYSICAL)).toBe(0);
-  });
-
-  it('wears another by moving it to the front', () => {
-    const inventory = createInventory([weaponEntry(IRON_SPEAR), entry(WOODEN_SHIELD), entry(spare)]);
-    const after = wearArmor(inventory, 2);
-    expect(after.map(({ item }) => item.id)).toEqual(['spare-shield', 'iron-spear', 'wooden-shield']);
-    expect(getArmorDefense(after, PHYSICAL)).toBe(3);
-    expect(getArmorWeight(after, PHYSICAL)).toBe(4);
-    expect(Object.isFrozen(after)).toBe(true);
-    expect(wearArmor(after, 0)).toBe(after);
-  });
-
-  it('wears a shield only with a hand free for it', () => {
-    const shield = entry(WOODEN_SHIELD);
-    const body = entry(WOODEN_ARMOR);
-    // A two-handed bow leaves no hand for the shield; the body armor stays.
-    const archer = createInventory([weaponEntry(IRON_BOW), shield, body]);
-    expect(canUseShield(archer, PHYSICAL)).toBe(false);
-    expect(getWornArmor(archer, PHYSICAL)).toEqual([{ armor: WOODEN_ARMOR, index: 2 }]);
-    expect(getArmorDefense(archer, PHYSICAL)).toBe(1);
-    expect(getArmorWeight(archer, PHYSICAL)).toBe(2);
-    expect(canUseShield(createInventory([weaponEntry(GREAT_AXE), shield]), PHYSICAL)).toBe(false);
-    // Only the equipped weapon counts: a bow carried behind a spear doesn't.
-    expect(canUseShield(createInventory([weaponEntry(IRON_SPEAR), weaponEntry(IRON_BOW), shield]), PHYSICAL)).toBe(
-      true,
-    );
-    // A two-handed weapon the unit can't wield isn't equipped either.
-    expect(canUseShield(createInventory([weaponEntry(IRON_BOW), weaponEntry(FIRE), shield]), ['magical'])).toBe(true);
-    // A staff takes both hands, whatever is equipped.
-    const healer = createInventory([weaponEntry(IRON_SPEAR), staffEntry(HEAL_STAFF), shield]);
-    expect(canUseShield(healer, PHYSICAL)).toBe(false);
-    expect(getWornArmor(healer, PHYSICAL)).toEqual([]);
-    // Bare-handed leaves a hand free.
-    expect(canUseShield(createInventory([shield]), PHYSICAL)).toBe(true);
-    expect(canUseShield(createInventory([weaponEntry(FISTS), shield]), PHYSICAL)).toBe(true);
-  });
-
-  it('throws where there is no armor', () => {
-    const inventory = createInventory([weaponEntry(IRON_SPEAR)]);
-    expect(() => wearArmor(inventory, 0)).toThrow(/No armor/);
-    expect(() => wearArmor(inventory, 4)).toThrow(/No armor/);
   });
 });
 
@@ -266,8 +188,8 @@ const distinctItems = (n: number) =>
   Array.from({ length: n }, (_, i) => ({ item: { ...HEALTH_POTION, id: `item-${i}` }, quantity: 1 }));
 
 describe('MAX_INVENTORY_SLOTS', () => {
-  it('is 6', () => {
-    expect(MAX_INVENTORY_SLOTS).toBe(6);
+  it('is 4', () => {
+    expect(MAX_INVENTORY_SLOTS).toBe(4);
   });
 
   it('lets createInventory fill every slot', () => {
@@ -275,7 +197,7 @@ describe('MAX_INVENTORY_SLOTS', () => {
   });
 
   it('makes createInventory throw past the limit', () => {
-    expect(() => createInventory(distinctItems(MAX_INVENTORY_SLOTS + 1))).toThrow(/at most 6/);
+    expect(() => createInventory(distinctItems(MAX_INVENTORY_SLOTS + 1))).toThrow(/at most 4/);
   });
 
   it("doesn't count empty entries against the limit", () => {
@@ -289,7 +211,7 @@ describe('canAddItem', () => {
 
   it('allows a new item while a slot is free', () => {
     expect(canAddItem(createInventory(), HEALTH_POTION)).toBe(true);
-    expect(canAddItem(createInventory(distinctItems(5)), MANA_POTION)).toBe(true);
+    expect(canAddItem(createInventory(distinctItems(3)), MANA_POTION)).toBe(true);
   });
 
   it('rejects a new item when every slot is taken', () => {
@@ -338,18 +260,12 @@ describe('addItem', () => {
   });
 });
 
-describe('weapons in the inventory', () => {
+describe('weapons', () => {
   const spear = weaponEntry(IRON_SPEAR);
 
-  it('never stack: each weapon added takes its own slot with its uses', () => {
-    const inventory = addItem(createInventory([spear]), IRON_SPEAR, 12);
-    expect(inventory).toEqual([spear, { item: IRON_SPEAR, quantity: 12 }]);
-  });
-
-  it('need a free slot even when the same weapon is carried', () => {
-    const full = createInventory(Array.from({ length: MAX_INVENTORY_SLOTS }, () => spear));
-    expect(canAddItem(full, IRON_SPEAR)).toBe(false);
-    expect(() => addItem(full, IRON_SPEAR)).toThrow(/full/);
+  it("don't go in a bag", () => {
+    expect(canAddItem(createInventory(), IRON_SPEAR)).toBe(false);
+    expect(() => addItem(createInventory(), IRON_SPEAR)).toThrow();
   });
 
   it('restore nothing and so are never used like a potion', () => {

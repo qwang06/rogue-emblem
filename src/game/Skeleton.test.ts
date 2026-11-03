@@ -31,9 +31,8 @@ describe('Skeleton', () => {
   it('fights with its Bone Claws, which never breaks, and carries nothing else', () => {
     const skeleton = new Skeleton({ team: 'enemy' });
     expect(skeleton.weapon).toBe(BONE_CLAWS);
-    expect(skeleton.weaponUses).toBeNull();
-    expect(skeleton.items).toEqual(SKELETON_ITEMS);
-    expect(skeleton.items).toHaveLength(1);
+    expect(skeleton.innate).toEqual(SKELETON_ITEMS.map(({ item }) => item));
+    expect(skeleton.items).toEqual([]);
   });
 
   it('levels up with the skeleton growth rates', () => {

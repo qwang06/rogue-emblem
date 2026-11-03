@@ -36,18 +36,18 @@ describe('Archer', () => {
     expect(archer.growths).toBe(ARCHER_GROWTHS);
   });
 
-  it('wields physical weapons only', () => {
+  it('is trained in physical weapons and wields any', () => {
     const archer = new Archer({ team: 'player', items: [weaponEntry(FIRE)] });
     expect(archer.weaponTypes).toEqual(['physical']);
-    expect(archer.weapon).toBeNull();
+    expect(archer.weapon).toBe(FIRE);
   });
 
   it('carries an Iron Bow, a health potion and a mana potion', () => {
     const archer = new Archer({ team: 'player' });
-    expect(archer.items).toEqual(ARCHER_ITEMS);
-    expect(archer.items.map((entry) => entry.item)).toEqual([IRON_BOW, HEALTH_POTION, MANA_POTION]);
+    expect(ARCHER_ITEMS.map((entry) => entry.item)).toEqual([IRON_BOW, HEALTH_POTION, MANA_POTION]);
+    expect(archer.equipment).toEqual({ main: IRON_BOW });
+    expect(archer.items.map((entry) => entry.item)).toEqual([HEALTH_POTION, MANA_POTION]);
     expect(archer.weapon).toBe(IRON_BOW);
-    expect(archer.weaponUses).toBe(IRON_BOW.uses);
   });
 
   it("learns Long Shot at level 2, keeping the villager's Throw Stones", () => {

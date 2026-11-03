@@ -13,7 +13,7 @@ import { createActionMenu, moveSelection, selectIndex, type Menu, type MenuActio
 import type { Item } from '../items.ts';
 import { UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
 import { isWeapon } from '../weapons.ts';
-import { canCarry, getEquippedUses, isSuitedTo, lookUpItem } from './convoy.ts';
+import { canCarry, isSuitedTo, lookUpItem } from './convoy.ts';
 import { buyItemFor, canBuy, canBuyFor, canSell, MERCHANT_STOCK, sellItem } from './merchant.ts';
 import { RUN_ITEMS, type RunState } from './run.ts';
 
@@ -127,8 +127,7 @@ export function cancelMerchant(state: MerchantScreenState): MerchantScreenState 
 
 // The "who is it for" menu for `itemId`: every unit, in roster order (one
 // without room disabled), then the convoy. It opens on a unit with room
-// that the item suits (isSuitedTo) — for a weapon, the one whose own has
-// the fewest uses left (getEquippedUses) — else on the convoy.
+// that the item suits (isSuitedTo), the first such, else on the convoy.
 export function getRecipients(
   run: RunState,
   itemId: string,
@@ -144,15 +143,8 @@ export function getRecipients(
   );
   const convoy = Object.freeze<MerchantRecipient>({ id: CONVOY_RECIPIENT, label: 'Convoy', suited: false });
   const actions = Object.freeze([...units, convoy]);
-  const isWeaponItem = isWeapon(lookUpItem(itemId, items));
-  // Unbreakable counts as plenty; a weapon is wanted most where uses are fewest.
-  const need = (unitId: string) => (isWeaponItem ? (getEquippedUses(run, unitId, classes, items) ?? Infinity) : 0);
-  let best = units.length;
-  units.forEach((unit, index) => {
-    if (!unit.suited || unit.disabled) return;
-    if (best === units.length || need(unit.id) < need(units[best].id)) best = index;
-  });
-  return selectIndex(createActionMenu(actions), best);
+  const best = units.findIndex((unit) => unit.suited && !unit.disabled);
+  return selectIndex(createActionMenu(actions), best >= 0 ? best : units.length);
 }
 
 const INDEX_FIELDS = Object.freeze({ stock: 'stockIndex', convoy: 'convoyIndex' } as const);

@@ -233,32 +233,33 @@ describe('camp', () => {
     const run = { ...newRun(), gold: 100 };
     const bought = apply(campWith(run), { type: 'buy', itemId: WOODEN_SWORD.id });
     expect(bought.run.gold).toBe(100 - getItemPrice(WOODEN_SWORD));
-    expect(bought.run.convoy).toEqual([{ itemId: WOODEN_SWORD.id, quantity: WOODEN_SWORD.uses }]);
+    expect(bought.run.convoy).toEqual([{ itemId: WOODEN_SWORD.id, quantity: 1 }]);
     const sold = apply(bought, { type: 'sell', convoyIndex: 0 });
     expect(sold.run.convoy).toEqual([]);
     expect(() => apply(campWith({ ...run, gold: 0 }), { type: 'buy', itemId: WOODEN_SWORD.id })).toThrow(/buy/);
     expect(() => apply(campWith(run), { type: 'buy', itemId: 'excalibur' })).toThrow(RunCommandError);
   });
 
-  it("buys straight into a unit's inventory when one is named", () => {
+  it('buys straight onto a unit when one is named', () => {
     const run = { ...newRun(), gold: 100 };
     const bought = apply(campWith(run), { type: 'buy', itemId: WOODEN_SWORD.id, unitId: 'alden' });
-    expect(bought.run.convoy).toEqual([]);
     const alden = bought.run.roster.find((unit) => unit.id === 'alden')!;
-    expect(alden.items.at(-1)).toEqual({ itemId: WOODEN_SWORD.id, quantity: WOODEN_SWORD.uses });
+    expect(alden.equipment?.main).toBe(WOODEN_SWORD.id);
+    expect(bought.run.convoy).toHaveLength(1);
     expect(() => apply(campWith(run), { type: 'buy', itemId: WOODEN_SWORD.id, unitId: 'nobody' })).toThrow(/buy/);
   });
 
-  it('gives, equips and stores items', () => {
-    const run = { ...newRun(), convoy: [{ itemId: WOODEN_SPEAR.id, quantity: 20 }] };
+  it('gives, unequips and stores items', () => {
+    const run = { ...newRun(), convoy: [{ itemId: WOODEN_SPEAR.id, quantity: 1 }] };
     const given = apply(campWith(run), { type: 'give', unitId: 'alden', convoyIndex: 0 });
     const alden = given.run.roster.find((unit) => unit.id === 'alden')!;
-    const index = alden.items.findIndex((item) => item.itemId === WOODEN_SPEAR.id);
-    expect(index).toBeGreaterThan(0);
-    const equipped = apply(given, { type: 'equip', unitId: 'alden', itemIndex: index });
-    expect(equipped.run.roster.find((unit) => unit.id === 'alden')!.items[0].itemId).toBe(WOODEN_SPEAR.id);
-    const stored = apply(equipped, { type: 'store', unitId: 'alden', itemIndex: 0 });
-    expect(stored.run.convoy.map((entry) => entry.itemId)).toContain(WOODEN_SPEAR.id);
+    expect(alden.equipment?.main).toBe(WOODEN_SPEAR.id);
+    const unequipped = apply(given, { type: 'unequip', unitId: 'alden', slot: 'main' });
+    expect(unequipped.run.roster.find((unit) => unit.id === 'alden')!.equipment?.main).toBeUndefined();
+    expect(unequipped.run.convoy.map((entry) => entry.itemId)).toContain(WOODEN_SPEAR.id);
+    const stored = apply(unequipped, { type: 'store', unitId: 'alden', itemIndex: 0 });
+    expect(stored.run.convoy.length).toBe(unequipped.run.convoy.length + 1);
+    expect(() => apply(given, { type: 'unequip', unitId: 'alden', slot: 'head' })).toThrow(RunCommandError);
     expect(() => apply(campWith(run), { type: 'give', unitId: 'nobody', convoyIndex: 0 })).toThrow(RunCommandError);
   });
 
@@ -307,11 +308,11 @@ describe('getLegalRunCommands', () => {
 
   it('lists camp commands that all apply, ending with march', () => {
     const run = won(newRun()).run;
-    const session = campWith({ ...run, gold: 100, convoy: [{ itemId: WOODEN_SPEAR.id, quantity: 20 }] });
+    const session = campWith({ ...run, gold: 100, convoy: [{ itemId: WOODEN_SPEAR.id, quantity: 1 }] });
     const commands = getLegalRunCommands(session);
     expect(commands.at(-1)).toEqual({ type: 'march' });
     expect(new Set(commands.map((command) => command.type))).toEqual(
-      new Set(['rest', 'buy', 'sell', 'give', 'store', 'equip', 'learn-secondary', 'march']),
+      new Set(['rest', 'buy', 'sell', 'give', 'store', 'unequip', 'learn-secondary', 'march']),
     );
     for (const command of commands) expect(() => applyRunCommand(session, command)).not.toThrow();
   });
@@ -539,7 +540,7 @@ describe('promote', () => {
     const session = apply(campWith(sealed(newRun())), { type: 'promote', unitId: 'cato', promotionId: 'vanguard' });
     expect(session.phase).toBe('camp');
     expect(session.run.roster.find((unit) => unit.id === 'cato')!.classId).toBe('vanguard');
-    expect(session.run.convoy).toEqual([]);
+    expect(session.run.convoy.some((entry) => entry.itemId === MASTER_SEAL.id)).toBe(false);
   });
 
   it("refuses a promotion the unit can't make", () => {

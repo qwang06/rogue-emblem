@@ -8,7 +8,7 @@ import { getPromotions, PROMOTION_LEVEL } from '../promotions.ts';
 import { Soldier } from '../Soldier.ts';
 import { Villager } from '../Villager.ts';
 import type { Unit } from '../Unit.ts';
-import { IRON_BOW, IRON_SPEAR, WOODEN_SPEAR } from '../weapons.ts';
+import { IRON_BOW, WOODEN_SPEAR } from '../weapons.ts';
 import { REST_COST } from './camp.ts';
 import { createRun, type RunState, type UnitSnapshot } from './run.ts';
 import {
@@ -23,7 +23,6 @@ import {
   BOON_SCORES,
   getBestBoonIndex,
   getDeployingUnits,
-  LOW_USES,
   pickBoonOffer,
   pickRecruit,
   pickReward,
@@ -200,36 +199,28 @@ describe('planCamp', () => {
     expect(playCamp(run)).toEqual([{ type: 'rest' }, { type: 'march' }]);
   });
 
-  it('buys, hands over and equips a spare for a weapon about to break', () => {
-    const run = withUnit(makeRun({ a: soldier() }, { gold: 100 }), 'a', (unit) => ({
-      ...unit,
-      items: [{ itemId: IRON_SPEAR.id, quantity: LOW_USES }],
-    }));
-    const commands = playCamp(run);
-    expect(commands.map((command) => command.type)).toEqual(['buy', 'give', 'equip', 'march']);
+  it('buys and hands over a weapon to a unit with an empty main hand', () => {
+    const run = withUnit(makeRun({ a: soldier() }, { gold: 100 }), 'a', (unit) => ({ ...unit, equipment: {} }));
+    expect(playCamp(run).map((command) => command.type)).toEqual(['buy', 'give', 'march']);
   });
 
-  it('swaps to a one-handed spare over a two-handed one to keep its shield', () => {
-    const run = withUnit(makeRun({ a: soldier() }, { gold: 100 }), 'a', (unit) => ({
+  it('takes a one-handed weapon over a two-handed one to keep its shield', () => {
+    const convoy = [
+      { itemId: IRON_BOW.id, quantity: 1 },
+      { itemId: WOODEN_SPEAR.id, quantity: 1 },
+    ];
+    const run = withUnit(makeRun({ a: soldier() }, { gold: 0, convoy }), 'a', (unit) => ({
       ...unit,
-      items: [
-        { itemId: IRON_SPEAR.id, quantity: LOW_USES },
-        { itemId: IRON_BOW.id, quantity: 40 },
-        { itemId: WOODEN_SPEAR.id, quantity: LOW_USES + 1 },
-        { itemId: WOODEN_SHIELD.id, quantity: 1 },
-      ],
+      equipment: { off: WOODEN_SHIELD.id },
     }));
-    expect(playCamp(run)[0]).toEqual({ type: 'equip', unitId: 'a', itemIndex: 2 });
-    // Without the shield, the spare with the most uses wins.
-    const unshielded = withUnit(run, 'a', (unit) => ({ ...unit, items: unit.items.slice(0, 3) }));
-    expect(playCamp(unshielded)[0]).toEqual({ type: 'equip', unitId: 'a', itemIndex: 1 });
+    expect(playCamp(run)[0]).toEqual({ type: 'give', unitId: 'a', convoyIndex: 1 });
   });
 
-  it('takes a spare from the convoy before buying one', () => {
+  it('takes a weapon from the convoy before buying one', () => {
     const run = withUnit(
-      makeRun({ a: soldier() }, { gold: 100, convoy: [{ itemId: WOODEN_SPEAR.id, quantity: 20 }] }),
+      makeRun({ a: soldier() }, { gold: 100, convoy: [{ itemId: WOODEN_SPEAR.id, quantity: 1 }] }),
       'a',
-      (unit) => ({ ...unit, items: [] }),
+      (unit) => ({ ...unit, equipment: {} }),
     );
     expect(playCamp(run).map((command) => command.type)).toEqual(['give', 'march']);
   });
@@ -238,26 +229,20 @@ describe('planCamp', () => {
     const archer = withUnit(
       makeRun({ a: new Archer({ name: 'Bryn', team: 'player' }) }, { gold: 100 }),
       'a',
-      (unit) => ({
-        ...unit,
-        items: [],
-      }),
+      (unit) => ({ ...unit, equipment: {} }),
     );
     expect(playCamp(archer)[0]).toEqual({ type: 'buy', itemId: IRON_BOW.id });
     const healer = withUnit(
       makeRun({ a: new Acolyte({ name: 'Cass', team: 'player' }) }, { gold: 100 }),
       'a',
-      (unit) => ({
-        ...unit,
-        items: [],
-      }),
+      (unit) => ({ ...unit, equipment: {} }),
     );
     expect(playCamp(healer).map((command) => command.type)).toEqual(['buy', 'give', 'march']);
     expect(playCamp(healer)[0]).toEqual({ type: 'buy', itemId: HEAL_STAFF.id });
   });
 
   it("marches without what it can't afford", () => {
-    const run = withUnit(makeRun({ a: soldier() }, { gold: 0 }), 'a', (unit) => ({ ...unit, items: [] }));
+    const run = withUnit(makeRun({ a: soldier() }, { gold: 0 }), 'a', (unit) => ({ ...unit, equipment: {} }));
     expect(playCamp(run)).toEqual([{ type: 'march' }]);
   });
 });

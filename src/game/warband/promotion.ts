@@ -4,13 +4,23 @@
 // from the merchant or won as a stage reward, held in the convoy or a
 // unit's inventory; a promotion spends the unit's own first, then the
 // convoy's, then another unit's. The promotion's gift weapon goes in the
-// unit's inventory, or the convoy when it has no room. Everything here is
+// unit's main hand, whatever it held (and a shield beside a two-handed
+// gift) going to the convoy. Everything here is
 // pure: each function returns a new frozen run and leaves its input alone.
 
-import { MASTER_SEAL, MAX_INVENTORY_SLOTS } from '../items.ts';
+import { equipGear, getGearLayout } from '../equipment.ts';
+import { MASTER_SEAL } from '../items.ts';
 import { canPromote, findPromotion, getPromotions, promoteUnit, type Promotion } from '../promotions.ts';
 import type { UnitClass } from '../unitClasses.ts';
-import { restoreUnit, snapshotUnit, type ItemSnapshot, type RunState, type UnitSnapshot } from './run.ts';
+import { getUnitEquipment } from './convoy.ts';
+import {
+  restoreUnit,
+  snapshotEquipment,
+  snapshotUnit,
+  type ItemSnapshot,
+  type RunState,
+  type UnitSnapshot,
+} from './run.ts';
 
 // How many Master Seals the warband holds, in the convoy and on its units.
 export function countSeals(run: Pick<RunState, 'convoy' | 'roster'>): number {
@@ -35,8 +45,8 @@ export function canPromoteInRun(run: RunState, unitId: string, promotionId: stri
 
 // The run after the unit `unitId` promotes to `promotionId`: a seal spent
 // (its own, else the convoy's, else the first other unit's that has one),
-// the unit promoted (promoteUnit) and its promotion's gift weapon, fresh,
-// in its inventory or, without room, at the end of the convoy. Throws when
+// the unit promoted (promoteUnit) and its promotion's gift weapon in its
+// main hand, what that displaces at the end of the convoy. Throws when
 // it can't (see canPromoteInRun).
 export function promoteInRun(
   run: RunState,
@@ -80,9 +90,11 @@ function handOverGift(
 ): { unit: UnitSnapshot; convoy: readonly ItemSnapshot[] } {
   const { gift } = promotion;
   if (!gift) return { unit, convoy };
-  const entry = { itemId: gift.id, quantity: gift.uses ?? 1 };
-  if (unit.items.length < MAX_INVENTORY_SLOTS) return { unit: { ...unit, items: [...unit.items, entry] }, convoy };
-  return { unit, convoy: [...convoy, entry] };
+  const { equipment, removed } = equipGear(getUnitEquipment(unit), gift, getGearLayout(unit.classId), unit.classId);
+  return {
+    unit: { ...unit, equipment: snapshotEquipment(equipment) },
+    convoy: [...convoy, ...removed.map((gear) => ({ itemId: gear.id, quantity: 1 }))],
+  };
 }
 
 function freeze(run: RunState): RunState {
@@ -90,7 +102,11 @@ function freeze(run: RunState): RunState {
     ...run,
     roster: Object.freeze(
       run.roster.map((unit) =>
-        Object.freeze({ ...unit, items: Object.freeze(unit.items.map((entry) => Object.freeze({ ...entry }))) }),
+        Object.freeze({
+          ...unit,
+          items: Object.freeze(unit.items.map((entry) => Object.freeze({ ...entry }))),
+          ...(unit.equipment && { equipment: Object.freeze({ ...unit.equipment }) }),
+        }),
       ),
     ),
     convoy: Object.freeze(run.convoy.map((entry) => Object.freeze({ ...entry }))),

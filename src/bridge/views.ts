@@ -35,11 +35,11 @@ import type { Unit, UnitRank } from '../game/Unit.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
 import { getItemSprite, getUnitSprite } from '../game/tileset.ts';
 import { MASTER_SEAL } from '../game/items.ts';
+import { getWornGear, NO_EQUIPMENT } from '../game/equipment.ts';
 import { formatWeaponRange, type WeaponType } from '../game/weapons.ts';
 
-// One inventory slot. `quantity` is how many are left (for a weapon, its
-// uses left), or null for a weapon that never breaks; `equipped` marks
-// the weapon the unit fights with.
+// One thing a unit has: a worn piece of gear (`equipped`, quantity null)
+// or a consumable in its bag with how many are left.
 export interface ItemView {
   id: string;
   label: string;
@@ -100,8 +100,6 @@ export interface WeaponDetailView {
   crit: number;
   weight: number;
   range: string;
-  uses: number | null;
-  maxUses: number | null;
 }
 
 // A passive on the unit info screen: a promoted class's, a boon's, an elite
@@ -189,7 +187,6 @@ export type PopupKind =
   | 'miss'
   | 'health'
   | 'mana'
-  | 'broke'
   | 'loot'
   | 'stored'
   | 'learned'
@@ -361,7 +358,6 @@ function getClassLabel(unitClass: string | null): string | null {
 export function toUnitView(unit: Unit | null | undefined): UnitView | null {
   if (!unit) return null;
   const equipped = unit.equippedWeapon;
-  const worn = unit.wornArmor.map(({ index }) => index);
   return Object.freeze({
     name: unit.name,
     unitClass: unit.unitClass,
@@ -385,17 +381,20 @@ export function toUnitView(unit: Unit | null | undefined): UnitView | null {
     movement: unit.movement,
     range: equipped ? formatWeaponRange(equipped.weapon) : '–',
     weapon: equipped?.weapon.label ?? null,
-    items: Object.freeze(
-      (unit.items ?? []).map(({ item, quantity }, index) =>
+    items: Object.freeze([
+      ...getWornGear(unit.equipment ?? NO_EQUIPMENT).map((gear) =>
         Object.freeze({
-          id: item.id,
-          label: item.label,
-          quantity: item.kind === 'weapon' && item.uses === null ? null : quantity,
-          weapon: item.kind === 'weapon',
-          equipped: index === equipped?.index || worn.includes(index),
+          id: gear.id,
+          label: gear.label,
+          quantity: null,
+          weapon: gear.kind === 'weapon',
+          equipped: true,
         }),
       ),
-    ),
+      ...(unit.items ?? []).map(({ item, quantity }) =>
+        Object.freeze({ id: item.id, label: item.label, quantity, weapon: false, equipped: false }),
+      ),
+    ]),
     loot: unit.loot?.label ?? null,
     rank: unit.rank,
     statuses: Object.freeze(
@@ -459,8 +458,6 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
           crit: weapon.crit,
           weight: weapon.weight,
           range: formatWeaponRange(weapon),
-          uses: equipped!.uses,
-          maxUses: weapon.uses,
         })
       : null,
     weaponTypes: unit.weaponTypes,
@@ -590,7 +587,6 @@ const POPUP_TEXT: Readonly<Record<PopupKind, (amount: number, label: string) => 
   miss: () => 'Miss',
   health: (amount) => `+${amount} HP`,
   mana: (amount) => `+${amount} MP`,
-  broke: () => 'Broke!',
   loot: (_, label) => `Got ${label}`,
   stored: (_, label) => `${label} to convoy`,
   learned: (_, label) => `Learned ${label}!`,
@@ -606,7 +602,7 @@ const POPUP_TEXT: Readonly<Record<PopupKind, (amount: number, label: string) => 
 // Snapshot of one floating number over a unit: damage taken (plain, a
 // crit, or a miss), health or mana recovered, its weapon breaking, or loot
 // picked up or sent to the convoy, or a spell learned (`kind` is 'damage' |
-// 'crit' | 'miss' | 'health' | 'mana' | 'broke' | 'loot' | 'stored' |
+// 'crit' | 'miss' | 'health' | 'mana' | 'loot' | 'stored' |
 // 'learned', which the UI colors by; `text` is what it shows, naming
 // `label`, the item or spell, for loot and learning). `x`/`y` are the point the number
 // rises from, as fractions of the canvas (see toCanvasFraction); `durationMs` is how long it stays up,

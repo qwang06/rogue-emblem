@@ -75,18 +75,10 @@ describe('getItemPrice', () => {
 });
 
 describe('getSellPrice', () => {
-  it('pays half for a fresh weapon', () => {
-    expect(getSellPrice({ itemId: WOODEN_SWORD.id, quantity: 20 })).toBe(10);
-  });
-
-  it('pays for the uses left, rounded down', () => {
-    expect(getSellPrice({ itemId: WOODEN_SWORD.id, quantity: 10 })).toBe(5);
-    expect(getSellPrice({ itemId: WOODEN_AXE.id, quantity: 7 })).toBe(4); // 12.5 * 7 / 20 = 4.375
-    expect(getSellPrice({ itemId: WOODEN_SWORD.id, quantity: 1 })).toBe(0);
-  });
-
-  it('pays the same for a staff by uses left', () => {
-    expect(getSellPrice({ itemId: HEAL_STAFF.id, quantity: HEAL_STAFF.uses })).toBe(20);
+  it('pays half the price, rounded down', () => {
+    expect(getSellPrice({ itemId: WOODEN_SWORD.id, quantity: 1 })).toBe(10);
+    expect(getSellPrice({ itemId: WOODEN_AXE.id, quantity: 1 })).toBe(12);
+    expect(getSellPrice({ itemId: HEAL_STAFF.id, quantity: 1 })).toBe(20);
   });
 
   it('pays half for armor and for one of a stack of consumables', () => {
@@ -100,8 +92,8 @@ describe('getSellPrice', () => {
 });
 
 describe('getPurchaseQuantity', () => {
-  it('is a fresh weapon’s uses, or one of anything else', () => {
-    expect(getPurchaseQuantity(WOODEN_SPEAR)).toBe(20);
+  it('is one of anything, gear never wearing out', () => {
+    expect(getPurchaseQuantity(WOODEN_SPEAR)).toBe(1);
     expect(getPurchaseQuantity(WOODEN_ARMOR)).toBe(1);
     expect(getPurchaseQuantity(HEALTH_POTION)).toBe(1);
   });
@@ -113,7 +105,7 @@ describe('buyItem', () => {
     expect(after.gold).toBe(10);
     expect(after.convoy).toEqual([
       { itemId: IRON_SPEAR.id, quantity: 5 },
-      { itemId: WOODEN_SWORD.id, quantity: 20 },
+      { itemId: WOODEN_SWORD.id, quantity: 1 },
     ]);
     expect(Object.isFrozen(after)).toBe(true);
   });
@@ -156,9 +148,9 @@ describe('buyItem', () => {
 });
 
 describe('sellItem', () => {
-  it('takes the whole entry and pays for its uses left', () => {
-    const after = sellItem(campRun(5, [{ itemId: WOODEN_SWORD.id, quantity: 10 }]), 0);
-    expect(after.gold).toBe(10);
+  it('takes the whole entry and pays half its price', () => {
+    const after = sellItem(campRun(5, [{ itemId: WOODEN_SWORD.id, quantity: 1 }]), 0);
+    expect(after.gold).toBe(15);
     expect(after.convoy).toEqual([]);
   });
 
@@ -183,11 +175,11 @@ describe('sellItem', () => {
 });
 
 describe('buyItemFor', () => {
-  it("puts the bought item straight into the unit's inventory", () => {
+  it('equips bought gear on the unit, sending what it displaces to the convoy', () => {
     const after = buyItemFor(campRun(25), WOODEN_SPEAR.id, 'alden');
     expect(after.gold).toBe(5);
-    expect(after.convoy).toEqual([]);
-    expect(after.roster[0].items.at(-1)).toEqual({ itemId: WOODEN_SPEAR.id, quantity: 20 });
+    expect(after.roster[0].equipment).toEqual({ main: WOODEN_SPEAR.id });
+    expect(after.convoy).toEqual([{ itemId: IRON_SPEAR.id, quantity: 1 }]);
   });
 
   it('stacks a consumable onto the one the unit carries', () => {
@@ -199,29 +191,26 @@ describe('buyItemFor', () => {
     expect(after.roster[0].items.find((entry) => entry.itemId === HEALTH_POTION.id)!.quantity).toBe(before + 1);
   });
 
-  it('takes a non-stacking item from a convoy that already holds one like it', () => {
-    const run = campRun(25, [{ itemId: WOODEN_SPEAR.id, quantity: 3 }]);
+  it('takes the bought one, not a like one the convoy already holds', () => {
+    const run = campRun(25, [{ itemId: WOODEN_SPEAR.id, quantity: 1 }]);
     const after = buyItemFor(run, WOODEN_SPEAR.id, 'alden');
-    expect(after.convoy).toEqual([{ itemId: WOODEN_SPEAR.id, quantity: 3 }]);
-    expect(after.roster[0].items.at(-1)).toEqual({ itemId: WOODEN_SPEAR.id, quantity: 20 });
+    expect(after.roster[0].equipment).toEqual({ main: WOODEN_SPEAR.id });
+    expect(after.convoy).toEqual([
+      { itemId: WOODEN_SPEAR.id, quantity: 1 },
+      { itemId: IRON_SPEAR.id, quantity: 1 },
+    ]);
   });
 
   it('buys into the convoy for no unit', () => {
-    expect(buyItemFor(campRun(25), WOODEN_SPEAR.id, null).convoy).toEqual([{ itemId: WOODEN_SPEAR.id, quantity: 20 }]);
+    expect(buyItemFor(campRun(25), WOODEN_SPEAR.id, null).convoy).toEqual([{ itemId: WOODEN_SPEAR.id, quantity: 1 }]);
   });
 
-  it("refuses a unit with no room, or gold the warband doesn't have", () => {
+  it("refuses gear the unit can't wear, or gold the warband doesn't have", () => {
     const run = campRun(100);
-    const full = {
-      ...run,
-      roster: run.roster.map((unit) => ({
-        ...unit,
-        items: Array.from({ length: 6 }, () => ({ itemId: IRON_SPEAR.id, quantity: 1 })),
-      })),
-    };
-    expect(canBuyFor(full, WOODEN_SPEAR.id, 'alden')).toBe(false);
-    expect(canBuyFor(full, WOODEN_SPEAR.id, null)).toBe(true);
+    const archer = { ...run, roster: run.roster.map((unit) => ({ ...unit, equipment: { main: IRON_BOW.id } })) };
+    expect(canBuyFor(archer, WOODEN_SHIELD.id, 'alden')).toBe(false);
+    expect(canBuyFor(archer, WOODEN_SHIELD.id, null)).toBe(true);
     expect(canBuyFor(campRun(19), WOODEN_SPEAR.id, 'alden')).toBe(false);
-    expect(() => buyItemFor(full, WOODEN_SPEAR.id, 'alden')).toThrow();
+    expect(() => buyItemFor(archer, WOODEN_SHIELD.id, 'alden')).toThrow();
   });
 });

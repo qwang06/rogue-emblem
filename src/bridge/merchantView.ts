@@ -11,8 +11,8 @@ import type { MerchantColumn, MerchantScreenState } from '../game/warband/mercha
 import { RUN_ITEMS } from '../game/warband/run.ts';
 import { describeItem, type ItemDetail } from './rosterView.ts';
 
-// A stock or convoy entry. `quantity` is how many (a weapon's or staff's
-// uses), or null for a weapon that never breaks or armor; `price` is what
+// A stock or convoy entry. `quantity` is how many of a consumable, or null
+// for gear; `price` is what
 // it costs (stock) or sells for (convoy); `disabled` marks stock the
 // warband can't afford and convoy items that can't be sold.
 export interface MerchantItemView {
@@ -56,7 +56,7 @@ export function toMerchantScreenView(
 ): MerchantScreenView {
   const { run } = state;
   const toItem = (item: Item, key: string, quantity: number, price: number, disabled: boolean) => {
-    const uncounted = (item.kind === 'weapon' && item.uses === null) || item.kind === 'armor';
+    const uncounted = item.kind !== 'consumable';
     return Object.freeze<MerchantItemView>({
       key,
       label: item.label,

@@ -27,10 +27,9 @@ const TEAM_NOUNS: Readonly<Record<Team, string>> = { player: 'Ally', enemy: 'Ene
 // lines (a boss or an elite wearing its map badge on the portrait's
 // corner), then HP, MP and (for player units and guests below the level
 // cap) EXP bars, a plain grid of stats (RNG is its equipped weapon's), the
-// bars and stats each led by its abbreviation (StatLabel), and its items (up to
-// six, see MAX_INVENTORY_SLOTS) one per row with their icons — potions
-// with their count, weapons with their uses left (∞ if they never break)
-// and the equipped one highlighted — long names cut short with an
+// bars and stats each led by its abbreviation (StatLabel), and its items one
+// per row with their icons — its worn gear highlighted, then the potions in
+// its bag (up to MAX_INVENTORY_SLOTS) with their count — long names cut short with an
 // ellipsis; left out when it has none. An enemy carrying loot (see
 // loot.ts) shows it under a "Drops" line, and the statuses a skill left on
 // it (statuses.ts) show above that, each with its effect as a tooltip. The team shows as the window's
@@ -104,9 +103,7 @@ export function UnitPanel() {
               <span className="unit-panel__item-label" title={item.equipped ? `${item.label} (equipped)` : item.label}>
                 {item.label}
               </span>
-              <span className="unit-panel__item-quantity">
-                {item.weapon ? (item.quantity ?? '∞') : `×${item.quantity}`}
-              </span>
+              <span className="unit-panel__item-quantity">{item.quantity === null ? '' : `×${item.quantity}`}</span>
             </li>
           ))}
         </ul>

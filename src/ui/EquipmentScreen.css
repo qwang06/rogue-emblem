@@ -1,0 +1,108 @@
+/* ---- Equipment screen ------------------------------------------------- */
+
+/* Three columns: the units, the picked unit's paper doll over its numbers,
+   and the convoy's gear for the picked slot. Every list has a fixed height
+   (the doll always the five rows of a humanoid, a monster's two leaving
+   the rest blank), and each number row draws both values and the arrow,
+   so moving the cursor or changing gear never reflows anything (see "UI
+   layout" in AGENTS.md). The shared row, column and list styles are in
+   ui.css's "Roster screen" section. */
+.equipment-screen {
+  /* Two lines of text a row (a unit's name over its class, a slot's name
+     over its gear), as the roster's unit list. */
+  --row: 52px;
+  --stat-row: 28px;
+}
+
+.equipment-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+/* The units and the gear run as tall as the doll and its numbers. */
+.equipment-screen .equipment-list {
+  height: calc(5 * var(--row) + 4 * var(--stat-row) + 17px);
+}
+
+.equipment-slots {
+  height: calc(5 * var(--row));
+}
+
+.equipment-slots__blank {
+  pointer-events: none;
+}
+
+.equipment-slots__item {
+  display: block;
+  color: var(--fg-bright);
+}
+
+.equipment-slots__empty,
+.equipment-slots__locked {
+  color: var(--fg-dim);
+}
+
+.equipment-slots__locked .glyph-icon {
+  vertical-align: -2px;
+}
+
+.equipment-gear__remove {
+  font-style: italic;
+  color: var(--fg-dim);
+}
+
+/* The numbers: label, now, arrow, with the highlighted gear. Fixed columns
+   and tabular figures, so a value changing never moves another. */
+.equipment-stats {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  justify-content: space-evenly;
+  column-gap: 16px;
+  margin: 0;
+  padding: 8px 10px;
+  list-style: none;
+  border-top: var(--rule);
+}
+
+.equipment-stats__row {
+  display: grid;
+  grid-template-columns: 44px 36px 22px 36px;
+  align-items: center;
+  height: var(--stat-row);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.equipment-stats__label {
+  font-weight: 700;
+  color: var(--fg-dim);
+}
+
+.equipment-stats__value {
+  text-align: right;
+}
+
+.equipment-stats__arrow {
+  text-align: center;
+  color: var(--fg-dim);
+}
+
+.equipment-stats__after--up {
+  color: var(--green);
+}
+
+.equipment-stats__after--down {
+  color: var(--red);
+}
+
+/* One column at a time on narrow stages, stacked; the lists shorten. */
+@container (max-width: 40rem) {
+  .equipment-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .equipment-screen .equipment-list {
+    height: calc(4 * var(--row));
+  }
+}

@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { createInventory, HEALTH_POTION, MAX_INVENTORY_SLOTS, WOODEN_ARMOR, WOODEN_SHIELD } from './items.ts';
+import {
+  createInventory,
+  HEALTH_POTION,
+  MANA_POTION,
+  MAX_INVENTORY_SLOTS,
+  WOODEN_ARMOR,
+  WOODEN_SHIELD,
+} from './items.ts';
 import { assignLoot, claimLoot, getLootQuantity, getStageLootCount, LOOT_ITEMS, STAGE_LOOT_DROPS } from './loot.ts';
 import { createSeededRng } from './rng.ts';
-import { FISTS, IRON_SPEAR, WOODEN_AXE, WOODEN_SPEAR, WOODEN_SWORD } from './weapons.ts';
+import { FISTS, IRON_SPEAR, WOODEN_AXE, WOODEN_SWORD } from './weapons.ts';
 
 describe('LOOT_ITEMS', () => {
   it('is the wooden set and the Fire tome', () => {
@@ -87,12 +94,9 @@ describe('assignLoot', () => {
 });
 
 describe('getLootQuantity', () => {
-  it('is a weapon’s full uses', () => {
-    expect(getLootQuantity(WOODEN_SWORD)).toBe(20);
-    expect(getLootQuantity(IRON_SPEAR)).toBe(IRON_SPEAR.uses);
-  });
-
-  it('is one for a weapon that never breaks, armor or a consumable', () => {
+  it('is one of anything', () => {
+    expect(getLootQuantity(WOODEN_SWORD)).toBe(1);
+    expect(getLootQuantity(IRON_SPEAR)).toBe(1);
     expect(getLootQuantity(FISTS)).toBe(1);
     expect(getLootQuantity(WOODEN_SHIELD)).toBe(1);
     expect(getLootQuantity(HEALTH_POTION)).toBe(1);
@@ -100,31 +104,30 @@ describe('getLootQuantity', () => {
 });
 
 describe('claimLoot', () => {
-  it('puts the item at the end of an inventory with room', () => {
-    const inventory = createInventory([{ item: HEALTH_POTION, quantity: 1 }]);
-    const { inventory: after, stored } = claimLoot(inventory, WOODEN_AXE);
+  it('puts a consumable at the end of a bag with room', () => {
+    const inventory = createInventory([{ item: MANA_POTION, quantity: 1 }]);
+    const { inventory: after, stored } = claimLoot(inventory, HEALTH_POTION);
     expect(stored).toBe(false);
     expect(after.map(({ item, quantity }) => [item.id, quantity])).toEqual([
+      ['mana-potion', 1],
       ['health-potion', 1],
-      ['wooden-axe', 20],
     ]);
   });
 
-  it('fills the last free slot', () => {
-    const inventory = createInventory(
-      Array.from({ length: MAX_INVENTORY_SLOTS - 1 }, () => ({ item: WOODEN_SPEAR, quantity: 3 })),
-    );
-    const { inventory: after, stored } = claimLoot(inventory, WOODEN_ARMOR);
-    expect(stored).toBe(false);
-    expect(after).toHaveLength(MAX_INVENTORY_SLOTS);
-    expect(after.at(-1)).toEqual({ item: WOODEN_ARMOR, quantity: 1 });
+  it('sends gear to the convoy, leaving the bag alone', () => {
+    const inventory = createInventory([{ item: HEALTH_POTION, quantity: 1 }]);
+    for (const gear of [WOODEN_AXE, WOODEN_ARMOR]) {
+      const result = claimLoot(inventory, gear);
+      expect(result.stored).toBe(true);
+      expect(result.inventory).toBe(inventory);
+    }
   });
 
-  it('sends the item to the convoy from a full inventory, leaving it alone', () => {
+  it('sends a consumable to the convoy from a full bag, leaving it alone', () => {
     const inventory = createInventory(
-      Array.from({ length: MAX_INVENTORY_SLOTS }, () => ({ item: WOODEN_SPEAR, quantity: 3 })),
+      Array.from({ length: MAX_INVENTORY_SLOTS }, (_, i) => ({ item: { ...MANA_POTION, id: `p${i}` }, quantity: 1 })),
     );
-    const result = claimLoot(inventory, WOODEN_SWORD);
+    const result = claimLoot(inventory, HEALTH_POTION);
     expect(result.stored).toBe(true);
     expect(result.inventory).toBe(inventory);
   });

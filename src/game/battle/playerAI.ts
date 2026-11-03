@@ -15,7 +15,7 @@
 import { getCombatForecast, getAttackRange, getAttackTargets, type ForecastSide } from '../combat.ts';
 import { CRIT_MULTIPLIER } from '../combatStats.ts';
 import { getDistance, getCell, getNeighbors, findUnit, type Grid, type Point } from '../grid.ts';
-import { getHealAmount, getHealTargets, getStaves, isWounded } from '../healing.ts';
+import { getHealAmount, getHealTargets, isWounded } from '../healing.ts';
 import { canUseItem, getConsumables, getItemRecovery } from '../items.ts';
 import { getMoveCost, getMovementRange, getMovePath, type RangeTile } from '../movement.ts';
 import { getPhaseMovement } from '../enemyAI.ts';
@@ -303,7 +303,7 @@ function getActions(state: BattleState, context: Context, unitId: string, unit: 
       });
     }
   }
-  for (const { staff, index } of getStaves(unit.items)) {
+  for (const { staff, index } of unit.staves) {
     const canHeal = (otherId: string) => {
       const other = state.units.get(otherId);
       return otherId !== unitId && other !== undefined && areAllied(other.team, unit.team) && isWounded(other);

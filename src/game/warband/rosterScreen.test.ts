@@ -15,8 +15,8 @@ import {
   type RosterScreenState,
 } from './rosterScreen.ts';
 
-// Alden the soldier carries [Iron Spear, Health Potion, Mana Potion]; Cato
-// the villager [Fists, Health Potion, Mana Potion].
+// Alden the soldier wields an Iron Spear, Cato the villager a Wooden Sword;
+// each carries [Health Potion, Mana Potion] in its bag.
 function campRun(convoy: ItemSnapshot[] = []): RunState {
   const run = createRun(
     7,
@@ -78,8 +78,8 @@ describe('moving the cursor', () => {
   it('keeps the item cursor in range of a newly picked unit', () => {
     const run = campRun();
     const short = { ...run, roster: [run.roster[0], { ...run.roster[1], items: [run.roster[1].items[0]] }] };
-    const atLastItem = pointRosterCursor(openRosterScreen(short), 'items', 2);
-    expect(atLastItem.itemIndex).toBe(2);
+    const atLastItem = pointRosterCursor(openRosterScreen(short), 'items', 1);
+    expect(atLastItem.itemIndex).toBe(1);
     const moved = moveRosterCursor({ ...atLastItem, column: 'units' }, 0, 1);
     expect(moved.unitIndex).toBe(1);
     expect(moved.itemIndex).toBe(0);
@@ -133,37 +133,14 @@ describe('pointing', () => {
 
   it('highlights an open action', () => {
     const open = confirmRoster(pointRosterCursor(openRosterScreen(campRun()), 'items', 0));
-    expect(pointRosterCursor(open, 'actions', 1).actions!.selectedIndex).toBe(1);
+    expect(pointRosterCursor(open, 'actions', 0).actions!.selectedIndex).toBe(0);
   });
 });
 
 describe('item actions', () => {
-  it('offers Equip and Store for a weapon, Store for anything else', () => {
+  it('offers Store for a bag item', () => {
     const state = pointRosterCursor(openRosterScreen(campRun()), 'items', 0);
-    expect(getItemActions(state).map((a) => [a.id, a.disabled])).toEqual([
-      ['equip', true], // already equipped
-      ['store', false],
-    ]);
-    expect(getItemActions(pointRosterCursor(state, 'items', 1)).map((a) => a.id)).toEqual(['store']);
-  });
-
-  it('offers Equip for armor', () => {
-    const run = campRun([{ itemId: 'wooden-shield', quantity: 1 }]);
-    const given = confirmRoster(pointRosterCursor(openRosterScreen(run), 'convoy', 0));
-    const state = pointRosterCursor(given, 'items', 3);
-    // Already worn: it's the only shield it carries.
-    expect(getItemActions(state).map((a) => [a.id, a.disabled])).toEqual([
-      ['equip', true],
-      ['store', false],
-    ]);
-  });
-
-  it('can equip a natural weapon but not store it', () => {
-    const state = pointRosterCursor(moveRosterCursor(openRosterScreen(campRun()), 0, 1), 'items', 1);
-    expect(getItemActions(state)).toEqual([
-      { id: 'equip', label: 'Equip', disabled: false },
-      { id: 'store', label: 'Store', disabled: true },
-    ]);
+    expect(getItemActions(state)).toEqual([{ id: 'store', label: 'Store', disabled: false }]);
   });
 
   it('offers nothing for an empty inventory', () => {
@@ -182,49 +159,37 @@ describe('confirming', () => {
   });
 
   it('stores an item through its actions', () => {
-    const items = pointRosterCursor(openRosterScreen(campRun()), 'items', 2);
+    const items = pointRosterCursor(openRosterScreen(campRun()), 'items', 1);
     const open = confirmRoster(items);
     expect(open.actions!.actions.map((a) => a.id)).toEqual(['store']);
     const stored = confirmRoster(open);
     expect(stored.actions).toBeNull();
-    expect(ids(stored)).toEqual(['iron-spear', 'health-potion']);
+    expect(ids(stored)).toEqual(['health-potion']);
     expect(stored.run.convoy).toEqual([{ itemId: 'mana-potion', quantity: 1 }]);
     // The cursor falls back onto the last item left.
-    expect(stored.itemIndex).toBe(1);
+    expect(stored.itemIndex).toBe(0);
   });
 
-  it('equips a weapon and follows it to the front', () => {
-    const run = campRun([{ itemId: 'iron-bow', quantity: 40 }]);
-    const given = confirmRoster(pointRosterCursor(openRosterScreen(run), 'convoy', 0));
-    expect(ids(given)).toEqual(['iron-spear', 'health-potion', 'mana-potion', 'iron-bow']);
-    const open = confirmRoster(pointRosterCursor(given, 'items', 3));
-    expect(open.actions!.actions[0]).toMatchObject({ id: 'equip', disabled: false });
-    const equipped = confirmRoster(open);
-    expect(ids(equipped)).toEqual(['iron-bow', 'iron-spear', 'health-potion', 'mana-potion']);
-    expect(equipped.itemIndex).toBe(0);
+  it('gives a convoy consumable into the bag', () => {
+    const run = campRun([{ itemId: 'health-potion', quantity: 2 }]);
+    const after = confirmRoster(pointRosterCursor(openRosterScreen(run), 'convoy', 0));
+    expect(getPickedUnit(after)!.items[0]).toEqual({ itemId: 'health-potion', quantity: 2 });
+    expect(after.run.convoy).toEqual([{ itemId: 'health-potion', quantity: 1 }]);
   });
 
-  it('ignores a disabled action', () => {
-    const open = confirmRoster(pointRosterCursor(openRosterScreen(campRun()), 'items', 0));
-    expect(open.actions!.selectedIndex).toBe(0);
-    expect(confirmRoster(open)).toBe(open);
-  });
-
-  it('gives a convoy item to the picked unit, keeping the cursor in range', () => {
-    const run = campRun([{ itemId: 'iron-axe', quantity: 40 }]);
+  it('equips convoy gear, sending what it displaces back, keeping the cursor in range', () => {
+    const run = campRun([{ itemId: 'iron-axe', quantity: 1 }]);
     const state = pointRosterCursor(moveRosterCursor(openRosterScreen(run), 0, 1), 'convoy', 0);
     const after = confirmRoster(state);
     expect(getPickedUnit(after)!.id).toBe('cato');
-    expect(ids(after).at(-1)).toBe('iron-axe');
-    expect(after.run.convoy).toEqual([]);
+    expect(getPickedUnit(after)!.equipment).toEqual({ main: 'iron-axe' });
+    expect(after.run.convoy).toEqual([{ itemId: 'wooden-sword', quantity: 1 }]);
     expect(after.convoyIndex).toBe(0);
   });
 
   it('does nothing when the unit has no room', () => {
-    const run = campRun([{ itemId: 'iron-axe', quantity: 40 }]);
-    const full = Array.from({ length: 6 }, () => ({ itemId: 'iron-bow', quantity: 40 }));
-    const packed = { ...run, roster: [{ ...run.roster[0], items: full }] };
-    const state = pointRosterCursor(openRosterScreen(packed), 'convoy', 0);
+    const run = campRun([{ itemId: 'master-seal', quantity: 1 }]);
+    const state = pointRosterCursor(openRosterScreen(run), 'convoy', 0);
     expect(confirmRoster(state)).toBe(state);
   });
 

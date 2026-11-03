@@ -17,14 +17,23 @@ import { getRelicModifiers, hasRelic, PHOENIX_FEATHER } from './relics.ts';
 import { findKeystone } from './keystones.ts';
 import { MAX_HEAT } from './heat.ts';
 import { EMPTY_CHRONICLE, parseChronicle, recordBattle, type RunChronicle } from './chronicle.ts';
-import { ARMORS, HEALTH_POTION, MANA_POTION, MASTER_SEAL, type Inventory, type Item } from '../items.ts';
+import {
+  ARMORS,
+  HEALTH_POTION,
+  MANA_POTION,
+  MASTER_SEAL,
+  type Inventory,
+  type InventoryEntry,
+  type Item,
+} from '../items.ts';
+import { createLoadout, getGearLayout, type Equipment, type Gear, type GearSlot } from '../equipment.ts';
 import { createSeededRng } from '../rng.ts';
 import type { TomeProgress } from '../tomes.ts';
 import type { RunRoute, RunSite } from './travel.ts';
 import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
 import type { BattleOutcome } from '../turns.ts';
 import type { Unit } from '../Unit.ts';
-import { WEAPONS } from '../weapons.ts';
+import { WEAPONS, type Weapon } from '../weapons.ts';
 
 // How many units deploy to a stage at the start of a run.
 export const STARTING_DEPLOY_CAP = 5;
@@ -39,7 +48,7 @@ export const RUN_ITEMS: readonly Item[] = Object.freeze([
   MASTER_SEAL,
 ]);
 
-// An inventory entry by item id: a weapon's quantity is its uses left.
+// An inventory entry by item id: how many of it (always 1 for gear).
 export interface ItemSnapshot {
   itemId: string;
   quantity: number;
@@ -53,6 +62,12 @@ export interface ItemSnapshot {
 // boons.ts), absent when it has none; `quirk` the quirk it joined with (see
 // quirks.ts), absent when it has none; `secondaryClass` the class whose
 // skill set it has learned at camp (see mentors.ts), absent when none.
+// `items` is its bag (consumables), `equipment` the gear it wears by slot
+// and `innate` its innate attacks (fists, natural weapons, spells it
+// knows), by item id. A snapshot without `equipment` is from before
+// equipment slots: its `items` lists everything it carried, sorted into
+// slots by getSnapshotLoadout (normalizeSnapshot moves what doesn't fit to
+// the convoy when such a run loads).
 export interface UnitSnapshot {
   id: string;
   name: string;
@@ -71,11 +86,16 @@ export interface UnitSnapshot {
   defense: number;
   resistance: number;
   items: readonly ItemSnapshot[];
+  equipment?: EquipmentSnapshot;
+  innate?: readonly string[];
   tomeProgress?: TomeProgress;
   boons?: readonly string[];
   quirk?: string;
   secondaryClass?: string;
 }
+
+// The gear a unit wears, by slot, as item ids.
+export type EquipmentSnapshot = Readonly<Partial<Record<GearSlot, string>>>;
 
 // A level-up boon pick still owed: the unit, the level it reached, and any
 // stat gains that level up rolled (see levelUpPicks.ts).
@@ -236,6 +256,8 @@ export function snapshotUnit(id: string, unit: Unit): UnitSnapshot {
       classId: unit.unitClass,
       ...stats,
       items: unit.items.map(({ item, quantity }) => ({ itemId: item.id, quantity })),
+      equipment: snapshotEquipment(unit.equipment),
+      innate: unit.innate.map((weapon) => weapon.id),
       ...(Object.keys(unit.tomeProgress).length > 0 && { tomeProgress: unit.tomeProgress }),
       ...(unit.boons.length > 0 && { boons: unit.boons }),
       ...(unit.quirk && { quirk: unit.quirk }),
@@ -255,9 +277,13 @@ export function restoreUnit(
 ): Unit {
   const unit = createUnitOfClass(
     snapshot.classId,
-    { name: snapshot.name, team: 'player', level: snapshot.level, items: restoreInventory(snapshot.items, items) },
+    { name: snapshot.name, team: 'player', level: snapshot.level },
     classes,
   );
+  const loadout = getSnapshotLoadout(snapshot, items);
+  unit.items = loadout.bag;
+  unit.equipment = loadout.equipment;
+  if (loadout.innate) unit.innate = loadout.innate;
   for (const field of STAT_FIELDS) unit[field] = snapshot[field];
   unit.tomeProgress = Object.freeze({ ...snapshot.tomeProgress });
   unit.boons = Object.freeze([...(snapshot.boons ?? [])]);
@@ -305,9 +331,63 @@ export function restoreInventory(snapshots: readonly ItemSnapshot[], items: read
   });
 }
 
+// A snapshot's gear sorted out: its equipment, bag and innate attacks
+// (null when the snapshot doesn't say, leaving its class's), and `spare`,
+// what an old snapshot carried that has no place now (see createLoadout).
+// Throws on an unknown item.
+export function getSnapshotLoadout(
+  snapshot: Pick<UnitSnapshot, 'classId' | 'items' | 'equipment' | 'innate'>,
+  items: readonly Item[] = RUN_ITEMS,
+): { equipment: Equipment; bag: Inventory; innate: readonly Weapon[] | null; spare: readonly InventoryEntry[] } {
+  const carried = restoreInventory(snapshot.items, items);
+  if (!snapshot.equipment) {
+    const loadout = createLoadout(carried, getGearLayout(snapshot.classId), snapshot.classId);
+    return { ...loadout, innate: loadout.innate.length > 0 ? loadout.innate : null };
+  }
+  const equipment = Object.freeze(
+    Object.fromEntries(
+      Object.entries(snapshot.equipment).map(([slot, itemId]) => [slot, lookUp(itemId as string, items) as Gear]),
+    ),
+  );
+  const innate = snapshot.innate
+    ? Object.freeze(snapshot.innate.map((itemId) => lookUp(itemId, items) as Weapon))
+    : null;
+  return { equipment, bag: carried, innate, spare: [] };
+}
+
+// A snapshot in the equipment-slot shape: an old one's carried items
+// sorted into equipment, innate attacks and bag, with `spare` the entries
+// that had no place (for the convoy). A current one comes back as it is.
+export function normalizeSnapshot(
+  snapshot: UnitSnapshot,
+  items: readonly Item[] = RUN_ITEMS,
+): { snapshot: UnitSnapshot; spare: readonly ItemSnapshot[] } {
+  if (snapshot.equipment) return { snapshot, spare: [] };
+  const loadout = getSnapshotLoadout(snapshot, items);
+  return {
+    snapshot: freezeSnapshot({
+      ...snapshot,
+      items: loadout.bag.map(({ item, quantity }) => ({ itemId: item.id, quantity })),
+      equipment: snapshotEquipment(loadout.equipment),
+      ...(loadout.innate && { innate: loadout.innate.map((weapon) => weapon.id) }),
+    }),
+    spare: loadout.spare.map(({ item, quantity }) => ({ itemId: item.id, quantity })),
+  };
+}
+
+// Equipment as item ids by slot.
+export function snapshotEquipment(equipment: Equipment): EquipmentSnapshot {
+  return Object.freeze(Object.fromEntries(Object.entries(equipment).map(([slot, gear]) => [slot, gear!.id])));
+}
+
+function lookUp(itemId: string, items: readonly Item[]): Item {
+  const item = items.find((candidate) => candidate.id === itemId);
+  if (!item) throw new Error(`Unknown item: ${itemId}`);
+  return item;
+}
+
 // The run after a battle: each roster unit in result.units has its XP,
-// levels, stats, HP and inventory (spent weapon uses, broken weapons,
-// used items) written back, and those that died move from the roster to
+// levels, stats, HP, bag (used items) and spells learned written back, and those that died move from the roster to
 // `fallen` (except that with the Phoenix Feather the first of them, in
 // roster order, stays on at 1 HP instead, and the feather is spent).
 // Undeployed units are unchanged. Items the battle sent to the convoy join
@@ -502,19 +582,25 @@ export function parseRun(
     return null;
   }
   if (new Set(roster.map((unit) => unit.id)).size !== roster.length) return null;
+  // Saves from before equipment slots: sort each unit's items into its
+  // slots, sending what has no place to the convoy, and count gear (which
+  // no longer wears out) as one each.
+  const normalized = roster.map((unit) => normalizeSnapshot(unit, items));
+  const oneEach = (entry: ItemSnapshot) =>
+    lookUp(entry.itemId, items).kind === 'consumable' ? entry : { ...entry, quantity: 1 };
   return freezeRun({
     seed,
     stage,
-    roster,
-    convoy,
+    roster: normalized.map(({ snapshot }) => snapshot),
+    convoy: [...convoy, ...normalized.flatMap(({ spare }) => spare)].map(oneEach),
     gold,
     relics,
     ...(keystone !== undefined && { keystone }),
     deployCap,
-    fallen,
+    fallen: fallen.map((unit) => normalizeSnapshot(unit, items).snapshot),
     ...(pendingReward !== undefined && { pendingReward }),
     ...(pendingRecruitment !== undefined && { pendingRecruitment }),
-    ...(pendingGuest !== undefined && { pendingGuest }),
+    ...(pendingGuest !== undefined && { pendingGuest: normalizeSnapshot(pendingGuest, items).snapshot }),
     ...(pendingDraft !== undefined && { pendingDraft }),
     ...(pendingBoons !== undefined && { pendingBoons }),
     chronicle: chronicle === undefined ? EMPTY_CHRONICLE : parseChronicle(chronicle)!,
@@ -609,12 +695,27 @@ function isUnitSnapshot(
     (value.health as number) <= (value.maxHealth as number) &&
     (value.mana as number) <= (value.maxMana as number) &&
     isItems(value.items) &&
+    (value.equipment === undefined || isEquipmentSnapshot(value.equipment, isItems)) &&
+    (value.innate === undefined ||
+      (Array.isArray(value.innate) && isItems(value.innate.map((itemId) => ({ itemId, quantity: 1 }))))) &&
     (value.tomeProgress === undefined || isTomeProgress(value.tomeProgress)) &&
     (value.boons === undefined ||
       (Array.isArray(value.boons) && value.boons.every((boon) => typeof boon === 'string'))) &&
     (value.quirk === undefined || typeof value.quirk === 'string') &&
     (value.secondaryClass === undefined ||
       (typeof value.secondaryClass === 'string' && classIds.has(value.secondaryClass)))
+  );
+}
+
+const GEAR_SLOT_IDS: ReadonlySet<string> = new Set(['main', 'off', 'head', 'body', 'accessory', 'special']);
+
+function isEquipmentSnapshot(
+  value: unknown,
+  isItems: (value: unknown) => value is ItemSnapshot[],
+): value is EquipmentSnapshot {
+  return (
+    isRecord(value) &&
+    Object.entries(value).every(([slot, itemId]) => GEAR_SLOT_IDS.has(slot) && isItems([{ itemId, quantity: 1 }]))
   );
 }
 
@@ -641,10 +742,12 @@ function isWholeNumber(value: unknown): value is number {
 }
 
 function freezeSnapshot(snapshot: UnitSnapshot): UnitSnapshot {
-  const { tomeProgress, boons } = snapshot;
+  const { tomeProgress, boons, equipment, innate } = snapshot;
   return Object.freeze({
     ...snapshot,
     items: freezeItems(snapshot.items),
+    ...(equipment && { equipment: Object.freeze({ ...equipment }) }),
+    ...(innate && { innate: Object.freeze([...innate]) }),
     ...(tomeProgress && { tomeProgress: Object.freeze({ ...tomeProgress }) }),
     ...(boons && { boons: Object.freeze([...boons]) }),
   });

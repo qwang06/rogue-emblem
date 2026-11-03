@@ -23,8 +23,10 @@ describe('Bishop', () => {
 
   it('knows Light and carries a Heal staff and the potions', () => {
     const bishop = new Bishop({ team: 'player' });
-    expect(bishop.items).toEqual(BISHOP_ITEMS);
-    expect(bishop.items.map((entry) => entry.item)).toEqual([LIGHT, HEAL_STAFF, HEALTH_POTION, MANA_POTION]);
+    expect(BISHOP_ITEMS.map((entry) => entry.item)).toEqual([LIGHT, HEAL_STAFF, HEALTH_POTION, MANA_POTION]);
+    expect(bishop.innate).toEqual([LIGHT]);
+    expect(bishop.equipment).toEqual({ main: HEAL_STAFF });
+    expect(bishop.items.map((entry) => entry.item)).toEqual([HEALTH_POTION, MANA_POTION]);
     expect(bishop.weapon).toBe(LIGHT);
     expect(bishop.weaponTypes).toEqual(['magical']);
   });

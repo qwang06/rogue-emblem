@@ -179,14 +179,14 @@ describe('rollRewards', () => {
   });
 
   it('only offers useful weapons, unheld relics and lessons', () => {
-    const run = { ...fullRun(), relics: ['whetstone'] };
+    const run = { ...fullRun(), relics: ['field-kitchen'] };
     const offers = Array.from({ length: 100 }, (_, seed) => rollRewards(run, 2, createSeededRng(seed))).flat();
     expect(kinds(offers)).toContain('arms');
     expect(kinds(offers)).toContain('relic');
     expect(kinds(offers)).toContain('lesson');
     for (const reward of offers) {
       if (reward.kind === 'arms') expect([IRON_SPEAR.id, IRON_AXE.id, IRON_BOW.id]).toContain(reward.itemId);
-      if (reward.kind === 'relic') expect(reward.relicId).not.toBe('whetstone');
+      if (reward.kind === 'relic') expect(reward.relicId).not.toBe('field-kitchen');
     }
     const veterans = withRoster(
       run,
@@ -389,9 +389,9 @@ describe('applyReward', () => {
 
   it('gives the warband a rule relic once', () => {
     const run = fullRun();
-    const after = applyReward(run, { kind: 'relic', relicId: 'whetstone' });
-    expect(after.relics).toEqual(['whetstone']);
-    expect(applyReward(after, { kind: 'relic', relicId: 'whetstone' }).relics).toEqual(['whetstone']);
+    const after = applyReward(run, { kind: 'relic', relicId: 'field-kitchen' });
+    expect(after.relics).toEqual(['field-kitchen']);
+    expect(applyReward(after, { kind: 'relic', relicId: 'field-kitchen' }).relics).toEqual(['field-kitchen']);
     expect(run.relics).toEqual([]);
   });
 
@@ -408,8 +408,8 @@ describe('applyReward', () => {
 
   it('puts a fresh weapon in the convoy and leaves the original run alone', () => {
     const run = fullRun();
-    const after = applyReward(run, { kind: 'arms', itemId: FIRE.id, label: FIRE.label, uses: FIRE.uses! });
-    expect(after.convoy).toEqual([{ itemId: FIRE.id, quantity: FIRE.uses }]);
+    const after = applyReward(run, { kind: 'arms', itemId: FIRE.id, label: FIRE.label });
+    expect(after.convoy).toEqual([{ itemId: FIRE.id, quantity: 1 }]);
     expect(run.convoy).toEqual([]);
   });
 
@@ -479,9 +479,7 @@ describe('describeReward', () => {
     });
     expect(describeReward({ kind: 'gold', amount: 40 }).label).toBe('40 Gold');
     expect(describeReward({ kind: 'scroll' }).label).toBe("Mentor's Scroll");
-    expect(describeReward({ kind: 'arms', itemId: FIRE.id, label: FIRE.label, uses: 30 }).description).toContain(
-      'Fire Tome',
-    );
+    expect(describeReward({ kind: 'arms', itemId: FIRE.id, label: FIRE.label }).description).toContain('Fire Tome');
   });
 });
 

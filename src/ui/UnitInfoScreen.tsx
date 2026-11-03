@@ -163,14 +163,7 @@ function Combat({ unit }: { unit: UnitDetailView }) {
       {weapon ? (
         <p className="unit-info__weapon">
           <span className="unit-info__weapon-name">{weapon.label}</span>
-          <WeaponNumbers
-            power={weapon.power}
-            hit={weapon.hit}
-            crit={weapon.crit}
-            weight={weapon.weight}
-            uses={weapon.uses}
-            maxUses={weapon.maxUses}
-          />
+          <WeaponNumbers power={weapon.power} hit={weapon.hit} crit={weapon.crit} weight={weapon.weight} />
         </p>
       ) : (
         <p className="unit-info__empty">None</p>
@@ -185,7 +178,7 @@ function Combat({ unit }: { unit: UnitDetailView }) {
                 <ItemIcon itemId={item.id} />
                 {item.label}
               </span>
-              <span>{item.weapon ? (item.quantity ?? '∞') : `×${item.quantity}`}</span>
+              <span>{item.quantity === null ? '' : `×${item.quantity}`}</span>
             </li>
           ))}
         </ul>
