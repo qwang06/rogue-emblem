@@ -59,7 +59,7 @@ const STATS: readonly (readonly [GrowthStat, string])[] = [
   ['mana', 'MP'],
   ['strength', 'STR'],
   ['intelligence', 'INT'],
-  ['skill', 'SKL'],
+  ['dexterity', 'DEX'],
   ['speed', 'SPD'],
   ['luck', 'LCK'],
   ['defense', 'DEF'],

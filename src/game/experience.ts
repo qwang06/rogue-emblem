@@ -30,7 +30,7 @@ export const GROWTH_STATS = Object.freeze([
   'mana',
   'strength',
   'intelligence',
-  'skill',
+  'dexterity',
   'speed',
   'luck',
   'defense',

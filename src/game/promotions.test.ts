@@ -35,12 +35,12 @@ describe('PROMOTIONS', () => {
   });
 
   it('adds what the class starts above a villager, and MOV either way', () => {
-    expect(archer.bonuses).toEqual({ skill: 2, speed: 1, resistance: 1 });
+    expect(archer.bonuses).toEqual({ dexterity: 2, speed: 1, resistance: 1 });
     expect(vanguard.bonuses).toEqual({ health: 2, strength: 2 });
   });
 
   it('adds what the mage starts above an acolyte, the class it promotes from', () => {
-    expect(findPromotion('mage')!.bonuses).toEqual({ mana: 1, intelligence: 2, skill: 1 });
+    expect(findPromotion('mage')!.bonuses).toEqual({ mana: 1, intelligence: 2, dexterity: 1 });
     expect(findPromotion('bishop')!.bonuses).toEqual({
       health: 1,
       mana: 2,
@@ -111,13 +111,13 @@ describe('canPromote', () => {
 describe('getPromotionGains', () => {
   it('gives each bonus in full, leaving out stats it doesn’t raise', () => {
     const unit = new Villager({ team: 'player' });
-    expect(getPromotionGains(unit, archer)).toEqual({ skill: 2, speed: 1, resistance: 1 });
+    expect(getPromotionGains(unit, archer)).toEqual({ dexterity: 2, speed: 1, resistance: 1 });
   });
 
   it('gives the full bonus however high the stat already is (no caps)', () => {
     const unit = new Villager({ team: 'player' });
-    unit.skill = 99;
-    expect(getPromotionGains(unit, archer).skill).toBe(2);
+    unit.dexterity = 99;
+    expect(getPromotionGains(unit, archer).dexterity).toBe(2);
   });
 });
 

@@ -3,14 +3,14 @@ import { applyModifiers, type Modifier } from './modifiers.ts';
 import { Unit, type ClassUnitOptions } from './Unit.ts';
 import { FIRE_SPELL, weaponEntry, type WeaponType } from './weapons.ts';
 
-// The acolyte's attack-minded promotion: more intelligence, mana and skill
+// The acolyte's attack-minded promotion: more intelligence, mana and dexterity
 // than an acolyte, just as frail.
 export const MAGE_STATS = Object.freeze({
   health: 8,
   mana: 7,
   strength: 1,
   intelligence: 5,
-  skill: 3,
+  dexterity: 3,
   speed: 3,
   luck: 4,
   defense: 1,
@@ -26,7 +26,7 @@ export const MAGE_GROWTHS = Object.freeze({
   mana: 100,
   strength: 0,
   intelligence: 100,
-  skill: 50,
+  dexterity: 50,
   speed: 25,
   luck: 25,
   defense: 25,

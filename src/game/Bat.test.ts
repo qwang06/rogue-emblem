@@ -20,7 +20,7 @@ describe('Bat', () => {
     expect(bat.health).toBe(BAT_STATS.health);
     expect(bat.maxMana).toBe(0);
     expect(bat.strength).toBe(BAT_STATS.strength);
-    expect(bat.skill).toBe(BAT_STATS.skill);
+    expect(bat.dexterity).toBe(BAT_STATS.dexterity);
     expect(bat.speed).toBe(BAT_STATS.speed);
     expect(bat.luck).toBe(BAT_STATS.luck);
     expect(bat.defense).toBe(BAT_STATS.defense);

@@ -260,7 +260,7 @@ export function withCombatBonus<T extends Fighter>(unit: T, opponent: Fighter, a
     maxHealth: unit.maxHealth,
     strength: unit.strength,
     intelligence: unit.intelligence,
-    skill: unit.skill,
+    dexterity: unit.dexterity,
     speed: unit.speed,
     luck: unit.luck,
     defense: unit.defense,

@@ -121,7 +121,7 @@ describe('isSoftTarget', () => {
 });
 
 describe('createAttackScorer', () => {
-  const stats = { skill: 0, speed: 0, luck: 0, strength: 3, defense: 0, health: 10, maxHealth: 10 };
+  const stats = { dexterity: 0, speed: 0, luck: 0, strength: 3, defense: 0, health: 10, maxHealth: 10 };
   const archer = { ...stats, weapon: IRON_BOW };
   const foes: Record<string, Foe> = {
     spear: { ...stats, weapon: IRON_SPEAR },

@@ -24,7 +24,7 @@ describe('Vanguard', () => {
     expect(vanguard.maxMana).toBe(VANGUARD_STATS.mana);
     expect(vanguard.strength).toBe(VANGUARD_STATS.strength);
     expect(vanguard.intelligence).toBe(VANGUARD_STATS.intelligence);
-    expect(vanguard.skill).toBe(VANGUARD_STATS.skill);
+    expect(vanguard.dexterity).toBe(VANGUARD_STATS.dexterity);
     expect(vanguard.speed).toBe(VANGUARD_STATS.speed);
     expect(vanguard.luck).toBe(VANGUARD_STATS.luck);
     expect(vanguard.defense).toBe(VANGUARD_STATS.defense);

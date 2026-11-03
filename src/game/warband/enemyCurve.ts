@@ -64,7 +64,7 @@ const SURGE_STATS = [
   'maxMana',
   'strength',
   'intelligence',
-  'skill',
+  'dexterity',
   'speed',
   'luck',
   'defense',

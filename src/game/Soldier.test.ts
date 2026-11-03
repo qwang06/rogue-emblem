@@ -25,7 +25,7 @@ describe('Soldier', () => {
     expect(soldier.maxHealth).toBe(SOLDIER_STATS.health);
     expect(soldier.strength).toBe(SOLDIER_STATS.strength);
     expect(soldier.intelligence).toBe(SOLDIER_STATS.intelligence);
-    expect(soldier.skill).toBe(SOLDIER_STATS.skill);
+    expect(soldier.dexterity).toBe(SOLDIER_STATS.dexterity);
     expect(soldier.speed).toBe(SOLDIER_STATS.speed);
     expect(soldier.luck).toBe(SOLDIER_STATS.luck);
     expect(soldier.defense).toBe(SOLDIER_STATS.defense);

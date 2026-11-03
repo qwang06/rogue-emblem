@@ -29,7 +29,7 @@ export interface WeaponStatLine {
 // combat.ts); missing terms count as 0.
 export interface CombatStatLine {
   strength?: number;
-  skill?: number;
+  dexterity?: number;
   speed?: number;
   luck?: number;
   armorWeight?: number;
@@ -52,10 +52,12 @@ export function getAttackSpeed(unit: CombatStatLine): number {
   return (unit.speed ?? 0) - Math.max(0, weight - (unit.strength ?? 0));
 }
 
-// The attacker's raw hit rate: weapon hit + skill × 2 + luck / 2, plus
+// The attacker's raw hit rate: weapon hit + dexterity × 2 + luck / 2, plus
 // its hit bonus.
 export function getHit(unit: CombatStatLine): number {
-  return (unit.weapon?.hit ?? 0) + (unit.skill ?? 0) * 2 + Math.floor((unit.luck ?? 0) / 2) + (unit.bonus?.hit ?? 0);
+  return (
+    (unit.weapon?.hit ?? 0) + (unit.dexterity ?? 0) * 2 + Math.floor((unit.luck ?? 0) / 2) + (unit.bonus?.hit ?? 0)
+  );
 }
 
 // How well a unit evades: attack speed × 2 + luck, plus its avoid bonus
@@ -64,10 +66,10 @@ export function getAvoid(unit: CombatStatLine): number {
   return getAttackSpeed(unit) * 2 + (unit.luck ?? 0) + (unit.bonus?.avoid ?? 0);
 }
 
-// The attacker's raw crit rate: weapon crit + skill / 2, plus its crit
+// The attacker's raw crit rate: weapon crit + dexterity / 2, plus its crit
 // bonus.
 export function getCrit(unit: CombatStatLine): number {
-  return (unit.weapon?.crit ?? 0) + Math.floor((unit.skill ?? 0) / 2) + (unit.bonus?.crit ?? 0);
+  return (unit.weapon?.crit ?? 0) + Math.floor((unit.dexterity ?? 0) / 2) + (unit.bonus?.crit ?? 0);
 }
 
 // How well a unit wards off crits: its luck.

@@ -782,7 +782,7 @@ function chainKill(draft: Draft, unitId: string) {
     maxHealth: foe.maxHealth,
     strength: foe.strength,
     intelligence: foe.intelligence,
-    skill: foe.skill,
+    dexterity: foe.dexterity,
     speed: foe.speed,
     luck: foe.luck,
     defense: foe.defense,

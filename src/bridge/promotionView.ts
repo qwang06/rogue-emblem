@@ -52,7 +52,7 @@ const STAT_LABELS: Readonly<Record<GrowthStat, string>> = Object.freeze({
   mana: 'MP',
   strength: 'STR',
   intelligence: 'INT',
-  skill: 'SKL',
+  dexterity: 'DEX',
   speed: 'SPD',
   luck: 'LCK',
   defense: 'DEF',

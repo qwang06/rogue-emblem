@@ -122,7 +122,9 @@ describe('the events', () => {
   it('Swordmaster: a lesson for the greenest unit, sparring for the sturdiest', () => {
     const run = at('swordmaster');
     const taught = take(run, 'Pay 30 gold for a lesson').run;
-    expect(taught.roster[0].skill + taught.roster[1].skill).toBe(run.roster[0].skill + run.roster[1].skill + 1);
+    expect(taught.roster[0].dexterity + taught.roster[1].dexterity).toBe(
+      run.roster[0].dexterity + run.roster[1].dexterity + 1,
+    );
     expect(taught.gold).toBe(70);
   });
 

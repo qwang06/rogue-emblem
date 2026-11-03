@@ -2,7 +2,7 @@
 // just stats and the state changes every unit shares (taking damage,
 // healing, dying, spending mana, leveling up, equipping and wearing out
 // weapons). Stats follow Fire Emblem: strength / intelligence power physical /
-// magical hits, defense / resistance guard against them, and skill, speed
+// magical hits, defense / resistance guard against them, and dexterity, speed
 // and luck feed hit, crit and doubling. Specific unit types extend this
 // and set their own class, stats, growth rates and XP rate
 // (see experience.ts), which decide what a level up raises, and the weapon
@@ -68,7 +68,7 @@ export interface UnitOptions {
   mana?: number;
   strength: number;
   intelligence?: number;
-  skill?: number;
+  dexterity?: number;
   speed?: number;
   luck?: number;
   defense: number;
@@ -109,7 +109,7 @@ export class Unit {
   mana: number;
   strength: number;
   intelligence: number;
-  skill: number;
+  dexterity: number;
   speed: number;
   luck: number;
   defense: number;
@@ -173,7 +173,7 @@ export class Unit {
     mana = 0,
     strength,
     intelligence = 0,
-    skill = 0,
+    dexterity = 0,
     speed = 0,
     luck = 0,
     defense,
@@ -197,7 +197,7 @@ export class Unit {
     this.mana = mana;
     this.strength = strength;
     this.intelligence = intelligence;
-    this.skill = skill;
+    this.dexterity = dexterity;
     this.speed = speed;
     this.luck = luck;
     this.defense = defense;
