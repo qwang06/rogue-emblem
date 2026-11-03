@@ -53,6 +53,8 @@ export const REWARD_SCORES = Object.freeze({
   // (MENTORS_ENABLED), and the policy doesn't learn secondary skill sets
   // at camp yet, so it stays low until it does.
   scroll: 5,
+  // A keystone, offered alone every tenth stage.
+  keystone: 60,
 });
 
 // The relics the policy would rather start with, best first; any other
@@ -157,6 +159,8 @@ export function scoreReward(run: RunState, reward: Reward): number {
       return REWARD_SCORES.scroll;
     case 'gold':
       return REWARD_SCORES.gold;
+    case 'keystone':
+      return REWARD_SCORES.keystone;
   }
 }
 

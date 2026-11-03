@@ -11,7 +11,7 @@ export const WHELP_STATS = Object.freeze({
   mana: 1,
   strength: 2,
   intelligence: 0,
-  skill: 2,
+  dexterity: 2,
   speed: 3,
   luck: 1,
   defense: 1,

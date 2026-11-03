@@ -400,6 +400,18 @@ describe('serializeRun and parseRun', () => {
     expect(unit?.boons).toEqual(['stat-intelligence']);
   });
 
+  it('reads a save from before skill was renamed dexterity', () => {
+    const acolyte = new Acolyte({ name: 'Iris', team: 'player' });
+    acolyte.boons = ['stat-dexterity'];
+    const text = serializeRun(createRun(1, new Map([['iris', acolyte]])))
+      .replace('"dexterity"', '"skill"')
+      .replace('"stat-dexterity"', '"stat-skill"');
+    expect(text).toContain('"skill"');
+    const unit = parseRun(text)?.roster[0];
+    expect(unit?.dexterity).toBe(acolyte.dexterity);
+    expect(unit?.boons).toEqual(['stat-dexterity']);
+  });
+
   it('round-trips a run mid-way through', () => {
     const run = startingRun();
     const units = restoreRoster(run);

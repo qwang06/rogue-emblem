@@ -9,7 +9,7 @@ import { weaponEntry, IRON_SPEAR } from '../weapons.ts';
 import { applyCommand } from './commands.ts';
 import { createBattleState, type BattleState } from './state.ts';
 
-// A unit whose strikes always land and never crit (its skill outdoes any
+// A unit whose strikes always land and never crit (its dexterity outdoes any
 // avoid, its luck any crit), so exchanges come out the same whatever the
 // dice. Iron spear, 5 strength: 6 damage a hit against 0 defense.
 export function makeTestUnit(options: Partial<UnitOptions> & Pick<UnitOptions, 'team'>): Unit {
@@ -17,7 +17,7 @@ export function makeTestUnit(options: Partial<UnitOptions> & Pick<UnitOptions, '
     name: options.team === 'player' ? 'Hero' : 'Foe',
     health: 20,
     strength: 5,
-    skill: 100,
+    dexterity: 100,
     luck: 100,
     defense: 0,
     movement: 3,

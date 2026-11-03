@@ -20,7 +20,7 @@ describe('Troll', () => {
     expect(troll.health).toBe(TROLL_STATS.health);
     expect(troll.maxMana).toBe(0);
     expect(troll.strength).toBe(TROLL_STATS.strength);
-    expect(troll.skill).toBe(TROLL_STATS.skill);
+    expect(troll.dexterity).toBe(TROLL_STATS.dexterity);
     expect(troll.speed).toBe(TROLL_STATS.speed);
     expect(troll.luck).toBe(TROLL_STATS.luck);
     expect(troll.defense).toBe(TROLL_STATS.defense);

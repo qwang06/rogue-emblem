@@ -20,7 +20,7 @@ describe('Slime', () => {
     expect(slime.health).toBe(SLIME_STATS.health);
     expect(slime.maxMana).toBe(0);
     expect(slime.strength).toBe(SLIME_STATS.strength);
-    expect(slime.skill).toBe(SLIME_STATS.skill);
+    expect(slime.dexterity).toBe(SLIME_STATS.dexterity);
     expect(slime.speed).toBe(SLIME_STATS.speed);
     expect(slime.luck).toBe(SLIME_STATS.luck);
     expect(slime.defense).toBe(SLIME_STATS.defense);

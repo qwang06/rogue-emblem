@@ -42,9 +42,9 @@ describe('Mage', () => {
 });
 
 describe('promoting an acolyte to a mage', () => {
-  it('makes it a mage with more MP, INT and SKL, keeping its level, items and Mend', () => {
+  it('makes it a mage with more MP, INT and DEX, keeping its level, items and Mend', () => {
     const acolyte = new Acolyte({ team: 'player', level: 5 });
-    const before = { mana: acolyte.maxMana, intelligence: acolyte.intelligence, skill: acolyte.skill };
+    const before = { mana: acolyte.maxMana, intelligence: acolyte.intelligence, dexterity: acolyte.dexterity };
     const items = acolyte.items;
     const mage = findPromotion('mage')!;
     expect(mage.from).toBe('acolyte');
@@ -55,7 +55,7 @@ describe('promoting an acolyte to a mage', () => {
     expect(acolyte.items).toBe(items);
     expect(acolyte.maxMana).toBe(before.mana + 1);
     expect(acolyte.intelligence).toBe(before.intelligence + 2);
-    expect(acolyte.skill).toBe(before.skill + 1);
+    expect(acolyte.dexterity).toBe(before.dexterity + 1);
     expect(acolyte.growths).toBe(MAGE_GROWTHS);
     expect(getLearnedSkills(acolyte.unitClass, acolyte.level)).toContain(MEND);
   });

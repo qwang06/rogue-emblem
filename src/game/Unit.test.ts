@@ -40,19 +40,19 @@ describe('Unit', () => {
     expect(unit.maxMana).toBe(0);
   });
 
-  it('defaults intelligence, skill, speed, luck, and resistance to 0', () => {
+  it('defaults intelligence, dexterity, speed, luck, and resistance to 0', () => {
     const unit = makeUnit();
     expect(unit.intelligence).toBe(0);
-    expect(unit.skill).toBe(0);
+    expect(unit.dexterity).toBe(0);
     expect(unit.speed).toBe(0);
     expect(unit.luck).toBe(0);
     expect(unit.resistance).toBe(0);
   });
 
   it('accepts the expanded stats', () => {
-    const unit = makeUnit({ intelligence: 6, skill: 5, speed: 7, luck: 3, resistance: 4 });
+    const unit = makeUnit({ intelligence: 6, dexterity: 5, speed: 7, luck: 3, resistance: 4 });
     expect(unit.intelligence).toBe(6);
-    expect(unit.skill).toBe(5);
+    expect(unit.dexterity).toBe(5);
     expect(unit.speed).toBe(7);
     expect(unit.luck).toBe(3);
     expect(unit.resistance).toBe(4);

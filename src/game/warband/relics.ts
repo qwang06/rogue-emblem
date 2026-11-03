@@ -67,6 +67,8 @@ export const FOUR_LEAF_CLOVER = relic(
   `Reward picks offer ${CLOVER_REWARD_CHOICES} choices instead of 3.`,
 );
 export const FIELD_KITCHEN = relic('field-kitchen', 'Field Kitchen', 'Resting at camp costs no gold.');
+// How much the Lone Wolf relic raises a unit deployed alone, in percent.
+export const LONE_WOLF_PERCENT = 60;
 
 // Every relic, in the order the relic book lists them.
 export const RELICS: readonly Relic[] = Object.freeze([
@@ -99,6 +101,9 @@ export const RELICS: readonly Relic[] = Object.freeze([
     { kind: 'phase-mana', amount: 1 },
   ]),
   relic('whetstone', 'Whetstone', 'Units have +{n} crit.', [{ kind: 'combat', term: 'crit', amount: 10 }]),
+  relic('lone-wolf', 'Lone Wolf', `A unit deployed alone has ${LONE_WOLF_PERCENT}% higher stats for the battle.`, [
+    { kind: 'lone-wolf', percent: LONE_WOLF_PERCENT },
+  ]),
   relic('scholars-quill', "Scholar's Quill", 'Every unit earns {n}% more XP.', [{ kind: 'experience', percent: 50 }]),
   BOUNTY_LEDGER,
   PHOENIX_FEATHER,
@@ -204,5 +209,12 @@ export function canTakeRelic(relicIds: readonly string[], id: string): boolean {
 // The relics a run started with `runSeed` offers to start with: always
 // the same for the same seed.
 export function rollStartingRelics(runSeed: number): Relic[] {
-  return rollRelics(createSeededRng((runSeed ^ 0x7f4a7c15) >>> 0), [], STARTING_RELIC_CHOICES);
+  return shuffle(
+    createSeededRng((runSeed ^ 0x7f4a7c15) >>> 0),
+    getUnownedRelics([]).filter(({ id }) => !NOT_STARTING_RELICS.has(id)),
+  ).slice(0, STARTING_RELIC_CHOICES);
 }
+
+// Relics a run never starts with: the Lone Wolf, since every run starts
+// with a lone unit and no run should start strong.
+const NOT_STARTING_RELICS: ReadonlySet<string> = new Set(['lone-wolf']);

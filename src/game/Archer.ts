@@ -3,14 +3,14 @@ import { applyModifiers, type Modifier } from './modifiers.ts';
 import { Unit, type ClassUnitOptions } from './Unit.ts';
 import { IRON_BOW, weaponEntry, type WeaponType } from './weapons.ts';
 
-// Frail and accurate: more skill and speed than a soldier, less health,
+// Frail and accurate: more dexterity and speed than a soldier, less health,
 // strength and defense.
 export const ARCHER_STATS = Object.freeze({
   health: 9,
   mana: 5,
   strength: 3,
   intelligence: 0,
-  skill: 5,
+  dexterity: 5,
   speed: 4,
   luck: 2,
   defense: 1,
@@ -26,7 +26,7 @@ export const ARCHER_GROWTHS = Object.freeze({
   mana: 25,
   strength: 50,
   intelligence: 0,
-  skill: 100,
+  dexterity: 100,
   speed: 50,
   luck: 25,
   defense: 25,

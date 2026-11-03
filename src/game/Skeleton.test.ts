@@ -20,7 +20,7 @@ describe('Skeleton', () => {
     expect(skeleton.health).toBe(SKELETON_STATS.health);
     expect(skeleton.maxMana).toBe(0);
     expect(skeleton.strength).toBe(SKELETON_STATS.strength);
-    expect(skeleton.skill).toBe(SKELETON_STATS.skill);
+    expect(skeleton.dexterity).toBe(SKELETON_STATS.dexterity);
     expect(skeleton.speed).toBe(SKELETON_STATS.speed);
     expect(skeleton.luck).toBe(SKELETON_STATS.luck);
     expect(skeleton.defense).toBe(SKELETON_STATS.defense);

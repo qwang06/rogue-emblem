@@ -418,12 +418,12 @@ describe('resolveCombat rolls', () => {
 
   it('triples damage on a crit', () => {
     // skill 20 → crit 10 vs 0 dodge; rolls: hit 0, crit 5.
-    const result = resolveCombat(unit({ skill: 20 }), unit(), { distance: 1, rng: rolls(0, 0.05, 0.99) });
+    const result = resolveCombat(unit({ dexterity: 20 }), unit(), { distance: 1, rng: rolls(0, 0.05, 0.99) });
     expect(result.strikes[0]).toMatchObject({ hit: true, crit: true, damage: 9 });
   });
 
   it('can kill with a crit, ending the exchange', () => {
-    const result = resolveCombat(unit({ skill: 20 }), unit({ health: 8 }), { distance: 1, rng: alwaysHit });
+    const result = resolveCombat(unit({ dexterity: 20 }), unit({ health: 8 }), { distance: 1, rng: alwaysHit });
     expect(result.strikes).toEqual([
       { by: 'attacker', target: 'defender', damage: 9, hit: true, crit: true, lethal: true },
     ]);
@@ -433,7 +433,7 @@ describe('resolveCombat rolls', () => {
   it('never crits on a miss', () => {
     // Hit 120 vs avoid 40 = 80%; crit chance 10, but the hit roll misses so
     // the crit roll (0 — would crit) is never taken.
-    const result = resolveCombat(unit({ skill: 20 }), unit({ speed: 20, weapon: null }), {
+    const result = resolveCombat(unit({ dexterity: 20 }), unit({ speed: 20, weapon: null }), {
       distance: 1,
       rng: rolls(0.99, 0),
     });
@@ -483,13 +483,13 @@ describe('resolveCombat rolls', () => {
 });
 
 describe('getCombatForecast', () => {
-  // 20 HP so nobody dies mid-exchange; base 80 hit + skill, no crit unless skilled.
+  // 20 HP so nobody dies mid-exchange; base 80 hit + dexterity, no crit unless dexterous.
   const unit = (stats: Partial<Combatant> = {}): Combatant => ({
     health: 20,
     maxHealth: 20,
     strength: 5,
     defense: 2,
-    skill: 0,
+    dexterity: 0,
     speed: 0,
     luck: 0,
     weapon: arms(),
@@ -507,7 +507,7 @@ describe('getCombatForecast', () => {
   }
 
   it('shows both sides of a plain exchange', () => {
-    const forecast = getCombatForecast(unit({ skill: 4 }), unit({ strength: 4, speed: 3 }), { distance: 1 });
+    const forecast = getCombatForecast(unit({ dexterity: 4 }), unit({ strength: 4, speed: 3 }), { distance: 1 });
     expect(forecast.attacker).toEqual({
       health: 20,
       maxHealth: 20,
@@ -547,7 +547,7 @@ describe('getCombatForecast', () => {
   });
 
   it('matches crit damage as damage × CRIT_MULTIPLIER', () => {
-    const attacker = unit({ skill: 10 }); // 5% crit, rolled as 0 → crits
+    const attacker = unit({ dexterity: 10 }); // 5% crit, rolled as 0 → crits
     const forecast = getCombatForecast(attacker, unit(), { distance: 1 });
     const { strikes } = resolveCombat(attacker, unit(), {
       distance: 1,
@@ -604,7 +604,7 @@ describe('getCombatForecast', () => {
   });
 
   it('clamps hit to 0–100', () => {
-    const forecast = getCombatForecast(unit({ skill: 20 }), unit({ skill: 20, speed: 70 }), { distance: 1 });
+    const forecast = getCombatForecast(unit({ dexterity: 20 }), unit({ dexterity: 20, speed: 70 }), { distance: 1 });
     expect(forecast.attacker.hit).toBe(0);
     expect(forecast.defender.hit).toBe(100);
   });
@@ -625,7 +625,7 @@ describe('getForecastHealthAfter', () => {
     maxHealth: 20,
     strength: 5,
     defense: 2,
-    skill: 0,
+    dexterity: 0,
     speed: 0,
     luck: 0,
     weapon: arms(),
@@ -692,7 +692,7 @@ describe('combat with modifiers', () => {
     maxHealth: 20,
     strength: 6,
     defense: 1,
-    skill: 5,
+    dexterity: 5,
     speed: 3,
     luck: 2,
     weapon: arms({ power: 2, crit: 5 }),
@@ -788,7 +788,7 @@ describe('combat procs', () => {
     maxHealth: 20,
     strength: 6,
     defense: 1,
-    skill: 5,
+    dexterity: 5,
     speed: 3,
     luck: 2,
     weapon: arms({ power: 2, crit: 5 }),
@@ -857,7 +857,7 @@ describe('gear effects', () => {
     maxHealth: 20,
     strength: 6,
     defense: 1,
-    skill: 5,
+    dexterity: 5,
     speed: 3,
     luck: 2,
     weapon: arms({ power: 2, crit: 5 }),

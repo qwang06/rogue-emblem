@@ -191,6 +191,30 @@ export const EVOLUTIONS: readonly Evolution[] = Object.freeze([
       { kind: 'phase-mana', amount: 1 },
     ],
   }),
+  // Build evolutions: boons alone, no relic, one per build.
+  evolution({
+    id: 'reaper',
+    name: 'Reaper',
+    description: 'Its first kill in its own attack each phase lets it act again.',
+    boons: ['chain-kill'],
+    ranks: { bloodlust: 2 },
+    modifiers: [{ kind: 'encore' }],
+  }),
+  evolution({
+    id: 'plague',
+    name: 'Plague',
+    description: 'A foe it fells passes its debuffs to the nearest foe, and its debuffs last a phase longer.',
+    boons: ['exploit', 'opportunist'],
+    modifiers: [{ kind: 'contagion' }, { kind: 'linger-debuffs' }],
+  }),
+  evolution({
+    id: 'iron-maiden',
+    name: 'Iron Maiden',
+    description: 'Taunts the foes beside it as each of your phases starts.',
+    boons: ['spite'],
+    ranks: { thorns: 3 },
+    modifiers: [{ kind: 'taunt-aura' }],
+  }),
 ]);
 
 // What a recipe is checked against: a unit's class and boons, and the

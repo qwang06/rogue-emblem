@@ -25,7 +25,7 @@ export function growUpWhelp(unit: UnitSnapshot): UnitSnapshot {
     mana: unit.mana + bonus.mana,
     strength: unit.strength + bonus.strength,
     intelligence: unit.intelligence + bonus.intelligence,
-    skill: unit.skill + bonus.skill,
+    dexterity: unit.dexterity + bonus.dexterity,
     speed: unit.speed + bonus.speed,
     luck: unit.luck + bonus.luck,
     defense: unit.defense + bonus.defense,

@@ -67,7 +67,7 @@ describe('toUnitView', () => {
       maxMana: 5,
       strength: 4,
       intelligence: 0,
-      skill: 0,
+      dexterity: 0,
       speed: 0,
       luck: 0,
       defense: 2,
@@ -188,7 +188,7 @@ describe('toUnitDetailView', () => {
     const unit = new Soldier({ team: 'player' });
     const view = toUnitDetailView(unit)!;
     expect(view.classLabel).toBe('Soldier');
-    expect(view.stats.map((stat) => stat.label)).toEqual(['STR', 'INT', 'SKL', 'SPD', 'LCK', 'DEF', 'RES']);
+    expect(view.stats.map((stat) => stat.label)).toEqual(['STR', 'INT', 'DEX', 'SPD', 'LCK', 'DEF', 'RES']);
     expect(view.stats[0]).toEqual({ id: 'strength', label: 'STR', value: unit.strength });
   });
 
@@ -201,7 +201,7 @@ describe('toUnitDetailView', () => {
       name: 'Soldier',
       health: 10,
       strength: 2,
-      skill: 3,
+      dexterity: 3,
       speed: 5,
       luck: 4,
       defense: 2,
@@ -619,13 +619,23 @@ describe('toExperienceGainView', () => {
 describe('toLevelUpView', () => {
   const levelUp = {
     level: 3,
-    gains: { health: 1, mana: 0, strength: 1, intelligence: 0, skill: 0, speed: 1, luck: 0, defense: 0, resistance: 0 },
+    gains: {
+      health: 1,
+      mana: 0,
+      strength: 1,
+      intelligence: 0,
+      dexterity: 0,
+      speed: 1,
+      luck: 0,
+      defense: 0,
+      resistance: 0,
+    },
     stats: {
       health: 12,
       mana: 5,
       strength: 5,
       intelligence: 0,
-      skill: 3,
+      dexterity: 3,
       speed: 4,
       luck: 2,
       defense: 2,
@@ -637,7 +647,7 @@ describe('toLevelUpView', () => {
   it('lists every stat with its label, new value and gain, plus learned skills', () => {
     const view = toLevelUpView({ id: 4, name: 'Ana', levelUp, durationMs: 2000 });
     expect(view.level).toBe(3);
-    expect(view.stats.map((s) => s.label)).toEqual(['HP', 'MP', 'STR', 'INT', 'SKL', 'SPD', 'LCK', 'DEF', 'RES']);
+    expect(view.stats.map((s) => s.label)).toEqual(['HP', 'MP', 'STR', 'INT', 'DEX', 'SPD', 'LCK', 'DEF', 'RES']);
     expect(view.stats[0]).toEqual({ id: 'health', label: 'HP', value: 12, gain: 1 });
     expect(view.stats[1]).toEqual({ id: 'mana', label: 'MP', value: 5, gain: 0 });
     expect(view.skills).toEqual(['Power Strike']);
@@ -708,7 +718,7 @@ describe('toRewardAction', () => {
     const unit = snapshotUnit('recruit-1', new Acolyte({ name: 'Dara', team: 'player' }));
     const action = toRewardAction({ kind: 'recruit', unit }, 0);
     expect(action.label).toBe('Recruit Dara');
-    expect(action.stats?.map(({ label }) => label)).toEqual(['HP', 'STR', 'INT', 'SKL', 'SPD', 'DEF', 'RES']);
+    expect(action.stats?.map(({ label }) => label)).toEqual(['HP', 'STR', 'INT', 'DEX', 'SPD', 'DEF', 'RES']);
     expect(action.stats?.find(({ label }) => label === 'INT')?.value).toBe(unit.intelligence);
     expect(action.sprite).toBe(getUnitSprite(unit.classId));
   });
@@ -857,5 +867,13 @@ describe('toUnitDetailView with modifiers', () => {
     expect(after.skills.map((skill) => skill.id)).toEqual(['throw-stones', 'shove', 'shield-bash', 'cleave']);
     // The soldier's own passive, then its boons'.
     expect(after.passives.map((passive) => passive.id)).toEqual(['class', 'keen-eye', 'stalwart']);
+  });
+});
+
+describe('toRelicViews with a keystone', () => {
+  it('lists the keystone first, then the relics', () => {
+    const views = toRelicViews(['hawk-lens'], 1, 'glass-lens');
+    expect(views.map(({ name }) => name)).toEqual(['Keystone: Glass Lens', "Hawk's Lens"]);
+    expect(toRelicViews([], 1, 'nonsense')).toEqual([]);
   });
 });

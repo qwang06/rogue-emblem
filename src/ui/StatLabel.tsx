@@ -6,7 +6,7 @@ const STAT_NAMES: Readonly<Record<string, string>> = {
   MP: 'Mana',
   STR: 'Strength',
   INT: 'Intelligence',
-  SKL: 'Skill',
+  DEX: 'Dexterity',
   SPD: 'Speed',
   LCK: 'Luck',
   DEF: 'Defense',

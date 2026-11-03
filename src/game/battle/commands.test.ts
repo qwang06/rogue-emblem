@@ -256,7 +256,7 @@ describe('attack', () => {
   });
 
   it('rolls the same with the same seed, and moves the seed on', () => {
-    const misses = { skill: 0, luck: 0 };
+    const misses = { dexterity: 0, luck: 0 };
     const battle = (seed: number) =>
       createTestBattle(
         {
@@ -1543,7 +1543,7 @@ describe('an attack that shoves (shove-on-attack, the slime’s Bounce)', () => 
   });
 
   it("doesn't shove when every strike misses", () => {
-    const { state, events } = run(bounceAt('grass', { skill: -1000 }), attack);
+    const { state, events } = run(bounceAt('grass', { dexterity: -1000 }), attack);
     expect(findUnit(state.grid, 'foe')).toEqual({ x: 2, y: 0 });
     expect(types(events)).not.toContain('pushed');
   });

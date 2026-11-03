@@ -118,7 +118,7 @@ describe('rollBoons', () => {
     for (const passive of BOONS.filter((b) => b.kind === 'passive')) {
       while (isBoonEligible(unit, passive)) takeBoon(unit, passive);
     }
-    for (const stat of ['maxHealth', 'strength', 'skill', 'speed', 'luck', 'defense', 'resistance'] as const) {
+    for (const stat of ['maxHealth', 'strength', 'dexterity', 'speed', 'luck', 'defense', 'resistance'] as const) {
       unit[stat] = 99;
     }
     for (const id of ['skill-lunge', 'skill-phalanx', 'skill-taunt']) applyModifiers(unit, boon(id).modifiers);
@@ -258,5 +258,30 @@ describe('rarity', () => {
   it('grows the offers with the stage they are rolled at', () => {
     const offers = rollBoons(soldier(), createSeededRng(3), 10);
     expect(offers.filter((offer) => offer.kind !== 'skill').every((offer) => offer.stagePercent === 142)).toBe(true);
+  });
+});
+
+describe('build passives', () => {
+  it('scale with rarity, and Thorns with the stage too', () => {
+    expect(findTakenBoon('thorns|epic|150')!.modifiers).toEqual([{ kind: 'thorns', amount: 8 }]);
+    expect(findTakenBoon('spite|rare|150')!.modifiers).toEqual([{ kind: 'reflect', percent: 23 }]);
+    expect(findTakenBoon('bloodlust|legendary|150')!.modifiers).toEqual([
+      { kind: 'kill-stack', term: 'damage', amount: 4 },
+    ]);
+    expect(findTakenBoon('opportunist|epic|100')!.modifiers).toEqual([{ kind: 'crit-per-foe-debuff', amount: 13 }]);
+    expect(findTakenBoon('exploit|rare|200')!.modifiers).toEqual([
+      { kind: 'combat', term: 'damage-percent', amount: 15, when: 'vs-debuffed' },
+    ]);
+    expect(findTakenBoon('desperation')!.modifiers).toEqual([
+      { kind: 'missing-health-bonus', term: 'damage', amount: 1 },
+    ]);
+  });
+
+  it('cap Bloodlust, Opportunist, Spite and Desperation at rank III', () => {
+    for (const id of ['bloodlust', 'opportunist', 'spite', 'desperation']) {
+      const unit = soldier();
+      for (let rank = 0; rank < 3; rank++) takeBoon(unit, findBoon(id)!);
+      expect(isBoonEligible(unit, findBoon(id)!), id).toBe(false);
+    }
   });
 });

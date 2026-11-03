@@ -20,7 +20,7 @@ describe('Orc', () => {
     expect(orc.health).toBe(ORC_STATS.health);
     expect(orc.maxMana).toBe(0);
     expect(orc.strength).toBe(ORC_STATS.strength);
-    expect(orc.skill).toBe(ORC_STATS.skill);
+    expect(orc.dexterity).toBe(ORC_STATS.dexterity);
     expect(orc.speed).toBe(ORC_STATS.speed);
     expect(orc.luck).toBe(ORC_STATS.luck);
     expect(orc.defense).toBe(ORC_STATS.defense);

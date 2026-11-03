@@ -23,7 +23,7 @@ describe('Archer', () => {
     expect(archer.maxMana).toBe(ARCHER_STATS.mana);
     expect(archer.strength).toBe(ARCHER_STATS.strength);
     expect(archer.intelligence).toBe(ARCHER_STATS.intelligence);
-    expect(archer.skill).toBe(ARCHER_STATS.skill);
+    expect(archer.dexterity).toBe(ARCHER_STATS.dexterity);
     expect(archer.speed).toBe(ARCHER_STATS.speed);
     expect(archer.luck).toBe(ARCHER_STATS.luck);
     expect(archer.defense).toBe(ARCHER_STATS.defense);

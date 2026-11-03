@@ -8,8 +8,8 @@ Reference for every unit class: base stats, growth rates, weapons and skills. Ke
 - **Weapons:** a unit attacks with the weapon in its main hand or one of its innate attacks: the weapons its body comes with (Fists, a monster's natural weapon) and the spells it knows. Picking one in the Attack menu fights with it. A class masters weapon types (`physical`, `magical`, `siege`), and only weapons of those types are offered. A unit with nothing to attack with can't attack or counter.
 - **Damage** of a regular hit = `STR + Pow − DEF` for physical and siege weapons (`INT + Pow − RES` for magical ones), never below 0.
 - **Attack speed** = `SPD − max(0, Wt − STR)`: a weapon heavier than the wielder's strength slows it down.
-- **Hit chance** = (weapon `Hit` + `SKL × 2` + `LCK / 2`) − (attack speed `× 2` + `LCK` of the target), clamped to 0–100%.
-- **Crit chance** = (weapon `Crit` + `SKL / 2`) − target's `LCK`, clamped to 0–100%. A crit deals ×3 damage.
+- **Hit chance** = (weapon `Hit` + `DEX × 2` + `LCK / 2`) − (attack speed `× 2` + `LCK` of the target), clamped to 0–100%.
+- **Crit chance** = (weapon `Crit` + `DEX / 2`) − target's `LCK`, clamped to 0–100%. A crit deals ×3 damage.
 - **Doubling:** a unit strikes twice in an exchange when its attack speed beats the opponent's by 4 or more.
 - **Counters:** the defender strikes back if the attacker is within its weapon's range (`Rng`). Bows and siege engines can't strike adjacent foes.
 - **Hands:** every weapon is one-handed (`1`) or two-handed (`2`); bows, the Great Axe, siege weapons and every staff take both hands. The off hand takes a shield only while the main hand is empty or holds a one-handed weapon, so equipping a two-handed weapon or a staff sends the shield back to the convoy. Head, body and accessory gear is worn whatever the unit holds.
@@ -73,7 +73,7 @@ The starting unit, a townsperson in a plain tunic with no armor: Warband Mode's 
 | MP   | 5    | 50%    |
 | STR  | 3    | 50%    |
 | INT  | 0    | 0%     |
-| SKL  | 3    | 50%    |
+| DEX  | 3    | 50%    |
 | SPD  | 3    | 50%    |
 | LCK  | 2    | 50%    |
 | DEF  | 2    | 50%    |
@@ -118,7 +118,7 @@ The ranged infantry: frail but accurate. Its bow only reaches two tiles away, so
 | MP   | 5    | 25%    |
 | STR  | 3    | 50%    |
 | INT  | 0    | 0%     |
-| SKL  | 5    | 100%   |
+| DEX  | 5    | 100%   |
 | SPD  | 4    | 50%    |
 | LCK  | 2    | 25%    |
 | DEF  | 1    | 25%    |
@@ -148,7 +148,7 @@ The spear-and-shield infantry: the enemy in the demo battle. Villagers become on
 | MP   | 5    | 25%    |
 | STR  | 4    | 50%    |
 | INT  | 0    | 0%     |
-| SKL  | 3    | 25%    |
+| DEX  | 3    | 25%    |
 | SPD  | 3    | 25%    |
 | LCK  | 2    | 25%    |
 | DEF  | 2    | 100%   |
@@ -171,7 +171,7 @@ Passive, **Shield Wall**: takes 1 less damage when attacked. Carries an Iron Spe
 
 ## Vanguard
 
-The axe-wielding front line: high HP and strength, low skill, speed and luck. Its strength matches the Iron Axe's weight, so the axe doesn't slow it, but the axe's low hit makes it the least accurate class. Villagers become one by promoting (see Promotions); a fresh one (an enemy) starts on the stat line below.
+The axe-wielding front line: high HP and strength, low dexterity, speed and luck. Its strength matches the Iron Axe's weight, so the axe doesn't slow it, but the axe's low hit makes it the least accurate class. Villagers become one by promoting (see Promotions); a fresh one (an enemy) starts on the stat line below.
 
 | Stat | Base | Growth |
 | ---- | ---- | ------ |
@@ -179,7 +179,7 @@ The axe-wielding front line: high HP and strength, low skill, speed and luck. It
 | MP   | 5    | 25%    |
 | STR  | 5    | 100%   |
 | INT  | 0    | 0%     |
-| SKL  | 2    | 50%    |
+| DEX  | 2    | 50%    |
 | SPD  | 2    | 25%    |
 | LCK  | 1    | 0%     |
 | DEF  | 2    | 25%    |
@@ -209,7 +209,7 @@ Promoted from the Villager. Hauls a powder keg on its back and throws it up to t
 | MP   | 5    | 50%    |
 | STR  | 4    | 50%    |
 | INT  | 0    | 0%     |
-| SKL  | 3    | 100%   |
+| DEX  | 3    | 100%   |
 | SPD  | 3    | 25%    |
 | LCK  | 2    | 0%     |
 | DEF  | 1    | 25%    |
@@ -239,7 +239,7 @@ A specialized unit that doesn't promote, recruited or brought by the Sellswords 
 | MP   | 5    | 25%    |
 | STR  | 2    | 25%    |
 | INT  | 0    | 0%     |
-| SKL  | 4    | 25%    |
+| DEX  | 4    | 25%    |
 | SPD  | 6    | 100%   |
 | LCK  | 4    | 100%   |
 | DEF  | 1    | 0%     |
@@ -268,7 +268,7 @@ A specialized unit, recruited on its own (or grown from the Beast Tamer origin's
 | MP   | 2    | 25%    |
 | STR  | 5    | 100%   |
 | INT  | 0    | 0%     |
-| SKL  | 2    | 25%    |
+| DEX  | 2    | 25%    |
 | SPD  | 4    | 50%    |
 | LCK  | 1    | 0%     |
 | DEF  | 2    | 25%    |
@@ -297,7 +297,7 @@ The Beast Tamer origin's second unit: a young winged beast that hasn't grown int
 | MP   | 1    | 25%    |
 | STR  | 2    | 100%   |
 | INT  | 0    | 0%     |
-| SKL  | 2    | 25%    |
+| DEX  | 2    | 25%    |
 | SPD  | 3    | 50%    |
 | LCK  | 1    | 0%     |
 | DEF  | 1    | 25%    |
@@ -323,7 +323,7 @@ A special unit of its own kind: a rider on the faction's winged beast, strong, f
 | MP   | 5    | 25%    |
 | STR  | 5    | 50%    |
 | INT  | 0    | 0%     |
-| SKL  | 4    | 50%    |
+| DEX  | 4    | 50%    |
 | SPD  | 5    | 100%   |
 | LCK  | 3    | 25%    |
 | DEF  | 3    | 25%    |
@@ -352,7 +352,7 @@ A specialized unit that doesn't promote: a siege engine on wheels (crystal canno
 | MP   | 4    | 50%    |
 | STR  | 5    | 100%   |
 | INT  | 0    | 0%     |
-| SKL  | 3    | 50%    |
+| DEX  | 3    | 50%    |
 | SPD  | 1    | 0%     |
 | LCK  | 0    | 0%     |
 | DEF  | 3    | 25%    |
@@ -381,7 +381,7 @@ A specialized unit that doesn't promote: a covered battering ram, the most HP an
 | MP   | 4    | 25%    |
 | STR  | 6    | 50%    |
 | INT  | 0    | 0%     |
-| SKL  | 1    | 0%     |
+| DEX  | 1    | 0%     |
 | SPD  | 0    | 0%     |
 | LCK  | 0    | 0%     |
 | DEF  | 5    | 100%   |
@@ -410,7 +410,7 @@ A specialized unit that promotes into a Mage or a Bishop at level 5 (see Promoti
 | MP   | 6    | 75%    |
 | STR  | 1    | 0%     |
 | INT  | 3    | 100%   |
-| SKL  | 2    | 25%    |
+| DEX  | 2    | 25%    |
 | SPD  | 3    | 25%    |
 | LCK  | 4    | 25%    |
 | DEF  | 1    | 25%    |
@@ -435,7 +435,7 @@ Mend heals like the Heal staff without needing one. Knows Light, and carries a H
 
 ## Mage
 
-The acolyte's promotion: the battle caster. It trades nothing for more INT, MP and SKL than an acolyte and a flat damage bonus, so its spells hit hardest of any unit from one or two tiles away, but it's just as frail. A promoted acolyte keeps its Heal staff and Mend, and is handed a Fire Tome; a fresh one (an enemy) knows Fire and starts on the stat line below.
+The acolyte's promotion: the battle caster. It trades nothing for more INT, MP and DEX than an acolyte and a flat damage bonus, so its spells hit hardest of any unit from one or two tiles away, but it's just as frail. A promoted acolyte keeps its Heal staff and Mend, and is handed a Fire Tome; a fresh one (an enemy) knows Fire and starts on the stat line below.
 
 | Stat | Base | Growth |
 | ---- | ---- | ------ |
@@ -443,7 +443,7 @@ The acolyte's promotion: the battle caster. It trades nothing for more INT, MP a
 | MP   | 7    | 100%   |
 | STR  | 1    | 0%     |
 | INT  | 5    | 100%   |
-| SKL  | 3    | 50%    |
+| DEX  | 3    | 50%    |
 | SPD  | 3    | 25%    |
 | LCK  | 4    | 25%    |
 | DEF  | 1    | 25%    |
@@ -473,7 +473,7 @@ The acolyte's other promotion: the healer, deepened. More MP, RES and LCK than a
 | MP   | 8    | 100%   |
 | STR  | 1    | 0%     |
 | INT  | 4    | 75%    |
-| SKL  | 2    | 25%    |
+| DEX  | 2    | 25%    |
 | SPD  | 3    | 25%    |
 | LCK  | 5    | 50%    |
 | DEF  | 2    | 25%    |
@@ -503,7 +503,7 @@ A neutral unit, belonging to no faction (the pack's teal water spirit). Steady a
 | MP   | 6    | 50%    |
 | STR  | 0    | 0%     |
 | INT  | 3    | 45%    |
-| SKL  | 3    | 35%    |
+| DEX  | 3    | 35%    |
 | SPD  | 3    | 35%    |
 | LCK  | 3    | 35%    |
 | DEF  | 1    | 15%    |
@@ -529,7 +529,7 @@ A neutral unit (the pack's fire spirit). The hardest-hitting elemental, with Fir
 | MP   | 6    | 50%    |
 | STR  | 0    | 0%     |
 | INT  | 4    | 55%    |
-| SKL  | 3    | 40%    |
+| DEX  | 3    | 40%    |
 | SPD  | 4    | 45%    |
 | LCK  | 2    | 25%    |
 | DEF  | 0    | 10%    |
@@ -555,7 +555,7 @@ A neutral unit (the pack's white air spirit). The quickest and most elusive elem
 | MP   | 6    | 50%    |
 | STR  | 0    | 0%     |
 | INT  | 3    | 40%    |
-| SKL  | 4    | 45%    |
+| DEX  | 4    | 45%    |
 | SPD  | 6    | 60%    |
 | LCK  | 4    | 45%    |
 | DEF  | 0    | 10%    |
@@ -581,7 +581,7 @@ A neutral unit (the pack's brown rock spirit). Slow and heavy, it slams a foe ne
 | MP   | 2    | 20%    |
 | STR  | 5    | 50%    |
 | INT  | 0    | 0%     |
-| SKL  | 2    | 30%    |
+| DEX  | 2    | 30%    |
 | SPD  | 1    | 10%    |
 | LCK  | 1    | 15%    |
 | DEF  | 4    | 45%    |
@@ -609,7 +609,7 @@ Passive, **Bounce**: a hit in its own attack shoves the target a tile back once 
 | MP   | 0    | 0%     |
 | STR  | 3    | 30%    |
 | INT  | 0    | 0%     |
-| SKL  | 1    | 20%    |
+| DEX  | 1    | 20%    |
 | SPD  | 1    | 20%    |
 | LCK  | 0    | 10%    |
 | DEF  | 0    | 20%    |
@@ -635,7 +635,7 @@ A quick, scrappy monster: as fast as anything at level 1 and hits about as hard 
 | MP   | 0    | 0%     |
 | STR  | 3    | 40%    |
 | INT  | 0    | 0%     |
-| SKL  | 4    | 45%    |
+| DEX  | 4    | 45%    |
 | SPD  | 5    | 50%    |
 | LCK  | 1    | 25%    |
 | DEF  | 1    | 20%    |
@@ -661,7 +661,7 @@ The sturdy monster: slow and unlucky, but its bones shrug off weak hits and its 
 | MP   | 0    | 0%     |
 | STR  | 4    | 45%    |
 | INT  | 0    | 0%     |
-| SKL  | 3    | 35%    |
+| DEX  | 3    | 35%    |
 | SPD  | 2    | 25%    |
 | LCK  | 0    | 5%     |
 | DEF  | 3    | 40%    |
@@ -687,7 +687,7 @@ The nimblest monster: hard to hit and quick enough to strike twice, but frail an
 | MP   | 0    | 0%     |
 | STR  | 2    | 30%    |
 | INT  | 0    | 0%     |
-| SKL  | 3    | 40%    |
+| DEX  | 3    | 40%    |
 | SPD  | 6    | 55%    |
 | LCK  | 3    | 35%    |
 | DEF  | 0    | 10%    |
@@ -713,7 +713,7 @@ The heavy monster: slow, but tough enough to take several hits, and it hits hard
 | MP   | 0    | 0%     |
 | STR  | 5    | 55%    |
 | INT  | 0    | 0%     |
-| SKL  | 2    | 30%    |
+| DEX  | 2    | 30%    |
 | SPD  | 2    | 20%    |
 | LCK  | 1    | 15%    |
 | DEF  | 2    | 35%    |
@@ -739,7 +739,7 @@ The charging monster: as strong as an orc with the same Great Axe, but quick and
 | MP   | 0    | 0%     |
 | STR  | 5    | 50%    |
 | INT  | 0    | 0%     |
-| SKL  | 4    | 35%    |
+| DEX  | 4    | 35%    |
 | SPD  | 5    | 40%    |
 | LCK  | 2    | 15%    |
 | DEF  | 1    | 20%    |
@@ -765,7 +765,7 @@ The wall of a monster: the most HP of any monster bar the dragon, slow and clums
 | MP   | 0    | 0%     |
 | STR  | 4    | 45%    |
 | INT  | 0    | 0%     |
-| SKL  | 1    | 15%    |
+| DEX  | 1    | 15%    |
 | SPD  | 1    | 10%    |
 | LCK  | 0    | 10%    |
 | DEF  | 3    | 40%    |
@@ -791,7 +791,7 @@ The Red Dragon, boss of the Dragon's Roost (the run's stage 10, before the Hold;
 | MP   | 0    | 0%     |
 | STR  | 7    | 50%    |
 | INT  | 0    | 0%     |
-| SKL  | 4    | 30%    |
+| DEX  | 4    | 30%    |
 | SPD  | 3    | 20%    |
 | LCK  | 2    | 15%    |
 | DEF  | 5    | 40%    |

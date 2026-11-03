@@ -37,7 +37,7 @@ One 32x32 PNG per item, named by item id, painted at a true 32x32 (not 16px doub
 
 ## Reward icons: src/assets/rewards/
 
-One 32x32 PNG per reward kind whose card doesn't show an item or unit (`draft`, `rest`, `relic`, `gold`, `lesson`, `scroll`), named by kind, made with the item icon recipe above: a stack of ribbon-tied contracts with a wax seal, a campfire, a gold amulet with a purple gem, a heap of gold coins, an open book under a glowing blue star, a sealed scroll. Weak spot: `gold` is a lumpy heap that only partly reads as coins. Only the reward screen shows them (`REWARD_ICON_URLS` in `src/assets/rewardIcons.ts`, a Vite glob); `src/assets/rewardIcons.test.ts` checks the set.
+One 32x32 PNG per reward kind whose card doesn't show an item or unit (`draft`, `rest`, `relic`, `gold`, `lesson`, `scroll`), named by kind, made with the item icon recipe above: a stack of ribbon-tied contracts with a wax seal, a campfire, a gold amulet with a purple gem, a heap of gold coins, an open book under a glowing blue star, a sealed scroll. Weak spot: `gold` is a lumpy heap that only partly reads as coins. `keystone` is a placeholder copy of the general icon `icons/key.png` until one is painted. Only the reward screen shows them (`REWARD_ICON_URLS` in `src/assets/rewardIcons.ts`, a Vite glob); `src/assets/rewardIcons.test.ts` checks the set.
 
 ## Glyph icons: src/assets/glyphs/
 

@@ -291,12 +291,12 @@ export const EVENTS: readonly WaysideEvent[] = Object.freeze([
     return [
       {
         label: `Pay ${LESSON_GOLD} gold for a lesson`,
-        detail: `${student?.name ?? 'A unit'} gains +1 SKL and +1 SPD.`,
+        detail: `${student?.name ?? 'A unit'} gains +1 DEX and +1 SPD.`,
         blocked: needGold(run, LESSON_GOLD),
         resolve: (r) => ({
           run: updateUnit(spend(r, LESSON_GOLD), student!.id, (u) => ({
             ...u,
-            skill: u.skill + 1,
+            dexterity: u.dexterity + 1,
             speed: u.speed + 1,
           })),
           text: `${student!.name} learns to strike faster and truer.`,

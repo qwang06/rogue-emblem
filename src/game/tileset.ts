@@ -440,12 +440,15 @@ export interface UnitSheetLayout {
 // layout per animation (only the animations it has), `extras` (more
 // sheets shown only in the animation viewer, by sheet suffix and label),
 // `impactFrame` (the attack frame where the blow lands) and
-// `bakedShadow` (the art draws its own shadow, so the map adds none).
+// `bakedShadow` (the art draws its own shadow, so the map adds none) and
+// `portraitTop` (for an idle frame taller than a tile, the empty pixel rows
+// above the art: a one-tile portrait starts below them, at the head).
 export interface UnitArt {
   sheets: Partial<Record<UnitAnimation, UnitSheetLayout>>;
   extras?: readonly { sheet: string; label: string; layout: UnitSheetLayout; animation: UnitAnimation }[];
   impactFrame?: number;
   bakedShadow?: boolean;
+  portraitTop?: number;
 }
 
 // The pack's layout: 4 one-tile frames per facing.
@@ -475,7 +478,7 @@ const RED_DRAGON_ATTACK: UnitSheetLayout = Object.freeze({
 // frames (the orc's 112px high) with the tile in the middle. Each draws
 // its own shadow. The attack's swipe is also a sheet of its own
 // (AttackEffect, frame 0 empty), as is the body without it (AttackBody).
-function monsterArt(height: number, impactFrame: number): UnitArt {
+function monsterArt(height: number, impactFrame: number, portraitTop = 0): UnitArt {
   const tile = (frames: number): UnitSheetLayout =>
     Object.freeze({ frameWidth: TILE_SIZE, frameHeight: height, frames, tileX: 0, tileY: height - TILE_SIZE });
   const attack: UnitSheetLayout = Object.freeze({
@@ -498,6 +501,7 @@ function monsterArt(height: number, impactFrame: number): UnitArt {
     ]),
     impactFrame,
     bakedShadow: true,
+    portraitTop,
   });
 }
 
@@ -531,7 +535,7 @@ export const UNIT_ART: Readonly<Record<string, UnitArt>> = Object.freeze({
   Goblin: monsterArt(TILE_SIZE, 1),
   Skeleton: monsterArt(TILE_SIZE, 1),
   Bat: monsterArt(TILE_SIZE, 2),
-  Orc: monsterArt(TILE_SIZE + TILE_SIZE / 2, 1),
+  Orc: monsterArt(TILE_SIZE + TILE_SIZE / 2, 1, 10),
   Minotaur: bigMonsterArt(2, 'Attack (slash only)'),
   Troll: bigMonsterArt(2, 'Attack (smash only)'),
   Red_Dragon: Object.freeze({

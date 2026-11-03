@@ -18,7 +18,7 @@ export interface ElementalLine {
     mana: number;
     strength: number;
     intelligence: number;
-    skill: number;
+    dexterity: number;
     speed: number;
     luck: number;
     defense: number;
@@ -40,7 +40,7 @@ export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object
       mana: 6,
       strength: 0,
       intelligence: 3,
-      skill: 3,
+      dexterity: 3,
       speed: 3,
       luck: 3,
       defense: 1,
@@ -52,7 +52,7 @@ export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object
       mana: 50,
       strength: 0,
       intelligence: 45,
-      skill: 35,
+      dexterity: 35,
       speed: 35,
       luck: 35,
       defense: 15,
@@ -68,7 +68,7 @@ export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object
       mana: 6,
       strength: 0,
       intelligence: 4,
-      skill: 3,
+      dexterity: 3,
       speed: 4,
       luck: 2,
       defense: 0,
@@ -80,7 +80,7 @@ export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object
       mana: 50,
       strength: 0,
       intelligence: 55,
-      skill: 40,
+      dexterity: 40,
       speed: 45,
       luck: 25,
       defense: 10,
@@ -96,7 +96,7 @@ export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object
       mana: 6,
       strength: 0,
       intelligence: 3,
-      skill: 4,
+      dexterity: 4,
       speed: 6,
       luck: 4,
       defense: 0,
@@ -108,7 +108,7 @@ export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object
       mana: 50,
       strength: 0,
       intelligence: 40,
-      skill: 45,
+      dexterity: 45,
       speed: 60,
       luck: 45,
       defense: 10,
@@ -124,7 +124,7 @@ export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object
       mana: 2,
       strength: 5,
       intelligence: 0,
-      skill: 2,
+      dexterity: 2,
       speed: 1,
       luck: 1,
       defense: 4,
@@ -136,7 +136,7 @@ export const ELEMENTALS: Readonly<Record<ElementalKind, ElementalLine>> = Object
       mana: 20,
       strength: 50,
       intelligence: 0,
-      skill: 30,
+      dexterity: 30,
       speed: 10,
       luck: 15,
       defense: 45,

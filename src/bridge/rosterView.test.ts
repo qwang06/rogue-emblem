@@ -55,7 +55,7 @@ describe('toRosterScreenView', () => {
     const cato = run.roster[1];
     expect(shown.name).toBe('Cato');
     expect(shown.classLabel).toBe('Villager');
-    expect(shown.stats.map((stat) => stat.label)).toEqual(['STR', 'INT', 'SKL', 'SPD', 'LCK', 'DEF', 'RES']);
+    expect(shown.stats.map((stat) => stat.label)).toEqual(['STR', 'INT', 'DEX', 'SPD', 'LCK', 'DEF', 'RES']);
     expect(shown.stats.find((stat) => stat.label === 'STR')!.value).toBe(cato.strength);
     expect(shown.health).toBe(cato.health);
     expect(toRosterScreenView(openRosterScreen(run)).unit!.equippedWeapon?.label).toBe('Iron Spear');
