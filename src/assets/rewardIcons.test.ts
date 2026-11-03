@@ -5,7 +5,7 @@ const dir = new URL('./rewards/', import.meta.url);
 
 // The reward kinds whose card shows a reward icon; a recruit shows its unit,
 // and supplies, arms and a seal their item's icon.
-const KINDS = ['draft', 'rest', 'relic', 'gold', 'lesson', 'scroll'];
+const KINDS = ['draft', 'rest', 'relic', 'gold', 'lesson', 'scroll', 'keystone'];
 
 describe('reward icons', () => {
   it('has an icon for every reward kind without an item or unit, and no others', () => {
