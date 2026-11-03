@@ -104,6 +104,17 @@ export const FINISHER_PERCENT = 4;
 // before rarity.
 export const CLEAVE_THROUGH_PERCENT = 25;
 export const CHAIN_KILL_PERCENT = 20;
+// The build passives' numbers per rank, before rarity: Bloodlust's damage
+// per kill, Exploit's percent more damage against a debuffed foe,
+// Opportunist's crit per debuff on the foe, Thorns' damage back, Spite's
+// percent of damage taken sent back, Desperation's damage per tenth of max
+// HP missing.
+export const BLOODLUST_DAMAGE = 1;
+export const EXPLOIT_PERCENT = 10;
+export const OPPORTUNIST_CRIT = 5;
+export const THORNS_DAMAGE = 2;
+export const SPITE_PERCENT = 15;
+export const DESPERATION_DAMAGE = 1;
 // The tiles a Momentum kill lets a unit move on, per rank.
 export const MOMENTUM_MOVEMENT = 2;
 
@@ -280,6 +291,47 @@ const DEFINITIONS: readonly BoonDefinition[] = [
     (a) => `Defeating a foe with an attack lets the unit move ${a} more tiles.`,
     2,
   ),
+  // Build passives: each feeds one of the build evolutions (evolutions.ts).
+  passive(
+    'bloodlust',
+    'Bloodlust',
+    { kind: 'kill-stack', term: 'damage', amount: BLOODLUST_DAMAGE },
+    (a) => `Each foe it defeats gives +${a} damage for the rest of the battle.`,
+    3,
+  ),
+  passive(
+    'exploit',
+    'Exploit',
+    { kind: 'combat', term: 'damage-percent', amount: EXPLOIT_PERCENT, when: 'vs-debuffed' },
+    (a) => `Deals ${a}% more damage to a foe with any debuff.`,
+  ),
+  passive(
+    'opportunist',
+    'Opportunist',
+    { kind: 'crit-per-foe-debuff', amount: OPPORTUNIST_CRIT },
+    (a) => `+${a} crit for each debuff on its foe.`,
+    3,
+  ),
+  passive(
+    'thorns',
+    'Thorns',
+    { kind: 'thorns', amount: THORNS_DAMAGE },
+    (a) => `A foe whose strike lands on it from the next tile takes ${a} damage.`,
+  ),
+  passive(
+    'spite',
+    'Spite',
+    { kind: 'reflect', percent: SPITE_PERCENT },
+    (a) => `${a}% of the damage each strike deals it goes back to the striker.`,
+    3,
+  ),
+  passive(
+    'desperation',
+    'Desperation',
+    { kind: 'missing-health-bonus', term: 'damage', amount: DESPERATION_DAMAGE },
+    (a) => `+${a} damage for each tenth of its max HP it's missing.`,
+    3,
+  ),
 ];
 
 const DEFINITION_BY_ID: ReadonlyMap<string, BoonDefinition> = new Map(DEFINITIONS.map((d) => [d.id, d]));
@@ -344,13 +396,19 @@ export function scaleModifier(modifier: Modifier, rarityPercent: number, stagePe
     case 'kill-heal':
     case 'phase-heal':
       return { ...modifier, amount: scaleAmount(modifier.amount, both) };
+    case 'thorns':
+      return { ...modifier, amount: scaleAmount(modifier.amount, both) };
     case 'phase-mana':
+    case 'kill-stack':
+    case 'crit-per-foe-debuff':
+    case 'missing-health-bonus':
       return { ...modifier, amount: scaleAmount(modifier.amount, rarityPercent) };
     case 'twin-strike':
     case 'finisher':
     case 'cleave-through':
     case 'chain-kill':
     case 'lifesteal':
+    case 'reflect':
       return { ...modifier, percent: scaleAmount(modifier.percent, rarityPercent) };
     default:
       return modifier;
