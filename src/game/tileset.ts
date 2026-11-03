@@ -271,6 +271,7 @@ export const FACTION_BODIES: Readonly<Record<string, string>> = Object.freeze({
   ram: 'Ram',
   acolyte: 'Acolyte',
   mage: 'Mage',
+  bishop: 'Bishop',
 });
 
 // Unit art for the classes that look the same whatever side they're on:
@@ -286,6 +287,8 @@ export const UNIT_SPRITES: Readonly<Record<string, string>> = Object.freeze({
   skeleton: 'Skeleton',
   bat: 'Bat',
   orc: 'Orc',
+  minotaur: 'Minotaur',
+  troll: 'Troll',
   dragon: 'Red_Dragon',
 });
 
@@ -348,6 +351,8 @@ export const ITEM_SPRITES: Record<string, string> = {
   'mana-potion': 'mana-potion',
   'master-seal': 'master-seal',
   'powder-keg': 'powder-keg',
+  // The troll's maul shows the club until it has an icon of its own.
+  'stone-maul': 'club',
   tackle: 'tackle',
 };
 
@@ -468,12 +473,39 @@ function monsterArt(height: number, impactFrame: number): UnitArt {
   });
 }
 
+// The big monsters (src/assets/units/{Minotaur,Troll}_*.png): 32px art
+// standing on one tile, with a struck pose (2 frames), a fall (1 frame)
+// and an attack in 112x96 frames with the tile in the middle of the
+// bottom two thirds, the swing reaching a tile out on every side. Unlike
+// the smaller monsters they bring no shadow, so the map adds one. The
+// attack's swing is also a sheet of its own (AttackEffect, frame 0
+// empty), as is the body without it (AttackBody).
+function bigMonsterArt(impactFrame: number, effectLabel: string): UnitArt {
+  const attack: UnitSheetLayout = Object.freeze({ frameWidth: 112, frameHeight: 96, frames: 6, tileX: 40, tileY: 32 });
+  return Object.freeze({
+    sheets: Object.freeze({
+      idle: PACK_SHEET_LAYOUT,
+      move: PACK_SHEET_LAYOUT,
+      attack,
+      hit: Object.freeze({ ...PACK_SHEET_LAYOUT, frames: 2 }),
+      die: Object.freeze({ ...PACK_SHEET_LAYOUT, frames: 1 }),
+    }),
+    extras: Object.freeze([
+      Object.freeze({ sheet: 'AttackBody', label: 'Attack (body only)', layout: attack, animation: 'attack' as const }),
+      Object.freeze({ sheet: 'AttackEffect', label: effectLabel, layout: attack, animation: 'attack' as const }),
+    ]),
+    impactFrame,
+  });
+}
+
 export const UNIT_ART: Readonly<Record<string, UnitArt>> = Object.freeze({
   Slime: monsterArt(TILE_SIZE, 2),
   Goblin: monsterArt(TILE_SIZE, 1),
   Skeleton: monsterArt(TILE_SIZE, 1),
   Bat: monsterArt(TILE_SIZE, 2),
   Orc: monsterArt(TILE_SIZE + TILE_SIZE / 2, 1),
+  Minotaur: bigMonsterArt(2, 'Attack (slash only)'),
+  Troll: bigMonsterArt(2, 'Attack (smash only)'),
   Red_Dragon: Object.freeze({
     sheets: Object.freeze({
       idle: PACK_SHEET_LAYOUT,

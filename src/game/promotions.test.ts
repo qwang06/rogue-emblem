@@ -21,9 +21,9 @@ const archer = findPromotion('archer')!;
 const vanguard = findPromotion('vanguard')!;
 
 describe('PROMOTIONS', () => {
-  it('gives the villager the four tier-2 classes, the acolyte the mage, and nothing else any', () => {
+  it('gives the villager the four tier-2 classes, the acolyte the mage and the bishop, and nothing else any', () => {
     expect(getPromotions('villager').map(({ id }) => id)).toEqual(['archer', 'soldier', 'vanguard', 'sapper']);
-    expect(getPromotions('acolyte').map(({ id }) => id)).toEqual(['mage']);
+    expect(getPromotions('acolyte').map(({ id }) => id)).toEqual(['mage', 'bishop']);
     for (const { id } of UNIT_CLASSES) {
       if (id !== 'villager' && id !== 'acolyte') expect(getPromotions(id), id).toEqual([]);
     }
@@ -41,15 +41,24 @@ describe('PROMOTIONS', () => {
 
   it('adds what the mage starts above an acolyte, the class it promotes from', () => {
     expect(findPromotion('mage')!.bonuses).toEqual({ mana: 1, intelligence: 2, skill: 1 });
+    expect(findPromotion('bishop')!.bonuses).toEqual({
+      health: 1,
+      mana: 2,
+      intelligence: 1,
+      luck: 1,
+      defense: 1,
+      resistance: 2,
+    });
   });
 
-  it("puts the villager's promotions at tier 2 and the acolyte's mage at tier 3", () => {
+  it("puts the villager's promotions at tier 2 and the acolyte's mage and bishop at tier 3", () => {
     expect(PROMOTIONS.map(({ id, tier }) => [id, tier])).toEqual([
       ['archer', 2],
       ['soldier', 2],
       ['vanguard', 2],
       ['sapper', 2],
       ['mage', 3],
+      ['bishop', 3],
     ]);
   });
 

@@ -4,9 +4,9 @@
 // class tree: the villager, the starting unit, comes first; then its four
 // promotions (promotions.ts), which a unit becomes by promoting; then the
 // specialized units (the scout, the beast, the beast rider, siege engines,
-// rams and the acolyte, the only one that promotes, into the mage); then the neutral
-// elementals, which belong to no faction; then the monsters (slime,
-// goblin, skeleton, bat, orc, dragon), which are enemies only. Promoted classes, neutral units and monsters
+// rams and the acolyte, the only one that promotes, into the mage or the
+// bishop); then the neutral elementals, which belong to no faction; then
+// the monsters (slime, goblin, skeleton, bat, orc, minotaur, troll, dragon), which are enemies only. Promoted classes, neutral units and monsters
 // are never recruits, starting picks or Training choices (see
 // PLAYABLE_CLASSES).
 
@@ -14,6 +14,7 @@ import { Acolyte } from './Acolyte.ts';
 import { Archer } from './Archer.ts';
 import { Bat } from './Bat.ts';
 import { Beast } from './Beast.ts';
+import { Bishop } from './Bishop.ts';
 import { BeastRider } from './BeastRider.ts';
 import { Whelp } from './Whelp.ts';
 import { Dragon } from './Dragon.ts';
@@ -22,6 +23,7 @@ import { Goblin } from './Goblin.ts';
 import { Mage } from './Mage.ts';
 import { findPromotion } from './promotions.ts';
 import { Orc } from './Orc.ts';
+import { Minotaur } from './Minotaur.ts';
 import { Ram } from './Ram.ts';
 import { Sapper } from './Sapper.ts';
 import { Scout } from './Scout.ts';
@@ -29,6 +31,7 @@ import { Siege } from './Siege.ts';
 import { Skeleton } from './Skeleton.ts';
 import { Slime } from './Slime.ts';
 import { Soldier } from './Soldier.ts';
+import { Troll } from './Troll.ts';
 import type { ClassUnitOptions, Unit } from './Unit.ts';
 import { Vanguard } from './Vanguard.ts';
 import { Villager } from './Villager.ts';
@@ -74,6 +77,7 @@ export const UNIT_CLASSES: readonly UnitClass[] = Object.freeze([
   baseClass('ram', 'Ram', (options) => new Ram(options)),
   baseClass('acolyte', 'Acolyte', (options) => new Acolyte(options)),
   promotedClass('mage', (options) => new Mage(options)),
+  promotedClass('bishop', (options) => new Bishop(options)),
   ...ELEMENTAL_KINDS.map((kind) =>
     Object.freeze<UnitClass>({
       id: elementalClassId(kind),
@@ -87,6 +91,8 @@ export const UNIT_CLASSES: readonly UnitClass[] = Object.freeze([
   monsterClass('skeleton', 'Skeleton', (options) => new Skeleton(options)),
   monsterClass('bat', 'Bat', (options) => new Bat(options)),
   monsterClass('orc', 'Orc', (options) => new Orc(options)),
+  monsterClass('minotaur', 'Minotaur', (options) => new Minotaur(options)),
+  monsterClass('troll', 'Troll', (options) => new Troll(options)),
   Object.freeze<UnitClass>({
     id: 'dragon',
     label: 'Dragon',

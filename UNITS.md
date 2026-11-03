@@ -1,6 +1,6 @@
 # UNITS.md
 
-Reference for every unit class: base stats, growth rates, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Villager.ts`, `src/game/Archer.ts`, `src/game/Soldier.ts`, `src/game/Vanguard.ts`, `src/game/Sapper.ts`, `src/game/Scout.ts`, `src/game/Beast.ts`, `src/game/BeastRider.ts`, `src/game/Siege.ts`, `src/game/Ram.ts`, `src/game/Acolyte.ts`, `src/game/Mage.ts`, `src/game/Elemental.ts`, `src/game/promotions.ts`, `src/game/Slime.ts`, `src/game/Goblin.ts`, `src/game/Skeleton.ts`, `src/game/Bat.ts`, `src/game/Orc.ts`, `src/game/Dragon.ts`, `src/game/healing.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
+Reference for every unit class: base stats, growth rates, weapons and skills. Keep it in step with the code: whenever a class's numbers, weapons or skills change (`src/game/Villager.ts`, `src/game/Archer.ts`, `src/game/Soldier.ts`, `src/game/Vanguard.ts`, `src/game/Sapper.ts`, `src/game/Scout.ts`, `src/game/Beast.ts`, `src/game/BeastRider.ts`, `src/game/Siege.ts`, `src/game/Ram.ts`, `src/game/Acolyte.ts`, `src/game/Mage.ts`, `src/game/Bishop.ts`, `src/game/Elemental.ts`, `src/game/promotions.ts`, `src/game/Slime.ts`, `src/game/Goblin.ts`, `src/game/Skeleton.ts`, `src/game/Bat.ts`, `src/game/Orc.ts`, `src/game/Minotaur.ts`, `src/game/Troll.ts`, `src/game/Dragon.ts`, `src/game/healing.ts`, `src/game/weapons.ts`, `src/game/skills.ts`, or a new class in `src/game/unitClasses.ts`), update this file in the same change. `src/game/unitsDoc.test.ts` checks the tables below against the code and fails if they drift.
 
 ## How the numbers work
 
@@ -30,29 +30,30 @@ Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.m
 
 ## Weapons
 
-One starter weapon per armed unit in the unit catalog. Fists, the Wooden Sword, the Wooden Spear, the Iron Spear, the Iron Bow, the Iron Axe, the Powder Keg and the Ballista are carried by a class; the monsters, the Beast, the Ram and the elementals fight with natural weapons (Tackle, Club, Bone Claws, Fangs, Bite, Great Axe, Fire Breath, Fire, Light), which never break; the rest of the wooden set is basic gear no class starts with; the Acolyte knows Light from the start; the Mage knows Fire; and the Fire Tome drops as loot for an Acolyte to learn Fire from (and is the Mage's promotion gift).
+One starter weapon per armed unit in the unit catalog. Fists, the Wooden Sword, the Wooden Spear, the Iron Spear, the Iron Bow, the Iron Axe, the Powder Keg and the Ballista are carried by a class; the monsters, the Beast, the Ram and the elementals fight with natural weapons (Tackle, Club, Bone Claws, Fangs, Bite, Great Axe, Stone Maul, Fire Breath, Fire, Light), which never break; the rest of the wooden set is basic gear no class starts with; the Acolyte and the Bishop know Light from the start; the Mage knows Fire; and the Fire Tome drops as loot for an Acolyte to learn Fire from (and is the Mage's promotion gift).
 
-| Weapon       | Type     | Hands | Mt  | Hit | Crit | Wt  | Rng | Uses | For (catalog art)                                        |
-| ------------ | -------- | ----- | --- | --- | ---- | --- | --- | ---- | -------------------------------------------------------- |
-| Fists        | physical | 1     | 0   | 80  | 0    | 0   | 1   | ∞    | Villager (once its sword breaks)                         |
-| Iron Spear   | physical | 1     | 1   | 80  | 0    | 3   | 1   | 40   | Soldier, Beast Rider                                     |
-| Iron Axe     | physical | 1     | 3   | 65  | 0    | 5   | 1   | 40   | Vanguard (axe)                                           |
-| Iron Bow     | physical | 2     | 2   | 80  | 0    | 2   | 2   | 40   | Archer                                                   |
-| Fire Tome    | magical  | 1     | 2   | 85  | 0    | 1   | 1–2 | 30   | Loot (teaches Fire)                                      |
-| Fire         | magical  | 1     | 2   | 85  | 0    | 1   | 1–2 | ∞    | Mage; learned from the Fire Tome; Fire Elemental         |
-| Light        | magical  | 1     | 0   | 90  | 0    | 0   | 1–2 | ∞    | Acolyte (known from the start), Water and Air Elementals |
-| Powder Keg   | siege    | 2     | 5   | 70  | 0    | 6   | 1–2 | 5    | Sapper                                                   |
-| Ballista     | siege    | 2     | 6   | 70  | 0    | 8   | 2–3 | 10   | Siege                                                    |
-| Tackle       | physical | 1     | 0   | 75  | 0    | 0   | 1   | ∞    | Slime, Ram, Earth Elemental                              |
-| Club         | physical | 1     | 2   | 75  | 0    | 2   | 1   | ∞    | Goblin                                                   |
-| Bone Claws   | physical | 1     | 2   | 80  | 0    | 1   | 1   | ∞    | Skeleton                                                 |
-| Fangs        | physical | 1     | 1   | 85  | 0    | 0   | 1   | ∞    | Bat                                                      |
-| Bite         | physical | 1     | 2   | 75  | 5    | 1   | 1   | ∞    | Beast, Whelp                                             |
-| Great Axe    | physical | 2     | 3   | 65  | 0    | 4   | 1   | ∞    | Orc                                                      |
-| Fire Breath  | physical | 1     | 4   | 75  | 0    | 0   | 1–2 | ∞    | Dragon                                                   |
-| Wooden Sword | physical | 1     | 1   | 90  | 0    | 1   | 1   | 20   | Villager                                                 |
-| Wooden Spear | physical | 1     | 1   | 75  | 0    | 2   | 1   | 20   | Scout                                                    |
-| Wooden Axe   | physical | 1     | 2   | 60  | 0    | 3   | 1   | 20   | –                                                        |
+| Weapon       | Type     | Hands | Mt  | Hit | Crit | Wt  | Rng | Uses | For (catalog art)                                                |
+| ------------ | -------- | ----- | --- | --- | ---- | --- | --- | ---- | ---------------------------------------------------------------- |
+| Fists        | physical | 1     | 0   | 80  | 0    | 0   | 1   | ∞    | Villager (once its sword breaks)                                 |
+| Iron Spear   | physical | 1     | 1   | 80  | 0    | 3   | 1   | 40   | Soldier, Beast Rider                                             |
+| Iron Axe     | physical | 1     | 3   | 65  | 0    | 5   | 1   | 40   | Vanguard (axe)                                                   |
+| Iron Bow     | physical | 2     | 2   | 80  | 0    | 2   | 2   | 40   | Archer                                                           |
+| Fire Tome    | magical  | 1     | 2   | 85  | 0    | 1   | 1–2 | 30   | Loot (teaches Fire)                                              |
+| Fire         | magical  | 1     | 2   | 85  | 0    | 1   | 1–2 | ∞    | Mage; learned from the Fire Tome; Fire Elemental                 |
+| Light        | magical  | 1     | 0   | 90  | 0    | 0   | 1–2 | ∞    | Acolyte, Bishop (known from the start), Water and Air Elementals |
+| Powder Keg   | siege    | 2     | 5   | 70  | 0    | 6   | 1–2 | 5    | Sapper                                                           |
+| Ballista     | siege    | 2     | 6   | 70  | 0    | 8   | 2–3 | 10   | Siege                                                            |
+| Tackle       | physical | 1     | 0   | 75  | 0    | 0   | 1   | ∞    | Slime, Ram, Earth Elemental                                      |
+| Club         | physical | 1     | 2   | 75  | 0    | 2   | 1   | ∞    | Goblin                                                           |
+| Bone Claws   | physical | 1     | 2   | 80  | 0    | 1   | 1   | ∞    | Skeleton                                                         |
+| Fangs        | physical | 1     | 1   | 85  | 0    | 0   | 1   | ∞    | Bat                                                              |
+| Bite         | physical | 1     | 2   | 75  | 5    | 1   | 1   | ∞    | Beast, Whelp                                                     |
+| Great Axe    | physical | 2     | 3   | 65  | 0    | 4   | 1   | ∞    | Orc, Minotaur                                                    |
+| Stone Maul   | physical | 2     | 4   | 60  | 0    | 5   | 1   | ∞    | Troll                                                            |
+| Fire Breath  | physical | 1     | 4   | 75  | 0    | 0   | 1–2 | ∞    | Dragon                                                           |
+| Wooden Sword | physical | 1     | 1   | 90  | 0    | 1   | 1   | 20   | Villager                                                         |
+| Wooden Spear | physical | 1     | 1   | 75  | 0    | 2   | 1   | 20   | Scout                                                            |
+| Wooden Axe   | physical | 1     | 2   | 60  | 0    | 3   | 1   | 20   | –                                                                |
 
 The wooden set is the basic gear: lighter and weaker than iron, and it breaks after 20 strikes. The villager starts with the sword and the scout with the spear. It comes with two pieces of armor. A unit wears the first shield and the first body armor it carries (equip another on the camp's roster screen; a shield only with a hand free for it, see Hands above), and each adds its DEF against physical hits. Its weight adds to the weapon's: a unit loses SPD (for avoid and doubling) by however much weapon and armor weight together exceed its STR:
 
@@ -92,19 +93,19 @@ Carries a Wooden Sword, its Fists for when the sword breaks, a Health Potion (+5
 
 ## Promotions
 
-In Warband Mode a villager or an acolyte that has reached **level 5** can promote at camp by spending a **Master Seal** (60 gold from the merchant, or a stage reward offered once someone is a level short of promoting and the warband holds none). A villager picks one of four tier-2 classes; an acolyte becomes a Mage, the first tier-3 class (more to come), also with a Master Seal; they're defined in `src/game/promotions.ts`. A promotion:
+In Warband Mode a villager or an acolyte that has reached **level 5** can promote at camp by spending a **Master Seal** (60 gold from the merchant, or a stage reward offered once someone is a level short of promoting and the warband holds none). A villager picks one of four tier-2 classes; an acolyte picks one of two tier-3 classes, the Mage or the Bishop, also with a Master Seal; they're defined in `src/game/promotions.ts`. A promotion:
 
 - makes the unit that class: its growths, weapon types, XP rate and skill tree;
 - adds whatever stats the class starts above the class it promotes from, on the spot, in full (a max HP or MP gain raises the current value too), and changes MOV by the difference;
 - carries the class's passive into every battle;
-- hands over the class's weapon (in its inventory, or the convoy when it's full).
+- hands over the class's weapon, if it has one (in its inventory, or the convoy when it's full).
 
 Level, XP, items, boons and tome progress carry over. The promoted classes are never recruits, starting picks or Training choices; the other specialized units (Scout, Beast, Beast Rider, Siege, Ram) don't promote.
 
 | Base class | Promotes to                       | Gift                                       |
 | ---------- | --------------------------------- | ------------------------------------------ |
 | Villager   | Archer, Soldier, Vanguard, Sapper | Iron Bow, Iron Spear, Iron Axe, Powder Keg |
-| Acolyte    | Mage                              | Fire Tome                                  |
+| Acolyte    | Mage, Bishop                      | Fire Tome, none                            |
 
 ## Archer
 
@@ -400,7 +401,7 @@ It fights with its Tackle and carries nothing else.
 
 ## Acolyte
 
-A specialized unit that promotes into a Mage at level 5 (see Promotions). The healer and the warband's magic user: it mends a wounded ally next to it with its Heal staff, and fights with Light, a weak spell it knows from the start that strikes from one or two tiles away and never runs out. At level 1 a heal restores 5 HP (the staff's 2 power + 3 INT) and Light hits a soldier for 3 (2 through its Shield Wall). A tome it finds (see Tomes above) teaches it a stronger spell. Frail, but its RES and LCK make it hard to hurt with magic or crit.
+A specialized unit that promotes into a Mage or a Bishop at level 5 (see Promotions). The healer and the warband's magic user: it mends a wounded ally next to it with its Heal staff, and fights with Light, a weak spell it knows from the start that strikes from one or two tiles away and never runs out. At level 1 a heal restores 5 HP (the staff's 2 power + 3 INT) and Light hits a soldier for 3 (2 through its Shield Wall). A tome it finds (see Tomes above) teaches it a stronger spell. Frail, but its RES and LCK make it hard to hurt with magic or crit.
 
 | Stat | Base | Growth |
 | ---- | ---- | ------ |
@@ -460,6 +461,36 @@ The acolyte's promotion: the battle caster. It trades nothing for more INT, MP a
 Level-up skill picks: **Fireball** (4 MP, range 1–3, the regular hit with +1 `INT`, on the target and every foe on the four tiles around it), **Frost Lance** (3 MP, range 1–2, the regular hit, and on a foe right behind the target, leaving both Rooted) and **Siphon** (2 MP, range 1–2, the regular hit, healing the mage for half the damage dealt, rounded up).
 
 Passive, **Arcane Might**: +2 damage. Knows Fire, and carries a Health Potion (+5 HP) and a Mana Potion (+3 MP).
+
+## Bishop
+
+The acolyte's other promotion: the healer, deepened. More MP, RES and LCK than an acolyte and a point more INT and DEF, so it outlasts magic and keeps healing longer, but it strikes no harder. Its signature, Sanctuary, mends a wounded ally up to two tiles away and every wounded ally around it at once. A promoted acolyte keeps its Light, Heal staff and Mend and is handed nothing new; a fresh one (an enemy) knows Light, carries a Heal staff and starts on the stat line below.
+
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 9    | 60%    |
+| MP   | 8    | 100%   |
+| STR  | 1    | 0%     |
+| INT  | 4    | 75%    |
+| SKL  | 2    | 25%    |
+| SPD  | 3    | 25%    |
+| LCK  | 5    | 50%    |
+| DEF  | 2    | 25%    |
+| RES  | 6    | 75%    |
+| MOV  | 5    | –      |
+
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| magical      | Light           | 100%    |
+
+| Skill     | Learned at | Mana | Range | Damage                                                                       |
+| --------- | ---------- | ---- | ----- | ---------------------------------------------------------------------------- |
+| Mend      | 2          | 3    | 1     | None: heals an ally 2 + `INT`                                                |
+| Sanctuary | 2          | 5    | 1–2   | None: heals a wounded ally and every wounded ally next to it, each 2 + `INT` |
+
+Level-up skill picks: the acolyte's, **Smite**, **Prayer** and **Ward** (see Acolyte).
+
+Passive, **Devotion**: regains 1 MP at the start of each of its phases. Knows Light, and carries a Heal staff, a Health Potion (+5 HP) and a Mana Potion (+3 MP).
 
 ## Water Elemental
 
@@ -691,6 +722,58 @@ The heavy monster: slow, but tough enough to take several hits, and it hits hard
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
 | physical     | Great Axe       | 100%    |
+
+| Skill | Learned at | Mana | Range | Damage |
+| ----- | ---------- | ---- | ----- | ------ |
+
+It learns no skills and carries no potions.
+
+## Minotaur
+
+The charging monster: as strong as an orc with the same Great Axe, but quick and far-ranging (6 MOV, 5 SPD), so it reaches the back line and often strikes twice. Its hide is thinner than an orc's, so it drops faster once it's caught. It carries nothing else.
+
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 13   | 70%    |
+| MP   | 0    | 0%     |
+| STR  | 5    | 50%    |
+| INT  | 0    | 0%     |
+| SKL  | 4    | 35%    |
+| SPD  | 5    | 40%    |
+| LCK  | 2    | 15%    |
+| DEF  | 1    | 20%    |
+| RES  | 0    | 10%    |
+| MOV  | 6    | –      |
+
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| physical     | Great Axe       | 100%    |
+
+| Skill | Learned at | Mana | Range | Damage |
+| ----- | ---------- | ---- | ----- | ------ |
+
+It learns no skills and carries no potions.
+
+## Troll
+
+The wall of a monster: the most HP of any monster bar the dragon, slow and clumsy, swinging a Stone Maul that hits hard but often misses. Its passive, **Regeneration**, gives it back 3 HP at the start of each of its phases, so it has to be brought down in one push rather than worn down. It carries nothing else.
+
+| Stat | Base | Growth |
+| ---- | ---- | ------ |
+| HP   | 18   | 100%   |
+| MP   | 0    | 0%     |
+| STR  | 4    | 45%    |
+| INT  | 0    | 0%     |
+| SKL  | 1    | 15%    |
+| SPD  | 1    | 10%    |
+| LCK  | 0    | 10%    |
+| DEF  | 3    | 40%    |
+| RES  | 1    | 15%    |
+| MOV  | 4    | –      |
+
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| physical     | Stone Maul      | 100%    |
 
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |

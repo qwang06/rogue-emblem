@@ -20,6 +20,7 @@ describe('UNIT_CLASSES', () => {
       'ram',
       'acolyte',
       'mage',
+      'bishop',
       'water-elemental',
       'fire-elemental',
       'air-elemental',
@@ -29,6 +30,8 @@ describe('UNIT_CLASSES', () => {
       'skeleton',
       'bat',
       'orc',
+      'minotaur',
+      'troll',
       'dragon',
     ]);
     expect(UNIT_CLASSES.map((c) => c.label)).toEqual([
@@ -45,6 +48,7 @@ describe('UNIT_CLASSES', () => {
       'Ram',
       'Acolyte',
       'Mage',
+      'Bishop',
       'Water Elemental',
       'Fire Elemental',
       'Air Elemental',
@@ -54,6 +58,8 @@ describe('UNIT_CLASSES', () => {
       'Skeleton',
       'Bat',
       'Orc',
+      'Minotaur',
+      'Troll',
       'Dragon',
     ]);
   });
@@ -99,6 +105,8 @@ describe('PLAYABLE_CLASSES', () => {
       'skeleton',
       'bat',
       'orc',
+      'minotaur',
+      'troll',
       'dragon',
     ]);
     expect(UNIT_CLASSES.filter((c) => c.neutral).map((c) => c.id)).toEqual([
@@ -116,6 +124,7 @@ describe('PLAYABLE_CLASSES', () => {
       ['vanguard', 'villager'],
       ['sapper', 'villager'],
       ['mage', 'acolyte'],
+      ['bishop', 'acolyte'],
     ]);
   });
 

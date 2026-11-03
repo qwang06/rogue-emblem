@@ -326,6 +326,22 @@ export const GREAT_AXE = weapon({
   uses: null,
 });
 
+// The troll's maul, a boulder lashed to a branch: the hardest-hitting
+// natural weapon bar the dragon's breath, and the least sure to land.
+export const STONE_MAUL = weapon({
+  id: 'stone-maul',
+  label: 'Stone Maul',
+  type: 'physical',
+  hands: 2,
+  might: 4,
+  hit: 60,
+  crit: 0,
+  weight: 5,
+  minRange: 1,
+  maxRange: 1,
+  uses: null,
+});
+
 // The red dragon's breath: a gout of flame that reaches a tile further
 // than a bite, so the dragon answers archers too. It never runs out.
 export const FIRE_BREATH = weapon({
@@ -405,6 +421,7 @@ export const WEAPONS: readonly Weapon[] = Object.freeze([
   FANGS,
   BITE,
   GREAT_AXE,
+  STONE_MAUL,
   FIRE_BREATH,
   WOODEN_SWORD,
   WOODEN_SPEAR,
@@ -421,6 +438,7 @@ export const NATURAL_WEAPON_IDS: ReadonlySet<string> = new Set([
   FANGS.id,
   BITE.id,
   GREAT_AXE.id,
+  STONE_MAUL.id,
   FIRE_BREATH.id,
   FIRE_SPELL.id,
   LIGHT.id,

@@ -260,7 +260,7 @@
     },
     {
       "name": "Frostfell",
-      "description": "Snowbound peaks on the road to the Roost: skeletons and bats from the frozen barrows, with an orc to lead them.",
+      "description": "Snowbound peaks on the road to the Roost: skeletons and bats from the frozen barrows, a troll that shrugs off its wounds, and an orc to lead them.",
       "terrain": {
         "generator": "planned",
         "width": 8,
@@ -278,7 +278,8 @@
       },
       "enemies": [
         { "count": 1, "unitClass": "orc", "area": { "y": [0, 0.34] }, "level": 5 },
-        { "count": 2, "unitClass": "skeleton", "area": { "y": [0, 0.34] }, "level": 5 },
+        { "count": 1, "unitClass": "troll", "area": { "y": [0, 0.34] }, "level": 5 },
+        { "count": 1, "unitClass": "skeleton", "area": { "y": [0, 0.34] }, "level": 5 },
         { "count": 2, "unitClass": "bat", "area": { "y": [0, 0.34] }, "level": 5 }
       ],
       "treeChance": 0,
@@ -288,7 +289,7 @@
     },
     {
       "name": "Cinder Deep",
-      "description": "Ash plains split by rivers of lava below the Roost: skeletons and slimes boiled up from the deep, with an orc to drive them.",
+      "description": "Ash plains split by rivers of lava below the Roost: skeletons and slimes boiled up from the deep, a charging minotaur, and an orc to drive them.",
       "terrain": {
         "generator": "planned",
         "width": 8,
@@ -307,7 +308,8 @@
       "enemies": [
         { "count": 1, "unitClass": "orc", "area": { "y": [0, 0.34] }, "level": 6 },
         { "count": 2, "unitClass": "skeleton", "area": { "y": [0, 0.34] }, "level": 5 },
-        { "count": 2, "unitClass": "slime", "area": { "y": [0, 0.34] }, "level": 6 }
+        { "count": 1, "unitClass": "minotaur", "area": { "y": [0, 0.34] }, "level": 6 },
+        { "count": 1, "unitClass": "slime", "area": { "y": [0, 0.34] }, "level": 6 }
       ],
       "treeChance": 0,
       "palette": "b-red",
