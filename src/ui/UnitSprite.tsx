@@ -18,8 +18,9 @@ export function UnitSprite({
 }) {
   const size = TILE_SIZE * scale;
   const { rows, defaultFacing } = UNIT_SHEET;
-  // Every art idles in one-tile frames.
-  const { key, frames, frameMs } = getUnitSheet(sprite, 'idle')!;
+  // Idle frames are a tile wide; a taller one (the orc's 48px) is shown
+  // from its top in the one-tile box, its feet cropped off below.
+  const { key, frames, frameMs, frameHeight } = getUnitSheet(sprite, 'idle')!;
   const columns = frames;
   const row = rows[defaultFacing];
   const style: CSSProperties & Record<`--${string}`, string> = {
@@ -27,7 +28,7 @@ export function UnitSprite({
     height: size,
     backgroundImage: `url(${SPRITE_URLS[key]})`,
     backgroundSize: `${columns * size}px auto`,
-    backgroundPosition: `0 ${-row * size}px`,
+    backgroundPosition: `0 ${-row * frameHeight * scale}px`,
   };
   if (animated) {
     // Slides the row left one frame per step (see .unit-sprite--animated).
