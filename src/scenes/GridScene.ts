@@ -188,6 +188,7 @@ import {
   getWallAutotile,
   type MapSprite,
 } from '../game/mapArt.ts';
+import { tallArtDepth, unitDepth } from '../game/depthOrder.ts';
 import { canMoveAlongPath, extendMovePath, getMovementRange } from '../game/movement.ts';
 import { pickAttackPlan } from '../game/attackMove.ts';
 import { getDangerZone } from '../game/dangerZone.ts';
@@ -725,6 +726,16 @@ export class GridScene extends Phaser.Scene {
     }
   }
 
+  // Run each frame from update: re-sorts every unit by the row it stands
+  // on (fractional while it walks), so it passes behind or in front of
+  // tall map art like a mountain's peak (see depthOrder.ts). An attacking
+  // unit keeps ATTACK_DEPTH, over the units around it, until its swing ends.
+  sortUnitDepths() {
+    for (const sprite of this.unitSprites?.values() ?? []) {
+      if (sprite.active && !sprite.getData('attacking')) sprite.setDepth(unitDepth(sprite.y / TILE_SIZE));
+    }
+  }
+
   // `setup` is the battle to run (gameStore's battleSetup, see
   // src/game/battleSetup.ts), the first story chapter if there's none.
   create(setup: BattleSetup = FIRST_STORY_CHAPTER) {
@@ -928,6 +939,7 @@ export class GridScene extends Phaser.Scene {
   }
 
   override update(_time: number, delta: number) {
+    this.sortUnitDepths();
     const { JustDown } = Phaser.Input.Keyboard;
     const { dx, dy } = this.readArrowKeys(delta);
     const pointer = this.drainPointerInput();
@@ -3228,8 +3240,7 @@ export class GridScene extends Phaser.Scene {
     const art: string = sprite.getData('art');
     this.faceSprite(sprite, target);
     const impactFrame = getImpactFrame(art);
-    const depth = sprite.depth;
-    sprite.setDepth(ATTACK_DEPTH);
+    sprite.setDepth(ATTACK_DEPTH).setData('attacking', true);
     let impacted = false;
     const impact = () => {
       if (impacted) return;
@@ -3241,7 +3252,7 @@ export class GridScene extends Phaser.Scene {
         if (index >= impactFrame) impact();
       },
       onDone: () => {
-        sprite.setDepth(depth);
+        sprite.setData('attacking', false);
         impact();
         onDone();
       },
@@ -4013,16 +4024,18 @@ export class GridScene extends Phaser.Scene {
 
   // One-tile overlays from `terrainSheet`, or the props sheet (forests,
   // mountains, buildings, crossings; see src/game/mapArt.ts): ground art
-  // and caps under units, at the trees' depth (caps just above, so a peak
-  // covers the forest it pokes into), and roofs over units like the gate's.
+  // under units, at the trees' depth; art rising north of its cell (a
+  // peak, a flag, a tower's top) y-sorted with the units (depthOrder.ts),
+  // so a unit north of a mountain stands behind its peak; and roofs over
+  // units like the gate's.
   renderMapSprites(terrainSheet: typeof TERRAIN_SHEET, sprites: readonly MapSprite[]) {
     const depths = { ground: 0.4, cap: 0.45, roof: 0.8 };
-    for (const { x, y, tile, layer, sheet = terrainSheet } of sprites) {
+    for (const { x, y, tile, layer, baseY, sheet = terrainSheet } of sprites) {
       const pos = gridToWorld(x, y, TILE_SIZE);
       const image = this.add
         .image(pos.x, pos.y, sheet.key, getTileFrame(tile, sheet.columns))
         .setOrigin(0, 0)
-        .setDepth(depths[layer]);
+        .setDepth(baseY === undefined ? depths[layer] : tallArtDepth(baseY));
       this.terrainArt.push(image);
     }
   }
@@ -4093,7 +4106,7 @@ export class GridScene extends Phaser.Scene {
     const sprite = this.add
       .sprite(x, y, unitSheetKey(art, 'idle'))
       .setOrigin(0, 0)
-      .setDepth(0.75)
+      .setDepth(unitDepth(gridY))
       .setData('art', art)
       .setData('facing', UNIT_SHEET.defaultFacing)
       .play(this.unitAnimation(art, 'idle', UNIT_SHEET.defaultFacing));

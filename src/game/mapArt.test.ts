@@ -66,7 +66,7 @@ describe('getFeatureSprites', () => {
   it('caps a lone mountain with a peak in the cell north of it', () => {
     const sprites = features(['.', '^']);
     expect(MOUNTAIN_ART.body).toContainEqual(at(sprites, 0, 1)[0].tile);
-    expect(at(sprites, 0, 0)).toEqual([{ x: 0, y: 0, tile: expect.anything(), layer: 'cap' }]);
+    expect(at(sprites, 0, 0)).toEqual([{ x: 0, y: 0, tile: expect.anything(), layer: 'cap', baseY: 1 }]);
     expect(MOUNTAIN_ART.cap).toContainEqual(at(sprites, 0, 0)[0].tile);
   });
 
@@ -98,7 +98,7 @@ describe('getFeatureSprites', () => {
       { x: 0, y: 1, tile: [7, 1], layer: 'ground' },
       { x: 0, y: 2, tile: [4, 1], layer: 'ground' },
       { x: 1, y: 2, tile: [8, 2], layer: 'ground' },
-      { x: 1, y: 1, tile: [5, 0], layer: 'cap' },
+      { x: 1, y: 1, tile: [5, 0], layer: 'cap', baseY: 2 },
     ]);
   });
 });
@@ -116,15 +116,15 @@ describe('getBuildingSprites', () => {
   it('flags a colored building from the cell north of it', () => {
     expect(sprites([{ x: 3, y: 4, building: 'farm' }], 'b-red')).toEqual([
       { x: 3, y: 4, tile: [19, 50], layer: 'ground' },
-      { x: 3, y: 3, tile: [19, 49], layer: 'cap' },
+      { x: 3, y: 3, tile: [19, 49], layer: 'cap', baseY: 4 },
     ]);
   });
 
   it('draws a tall building with its top over units and its flag above that', () => {
     expect(sprites([{ x: 3, y: 4, building: 'castle' }], 'a-teal')).toEqual([
       { x: 3, y: 4, tile: [14, 62], layer: 'ground' },
-      { x: 3, y: 3, tile: [14, 61], layer: 'roof' },
-      { x: 3, y: 2, tile: [14, 60], layer: 'cap' },
+      { x: 3, y: 3, tile: [14, 61], layer: 'roof', baseY: 4 },
+      { x: 3, y: 2, tile: [14, 60], layer: 'cap', baseY: 4 },
     ]);
   });
 
