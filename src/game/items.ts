@@ -151,8 +151,7 @@ export function canAddItem(inventory: Inventory, item: Item): boolean {
 
 // Adds quantity (default 1) of item and returns the new inventory: a
 // consumable is stacked onto its entry if there is one, else it goes in a
-// new slot at the end — as a weapon always does, with `quantity` as its
-// uses left. Throws if it doesn't fit (check canAddItem first) or quantity
+// new slot at the end. Throws if it doesn't fit (check canAddItem first) or quantity
 // isn't positive.
 export function addItem(inventory: Inventory, item: Item, quantity = 1): Inventory {
   if (!(quantity > 0)) throw new Error(`Can't add ${quantity} of ${item.id}`);

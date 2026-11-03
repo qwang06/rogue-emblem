@@ -401,7 +401,7 @@ function strikesAvailable(unit: Pick<Fighter, 'weapon' | 'weaponUses'>): number 
 // foe at or under its `finisher` percent of max HP fells it, `lifesteal`
 // heals the striker that share of the HP it took (up to its max HP, as the
 // strike's `drain`), and after each strike `twin-strike` rolls for one
-// more by the same side at once, while its weapon has uses left (a twin
+// more by the same side at once, while its weapon has uses left, if it counts them (a twin
 // strike can't chain into another). A crit that fells the foe heals an
 // `overkill-heal` striker by the damage past the foe's HP (in `drain` too),
 // and a landed strike the foe survives costs the striker its recoil

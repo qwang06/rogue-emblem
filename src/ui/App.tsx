@@ -39,6 +39,7 @@ import { MentorScreen } from './MentorScreen.tsx';
 import { MerchantScreen } from './MerchantScreen.tsx';
 import { PromotionScreen } from './PromotionScreen.tsx';
 import { RosterScreen } from './RosterScreen.tsx';
+import { EquipmentScreen } from './EquipmentScreen.tsx';
 import { SettingsButton } from './SettingsButton.tsx';
 import { SkillMenu } from './SkillMenu.tsx';
 import { TitleScreen } from './TitleScreen.tsx';
@@ -133,6 +134,7 @@ export function App() {
               <BoonPickScreen />
               <CampMenu />
               <RosterScreen />
+              <EquipmentScreen />
               <MerchantScreen />
               <PromotionScreen />
               <MentorScreen />

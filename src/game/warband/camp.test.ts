@@ -22,8 +22,14 @@ function campRun(gold: number, hurt = true): RunState {
 }
 
 describe('getCampActions', () => {
-  it('offers the roster, the merchant and rest before moving on', () => {
-    expect(getCampActions(campRun(100)).map((action) => action.id)).toEqual(['roster', 'merchant', 'rest', 'march']);
+  it('offers the roster, equipment, the merchant and rest before moving on', () => {
+    expect(getCampActions(campRun(100)).map((action) => action.id)).toEqual([
+      'roster',
+      'equipment',
+      'merchant',
+      'rest',
+      'march',
+    ]);
   });
 
   it('leaves Mentors out while MENTORS_ENABLED is off', () => {
@@ -37,19 +43,19 @@ describe('getCampActions', () => {
     const run = campRun(100);
     expect(canTakeLesson(run)).toBe(true);
     const broke = { ...run, gold: 0 };
-    expect(getCampActions(broke, true)[3]).toMatchObject({ id: 'mentors', disabled: true });
+    expect(getCampActions(broke, true)[4]).toMatchObject({ id: 'mentors', disabled: true });
     expect(canTakeLesson(broke)).toBe(false);
-    expect(getCampActions({ ...broke, scrolls: 1 }, true)[3].disabled).toBe(false);
+    expect(getCampActions({ ...broke, scrolls: 1 }, true)[4].disabled).toBe(false);
   });
 
   it('names the cost of resting', () => {
-    expect(getCampActions(campRun(100))[2].label).toBe(`Rest (${REST_COST} gold)`);
+    expect(getCampActions(campRun(100))[3].label).toBe(`Rest (${REST_COST} gold)`);
   });
 
   it("disables Rest when it can't be afforded or nobody needs it", () => {
-    expect(getCampActions(campRun(100))[2].disabled).toBe(false);
-    expect(getCampActions(campRun(REST_COST - 1))[2].disabled).toBe(true);
-    expect(getCampActions(campRun(100, false))[2].disabled).toBe(true);
+    expect(getCampActions(campRun(100))[3].disabled).toBe(false);
+    expect(getCampActions(campRun(REST_COST - 1))[3].disabled).toBe(true);
+    expect(getCampActions(campRun(100, false))[3].disabled).toBe(true);
   });
 });
 
@@ -63,6 +69,7 @@ describe('the Promote action', () => {
   it('shows once someone could promote, after the merchant', () => {
     expect(getCampActions(promotable(campRun(100), 1)).map((action) => action.id)).toEqual([
       'roster',
+      'equipment',
       'merchant',
       'promote',
       'rest',
@@ -141,6 +148,7 @@ describe('camp on the realm', () => {
     const town = onRealm(campRun(0), 'town');
     expect(getCampActions(town).map((action) => [action.id, action.label])).toEqual([
       ['roster', 'Manage Roster'],
+      ['equipment', 'Equipment'],
       ['merchant', 'Merchant'],
       ['rest', 'Rest (free)'],
       ['march', 'Travel'],
@@ -151,7 +159,7 @@ describe('camp on the realm', () => {
 
   it('has no merchant after a battle, and rest costs gold', () => {
     const field = onRealm(campRun(100), 'battle');
-    expect(getCampActions(field).map((action) => action.id)).toEqual(['roster', 'rest', 'march']);
+    expect(getCampActions(field).map((action) => action.id)).toEqual(['roster', 'equipment', 'rest', 'march']);
     expect(restAtCamp(field).gold).toBe(100 - REST_COST);
   });
 });
@@ -162,7 +170,7 @@ describe('Field Kitchen', () => {
     expect(getRestCost(run)).toBe(0);
     expect(getRestCost(campRun(0))).toBe(REST_COST);
     expect(canRest(run)).toBe(true);
-    expect(getCampActions(run)[2]).toMatchObject({ label: 'Rest (free)' });
+    expect(getCampActions(run)[3]).toMatchObject({ label: 'Rest (free)' });
     const rested = restAtCamp(run);
     expect(rested.gold).toBe(0);
     expect(rested.roster[0].health).toBe(rested.roster[0].maxHealth);

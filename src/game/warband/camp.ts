@@ -1,7 +1,8 @@
 // The camp between Warband Mode stages, once the reward is taken: its menu
-// (Manage Roster, Merchant, Promote, Rest, Mentors while MENTORS_ENABLED is
-// on, Next Stage or Travel)
+// (Manage Roster, Equipment, Merchant, Promote, Rest, Mentors while
+// MENTORS_ENABLED is on, Next Stage or Travel)
 // and the rest. Manage Roster opens the roster screen (rosterScreen.ts),
+// Equipment the equipment screen (equipmentScreen.ts),
 // Merchant the merchant screen (merchantScreen.ts), Promote the promotion
 // screen (promotionScreen.ts) and Mentors the mentor screen
 // (mentorScreen.ts), where units learn secondary skill sets. Everything here
@@ -26,7 +27,7 @@ export function getRestCost(run: Pick<RunState, 'relics' | 'route' | 'heat'>): n
   return REST_COST * getRunHeatRules(run).restCostMultiplier;
 }
 
-export type CampActionId = 'roster' | 'merchant' | 'promote' | 'rest' | 'mentors' | 'march';
+export type CampActionId = 'roster' | 'equipment' | 'merchant' | 'promote' | 'rest' | 'mentors' | 'march';
 
 export interface CampAction extends MenuAction {
   id: CampActionId;
@@ -44,6 +45,7 @@ export function getCampActions(run: RunState, mentors: boolean = MENTORS_ENABLED
   return Object.freeze(
     [
       { id: 'roster', label: 'Manage Roster' },
+      { id: 'equipment', label: 'Equipment' },
       ...(hasMerchant(run) ? [{ id: 'merchant', label: 'Merchant' }] : []),
       ...(getPromotionCandidates(run).length > 0
         ? [{ id: 'promote', label: 'Promote', disabled: countSeals(run) === 0 }]
