@@ -176,3 +176,29 @@ describe('in a run', () => {
     expect(guard([])).toBe(0);
   });
 });
+
+describe('build evolutions', () => {
+  const ranked = (id: string, rank: number) => Array.from({ length: rank }, () => id);
+
+  it('makes a Reaper of Chain Kill and Bloodlust II, no relic needed', () => {
+    const reaper = findEvolution('reaper')!;
+    expect(hasEvolution({ classId: 'vanguard', boons: ['chain-kill', ...ranked('bloodlust', 2)] }, [], reaper)).toBe(
+      true,
+    );
+    expect(hasEvolution({ classId: 'vanguard', boons: ['chain-kill', 'bloodlust'] }, [], reaper)).toBe(false);
+    expect(reaper.modifiers).toEqual([{ kind: 'encore' }]);
+  });
+
+  it('spreads and lengthens debuffs with Exploit and Opportunist', () => {
+    const plague = findEvolution('plague')!;
+    expect(hasEvolution({ classId: 'archer', boons: ['exploit', 'opportunist'] }, [], plague)).toBe(true);
+    expect(plague.modifiers).toEqual([{ kind: 'contagion' }, { kind: 'linger-debuffs' }]);
+  });
+
+  it('gives Iron Maiden its taunt aura at Thorns III with Spite', () => {
+    const maiden = findEvolution('iron-maiden')!;
+    expect(hasEvolution({ classId: 'soldier', boons: ['spite', ...ranked('thorns', 3)] }, [], maiden)).toBe(true);
+    expect(hasEvolution({ classId: 'soldier', boons: ['spite', ...ranked('thorns', 2)] }, [], maiden)).toBe(false);
+    expect(maiden.modifiers).toEqual([{ kind: 'taunt-aura' }]);
+  });
+});
