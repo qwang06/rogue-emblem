@@ -17,6 +17,7 @@ import {
   type BossState,
 } from '../bosses.ts';
 import { getAttackTargets, resolveCombat, type Fighter, type Strike, type TargetTile } from '../combat.ts';
+import { applyCurses, getDeployedCurses } from '../curses.ts';
 import { canDeployUnit, canDeployUnitAt, canStartBattle, isPlaced, placeUnit } from '../deployment.ts';
 import { getPhaseMovement } from '../enemyAI.ts';
 import { getCombatAward, getCombatOutcome, type ExperienceAward, type ExperienceGain } from '../experience.ts';
@@ -545,9 +546,19 @@ function startBattle(draft: Draft) {
   const benched = roster.filter((unitId) => !deployed.includes(unitId));
   for (const unitId of benched) draft.units.delete(unitId);
   draft.deployed = Object.freeze(deployed);
+  layCurses(draft, deployed);
   draft.stage = 'battle';
   draft.events.push({ type: 'battle-started', benched: Object.freeze(benched) });
   startPhase(draft, getFirstPhase(1, hasGuests(draft)));
+}
+
+// The deployed units' curses (see curses.ts) fall on the enemies as the
+// battle starts.
+function layCurses(draft: Draft, deployed: readonly string[]) {
+  const curses = getDeployedCurses(draft.units, deployed);
+  if (curses.length === 0) return;
+  const enemies = getTeamUnitIds(draft.units, 'enemy').map((unitId) => draft.edit(unitId));
+  applyCurses(enemies, curses, draft.rng);
 }
 
 function requireBattle(draft: Draft) {
