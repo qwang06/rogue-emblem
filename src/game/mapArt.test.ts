@@ -22,6 +22,7 @@ import {
   FOREST_ART,
   MOUNTAIN_ART,
   SPIKES_ART,
+  SPIKES_SHEET,
   TERRAIN_SHEET,
   type BuildingPaletteName,
 } from './tileset.ts';
@@ -183,13 +184,13 @@ describe('getWallAutotile', () => {
 });
 
 describe('getHazardSprites', () => {
-  it('lays a spike trap on each spikes cell, off the props sheet', () => {
+  it("lays a spike trap on each spikes cell, off the spike trap's sheet", () => {
     let grid = createGrid(3, 2, 'grass');
     grid = setTerrain(grid, 2, 1, 'spikes');
-    expect(getHazardSprites(grid, SPIKES_ART, MAP_PROPS_SHEET)).toEqual([
-      { x: 2, y: 1, tile: SPIKES_ART, layer: 'ground', sheet: MAP_PROPS_SHEET },
+    expect(getHazardSprites(grid, SPIKES_ART, SPIKES_SHEET)).toEqual([
+      { x: 2, y: 1, tile: SPIKES_ART, layer: 'ground', sheet: SPIKES_SHEET },
     ]);
-    expect(getHazardSprites(createGrid(2, 2, 'grass'), SPIKES_ART, MAP_PROPS_SHEET)).toEqual([]);
+    expect(getHazardSprites(createGrid(2, 2, 'grass'), SPIKES_ART, SPIKES_SHEET)).toEqual([]);
   });
 });
 

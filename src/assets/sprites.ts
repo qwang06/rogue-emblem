@@ -7,12 +7,13 @@ import ginkgoTreeGreen from './ginkgo_tree_green.png';
 import goldGinkgoTree from './gold_ginkgo_tree.png';
 import mapProps from './map-props.png';
 import mapPropsStarship from './map-props-starship.png';
-import mineMarker from './mine-marker.png';
 import overworldAutumn from './overworld-autumn.png';
 import overworldUnderworld from './overworld-underworld.png';
 import overworldStarship from './overworld-starship.png';
 import overworldWinter from './overworld-winter.png';
 import overworld from './overworld.png';
+import trapPowderMine from './traps/powder-mine.png';
+import trapSpikes from './traps/spikes.png';
 import ballistaIcon from './items/ballista.png';
 import biteIcon from './items/bite.png';
 import boneClawsIcon from './items/bone-claws.png';
@@ -65,7 +66,8 @@ export const SPRITE_URLS: Readonly<Record<string, string>> = {
   gold_ginkgo_tree: goldGinkgoTree,
   'map-props': mapProps,
   'map-props-starship': mapPropsStarship,
-  'mine-marker': mineMarker,
+  'trap-spikes': trapSpikes,
+  'trap-powder-mine': trapPowderMine,
   'ballista': ballistaIcon,
   'bite': biteIcon,
   'bone-claws': boneClawsIcon,

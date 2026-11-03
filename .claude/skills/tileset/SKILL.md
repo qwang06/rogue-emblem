@@ -132,9 +132,36 @@ The Warband overworld is a parchment map (`realmInk.ts`, `inkRaster.ts`), not th
 
 ## Map props: map-props.png
 
-`src/assets/map-props.png` (352x64, `MAP_PROPS_SHEET`, 11 columns) holds the crossings the overworld sheet lacks, drawn by `scripts/draw-map-props.js` (run it from the repo root; it rewrites the file) as 16px art doubled, in colors sampled off the sheet. `[i, 0]` and `[i, 1]` are the gateway for building palette `i` (`GATE_ART`, in the script's `GATE_PALETTES` order: a-stone, a-orange, a-teal, a-pink, a-brown, b-white, b-red, b-blue, b-green, b-orange): row 0 is the posts (two 5px piers in the rampart's colors, the arch's dark underside, a sand floor so the dirt road runs through, drawn under units) and row 1 the crenellated lintel (drawn over units). `[10, 0]` (`FORD_ART`) is a ford's two staggered stepping stones in the rocks tile's colors with a pale wake, kept to the tile's middle rows so they clear both banks. `[10, 1]` (`SPIKES_ART`) is a spike trap (`getHazardSprites`, on `spikes` cells, under units): five steel spikes in two staggered rows, in the bridge tile `[11, 2]`'s stone colors (sorted darkest first: outline, shaded face, light face, and the brightest as a glint on each tip), standing in a sunken pit of the dirt path's sand with a steel rim, x 2–29, y 12–29, so grass shows round it. The water autotile `joins` bridges and fords and the dirt and wall autotiles join gates, so the terrain runs on under them. Bridges use the sheet's own tiles (`BRIDGE_ART`).
+`src/assets/map-props.png` (352x64, `MAP_PROPS_SHEET`, 11 columns) holds the crossings the overworld sheet lacks, drawn by `scripts/draw-map-props.js` (run it from the repo root; it rewrites the file) as 16px art doubled, in colors sampled off the sheet. `[i, 0]` and `[i, 1]` are the gateway for building palette `i` (`GATE_ART`, in the script's `GATE_PALETTES` order: a-stone, a-orange, a-teal, a-pink, a-brown, b-white, b-red, b-blue, b-green, b-orange): row 0 is the posts (two 5px piers in the rampart's colors, the arch's dark underside, a sand floor so the dirt road runs through, drawn under units) and row 1 the crenellated lintel (drawn over units). `[10, 0]` (`FORD_ART`) is a ford's two staggered stepping stones in the rocks tile's colors with a pale wake, kept to the tile's middle rows so they clear both banks. `[10, 1]` is an old spike trap the game no longer draws (spikes now come from `src/assets/traps/spikes.png`, see below): five steel spikes in two staggered rows, in the bridge tile `[11, 2]`'s stone colors (sorted darkest first: outline, shaded face, light face, and the brightest as a glint on each tip), standing in a sunken pit of the dirt path's sand with a steel rim, x 2–29, y 12–29, so grass shows round it. The water autotile `joins` bridges and fords and the dirt and wall autotiles join gates, so the terrain runs on under them. Bridges use the sheet's own tiles (`BRIDGE_ART`).
 
-`src/assets/mine-marker.png` (32x32, sprite key `mine-marker`) is the marker GridScene draws on a mine the player's side laid (`refreshMines`, depth 0.43, under units): a 16px PixelLab-style landmine doubled, black outline, grey body with a red light on top, about 14px wide in the tile's middle. It reads on all four season sheets' grass, the underworld's dark ground included.
+## Traps: src/assets/traps/
+
+Animated traps from Qiang's `traps.png` atlas (16px art, sliced from its `traps.json` and doubled), one strip per trap, six frames left to right, 167ms each, alpha fully on or off. `TRAP_ART` in `tileset.ts` names the ones the game uses, with the frame each rests at and the frames it plays when it goes off (`GridScene.springTrap`); `getUnitSheetFrameSizes` loads them at their frame size.
+
+| File              | Frame | Frames (0–5)                                                                                        | Used for                                                                                                                                     |
+| ----------------- | ----- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `spikes.png`      | 32x32 | iron spikes in a stone slab: armed (holes), tips showing, rising, fully raised x2, retracting       | `spikes` cells (`SPIKES_ART` = frame 1 on `SPIKES_SHEET`, depth 0.4); springs 2–5 then back to 1 when a unit is shoved on (`playPush`)       |
+| `powder-mine.png` | 64x64 | half-buried keg with a fuse: armed, fuse lit, detonating, blast, blast at full size, aftermath rock | a mine the player's side laid (frame 0 centered on the tile, `refreshMines`, depth 0.43); blast 1–4 over units when tripped (`mine-tripped`) |
+| `bear.png`        | 32x32 | toothed jaws on a chain: armed, triggered, closing x2, snapped shut (holds the target), shut        | not used yet                                                                                                                                 |
+| `pitfall.png`     | 32x32 | straw and grass cover over a stake pit: armed, triggered, opening x2, open x2                       | not used yet                                                                                                                                 |
+| `fire-vent.png`   | 32x64 | flame from a stone pit (bottom 32px sit on the tile): armed, igniting, growing, full x2, dying      | not used yet                                                                                                                                 |
+
+The mine's armed keg spans x 14–51, y 16–51 of its 64px frame, so it overhangs its tile by a few pixels; the full blast (frame 4) fills nearly the whole frame.
+
+## Fantasy icons: src/assets/icons/
+
+64 small icons from Qiang's `fantasy_icons.png` (16px art, sliced from its `fantasy_icons.json` and doubled to 32x32), each file named for what it shows, so no lookup table is needed: `ICON_URLS` in `src/assets/fantasyIcons.ts` (a Vite glob) maps the name to its URL. React only. Bright colors, dark outline, no shadow.
+
+- Weapons: `sword` (gold guard), `dagger` (red jewel), `battleaxe`, `warhammer`, `spear` (red tassel), `bow` (nocked arrow), `staff` (purple orb), `scythe`.
+- Gear: `shield` (blue heater, white cross), `helmet` (visor, red crest), `chestplate`, `gauntlet`, `boot` (gold buckle), `cloak` (purple, hooded), `ring` (red gem), `amulet` (blue stone).
+- Consumables: `flask-round` (red), `bottle-tall` (blue), `flask-cone` (green), `bread`, `drumstick`, `apple`, `mushroom` (red, white spots), `scroll`.
+- Treasure and tools: `coins`, `gem` (blue), `key`, `chest`, `torch`, `lantern`, `bomb`, `map` (treasure map with an X).
+- Symbols: `heart`, `fist` (red wrap), `droplet` (blue), `wing` (white), `bullseye`, `clover`, `book` (open), `eye` (blue iris).
+- Magic and elements: `fireball`, `ice-crystal`, `lightning`, `cauldron` (green brew), `tornado`, `boulder` (mossy), `sun`, `crescent-moon`.
+- Combat effects: `crossed-swords`, `slash` (white arcs), `claw-marks` (red), `healing-cross` (green), `arrow-volley`, `ward-bubble` (shield in a blue bubble), `rune-stone` (glowing rune), `broken-chain`.
+- Rare: `crown`, `skull`, `chalice` (red liquid), `hourglass`, `crystal-ball`, `dragon-fang`, `war-horn`, `cursed-mask` (horned, red eyes).
+
+Used by: every relic (`RELIC_ICONS`, shown by `RelicIcon` on the camp's relic list and the starting relic pick, and at 2x on a relic reward's card). `src/assets/fantasyIcons.test.ts` fails when a relic has no icon.
 
 ## How the code uses the art
 

@@ -225,6 +225,10 @@ import {
   DEFAULT_BUILDING_PALETTE,
   FORD_ART,
   SPIKES_ART,
+  SPIKES_SHEET,
+  TRAP_ART,
+  TRAP_FRAME_MS,
+  type TrapArt,
   FOREST_ART,
   GATE_ART,
   MOUNTAIN_ART,
@@ -655,10 +659,34 @@ export class GridScene extends Phaser.Scene {
     }
     for (const [key, mine] of shown) {
       if (this.mineMarkers.has(key)) continue;
-      const pos = gridToWorld(mine.x, mine.y, TILE_SIZE);
-      const marker = this.add.image(pos.x, pos.y, 'mine-marker').setOrigin(0, 0).setDepth(0.43);
+      const { key: texture, rest } = TRAP_ART.mine;
+      const marker = this.add.image(...this.tileCenter(mine), texture, rest).setDepth(0.43);
       this.mineMarkers.set(key, marker);
     }
+  }
+
+  // The world position of tile `at`'s center.
+  tileCenter(at: Point): [number, number] {
+    const pos = gridToWorld(at.x, at.y, TILE_SIZE);
+    return [pos.x + TILE_SIZE / 2, pos.y + TILE_SIZE / 2];
+  }
+
+  // Plays `trap` going off once on tile `at` (its frames centered there),
+  // at `depth`, then clears it: spikes springing under a shoved unit, a
+  // mine's blast over the one that tripped it.
+  springTrap(trap: TrapArt, at: Point, depth: number) {
+    const animKey = `${trap.key}-trigger`;
+    if (!this.anims.exists(animKey)) {
+      this.anims.create({
+        key: animKey,
+        frames: trap.trigger.map((frame) => ({ key: trap.key, frame })),
+        frameRate: 1000 / TRAP_FRAME_MS,
+      });
+    }
+    const sprite = this.add.sprite(...this.tileCenter(at), trap.key, trap.rest).setDepth(depth);
+    sprite.anims.timeScale = this.getPlaybackSpeed();
+    sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sprite.destroy());
+    sprite.play(animKey);
   }
 
   preload() {
@@ -753,7 +781,7 @@ export class GridScene extends Phaser.Scene {
       this.renderTerrain(grid, { ...TERRAIN_AUTOTILES, wall: getWallAutotile(palette) }, sheet);
       this.renderMapSprites(sheet, [
         ...getCrossingSprites(grid, BRIDGE_ART, GATE_ART[paletteName], FORD_ART, props),
-        ...getHazardSprites(grid, SPIKES_ART, props),
+        ...getHazardSprites(grid, SPIKES_ART, SPIKES_SHEET),
         ...getFeatureSprites(grid, FOREST_ART, MOUNTAIN_ART),
         ...getBuildingSprites(level.buildings ?? [], palette, BUILDING_ART),
       ]);
@@ -3107,6 +3135,7 @@ export class GridScene extends Phaser.Scene {
       case 'mine-tripped': {
         const sprite = this.unitSprites.get(event.unitId)!;
         this.refreshMines(this.battle.mines);
+        this.springTrap(TRAP_ART.mine, event.at, 0.8);
         this.showStats(event.unitId, { health: event.health });
         this.showDamagePopup(sprite, event.damage);
         playHitFlash(this, sprite, next);
@@ -3311,6 +3340,7 @@ export class GridScene extends Phaser.Scene {
         next();
         return;
       }
+      if (push.moved && push.hazard) this.springTrap(TRAP_ART.spikes, push.to, 0.42);
       this.showStats(push.unitId, { health });
       this.showDamagePopup(sprite, push.damage);
       playHitFlash(this, sprite, next);

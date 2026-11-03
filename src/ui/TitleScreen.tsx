@@ -29,6 +29,7 @@ import { loadSavedRun } from '../data/runSave.ts';
 import { enterRun } from '../bridge/warbandFlow.ts';
 import { startRoute } from '../game/warband/travel.ts';
 import { loadMeta } from '../data/metaSave.ts';
+import { RelicIcon } from './RelicIcon.tsx';
 import { getUnitSprite } from '../game/tileset.ts';
 import { routeHash } from './route.ts';
 import { UnitSprite } from './UnitSprite.tsx';
@@ -322,6 +323,7 @@ export function TitleScreen() {
             if (selected) classes.push('title-menu__item--selected');
             if (action.disabled) classes.push('title-menu__item--disabled');
             if (view === 'new-run') classes.push('title-menu__item--class');
+            if (view === 'relic') classes.push('title-menu__item--relic');
             return (
               <li key={action.id}>
                 <button
@@ -339,6 +341,7 @@ export function TitleScreen() {
                       ))}
                     </span>
                   )}
+                  {view === 'relic' && <RelicIcon id={action.id} />}
                   {action.label}
                 </button>
               </li>

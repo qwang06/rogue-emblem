@@ -726,6 +726,11 @@ describe('toRewardAction', () => {
     expect(toRewardAction({ kind: 'seal' }, 0).itemIcon).toBe(getItemSprite('master-seal'));
     expect(toRewardAction({ kind: 'rest' }, 0)).not.toHaveProperty('itemIcon');
   });
+
+  it('carries the relic a relic reward gives, and none for other rewards', () => {
+    expect(toRewardAction({ kind: 'relic', relicId: 'whetstone' }, 0).relicId).toBe('whetstone');
+    expect(toRewardAction({ kind: 'rest' }, 0)).not.toHaveProperty('relicId');
+  });
 });
 
 describe('toStageClearView', () => {
