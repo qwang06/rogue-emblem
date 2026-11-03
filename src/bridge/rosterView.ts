@@ -136,7 +136,7 @@ export function toRosterScreenView(
 // icon chips (WeaponNumbers) after the line. Uses is null for one that
 // never breaks.
 export interface ItemNumbers {
-  might?: number;
+  power?: number;
   hit?: number;
   crit?: number;
   weight?: number;
@@ -164,7 +164,7 @@ export function describeItem(item: Item): ItemDetail {
   if (item.kind === 'weapon') {
     const kind = item.type[0].toUpperCase() + item.type.slice(1);
     return describe(`${kind} weapon · ${formatHands(item.hands)}`, {
-      might: item.might,
+      power: item.power,
       hit: item.hit,
       crit: item.crit,
       weight: item.weight,

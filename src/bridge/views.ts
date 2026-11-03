@@ -94,7 +94,7 @@ export interface StatLineView {
 export interface WeaponDetailView {
   label: string;
   type: WeaponType;
-  might: number;
+  power: number;
   hit: number;
   crit: number;
   weight: number;
@@ -420,7 +420,7 @@ const DETAIL_STATS: readonly (readonly [Exclude<GrowthStat, 'health' | 'mana'>, 
 // Snapshot of a unit for the unit info screen: toUnitView's fields plus
 // its class's display name, each stat, the rates it fights
 // with before any opponent is counted (attack is its power stat plus its
-// weapon's might; hit, avoid, crit and attack speed from combatStats.ts),
+// weapon's power; hit, avoid, crit and attack speed from combatStats.ts),
 // its equipped weapon's numbers, the weapon types it can wield and the
 // skills it has learned.
 export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView | null {
@@ -444,7 +444,7 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
     ...view,
     stats: Object.freeze(DETAIL_STATS.map(([id, label]) => Object.freeze({ id, label, value: unit[id] }))),
     damageType,
-    attack: unit[DAMAGE_TYPES[damageType].power] + (weapon?.might ?? 0) + bonus.damage,
+    attack: unit[DAMAGE_TYPES[damageType].power] + (weapon?.power ?? 0) + bonus.damage,
     hit: getHit({ ...rates, bonus }),
     avoid: getAvoid({ ...rates, bonus }),
     crit: getCrit({ ...rates, bonus }),
@@ -453,7 +453,7 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
       ? Object.freeze({
           label: weapon.label,
           type: weapon.type,
-          might: weapon.might,
+          power: weapon.power,
           hit: weapon.hit,
           crit: weapon.crit,
           weight: weapon.weight,

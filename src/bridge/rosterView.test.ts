@@ -114,7 +114,7 @@ describe('describeItem', () => {
     expect(describeItem(IRON_AXE)).toEqual({
       label: IRON_AXE.label,
       description: 'Physical weapon · 1H',
-      numbers: { might: 3, hit: 65, crit: 0, weight: 5, range: '1', uses: 40 },
+      numbers: { power: 3, hit: 65, crit: 0, weight: 5, range: '1', uses: 40 },
     });
     expect(describeItem(FISTS).numbers?.uses).toBeNull();
     expect(describeItem(HEAL_STAFF)).toMatchObject({

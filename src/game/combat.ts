@@ -1,7 +1,7 @@
 // Pure combat rules: which tiles a unit can strike, which of those hold a
 // valid target, how much damage a hit deals, and how a whole exchange of
 // strikes plays out. A unit fights with its equipped weapon (weapons.ts),
-// which sets its range, damage type and might, and with whatever its
+// which sets its range, damage type and power, and with whatever its
 // modifiers (modifiers.ts) add for the exchange at hand. No Phaser, no rendering,
 // no hidden state — applying the damage (and spending weapon uses) on a
 // Unit is the caller's job.
@@ -25,10 +25,10 @@ export type DamageType = 'physical' | 'magical';
 export type CombatSide = 'attacker' | 'defender';
 
 // The weapon numbers combat reads.
-export type CombatWeapon = Pick<Weapon, 'type' | 'might' | 'hit' | 'crit' | 'weight' | 'minRange' | 'maxRange'>;
+export type CombatWeapon = Pick<Weapon, 'type' | 'power' | 'hit' | 'crit' | 'weight' | 'minRange' | 'maxRange'>;
 
 // What the damage formulas read off a unit. Missing stats count as 0; a
-// unit without a weapon hits physically with no might. `armorDefense` is
+// unit without a weapon hits physically with no power. `armorDefense` is
 // what its worn armor adds to its defense (see getArmorDefense in items.ts),
 // and `bonus` what its modifiers add (damage dealt, guard against damage
 // taken) for the exchange at hand.
@@ -38,7 +38,7 @@ export interface DamageStats {
   defense?: number;
   armorDefense?: number;
   resistance?: number;
-  weapon?: Pick<CombatWeapon, 'type' | 'might'> | null;
+  weapon?: Pick<CombatWeapon, 'type' | 'power'> | null;
   bonus?: Partial<CombatBonus>;
 }
 
@@ -195,17 +195,17 @@ export function getDamageType(attacker: Pick<DamageStats, 'weapon'>): DamageType
   return WEAPON_DAMAGE_TYPES[type];
 }
 
-// Damage one hit deals: strength plus weapon might minus defense (and
-// worn armor) for a physical hit, intelligence plus might minus resistance for a
+// Damage one hit deals: strength plus weapon power minus defense (and
+// worn armor) for a physical hit, intelligence plus power minus resistance for a
 // magical one, plus the attacker's damage bonus and minus the defender's
 // guard bonus, never below zero, then scaled by the percent bonuses
 // (scaleDamage). Missing stats count as 0.
 export function calculateDamage(attacker: DamageStats, defender: DamageStats): number {
-  const { power, guard } = DAMAGE_TYPES[getDamageType(attacker)];
-  const might = attacker.weapon?.might ?? 0;
+  const { power: stat, guard } = DAMAGE_TYPES[getDamageType(attacker)];
+  const power = attacker.weapon?.power ?? 0;
   const armor = guard === 'defense' ? (defender.armorDefense ?? 0) : 0;
   const bonus = (attacker.bonus?.damage ?? 0) - (defender.bonus?.guard ?? 0);
-  const base = Math.max(0, (attacker[power] ?? 0) + might + bonus - (defender[guard] ?? 0) - armor);
+  const base = Math.max(0, (attacker[stat] ?? 0) + power + bonus - (defender[guard] ?? 0) - armor);
   return scaleDamage(base, attacker.bonus?.['damage-percent'] ?? 0, defender.bonus?.['guard-percent'] ?? 0);
 }
 

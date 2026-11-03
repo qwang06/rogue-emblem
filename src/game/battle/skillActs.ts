@@ -154,7 +154,7 @@ function needsPlayOut(skill: Skill): boolean {
     !!skill.retreat ||
     !!skill.drain ||
     !!skill.recoil ||
-    !!skill.chargeMight
+    !!skill.chargePower
   );
 }
 
@@ -313,7 +313,7 @@ export function weighEvents(
 function placeAt(state: BattleState, unitId: string, grid: BattleState['grid'], walked: number): BattleState {
   const unit = state.units.get(unitId)!;
   // Only a charge skill reads how far it walked.
-  if (!getUsableSkills(unit).some((skill) => skill.chargeMight) || unit.movedTiles === walked) {
+  if (!getUsableSkills(unit).some((skill) => skill.chargePower) || unit.movedTiles === walked) {
     return { ...state, grid };
   }
   const walker = unit.clone();
