@@ -21,15 +21,28 @@ import type { Unit } from './Unit.ts';
 import { applySurge } from './warband/enemyCurve.ts';
 import { ELITE_AFFIXES, findEliteAffix } from './warband/elites.ts';
 
-export type Curse =
+// A curse marked `shared` (a keystone's, see warband/keystones.ts) is
+// carried by every unit but falls only once a battle: of the deployed
+// units' curses with the same `shared` key, only the first counts.
+export type Curse = (
   | { kind: 'enemy-surge'; percent: number }
   | { kind: 'enemy-affix'; affixId: string }
   | { kind: 'elite-enemy'; affixes: number }
-  | { kind: 'boss-modifiers'; modifiers: readonly Modifier[] };
+  | { kind: 'boss-modifiers'; modifiers: readonly Modifier[] }
+) & { shared?: string };
 
-// Every curse the deployed units among `units` carry, in order.
+// Every curse the deployed units among `units` carry, in order, a shared
+// curse counted once for all of its holders.
 export function getDeployedCurses(units: ReadonlyMap<string, Unit>, deployed: readonly string[]): Curse[] {
-  return deployed.flatMap((unitId) => units.get(unitId)?.curses ?? []);
+  const seen = new Set<string>();
+  return deployed.flatMap((unitId) =>
+    (units.get(unitId)?.curses ?? []).filter((curse) => {
+      if (curse.shared === undefined) return true;
+      if (seen.has(curse.shared)) return false;
+      seen.add(curse.shared);
+      return true;
+    }),
+  );
 }
 
 // The enemy a curse aimed at the boss falls on: the one ranked boss, else

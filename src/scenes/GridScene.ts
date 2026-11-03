@@ -1650,7 +1650,7 @@ export class GridScene extends Phaser.Scene {
     const actions = getCampActions(run);
     const selected = this.campMenu?.selectedIndex ?? actions.findIndex((action) => action.id === 'march');
     this.publishMenu('campMenu', selectIndex(createActionMenu(actions), selected));
-    gameStore.setState({ campGold: run.gold, campRelics: toRelicViews(run.relics, run.stage) });
+    gameStore.setState({ campGold: run.gold, campRelics: toRelicViews(run.relics, run.stage, run.keystone) });
   }
 
   updateCampMenu(dy: number, confirm: boolean) {

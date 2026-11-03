@@ -32,6 +32,7 @@ export const RELIC_ICONS: Readonly<Record<string, string>> = Object.freeze({
   'phoenix-feather': 'fireball',
   'four-leaf-clover': 'clover',
   'field-kitchen': 'cauldron',
+  'lone-wolf': 'crescent-moon',
 });
 
 // The URL of relic `relicId`'s icon, or null for a relic without one.
