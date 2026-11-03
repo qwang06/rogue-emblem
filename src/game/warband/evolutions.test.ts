@@ -70,7 +70,7 @@ describe('hasEvolution', () => {
 describe('rank evolutions', () => {
   const ranked = (id: string, rank: number) => Array.from({ length: rank }, () => id);
 
-  it('needs the passive at its top rank and the matching relic', () => {
+  it('needs the passive at rank III and the matching relic', () => {
     const berserk = findEvolution('berserk')!;
     expect(berserk.ranks).toEqual({ brawler: RANK_EVOLUTION_RANK });
     const unit = (rank: number) => ({ classId: 'soldier', boons: ranked('brawler', rank) });
@@ -84,7 +84,7 @@ describe('rank evolutions', () => {
     expect(hasEvolution({ classId: 'acolyte', boons }, ['mending-charm'], findEvolution('troll-blood')!)).toBe(true);
   });
 
-  it('flags the boon that takes the passive to its top rank', () => {
+  it('flags the boon that takes the passive to rank III', () => {
     const unit = { classId: 'archer', boons: ranked('keen-eye', RANK_EVOLUTION_RANK - 1) };
     expect(completesEvolution(unit, ['hawk-lens'], { boon: 'keen-eye' })).toBe(true);
     expect(completesEvolution({ ...unit, boons: ['keen-eye'] }, ['hawk-lens'], { boon: 'keen-eye' })).toBe(false);

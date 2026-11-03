@@ -41,6 +41,20 @@ export function randomItem<T>(rng: Rng, items: readonly T[]): T {
   return items[Math.floor(rng() * items.length)];
 }
 
+// `items` in a random order where an item with a higher `weight` tends to
+// come earlier (each item's chance to be first is its share of the total
+// weight; Efraimidis-Spirakis keys). Items weighing 0 or less come last, in
+// their order. Uses one rng() call per item.
+export function weightedShuffle<T>(rng: Rng, items: readonly T[], weight: (item: T) => number): T[] {
+  const keyed = items.map((item, index) => {
+    const w = weight(item);
+    const roll = rng();
+    return { item, index, key: w > 0 ? Math.log(Math.max(roll, Number.MIN_VALUE)) / w : -Infinity };
+  });
+  keyed.sort((a, b) => b.key - a.key || a.index - b.index);
+  return keyed.map(({ item }) => item);
+}
+
 // A shuffled copy of items (Fisher–Yates); items itself is left alone.
 export function shuffle<T>(rng: Rng, items: readonly T[]): T[] {
   const result = items.slice();

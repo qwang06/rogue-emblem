@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createResumableRng, createSeededRng, randomInt, randomItem, shuffle } from './rng.ts';
+import { createResumableRng, createSeededRng, randomInt, randomItem, shuffle, weightedShuffle } from './rng.ts';
 
 describe('createSeededRng', () => {
   it('gives the same sequence for the same seed', () => {
@@ -68,5 +68,34 @@ describe('shuffle', () => {
     const shuffled = shuffle(createSeededRng(3), items);
     expect([...shuffled].sort()).toEqual(items);
     expect(items).toEqual([1, 2, 3, 4, 5]);
+  });
+});
+
+describe('weightedShuffle', () => {
+  it('keeps every item once and is deterministic for a seed', () => {
+    const items = ['a', 'b', 'c', 'd'];
+    const once = weightedShuffle(createSeededRng(4), items, () => 1);
+    expect([...once].sort()).toEqual(items);
+    expect(weightedShuffle(createSeededRng(4), items, () => 1)).toEqual(once);
+  });
+
+  it('puts heavier items first more often', () => {
+    let heavyFirst = 0;
+    for (let seed = 0; seed < 500; seed++) {
+      if (
+        weightedShuffle(createSeededRng(seed), ['light', 'heavy'], (item) => (item === 'heavy' ? 4 : 1))[0] === 'heavy'
+      )
+        heavyFirst++;
+    }
+    expect(heavyFirst / 500).toBeGreaterThan(0.7);
+    expect(heavyFirst / 500).toBeLessThan(0.9);
+  });
+
+  it('puts items weighing nothing last, in their order', () => {
+    expect(weightedShuffle(createSeededRng(1), ['x', 'y', 'z'], (item) => (item === 'z' ? 1 : 0))).toEqual([
+      'z',
+      'x',
+      'y',
+    ]);
   });
 });
