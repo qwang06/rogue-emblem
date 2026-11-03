@@ -4082,7 +4082,13 @@ export class GridScene extends Phaser.Scene {
     const unit = this.units.get(unitId)!;
     const { x, y } = gridToWorld(gridX, gridY, TILE_SIZE);
     const art = getUnitSprite(unit.unitClass, unit.faction);
-    const sprite = this.addTileSprite(x, y, unitSheetKey(art, 'idle'))
+    // Unit art is drawn at its own size, never stretched to the tile: a
+    // frame taller or wider than a tile (the orc's 48px idle) spills over
+    // the tiles around it from the pivot pinUnitSheetFrames gives it, so
+    // the unit stands on its tile's bottom edge like every other.
+    const sprite = this.add
+      .sprite(x, y, unitSheetKey(art, 'idle'))
+      .setOrigin(0, 0)
       .setDepth(0.75)
       .setData('art', art)
       .setData('facing', UNIT_SHEET.defaultFacing)
