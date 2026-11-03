@@ -14,8 +14,8 @@ describe('the Fire tome', () => {
   });
 
   it('teaches a spell with its numbers that never breaks and stays with its learner', () => {
-    const { might, hit, crit, weight, minRange, maxRange, type } = FIRE;
-    expect(FIRE_SPELL).toMatchObject({ might, hit, crit, weight, minRange, maxRange, type, uses: null });
+    const { power, hit, crit, weight, minRange, maxRange, type } = FIRE;
+    expect(FIRE_SPELL).toMatchObject({ power, hit, crit, weight, minRange, maxRange, type, uses: null });
     expect(isTome(FIRE_SPELL)).toBe(false);
     expect(WEAPONS).toContain(FIRE_SPELL);
     expect(NATURAL_WEAPON_IDS.has(FIRE_SPELL.id)).toBe(true);

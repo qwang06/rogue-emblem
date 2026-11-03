@@ -103,9 +103,9 @@ export function getKillExperience(level: number, enemyLevel: number): number {
 // ('attacker' | 'defender'): 'died' if it was killed, 'kill' if it killed
 // its opponent, 'hit' if it landed any damage, otherwise 'miss'.
 export function getCombatOutcome(strikes: readonly Strike[], side: CombatSide): CombatOutcome {
-  if (strikes.some((s) => s.target === side && s.lethal)) return 'died';
+  if (strikes.some((s) => (s.target === side && s.lethal) || (s.by === side && s.recoilLethal))) return 'died';
   const own = strikes.filter((s) => s.by === side);
-  if (own.some((s) => s.lethal)) return 'kill';
+  if (own.some((s) => s.lethal) || strikes.some((s) => s.target === side && s.recoilLethal)) return 'kill';
   if (own.some((s) => s.hit && s.damage > 0)) return 'hit';
   return 'miss';
 }

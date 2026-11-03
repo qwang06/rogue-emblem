@@ -3067,6 +3067,10 @@ export class GridScene extends Phaser.Scene {
         this.showDamagePopup(this.unitSprites.get(event.unitId)!, 0, 'status', 'Momentum!');
         next();
         return;
+      case 'encore':
+        this.showDamagePopup(this.unitSprites.get(event.unitId)!, 0, 'status', 'Encore!');
+        next();
+        return;
       case 'status':
         this.showDamagePopup(this.unitSprites.get(event.targetId)!, 0, 'status', STATUSES[event.status].label);
         next();

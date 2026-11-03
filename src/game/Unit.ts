@@ -44,6 +44,7 @@ import {
 import { getDefaultFaction, type FactionId } from './factions.ts';
 import type { Modifier } from './modifiers.ts';
 import type { StatusId } from './statuses.ts';
+import type { Curse } from './curses.ts';
 import { getTomeSpell, isTome, knowsSpell, learnSpell, recordTomeUse, type TomeProgress } from './tomes.ts';
 import type { Team } from './turns.ts';
 import {
@@ -136,11 +137,18 @@ export class Unit {
   // What its relics and boons add for the battle (see modifiers.ts), set
   // by applyModifiers when a Warband run fields it.
   modifiers: readonly Modifier[] = Object.freeze([]);
+  // The curses its cursed gear lays on the enemies of any battle it's
+  // deployed in (see curses.ts).
+  curses: readonly Curse[] = Object.freeze([]);
   // Statuses a skill has left on it this battle (see statuses.ts), until
   // its team's next phase ends. Never saved.
   statuses: readonly StatusId[] = Object.freeze([]);
+  // Debuffs among its statuses that outlast the next time its debuffs wear
+  // off, once: one laid on its own phase, or by a unit that makes debuffs
+  // linger (see battle/commands.ts). Never saved.
+  lingering: readonly StatusId[] = Object.freeze([]);
   // How many tiles it walked this phase (its move's path), for skills that
-  // hit harder after a run up (a skill's `chargeMight`). Never saved.
+  // hit harder after a run up (a skill's `chargePower`). Never saved.
   movedTiles = 0;
   // Whether it's a monster (the monster classes set it), for modifiers
   // that only count against monsters.

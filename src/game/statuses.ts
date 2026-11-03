@@ -20,6 +20,7 @@
 // - Warded: it takes 4 less damage from every hit.
 // - Hastened: it moves 2 more tiles.
 // - Taunting: the foes it Taunted must come for it.
+// - Veiled: it has 30 more avoid (a Veil-on-wait modifier gives it).
 
 import type { Modifier } from './modifiers.ts';
 
@@ -32,6 +33,7 @@ export const STATUS_IDS = Object.freeze([
   'warded',
   'hastened',
   'taunting',
+  'veiled',
 ] as const);
 export type StatusId = (typeof STATUS_IDS)[number];
 
@@ -102,6 +104,13 @@ export const STATUSES: Readonly<Record<StatusId, Status>> = Object.freeze({
     label: 'Taunting',
     description: 'Foes it Taunted must come for it.',
     modifiers: Object.freeze([]),
+  }),
+  veiled: Object.freeze({
+    id: 'veiled',
+    kind: 'buff',
+    label: 'Veiled',
+    description: '+30 avoid.',
+    modifiers: Object.freeze([Object.freeze<Modifier>({ kind: 'combat', term: 'avoid', amount: 30 })]),
   }),
 });
 

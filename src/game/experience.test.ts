@@ -72,6 +72,12 @@ describe('getCombatOutcome', () => {
     expect(getCombatOutcome([strike('attacker', { lethal: true })], 'attacker')).toBe('kill');
   });
 
+  it('counts a striker felled by recoil as died, and its foe as the killer', () => {
+    const strikes = [strike('attacker', { recoil: 3, recoilLethal: true })];
+    expect(getCombatOutcome(strikes, 'attacker')).toBe('died');
+    expect(getCombatOutcome(strikes, 'defender')).toBe('kill');
+  });
+
   it('is died when the side is killed, even after hitting', () => {
     const strikes = [strike('attacker'), strike('defender', { lethal: true })];
     expect(getCombatOutcome(strikes, 'attacker')).toBe('died');

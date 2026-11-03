@@ -22,9 +22,9 @@ import type { Point } from './grid.ts';
 import { STATUSES, type StatusId } from './statuses.ts';
 import { getModifierSkills, type Modifier } from './modifiers.ts';
 
-// A skill: { id, label, manaCost, range, animation, might?, damageScale?,
-// push?, effect?, power? }. Its damage is a variant of the user's regular
-// hit: `might` (default 0) is added to the user's attack power, and the
+// A skill: { id, label, manaCost, range, animation, power?, damageScale?,
+// push?, effect? }. Its damage is a variant of the user's regular
+// hit: `power` (default 0) is added to the user's attack stat, and the
 // resulting damage is multiplied by `damageScale` (default 1). `range` is
 // how far away (orthogonal steps) the target can be, and `animation` names
 // the effect the presentation layer plays for it. A `push` skill also
@@ -45,15 +45,15 @@ import { getModifierSkills, type Modifier } from './modifiers.ts';
 // whose `effect` is 'buff' strikes no one: it gives its `status` to an
 // ally instead (or to every ally its area reaches). A `drain` skill heals
 // the user that share of the damage it dealt foes, rounded up; a `recoil`
-// one costs the user that much HP (never its last); `monsterMight` is
-// power added on top of `might` against a monster.
+// one costs the user that much HP (never its last); `monsterPower` is
+// added on top of `power` against a monster.
 //
 // Some skills move the user (see skillMoves.ts). A `leap` skill jumps it
 // up to that many tiles to land next to its target before it strikes (a
 // `straight` one only along a row or column, over free tiles: a charge);
 // a `retreat` one steps it that many tiles straight back from its target
 // after; a `strafe` one flies it that far in a line, striking every foe it
-// passes over, and lands it on the farthest free tile. `chargeMight` adds
+// passes over, and lands it on the farthest free tile. `chargePower` adds
 // 1 power for each tile the user walked this turn, up to that much. A
 // skill whose `effect` is 'swap' trades places with the ally it's aimed
 // at.
@@ -70,11 +70,12 @@ export interface Skill {
   manaCost: number;
   range: number;
   animation: string;
-  might?: number;
+  // Added to the user's attack stat for a strike, or the base heal of a
+  // healing skill.
+  power?: number;
   damageScale?: number;
   push?: boolean;
   effect?: 'heal' | 'buff' | 'swap';
-  power?: number;
   intelligenceScale?: number;
   area?: SkillArea;
   friendlyFire?: boolean;
@@ -82,12 +83,12 @@ export interface Skill {
   status?: StatusId;
   drain?: number;
   recoil?: number;
-  monsterMight?: number;
+  monsterPower?: number;
   leap?: number;
   straight?: boolean;
   retreat?: number;
   strafe?: number;
-  chargeMight?: number;
+  chargePower?: number;
   mine?: number;
   breach?: boolean;
   selfStatus?: StatusId;
@@ -130,7 +131,7 @@ export const POWER_STRIKE: Skill = Object.freeze({
   label: 'Power Strike',
   manaCost: 2,
   range: 1,
-  might: 3,
+  power: 3,
   animation: 'strike',
 });
 
@@ -175,7 +176,7 @@ export const SKEWER: Skill = Object.freeze({
   label: 'Skewer',
   manaCost: 3,
   range: 1,
-  might: 1,
+  power: 1,
   area: 'line',
   animation: 'strike',
 });
@@ -238,7 +239,7 @@ export const SHIELD_BASH: Skill = Object.freeze({
   label: 'Shield Bash',
   manaCost: 3,
   range: 1,
-  might: 1,
+  power: 1,
   push: true,
   animation: 'strike',
 });
@@ -345,11 +346,11 @@ export const POUNCE = promotionSkill('pounce', 'Pounce', { manaCost: 2, range: 4
 
 // A leaping overhead swing: the user jumps up to 2 tiles to land next to a
 // foe and strikes with 2 more power.
-export const JUMP_SWING = promotionSkill('jump-swing', 'Jump Swing', { range: 3, leap: 2, might: 2 });
+export const JUMP_SWING = promotionSkill('jump-swing', 'Jump Swing', { range: 3, leap: 2, power: 2 });
 
 // A lance charge: the user's regular attack on an adjacent foe, with 1
 // more power for each tile it walked this turn, up to 4.
-export const CHARGE = promotionSkill('charge', 'Charge', { manaCost: 2, chargeMight: 4 });
+export const CHARGE = promotionSkill('charge', 'Charge', { manaCost: 2, chargePower: 4 });
 
 // The ram rolls up to 3 tiles along a row or column, over free ground, to
 // slam the first foe in its way with its regular attack and push it a
@@ -417,7 +418,7 @@ export const TAUNT = promotionSkill('taunt', 'Taunt', {
 
 // A blow that splits armor: the user's regular attack with 2 more power on
 // an adjacent foe, which it leaves Sundered (3 more damage from every hit).
-export const SUNDER = promotionSkill('sunder', 'Sunder', { might: 2, status: 'sundered' });
+export const SUNDER = promotionSkill('sunder', 'Sunder', { power: 2, status: 'sundered' });
 
 // An arrow through the foot: the user's regular attack on a foe up to 2
 // tiles away, which it leaves Rooted.
@@ -447,16 +448,16 @@ export const ROAR = promotionSkill('roar', 'Roar', {
   area: 'burst',
   status: 'rooted',
 });
-export const FRENZY = promotionSkill('frenzy', 'Frenzy', { manaCost: 4, might: 6 });
-export const IMPALE = promotionSkill('impale', 'Impale', { might: 5 });
-export const LUNGE = promotionSkill('lunge', 'Lunge', { manaCost: 2, range: 2, might: 2 });
-export const CRUSHING_BLOW = promotionSkill('crushing-blow', 'Crushing Blow', { might: 5 });
-export const BLAST = promotionSkill('blast', 'Blast', { range: 2, might: 3, animation: 'stone' });
-export const BULWARK_BASH = promotionSkill('bulwark-bash', 'Bulwark Bash', { might: 3 });
-export const HOLY_STRIKE = promotionSkill('holy-strike', 'Holy Strike', { might: 3 });
+export const FRENZY = promotionSkill('frenzy', 'Frenzy', { manaCost: 4, power: 6 });
+export const IMPALE = promotionSkill('impale', 'Impale', { power: 5 });
+export const LUNGE = promotionSkill('lunge', 'Lunge', { manaCost: 2, range: 2, power: 2 });
+export const CRUSHING_BLOW = promotionSkill('crushing-blow', 'Crushing Blow', { power: 5 });
+export const BLAST = promotionSkill('blast', 'Blast', { range: 2, power: 3, animation: 'stone' });
+export const BULWARK_BASH = promotionSkill('bulwark-bash', 'Bulwark Bash', { power: 3 });
+export const HOLY_STRIKE = promotionSkill('holy-strike', 'Holy Strike', { power: 3 });
 // Holy light from up to 2 tiles away: the user's regular attack with 3
 // more power, and 3 more again against a monster.
-export const SMITE = promotionSkill('smite', 'Smite', { range: 2, might: 3, monsterMight: 3, animation: 'stone' });
+export const SMITE = promotionSkill('smite', 'Smite', { range: 2, power: 3, monsterPower: 3, animation: 'stone' });
 
 // The beast's jaws: its regular attack on an adjacent foe, healing it for
 // half the damage dealt.
@@ -464,10 +465,10 @@ export const SAVAGE_BITE = promotionSkill('savage-bite', 'Savage Bite', { manaCo
 
 // An all-out swing: the user's regular attack with 6 more power on an
 // adjacent foe, at the cost of 3 of its own HP (never its last).
-export const RECKLESS_SWING = promotionSkill('reckless-swing', 'Reckless Swing', { might: 6, recoil: 3 });
+export const RECKLESS_SWING = promotionSkill('reckless-swing', 'Reckless Swing', { power: 6, recoil: 3 });
 // The mage's signature: a burst of flame on a foe up to 2 tiles away, the
 // user's regular attack with 4 more power.
-export const FLARE = promotionSkill('flare', 'Flare', { range: 2, might: 4, animation: 'stone' });
+export const FLARE = promotionSkill('flare', 'Flare', { range: 2, power: 4, animation: 'stone' });
 
 // The mage's level-up picks. A ball of fire thrown up to 3 tiles: the
 // user's regular attack with 1 more power, on the target and every foe
@@ -475,7 +476,7 @@ export const FLARE = promotionSkill('flare', 'Flare', { range: 2, might: 4, anim
 export const FIREBALL = promotionSkill('fireball', 'Fireball', {
   manaCost: 4,
   range: 3,
-  might: 1,
+  power: 1,
   area: 'burst',
   animation: 'stone',
 });
@@ -508,9 +509,9 @@ export const SANCTUARY: Skill = Object.freeze({
 });
 
 // The skills an evolution teaches (see warband/evolutions.ts).
-export const VOLLEY = promotionSkill('volley', 'Volley', { range: 3, might: 3, animation: 'stone' });
-export const INFERNO = promotionSkill('inferno', 'Inferno', { manaCost: 4, range: 3, might: 5, animation: 'stone' });
-export const EARTHSHAKER = promotionSkill('earthshaker', 'Earthshaker', { manaCost: 4, might: 8 });
+export const VOLLEY = promotionSkill('volley', 'Volley', { range: 3, power: 3, animation: 'stone' });
+export const INFERNO = promotionSkill('inferno', 'Inferno', { manaCost: 4, range: 3, power: 5, animation: 'stone' });
+export const EARTHSHAKER = promotionSkill('earthshaker', 'Earthshaker', { manaCost: 4, power: 8 });
 // A prayer that closes an adjacent ally's wounds without a staff: it
 // restores 2 plus the user's intelligence, like the Heal staff.
 export const MEND: Skill = Object.freeze({
@@ -654,13 +655,13 @@ export function findUnitSkill(unit: SkillUser, skillId: string, trees: SkillTree
 
 // Damage a skill deals when `user` uses it on `defender`: the user's
 // regular hit (calculateDamage, of its weapon's damage type and with its
-// weapon's might) with the skill's `might` added to its attack power,
+// weapon's power) with the skill's `power` added to its attack stat,
 // times its `damageScale`, rounded up — so a scaled-down hit that would
 // have dealt damage still deals at least 1. Each side's modifiers count
 // as in an exchange the user started (withCombatBonus). Never below zero.
 // Skills don't spend weapon uses.
 export function calculateSkillDamage(skill: Skill, user: SkillFighter, defender: SkillFighter): number {
-  const { power } = DAMAGE_TYPES[getDamageType(user)];
+  const { power: stat } = DAMAGE_TYPES[getDamageType(user)];
   // Copied field by field: a Unit's weapon and armor are getters, which a
   // spread drops.
   const boosted: DamageStats = {
@@ -669,9 +670,8 @@ export function calculateSkillDamage(skill: Skill, user: SkillFighter, defender:
     weapon: user.weapon,
     bonus: getFighterBonus(user, defender, true),
   };
-  const charge = Math.min(skill.chargeMight ?? 0, user.movedTiles ?? 0);
-  boosted[power] =
-    (user[power] ?? 0) + (skill.might ?? 0) + charge + (defender.monster ? (skill.monsterMight ?? 0) : 0);
+  const charge = Math.min(skill.chargePower ?? 0, user.movedTiles ?? 0);
+  boosted[stat] = (user[stat] ?? 0) + (skill.power ?? 0) + charge + (defender.monster ? (skill.monsterPower ?? 0) : 0);
   const guarded: DamageStats = {
     defense: defender.defense,
     armorDefense: defender.armorDefense,
@@ -850,7 +850,7 @@ export function describeSkill(skill: Skill): string {
     return `Leaves a foe ${reach} ${leaves}.`;
   }
   const hit = scale === 1 ? 'Its regular hit' : scale === 0.5 ? 'Half its regular hit' : `${scale}× its regular hit`;
-  const might = skill.might ? ` with +${skill.might} power` : '';
+  const bonus = skill.power ? ` with +${skill.power} power` : '';
   const area = skill.area ? ` ${AREA_PHRASES[skill.area]}` : '';
   const allies = skill.friendlyFire ? ', allies included' : '';
   const push = skill.push ? ', then pushes it a tile away' : '';
@@ -858,10 +858,10 @@ export function describeSkill(skill: Skill): string {
     ? `, then a second hit for ${skill.followUp === 0.5 ? 'half' : `${skill.followUp}×`} that`
     : '';
   const after = status ? `, leaving it ${leaves}` : '';
-  const monsters = skill.monsterMight ? ` (+${skill.monsterMight} more against monsters)` : '';
+  const monsters = skill.monsterPower ? ` (+${skill.monsterPower} more against monsters)` : '';
   const drain = skill.drain ? `, healing it for ${skill.drain === 0.5 ? 'half' : `${skill.drain}×`} the damage` : '';
   const recoil = skill.recoil ? `, costing it ${skill.recoil} HP` : '';
-  const charge = skill.chargeMight ? ` (+1 for each tile it moved this turn, up to ${skill.chargeMight})` : '';
+  const charge = skill.chargePower ? ` (+1 for each tile it moved this turn, up to ${skill.chargePower})` : '';
   const retreat = skill.retreat
     ? `, then steps ${skill.retreat === 1 ? 'a tile' : `up to ${skill.retreat} tiles`} back`
     : '';
@@ -871,9 +871,9 @@ export function describeSkill(skill: Skill): string {
   }
   if (skill.leap) {
     const way = skill.straight ? `Charges up to ${tiles(skill.leap)} in a line` : `Leaps up to ${tiles(skill.leap)}`;
-    return `${way} to a foe, then ${hit.charAt(0).toLowerCase()}${hit.slice(1)}${might}${push}.`;
+    return `${way} to a foe, then ${hit.charAt(0).toLowerCase()}${hit.slice(1)}${bonus}${push}.`;
   }
-  return `${hit}${might}${charge}${monsters} on a foe ${reach}${area}${allies}${push}${followUp}${after}${drain}${recoil}${retreat}.`;
+  return `${hit}${bonus}${charge}${monsters} on a foe ${reach}${area}${allies}${push}${followUp}${after}${drain}${recoil}${retreat}.`;
 }
 
 export function canUseSkill(unit: { mana: number }, skill: Skill): boolean {

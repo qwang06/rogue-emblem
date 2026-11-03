@@ -278,26 +278,26 @@ describe('calculateSkillDamage', () => {
     expect(calculateSkillDamage(skill, { strength: 2 }, { defense: 2 })).toBe(0);
   });
 
-  it('applies might before scaling', () => {
-    const skill = makeSkill({ id: 'combo', label: 'Combo', manaCost: 1, range: 1, might: 2, damageScale: 0.5 });
+  it('applies power before scaling', () => {
+    const skill = makeSkill({ id: 'combo', label: 'Combo', manaCost: 1, range: 1, power: 2, damageScale: 0.5 });
     expect(calculateSkillDamage(skill, { strength: 4 }, { defense: 2 })).toBe(2);
   });
 
-  describe('with might', () => {
-    const strike = makeSkill({ id: 'smash', label: 'Smash', manaCost: 1, range: 1, might: 3 });
+  describe('with power', () => {
+    const strike = makeSkill({ id: 'smash', label: 'Smash', manaCost: 1, range: 1, power: 3 });
 
-    it("adds might to the user's strength for a physical hit", () => {
+    it("adds power to the user's strength for a physical hit", () => {
       expect(calculateSkillDamage(strike, { strength: 4 }, { defense: 2 })).toBe(5);
     });
 
-    it("adds might to the user's intelligence for a magical hit", () => {
-      const mage = { strength: 0, intelligence: 5, weapon: { type: 'magical' as const, might: 0 } };
+    it("adds power to the user's intelligence for a magical hit", () => {
+      const mage = { strength: 0, intelligence: 5, weapon: { type: 'magical' as const, power: 0 } };
       expect(calculateSkillDamage(strike, mage, { defense: 20, resistance: 1 })).toBe(7);
     });
 
-    it("builds on the weapon's might, as the regular hit does", () => {
+    it("builds on the weapon's power, as the regular hit does", () => {
       const soldier = new Soldier({ team: 'enemy' });
-      // 4 STR + 1 Iron Spear might + 3 skill might − 2 DEF.
+      // 4 STR + 1 Iron Spear power + 3 skill power − 2 DEF.
       expect(calculateSkillDamage(strike, soldier, { defense: 2 })).toBe(6);
     });
 
@@ -452,7 +452,7 @@ describe('getClassSkillPicks', () => {
 
 describe('SHIELD_BASH and WING_BUFFET', () => {
   it('strike and then push', () => {
-    expect(SHIELD_BASH).toMatchObject({ might: 1, push: true, range: 1 });
+    expect(SHIELD_BASH).toMatchObject({ power: 1, push: true, range: 1 });
     expect(WING_BUFFET).toMatchObject({ damageScale: 0.5, push: true, range: 1 });
   });
 });
@@ -513,7 +513,7 @@ describe('MEND', () => {
 });
 
 describe('calculateSkillDamage with modifiers', () => {
-  const user = { strength: 5, weapon: { type: 'physical' as const, might: 0 } };
+  const user = { strength: 5, weapon: { type: 'physical' as const, power: 0 } };
   const defender = { defense: 1 };
 
   it("adds the user's attacking damage bonus and the target's guard", () => {

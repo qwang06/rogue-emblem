@@ -1,6 +1,6 @@
 // Pure rules for weapons. A weapon is an item a unit carries in its
 // inventory (see items.ts) and fights with: it sets the unit's attack
-// range, the kind of damage it deals, and adds its might, hit and crit to
+// range, the kind of damage it deals, and adds its power, hit and crit to
 // the combat formulas (combat.ts, combatStats.ts). Each class masters some
 // weapon types and can only wield those. The equipped weapon is the first
 // one in the inventory the unit can wield; equipping another moves it to
@@ -24,8 +24,8 @@ export type WeaponType = 'physical' | 'magical' | 'siege';
 // one that takes two can't wear a shield (see canUseShield in items.ts).
 export type Hands = 1 | 2;
 
-// A weapon: { kind: 'weapon', id, label, type, hands, might, hit, crit,
-// weight, minRange, maxRange, uses }. `hands` is 1 or 2 (see Hands); `might` adds to the wielder's attack power,
+// A weapon: { kind: 'weapon', id, label, type, hands, power, hit, crit,
+// weight, minRange, maxRange, uses }. `hands` is 1 or 2 (see Hands); `power` adds to the wielder's attack power,
 // `hit` and `crit` to its hit and crit rates, `weight` slows a wielder
 // weaker than it (see getAttackSpeed in combatStats.ts). `uses` is how
 // many strikes a fresh one has, or null for one that never breaks.
@@ -37,7 +37,7 @@ export interface Weapon {
   label: string;
   type: WeaponType;
   hands: Hands;
-  might: number;
+  power: number;
   hit: number;
   crit: number;
   weight: number;
@@ -69,7 +69,7 @@ export interface WeaponAction extends MenuAction {
   uses: number | null;
   // The uses it started with, null for one that never breaks.
   maxUses: number | null;
-  might: number;
+  power: number;
   hit: number;
   crit: number;
   weight: number;
@@ -101,7 +101,7 @@ export const FISTS = weapon({
   label: 'Fists',
   type: 'physical',
   hands: 1,
-  might: 0,
+  power: 0,
   hit: 80,
   crit: 0,
   weight: 0,
@@ -116,7 +116,7 @@ export const IRON_SPEAR = weapon({
   label: 'Iron Spear',
   type: 'physical',
   hands: 1,
-  might: 1,
+  power: 1,
   hit: 80,
   crit: 0,
   weight: 3,
@@ -131,7 +131,7 @@ export const IRON_AXE = weapon({
   label: 'Iron Axe',
   type: 'physical',
   hands: 1,
-  might: 3,
+  power: 3,
   hit: 65,
   crit: 0,
   weight: 5,
@@ -147,7 +147,7 @@ export const IRON_BOW = weapon({
   label: 'Iron Bow',
   type: 'physical',
   hands: 2,
-  might: 2,
+  power: 2,
   hit: 80,
   crit: 0,
   weight: 2,
@@ -163,7 +163,7 @@ export const FIRE = weapon({
   label: 'Fire Tome',
   type: 'magical',
   hands: 1,
-  might: 2,
+  power: 2,
   hit: 85,
   crit: 0,
   weight: 1,
@@ -179,7 +179,7 @@ export const FIRE_SPELL = weapon({
   label: 'Fire',
   type: 'magical',
   hands: 1,
-  might: 2,
+  power: 2,
   hit: 85,
   crit: 0,
   weight: 1,
@@ -196,7 +196,7 @@ export const LIGHT = weapon({
   label: 'Light',
   type: 'magical',
   hands: 1,
-  might: 0,
+  power: 0,
   hit: 90,
   crit: 0,
   weight: 0,
@@ -211,7 +211,7 @@ export const POWDER_KEG = weapon({
   label: 'Powder Keg',
   type: 'siege',
   hands: 2,
-  might: 5,
+  power: 5,
   hit: 70,
   crit: 0,
   weight: 6,
@@ -226,7 +226,7 @@ export const BALLISTA = weapon({
   label: 'Ballista',
   type: 'siege',
   hands: 2,
-  might: 6,
+  power: 6,
   hit: 70,
   crit: 0,
   weight: 8,
@@ -236,13 +236,13 @@ export const BALLISTA = weapon({
 });
 
 // The monsters' natural weapons, which never break. The slime's body slam:
-// no might at all.
+// no power at all.
 export const TACKLE = weapon({
   id: 'tackle',
   label: 'Tackle',
   type: 'physical',
   hands: 1,
-  might: 0,
+  power: 0,
   hit: 75,
   crit: 0,
   weight: 0,
@@ -257,7 +257,7 @@ export const CLUB = weapon({
   label: 'Club',
   type: 'physical',
   hands: 1,
-  might: 2,
+  power: 2,
   hit: 75,
   crit: 0,
   weight: 2,
@@ -272,7 +272,7 @@ export const BONE_CLAWS = weapon({
   label: 'Bone Claws',
   type: 'physical',
   hands: 1,
-  might: 2,
+  power: 2,
   hit: 80,
   crit: 0,
   weight: 1,
@@ -287,7 +287,7 @@ export const FANGS = weapon({
   label: 'Fangs',
   type: 'physical',
   hands: 1,
-  might: 1,
+  power: 1,
   hit: 85,
   crit: 0,
   weight: 0,
@@ -302,7 +302,7 @@ export const BITE = weapon({
   label: 'Bite',
   type: 'physical',
   hands: 1,
-  might: 2,
+  power: 2,
   hit: 75,
   crit: 5,
   weight: 1,
@@ -317,7 +317,7 @@ export const GREAT_AXE = weapon({
   label: 'Great Axe',
   type: 'physical',
   hands: 2,
-  might: 3,
+  power: 3,
   hit: 65,
   crit: 0,
   weight: 4,
@@ -333,7 +333,7 @@ export const STONE_MAUL = weapon({
   label: 'Stone Maul',
   type: 'physical',
   hands: 2,
-  might: 4,
+  power: 4,
   hit: 60,
   crit: 0,
   weight: 5,
@@ -349,7 +349,7 @@ export const FIRE_BREATH = weapon({
   label: 'Fire Breath',
   type: 'physical',
   hands: 1,
-  might: 4,
+  power: 4,
   hit: 75,
   crit: 0,
   weight: 0,
@@ -366,7 +366,7 @@ export const WOODEN_SWORD = weapon({
   label: 'Wooden Sword',
   type: 'physical',
   hands: 1,
-  might: 1,
+  power: 1,
   hit: 90,
   crit: 0,
   weight: 1,
@@ -375,13 +375,13 @@ export const WOODEN_SWORD = weapon({
   uses: 20,
 });
 
-// A sharpened pole: the iron spear's might, less sure to land.
+// A sharpened pole: the iron spear's power, less sure to land.
 export const WOODEN_SPEAR = weapon({
   id: 'wooden-spear',
   label: 'Wooden Spear',
   type: 'physical',
   hands: 1,
-  might: 1,
+  power: 1,
   hit: 75,
   crit: 0,
   weight: 2,
@@ -396,7 +396,7 @@ export const WOODEN_AXE = weapon({
   label: 'Wooden Axe',
   type: 'physical',
   hands: 1,
-  might: 2,
+  power: 2,
   hit: 60,
   crit: 0,
   weight: 3,
@@ -546,7 +546,7 @@ export function getWeaponActions(
         type: weapon.type,
         uses,
         maxUses: weapon.uses,
-        might: weapon.might,
+        power: weapon.power,
         hit: weapon.hit,
         crit: weapon.crit,
         weight: weapon.weight,

@@ -1,7 +1,7 @@
 // Pure combat rules: which tiles a unit can strike, which of those hold a
 // valid target, how much damage a hit deals, and how a whole exchange of
 // strikes plays out. A unit fights with its equipped weapon (weapons.ts),
-// which sets its range, damage type and might, and with whatever its
+// which sets its range, damage type and power, and with whatever its
 // modifiers (modifiers.ts) add for the exchange at hand. No Phaser, no rendering,
 // no hidden state — applying the damage (and spending weapon uses) on a
 // Unit is the caller's job.
@@ -17,18 +17,27 @@ import {
   type Rng,
 } from './combatStats.ts';
 import type { Grid, Point } from './grid.ts';
-import { getCombatBonus, hasModifier, isWounded, sumModifiers, type CombatBonus, type Modifier } from './modifiers.ts';
-import { getStatusModifiers, type StatusId } from './statuses.ts';
+import {
+  getCombatBonus,
+  hasModifier,
+  isConditionMet,
+  isWounded,
+  sumModifiers,
+  type CombatBonus,
+  type CombatContext,
+  type Modifier,
+} from './modifiers.ts';
+import { getStatusModifiers, STATUSES, type StatusId } from './statuses.ts';
 import { WEAPON_DAMAGE_TYPES, type Weapon } from './weapons.ts';
 
 export type DamageType = 'physical' | 'magical';
 export type CombatSide = 'attacker' | 'defender';
 
 // The weapon numbers combat reads.
-export type CombatWeapon = Pick<Weapon, 'type' | 'might' | 'hit' | 'crit' | 'weight' | 'minRange' | 'maxRange'>;
+export type CombatWeapon = Pick<Weapon, 'type' | 'power' | 'hit' | 'crit' | 'weight' | 'minRange' | 'maxRange'>;
 
 // What the damage formulas read off a unit. Missing stats count as 0; a
-// unit without a weapon hits physically with no might. `armorDefense` is
+// unit without a weapon hits physically with no power. `armorDefense` is
 // what its worn armor adds to its defense (see getArmorDefense in items.ts),
 // and `bonus` what its modifiers add (damage dealt, guard against damage
 // taken) for the exchange at hand.
@@ -38,7 +47,7 @@ export interface DamageStats {
   defense?: number;
   armorDefense?: number;
   resistance?: number;
-  weapon?: Pick<CombatWeapon, 'type' | 'might'> | null;
+  weapon?: Pick<CombatWeapon, 'type' | 'power'> | null;
   bonus?: Partial<CombatBonus>;
 }
 
@@ -84,6 +93,10 @@ export interface Strike {
   // Whether a `finisher` modifier felled the target (its damage counts
   // the rest of the target's HP).
   finished?: boolean;
+  // HP the target's `thorns` and `reflect` cost the striker, when any, and
+  // whether that felled the striker (which ends the exchange).
+  recoil?: number;
+  recoilLethal?: boolean;
 }
 
 export interface CombatResult {
@@ -195,17 +208,17 @@ export function getDamageType(attacker: Pick<DamageStats, 'weapon'>): DamageType
   return WEAPON_DAMAGE_TYPES[type];
 }
 
-// Damage one hit deals: strength plus weapon might minus defense (and
-// worn armor) for a physical hit, intelligence plus might minus resistance for a
+// Damage one hit deals: strength plus weapon power minus defense (and
+// worn armor) for a physical hit, intelligence plus power minus resistance for a
 // magical one, plus the attacker's damage bonus and minus the defender's
 // guard bonus, never below zero, then scaled by the percent bonuses
 // (scaleDamage). Missing stats count as 0.
 export function calculateDamage(attacker: DamageStats, defender: DamageStats): number {
-  const { power, guard } = DAMAGE_TYPES[getDamageType(attacker)];
-  const might = attacker.weapon?.might ?? 0;
+  const { power: stat, guard } = DAMAGE_TYPES[getDamageType(attacker)];
+  const power = attacker.weapon?.power ?? 0;
   const armor = guard === 'defense' ? (defender.armorDefense ?? 0) : 0;
   const bonus = (attacker.bonus?.damage ?? 0) - (defender.bonus?.guard ?? 0);
-  const base = Math.max(0, (attacker[power] ?? 0) + might + bonus - (defender[guard] ?? 0) - armor);
+  const base = Math.max(0, (attacker[stat] ?? 0) + power + bonus - (defender[guard] ?? 0) - armor);
   return scaleDamage(base, attacker.bonus?.['damage-percent'] ?? 0, defender.bonus?.['guard-percent'] ?? 0);
 }
 
@@ -231,9 +244,32 @@ export interface SkillFighter extends DamageStats {
   movedTiles?: number;
 }
 
+// How many debuffs (statuses.ts) a unit carries.
+export function countDebuffs(statuses: readonly StatusId[] | undefined): number {
+  return (statuses ?? []).filter((id) => STATUSES[id].kind === 'debuff').length;
+}
+
+// Where `unit` stands as it fights `opponent`, for the modifier conditions
+// (see isConditionMet in modifiers.ts).
+export function getFighterContext(unit: SkillFighter, opponent: SkillFighter, attacking: boolean): CombatContext {
+  const foeHealth = opponent.health;
+  return {
+    attacking,
+    wounded: unit.health !== undefined && isWounded({ health: unit.health, maxHealth: unit.maxHealth }),
+    vsMonster: opponent.monster === true,
+    foeWounded: foeHealth !== undefined && isWounded({ health: foeHealth, maxHealth: opponent.maxHealth }),
+    foeUnhurt: foeHealth !== undefined && opponent.maxHealth !== undefined && foeHealth >= opponent.maxHealth,
+    foeDebuffed: countDebuffs(opponent.statuses) > 0,
+    foeMarked: opponent.statuses?.includes('marked') ?? false,
+  };
+}
+
 // What `unit`'s modifiers and statuses (statuses.ts) add (getCombatBonus)
-// as it fights `opponent`, given whether it's `attacking`, is under half
-// HP and faces a monster; undefined without either.
+// as it fights `opponent`, given whether it's `attacking` (see
+// getFighterContext), plus its gear effects that count something: crit for
+// each of the foe's debuffs (`crit-per-foe-debuff`) and a term for each
+// full tenth of its max HP it's missing (`missing-health-bonus`);
+// undefined without either.
 export function getFighterBonus(
   unit: SkillFighter,
   opponent: SkillFighter,
@@ -241,20 +277,36 @@ export function getFighterBonus(
 ): CombatBonus | undefined {
   const modifiers = [...(unit.modifiers ?? []), ...getStatusModifiers(unit.statuses)];
   if (modifiers.length === 0) return undefined;
-  return getCombatBonus(modifiers, {
-    attacking,
-    wounded: unit.health !== undefined && isWounded({ health: unit.health, maxHealth: unit.maxHealth }),
-    vsMonster: opponent.monster === true,
-  });
+  const bonus = { ...getCombatBonus(modifiers, getFighterContext(unit, opponent, attacking)) };
+  bonus.crit += sumModifiers(modifiers, 'crit-per-foe-debuff') * countDebuffs(opponent.statuses);
+  const tenthsMissing = getTenthsMissing(unit);
+  if (tenthsMissing > 0) {
+    for (const modifier of modifiers) {
+      if (modifier.kind === 'missing-health-bonus') bonus[modifier.term] += modifier.amount * tenthsMissing;
+    }
+  }
+  return Object.freeze(bonus);
+}
+
+// How many full tenths of its max HP a unit is missing (0 when it has no
+// max HP to measure against).
+export function getTenthsMissing(unit: { health?: number; maxHealth?: number }): number {
+  if (unit.health === undefined || !unit.maxHealth) return 0;
+  return Math.floor((Math.max(0, unit.maxHealth - unit.health) * 10) / unit.maxHealth);
 }
 
 // `unit` as it fights `opponent` in one exchange, as the attacker or not:
 // a plain copy of the stats the formulas read, with `bonus` set to what
 // its modifiers add (getFighterBonus). A unit without modifiers comes back
 // as it is. Works on a Unit, whose weapon and armor are getters.
+// A `sure-hit` with a condition is kept only when it holds.
 export function withCombatBonus<T extends Fighter>(unit: T, opponent: Fighter, attacking: boolean): T {
   const bonus = getFighterBonus(unit, opponent, attacking);
   if (!bonus) return unit;
+  const context = getFighterContext(unit, opponent, attacking);
+  const modifiers = unit.modifiers?.filter(
+    (modifier) => modifier.kind !== 'sure-hit' || isConditionMet(modifier.when, context),
+  );
   return {
     health: unit.health,
     maxHealth: unit.maxHealth,
@@ -270,7 +322,7 @@ export function withCombatBonus<T extends Fighter>(unit: T, opponent: Fighter, a
     weapon: unit.weapon,
     weaponUses: unit.weaponUses,
     monster: unit.monster,
-    modifiers: unit.modifiers,
+    modifiers,
     statuses: unit.statuses,
     bonus,
   } as T;
@@ -350,7 +402,10 @@ function strikesAvailable(unit: Pick<Fighter, 'weapon' | 'weaponUses'>): number 
 // heals the striker that share of the HP it took (up to its max HP, as the
 // strike's `drain`), and after each strike `twin-strike` rolls for one
 // more by the same side at once, while its weapon has uses left (a twin
-// strike can't chain into another). Combat stops as soon as a unit dies. Nothing is mutated — returns
+// strike can't chain into another). A crit that fells the foe heals an
+// `overkill-heal` striker by the damage past the foe's HP (in `drain` too),
+// and a landed strike the foe survives costs the striker its recoil
+// (getRecoil: thorns and reflect). Combat stops as soon as a unit dies. Nothing is mutated — returns
 // { strikes, attackerHealth, defenderHealth }, where strikes is the ordered
 // list [{ by, target, damage, hit, crit, lethal }] with `by` / `target`
 // being 'attacker' or 'defender', for the caller to apply and animate.
@@ -393,11 +448,13 @@ export function resolveCombat(
       finished = true;
     }
     const dealt = Math.min(damage, health[target]);
+    const overkill = crit && damage > health[target] ? damage - health[target] : 0;
     health[target] -= dealt;
     const lethal = health[target] === 0;
     const strike: Strike = { by, target, damage, hit, crit, lethal };
     if (finished) strike.finished = true;
-    const drained = Math.floor((dealt * sumModifiers(striker.modifiers, 'lifesteal')) / 100);
+    const overkillHeal = lethal && hasModifier(striker.modifiers, 'overkill-heal') ? overkill : 0;
+    const drained = Math.floor((dealt * sumModifiers(striker.modifiers, 'lifesteal')) / 100) + overkillHeal;
     const room = striker.maxHealth === undefined ? drained : striker.maxHealth - health[by];
     const drain = Math.max(0, Math.min(drained, room));
     if (drain > 0) {
@@ -406,6 +463,15 @@ export function resolveCombat(
     }
     strikes.push(strike);
     if (lethal) break;
+    const recoil = Math.min(health[by], hit ? getRecoil(struck, dealt, distance) : 0);
+    if (recoil > 0) {
+      health[by] -= recoil;
+      strike.recoil = recoil;
+      if (health[by] === 0) {
+        strike.recoilLethal = true;
+        break;
+      }
+    }
     const twin = sumModifiers(striker.modifiers, 'twin-strike');
     if (twin > 0 && !twinAt.has(i) && usesLeft[by] > 0 && rollChance(Math.min(100, twin), rng)) {
       usesLeft[by]--;
@@ -415,6 +481,22 @@ export function resolveCombat(
   }
 
   return { strikes, attackerHealth: health.attacker, defenderHealth: health.defender };
+}
+
+// What a landed strike that dealt `dealt` to `struck` from `distance` tiles
+// costs the striker: `struck`'s thorns from the next tile, plus its reflect
+// percent of `dealt` (a reflect naming a status counts only while `struck`
+// has it), rounded down. A strike that fells `struck` costs nothing.
+export function getRecoil(struck: Pick<Fighter, 'modifiers' | 'statuses'>, dealt: number, distance: number): number {
+  let thorns = 0;
+  let percent = 0;
+  for (const modifier of struck.modifiers ?? []) {
+    if (modifier.kind === 'thorns' && distance === 1) thorns += modifier.amount;
+    if (modifier.kind === 'reflect' && (!modifier.status || struck.statuses?.includes(modifier.status))) {
+      percent += modifier.percent;
+    }
+  }
+  return thorns + Math.floor((dealt * percent) / 100);
 }
 
 // What an attack would look like before it's made, for the forecast panel:

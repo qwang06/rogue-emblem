@@ -499,6 +499,129 @@ describe('modifiers', () => {
     expect(state.kills.get('hero')).toBe(1);
   });
 
+  it('lays status-on-hit statuses on a foe it hits, the crit ones only on a crit', () => {
+    const start = finisher([
+      { kind: 'sure-hit' },
+      { kind: 'combat', term: 'crit', amount: -1000 },
+      { kind: 'status-on-hit', status: 'marked' },
+      { kind: 'status-on-hit', status: 'sundered', on: 'crit' },
+    ]);
+    start.units.get('foe')!.health = 20;
+    const { state, events } = run(start, strike);
+    expect(events).toContainEqual({ type: 'status', unitId: 'hero', targetId: 'foe', status: 'marked' });
+    expect(state.units.get('foe')!.statuses).toEqual(['marked']);
+  });
+
+  it('stacks a kill-stack term on each kill and heals a kill-heal-percent share', () => {
+    const start = finisher([
+      { kind: 'kill-stack', term: 'damage', amount: 2 },
+      { kind: 'kill-heal-percent', percent: 100 },
+    ]);
+    start.units.get('hero')!.health = 5;
+    const hero = run(start, strike).state.units.get('hero')!;
+    expect(hero.health).toBe(20);
+    expect(hero.modifiers).toContainEqual({ kind: 'combat', term: 'damage', amount: 2 });
+  });
+
+  it('lets an encore unit act again after a kill, once a phase', () => {
+    const hero = makeTestUnit({ team: 'player' });
+    hero.modifiers = [{ kind: 'encore' }];
+    const start = createTestBattle({
+      west: { unit: makeTestUnit({ team: 'enemy', health: 6 }), at: { x: 0, y: 0 } },
+      hero: { unit: hero, at: { x: 1, y: 0 } },
+      east: { unit: makeTestUnit({ team: 'enemy', health: 6 }), at: { x: 2, y: 0 } },
+      other: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 7, y: 0 } },
+    });
+    const first = run(start, { type: 'attack', unitId: 'hero', target: { x: 0, y: 0 } });
+    expect(first.events).toContainEqual({ type: 'encore', unitId: 'hero' });
+    expect(first.state.turnState!.done).not.toContain('hero');
+    const second = run(first.state, { type: 'attack', unitId: 'hero', target: { x: 2, y: 0 } });
+    expect(second.state.units.has('east')).toBe(false);
+    expect(types(second.events)).not.toContain('encore');
+    // Its action over, the player's phase ends.
+    expect(second.state.turnState!.team).toBe('enemy');
+  });
+
+  it("passes a felled foe's debuffs to the foe nearest it with contagion", () => {
+    const start = finisher([{ kind: 'contagion' }]);
+    start.units.get('foe')!.statuses = ['marked', 'rooted'];
+    const { state } = run(start, strike);
+    expect(state.units.get('other')!.statuses).toEqual(['marked', 'rooted']);
+  });
+
+  it('lays status-on-recoil statuses on a striker its recoil hurts', () => {
+    const start = finisher([{ kind: 'sure-hit' }]);
+    const foe = start.units.get('foe')!;
+    foe.health = 20;
+    foe.modifiers = [
+      { kind: 'thorns', amount: 1 },
+      { kind: 'status-on-recoil', status: 'sundered' },
+    ];
+    const { state } = run(start, strike);
+    // Laid on its own phase, it lingers through the enemy phase.
+    expect(state.turnState!.team).toBe('enemy');
+    expect(state.units.get('hero')!.statuses).toContain('sundered');
+    expect(state.units.get('hero')!.lingering).toEqual([]);
+  });
+
+  it('makes the debuffs a linger-debuffs unit lays last one more foe phase', () => {
+    const start = finisher([
+      { kind: 'sure-hit' },
+      { kind: 'linger-debuffs' },
+      { kind: 'status-on-hit', status: 'marked' },
+    ]);
+    start.units.get('foe')!.health = 20;
+    const marked = (state: BattleState) => state.units.get('foe')!.statuses.includes('marked');
+    let { state } = run(start, strike);
+    expect(marked(state)).toBe(true);
+    // Through the enemy phase, then the next turn's player phase, then the
+    // end of its second enemy phase.
+    state = run(state, { type: 'end-phase' }).state;
+    expect(state.turnState!.team).toBe('player');
+    expect(marked(state)).toBe(true);
+    state = run(state, { type: 'end-phase' }).state;
+    expect(marked(state)).toBe(true);
+    state = run(state, { type: 'end-phase' }).state;
+    expect(marked(state)).toBe(false);
+  });
+
+  it('veils a unit with veil-on-wait when it waits', () => {
+    const start = finisher([{ kind: 'veil-on-wait' }]);
+    const { state, events } = run(start, { type: 'wait', unitId: 'hero' });
+    expect(state.units.get('hero')!.statuses).toEqual(['veiled']);
+    expect(events).toContainEqual({ type: 'status', unitId: 'hero', targetId: 'hero', status: 'veiled' });
+  });
+
+  it('taunts the foes beside a taunt-aura unit as its phase starts', () => {
+    const hero = makeTestUnit({ team: 'player' });
+    hero.modifiers = [{ kind: 'taunt-aura' }];
+    const state = createTestBattle({
+      hero: { unit: hero, at: { x: 0, y: 0 } },
+      near: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 1, y: 0 } },
+      far: { unit: makeTestUnit({ team: 'enemy' }), at: { x: 5, y: 0 } },
+    });
+    expect(state.units.get('near')!.statuses).toEqual(['taunted']);
+    expect(state.units.get('far')!.statuses).toEqual([]);
+    expect(state.units.get('hero')!.statuses).toEqual(['taunting']);
+  });
+
+  it('hurts a striker that lands a hit on a thorny foe, and counts its fall as a kill for the foe', () => {
+    const hero = makeTestUnit({ team: 'player', health: 2 });
+    hero.modifiers = [{ kind: 'sure-hit' }];
+    const foe = makeTestUnit({ team: 'enemy' });
+    foe.modifiers = [{ kind: 'thorns', amount: 3 }];
+    const start = createTestBattle({
+      hero: { unit: hero, at: { x: 0, y: 0 } },
+      foe: { unit: foe, at: { x: 1, y: 0 } },
+    });
+    const { state, events } = run(start, { type: 'attack', unitId: 'hero', target: { x: 1, y: 0 } });
+    expect(events).toContainEqual({ type: 'recoil', unitId: 'hero', damage: 2, health: 0 });
+    expect(events.filter((event) => event.type === 'strike')).toHaveLength(1);
+    expect(state.units.has('hero')).toBe(false);
+    expect(state.kills.get('foe')).toBe(1);
+    expect(state.units.get('foe')!.health).toBe(20 - 6);
+  });
+
   it('chains a kill into one free, uncountered strike on a foe in reach', () => {
     const hero = makeTestUnit({ team: 'player' });
     hero.modifiers = [{ kind: 'chain-kill', percent: 100 }];

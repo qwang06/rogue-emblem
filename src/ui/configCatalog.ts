@@ -121,7 +121,7 @@ export function getConfigCatalog(): readonly ConfigGroup[] {
         {
           id: 'weapons',
           title: 'Weapons',
-          description: 'Might, hit, crit, weight, range and uses of every weapon.',
+          description: 'Power, hit, crit, weight, range and uses of every weapon.',
           sources: ['src/game/weapons.ts'],
           summary: plural(WEAPONS.length, 'weapon'),
         },
