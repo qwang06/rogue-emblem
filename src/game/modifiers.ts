@@ -105,7 +105,27 @@ export type Modifier =
   | { kind: 'missing-health-bonus'; term: CombatTerm; amount: number }
   | { kind: 'thorns'; amount: number }
   | { kind: 'reflect'; percent: number; status?: StatusId }
-  | { kind: 'overkill-heal' };
+  | { kind: 'overkill-heal' }
+  // Gear effects the battle's commands play (see battle/commands.ts). A
+  // strike of its that lands (`on` 'hit', the default) or crits lays
+  // `status` on the foe it struck, if the foe survives (`status-on-hit`);
+  // its recoil lays `status` on the striker (`status-on-recoil`); each kill
+  // adds `amount` to `term` for the rest of the battle (`kill-stack`) and
+  // heals `percent` of its max HP (`kill-heal-percent`); a kill in its own
+  // attack lets it act again, once per phase (`encore`); a foe it fells
+  // passes its debuffs to the foe nearest it (`contagion`); as its phase
+  // starts, it Taunts the foes beside it (`taunt-aura`); waiting leaves it
+  // Veiled (`veil-on-wait`); the debuffs it lays last one more of the
+  // foe's phases (`linger-debuffs`).
+  | { kind: 'status-on-hit'; status: StatusId; on?: 'hit' | 'crit' }
+  | { kind: 'status-on-recoil'; status: StatusId }
+  | { kind: 'kill-stack'; term: CombatTerm; amount: number }
+  | { kind: 'kill-heal-percent'; percent: number }
+  | { kind: 'encore' }
+  | { kind: 'contagion' }
+  | { kind: 'taunt-aura' }
+  | { kind: 'veil-on-wait' }
+  | { kind: 'linger-debuffs' };
 
 export type ModifierKind = Modifier['kind'];
 

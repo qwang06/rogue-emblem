@@ -139,6 +139,10 @@ export class Unit {
   // Statuses a skill has left on it this battle (see statuses.ts), until
   // its team's next phase ends. Never saved.
   statuses: readonly StatusId[] = Object.freeze([]);
+  // Debuffs among its statuses that outlast the next time its debuffs wear
+  // off, once: one laid on its own phase, or by a unit that makes debuffs
+  // linger (see battle/commands.ts). Never saved.
+  lingering: readonly StatusId[] = Object.freeze([]);
   // How many tiles it walked this phase (its move's path), for skills that
   // hit harder after a run up (a skill's `chargePower`). Never saved.
   movedTiles = 0;
