@@ -1,5 +1,6 @@
 import { GlyphIcon } from './GlyphIcon.tsx';
 import { MenuIcon } from './MenuIcon.tsx';
+import { RelicIcon } from './RelicIcon.tsx';
 import { useGameStore } from './useGameStore.ts';
 import { menuItemPointerProps } from './menuPointer.ts';
 
@@ -9,7 +10,7 @@ import { menuItemPointerProps } from './menuPointer.ts';
 // the promotion screen (PromotionScreen), Rest heals everyone for gold,
 // Mentors opens the mentor screen (MentorScreen), Next Stage marches on.
 // The warband's gold, behind a coin, sits in the window's bottom border, and the relics it
-// holds are listed beside the menu (below it on a narrow stage). It hides
+// holds are listed, each by its icon, beside the menu (below it on a narrow stage). It hides
 // while one of those screens is open. GridScene handles the input; the
 // mouse is forwarded to it.
 export function CampMenu() {
@@ -63,6 +64,7 @@ export function CampMenu() {
           <ul className="camp-relics__list">
             {relics.map((relic) => (
               <li key={relic.id} className="camp-relics__relic">
+                <RelicIcon id={relic.id} className="camp-relics__icon" />
                 <span className="camp-relics__name">{relic.name}</span>
                 <span className="camp-relics__description">{relic.description}</span>
               </li>

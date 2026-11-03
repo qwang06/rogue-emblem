@@ -109,11 +109,15 @@ export function getWallAutotile(palette: BuildingPalette): Autotile {
 }
 
 // A spike trap on each spikes cell (see hazards.ts), under units, off
-// `propsSheet`.
-export function getHazardSprites(grid: Grid, spikesTile: SheetTile, propsSheet: typeof MAP_PROPS_SHEET): MapSprite[] {
+// `spikesSheet`.
+export function getHazardSprites(
+  grid: Grid,
+  spikesTile: SheetTile,
+  spikesSheet: { key: string; columns: number },
+): MapSprite[] {
   return grid.cells
     .filter(({ terrain }) => terrain === 'spikes')
-    .map(({ x, y }) => ({ x, y, tile: spikesTile, layer: 'ground' as const, sheet: propsSheet }));
+    .map(({ x, y }) => ({ x, y, tile: spikesTile, layer: 'ground' as const, sheet: spikesSheet }));
 }
 
 // Overlays for crossings: a bridge on each bridge cell (running north–south

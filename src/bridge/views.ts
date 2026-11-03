@@ -290,6 +290,9 @@ export interface RewardAction extends MenuAction {
   // The icon (a SPRITE_URLS key, getItemSprite) of the item a Supplies,
   // Arms or Seal reward gives; absent on other rewards.
   itemIcon?: string;
+  // The relic a Relic reward gives (its icon, see RELIC_ICONS); absent on
+  // other rewards.
+  relicId?: string;
   // Each roster unit's HP after taking it, in roster order, for a reward
   // that restores HP (see previewRewardHealth), else null.
   healthAfter: readonly { health: number; maxHealth: number }[] | null;
@@ -824,6 +827,7 @@ export function toRewardAction(reward: Reward, index: number, run: RunState | nu
     healthAfter,
     ...(unit ? { sprite: getUnitSprite(unit.classId) } : {}),
     ...(itemIcon ? { itemIcon } : {}),
+    ...(reward.kind === 'relic' ? { relicId: reward.relicId } : {}),
   });
 }
 

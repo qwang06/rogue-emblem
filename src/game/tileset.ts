@@ -215,10 +215,11 @@ export const BRIDGE_ART: { vertical: SheetTile; horizontal: SheetTile } = {
 
 // Map props the terrain sheet doesn't have, drawn to match it by
 // .claude/skills/tileset/scripts/draw-map-props.js: a gateway per palette
-// ford stepping stones and a spike trap. A 32px sheet like the terrain one.
+// and ford stepping stones (its spike trap is no longer drawn: see
+// TRAP_ART). A 32px sheet like the terrain one.
 export const MAP_PROPS_SHEET = { key: 'map-props', columns: 11 };
 
-// The props sheet a map in each season draws its gateways, ford and spikes
+// The props sheet a map in each season draws its gateways and ford
 // from: the starship's has its own sci-fi gateways (same layout, made by
 // recolor-season.js); the rest share MAP_PROPS_SHEET.
 export const SEASON_PROPS_SHEETS: Readonly<Record<Season, typeof MAP_PROPS_SHEET>> = {
@@ -248,9 +249,36 @@ export const GATE_ART: Record<BuildingPaletteName, { posts: SheetTile; lintel: S
 // Ford stepping stones on MAP_PROPS_SHEET, over a ford's water.
 export const FORD_ART: SheetTile = [10, 0];
 
-// A spike trap on MAP_PROPS_SHEET, over the ground of a spikes cell
-// (src/game/hazards.ts).
-export const SPIKES_ART: SheetTile = [10, 1];
+// A trap's animation strip in src/assets/traps/ (16px art doubled, six
+// frames left to right, see the tileset skill), loaded under `key` at its
+// frame size: `rest` is the frame it sits at on the map, `trigger` the
+// frames it plays once when it goes off.
+export interface TrapArt {
+  key: string;
+  frameWidth: number;
+  frameHeight: number;
+  rest: number;
+  trigger: readonly number[];
+}
+
+// The traps the game draws: a spike trap on each spikes cell
+// (src/game/hazards.ts), which springs when a unit is shoved onto it, and
+// the powder mine marking a mine the player's side laid, which blows up
+// when a foe trips it. The mine's 64px frames center on its tile so the
+// blast spills over. The bear trap, pitfall and fire vent strips in
+// src/assets/traps/ aren't used yet.
+export const TRAP_ART = {
+  spikes: { key: 'trap-spikes', frameWidth: 32, frameHeight: 32, rest: 1, trigger: [2, 3, 4, 5, 1] },
+  mine: { key: 'trap-powder-mine', frameWidth: 64, frameHeight: 64, rest: 0, trigger: [1, 2, 3, 4] },
+} as const satisfies Record<string, TrapArt>;
+
+// How long each trap frame shows as it goes off.
+export const TRAP_FRAME_MS = 167;
+
+// The spike trap's strip as a sheet for map sprites, and its resting frame
+// on it, over the ground of a spikes cell.
+export const SPIKES_SHEET = { key: TRAP_ART.spikes.key, columns: 6 };
+export const SPIKES_ART: SheetTile = [TRAP_ART.spikes.rest, 0];
 
 // The art body each faction class wears (factions.ts): a unit of the class
 // wears its faction's version of the body, e.g. a Sunward archer
@@ -547,13 +575,14 @@ export function getAllUnitSheets(art: string): UnitSheet[] {
   return [...main, ...extras];
 }
 
-// The frame size of every unit sheet cut differently from one tile, by
-// texture key: how GridScene loads them.
+// The frame size of every unit sheet cut differently from one tile, and
+// of each trap strip (TRAP_ART), by texture key: how GridScene loads them.
 export function getUnitSheetFrameSizes(): Record<string, { frameWidth: number; frameHeight: number }> {
   const sizes: Record<string, { frameWidth: number; frameHeight: number }> = {};
   for (const art of Object.keys(UNIT_ART)) {
     for (const { key, frameWidth, frameHeight } of getAllUnitSheets(art)) sizes[key] = { frameWidth, frameHeight };
   }
+  for (const { key, frameWidth, frameHeight } of Object.values(TRAP_ART)) sizes[key] = { frameWidth, frameHeight };
   return sizes;
 }
 

@@ -9,7 +9,7 @@
 //   [i, 0] gateway posts for palette i (GATE_PALETTES order), drawn under units
 //   [i, 1] gateway lintel for palette i, drawn over units
 //   [10, 0] ford stepping stones, drawn over the river's water
-//   [10, 1] a spike trap, drawn over the ground under units
+//   [10, 1] a spike trap (no longer drawn: the game uses src/assets/traps/spikes.png)
 
 import { decode, encode } from './dump-png.js';
 

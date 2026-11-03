@@ -26,6 +26,8 @@ import {
   getUnitAnimations,
   getUnitSheet,
   getUnitSheetFrameSizes,
+  SPIKES_SHEET,
+  TRAP_ART,
   hasBakedShadow,
   UNIT_SPRITES,
   FACTION_BODIES,
@@ -75,6 +77,16 @@ describe('sprite keys', () => {
     }
     expect(SEASON_TERRAIN_SHEETS.summer).toBe(TERRAIN_SHEET);
     expect(new Set(SEASONS.map((season) => SEASON_TERRAIN_SHEETS[season].key)).size).toBe(SEASONS.length);
+  });
+
+  it('loads every trap strip at its own frame size, with its frames on the strip', () => {
+    const sizes = getUnitSheetFrameSizes();
+    for (const { key, frameWidth, frameHeight, rest, trigger } of Object.values(TRAP_ART)) {
+      expect(SPRITE_URLS).toHaveProperty([key]);
+      expect(sizes[key]).toEqual({ frameWidth, frameHeight });
+      for (const frame of [rest, ...trigger]) expect(frame, key).toBeLessThan(6);
+    }
+    expect(SPIKES_SHEET.key).toBe(TRAP_ART.spikes.key);
   });
 
   it('names an image for every tree', () => {

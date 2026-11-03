@@ -2819,6 +2819,12 @@ kbd {
   font-size: clamp(1.1rem, 4vh, 1.5rem);
 }
 
+.title-menu__item--relic {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .title-menu__sprites {
   display: flex;
   flex: none;
@@ -4615,7 +4621,21 @@ textarea.draft-input {
 
 .camp-relics__relic {
   display: grid;
-  gap: 2px;
+  grid-template-columns: auto 1fr;
+  column-gap: 8px;
+  row-gap: 2px;
+}
+
+.camp-relics__icon {
+  grid-row: span 2;
+}
+
+.relic-icon {
+  display: block;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  image-rendering: pixelated;
 }
 
 .camp-relics__name {
