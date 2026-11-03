@@ -18,6 +18,7 @@ import { WARBAND_NAMES } from './names.ts';
 import { findQuirk, rollQuirk } from './quirks.ts';
 import { ALL_STARTING_CLASSES } from './startingClasses.ts';
 import { applyHeatToClearGold } from './heat.ts';
+import { findKeystone, isKeystoneStage, rollKeystones } from './keystones.ts';
 import {
   BOUNTY_GOLD_PER_KILL,
   BOUNTY_LEDGER,
@@ -87,7 +88,7 @@ export const REROLL_COST = 10;
 export const REROLL_COST_STEP = 10;
 
 export type RewardKind =
-  'recruit' | 'draft' | 'rest' | 'supplies' | 'relic' | 'gold' | 'arms' | 'lesson' | 'scroll' | 'seal';
+  'recruit' | 'draft' | 'rest' | 'supplies' | 'relic' | 'gold' | 'arms' | 'lesson' | 'scroll' | 'seal' | 'keystone';
 
 export type Reward =
   // A new unit joins the roster.
@@ -112,7 +113,9 @@ export type Reward =
   // mentors.ts).
   | { kind: 'scroll' }
   // Gold for the warband.
-  | { kind: 'gold'; amount: number };
+  | { kind: 'gold'; amount: number }
+  // A keystone (keystones.ts), replacing the one the warband holds.
+  | { kind: 'keystone'; keystoneId: string };
 
 // The gold a cleared stage pays: STAGE_CLEAR_GOLD, STAGE_CLEAR_GOLD_PER_STAGE
 // for each stage, FLAWLESS_BONUS_GOLD when `losses` (units that died in
@@ -169,6 +172,11 @@ export function getRecruitTarget(stage: number): number {
 // and a fort's always hold one.
 export function rollStageRewards(run: RunState, stage: number, rerolls: number = 0): readonly Reward[] {
   const rng = createSeededRng((getRewardSeed(run.seed, stage) + rerolls) >>> 0);
+  if (isKeystoneStage(stage)) {
+    const keystones = rollKeystones(rng, run.keystone);
+    if (keystones.length > 0)
+      return Object.freeze(keystones.map(({ id }) => Object.freeze({ kind: 'keystone' as const, keystoneId: id })));
+  }
   const count = getRewardChoices(run) + (isBigClear(run, stage) ? BIG_CLEAR_EXTRA_CHOICES : 0);
   const relics = isEliteClear(run, stage) ? rollOfferableRelics(rng, run.relics, count) : [];
   if (relics.length > 0)
@@ -321,6 +329,10 @@ function createReward(kind: RewardKind, run: RunState, stage: number, rng: Rng, 
       return { kind };
     case 'gold':
       return { kind, amount: PURSE_GOLD + PURSE_GOLD_PER_STAGE * stage };
+    case 'keystone':
+      // Never in the kinds rollRewards draws; keystones come only from
+      // rollStageRewards on a keystone stage.
+      return { kind, keystoneId: rollKeystones(rng, run.keystone, 1)[0]?.id ?? '' };
   }
 }
 
@@ -421,6 +433,8 @@ function applyRewardEffect(run: RunState, reward: Reward, classes: readonly Unit
       return addScrolls(run);
     case 'gold':
       return addGold(run, reward.amount);
+    case 'keystone':
+      return findKeystone(reward.keystoneId) ? freeze({ ...run, keystone: reward.keystoneId }) : run;
   }
 }
 
@@ -478,7 +492,7 @@ export function addGold(run: RunState, amount: number): RunState {
 export function describeReward(
   reward: Reward,
   classes: readonly UnitClass[] = UNIT_CLASSES,
-  run: Pick<RunState, 'stage' | 'relics'> | null = null,
+  run: Pick<RunState, 'stage' | 'relics' | 'keystone'> | null = null,
 ): { label: string; description: string } {
   switch (reward.kind) {
     case 'recruit': {
@@ -529,6 +543,15 @@ export function describeReward(
       };
     case 'gold':
       return { label: `${reward.amount} Gold`, description: 'A purse of coin, for the camp to come.' };
+    case 'keystone': {
+      const keystone = findKeystone(reward.keystoneId);
+      if (!keystone) return { label: reward.keystoneId, description: '' };
+      const held = findKeystone(run?.keystone);
+      return {
+        label: `Keystone: ${keystone.name}`,
+        description: held ? `${keystone.description} Replaces ${held.name}.` : keystone.description,
+      };
+    }
   }
 }
 

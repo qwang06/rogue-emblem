@@ -872,3 +872,11 @@ describe('toUnitDetailView with modifiers', () => {
     expect(after.passives.map((passive) => passive.id)).toEqual(['class', 'keen-eye', 'stalwart']);
   });
 });
+
+describe('toRelicViews with a keystone', () => {
+  it('lists the keystone first, then the relics', () => {
+    const views = toRelicViews(['hawk-lens'], 1, 'glass-lens');
+    expect(views.map(({ name }) => name)).toEqual(['Keystone: Glass Lens', "Hawk's Lens"]);
+    expect(toRelicViews([], 1, 'nonsense')).toEqual([]);
+  });
+});

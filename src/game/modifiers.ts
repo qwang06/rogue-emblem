@@ -125,7 +125,11 @@ export type Modifier =
   | { kind: 'contagion' }
   | { kind: 'taunt-aura' }
   | { kind: 'veil-on-wait' }
-  | { kind: 'linger-debuffs' };
+  | { kind: 'linger-debuffs' }
+  // When it's the only unit of its side deployed, its stats grow by
+  // `percent` as the battle starts (the Lone Wolf relic; see startBattle
+  // in battle/commands.ts).
+  | { kind: 'lone-wolf'; percent: number };
 
 export type ModifierKind = Modifier['kind'];
 

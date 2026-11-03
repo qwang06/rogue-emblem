@@ -23,6 +23,53 @@ describe('getDeployedCurses', () => {
   });
 });
 
+describe('shared curses', () => {
+  it('fall once for all the deployed units carrying them', () => {
+    const shared: Curse = { kind: 'enemy-surge', percent: 15, shared: 'keystone-x' };
+    const own: Curse = { kind: 'enemy-affix', affixId: 'keen' };
+    const a = makeTestUnit({ team: 'player' });
+    a.curses = [shared, own];
+    const b = makeTestUnit({ team: 'player' });
+    b.curses = [shared, own];
+    const units = new Map([
+      ['a', a],
+      ['b', b],
+    ]);
+    expect(getDeployedCurses(units, ['a', 'b'])).toEqual([shared, own, own]);
+  });
+});
+
+describe('the Lone Wolf at the start of a battle', () => {
+  function battle(deployBoth: boolean) {
+    const hero = makeTestUnit({ team: 'player', strength: 10, health: 20 });
+    hero.modifiers = [{ kind: 'lone-wolf', percent: 50 }];
+    let grid = createGrid(4, 1, 'grass');
+    grid = setUnit(grid, 0, 0, 'hero');
+    if (deployBoth) grid = setUnit(grid, 1, 0, 'mate');
+    grid = setUnit(grid, 3, 0, 'foe');
+    const state = createBattleState(
+      {
+        grid,
+        units: new Map([
+          ['hero', hero],
+          ['mate', makeTestUnit({ team: 'player' })],
+          ['foe', foe()],
+        ]),
+        roster: deployBoth ? ['hero', 'mate'] : ['hero'],
+        deploymentZone: [],
+        maxDeployed: 2,
+      },
+      1,
+    );
+    return applyCommand(state, { type: 'start-battle' }).state.units.get('hero')!;
+  }
+
+  it('grows a unit deployed alone, and not one with company', () => {
+    expect(battle(false)).toMatchObject({ strength: 15, maxHealth: 30, health: 30 });
+    expect(battle(true)).toMatchObject({ strength: 10, maxHealth: 20 });
+  });
+});
+
 describe('getCurseBoss', () => {
   it('is the boss, else the enemy with the most max HP', () => {
     const [small, big, boss] = [foe(10), foe(30), foe(5)];

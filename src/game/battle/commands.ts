@@ -75,6 +75,7 @@ import {
   type Skill,
 } from '../skills.ts';
 import { hasModifier, sumModifiers, type Modifier } from '../modifiers.ts';
+import { applySurge } from '../warband/enemyCurve.ts';
 import {
   createArrival,
   createWaveArrival,
@@ -547,6 +548,7 @@ function startBattle(draft: Draft) {
   for (const unitId of benched) draft.units.delete(unitId);
   draft.deployed = Object.freeze(deployed);
   layCurses(draft, deployed);
+  emboldenLoneWolf(draft, deployed);
   draft.stage = 'battle';
   draft.events.push({ type: 'battle-started', benched: Object.freeze(benched) });
   startPhase(draft, getFirstPhase(1, hasGuests(draft)));
@@ -559,6 +561,14 @@ function layCurses(draft: Draft, deployed: readonly string[]) {
   if (curses.length === 0) return;
   const enemies = getTeamUnitIds(draft.units, 'enemy').map((unitId) => draft.edit(unitId));
   applyCurses(enemies, curses, draft.rng);
+}
+
+// A unit deployed alone grows by its lone-wolf percent (the Lone Wolf
+// relic) as the battle starts, like an enemy's surge.
+function emboldenLoneWolf(draft: Draft, deployed: readonly string[]) {
+  if (deployed.length !== 1) return;
+  const percent = sumModifiers(draft.unit(deployed[0]).modifiers, 'lone-wolf');
+  if (percent > 0) applySurge(draft.edit(deployed[0]), 100 + percent);
 }
 
 function requireBattle(draft: Draft) {

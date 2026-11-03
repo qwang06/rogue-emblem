@@ -30,6 +30,7 @@ import { findEliteAffix } from '../game/warband/elites.ts';
 import { findQuirk } from '../game/warband/quirks.ts';
 import type { BoonOffer } from '../game/warband/levelUpPicks.ts';
 import { countRelic, findRelic, getRelicDescription, type Relic } from '../game/warband/relics.ts';
+import { findKeystone } from '../game/warband/keystones.ts';
 import type { Unit, UnitRank } from '../game/Unit.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
 import { getItemSprite, getUnitSprite } from '../game/tileset.ts';
@@ -905,10 +906,21 @@ export interface BoonRedrawView {
 
 // The relics `relicIds` names, in order, for the camp's list: one entry
 // per relic, with copies counted in its name and description, its numbers
-// as they stand at `stage`. Unknown ids are left out.
-export function toRelicViews(relicIds: readonly string[], stage = 1): readonly RelicView[] {
-  return Object.freeze(
-    [...new Set(relicIds)]
+// as they stand at `stage`, after the warband's keystone (keystones.ts) if
+// it holds one. Unknown ids are left out.
+export function toRelicViews(relicIds: readonly string[], stage = 1, keystoneId?: string): readonly RelicView[] {
+  const keystone = findKeystone(keystoneId);
+  return Object.freeze([
+    ...(keystone
+      ? [
+          Object.freeze({
+            id: `keystone-${keystone.id}`,
+            name: `Keystone: ${keystone.name}`,
+            description: keystone.description,
+          }),
+        ]
+      : []),
+    ...[...new Set(relicIds)]
       .map(findRelic)
       .filter((relic): relic is Relic => relic !== null)
       .map((relic) => {
@@ -919,7 +931,7 @@ export function toRelicViews(relicIds: readonly string[], stage = 1): readonly R
           description: getRelicDescription(relic, stage, copies),
         });
       }),
-  );
+  ]);
 }
 
 // Snapshot of what a cleared stage paid (see getStageClearGold).

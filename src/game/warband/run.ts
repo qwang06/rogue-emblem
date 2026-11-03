@@ -14,6 +14,7 @@ import { getEvolutions } from './evolutions.ts';
 import { getQuirkModifiers } from './quirks.ts';
 import { growUpWhelp } from './whelp.ts';
 import { getRelicModifiers, hasRelic, PHOENIX_FEATHER } from './relics.ts';
+import { findKeystone } from './keystones.ts';
 import { MAX_HEAT } from './heat.ts';
 import { EMPTY_CHRONICLE, parseChronicle, recordBattle, type RunChronicle } from './chronicle.ts';
 import { ARMORS, HEALTH_POTION, MANA_POTION, MASTER_SEAL, type Inventory, type Item } from '../items.ts';
@@ -108,6 +109,8 @@ export interface RunState {
   gold: number;
   // The relics the warband holds, by id (see relics.ts), in the order won.
   relics: readonly string[];
+  // The keystone the warband holds, by id (see keystones.ts), if any.
+  keystone?: string;
   // How many units deploy to a stage.
   deployCap: number;
   // Units that died, as they were when they died: battle by battle, in
@@ -265,19 +268,29 @@ export function restoreUnit(
 
 // The run's roster as Units by unitId, ready to put in a battle, each
 // carrying the run's relics' modifiers and its evolutions' (evolutions.ts)
-// on top of its boons'.
+// on top of its boons', and the keystone's modifiers and curses
+// (keystones.ts; its curses are shared, so they fall once a battle).
 export function restoreRoster(
   run: RunState,
   classes?: readonly UnitClass[],
   items?: readonly Item[],
 ): Map<string, Unit> {
   const relics = getRelicModifiers(run.relics, run.stage);
+  const keystone = findKeystone(run.keystone);
   return new Map(
     run.roster.map((snapshot) => {
       const evolutions = getEvolutions(snapshot, run.relics);
       const unit = restoreUnit(snapshot, classes, items);
       unit.evolutions = Object.freeze(evolutions.map(({ id }) => id));
-      return [snapshot.id, applyModifiers(unit, [...relics, ...evolutions.flatMap(({ modifiers }) => modifiers)])];
+      if (keystone) unit.curses = Object.freeze([...unit.curses, ...keystone.curses]);
+      return [
+        snapshot.id,
+        applyModifiers(unit, [
+          ...relics,
+          ...evolutions.flatMap(({ modifiers }) => modifiers),
+          ...(keystone?.modifiers ?? []),
+        ]),
+      ];
     }),
   );
 }
@@ -432,6 +445,7 @@ export function parseRun(
     convoy,
     gold,
     relics,
+    keystone,
     deployCap,
     fallen,
     pendingReward,
@@ -464,6 +478,7 @@ export function parseRun(
     !isWholeNumber(gold) ||
     !Array.isArray(relics) ||
     !relics.every((relic) => typeof relic === 'string') ||
+    (keystone !== undefined && typeof keystone !== 'string') ||
     !isWholeNumber(deployCap) ||
     deployCap < 1 ||
     !isUnits(fallen) ||
@@ -494,6 +509,7 @@ export function parseRun(
     convoy,
     gold,
     relics,
+    ...(keystone !== undefined && { keystone }),
     deployCap,
     fallen,
     ...(pendingReward !== undefined && { pendingReward }),
