@@ -194,7 +194,8 @@ export type BattleEvent =
   // A chain kill: `unitId` gets a free strike on `targetId` (the strike
   // follows).
   | { type: 'chain'; unitId: string; targetId: string }
-  // A recoil skill cost its user `damage` HP, leaving it `health`.
+  // A recoil skill, or a foe's thorns or reflect, cost `unitId` `damage`
+  // HP, leaving it `health`.
   | { type: 'recoil'; unitId: string; damage: number; health: number }
   // A skill moved `unitId` from one tile to another without walking: a
   // leap, a strafing run, a retreat or a swap (see skillMoves.ts).
@@ -686,8 +687,9 @@ function resolveAttack(draft: Draft, attackerId: string, target: TargetTile, fro
   const ids = { attacker: attackerId, defender: target.unitId };
   let killedByAttacker = false;
   for (const strike of strikes) {
-    if (applyStrike(draft, strike, ids)) {
-      killedByAttacker = strike.by === 'attacker';
+    const fell = applyStrike(draft, strike, ids);
+    if (fell) {
+      killedByAttacker = fell === 'struck' && strike.by === 'attacker';
       break;
     }
   }
@@ -699,9 +701,15 @@ function resolveAttack(draft: Draft, attackerId: string, target: TargetTile, fro
 // Applies one strike of an exchange between `ids`: it wears the striker's
 // weapon (and a tome strike can teach its spell), a hit lands, a lifesteal
 // strike heals its striker, a cleave-through hit splashes the target's
-// neighbours, and a unit brought to 0 health leaves the map (dropping its
-// loot to a player killer). Returns whether the struck unit fell.
-function applyStrike(draft: Draft, strike: Strike, ids: { attacker: string; defender: string }): boolean {
+// neighbours, a thorns or reflect recoil hurts the striker, and a unit
+// brought to 0 health leaves the map (dropping its loot to a player
+// killer). Returns who fell: the struck unit, the striker (to its recoil),
+// or no one (null).
+function applyStrike(
+  draft: Draft,
+  strike: Strike,
+  ids: { attacker: string; defender: string },
+): 'struck' | 'striker' | null {
   const strikerId = ids[strike.by];
   const struckId = ids[strike.target];
   const striker = draft.edit(strikerId);
@@ -727,11 +735,22 @@ function applyStrike(draft: Draft, strike: Strike, ids: { attacker: string; defe
   // A lifesteal strike heals its striker (see resolveCombat).
   if (strike.drain) recover(draft, strikerId, 'health', strike.drain, 'drain');
   if (strike.hit) cleaveThrough(draft, strikerId, struckId, strike.damage);
-  if (struck.isAlive()) return false;
-  dropLoot(draft, struckId, strikerId);
-  defeat(draft, struckId, strikerId);
-  healOnKill(draft, strikerId);
-  return true;
+  if (!struck.isAlive()) {
+    dropLoot(draft, struckId, strikerId);
+    defeat(draft, struckId, strikerId);
+    healOnKill(draft, strikerId);
+    return 'struck';
+  }
+  if (!strike.recoil) return null;
+  // The struck unit's thorns or reflect (see getRecoil in combat.ts).
+  const hurt = draft.edit(strikerId);
+  hurt.takeDamage(strike.recoil);
+  draft.events.push({ type: 'recoil', unitId: strikerId, damage: strike.recoil, health: hurt.health });
+  if (hurt.isAlive()) return null;
+  dropLoot(draft, strikerId, struckId);
+  defeat(draft, strikerId, struckId);
+  healOnKill(draft, struckId);
+  return 'striker';
 }
 
 // A cleave-through hit (see modifiers.ts) of `damage` on `struckId` also

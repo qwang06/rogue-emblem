@@ -499,6 +499,23 @@ describe('modifiers', () => {
     expect(state.kills.get('hero')).toBe(1);
   });
 
+  it('hurts a striker that lands a hit on a thorny foe, and counts its fall as a kill for the foe', () => {
+    const hero = makeTestUnit({ team: 'player', health: 2 });
+    hero.modifiers = [{ kind: 'sure-hit' }];
+    const foe = makeTestUnit({ team: 'enemy' });
+    foe.modifiers = [{ kind: 'thorns', amount: 3 }];
+    const start = createTestBattle({
+      hero: { unit: hero, at: { x: 0, y: 0 } },
+      foe: { unit: foe, at: { x: 1, y: 0 } },
+    });
+    const { state, events } = run(start, { type: 'attack', unitId: 'hero', target: { x: 1, y: 0 } });
+    expect(events).toContainEqual({ type: 'recoil', unitId: 'hero', damage: 2, health: 0 });
+    expect(events.filter((event) => event.type === 'strike')).toHaveLength(1);
+    expect(state.units.has('hero')).toBe(false);
+    expect(state.kills.get('foe')).toBe(1);
+    expect(state.units.get('foe')!.health).toBe(20 - 6);
+  });
+
   it('chains a kill into one free, uncountered strike on a foe in reach', () => {
     const hero = makeTestUnit({ team: 'player' });
     hero.modifiers = [{ kind: 'chain-kill', percent: 100 }];

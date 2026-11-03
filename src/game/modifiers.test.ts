@@ -34,6 +34,18 @@ describe('isConditionMet', () => {
     expect(isConditionMet('vs-monster', { ...neutral, vsMonster: true })).toBe(true);
     expect(isConditionMet('vs-monster', neutral)).toBe(false);
   });
+
+  it('checks the foe: wounded, unhurt, debuffed, marked (false when unknown)', () => {
+    for (const [condition, field] of [
+      ['vs-wounded', 'foeWounded'],
+      ['vs-unhurt', 'foeUnhurt'],
+      ['vs-debuffed', 'foeDebuffed'],
+      ['vs-marked', 'foeMarked'],
+    ] as const) {
+      expect(isConditionMet(condition, { ...neutral, [field]: true })).toBe(true);
+      expect(isConditionMet(condition, neutral)).toBe(false);
+    }
+  });
 });
 
 describe('getCombatBonus', () => {

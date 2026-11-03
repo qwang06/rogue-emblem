@@ -9,6 +9,9 @@ import {
   getAttackTargets,
   getCombatForecast,
   getForecastHealthAfter,
+  getFighterBonus,
+  getRecoil,
+  getTenthsMissing,
   getThreatRange,
   isInStrikeRange,
   resolveCombat,
@@ -845,5 +848,125 @@ describe('combat procs', () => {
       rng: rolls(0, 0, 0, 0.999),
     });
     expect(crit.strikes[0].damage).toBe(7 * 4);
+  });
+});
+
+describe('gear effects', () => {
+  const fighter = (overrides: Partial<Combatant> = {}): Combatant => ({
+    health: 20,
+    maxHealth: 20,
+    strength: 6,
+    defense: 1,
+    skill: 5,
+    speed: 3,
+    luck: 2,
+    weapon: arms({ power: 2, crit: 5 }),
+    ...overrides,
+  });
+  // Every strike lands and none crits.
+  const plainHits = () => 0.5;
+
+  it('reads conditions about the foe: wounded, unhurt, debuffed, marked', () => {
+    const executioner = fighter({
+      modifiers: [
+        { kind: 'combat', term: 'damage-percent', amount: 100, when: 'vs-wounded' },
+        { kind: 'combat', term: 'hit', amount: -20, when: 'vs-unhurt' },
+        { kind: 'combat', term: 'damage', amount: 3, when: 'vs-marked' },
+        { kind: 'combat', term: 'crit', amount: 5, when: 'vs-debuffed' },
+      ],
+    });
+    expect(getFighterBonus(executioner, fighter(), true)).toMatchObject({ 'damage-percent': 0, hit: -20, damage: 0 });
+    expect(getFighterBonus(executioner, fighter({ health: 9 }), true)).toMatchObject({ 'damage-percent': 100, hit: 0 });
+    expect(getFighterBonus(executioner, fighter({ health: 15 }), true)).toMatchObject({ 'damage-percent': 0, hit: 0 });
+    expect(getFighterBonus(executioner, fighter({ statuses: ['marked'] }), true)).toMatchObject({ damage: 3, crit: 5 });
+    expect(getFighterBonus(executioner, fighter({ statuses: ['rooted'] }), true)).toMatchObject({ damage: 0, crit: 5 });
+    // A buff isn't a debuff.
+    expect(getFighterBonus(executioner, fighter({ statuses: ['guarded'] }), true)).toMatchObject({ crit: 0 });
+  });
+
+  it('adds crit for each debuff on the foe', () => {
+    const stiletto = fighter({ modifiers: [{ kind: 'crit-per-foe-debuff', amount: 10 }] });
+    expect(getFighterBonus(stiletto, fighter(), true)?.crit).toBe(0);
+    expect(getFighterBonus(stiletto, fighter({ statuses: ['marked', 'sundered', 'guarded'] }), true)?.crit).toBe(20);
+  });
+
+  it('grows a term with each full tenth of max HP missing', () => {
+    expect(getTenthsMissing({ health: 20, maxHealth: 20 })).toBe(0);
+    expect(getTenthsMissing({ health: 17, maxHealth: 20 })).toBe(1);
+    expect(getTenthsMissing({ health: 1, maxHealth: 20 })).toBe(9);
+    expect(getTenthsMissing({ health: 5 })).toBe(0);
+    const hide = { kind: 'missing-health-bonus', amount: 1 } as const;
+    const unit = fighter({
+      health: 10,
+      modifiers: [
+        { ...hide, term: 'damage' },
+        { ...hide, term: 'guard' },
+      ],
+    });
+    expect(getFighterBonus(unit, fighter(), true)).toMatchObject({ damage: 5, guard: 5 });
+    expect(getFighterBonus({ ...unit, health: 20 }, fighter(), true)).toMatchObject({ damage: 0, guard: 0 });
+  });
+
+  it('keeps a conditional sure-hit only when its condition holds', () => {
+    const riposte = fighter({ modifiers: [{ kind: 'sure-hit', when: 'defending' }] });
+    const attacker = fighter();
+    // The attacker misses; the riposte counter lands on a roll that would miss.
+    const countered = resolveCombat(attacker, riposte, { distance: 1, rng: alwaysMiss });
+    expect(countered.strikes.map((s) => [s.by, s.hit])).toEqual([
+      ['attacker', false],
+      ['defender', true],
+    ]);
+    const attacking = resolveCombat(riposte, attacker, { distance: 1, rng: alwaysMiss });
+    expect(attacking.strikes.every((s) => !s.hit)).toBe(true);
+  });
+
+  it('computes recoil from thorns next to it and reflect from any range', () => {
+    expect(getRecoil({ modifiers: [{ kind: 'thorns', amount: 3 }] }, 7, 1)).toBe(3);
+    expect(getRecoil({ modifiers: [{ kind: 'thorns', amount: 3 }] }, 7, 2)).toBe(0);
+    expect(getRecoil({ modifiers: [{ kind: 'reflect', percent: 30 }] }, 7, 2)).toBe(2);
+    const mail = {
+      modifiers: [
+        { kind: 'reflect', percent: 30 },
+        { kind: 'reflect', percent: 20, status: 'taunting' },
+      ] as const,
+    };
+    expect(getRecoil(mail, 10, 1)).toBe(3);
+    expect(getRecoil({ ...mail, statuses: ['taunting'] }, 10, 1)).toBe(5);
+    expect(getRecoil({}, 10, 1)).toBe(0);
+  });
+
+  it('hurts a striker whose hit lands on a thorny foe, ending the exchange if it falls', () => {
+    const tank = fighter({ modifiers: [{ kind: 'thorns', amount: 3 }] });
+    const result = resolveCombat(fighter(), tank, { distance: 1, rng: plainHits });
+    expect(result.strikes[0]).toMatchObject({ by: 'attacker', damage: 7, recoil: 3 });
+    expect(result.strikes[1].recoil).toBeUndefined();
+    expect(result.attackerHealth).toBe(20 - 3 - 7);
+    const frail = resolveCombat(fighter({ health: 2 }), tank, { distance: 1, rng: plainHits });
+    expect(frail.strikes).toHaveLength(1);
+    expect(frail.strikes[0]).toMatchObject({ recoil: 2, recoilLethal: true });
+    expect(frail.attackerHealth).toBe(0);
+  });
+
+  it('costs no recoil for a miss or for the blow that fells the foe', () => {
+    const tank = fighter({ modifiers: [{ kind: 'thorns', amount: 3 }] });
+    const missed = resolveCombat(fighter(), tank, { distance: 1, rng: alwaysMiss });
+    expect(missed.strikes.some((s) => s.recoil)).toBe(false);
+    const felled = resolveCombat(fighter(), { ...tank, health: 5 }, { distance: 1, rng: plainHits });
+    expect(felled.strikes[0]).toMatchObject({ lethal: true });
+    expect(felled.strikes[0].recoil).toBeUndefined();
+  });
+
+  it('heals an overkill-heal striker by the damage past the foe on a killing crit', () => {
+    const ring = fighter({ health: 5, modifiers: [{ kind: 'overkill-heal' }], weapon: arms({ power: 2, crit: 100 }) });
+    // A crit for 21 on a foe with 4 HP: 17 past it.
+    const result = resolveCombat(ring, fighter({ health: 4 }), { distance: 1, rng: alwaysHit });
+    expect(result.strikes[0]).toMatchObject({ crit: true, lethal: true, drain: 15 });
+    expect(result.attackerHealth).toBe(20);
+    // A plain killing hit heals nothing.
+    const plain = resolveCombat({ ...ring, weapon: arms({ power: 2 }) }, fighter({ health: 4 }), {
+      distance: 1,
+      rng: plainHits,
+    });
+    expect(plain.strikes[0].drain).toBeUndefined();
   });
 });
