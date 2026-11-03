@@ -75,7 +75,6 @@ import {
   type Skill,
 } from '../skills.ts';
 import { hasModifier, sumModifiers, type Modifier } from '../modifiers.ts';
-import { applySurge } from '../warband/enemyCurve.ts';
 import {
   createArrival,
   createWaveArrival,
@@ -561,12 +560,23 @@ function layCurses(draft: Draft, deployed: readonly string[]) {
   applyCurses(enemies, curses, draft.rng);
 }
 
-// A unit deployed alone grows by its lone-wolf percent (the Lone Wolf
-// relic) as the battle starts, like an enemy's surge.
+// A unit deployed alone (the Lone Wolf relic) deals its lone-wolf percent
+// more damage, takes half that percent less, and has +20 hit and avoid,
+// for this battle only: modifiers aren't written back to the run, so
+// nothing of it outlasts the battle.
+export const LONE_WOLF_ACCURACY = 20;
 function emboldenLoneWolf(draft: Draft, deployed: readonly string[]) {
   if (deployed.length !== 1) return;
-  const percent = sumModifiers(draft.unit(deployed[0]).modifiers, 'lone-wolf');
-  if (percent > 0) applySurge(draft.edit(deployed[0]), 100 + percent);
+  const { modifiers } = draft.unit(deployed[0]);
+  const percent = sumModifiers(modifiers, 'lone-wolf');
+  if (percent <= 0) return;
+  draft.edit(deployed[0]).modifiers = Object.freeze([
+    ...modifiers,
+    { kind: 'combat', term: 'damage-percent', amount: percent },
+    { kind: 'combat', term: 'guard-percent', amount: Math.floor(percent / 2) },
+    { kind: 'combat', term: 'hit', amount: LONE_WOLF_ACCURACY },
+    { kind: 'combat', term: 'avoid', amount: LONE_WOLF_ACCURACY },
+  ]);
 }
 
 function requireBattle(draft: Draft) {
