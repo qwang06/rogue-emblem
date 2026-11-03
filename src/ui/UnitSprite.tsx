@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { SPRITE_URLS } from '../assets/sprites.ts';
-import { getUnitSheet, TILE_SIZE, UNIT_SHEET } from '../game/tileset.ts';
+import { getUnitSheet, TILE_SIZE, UNIT_ART, UNIT_SHEET } from '../game/tileset.ts';
 
 // A unit's idle sheet by unit art name (UNIT_SPRITES in tileset.ts), drawn at
 // the size of `scale` map tiles with crisp pixels, cropped from the sheet's
@@ -19,7 +19,8 @@ export function UnitSprite({
   const size = TILE_SIZE * scale;
   const { rows, defaultFacing } = UNIT_SHEET;
   // Idle frames are a tile wide; a taller one (the orc's 48px) is shown
-  // from its top in the one-tile box, its feet cropped off below.
+  // from the top of its art (UnitArt.portraitTop) in the one-tile box,
+  // its feet cropped off below.
   const { key, frames, frameMs, frameHeight } = getUnitSheet(sprite, 'idle')!;
   const columns = frames;
   const row = rows[defaultFacing];
@@ -28,7 +29,7 @@ export function UnitSprite({
     height: size,
     backgroundImage: `url(${SPRITE_URLS[key]})`,
     backgroundSize: `${columns * size}px auto`,
-    backgroundPosition: `0 ${-row * frameHeight * scale}px`,
+    backgroundPosition: `0 ${-(row * frameHeight + (UNIT_ART[sprite]?.portraitTop ?? 0)) * scale}px`,
   };
   if (animated) {
     // Slides the row left one frame per step (see .unit-sprite--animated).
