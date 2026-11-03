@@ -45,6 +45,7 @@ describe('toMentorScreenView', () => {
       'Ram',
       'Acolyte',
       'Mage',
+      'Bishop',
     ]);
     expect(view.lessons[ACOLYTE_LESSON]).toEqual({
       key: 'acolyte',

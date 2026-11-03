@@ -43,6 +43,7 @@ import {
   PINNING_SHOT,
   POWER_STRIKE,
   PRAYER,
+  SANCTUARY,
   ROAR,
   SHOVE,
   SHRAPNEL,
@@ -747,6 +748,39 @@ describe('area and follow-up skills', () => {
     expect(events.filter((event) => event.type === 'healed')).toEqual([
       { type: 'healed', unitId: 'hero', targetId: 'east', amount: 1, skill: PRAYER },
       { type: 'healed', unitId: 'hero', targetId: 'west', amount: 3, skill: PRAYER },
+    ]);
+    expect(state.units.get('far')!.health).toBe(10);
+  });
+
+  it('aims Sanctuary at a wounded ally up to 2 tiles away and mends every wounded ally around it', () => {
+    const hurt = (health: number) => {
+      const unit = makeTestUnit({ team: 'player' });
+      unit.takeDamage(20 - health);
+      return unit;
+    };
+    const start = createTestBattle(
+      {
+        hero: { unit: user(SANCTUARY, { intelligence: 4 }), at: { x: 0, y: 1 } },
+        aimed: { unit: hurt(10), at: { x: 2, y: 1 } },
+        beside: { unit: hurt(15), at: { x: 3, y: 1 } },
+        whole: { unit: makeTestUnit({ team: 'player' }), at: { x: 2, y: 0 } },
+        far: { unit: hurt(10), at: { x: 4, y: 1 } },
+        foe: { unit: foe(), at: { x: 4, y: 2 } },
+      },
+      { width: 5, height: 3 },
+    );
+    expect(getSkillTargets(start.grid, start.units, 'hero', { x: 0, y: 1 }, SANCTUARY)).toEqual([
+      { x: 2, y: 1, unitId: 'aimed' },
+    ]);
+    const { state, events } = run(start, {
+      type: 'skill',
+      unitId: 'hero',
+      skillId: 'sanctuary',
+      target: { x: 2, y: 1 },
+    });
+    expect(events.filter((event) => event.type === 'healed')).toEqual([
+      { type: 'healed', unitId: 'hero', targetId: 'aimed', amount: 6, skill: SANCTUARY },
+      { type: 'healed', unitId: 'hero', targetId: 'beside', amount: 5, skill: SANCTUARY },
     ]);
     expect(state.units.get('far')!.health).toBe(10);
   });
