@@ -44,6 +44,7 @@ import {
 import { getDefaultFaction, type FactionId } from './factions.ts';
 import type { Modifier } from './modifiers.ts';
 import type { StatusId } from './statuses.ts';
+import type { Curse } from './curses.ts';
 import { getTomeSpell, isTome, knowsSpell, learnSpell, recordTomeUse, type TomeProgress } from './tomes.ts';
 import type { Team } from './turns.ts';
 import {
@@ -136,6 +137,9 @@ export class Unit {
   // What its relics and boons add for the battle (see modifiers.ts), set
   // by applyModifiers when a Warband run fields it.
   modifiers: readonly Modifier[] = Object.freeze([]);
+  // The curses its cursed gear lays on the enemies of any battle it's
+  // deployed in (see curses.ts).
+  curses: readonly Curse[] = Object.freeze([]);
   // Statuses a skill has left on it this battle (see statuses.ts), until
   // its team's next phase ends. Never saved.
   statuses: readonly StatusId[] = Object.freeze([]);
