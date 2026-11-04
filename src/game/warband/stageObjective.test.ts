@@ -129,13 +129,11 @@ describe('makeBoss', () => {
 });
 
 describe('objectives on generated stages', () => {
+  // Generated once and shared: placing a seize leaves the level as it was,
+  // and the boss checks run last.
+  const levels = REGION_CONFIGS.flatMap((region) => SEEDS.slice(0, 40).map((seed) => createStageLevel(seed, region)));
   const placed = (kind: 'seize' | 'boss') =>
-    REGION_CONFIGS.flatMap((region) =>
-      SEEDS.slice(0, 40).map((seed) => {
-        const level = createStageLevel(seed, region);
-        return { level, objective: placeObjective({ kind }, level) as Objective };
-      }),
-    );
+    levels.map((level) => ({ level, objective: placeObjective({ kind }, level) as Objective }));
 
   it('always finds a seize tile the warband can walk to, off the deployment zone', () => {
     for (const { level, objective } of placed('seize')) {

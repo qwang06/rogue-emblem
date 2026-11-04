@@ -11,7 +11,7 @@ import { PLAYER_ROSTER, type DemoLevel, type TreePlacement } from '../demoLevel.
 import { setTerrain, setUnit, type Point } from '../grid.ts';
 import { pickSpikeTiles, SPIKES } from '../hazards.ts';
 import { getBuildingSprites, getFeatureSprites } from '../mapArt.ts';
-import { pickZonedEnemyTiles } from '../enemySpawns.ts';
+import { countEnemies, pickZonedEnemyTiles } from '../enemySpawns.ts';
 import type { Rng } from '../combatStats.ts';
 import { growToLevel } from '../experience.ts';
 import { outfitEnemy } from '../enemyGear.ts';
@@ -21,6 +21,7 @@ import { generateMap } from '../mapPlan.ts';
 import { checkMap } from '../mapCheck.ts';
 import { getMapMetrics, scoreMap, type MapMetrics } from '../mapScore.ts';
 import type { MapArchetype } from '../mapArchetypes.ts';
+import { getMapSize, resizeMapOptions } from '../mapSize.ts';
 import { DEFAULT_OBJECTIVE, type ObjectiveKind } from '../objectives.ts';
 import { createSeededRng, randomInt, randomItem } from '../rng.ts';
 import type { Unit } from '../Unit.ts';
@@ -62,6 +63,23 @@ export const SPIKE_TRAP_REACH = 3;
 // Mixed into the stage seed so the traps' draw doesn't change the rest of
 // the stage.
 const SPIKE_SEED_SALT = 0x51c3e5;
+
+// Mixed into the stage seed so the map's size doesn't change the rest of
+// the stage.
+const SIZE_SEED_SALT = 0x512e5a;
+
+// `region` with its map sized for the stage (see mapSize.ts): room for
+// `deployCap` units of the warband and every enemy of its groups, shaped
+// by its archetype ('advance' when unset), never smaller than the region's
+// own width and height, and its patch and building counts scaled to match.
+// Drawn from `seed` apart from everything else.
+export function sizeStageRegion(seed: number, region: RegionConfig, deployCap = WARBAND_MAX_DEPLOYED): RegionConfig {
+  const rng = createSeededRng(seed ^ SIZE_SEED_SALT);
+  const { terrain } = region;
+  const units = deployCap + countEnemies(region.enemies);
+  const size = getMapSize(units, terrain.archetype ?? 'advance', rng, { width: terrain.width, height: terrain.height });
+  return { ...region, terrain: resizeMapOptions(terrain, size, rng) };
+}
 
 // How many candidate maps a stage's seed lays out to keep the best of.
 export const MAP_CANDIDATES = 30;
@@ -144,8 +162,9 @@ export function pickStageLayout(seed: number, region: RegionConfig, candidates =
 }
 
 // Returns a level shaped like createDemoLevel's, generated from `seed` with
-// `region`'s terrain options, on the best of the seed's candidate maps (see
-// pickStageLayout):
+// `region`'s terrain options, sized for the fight (sizeStageRegion, for
+// `maxDeployed` and the region's enemies), on the best of the seed's
+// candidate maps (see pickStageLayout):
 // - deploymentZone: the path's south end and the tiles either side of it
 // - roster: `roster`'s units (a run's warband), else createStartingWarband's,
 //   deploying up to `maxDeployed`
@@ -165,7 +184,8 @@ export function pickStageLayout(seed: number, region: RegionConfig, candidates =
 // - objective: a rout; battleSetup.ts places the stage's own (stageObjective.ts)
 // - seizeTile: the tile the map's archetype planned for a seize, if any
 // - spike traps (hazards.ts): on SPIKE_TRAP_CHANCE of seeds, a few near
-//   the enemies' starts, drawn from the seed apart from everything else
+//   the enemies' starts (more on a bigger map: SPIKE_TRAP_COUNT is for
+//   8x8), drawn from the seed apart from everything else
 // - loot: `lootCount` of the enemies (as many as there are, if fewer) each
 //   carry an item to drop (see assignLoot), picked after everything else so
 //   the map is the same whatever the count
@@ -176,7 +196,7 @@ export function createStageLevel(
   maxDeployed = WARBAND_MAX_DEPLOYED,
   lootCount = 0,
 ): DemoLevel {
-  const layout = pickStageLayout(seed, region);
+  const layout = pickStageLayout(seed, sizeStageRegion(seed, region, maxDeployed));
   const { rng, deploymentZone } = layout;
   const { buildings } = layout.terrain;
   let { grid } = layout.terrain;
@@ -226,12 +246,13 @@ export function createStageLevel(
   for (const [unitId, item] of assignLoot(enemyIds, lootCount, rng)) units.get(unitId)!.loot = item;
 
   const trapRng = createSeededRng(seed ^ SPIKE_SEED_SALT);
+  const trapScale = (grid.width * grid.height) / 64;
   if (trapRng() < SPIKE_TRAP_CHANCE) {
     const seizeTile = layout.terrain.seizeTile;
     const spikes = pickSpikeTiles(
       grid,
       {
-        count: randomInt(trapRng, SPIKE_TRAP_COUNT.min, SPIKE_TRAP_COUNT.max),
+        count: Math.round(randomInt(trapRng, SPIKE_TRAP_COUNT.min, SPIKE_TRAP_COUNT.max) * trapScale),
         enemyTiles,
         reach: SPIKE_TRAP_REACH,
         avoid: [...deploymentZone, ...decorations, ...buildingTiles, ...(seizeTile ? [seizeTile] : [])],

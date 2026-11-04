@@ -7,6 +7,10 @@
 // - nearestEnemy: the fewest steps from a deployment tile to an enemy,
 //   walking around water, mountains and walls. Most units move 5 and
 //   strike 1 tile away, so at 6 or less a fight can start on turn 1.
+// - meanEnemy / farthestEnemy: the average and the most steps from the
+//   deployment zone to an enemy it can reach. Enemies charge, so with the
+//   average at 9 or less and the farthest at 13 or less every enemy is in
+//   the fight by turn 2 or 3, however big the map.
 // - routes: how many separate ways lead from the deployment zone to the
 //   enemy, i.e. how many tiles would have to be blocked to cut them off
 //   (counted up to MAX_ROUTES). One route makes the battle a single lane.
@@ -21,6 +25,8 @@ import { getMoveCost } from './movement.ts';
 export interface MapMetrics {
   // Null when no enemy can be reached (or there are none).
   nearestEnemy: number | null;
+  meanEnemy: number | null;
+  farthestEnemy: number | null;
   routes: number;
   openShare: number;
   playerCover: number;
@@ -39,6 +45,9 @@ export const COVER_REACH = 2;
 export const MAP_SCORE_TARGETS = Object.freeze({
   // Farther than this and nobody can fight on turn 1.
   maxNearestEnemy: 6,
+  // Farther than these and the back of the enemy takes turns to arrive.
+  maxMeanEnemy: 9,
+  maxFarthestEnemy: 13,
   minRoutes: 2,
   minOpenShare: 0.75,
 });
@@ -46,6 +55,8 @@ export const MAP_SCORE_TARGETS = Object.freeze({
 const PENALTIES = Object.freeze({
   // Per step past maxNearestEnemy.
   distance: 3,
+  // Per step past maxMeanEnemy or maxFarthestEnemy.
+  depth: 1,
   // Per route short of minRoutes.
   route: 10,
   // Per tenth of the map short of minOpenShare.
@@ -127,9 +138,14 @@ export function countRoutes(grid: Grid, from: readonly Point[], to: readonly Poi
   return flow;
 }
 
-// Forest tiles within `reach` steps of any of `starts`.
-function countCover(grid: Grid, starts: readonly Point[], reach: number): number {
-  const distances = getWalkingDistances(grid, starts);
+// Forest tiles within `reach` steps of any of `starts` (whose walking
+// distances, when already known, are `distances`).
+function countCover(
+  grid: Grid,
+  starts: readonly Point[],
+  reach: number,
+  distances = getWalkingDistances(grid, starts, reach),
+): number {
   return grid.cells.filter((c) => c.terrain === 'forest' && (distances.get(key(c)) ?? Infinity) <= reach).length;
 }
 
@@ -140,9 +156,11 @@ export function getMapMetrics(grid: Grid, deploymentZone: readonly Point[], enem
   const steps = enemyTiles.map((p) => distances.get(key(p))).filter((d) => d !== undefined);
   return {
     nearestEnemy: steps.length > 0 ? Math.min(...steps) : null,
+    meanEnemy: steps.length > 0 ? steps.reduce((sum, d) => sum + d, 0) / steps.length : null,
+    farthestEnemy: steps.length > 0 ? Math.max(...steps) : null,
     routes: countRoutes(grid, deploymentZone, enemyTiles),
     openShare: grid.cells.filter((c) => isWalkable(grid, c)).length / grid.cells.length,
-    playerCover: countCover(grid, deploymentZone, COVER_REACH),
+    playerCover: countCover(grid, deploymentZone, COVER_REACH, distances),
     enemyCover: countCover(grid, enemyTiles, COVER_REACH),
   };
 }
@@ -150,11 +168,13 @@ export function getMapMetrics(grid: Grid, deploymentZone: readonly Point[], enem
 // How far `metrics` miss MAP_SCORE_TARGETS: 0 when they meet every
 // target, more the further they miss. Lower is better.
 export function scoreMap(metrics: MapMetrics): number {
-  const { nearestEnemy, routes, openShare, playerCover, enemyCover } = metrics;
-  const { maxNearestEnemy, minRoutes, minOpenShare } = MAP_SCORE_TARGETS;
+  const { nearestEnemy, meanEnemy, farthestEnemy, routes, openShare, playerCover, enemyCover } = metrics;
+  const { maxNearestEnemy, maxMeanEnemy, maxFarthestEnemy, minRoutes, minOpenShare } = MAP_SCORE_TARGETS;
   if (nearestEnemy === null) return PENALTIES.unreachable;
   return (
     Math.max(0, nearestEnemy - maxNearestEnemy) * PENALTIES.distance +
+    Math.max(0, (meanEnemy ?? nearestEnemy) - maxMeanEnemy) * PENALTIES.depth +
+    Math.max(0, (farthestEnemy ?? nearestEnemy) - maxFarthestEnemy) * PENALTIES.depth +
     Math.max(0, minRoutes - routes) * PENALTIES.route +
     Math.max(0, minOpenShare - openShare) * 10 * PENALTIES.openShare +
     Math.abs(playerCover - enemyCover) * PENALTIES.cover

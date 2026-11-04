@@ -8,6 +8,8 @@ const grid = (...rows: string[]) => parseTerrainMap(rows);
 
 const MET: MapMetrics = Object.freeze({
   nearestEnemy: MAP_SCORE_TARGETS.maxNearestEnemy,
+  meanEnemy: MAP_SCORE_TARGETS.maxMeanEnemy,
+  farthestEnemy: MAP_SCORE_TARGETS.maxFarthestEnemy,
   routes: MAP_SCORE_TARGETS.minRoutes,
   openShare: MAP_SCORE_TARGETS.minOpenShare,
   playerCover: 2,
@@ -88,12 +90,16 @@ describe('getMapMetrics', () => {
       ],
     );
     expect(metrics.nearestEnemy).toBe(2);
+    expect(metrics.farthestEnemy).toBe(6);
+    expect(metrics.meanEnemy).toBe(4);
   });
 
   it('has no nearest enemy when none can be reached, or there are none', () => {
     const map = grid('.....', '~~~~~', '.....');
     expect(getMapMetrics(map, [{ x: 0, y: 2 }], [{ x: 0, y: 0 }]).nearestEnemy).toBeNull();
     expect(getMapMetrics(map, [{ x: 0, y: 2 }], []).nearestEnemy).toBeNull();
+    expect(getMapMetrics(map, [{ x: 0, y: 2 }], []).meanEnemy).toBeNull();
+    expect(getMapMetrics(map, [{ x: 0, y: 2 }], []).farthestEnemy).toBeNull();
   });
 
   it('counts the share of tiles a unit can stand on', () => {
@@ -124,6 +130,13 @@ describe('scoreMap', () => {
     expect(far).toBeGreaterThan(near);
   });
 
+  it('scores enemies standing deep in the map worse, a point a step past each target', () => {
+    expect(scoreMap({ ...MET, meanEnemy: MET.meanEnemy! + 2 })).toBe(2);
+    expect(scoreMap({ ...MET, farthestEnemy: MET.farthestEnemy! + 3 })).toBe(3);
+    expect(scoreMap({ ...MET, meanEnemy: MET.meanEnemy! + 1, farthestEnemy: MET.farthestEnemy! + 1 })).toBe(2);
+    expect(scoreMap({ ...MET, meanEnemy: 2, farthestEnemy: 3 })).toBe(0);
+  });
+
   it('scores a single lane worse than a far enemy', () => {
     const oneRoute = scoreMap({ ...MET, routes: 1 });
     expect(oneRoute).toBeGreaterThan(scoreMap({ ...MET, nearestEnemy: MET.nearestEnemy! + 2 }));
@@ -141,7 +154,15 @@ describe('scoreMap', () => {
   });
 
   it('scores an unreachable enemy worse than any reachable map', () => {
-    const worstReachable = scoreMap({ nearestEnemy: 30, routes: 1, openShare: 0.3, playerCover: 0, enemyCover: 10 });
+    const worstReachable = scoreMap({
+      nearestEnemy: 30,
+      meanEnemy: 30,
+      farthestEnemy: 30,
+      routes: 1,
+      openShare: 0.3,
+      playerCover: 0,
+      enemyCover: 10,
+    });
     expect(scoreMap({ ...MET, nearestEnemy: null })).toBeGreaterThan(worstReachable);
   });
 });
