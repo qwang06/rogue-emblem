@@ -37,7 +37,7 @@ One 32x32 PNG per item, named by item id, painted at a true 32x32 (not 16px doub
 
 ## Reward icons: src/assets/rewards/
 
-One 32x32 PNG per reward kind whose card doesn't show an item or unit (`draft`, `rest`, `relic`, `gold`, `lesson`, `scroll`), named by kind, made with the item icon recipe above: a stack of ribbon-tied contracts with a wax seal, a campfire, a gold amulet with a purple gem, a heap of gold coins, an open book under a glowing blue star, a sealed scroll. Weak spot: `gold` is a lumpy heap that only partly reads as coins. `keystone` is a placeholder copy of the general icon `icons/key.png` until one is painted. Only the reward screen shows them (`REWARD_ICON_URLS` in `src/assets/rewardIcons.ts`, a Vite glob); `src/assets/rewardIcons.test.ts` checks the set.
+One 32x32 PNG per reward kind whose card doesn't show an item or unit (`draft`, `rest`, `relic`, `gold`, `lesson`, `scroll`), named by kind, made with the item icon recipe above: a stack of ribbon-tied contracts with a wax seal, a campfire, a gold amulet with a purple gem, a heap of gold coins, an open book under a glowing blue star, a sealed scroll. Weak spot: `gold` is a lumpy heap that only partly reads as coins. `keystone` is a wedge-shaped grey keystone carved with a glowing blue rune, drawn in the general icons' 16px style (see Keystone icons). Only the reward screen shows them (`REWARD_ICON_URLS` in `src/assets/rewardIcons.ts`, a Vite glob); `src/assets/rewardIcons.test.ts` checks the set.
 
 ## Glyph icons: src/assets/glyphs/
 
@@ -162,6 +162,10 @@ The mine's armed keg spans x 14–51, y 16–51 of its 64px frame, so it overhan
 - Rare: `crown`, `skull`, `chalice` (red liquid), `hourglass`, `crystal-ball`, `dragon-fang`, `war-horn`, `cursed-mask` (horned, red eyes).
 
 Used by: every relic (`RELIC_ICONS`, shown by `RelicIcon` on the camp's relic list and the starting relic pick, and at 2x on a relic reward's card). `src/assets/fantasyIcons.test.ts` fails when a relic has no icon.
+
+## Keystone icons: src/assets/keystones/
+
+One 32x32 PNG per keystone (`KEYSTONES` in `src/game/warband/keystones.ts`), named by keystone id, drawn in the general icon set's style (16px art with the `PALETTES.icons` colors and a 1px `#33294a` outline, doubled): `frenzy-pact` two crossed red daggers, `glass-lens` a gold-rimmed magnifying glass, `avatar-of-war` a steel helm with bull horns and red eyes, `vampire-court` a purple bat with red eyes, `iron-legion` a riveted iron shield with a gold boss and spikes, `plague-host` a brown beaked plague mask with green lenses. The keystone reward's cards show them at 2x (`KEYSTONE_ICON_URLS` in `src/assets/keystoneIcons.ts`, a Vite glob), and the camp's relic list at 1x (`RelicIcon` with the entry's `keystoneId`). Weak spot: the daggers are thin X strokes. `src/assets/keystoneIcons.test.ts` fails when a keystone has no icon. Their pxl source, and 32 more icons in the same style drawn for the planned gear (the gear brainstorm's kits and monster signature gear, not in the game yet), are in the project files under `art/gear-icons/` (see its README).
 
 ## How the code uses the art
 
