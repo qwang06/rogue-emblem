@@ -6,7 +6,8 @@
 // The rule:
 // - area: about TILES_PER_UNIT walkable tiles for every unit on the field
 //   (the deploy cap plus the enemies), assuming OPEN_SHARE of the map is
-//   walkable, never less than the region's own size
+//   walkable (CAVE_OPEN_SHARE for a cave), never less than the region's
+//   own size
 // - shape: each archetype's aspect (width over height): wide for fights
 //   that run side to side, near square for an ambush; maps grow wide
 //   before they grow deep, since depth is what the warband has to walk
@@ -27,6 +28,9 @@ export interface MapSize {
 export const TILES_PER_UNIT = 8;
 // The share of a map that's walkable, for sizing (maps run 0.8 to 0.95).
 export const OPEN_SHARE = 0.85;
+// The same for a cave map (MapGenOptions.caves), whose rock walls take
+// about a quarter of it, so it's sized up to give each unit as much room.
+export const CAVE_OPEN_SHARE = 0.72;
 // The smallest and largest a stage's map may be.
 export const MIN_MAP_SIZE: Readonly<MapSize> = Object.freeze({ width: 8, height: 8 });
 export const MAX_MAP_SIZE: Readonly<MapSize> = Object.freeze({ width: 14, height: 10 });
@@ -53,19 +57,26 @@ const clamp = (value: number, min: number, max: number) => Math.max(min, Math.mi
 
 // The tiles a map for `unitCount` units should have: TILES_PER_UNIT
 // walkable tiles each, OPEN_SHARE of the map walkable.
-export function getTargetArea(unitCount: number): number {
-  return Math.ceil((TILES_PER_UNIT * Math.max(0, unitCount)) / OPEN_SHARE);
+export function getTargetArea(unitCount: number, openShare = OPEN_SHARE): number {
+  return Math.ceil((TILES_PER_UNIT * Math.max(0, unitCount)) / openShare);
 }
 
 // The map size for `unitCount` units on an `archetype` map (see the top
 // of this file), at least `min` (the region's own size) and at most
-// MAX_MAP_SIZE and the archetype's caps. When `min` is past the caps, `min`
-// wins, so a region authored bigger keeps its size.
-export function getMapSize(unitCount: number, archetype: MapArchetype, rng: Rng, min: MapSize = MIN_MAP_SIZE): MapSize {
+// MAX_MAP_SIZE and the archetype's caps, for a map with `openShare` of it
+// walkable. When `min` is past the caps, `min` wins, so a region authored
+// bigger keeps its size.
+export function getMapSize(
+  unitCount: number,
+  archetype: MapArchetype,
+  rng: Rng,
+  min: MapSize = MIN_MAP_SIZE,
+  openShare = OPEN_SHARE,
+): MapSize {
   const shape = ARCHETYPE_SHAPES[archetype];
   const maxWidth = Math.max(min.width, Math.min(MAX_MAP_SIZE.width, shape.maxWidth ?? Infinity));
   const maxHeight = Math.max(min.height, Math.min(MAX_MAP_SIZE.height, shape.maxHeight ?? Infinity));
-  const area = Math.max(min.width * min.height, getTargetArea(unitCount));
+  const area = Math.max(min.width * min.height, getTargetArea(unitCount, openShare));
   const height = clamp(Math.round(Math.sqrt(area / shape.aspect)), min.height, maxHeight);
   const nudge = Math.floor(rng() * 3) - 1;
   const width = clamp(Math.round(area / height) + nudge, min.width, maxWidth);

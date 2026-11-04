@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { countRoutes, getMapMetrics, MAP_SCORE_TARGETS, MAX_ROUTES, scoreMap, type MapMetrics } from './mapScore.ts';
+import {
+  CAVE_SCORE_TARGETS,
+  countRoutes,
+  getMapMetrics,
+  MAP_SCORE_TARGETS,
+  MAX_ROUTES,
+  scoreMap,
+  type MapMetrics,
+} from './mapScore.ts';
 import { parseTerrainMap } from './terrainMap.ts';
 
 // Rows are given north to south; `.` grass, `~` water, `^` mountain, `T`
@@ -121,6 +129,12 @@ describe('scoreMap', () => {
   it('scores 0 for a map that meets every target', () => {
     expect(scoreMap(MET)).toBe(0);
     expect(scoreMap({ ...MET, nearestEnemy: 1, routes: 3, openShare: 1 })).toBe(0);
+  });
+
+  it('grades against the targets it is given, a cave needing less open ground', () => {
+    const rocky = { ...MET, openShare: 0.65 };
+    expect(scoreMap(rocky)).toBeGreaterThan(0);
+    expect(scoreMap(rocky, CAVE_SCORE_TARGETS)).toBe(0);
   });
 
   it('scores worse the farther the nearest enemy is past the target', () => {

@@ -19,9 +19,10 @@ import { assignLoot } from '../loot.ts';
 import type { GeneratedTerrain } from '../mapGen.ts';
 import { generateMap } from '../mapPlan.ts';
 import { checkMap } from '../mapCheck.ts';
-import { getMapMetrics, scoreMap, type MapMetrics } from '../mapScore.ts';
+import { openLoops } from '../mapLoops.ts';
+import { CAVE_SCORE_TARGETS, getMapMetrics, MAP_SCORE_TARGETS, scoreMap, type MapMetrics } from '../mapScore.ts';
 import type { MapArchetype } from '../mapArchetypes.ts';
-import { getMapSize, resizeMapOptions } from '../mapSize.ts';
+import { CAVE_OPEN_SHARE, getMapSize, OPEN_SHARE, resizeMapOptions } from '../mapSize.ts';
 import { drawSetPieces, getSeasonPieces, getSetPieceCount, type SetPiece } from '../setPieces.ts';
 import { SET_PIECES } from '../../data/setPieces.ts';
 import { DEFAULT_OBJECTIVE, type ObjectiveKind } from '../objectives.ts';
@@ -79,7 +80,14 @@ export function sizeStageRegion(seed: number, region: RegionConfig, deployCap = 
   const rng = createSeededRng(seed ^ SIZE_SEED_SALT);
   const { terrain } = region;
   const units = deployCap + countEnemies(region.enemies);
-  const size = getMapSize(units, terrain.archetype ?? 'advance', rng, { width: terrain.width, height: terrain.height });
+  const min = { width: terrain.width, height: terrain.height };
+  const size = getMapSize(
+    units,
+    terrain.archetype ?? 'advance',
+    rng,
+    min,
+    terrain.caves ? CAVE_OPEN_SHARE : OPEN_SHARE,
+  );
   return { ...region, terrain: resizeMapOptions(terrain, size, rng) };
 }
 
@@ -118,7 +126,8 @@ const PIECE_SEED_SALT = 0x5e7b1e;
 // deployment zone where the map's archetype puts it (on the path's south
 // end and the tiles either side of it for 'advance'), and the enemies'
 // tiles from region.enemies, dealt into the archetype's enemy zones when it
-// has them.
+// has them. A map with only one way from the deployment zone to the enemy
+// gets a second opened round its chokepoint (openLoops in mapLoops.ts).
 export function layOutStage(seed: number, region: RegionConfig, pieces: readonly SetPiece[] = SET_PIECES): StageLayout {
   const rng = createSeededRng(seed);
   const { width, height } = region.terrain;
@@ -127,12 +136,12 @@ export function layOutStage(seed: number, region: RegionConfig, pieces: readonly
     region.terrain.setPieces ?? getSetPieceCount(width, height),
     createSeededRng(seed ^ PIECE_SEED_SALT),
   );
-  const terrain = generateMap(region.terrain, rng, drawn);
-  const start = terrain.path[0];
-  const baseZone = terrain.deploymentZone ?? [-1, 0, 1].map((dx) => ({ x: start.x + dx, y: start.y }));
+  const generated = generateMap(region.terrain, rng, drawn);
+  const start = generated.path[0];
+  const baseZone = generated.deploymentZone ?? [-1, 0, 1].map((dx) => ({ x: start.x + dx, y: start.y }));
   const deploymentZone = [...baseZone];
   const occupied = new Set(baseZone.map(({ x, y }) => `${x},${y}`));
-  const candidates = terrain.grid.cells
+  const candidates = generated.grid.cells
     .filter(
       ({ x, y, terrain: kind, unitId }) =>
         !occupied.has(`${x},${y}`) && !unitId && kind !== 'water' && kind !== 'mountain' && kind !== 'wall',
@@ -143,7 +152,15 @@ export function layOutStage(seed: number, region: RegionConfig, pieces: readonly
       return distance(a) - distance(b) || b.y - a.y || a.x - b.x;
     });
   deploymentZone.push(...candidates.slice(0, WARBAND_MAX_DEPLOYED - baseZone.length).map(({ x, y }) => ({ x, y })));
-  const enemyTiles = pickZonedEnemyTiles(terrain.grid, region.enemies, deploymentZone, terrain.enemyZones ?? [], rng);
+  const enemyTiles = pickZonedEnemyTiles(
+    generated.grid,
+    region.enemies,
+    deploymentZone,
+    generated.enemyZones ?? [],
+    rng,
+  );
+  // The loop pass: a map with one way to the enemy gets a second.
+  const terrain = { ...generated, grid: openLoops(generated.grid, deploymentZone, enemyTiles.flat()) };
   const problems = checkMap({
     grid: terrain.grid,
     buildings: terrain.buildings,
@@ -151,7 +168,16 @@ export function layOutStage(seed: number, region: RegionConfig, pieces: readonly
     enemyTiles: enemyTiles.flat(),
   });
   const metrics = getMapMetrics(terrain.grid, deploymentZone, enemyTiles.flat());
-  return { seed, rng, terrain, deploymentZone, enemyTiles, problems, metrics, score: scoreMap(metrics) };
+  return {
+    seed,
+    rng,
+    terrain,
+    deploymentZone,
+    enemyTiles,
+    problems,
+    metrics,
+    score: scoreMap(metrics, region.terrain.caves ? CAVE_SCORE_TARGETS : MAP_SCORE_TARGETS),
+  };
 }
 
 // Whether `a` is a better candidate than `b`: one that keeps every rule

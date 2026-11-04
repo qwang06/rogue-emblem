@@ -40,9 +40,17 @@ export const MAX_ROUTES = 3;
 // How far from a side's starting tiles a forest still counts as its cover.
 export const COVER_REACH = 2;
 
+export interface MapScoreTargets {
+  maxNearestEnemy: number;
+  maxMeanEnemy: number;
+  maxFarthestEnemy: number;
+  minRoutes: number;
+  minOpenShare: number;
+}
+
 // What scoreMap aims for. A map that meets every target scores 0; every
 // miss adds to its score, and lower is better.
-export const MAP_SCORE_TARGETS = Object.freeze({
+export const MAP_SCORE_TARGETS: Readonly<MapScoreTargets> = Object.freeze({
   // Farther than this and nobody can fight on turn 1.
   maxNearestEnemy: 6,
   // Farther than these and the back of the enemy takes turns to arrive.
@@ -50,6 +58,13 @@ export const MAP_SCORE_TARGETS = Object.freeze({
   maxFarthestEnemy: 13,
   minRoutes: 2,
   minOpenShare: 0.75,
+});
+
+// The targets for a cave map (MapGenOptions.caves): its rock walls are the
+// point, so less of it need be open.
+export const CAVE_SCORE_TARGETS: Readonly<MapScoreTargets> = Object.freeze({
+  ...MAP_SCORE_TARGETS,
+  minOpenShare: 0.62,
 });
 
 const PENALTIES = Object.freeze({
@@ -165,11 +180,11 @@ export function getMapMetrics(grid: Grid, deploymentZone: readonly Point[], enem
   };
 }
 
-// How far `metrics` miss MAP_SCORE_TARGETS: 0 when they meet every
-// target, more the further they miss. Lower is better.
-export function scoreMap(metrics: MapMetrics): number {
+// How far `metrics` miss `targets` (MAP_SCORE_TARGETS when unset): 0 when
+// they meet every target, more the further they miss. Lower is better.
+export function scoreMap(metrics: MapMetrics, targets: Readonly<MapScoreTargets> = MAP_SCORE_TARGETS): number {
   const { nearestEnemy, meanEnemy, farthestEnemy, routes, openShare, playerCover, enemyCover } = metrics;
-  const { maxNearestEnemy, maxMeanEnemy, maxFarthestEnemy, minRoutes, minOpenShare } = MAP_SCORE_TARGETS;
+  const { maxNearestEnemy, maxMeanEnemy, maxFarthestEnemy, minRoutes, minOpenShare } = targets;
   if (nearestEnemy === null) return PENALTIES.unreachable;
   return (
     Math.max(0, nearestEnemy - maxNearestEnemy) * PENALTIES.distance +

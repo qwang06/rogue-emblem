@@ -12,7 +12,7 @@
         "lakeSize": [2, 3],
         "mountains": 0,
         "forests": 2,
-        "forestSize": [2, 3],
+        "forestSize": [1, 2],
         "meadows": 2,
         "meadowSize": [2, 4],
         "ruins": 0,
@@ -290,9 +290,10 @@
     },
     {
       "name": "Cinder Deep",
-      "description": "Ash plains split by rivers of lava below the Roost: skeletons and slimes boiled up from the deep, a charging minotaur, and an orc to drive them.",
+      "description": "Ash caverns threaded with lava below the Roost: skeletons and slimes boiled up from the deep, a charging minotaur, and an orc to drive them.",
       "terrain": {
         "generator": "planned",
+        "caves": true,
         "width": 8,
         "height": 8,
         "lakes": 2,

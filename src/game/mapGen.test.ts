@@ -8,7 +8,6 @@ import {
   getBuildingFootprint,
   getReachable,
   getRingCells,
-  growPatch,
   placeBuildings,
   placeCastle,
   placeRuin,
@@ -58,41 +57,6 @@ describe('carvePath', () => {
         expect(tiles.has(`${x + 1},${y}`) && tiles.has(`${x},${y + 1}`) && tiles.has(`${x + 1},${y + 1}`)).toBe(false);
       }
     }
-  });
-});
-
-describe('growPatch', () => {
-  const grass = createGrid(5, 5, 'grass');
-
-  it('turns up to `size` connected grass tiles into the terrain', () => {
-    const grid = growPatch(grass, { x: 2, y: 2 }, 4, createSeededRng(1), new Set(), 'water');
-    const water = grid.cells.filter((c) => c.terrain === 'water');
-    expect(water).toHaveLength(4);
-    expect(getReachable(setTerrain(grass, 0, 0, 'grass'), water[0]).size).toBe(25);
-  });
-
-  it('grows any terrain it is given', () => {
-    const grid = growPatch(grass, { x: 2, y: 2 }, 3, createSeededRng(1), new Set(), 'forest');
-    expect(grid.cells.filter((c) => c.terrain === 'forest')).toHaveLength(3);
-  });
-
-  it('stops early when it runs out of room', () => {
-    const blocked = new Set(['1,2', '3,2', '2,1', '2,3']);
-    const grid = growPatch(grass, { x: 2, y: 2 }, 10, createSeededRng(1), blocked, 'water');
-    expect(grid.cells.filter((c) => c.terrain === 'water')).toHaveLength(1);
-  });
-
-  it('only grows over grass', () => {
-    const start = setTerrain(grass, 3, 2, 'dirt');
-    const grid = growPatch(start, { x: 2, y: 2 }, 25, createSeededRng(1), new Set(), 'water');
-    expect(grid.cells.filter((c) => c.terrain === 'water')).toHaveLength(24);
-    expect(getCell(grid, 3, 2)!.terrain).toBe('dirt');
-  });
-
-  it('leaves the grid alone when the start is blocked or not grass', () => {
-    expect(growPatch(grass, { x: 2, y: 2 }, 3, createSeededRng(1), new Set(['2,2']), 'water')).toBe(grass);
-    const dirt = setTerrain(grass, 2, 2, 'dirt');
-    expect(growPatch(dirt, { x: 2, y: 2 }, 3, createSeededRng(1), new Set(), 'water')).toBe(dirt);
   });
 });
 
@@ -305,6 +269,35 @@ describe('fillTerrain with set pieces', () => {
       [],
     );
     expect(fillTerrain(options, rng, carvePath(12, 10, rng)).setPieces).toBeUndefined();
+  });
+});
+
+describe('fillTerrain on a cave map', () => {
+  const options: MapGenOptions = { width: 12, height: 10, castle: false, ruins: 0, buildings: 0, caves: true };
+
+  it('raises rock walls but keeps the road, its margin and the deployment rows open, and every open tile reachable', () => {
+    let rock = 0;
+    for (const seed of SEEDS) {
+      const rng = createSeededRng(seed);
+      const path = carvePath(12, 10, rng);
+      const { grid } = fillTerrain({ ...options, lakes: 0, mountains: 0 }, rng, path);
+      rock += grid.cells.filter((c) => c.terrain === 'mountain').length;
+      for (const p of path) {
+        for (const n of [p, { x: p.x - 1, y: p.y }, { x: p.x + 1, y: p.y }]) {
+          expect(getCell(grid, n.x, n.y)?.terrain ?? 'dirt').not.toBe('mountain');
+        }
+      }
+      expect(grid.cells.filter((c) => c.y >= 8 && c.terrain === 'mountain')).toEqual([]);
+      const reachable = getReachable(grid, path[0]);
+      expect(grid.cells.filter((c) => c.terrain !== 'mountain').every((c) => reachable.has(key(c)))).toBe(true);
+    }
+    expect(rock / SEEDS.length).toBeGreaterThan(12);
+  });
+
+  it('has no walls without caves', () => {
+    const rng = createSeededRng(1);
+    const { grid } = fillTerrain({ ...options, caves: false, lakes: 0, mountains: 0 }, rng, carvePath(12, 10, rng));
+    expect(grid.cells.some((c) => c.terrain === 'mountain')).toBe(false);
   });
 });
 

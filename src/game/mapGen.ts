@@ -9,8 +9,11 @@
 //   3. placeRuin      — a ring of wall with a gap, a building inside
 //   4. set pieces     — hand-made bits of map (setPieces.ts), when given
 //   5. placeBuildings — a few lone buildings on open grass
-//   6. growPatch      — blobs of water, mountain, forest and meadow
-//   7. getReachable   — which tiles can be walked to from the south end
+//   6. cave walls     — rock grown by cellular automaton, for cave maps
+//                       (growCaveWalls in terrainShapes.ts)
+//   7. patches        — clumps of water, forest and meadow and ridges of
+//                       mountain (growShapedPatch), then smoothed
+//   8. getReachable   — which tiles can be walked to from the south end
 // The path is laid first and nothing impassable (water, mountains, walls)
 // goes on it or next to it, so the two ends of the map are always
 // connected. Buildings stand on grass and keep a tile of open ground around
@@ -25,6 +28,7 @@ import { DEFAULT_TERRAIN_LEGEND } from './terrainMap.ts';
 import { BUILDING_ART } from './tileset.ts';
 import type { MapArchetype } from './mapArchetypes.ts';
 import { getPieceCenter, getPieceOrigins, stampPiece, type SetPiece } from './setPieces.ts';
+import { fillPockets, growCaveWalls, growShapedPatch, smoothPatches, type PatchShape } from './terrainShapes.ts';
 
 type Range = readonly [number, number];
 
@@ -58,6 +62,10 @@ export interface MapGenOptions {
   setPieces?: number;
   // Whether to try to put a castle beside the north end of the path.
   castle?: boolean;
+  // Whether the map is a cave: rock walls grown over the open ground
+  // (growCaveWalls in terrainShapes.ts) before the patches, leaving the
+  // routes running through caverns.
+  caves?: boolean;
   // How many walled ruins and lone buildings to try to place.
   ruins?: number;
   buildings?: number;
@@ -155,35 +163,6 @@ export function withMargin(tiles: readonly Point[]): Set<string> {
     }
   }
   return keys;
-}
-
-// Grows a patch of `terrain` of up to `size` tiles from `start` by
-// repeatedly turning a random grass neighbor of the patch so far, skipping
-// `blocked` tiles. Returns the grid with the patch's tiles changed
-// (unchanged if `start` itself is blocked or not grass).
-export function growPatch(
-  grid: Grid,
-  start: Point,
-  size: number,
-  rng: Rng,
-  blocked: ReadonlySet<string>,
-  terrain: string,
-): Grid {
-  const patch: Point[] = [];
-  const inPatch = new Set<string>();
-  const canGrow = (p: Point) => !blocked.has(key(p)) && !inPatch.has(key(p)) && isGrass(grid, p);
-
-  if (!canGrow(start)) return grid;
-  patch.push(start);
-  inPatch.add(key(start));
-  while (patch.length < size) {
-    const frontier = patch.flatMap((p) => getNeighbors(grid, p.x, p.y)).filter(canGrow);
-    if (frontier.length === 0) break;
-    const next = randomItem(rng, frontier);
-    patch.push(next);
-    inPatch.add(key(next));
-  }
-  return patch.reduce((g, p) => setTerrain(g, p.x, p.y, terrain), grid);
 }
 
 // The cells of a rectangular ring of wall `width` x `height` cells with its
@@ -325,6 +304,7 @@ export const MAP_GEN_DEFAULTS = Object.freeze({
   meadows: 3,
   meadowSize: [4, 8] as Range,
   castle: true,
+  caves: false,
   ruins: 1,
   buildings: 2,
   turnChance: 0.35,
@@ -394,6 +374,7 @@ export function fillTerrain(
     meadows,
     meadowSize,
     castle,
+    caves,
     ruins,
     buildings: buildingCount,
   } = { ...MAP_GEN_DEFAULTS, ...withoutUndefined(options) };
@@ -460,22 +441,38 @@ export function fillTerrain(
 
   const impassableBlocked = union(edges, nearPath, structures);
   const openBlocked = union(edges, structures);
-  const layers: [string, number, Range, ReadonlySet<string>][] = [
-    ['water', lakes, lakeSize, impassableBlocked],
-    ['mountain', mountains, mountainSize, impassableBlocked],
-    ['forest', forests, forestSize, openBlocked],
-    ['meadow', meadows, meadowSize, openBlocked],
+  // A cave's walls go up first. They may crowd the side routes and the top
+  // row (enemies stand in the caverns), but keep off the routes themselves,
+  // the road's margin, the structures' and the deployment rows (the
+  // frame's reserved tiles, when it has them); any open ground they wall
+  // off fills in.
+  if (caves) {
+    const caveEdges = frame.reserved ? edges : new Set(grid.cells.filter((c) => c.y >= height - 2).map(key));
+    grid = growCaveWalls(grid, rng, union(caveEdges, nearRoad, new Set(keepClear.map(key)), structures));
+    grid = fillPockets(grid, path[0], frame.reserved ? openBlocked : structures);
+  }
+  const layers: [string, number, Range, ReadonlySet<string>, PatchShape][] = [
+    ['water', lakes, lakeSize, impassableBlocked, 'blob'],
+    ['mountain', mountains, mountainSize, impassableBlocked, 'ridge'],
+    ['forest', forests, forestSize, openBlocked, 'blob'],
+    ['meadow', meadows, meadowSize, openBlocked, 'blob'],
   ];
   // Each patch starts on a grass tile it's free to grow from, so asking for
   // `count` patches gives that many unless the map runs out of room (a patch
   // can still grow into an earlier one of its kind and merge with it).
-  for (const [terrain, count, [min, max], blocked] of layers) {
+  // Lakes, woods and meadows grow into clumps, mountains into ridges.
+  for (const [terrain, count, [min, max], blocked, shape] of layers) {
     for (let i = 0; i < count; i++) {
       const starts = grid.cells.filter((c) => c.terrain === 'grass' && !blocked.has(key(c)));
       if (starts.length === 0) break;
-      grid = growPatch(grid, pickStart(terrain, i, starts, rng), randomInt(rng, min, max), rng, blocked, terrain);
+      const start = pickStart(terrain, i, starts, rng);
+      grid = growShapedPatch(grid, start, randomInt(rng, min, max), rng, blocked, terrain, shape);
     }
   }
+  // Then one round of smoothing fills the notches and holes the lakes and
+  // ridges left (a clearing in a wood is fine, and keeps its slow ground
+  // from growing), off what impassable terrain keeps off.
+  grid = smoothPatches(grid, ['water', 'mountain'], (tile) => !impassableBlocked.has(key(tile)));
 
   return { grid, path: [...path], buildings, ...(frame.setPieces ? { setPieces: placedPieces } : {}) };
 }
