@@ -68,7 +68,7 @@ export const FACTIONS: readonly Faction[] = Object.freeze([
 ]);
 
 // The player's warband's faction.
-export const PLAYER_FACTION: FactionId = 'sunward';
+export const PLAYER_FACTION: FactionId = 'azure';
 
 // The faction enemies belong to when nothing (e.g. a region) says otherwise.
 export const DEFAULT_ENEMY_FACTION: FactionId = 'crimson';
