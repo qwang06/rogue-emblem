@@ -5,7 +5,8 @@
 // from an Rng (seeded from the run, so a stage always offers the
 // same picks) and each one is applied to the run as a pure function.
 
-import { HEALTH_POTION, MASTER_SEAL, MAX_INVENTORY_SLOTS } from '../items.ts';
+import { HEALTH_POTION, MASTER_SEAL, MAX_INVENTORY_SLOTS, type Armor } from '../items.ts';
+import { GEAR_DESCRIPTIONS, KIT_GEAR } from '../gearKits.ts';
 import { getPromotions, PROMOTION_LEVEL } from '../promotions.ts';
 import { countSeals } from './promotion.ts';
 import { getExperienceToNextLevel, getLevelUpGains, type LevelUpResult } from '../experience.ts';
@@ -88,7 +89,18 @@ export const REROLL_COST = 10;
 export const REROLL_COST_STEP = 10;
 
 export type RewardKind =
-  'recruit' | 'draft' | 'rest' | 'supplies' | 'relic' | 'gold' | 'arms' | 'lesson' | 'scroll' | 'seal' | 'keystone';
+  | 'recruit'
+  | 'draft'
+  | 'rest'
+  | 'supplies'
+  | 'relic'
+  | 'gold'
+  | 'arms'
+  | 'lesson'
+  | 'scroll'
+  | 'seal'
+  | 'keystone'
+  | 'gear';
 
 export type Reward =
   // A new unit joins the roster.
@@ -115,7 +127,10 @@ export type Reward =
   // Gold for the warband.
   | { kind: 'gold'; amount: number }
   // A keystone (keystones.ts), replacing the one the warband holds.
-  | { kind: 'keystone'; keystoneId: string };
+  | { kind: 'keystone'; keystoneId: string }
+  // A piece of signature or cursed gear (gearKits.ts) for the convoy: an
+  // elite lair's offers.
+  | { kind: 'gear'; itemId: string; label: string };
 
 // The gold a cleared stage pays: STAGE_CLEAR_GOLD, STAGE_CLEAR_GOLD_PER_STAGE
 // for each stage, FLAWLESS_BONUS_GOLD when `losses` (units that died in
@@ -178,11 +193,28 @@ export function rollStageRewards(run: RunState, stage: number, rerolls: number =
       return Object.freeze(keystones.map(({ id }) => Object.freeze({ kind: 'keystone' as const, keystoneId: id })));
   }
   const count = getRewardChoices(run) + (isBigClear(run, stage) ? BIG_CLEAR_EXTRA_CHOICES : 0);
-  const relics = isEliteClear(run, stage) ? rollOfferableRelics(rng, run.relics, count) : [];
-  if (relics.length > 0)
-    return Object.freeze(relics.map((relic) => Object.freeze({ kind: 'relic' as const, relicId: relic.id })));
+  const gear = isEliteClear(run, stage) ? rollOfferableGear(rng, run, count) : [];
+  if (gear.length > 0)
+    return Object.freeze(
+      gear.map((item) => Object.freeze({ kind: 'gear' as const, itemId: item.id, label: item.label })),
+    );
   const rewards = rollRewards(run, stage, rng, count);
   return isFortClear(run, stage) ? withRelicReward(rewards, run, rng) : rewards;
+}
+
+// The kit gear (gearKits.ts) a run can still be offered: one copy a run,
+// so none the convoy or the roster already holds.
+export function getOfferableGear(run: Pick<RunState, 'convoy' | 'roster'>): (Weapon | Armor)[] {
+  const owned = new Set([
+    ...run.convoy.map(({ itemId }) => itemId),
+    ...run.roster.flatMap((unit) => Object.values(unit.equipment ?? {})),
+  ]);
+  return KIT_GEAR.filter((gear) => !owned.has(gear.id));
+}
+
+// Up to `count` different pieces of offerable gear, picked by `rng`.
+export function rollOfferableGear(rng: Rng, run: Pick<RunState, 'convoy' | 'roster'>, count: number) {
+  return shuffle(rng, getOfferableGear(run)).slice(0, Math.max(0, count));
 }
 
 // `rewards` with its last offer that isn't a Recruit swapped for a relic
@@ -333,6 +365,11 @@ function createReward(kind: RewardKind, run: RunState, stage: number, rng: Rng, 
       // Never in the kinds rollRewards draws; keystones come only from
       // rollStageRewards on a keystone stage.
       return { kind, keystoneId: rollKeystones(rng, run.keystone, 1)[0]?.id ?? '' };
+    case 'gear': {
+      // Never drawn either: gear comes from an elite lair's offers.
+      const [gear] = rollOfferableGear(rng, run, 1);
+      return { kind, itemId: gear?.id ?? '', label: gear?.label ?? '' };
+    }
   }
 }
 
@@ -424,6 +461,7 @@ function applyRewardEffect(run: RunState, reward: Reward, classes: readonly Unit
         ? freeze({ ...run, relics: [...run.relics, reward.relicId] })
         : run;
     case 'arms':
+    case 'gear':
       return freeze({ ...run, convoy: [...run.convoy, { itemId: reward.itemId, quantity: 1 }] });
     case 'lesson':
       return applyLessonReward(run, reward, classes).run;
@@ -529,6 +567,11 @@ export function describeReward(
     }
     case 'arms':
       return { label: 'Arms Cache', description: `A ${reward.label} goes to the convoy.` };
+    case 'gear':
+      return {
+        label: reward.label,
+        description: `${GEAR_DESCRIPTIONS[reward.itemId] ?? ''} Goes to the convoy.`.trim(),
+      };
     case 'lesson':
       return { label: "Veteran's Lesson", description: 'Every unit gains enough XP to reach its next level.' };
     case 'seal':

@@ -20,6 +20,7 @@ import {
   type GearSlot,
 } from '../equipment.ts';
 import { MAX_INVENTORY_SLOTS, type Item } from '../items.ts';
+import { isCursed } from '../gearKits.ts';
 import { UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
 import { isWeapon, NATURAL_WEAPON_IDS } from '../weapons.ts';
 import {
@@ -74,7 +75,28 @@ export function canCarry(run: RunState, unitId: string, itemId: string, items: r
     return unit.items.some((held) => held.itemId === item.id) || unit.items.length < MAX_INVENTORY_SLOTS;
   }
   if (!isGear(item)) return false;
-  return canEquip(getUnitEquipment(unit, items), item, getGearLayout(unit.classId), unit.classId);
+  const equipment = getUnitEquipment(unit, items);
+  if (!canEquip(equipment, item, getGearLayout(unit.classId), unit.classId)) return false;
+  // Cursed gear sticks: nothing displaces it (see unequipToConvoy).
+  const { removed } = equipGear(equipment, item, getGearLayout(unit.classId), unit.classId);
+  return !removed.some(isCursed);
+}
+
+// What taking cursed gear off costs at camp, in gold. Cursed gear sticks
+// to its wearer: it can't be swapped out, only taken off for this.
+export const CLEANSE_COST = 40;
+
+// What taking off the unit `unitId`'s gear in `slot` costs: CLEANSE_COST
+// for cursed gear, else nothing.
+export function getUnequipCost(
+  run: RunState,
+  unitId: string,
+  slot: GearSlot,
+  items: readonly Item[] = RUN_ITEMS,
+): number {
+  const unit = findUnit(run, unitId);
+  const gear = unit ? getUnitEquipment(unit, items)[slot] : undefined;
+  return gear && isCursed(gear) ? CLEANSE_COST : 0;
 }
 
 // The gear the unit wears, by slot.
@@ -145,14 +167,17 @@ export function giveFromConvoy(
   return freezeRun({ ...run, convoy, roster: replaceUnit(run, withEquipment(unit, equipment, items)) });
 }
 
-// Whether the unit `unitId` has gear in `slot` to take off.
+// Whether the unit `unitId` has gear in `slot` to take off, and the gold
+// for it if it's cursed (getUnequipCost).
 export function canUnequip(run: RunState, unitId: string, slot: GearSlot, items: readonly Item[] = RUN_ITEMS): boolean {
   const unit = findUnit(run, unitId);
-  return unit !== null && getUnitEquipment(unit, items)[slot] !== undefined;
+  if (unit === null || getUnitEquipment(unit, items)[slot] === undefined) return false;
+  return run.gold >= getUnequipCost(run, unitId, slot, items);
 }
 
 // The run with the unit `unitId`'s gear in `slot` taken off and put in the
-// convoy. Throws if the slot is empty.
+// convoy, paying getUnequipCost for cursed gear. Throws if the slot is
+// empty or the run can't pay.
 export function unequipToConvoy(
   run: RunState,
   unitId: string,
@@ -160,10 +185,13 @@ export function unequipToConvoy(
   items: readonly Item[] = RUN_ITEMS,
 ): RunState {
   const unit = requireUnit(run, unitId);
+  const cost = getUnequipCost(run, unitId, slot, items);
   const { equipment, removed } = unequipGear(getUnitEquipment(unit, items), slot);
   if (!removed) throw new Error(`${unit.name} wears nothing in ${slot}`);
+  if (run.gold < cost) throw new Error(`Cleansing ${removed.label} costs ${cost} gold`);
   return freezeRun({
     ...run,
+    gold: run.gold - cost,
     convoy: putInto(run.convoy, removed.id, 1, false),
     roster: replaceUnit(run, withEquipment(unit, equipment, items)),
   });

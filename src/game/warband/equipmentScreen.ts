@@ -29,7 +29,9 @@ import {
 import type { Item } from '../items.ts';
 import {
   canGiveFromConvoy,
+  canCarry,
   canUnequip,
+  getUnequipCost,
   getUnitEquipment,
   giveFromConvoy,
   lookUpItem,
@@ -52,7 +54,10 @@ export interface EquipmentScreenState {
 // One choice in the gear column: take the slot's gear off, or wear the
 // convoy entry at `convoyIndex`. `disabled` marks gear the unit can't wear.
 export type GearChoice =
-  { kind: 'remove'; disabled: false } | { kind: 'gear'; convoyIndex: number; item: Gear; disabled: boolean };
+  // Remove costs `cost` gold for cursed gear (getUnequipCost), and is
+  // disabled when the run can't pay.
+  | { kind: 'remove'; cost: number; disabled: boolean }
+  | { kind: 'gear'; convoyIndex: number; item: Gear; disabled: boolean };
 
 const COLUMNS: readonly EquipmentColumn[] = Object.freeze(['units', 'slots', 'gear']);
 
@@ -92,12 +97,15 @@ export function getGearChoices(state: EquipmentScreenState, items: readonly Item
   const equipment = getUnitEquipment(unit, items);
   const layout = getGearLayout(unit.classId);
   const choices: GearChoice[] = [];
-  if (canUnequip(state.run, unit.id, slot, items)) choices.push(Object.freeze({ kind: 'remove', disabled: false }));
+  if (equipment[slot]) {
+    const cost = getUnequipCost(state.run, unit.id, slot, items);
+    choices.push(Object.freeze({ kind: 'remove', cost, disabled: !canUnequip(state.run, unit.id, slot, items) }));
+  }
   state.run.convoy.forEach((entry, convoyIndex) => {
     const item = lookUpItem(entry.itemId, items);
     if (!isGear(item) || getGearSlot(item) !== slot) return;
     if (slot === 'special' && (item.kind !== 'armor' || item.forClass !== unit.classId)) return;
-    const disabled = !canEquip(equipment, item, layout, unit.classId);
+    const disabled = !canEquip(equipment, item, layout, unit.classId) || !canCarry(state.run, unit.id, item.id, items);
     choices.push(Object.freeze({ kind: 'gear', convoyIndex, item, disabled }));
   });
   return choices;

@@ -114,7 +114,13 @@ export function toEquipmentScreenView(
   const gear = choices.map((choice) =>
     Object.freeze<GearChoiceView>(
       choice.kind === 'remove'
-        ? { key: 'remove', label: 'Remove', icon: null, remove: true, disabled: false }
+        ? {
+            key: 'remove',
+            label: choice.cost > 0 ? `Cleanse (${choice.cost} gold)` : 'Remove',
+            icon: null,
+            remove: true,
+            disabled: choice.disabled,
+          }
         : {
             key: `${choice.item.id}@${choice.convoyIndex}`,
             label: choice.item.label,

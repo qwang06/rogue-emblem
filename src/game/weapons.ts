@@ -7,6 +7,8 @@
 // is a magical weapon that teaches its spell to a unit that fights with it
 // often enough (see tomes.ts). No Phaser, no rendering, no hidden state.
 
+import type { Curse } from './curses.ts';
+import type { Modifier } from './modifiers.ts';
 import type { MenuAction } from './actionMenu.ts';
 import type { DamageType } from './combat.ts';
 import type { InventoryEntry } from './items.ts';
@@ -40,6 +42,10 @@ export interface Weapon {
   minRange: number;
   maxRange: number;
   teaches?: TomeLesson;
+  // What wearing it adds (modifiers.ts) and costs (curses.ts), for gear
+  // that bends a rule; see getGearModifiers in equipment.ts.
+  modifiers?: readonly Modifier[];
+  curses?: readonly Curse[];
 }
 
 // What a tome teaches: the id of the spell (a weapon that never breaks)
