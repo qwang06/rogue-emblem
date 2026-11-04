@@ -82,7 +82,6 @@ export function App() {
   return (
     <div className="page">
       <PageHeader
-        center={route.page === 'game' && <RelicBar />}
         actions={
           <>
             <AutoPlayButton />
@@ -104,6 +103,8 @@ export function App() {
           </>
         )}
       </PageHeader>
+      {/* A Warband run's relics, in a row of their own under the header. */}
+      {route.page === 'game' && <RelicBar />}
 
       <main className="page__main">
         {/* Above the stage rather than over it, so it never hides a tile: the stage gives up its height. */}

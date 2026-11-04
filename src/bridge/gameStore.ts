@@ -164,7 +164,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   campMenu: null, // frozen camp menu (getCampActions: Manage Roster / Merchant / Promote / Rest / Mentors / Next Stage) once a won stage's reward is taken, or null
   campGold: null, // the warband's gold while at camp (shown on the camp menu), or null
   campRelics: null, // RelicViews from toRelicViews() of the warband's relics while at camp (listed on the camp menu), or null
-  runRelics: null, // RelicViews from toRelicViews() of the warband's keystone and relics for the header's relic bar (RelicBar) all through a Warband run, or null outside one (see publishRunRelics)
+  runRelics: null, // RelicViews from toRelicViews() of the warband's keystone and relics for the relic bar under the header (RelicBar) all through a Warband run, or null outside one (see publishRunRelics)
   rosterScreen: null, // RosterScreenView from toRosterScreenView() while the roster screen is open between stages, or null
   equipmentScreen: null, // EquipmentScreenView from toEquipmentScreenView() while the camp's equipment screen is open, or null
   merchantScreen: null, // MerchantScreenView from toMerchantScreenView() while the camp's merchant screen is open, or null

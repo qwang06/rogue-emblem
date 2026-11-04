@@ -1,20 +1,22 @@
-/* ---- Relic bar (a Warband run's relics, in the page header) ----------- */
+/* ---- Relic bar (a Warband run's relics, in a row under the header) --- */
 
-/* Between the wordmark and the status, giving way first when the header is
-   tight (it shrinks far faster than the status, down to its Q cap): the row
-   scrolls sideways, with no scrollbar, rather than wrapping or pushing the
-   status and buttons off. */
+/* A row of a fixed height between the header and the stage, so the stage
+   (and the overworld and loading screen, placed by --below-header) start
+   below it. Too many relics for the width scroll sideways, with no
+   scrollbar, rather than wrapping. */
+.page:has(> .relic-bar) {
+  --relic-bar-height: 40px;
+  --below-header: calc(6px + 2.75rem + 6px + var(--relic-bar-height) + 6px);
+}
+
 .relic-bar {
-  flex: 0 1000 auto;
-  min-width: 2rem;
-  overflow: hidden;
+  flex: none;
   display: flex;
   align-items: center;
   gap: 4px;
-}
-
-.page-header:has(.relic-bar) .page-header__end {
-  flex: 1 1 auto;
+  height: var(--relic-bar-height);
+  min-width: 0;
+  padding: 0 4px;
 }
 
 .relic-bar__key {

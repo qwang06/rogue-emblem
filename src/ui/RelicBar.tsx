@@ -7,7 +7,7 @@ import { useGameStore } from './useGameStore.ts';
 import './RelicBar.css';
 
 // The relics a Warband run holds (its keystone first), as a row of icons in
-// the page header, like Slay the Spire's relic bar, through the run's
+// its own row under the page header, like Slay the Spire's relic bar, through the run's
 // battles, camp and overworld. Pointing at a relic, or focusing it, shows
 // its name and what it does in a tooltip below it. From the keyboard, Q
 // opens the bar on the relic last looked at; ←/→ step through them and Q,
@@ -95,7 +95,7 @@ function RelicRow({ relics, keysTaken }: { relics: readonly RelicView[]; keysTak
       <span className="relic-bar__key" aria-hidden="true" title="Q: browse relics">
         <kbd>Q</kbd>
       </span>
-      {/* The wheel scrolls the row sideways when the header is too narrow for it. */}
+      {/* The wheel scrolls the row sideways when the window is too narrow for it. */}
       <ul
         className="relic-bar__list"
         onWheel={(event) => {
@@ -150,7 +150,7 @@ function RelicRow({ relics, keysTaken }: { relics: readonly RelicView[]; keysTak
 }
 
 // The shown relic's name and description, hung below its icon in a fixed
-// box (so the header's scrolling row never clips it), kept on screen.
+// box (so the bar's scrolling row never clips it), kept on screen.
 function RelicTooltip({
   relic,
   anchor,

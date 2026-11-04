@@ -1,4 +1,4 @@
-// The header's relic bar (src/ui/RelicBar.tsx) shows the relics a Warband
+// The relic bar under the header (src/ui/RelicBar.tsx) shows the relics a Warband
 // run holds, keystone first, through every screen of the run: the map
 // scene publishes them when a battle starts and whenever it saves the run
 // (GridScene.keepRun), and the overworld whenever its run changes.

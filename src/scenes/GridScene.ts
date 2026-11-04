@@ -762,7 +762,7 @@ export class GridScene extends Phaser.Scene {
     this.pinUnitSheetFrames();
 
     this.setup = setup;
-    // The header's relic bar shows a Warband run's relics all through it.
+    // The relic bar under the header shows a Warband run's relics all through it.
     publishRunRelics(setup.mode === 'warband' ? (setup.run ?? null) : null);
     this.playClockFrom = Date.now(); // the run's play time is counted from here (takePlayTime)
     this.nextBattle = null; // the BattleSetup a victory leads to, once won

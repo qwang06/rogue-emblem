@@ -61,7 +61,7 @@ function prefersReducedMotion(): boolean {
 export function OverworldScreen() {
   const [run, setRun] = useState(() => loadSavedRun());
   const realm = useMemo(() => (run ? getRealm(run.seed, getActiveContent().regions) : null), [run]);
-  // The header's relic bar follows the run (a wayside event can grant a relic).
+  // The relic bar under the header follows the run (a wayside event can grant a relic).
   useEffect(() => publishRunRelics(run), [run]);
 
   if (!run || !realm) {
