@@ -585,6 +585,12 @@ describe('modifiers', () => {
     expect(events).toContainEqual({ type: 'status', unitId: 'hero', targetId: 'hero', status: 'veiled' });
   });
 
+  it("lays a veil-on-wait modifier's own status instead of Veiled (the Ambush Cloak's Lurking)", () => {
+    const start = finisher([{ kind: 'veil-on-wait', status: 'lurking' }]);
+    const { state } = run(start, { type: 'wait', unitId: 'hero' });
+    expect(state.units.get('hero')!.statuses).toEqual(['lurking']);
+  });
+
   it('taunts the foes beside a taunt-aura unit as its phase starts', () => {
     const hero = makeTestUnit({ team: 'player' });
     hero.modifiers = [{ kind: 'taunt-aura' }];
