@@ -697,8 +697,8 @@ export class GridScene extends Phaser.Scene {
   preload() {
     // Drives the loading screen's bar; the screen lifts at the end of create().
     this.load.on('progress', (progress: number) => gameStore.setState({ mapLoadProgress: progress }));
-    // Spritesheets so sprites can draw single frames: the cursor and arrow
-    // tiles of the terrain sheet and each season's map art (the tilemaps
+    // Spritesheets so sprites can draw single frames: the arrow tiles of
+    // the terrain sheet and each season's map art (the tilemaps
     // still use the sheets whole), and each unit sheet's animation frames.
     for (const [key, url] of Object.entries(TERRAIN_SHEET_URLS)) {
       this.load.spritesheet(key, url, { frameWidth: TILE_SIZE, frameHeight: TILE_SIZE });
@@ -3986,8 +3986,8 @@ export class GridScene extends Phaser.Scene {
   createCursor() {
     this.cursor = createCursor(0, 0);
     const { x, y } = gridToWorld(this.cursor.x, this.cursor.y, TILE_SIZE);
-    const { key, columns } = TERRAIN_SHEET;
-    const frames = CURSOR_ANIMATION.tiles.map((tile) => ({ key, frame: getTileFrame(tile, columns) }));
+    const key = CURSOR_ANIMATION.sheet;
+    const frames = CURSOR_ANIMATION.frames.map((frame) => ({ key, frame }));
     // Animations are global to the game, so a restarted scene reuses it.
     if (!this.anims.exists(CURSOR_ANIMATION.key)) {
       this.anims.create({
