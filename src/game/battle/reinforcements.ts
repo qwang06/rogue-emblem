@@ -77,16 +77,28 @@ export function createWaveArrival(state: ReinforcementState): Unit {
   return createArrival(classes[state.arrived % classes.length], state.rules.level, state.rules);
 }
 
+// How far (in straight steps) from the deployment zone a wave may arrive:
+// on a big map the farthest tile would leave it marching for turns, so it
+// arrives at the edge of the fight instead.
+export const WAVE_REACH = 10;
+
 // The free, walkable tile farthest from `zone` (by steps to its nearest
-// tile), the one nearest the map's middle column on a tie, then the
-// topmost; null when there's none.
-export function pickWaveTile(grid: Grid, zone: readonly Point[]): Point | null {
+// tile) but no more than `reach` steps from it, the one nearest the map's
+// middle column on a tie, then the topmost; the nearest past `reach` when
+// none is that close; null when there's none.
+export function pickWaveTile(grid: Grid, zone: readonly Point[], reach = WAVE_REACH): Point | null {
   if (zone.length === 0) return null;
   const middle = (grid.width - 1) / 2;
+  const free = grid.cells
+    .filter((cell) => !cell.unitId && getMoveCost(cell.terrain) !== Infinity)
+    .map((cell) => ({
+      cell,
+      distance: Math.min(...zone.map(({ x, y }) => Math.abs(cell.x - x) + Math.abs(cell.y - y))),
+    }));
+  const nearest = Math.min(...free.map(({ distance }) => distance));
+  const limit = Math.max(reach, nearest);
   let best: { point: Point; distance: number } | null = null;
-  for (const cell of grid.cells) {
-    if (cell.unitId || getMoveCost(cell.terrain) === Infinity) continue;
-    const distance = Math.min(...zone.map(({ x, y }) => Math.abs(cell.x - x) + Math.abs(cell.y - y)));
+  for (const { cell, distance } of free.filter((tile) => tile.distance <= limit)) {
     const better =
       !best ||
       distance > best.distance ||

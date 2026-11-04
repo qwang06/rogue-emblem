@@ -58,6 +58,18 @@ describe('pickWaveTile', () => {
     expect(pickWaveTile(grid, zone)).toEqual({ x: 1, y: 0 });
     expect(pickWaveTile(grid, [])).toBeNull();
   });
+
+  it('stays within reach of the deployment zone on a big map', () => {
+    const grid = createGrid(20, 4, 'grass');
+    const zone = [{ x: 0, y: 3 }];
+    // The farthest tiles within 10 steps are 10 away; of those, the
+    // nearest the middle column, then the topmost, wins.
+    expect(pickWaveTile(grid, zone, 10)).toEqual({ x: 9, y: 2 });
+    expect(pickWaveTile(grid, zone, 100)).toEqual({ x: 19, y: 0 });
+    // Nothing within reach: the nearest tile past it.
+    const row = setUnit(createGrid(20, 1, 'grass'), 0, 0, 'hero');
+    expect(pickWaveTile(row, [{ x: 0, y: 0 }], 0)).toEqual({ x: 1, y: 0 });
+  });
 });
 
 describe('waves in battle', () => {

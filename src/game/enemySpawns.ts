@@ -57,8 +57,8 @@ const key = ({ x, y }: Point) => `${x},${y}`;
 
 // How many steps each tile is from the nearest of `starts`, as keys "x,y",
 // walking through any tile with a finite move cost. Tiles no start can
-// reach are left out.
-export function getWalkingDistances(grid: Grid, starts: readonly Point[]): Map<string, number> {
+// reach (or, with `maxSteps`, reach within that many steps) are left out.
+export function getWalkingDistances(grid: Grid, starts: readonly Point[], maxSteps = Infinity): Map<string, number> {
   const walkable = (p: Point) => Number.isFinite(getMoveCost(getCell(grid, p.x, p.y)?.terrain ?? null));
   const distances = new Map<string, number>();
   const queue = starts.filter(walkable);
@@ -66,6 +66,7 @@ export function getWalkingDistances(grid: Grid, starts: readonly Point[]): Map<s
   for (let i = 0; i < queue.length; i++) {
     const p = queue[i];
     const next = distances.get(key(p))! + 1;
+    if (next > maxSteps) continue;
     for (const n of getNeighbors(grid, p.x, p.y)) {
       if (distances.has(key(n)) || !walkable(n)) continue;
       distances.set(key(n), next);

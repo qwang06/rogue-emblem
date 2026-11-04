@@ -141,12 +141,17 @@ export function RegionEditor({
       <fieldset className="region-editor__section">
         <legend>Map</legend>
         <div className="region-editor__grid">
-          <NumberField form={form} path={at('terrain', 'width')} label="Width" hint={`${MIN_SIZE}–${MAX_SIZE} tiles`} />
+          <NumberField
+            form={form}
+            path={at('terrain', 'width')}
+            label="Min width"
+            hint={`${MIN_SIZE}–${MAX_SIZE} tiles; stages grow it to fit the fight`}
+          />
           <NumberField
             form={form}
             path={at('terrain', 'height')}
-            label="Height"
-            hint={`${MIN_SIZE}–${MAX_SIZE} tiles`}
+            label="Min height"
+            hint={`${MIN_SIZE}–${MAX_SIZE} tiles; stages grow it to fit the fight`}
           />
           <SelectField form={form} path={at('palette')} label="Palette" options={PALETTES} />
           <SelectField form={form} path={at('faction')} label="Faction" options={FACTION_IDS} />

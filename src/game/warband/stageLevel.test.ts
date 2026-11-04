@@ -12,6 +12,7 @@ import {
   OBJECTIVE_ARCHETYPES,
   pickStageArchetype,
   pickStageLayout,
+  sizeStageRegion,
   SPIKE_TRAP_COUNT,
   SPIKE_TRAP_REACH,
   withArchetype,
@@ -165,7 +166,7 @@ describe('pickStageLayout', () => {
 describe('createStageLevel', () => {
   it('builds the map pickStageLayout picks, with enemies on its tiles', () => {
     for (const region of REGION_CONFIGS) {
-      const layout = pickStageLayout(1234, region);
+      const layout = pickStageLayout(1234, sizeStageRegion(1234, region));
       const level = createStageLevel(1234, region);
       expect(terrainToRows(level.grid)).toEqual(terrainToRows(layout.terrain.grid));
       expect(level.deploymentZone).toEqual(layout.deploymentZone);
@@ -196,7 +197,8 @@ describe('createStageLevel', () => {
     expect(withTraps.length).toBeLessThan(BATTLES.length * 0.7);
     for (const { level } of withTraps) {
       const traps = level.grid.cells.filter((c) => c.terrain === SPIKES);
-      expect(traps.length).toBeLessThanOrEqual(SPIKE_TRAP_COUNT.max);
+      const scale = (level.grid.width * level.grid.height) / 64;
+      expect(traps.length).toBeLessThanOrEqual(Math.round(SPIKE_TRAP_COUNT.max * scale));
       const enemies = level.grid.cells.filter((c) => c.unitId?.startsWith('enemy-'));
       for (const trap of traps) {
         expect(trap.unitId).toBeNull();
@@ -225,11 +227,14 @@ describe('createStageLevel', () => {
     expect(enemy.equipment.body?.id).toBe(GEAR_LADDER.iron.body.heavy);
   });
 
-  it('is sized by its region and offers the starting warband', () => {
+  it('is sized for the fight, never smaller than its region, and offers the starting warband', () => {
     for (const region of REGION_CONFIGS) {
       const level = createStageLevel(1, region);
-      expect(level.grid.width).toBe(region.terrain.width);
-      expect(level.grid.height).toBe(region.terrain.height);
+      const { terrain } = sizeStageRegion(1, region);
+      expect(level.grid.width).toBe(terrain.width);
+      expect(level.grid.height).toBe(terrain.height);
+      expect(level.grid.width).toBeGreaterThanOrEqual(region.terrain.width);
+      expect(level.grid.height).toBeGreaterThanOrEqual(region.terrain.height);
     }
     const level = createStageLevel(1, FIRST);
     expect(level.roster).toEqual([...createStartingWarband().keys()]);
@@ -250,8 +255,11 @@ describe('createStageLevel', () => {
     }
   });
 
-  it('places every built-in region enemy within its group, where the player can walk to it', () => {
+  it('places every built-in region enemy within its group (or its archetype’s zones), where the player can walk to it', () => {
     for (const { region, level } of BATTLES) {
+      // An archetype deals enemies into its own zones instead of their
+      // groups' areas (pickZonedEnemyTiles).
+      const zoned = region.terrain.archetype !== undefined && region.terrain.archetype !== 'advance';
       const { grid, units, deploymentZone } = level;
       const reachable = getReachable(grid, deploymentZone[1]);
       const enemies = [...units].filter(([, unit]) => unit.team === 'enemy');
@@ -260,7 +268,7 @@ describe('createStageLevel', () => {
       const groupOf = region.enemies.flatMap((group) => Array.from({ length: group.count }, () => group));
       enemies.forEach(([unitId], i) => {
         const tile = findUnit(grid, unitId)!;
-        expect(isInArea(tile, groupOf[i].area ?? {}, grid.width, grid.height)).toBe(true);
+        if (!zoned) expect(isInArea(tile, groupOf[i].area ?? {}, grid.width, grid.height)).toBe(true);
         expect(reachable.has(`${tile.x},${tile.y}`)).toBe(true);
       });
     }
@@ -565,7 +573,7 @@ describe('map archetypes on stages', () => {
     (archetype) => {
       for (const seed of [1, 2, 3, 4, 5]) {
         const stageRegion = withArchetype(region, archetype);
-        const layout = pickStageLayout(seed, stageRegion);
+        const layout = pickStageLayout(seed, sizeStageRegion(seed, stageRegion));
         expect(layout.problems, `${archetype} seed ${seed}`).toEqual([]);
         expect(layout.deploymentZone.slice(0, 3)).toEqual(layout.terrain.deploymentZone);
         expect(layout.deploymentZone).toHaveLength(5);

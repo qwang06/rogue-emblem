@@ -58,7 +58,7 @@ import {
   isTileSkill,
 } from '../game/skills.ts';
 import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange } from '../game/combat.ts';
-import { getFitZoom } from '../game/camera.ts';
+import { getFollowView } from '../game/camera.ts';
 import { createCursor, moveCursor } from '../game/cursor.ts';
 import {
   createBattleLevel,
@@ -289,9 +289,12 @@ import type { ItemAction, RestoreStat } from '../game/items.ts';
 import type { SkillAction } from '../game/skills.ts';
 import type { RosterMenuEntry, TargetingMode } from '../bridge/gameStore.ts';
 
-// The canvas is sized by the page (see main.ts); maps are zoomed to fit it,
-// in whole steps (crisp pixel art) up to MAX_ZOOM, and centered.
-const MAX_ZOOM = 2;
+// The canvas is sized by the page (see main.ts); maps are always drawn at
+// MAP_ZOOM (crisp pixel art, never shrunk to fit a small window), centered
+// on an axis they fit, and scrolled to follow the cursor on one they don't
+// (getFollowView), keeping it FOLLOW_MARGIN tiles from the canvas's edge.
+const MAP_ZOOM = 2;
+const FOLLOW_MARGIN = 2;
 const MOVE_RANGE_COLOR = 0x3b82f6;
 const MOVE_RANGE_ALPHA = 0.45;
 const ATTACK_RANGE_COLOR = 0xef4444;
@@ -513,6 +516,11 @@ export class GridScene extends Phaser.Scene {
   pointerTile: Point | null = null;
   cursor!: Point;
   cursorSprite!: Sprite;
+  // The world pixel the view's top-left corner shows (negative on an axis
+  // the map is centered on), and whether a move of it still has the map's
+  // anchors to refresh (see followCursor).
+  viewCorner: Point = { x: 0, y: 0 };
+  anchorsPending = false;
   unitSprites!: Map<string, Sprite>;
   // The marker on the tile a boss's horn marked, and that tile as "x,y".
   incomingMarker: Phaser.GameObjects.Rectangle | null = null;
@@ -810,6 +818,9 @@ export class GridScene extends Phaser.Scene {
     this.renderUnits(this.grid);
     this.createCursor();
 
+    // A restarted scene keeps its fields: start the view afresh.
+    this.viewCorner = { x: 0, y: 0 };
+    this.anchorsPending = false;
     this.fitCamera();
     // The scale manager outlives this scene, so stop listening when it goes.
     this.scale.on(Phaser.Scale.Events.RESIZE, this.fitCamera, this);
@@ -927,18 +938,34 @@ export class GridScene extends Phaser.Scene {
     gameStore.setState({ mapLoadProgress: 1, mapReady: true });
   }
 
-  // Zooms the map to fit the canvas (up to MAX_ZOOM) and centers it. Runs
-  // on create and whenever the page resizes the canvas.
+  // Sets the map's zoom and puts the view on the cursor. Runs on create
+  // and whenever the page resizes the canvas.
   fitCamera() {
-    const camera = this.cameras.main;
-    camera.setZoom(getFitZoom(this.grid, TILE_SIZE, this.scale.gameSize, MAX_ZOOM));
-    camera.centerOn((this.grid.width * TILE_SIZE) / 2, (this.grid.height * TILE_SIZE) / 2);
+    this.cameras.main.setZoom(MAP_ZOOM);
+    this.followCursor(true);
+  }
+
+  // Scrolls the view just enough to keep the cursor FOLLOW_MARGIN tiles
+  // inside it (see getFollowView), and, when it moved (or `force`), moves
+  // everything React anchors to the map once the view has updated.
+  followCursor(force = false) {
+    const view = { width: this.scale.gameSize.width / MAP_ZOOM, height: this.scale.gameSize.height / MAP_ZOOM };
+    const world = { width: this.grid.width * TILE_SIZE, height: this.grid.height * TILE_SIZE };
+    const focus = { ...gridToWorld(this.cursor.x, this.cursor.y, TILE_SIZE), width: TILE_SIZE, height: TILE_SIZE };
+    const corner = getFollowView(this.viewCorner, focus, view, world, FOLLOW_MARGIN * TILE_SIZE);
+    if (!force && corner.x === this.viewCorner.x && corner.y === this.viewCorner.y) return;
+    this.viewCorner = corner;
+    this.cameras.main.centerOn(corner.x + view.width / 2, corner.y + view.height / 2);
     // The camera's visible area only updates when it next renders, so move
-    // an open unit menu to the refitted map then.
+    // what's anchored to the map (menus, forecasts, tags) then, once.
+    if (this.anchorsPending) return;
+    this.anchorsPending = true;
     this.events.once(Phaser.Scenes.Events.RENDER, () => {
+      this.anchorsPending = false;
       if (this.activeUnit) this.publishMenuAnchor();
       if (this.rangeMode === 'attack' || this.rangeMode === 'skill') this.updateCombatForecast();
       if (this.rangeMode === 'skill') this.updatePushPreview();
+      if (this.hoveredUnit) this.publishHoveredUnit();
       this.refreshIntents();
     });
   }
@@ -3952,6 +3979,7 @@ export class GridScene extends Phaser.Scene {
   setCursor(x: number, y: number) {
     this.cursor = moveCursor(this.grid, this.cursor, x - this.cursor.x, y - this.cursor.y);
     this.updateCursorSprite();
+    this.followCursor();
     this.updateHoveredUnit();
     if (this.rangeMode === 'attack' || this.rangeMode === 'skill') this.updateCombatForecast();
     if (this.rangeMode === 'skill') this.updatePushPreview();

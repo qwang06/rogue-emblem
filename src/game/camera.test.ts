@@ -1,38 +1,48 @@
 import { describe, expect, it } from 'vitest';
-import { getFitZoom } from './camera.ts';
+import { getFollowView } from './camera.ts';
 
-const CANVAS = { width: 960, height: 720 };
+const TILE = 64;
+const tile = (x: number, y: number) => ({ x: x * TILE, y: y * TILE, width: TILE, height: TILE });
+// A 20x10-tile map (1280x640) seen through a 640x320 view, two tiles of
+// margin.
+const WORLD = { width: 20 * TILE, height: 10 * TILE };
+const VIEW = { width: 10 * TILE, height: 5 * TILE };
+const MARGIN = 2 * TILE;
 
-describe('getFitZoom', () => {
-  it('zooms a 20x15 map of 16px tiles to exactly fill a 960x720 canvas', () => {
-    expect(getFitZoom({ width: 20, height: 15 }, 16, CANVAS, 8)).toBe(3);
+describe('getFollowView', () => {
+  it('centers a map that fits, on each axis it fits', () => {
+    const view = { width: 1400, height: 1000 };
+    expect(getFollowView({ x: 0, y: 0 }, tile(3, 3), view, WORLD, MARGIN)).toEqual({ x: -60, y: -180 });
+    // Narrow but tall: the width scrolls, the height is centered.
+    const narrow = { width: 640, height: 1000 };
+    expect(getFollowView({ x: 0, y: 0 }, tile(0, 0), narrow, WORLD, MARGIN)).toEqual({ x: 0, y: -180 });
   });
 
-  it('caps small maps at maxZoom', () => {
-    expect(getFitZoom({ width: 3, height: 3 }, 16, CANVAS, 8)).toBe(8);
+  it("doesn't move while the focus stays inside the margin", () => {
+    const start = { x: 4 * TILE, y: 2 * TILE };
+    expect(getFollowView(start, tile(7, 4), VIEW, WORLD, MARGIN)).toEqual(start);
+    expect(getFollowView(start, tile(6, 4), VIEW, WORLD, MARGIN)).toEqual(start);
   });
 
-  it('is limited by whichever side fits worse', () => {
-    // 30 tiles across is 480px at 1x, so only 2x fits the width.
-    expect(getFitZoom({ width: 30, height: 3 }, 16, CANVAS, 20)).toBe(2);
-    // 20 tiles down is 320px at 1x, so only 2x fits the height.
-    expect(getFitZoom({ width: 3, height: 20 }, 16, CANVAS, 20)).toBe(2);
+  it('scrolls just enough to keep the focus a margin from the edge', () => {
+    const start = { x: 4 * TILE, y: 2 * TILE };
+    // Tile 12 needs the view to end at tile 15 (12 + 1 + 2), so start at 5.
+    expect(getFollowView(start, tile(12, 4), VIEW, WORLD, MARGIN)).toEqual({ x: 5 * TILE, y: 2 * TILE });
+    // Tile 5 needs the view to start at tile 3.
+    expect(getFollowView(start, tile(5, 2), VIEW, WORLD, MARGIN)).toEqual({ x: 3 * TILE, y: 0 });
   });
 
-  it('rounds down to a whole zoom', () => {
-    expect(getFitZoom({ width: 25, height: 15 }, 16, CANVAS, 8)).toBe(2);
+  it('never runs past the edges of the map', () => {
+    expect(getFollowView({ x: 0, y: 0 }, tile(0, 0), VIEW, WORLD, MARGIN)).toEqual({ x: 0, y: 0 });
+    expect(getFollowView({ x: 0, y: 0 }, tile(19, 9), VIEW, WORLD, MARGIN)).toEqual({ x: 10 * TILE, y: 5 * TILE });
   });
 
-  it('never goes below 1 for maps too big to fit', () => {
-    expect(getFitZoom({ width: 100, height: 100 }, 16, CANVAS, 8)).toBe(1);
-  });
-
-  it('steps in fractions when given a step', () => {
-    // An 8x8 map of 32px tiles is 256px: 768px tall fits 3x, capped at 2.5.
-    expect(getFitZoom({ width: 8, height: 8 }, 32, { width: 1200, height: 768 }, 2.5, 0.5)).toBe(2.5);
-    // 700px fits 2.73x, which rounds down to 2.5.
-    expect(getFitZoom({ width: 8, height: 8 }, 32, { width: 1200, height: 700 }, 3, 0.5)).toBe(2.5);
-    // 600px fits 2.34x, which rounds down to 2.
-    expect(getFitZoom({ width: 8, height: 8 }, 32, { width: 1200, height: 600 }, 3, 0.5)).toBe(2);
+  it('shrinks a margin too big for the view so the focus still shows', () => {
+    const tiny = { width: 2 * TILE, height: 2 * TILE };
+    const at = getFollowView({ x: 0, y: 0 }, tile(10, 5), tiny, WORLD, 5 * TILE);
+    expect(at.x).toBeLessThanOrEqual(10 * TILE);
+    expect(at.x + tiny.width).toBeGreaterThanOrEqual(11 * TILE);
+    expect(at.y).toBeLessThanOrEqual(5 * TILE);
+    expect(at.y + tiny.height).toBeGreaterThanOrEqual(6 * TILE);
   });
 });
