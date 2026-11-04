@@ -34,7 +34,7 @@ export const MAGE_GROWTHS = Object.freeze({
 });
 
 // The weapon types a mage can wield: magical ones, like the acolyte.
-export const MAGE_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['magical']);
+export const MAGE_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['tome']);
 
 // What a fresh mage carries into battle: the Fire spell it knows and the
 // potions.

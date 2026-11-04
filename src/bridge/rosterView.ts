@@ -4,11 +4,11 @@
 // frozen data, built fresh from the screen's state.
 
 import type { Menu } from '../game/actionMenu.ts';
-import { MAX_INVENTORY_SLOTS, type Item } from '../game/items.ts';
+import { ARMOR_WEIGHT_LABELS, MAX_INVENTORY_SLOTS, type Item } from '../game/items.ts';
 import { PROMOTION_LEVEL } from '../game/promotions.ts';
 import { getItemSprite, getUnitSprite } from '../game/tileset.ts';
 import { UNIT_CLASSES, type UnitClass } from '../game/unitClasses.ts';
-import { formatWeaponRange, type Hands } from '../game/weapons.ts';
+import { formatWeaponRange, WEAPON_DAMAGE_TYPES, WEAPON_TYPE_LABELS, type Hands } from '../game/weapons.ts';
 import { canGiveFromConvoy, lookUpItem } from '../game/warband/convoy.ts';
 import { restoreRoster, RUN_ITEMS, type ItemSnapshot } from '../game/warband/run.ts';
 import { toUnitDetailView, type UnitDetailView } from './views.ts';
@@ -156,8 +156,8 @@ export function describeItem(item: Item): ItemDetail {
         : { label: item.label, description },
     );
   if (item.kind === 'weapon') {
-    const kind = item.type[0].toUpperCase() + item.type.slice(1);
-    return describe(`${kind} weapon · ${formatHands(item.hands)}`, {
+    const damage = WEAPON_DAMAGE_TYPES[item.type] === 'magical' ? 'Magical' : 'Physical';
+    return describe(`${WEAPON_TYPE_LABELS[item.type]} · ${damage} · ${formatHands(item.hands)}`, {
       power: item.power,
       hit: item.hit,
       crit: item.crit,
@@ -171,9 +171,15 @@ export function describeItem(item: Item): ItemDetail {
     });
   }
   if (item.kind === 'armor') {
-    const stats = `DEF +${item.defense} against physical hits · Wt ${item.weight}`;
+    const stats = [
+      ...(item.defense > 0 || !(item.avoid || item.resistance) ? [`DEF +${item.defense}`] : []),
+      ...(item.avoid ? [`AVO +${item.avoid}`] : []),
+      ...(item.resistance ? [`RES +${item.resistance}`] : []),
+      `Wt ${item.weight}`,
+    ].join(' · ');
     if (item.slot === 'shield') return describe(`Shield · ${stats} · With a 1H weapon only`);
-    return describe(`${ARMOR_SLOT_LABELS[item.slot]} · ${stats}`);
+    const weight = item.weightClass ? ` · ${ARMOR_WEIGHT_LABELS[item.weightClass]}` : '';
+    return describe(`${ARMOR_SLOT_LABELS[item.slot]}${weight} · ${stats}`);
   }
   if (item.kind === 'seal') return describe(`Spent at camp to promote a unit of level ${PROMOTION_LEVEL} or more.`);
   return describe(`Restores up to ${item.amount} ${item.stat === 'health' ? 'HP' : 'mana'}.`);

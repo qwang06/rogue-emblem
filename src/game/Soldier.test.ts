@@ -33,9 +33,9 @@ describe('Soldier', () => {
     expect(soldier.movement).toBe(SOLDIER_STATS.movement);
   });
 
-  it('is trained in physical weapons and wields any', () => {
+  it('is trained in its families and wields any weapon', () => {
     const soldier = new Soldier({ team: 'enemy', items: [weaponEntry(FIRE)] });
-    expect(soldier.weaponTypes).toEqual(['physical']);
+    expect(soldier.weaponTypes).toEqual(['spear', 'sword']);
     expect(soldier.weapon).toBe(FIRE);
   });
 

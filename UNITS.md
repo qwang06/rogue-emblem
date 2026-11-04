@@ -5,11 +5,12 @@ Reference for every unit class: base stats, growth rates, weapons and skills. Ke
 ## How the numbers work
 
 - **Equipment:** a unit wears its gear in slots apart from its bag (`src/game/equipment.ts`). A humanoid has a main hand (a weapon or a staff), an off hand (a shield), a head, a body and one accessory; a monster (the monster classes, the Beast, Whelp, Ram and the elementals) has a special slot, which takes only signature gear made for its class, and an accessory. Gear is set between battles on the camp's Equipment screen, from the convoy, and never swapped mid-battle. The bag holds up to 4 consumables.
-- **Weapons:** a unit attacks with the weapon in its main hand or one of its innate attacks: the weapons its body comes with (Fists, a monster's natural weapon) and the spells it knows. Picking one in the Attack menu fights with it. A class masters weapon types (`physical`, `magical`, `siege`), and only weapons of those types are offered. A unit with nothing to attack with can't attack or counter.
-- **Damage** of a regular hit = `STR + Pow − DEF` for physical and siege weapons (`INT + Pow − RES` for magical ones), never below 0.
-- **Attack speed** = `SPD − max(0, Wt − STR)`: a weapon heavier than the wielder's strength slows it down.
-- **Hit chance** = (weapon `Hit` + `DEX × 2` + `LCK / 2`) − (attack speed `× 2` + `LCK` of the target), clamped to 0–100%.
-- **Crit chance** = (weapon `Crit` + `DEX / 2`) − target's `LCK`, clamped to 0–100%. A crit deals ×3 damage.
+- **Weapons:** a unit attacks with the weapon in its main hand or one of its innate attacks: the weapons its body comes with (Fists, a monster's natural weapon) and the spells it knows. Picking one in the Attack menu fights with it. Every weapon belongs to a family (`sword`, `spear`, `axe`, `bow`, `dagger`, `tome`, `staff`, `siege`, or `natural` for a body's own weapons). Any unit can wield any weapon, but a class is trained in a few families (its Weapon types below): a weapon of one of them, or a natural one, gets the **proficiency bonus** of +15 hit and +5 crit. Tomes and staves are magical, everything else physical. A unit with nothing to attack with can't attack or counter.
+- **Damage** of a regular hit = `STR + Pow − DEF` for physical weapons (`INT + Pow − RES` for magical ones), never below 0. Worn armor's DEF adds to `DEF`, and cloth's RES to `RES`.
+- **Attack speed** = `SPD − max(0, Wt − STR)`, where `Wt` is the weapon's weight plus the worn armor's: a load heavier than the wielder's strength slows it down.
+- **Movement** drops by 1 for every 4 points the load exceeds `STR` (`floor(max(0, Wt − STR) / 4)`), never below 0.
+- **Hit chance** = (weapon `Hit` + `DEX × 2` + `LCK / 2`, +15 when trained) − (attack speed `× 2` + `LCK` + armor avoid of the target), clamped to 0–100%.
+- **Crit chance** = (weapon `Crit` + `DEX / 2`, +5 when trained) − target's `LCK`, clamped to 0–100%. A crit deals ×3 damage.
 - **Doubling:** a unit strikes twice in an exchange when its attack speed beats the opponent's by 4 or more.
 - **Counters:** the defender strikes back if the attacker is within its weapon's range (`Rng`). Bows and siege engines can't strike adjacent foes.
 - **Hands:** every weapon is one-handed (`1`) or two-handed (`2`); bows, the Great Axe, siege weapons and every staff take both hands. The off hand takes a shield only while the main hand is empty or holds a one-handed weapon, so equipping a two-handed weapon or a staff sends the shield back to the convoy. Head, body and accessory gear is worn whatever the unit holds.
@@ -33,35 +34,57 @@ Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.m
 
 One starter weapon per armed unit in the unit catalog. Fists, the Wooden Sword, the Wooden Spear, the Iron Spear, the Iron Bow, the Iron Axe, the Powder Keg and the Ballista are carried by a class; the monsters, the Beast, the Ram and the elementals fight with natural weapons (Tackle, Club, Bone Claws, Fangs, Bite, Great Axe, Stone Maul, Fire Breath, Fire, Light), which are innate and never leave them; the rest of the wooden set is basic gear no class starts with; the Acolyte and the Bishop know Light from the start; the Mage knows Fire; and the Fire Tome drops as loot for an Acolyte to learn Fire from (and is the Mage's promotion gift).
 
-| Weapon       | Type     | Hands | Pow | Hit | Crit | Wt  | Rng | For (catalog art)                                                |
-| ------------ | -------- | ----- | --- | --- | ---- | --- | --- | ---------------------------------------------------------------- |
-| Fists        | physical | 1     | 0   | 80  | 0    | 0   | 1   | Villager (innate, with or without a sword)                       |
-| Iron Spear   | physical | 1     | 1   | 80  | 0    | 3   | 1   | Soldier, Beast Rider                                             |
-| Iron Axe     | physical | 1     | 3   | 65  | 0    | 5   | 1   | Vanguard (axe)                                                   |
-| Iron Bow     | physical | 2     | 2   | 80  | 0    | 2   | 2   | Archer                                                           |
-| Fire Tome    | magical  | 1     | 2   | 85  | 0    | 1   | 1–2 | Loot (teaches Fire)                                              |
-| Fire         | magical  | 1     | 2   | 85  | 0    | 1   | 1–2 | Mage; learned from the Fire Tome; Fire Elemental                 |
-| Light        | magical  | 1     | 0   | 90  | 0    | 0   | 1–2 | Acolyte, Bishop (known from the start), Water and Air Elementals |
-| Powder Keg   | siege    | 2     | 5   | 70  | 0    | 6   | 1–2 | Sapper                                                           |
-| Ballista     | siege    | 2     | 6   | 70  | 0    | 8   | 2–3 | Siege                                                            |
-| Tackle       | physical | 1     | 0   | 75  | 0    | 0   | 1   | Slime, Ram, Earth Elemental                                      |
-| Club         | physical | 1     | 2   | 75  | 0    | 2   | 1   | Goblin                                                           |
-| Bone Claws   | physical | 1     | 2   | 80  | 0    | 1   | 1   | Skeleton                                                         |
-| Fangs        | physical | 1     | 1   | 85  | 0    | 0   | 1   | Bat                                                              |
-| Bite         | physical | 1     | 2   | 75  | 5    | 1   | 1   | Beast, Whelp                                                     |
-| Great Axe    | physical | 2     | 3   | 65  | 0    | 4   | 1   | Orc, Minotaur                                                    |
-| Stone Maul   | physical | 2     | 4   | 60  | 0    | 5   | 1   | Troll                                                            |
-| Fire Breath  | physical | 1     | 4   | 75  | 0    | 0   | 1–2 | Dragon                                                           |
-| Wooden Sword | physical | 1     | 1   | 90  | 0    | 1   | 1   | Villager                                                         |
-| Wooden Spear | physical | 1     | 1   | 75  | 0    | 2   | 1   | Scout                                                            |
-| Wooden Axe   | physical | 1     | 2   | 60  | 0    | 3   | 1   | –                                                                |
+| Weapon        | Type    | Hands | Pow | Hit | Crit | Wt  | Rng | For (catalog art)                                                |
+| ------------- | ------- | ----- | --- | --- | ---- | --- | --- | ---------------------------------------------------------------- |
+| Fists         | natural | 1     | 0   | 80  | 0    | 0   | 1   | Villager (innate, with or without a sword)                       |
+| Iron Spear    | spear   | 1     | 1   | 80  | 0    | 3   | 1   | Soldier, Beast Rider                                             |
+| Iron Axe      | axe     | 1     | 3   | 65  | 0    | 5   | 1   | Vanguard (axe)                                                   |
+| Iron Bow      | bow     | 2     | 2   | 80  | 0    | 2   | 2   | Archer                                                           |
+| Fire Tome     | tome    | 1     | 2   | 85  | 0    | 1   | 1–2 | Loot (teaches Fire)                                              |
+| Fire          | tome    | 1     | 2   | 85  | 0    | 1   | 1–2 | Mage; learned from the Fire Tome; Fire Elemental                 |
+| Light         | tome    | 1     | 0   | 90  | 0    | 0   | 1–2 | Acolyte, Bishop (known from the start), Water and Air Elementals |
+| Powder Keg    | siege   | 2     | 5   | 70  | 0    | 6   | 1–2 | Sapper                                                           |
+| Ballista      | siege   | 2     | 6   | 70  | 0    | 8   | 2–3 | Siege                                                            |
+| Tackle        | natural | 1     | 0   | 75  | 0    | 0   | 1   | Slime, Ram, Earth Elemental                                      |
+| Club          | natural | 1     | 2   | 75  | 0    | 2   | 1   | Goblin                                                           |
+| Bone Claws    | natural | 1     | 2   | 80  | 0    | 1   | 1   | Skeleton                                                         |
+| Fangs         | natural | 1     | 1   | 85  | 0    | 0   | 1   | Bat                                                              |
+| Bite          | natural | 1     | 2   | 75  | 5    | 1   | 1   | Beast, Whelp                                                     |
+| Great Axe     | natural | 2     | 3   | 65  | 0    | 4   | 1   | Orc, Minotaur                                                    |
+| Stone Maul    | natural | 2     | 4   | 60  | 0    | 5   | 1   | Troll                                                            |
+| Fire Breath   | natural | 1     | 4   | 75  | 0    | 0   | 1–2 | Dragon                                                           |
+| Wooden Sword  | sword   | 1     | 1   | 90  | 0    | 1   | 1   | Villager                                                         |
+| Wooden Spear  | spear   | 1     | 1   | 75  | 0    | 2   | 1   | Scout                                                            |
+| Wooden Axe    | axe     | 1     | 2   | 60  | 0    | 3   | 1   | –                                                                |
+| Iron Sword    | sword   | 1     | 2   | 85  | 0    | 2   | 1   | Gear ladder (merchant, loot, enemies)                            |
+| Steel Sword   | sword   | 1     | 4   | 80  | 0    | 4   | 1   | Gear ladder (merchant, loot, enemies)                            |
+| Silver Sword  | sword   | 1     | 6   | 85  | 0    | 5   | 1   | Gear ladder (merchant, loot, enemies)                            |
+| Steel Spear   | spear   | 1     | 3   | 75  | 0    | 5   | 1   | Gear ladder (merchant, loot, enemies)                            |
+| Silver Spear  | spear   | 1     | 5   | 80  | 0    | 6   | 1   | Gear ladder (merchant, loot, enemies)                            |
+| Steel Axe     | axe     | 1     | 5   | 60  | 0    | 7   | 1   | Gear ladder (merchant, loot, enemies)                            |
+| Silver Axe    | axe     | 1     | 7   | 65  | 0    | 8   | 1   | Gear ladder (merchant, loot, enemies)                            |
+| Wooden Bow    | bow     | 2     | 1   | 80  | 0    | 1   | 2   | Gear ladder (merchant, loot, enemies)                            |
+| Steel Bow     | bow     | 2     | 4   | 75  | 0    | 4   | 2   | Gear ladder (merchant, loot, enemies)                            |
+| Silver Bow    | bow     | 2     | 6   | 80  | 0    | 5   | 2   | Gear ladder (merchant, loot, enemies)                            |
+| Wooden Dagger | dagger  | 1     | 0   | 95  | 5    | 0   | 1   | Gear ladder (merchant, loot, enemies)                            |
+| Iron Dagger   | dagger  | 1     | 1   | 90  | 10   | 1   | 1   | Gear ladder (merchant, loot, enemies)                            |
+| Steel Dagger  | dagger  | 1     | 3   | 85  | 10   | 2   | 1   | Gear ladder (merchant, loot, enemies)                            |
+| Silver Dagger | dagger  | 1     | 5   | 90  | 15   | 3   | 1   | Gear ladder (merchant, loot, enemies)                            |
 
-The wooden set is the basic gear: lighter and weaker than iron. The villager starts with the sword and the scout with the spear. It comes with two pieces of armor: a shield for the off hand (only with a hand free for it, see Hands above) and body armor, each adding its DEF against physical hits. Its weight adds to the weapon's: a unit loses SPD (for avoid and doubling) by however much weapon and armor weight together exceed its STR:
+The wooden set is the basic gear: lighter and weaker than iron. The villager starts with the sword and the scout with the spear. The rest of the weapons above (`src/game/gearLadder.ts`) fill out the **gear ladder**: wooden → iron → steel → silver, a sword, spear, axe, bow and dagger on each tier, each hitting harder and weighing more than the last. Swords are accurate, axes hit hardest and miss most, bows take both hands and strike 2 tiles away only, and daggers are light, sure, and the only family that crits.
 
-| Armor         | Slot   | DEF | Wt  |
-| ------------- | ------ | --- | --- |
-| Wooden Shield | shield | 1   | 1   |
-| Wooden Armor  | body   | 1   | 2   |
+Each tier also has a shield for the off hand (only with a hand free for it, see Hands above) and a body piece and a head piece in each **armor weight**: heavy (plate and helms: the most DEF, and heavy), light (leathers: some DEF and avoid, and light) and cloth (robes and hats: RES instead of DEF, and weightless). Armor weight adds to the weapon's (see Attack speed and Movement above).
+
+| Tier   | Shield     | Heavy body | Heavy head | Light body        | Light head        | Cloth body | Cloth head |
+| ------ | ---------- | ---------- | ---------- | ----------------- | ----------------- | ---------- | ---------- |
+| Wooden | DEF 1 Wt 1 | DEF 1 Wt 2 | DEF 1 Wt 1 | AVO 5 Wt 0        | AVO 5 Wt 0        | RES 1      | RES 1      |
+| Iron   | DEF 2 Wt 3 | DEF 3 Wt 4 | DEF 1 Wt 2 | DEF 1 AVO 5 Wt 1  | AVO 5 Wt 0        | RES 2      | RES 1      |
+| Steel  | DEF 3 Wt 4 | DEF 4 Wt 6 | DEF 2 Wt 3 | DEF 2 AVO 10 Wt 2 | DEF 1 AVO 5 Wt 1  | RES 3      | RES 2      |
+| Silver | DEF 4 Wt 4 | DEF 6 Wt 7 | DEF 3 Wt 3 | DEF 3 AVO 10 Wt 2 | DEF 1 AVO 10 Wt 1 | RES 4      | RES 3      |
+
+The pieces are named Wooden Shield, Wooden Armor, Wooden Helm, Hide Vest, Hide Cap, Linen Robe and Linen Hat on the wooden tier; Iron Shield, Iron Plate, Iron Helm, Leather Armor, Leather Hood, Wool Robe and Wool Hat on iron; Steel Shield, Steel Plate, Steel Helm, Studded Leather, Studded Hood, Silk Robe and Silk Hat on steel; and Silver Shield, Silver Plate, Silver Helm, Silverweave Coat, Silverweave Hood, Silver Robe and Silver Circlet on silver.
+
+In Warband Mode the merchant stocks the two newest tiers it has unlocked: wooden from stage 1, iron from stage 4, steel from stage 11 and silver from stage 20. Enemies' weapons climb the same ladder in their own family as their level reaches those numbers; from level 3 they wear body armor and from level 8 a head piece, both of the tier three levels lower, in their class's armor weight (heavy for the Soldier and Vanguard, cloth for the Acolyte, Mage and Bishop, light for the rest), never a piece that would cost them movement.
 
 ## Villager
 
@@ -82,7 +105,7 @@ The starting unit, a townsperson in a plain tunic with no armor: Warband Mode's 
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| physical     | Wooden Sword    | 150%    |
+| sword        | Wooden Sword    | 150%    |
 
 | Skill        | Learned at | Mana | Range | Damage                           |
 | ------------ | ---------- | ---- | ----- | -------------------------------- |
@@ -127,7 +150,7 @@ The ranged infantry: frail but accurate. Its bow only reaches two tiles away, so
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| physical     | Iron Bow        | 100%    |
+| bow, dagger  | Iron Bow        | 100%    |
 
 | Skill        | Learned at | Mana | Range | Damage                           |
 | ------------ | ---------- | ---- | ----- | -------------------------------- |
@@ -157,7 +180,7 @@ The spear-and-shield infantry: the enemy in the demo battle. Villagers become on
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| physical     | Iron Spear      | 100%    |
+| spear, sword | Iron Spear      | 100%    |
 
 | Skill        | Learned at | Mana | Range | Damage                                          |
 | ------------ | ---------- | ---- | ----- | ----------------------------------------------- |
@@ -188,7 +211,7 @@ The axe-wielding front line: high HP and strength, low dexterity, speed and luck
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| physical     | Iron Axe        | 100%    |
+| axe, sword   | Iron Axe        | 100%    |
 
 | Skill        | Learned at | Mana | Range | Damage                                          |
 | ------------ | ---------- | ---- | ----- | ----------------------------------------------- |
@@ -216,9 +239,9 @@ Promoted from the Villager. Hauls a powder keg on its back and throws it up to t
 | RES  | 0    | 0%     |
 | MOV  | 5    | –      |
 
-| Weapon types    | Starting weapon | XP rate |
-| --------------- | --------------- | ------- |
-| physical, siege | Powder Keg      | 100%    |
+| Weapon types | Starting weapon | XP rate |
+| ------------ | --------------- | ------- |
+| siege, axe   | Powder Keg      | 100%    |
 
 | Skill        | Learned at | Mana | Range | Damage                           |
 | ------------ | ---------- | ---- | ----- | -------------------------------- |
@@ -246,9 +269,9 @@ A specialized unit that doesn't promote, recruited or brought by the Sellswords 
 | RES  | 2    | 25%    |
 | MOV  | 7    | –      |
 
-| Weapon types | Starting weapon | XP rate |
-| ------------ | --------------- | ------- |
-| physical     | Wooden Spear    | 100%    |
+| Weapon types  | Starting weapon | XP rate |
+| ------------- | --------------- | ------- |
+| spear, dagger | Wooden Spear    | 100%    |
 
 | Skill       | Learned at | Mana | Range | Damage                                                  |
 | ----------- | ---------- | ---- | ----- | ------------------------------------------------------- |
@@ -277,7 +300,7 @@ A specialized unit, recruited on its own (or grown from the Beast Tamer origin's
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| physical     | Bite            | 100%    |
+| natural      | Bite            | 100%    |
 
 | Skill       | Learned at | Mana | Range | Damage                                            |
 | ----------- | ---------- | ---- | ----- | ------------------------------------------------- |
@@ -306,7 +329,7 @@ The Beast Tamer origin's second unit: a young winged beast that hasn't grown int
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| physical     | Bite            | 100%    |
+| natural      | Bite            | 100%    |
 
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |
@@ -332,7 +355,7 @@ A special unit of its own kind: a rider on the faction's winged beast, strong, f
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| physical     | Iron Spear      | 100%    |
+| spear        | Iron Spear      | 100%    |
 
 | Skill  | Learned at | Mana | Range | Damage                                                              |
 | ------ | ---------- | ---- | ----- | ------------------------------------------------------------------- |
@@ -390,7 +413,7 @@ A specialized unit that doesn't promote: a covered battering ram, the most HP an
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| physical     | Tackle          | 100%    |
+| natural      | Tackle          | 100%    |
 
 | Skill            | Learned at | Mana | Range | Damage                                                                                   |
 | ---------------- | ---------- | ---- | ----- | ---------------------------------------------------------------------------------------- |
@@ -419,7 +442,7 @@ A specialized unit that promotes into a Mage or a Bishop at level 5 (see Promoti
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| magical      | Light           | 100%    |
+| staff, tome  | Light           | 100%    |
 
 | Staff | Power | Rng | Heals at level 1 |
 | ----- | ----- | --- | ---------------- |
@@ -452,7 +475,7 @@ The acolyte's promotion: the battle caster. It trades nothing for more INT, MP a
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| magical      | Fire            | 100%    |
+| tome         | Fire            | 100%    |
 
 | Skill | Learned at | Mana | Range | Damage                        |
 | ----- | ---------- | ---- | ----- | ----------------------------- |
@@ -482,7 +505,7 @@ The acolyte's other promotion: the healer, deepened. More MP, RES and LCK than a
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| magical      | Light           | 100%    |
+| staff, tome  | Light           | 100%    |
 
 | Skill     | Learned at | Mana | Range | Damage                                                                       |
 | --------- | ---------- | ---- | ----- | ---------------------------------------------------------------------------- |
@@ -512,7 +535,7 @@ A neutral unit, belonging to no faction (the pack's teal water spirit). Steady a
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| magical      | Light           | 100%    |
+| tome         | Light           | 100%    |
 
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |
@@ -538,7 +561,7 @@ A neutral unit (the pack's fire spirit). The hardest-hitting elemental, with Fir
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| magical      | Fire            | 100%    |
+| tome         | Fire            | 100%    |
 
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |
@@ -564,7 +587,7 @@ A neutral unit (the pack's white air spirit). The quickest and most elusive elem
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| magical      | Light           | 100%    |
+| tome         | Light           | 100%    |
 
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |
@@ -590,7 +613,7 @@ A neutral unit (the pack's brown rock spirit). Slow and heavy, it slams a foe ne
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| physical     | Tackle          | 100%    |
+| natural      | Tackle          | 100%    |
 
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |
@@ -618,7 +641,7 @@ Passive, **Bounce**: a hit in its own attack shoves the target a tile back once 
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| physical     | Tackle          | 100%    |
+| natural      | Tackle          | 100%    |
 
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |
@@ -644,7 +667,7 @@ A quick, scrappy monster: as fast as anything at level 1 and hits about as hard 
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| physical     | Club            | 100%    |
+| natural      | Club            | 100%    |
 
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |
@@ -670,7 +693,7 @@ The sturdy monster: slow and unlucky, but its bones shrug off weak hits and its 
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| physical     | Bone Claws      | 100%    |
+| natural      | Bone Claws      | 100%    |
 
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |
@@ -696,7 +719,7 @@ The nimblest monster: hard to hit and quick enough to strike twice, but frail an
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| physical     | Fangs           | 100%    |
+| natural      | Fangs           | 100%    |
 
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |
@@ -722,7 +745,7 @@ The heavy monster: slow, but tough enough to take several hits, and it hits hard
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| physical     | Great Axe       | 100%    |
+| natural      | Great Axe       | 100%    |
 
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |
@@ -748,7 +771,7 @@ The charging monster: as strong as an orc with the same Great Axe, but quick and
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| physical     | Great Axe       | 100%    |
+| natural      | Great Axe       | 100%    |
 
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |
@@ -774,7 +797,7 @@ The wall of a monster: the most HP of any monster bar the dragon, slow and clums
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| physical     | Stone Maul      | 100%    |
+| natural      | Stone Maul      | 100%    |
 
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |
@@ -800,7 +823,7 @@ The Red Dragon, boss of the Dragon's Roost (the run's stage 10, before the Hold;
 
 | Weapon types | Starting weapon | XP rate |
 | ------------ | --------------- | ------- |
-| physical     | Fire Breath     | 100%    |
+| natural      | Fire Breath     | 100%    |
 
 | Skill | Learned at | Mana | Range | Damage |
 | ----- | ---------- | ---- | ----- | ------ |
@@ -811,14 +834,14 @@ It learns no skills and carries no potions.
 
 The Villager and the Soldier differ by a point of strength and their weapons: the wooden sword has the spear's power but lands more often. Each attack is from as close as the attacker's weapon reaches (2 tiles for the bow). Damage is before passives (the Soldier's Shield Wall takes 1 off each hit it takes).
 
-| Attacker | Target   | Weapon       | Damage | Hit | Crit | Strikes |
-| -------- | -------- | ------------ | ------ | --- | ---- | ------- |
-| Villager | Soldier  | Wooden Sword | 2      | 89% | 0%   | 1       |
-| Soldier  | Villager | Iron Spear   | 3      | 79% | 0%   | 1       |
-| Archer   | Soldier  | Iron Bow     | 3      | 83% | 0%   | 1       |
-| Vanguard | Soldier  | Iron Axe     | 6      | 61% | 0%   | 1       |
-| Sapper   | Soldier  | Powder Keg   | 7      | 69% | 0%   | 1       |
-| Acolyte  | Soldier  | Light        | 3      | 88% | 0%   | 1       |
+| Attacker | Target   | Weapon       | Damage | Hit  | Crit | Strikes |
+| -------- | -------- | ------------ | ------ | ---- | ---- | ------- |
+| Villager | Soldier  | Wooden Sword | 2      | 100% | 4%   | 1       |
+| Soldier  | Villager | Iron Spear   | 3      | 94%  | 4%   | 1       |
+| Archer   | Soldier  | Iron Bow     | 3      | 98%  | 5%   | 1       |
+| Vanguard | Soldier  | Iron Axe     | 6      | 76%  | 4%   | 1       |
+| Sapper   | Soldier  | Powder Keg   | 7      | 84%  | 4%   | 1       |
+| Acolyte  | Soldier  | Light        | 3      | 100% | 4%   | 1       |
 
 Every class learns its skill at level 2, its first level up (the Soldier's Shove, which deals no damage, is known from level 1); the skill rows use level-1 stats.
 

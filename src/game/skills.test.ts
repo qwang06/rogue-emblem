@@ -291,7 +291,7 @@ describe('calculateSkillDamage', () => {
     });
 
     it("adds power to the user's intelligence for a magical hit", () => {
-      const mage = { strength: 0, intelligence: 5, weapon: { type: 'magical' as const, power: 0 } };
+      const mage = { strength: 0, intelligence: 5, weapon: { type: 'tome' as const, power: 0 } };
       expect(calculateSkillDamage(strike, mage, { defense: 20, resistance: 1 })).toBe(7);
     });
 
@@ -513,7 +513,7 @@ describe('MEND', () => {
 });
 
 describe('calculateSkillDamage with modifiers', () => {
-  const user = { strength: 5, weapon: { type: 'physical' as const, power: 0 } };
+  const user = { strength: 5, weapon: { type: 'sword' as const, power: 0 } };
   const defender = { defense: 1 };
 
   it("adds the user's attacking damage bonus and the target's guard", () => {

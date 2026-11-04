@@ -33,7 +33,7 @@ export const GOBLIN_GROWTHS = Object.freeze({
 });
 
 // The weapon types a goblin can wield.
-export const GOBLIN_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
+export const GOBLIN_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['natural']);
 
 // What a goblin carries into battle: only its Club, which never breaks.
 // Monsters carry no potions.

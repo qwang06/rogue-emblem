@@ -12,6 +12,7 @@
 import type { MenuAction } from './actionMenu.ts';
 import type { Staff } from './healing.ts';
 import type { Weapon } from './weapons.ts';
+import { LADDER_ARMORS } from './gearLadder.ts';
 
 export type RestoreStat = 'health' | 'mana';
 
@@ -39,9 +40,25 @@ export interface Armor {
   slot: ArmorSlot;
   defense: number;
   weight: number;
+  // How heavy it is to wear (body and head armor, see ArmorWeight).
+  weightClass?: ArmorWeight;
+  // What light armor adds to avoid, and cloth to resistance.
+  avoid?: number;
+  resistance?: number;
   // For 'special' gear: the class id it's made for.
   forClass?: string;
 }
+
+// Body and head armor come in three weights: heavy (plate and helms: the
+// most DEF, and heavy), light (leather: some DEF and avoid, light) and
+// cloth (robes and hats: little DEF, but RES, and weightless).
+export type ArmorWeight = 'heavy' | 'light' | 'cloth';
+
+export const ARMOR_WEIGHT_LABELS: Readonly<Record<ArmorWeight, string>> = Object.freeze({
+  heavy: 'Heavy',
+  light: 'Light',
+  cloth: 'Cloth',
+});
 
 // A seal: { kind: 'seal', id, label }. Spent at camp to promote a unit
 // (see promotions.ts and warband/promotion.ts); it does nothing in battle
@@ -106,9 +123,11 @@ export const WOODEN_ARMOR: Armor = Object.freeze({
   slot: 'body',
   defense: 1,
   weight: 2,
+  weightClass: 'heavy',
 });
 
-export const ARMORS: readonly Armor[] = Object.freeze([WOODEN_SHIELD, WOODEN_ARMOR]);
+// Every armor piece: the wooden set, then the rest of the ladder (gearLadder.ts).
+export const ARMORS: readonly Armor[] = Object.freeze([WOODEN_SHIELD, WOODEN_ARMOR, ...LADDER_ARMORS]);
 
 export const MASTER_SEAL: Seal = Object.freeze({ kind: 'seal', id: 'master-seal', label: 'Master Seal' });
 

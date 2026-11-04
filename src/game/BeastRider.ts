@@ -34,7 +34,7 @@ export const BEAST_RIDER_GROWTHS = Object.freeze({
 });
 
 // The weapon types it can wield.
-export const BEAST_RIDER_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
+export const BEAST_RIDER_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['spear']);
 
 // What it carries into battle: an Iron Spear and the potions.
 export const BEAST_RIDER_ITEMS: Inventory = Object.freeze([weaponEntry(IRON_SPEAR), ...STARTING_ITEMS]);

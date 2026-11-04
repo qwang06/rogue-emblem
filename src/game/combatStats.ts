@@ -9,6 +9,7 @@
 // comes in through an injected `rng` (() => [0, 1)).
 
 import type { CombatBonus } from './modifiers.ts';
+import { isTrained, PROFICIENCY_CRIT, PROFICIENCY_HIT, type WeaponType } from './weapons.ts';
 
 // A crit deals this many times the strike's damage.
 export const CRIT_MULTIPLIER = 3;
@@ -20,10 +21,15 @@ export interface WeaponStatLine {
   hit: number;
   crit: number;
   weight: number;
+  // Its family, for the proficiency bonus; without one it gets none.
+  type?: WeaponType;
 }
 
 // The stats these formulas read. Missing stats count as 0; a unit without
-// a weapon adds no hit or crit and carries no weight. `armorWeight` is what
+// a weapon adds no hit or crit and carries no weight. `weaponTypes` are the
+// families it's trained in: a weapon of one of them (or a natural one) adds
+// PROFICIENCY_HIT and PROFICIENCY_CRIT (see isTrained in weapons.ts).
+// `armorAvoid` is what its light armor adds to avoid. `armorWeight` is what
 // its worn armor weighs (see getArmorWeight in items.ts). `bonus` is what
 // its modifiers add for the exchange at hand (see withCombatBonus in
 // combat.ts); missing terms count as 0.
@@ -33,6 +39,8 @@ export interface CombatStatLine {
   speed?: number;
   luck?: number;
   armorWeight?: number;
+  armorAvoid?: number;
+  weaponTypes?: readonly WeaponType[];
   weapon?: WeaponStatLine | null;
   bonus?: Partial<CombatBonus>;
 }
@@ -48,28 +56,58 @@ function clampPercent(value: number): number {
 // weight plus worn armor weight) exceeds its strength. Drives avoid and
 // doubling.
 export function getAttackSpeed(unit: CombatStatLine): number {
+  return (unit.speed ?? 0) - getOverload(unit);
+}
+
+// How much a unit's load (weapon weight plus worn armor weight) exceeds its
+// strength, or 0.
+export function getOverload(unit: Pick<CombatStatLine, 'strength' | 'armorWeight' | 'weapon'>): number {
   const weight = (unit.weapon?.weight ?? 0) + (unit.armorWeight ?? 0);
-  return (unit.speed ?? 0) - Math.max(0, weight - (unit.strength ?? 0));
+  return Math.max(0, weight - (unit.strength ?? 0));
+}
+
+// Each this much overload costs a point of movement.
+export const OVERLOAD_PER_MOVEMENT = 4;
+
+// The movement a unit's load costs it: 1 per OVERLOAD_PER_MOVEMENT its load
+// exceeds its strength (see getPhaseMovement in enemyAI.ts).
+export function getLoadMovementPenalty(unit: Pick<CombatStatLine, 'strength' | 'armorWeight' | 'weapon'>): number {
+  return Math.floor(getOverload(unit) / OVERLOAD_PER_MOVEMENT);
+}
+
+// Whether `unit` fights with a weapon it's trained in (see isTrained).
+export function isProficient(unit: CombatStatLine): boolean {
+  const weapon = unit.weapon;
+  return !!weapon?.type && isTrained(unit.weaponTypes, { type: weapon.type });
 }
 
 // The attacker's raw hit rate: weapon hit + dexterity × 2 + luck / 2, plus
-// its hit bonus.
+// the proficiency bonus with a trained weapon, plus its hit bonus.
 export function getHit(unit: CombatStatLine): number {
   return (
-    (unit.weapon?.hit ?? 0) + (unit.dexterity ?? 0) * 2 + Math.floor((unit.luck ?? 0) / 2) + (unit.bonus?.hit ?? 0)
+    (unit.weapon?.hit ?? 0) +
+    (isProficient(unit) ? PROFICIENCY_HIT : 0) +
+    (unit.dexterity ?? 0) * 2 +
+    Math.floor((unit.luck ?? 0) / 2) +
+    (unit.bonus?.hit ?? 0)
   );
 }
 
-// How well a unit evades: attack speed × 2 + luck, plus its avoid bonus
-// (terrain bonuses come later).
+// How well a unit evades: attack speed × 2 + luck, plus what its light
+// armor adds, plus its avoid bonus (terrain bonuses come later).
 export function getAvoid(unit: CombatStatLine): number {
-  return getAttackSpeed(unit) * 2 + (unit.luck ?? 0) + (unit.bonus?.avoid ?? 0);
+  return getAttackSpeed(unit) * 2 + (unit.luck ?? 0) + (unit.armorAvoid ?? 0) + (unit.bonus?.avoid ?? 0);
 }
 
-// The attacker's raw crit rate: weapon crit + dexterity / 2, plus its crit
-// bonus.
+// The attacker's raw crit rate: weapon crit + dexterity / 2, plus the
+// proficiency bonus with a trained weapon, plus its crit bonus.
 export function getCrit(unit: CombatStatLine): number {
-  return (unit.weapon?.crit ?? 0) + Math.floor((unit.dexterity ?? 0) / 2) + (unit.bonus?.crit ?? 0);
+  return (
+    (unit.weapon?.crit ?? 0) +
+    (isProficient(unit) ? PROFICIENCY_CRIT : 0) +
+    Math.floor((unit.dexterity ?? 0) / 2) +
+    (unit.bonus?.crit ?? 0)
+  );
 }
 
 // How well a unit wards off crits: its luck.

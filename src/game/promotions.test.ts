@@ -140,9 +140,9 @@ describe('promoteUnit', () => {
     expect(getStandingCombatBonus(unit.modifiers).hit).toBe(10);
   });
 
-  it('adds a weapon type, and leaves handing over the gift to the caller', () => {
+  it("trains it in the new class's families, and leaves handing over the gift to the caller", () => {
     const unit = promoteUnit(new Villager({ team: 'player' }), findPromotion('sapper')!);
-    expect(unit.weaponTypes).toEqual(['physical', 'siege']);
+    expect(unit.weaponTypes).toEqual(['siege', 'axe']);
     expect(unit.items.some(({ item }) => item.id === IRON_BOW.id)).toBe(false);
   });
 

@@ -34,7 +34,7 @@ export const DRAGON_GROWTHS = Object.freeze({
 });
 
 // The weapon types a dragon can wield.
-export const DRAGON_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
+export const DRAGON_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['natural']);
 
 // What a dragon carries into battle: only its Fire Breath, which never
 // runs out. Monsters carry no potions.

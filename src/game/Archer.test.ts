@@ -36,9 +36,9 @@ describe('Archer', () => {
     expect(archer.growths).toBe(ARCHER_GROWTHS);
   });
 
-  it('is trained in physical weapons and wields any', () => {
+  it('is trained in its families and wields any weapon', () => {
     const archer = new Archer({ team: 'player', items: [weaponEntry(FIRE)] });
-    expect(archer.weaponTypes).toEqual(['physical']);
+    expect(archer.weaponTypes).toEqual(['bow', 'dagger']);
     expect(archer.weapon).toBe(FIRE);
   });
 

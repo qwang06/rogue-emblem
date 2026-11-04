@@ -34,7 +34,7 @@ export const SLIME_GROWTHS = Object.freeze({
 });
 
 // The weapon types a slime can wield.
-export const SLIME_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
+export const SLIME_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['natural']);
 
 // What a slime carries into battle: only its Tackle, which never breaks.
 // Monsters carry no potions.

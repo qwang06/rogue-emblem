@@ -24,9 +24,13 @@ import {
   getPurchaseQuantity,
   getSellPrice,
   ITEM_PRICES,
-  MERCHANT_STOCK,
+  getMerchantStock,
+  HEAD_TIER_PRICES,
+  TIER_STAGES,
+  WEAPON_TIER_PRICES,
   sellItem,
 } from './merchant.ts';
+import { GEAR_LADDER, getGearTier, getTierItemIds } from '../gearLadder.ts';
 import { createRun, RUN_ITEMS, type ItemSnapshot, type RunState } from './run.ts';
 
 function campRun(gold: number, convoy: ItemSnapshot[] = []): RunState {
@@ -34,18 +38,30 @@ function campRun(gold: number, convoy: ItemSnapshot[] = []): RunState {
   return { ...run, gold, convoy };
 }
 
-describe('MERCHANT_STOCK', () => {
-  it('sells the wooden set, a bow, a Heal staff and the Master Seal', () => {
-    expect(MERCHANT_STOCK).toEqual([
-      WOODEN_SWORD.id,
-      WOODEN_SPEAR.id,
-      WOODEN_AXE.id,
-      WOODEN_SHIELD.id,
-      WOODEN_ARMOR.id,
-      IRON_BOW.id,
-      HEAL_STAFF.id,
-      MASTER_SEAL.id,
-    ]);
+describe('getMerchantStock', () => {
+  it('sells the wooden tier, a Heal staff and the Master Seal on the first stages', () => {
+    expect(getMerchantStock(1)).toEqual([...getTierItemIds('wooden'), HEAL_STAFF.id, MASTER_SEAL.id]);
+    expect(getMerchantStock(3)).toEqual(getMerchantStock(1));
+    expect(getMerchantStock(1)).toContain(WOODEN_SWORD.id);
+    expect(getMerchantStock(1)).toContain(WOODEN_ARMOR.id);
+    expect(getMerchantStock(1)).toContain(WOODEN_SHIELD.id);
+  });
+
+  it('stocks the two newest tiers it has unlocked, the newest first', () => {
+    const tiers = (stage: number) => [
+      ...new Set(
+        getMerchantStock(stage)
+          .map(getGearTier)
+          .filter((tier) => tier !== null),
+      ),
+    ];
+    expect(TIER_STAGES).toEqual({ wooden: 1, iron: 4, steel: 11, silver: 20 });
+    expect(tiers(4)).toEqual(['iron', 'wooden']);
+    expect(tiers(10)).toEqual(['iron', 'wooden']);
+    expect(tiers(11)).toEqual(['steel', 'iron']);
+    expect(tiers(20)).toEqual(['silver', 'steel']);
+    expect(tiers(30)).toEqual(['silver', 'steel']);
+    expect(getMerchantStock(4)[0]).toBe(GEAR_LADDER.iron.weapons.sword);
   });
 
   it('prices everything it sells and every item a run can hold, but natural weapons and learned spells', () => {
@@ -53,7 +69,16 @@ describe('MERCHANT_STOCK', () => {
       if (NATURAL_WEAPON_IDS.has(item.id)) expect(getItemPrice(item), item.id).toBe(0);
       else expect(getItemPrice(item), item.id).toBeGreaterThan(0);
     }
-    for (const id of MERCHANT_STOCK) expect(ITEM_PRICES[id], id).toBeGreaterThan(0);
+    for (const id of getMerchantStock(30)) expect(ITEM_PRICES[id], id).toBeGreaterThan(0);
+  });
+
+  it('prices each tier above the one before', () => {
+    expect(ITEM_PRICES[GEAR_LADDER.iron.weapons.sword]).toBe(WEAPON_TIER_PRICES.iron);
+    expect(ITEM_PRICES[GEAR_LADDER.steel.body.light]).toBe(WEAPON_TIER_PRICES.steel);
+    expect(ITEM_PRICES[GEAR_LADDER.silver.head.cloth]).toBe(HEAD_TIER_PRICES.silver);
+    expect(ITEM_PRICES[GEAR_LADDER.steel.shield]).toBe(HEAD_TIER_PRICES.steel);
+    // The older pieces keep their own prices.
+    expect(ITEM_PRICES[IRON_BOW.id]).toBe(45);
   });
 });
 
@@ -183,7 +208,7 @@ describe('buyItemFor', () => {
   });
 
   it('stacks a consumable onto the one the unit carries', () => {
-    const stock = [...MERCHANT_STOCK, HEALTH_POTION.id];
+    const stock = [...getMerchantStock(1), HEALTH_POTION.id];
     const run = campRun(10);
     const before = run.roster[0].items.find((entry) => entry.itemId === HEALTH_POTION.id)!.quantity;
     const after = buyItemFor(run, HEALTH_POTION.id, 'alden', stock);

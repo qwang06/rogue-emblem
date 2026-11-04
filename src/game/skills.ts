@@ -675,6 +675,7 @@ export function calculateSkillDamage(skill: Skill, user: SkillFighter, defender:
   const guarded: DamageStats = {
     defense: defender.defense,
     armorDefense: defender.armorDefense,
+    armorResistance: defender.armorResistance,
     resistance: defender.resistance,
     bonus: getFighterBonus(defender, user, false),
   };

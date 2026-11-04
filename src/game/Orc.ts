@@ -33,7 +33,7 @@ export const ORC_GROWTHS = Object.freeze({
 });
 
 // The weapon types an orc can wield.
-export const ORC_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
+export const ORC_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['natural']);
 
 // What an orc carries into battle: only its Great Axe, which never breaks.
 // Monsters carry no potions.

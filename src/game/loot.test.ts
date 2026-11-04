@@ -7,20 +7,14 @@ import {
   WOODEN_ARMOR,
   WOODEN_SHIELD,
 } from './items.ts';
+import { getTierItemIds } from './gearLadder.ts';
 import { assignLoot, claimLoot, getLootQuantity, getStageLootCount, LOOT_ITEMS, STAGE_LOOT_DROPS } from './loot.ts';
 import { createSeededRng } from './rng.ts';
 import { FISTS, IRON_SPEAR, WOODEN_AXE, WOODEN_SWORD } from './weapons.ts';
 
 describe('LOOT_ITEMS', () => {
-  it('is the wooden set and the Fire tome', () => {
-    expect(LOOT_ITEMS.map((item) => item.id)).toEqual([
-      'wooden-sword',
-      'wooden-spear',
-      'wooden-axe',
-      'wooden-shield',
-      'wooden-armor',
-      'fire',
-    ]);
+  it('is the wooden tier of the gear ladder and the Fire tome', () => {
+    expect(LOOT_ITEMS.map((item) => item.id)).toEqual([...getTierItemIds('wooden'), 'fire']);
   });
 });
 

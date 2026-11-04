@@ -11,7 +11,7 @@ import {
   type DamageType,
   type ForecastSide,
 } from '../game/combat.ts';
-import { getAttackSpeed, getAvoid, getCrit, getHit } from '../game/combatStats.ts';
+import { getAttackSpeed, getAvoid, getCrit, getHit, getLoadMovementPenalty } from '../game/combatStats.ts';
 import type { Dialog, DialogSide } from '../game/dialog.ts';
 import { getExperienceForLevel, type ExperienceGain, type GrowthStat, type LevelUpResult } from '../game/experience.ts';
 import type { ObjectiveText } from '../game/objectives.ts';
@@ -377,8 +377,8 @@ export function toUnitView(unit: Unit | null | undefined): UnitView | null {
     speed: unit.speed,
     luck: unit.luck,
     defense: unit.defense + unit.armorDefense,
-    resistance: unit.resistance,
-    movement: unit.movement,
+    resistance: unit.resistance + unit.armorResistance,
+    movement: Math.max(0, unit.movement - getLoadMovementPenalty(unit)),
     range: equipped ? formatWeaponRange(equipped.weapon) : '–',
     weapon: equipped?.weapon.label ?? null,
     items: Object.freeze([
@@ -438,6 +438,8 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
     speed: unit.speed,
     strength: unit.strength,
     armorWeight: unit.armorWeight,
+    armorAvoid: unit.armorAvoid,
+    weaponTypes: unit.weaponTypes,
     weapon,
   };
   return Object.freeze({

@@ -34,7 +34,7 @@ export const VANGUARD_GROWTHS = Object.freeze({
 });
 
 // The weapon types a vanguard can wield.
-export const VANGUARD_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
+export const VANGUARD_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['axe', 'sword']);
 
 // What a vanguard carries into battle: its axe and the potions.
 export const VANGUARD_ITEMS: Inventory = Object.freeze([weaponEntry(IRON_AXE), ...STARTING_ITEMS]);

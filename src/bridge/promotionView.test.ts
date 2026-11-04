@@ -37,7 +37,7 @@ describe('toPromotionScreenView', () => {
       toClass: 'Sapper',
       tier: 2,
       movement: 0,
-      weaponTypes: ['physical', 'siege'],
+      weaponTypes: ['siege', 'axe'],
       skill: { label: 'Blast', manaCost: 3, range: 2 },
       passive: { name: 'Demolitions', description: '+5 crit.' },
       gift: 'Powder Keg',

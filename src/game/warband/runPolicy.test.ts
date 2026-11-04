@@ -3,7 +3,8 @@ import { RARITY_PERCENT } from './boons.ts';
 import { Acolyte } from '../Acolyte.ts';
 import { Archer } from '../Archer.ts';
 import { HEAL_STAFF } from '../healing.ts';
-import { MASTER_SEAL, WOODEN_SHIELD } from '../items.ts';
+import { GEAR_LADDER, WOODEN_BOW } from '../gearLadder.ts';
+import { MASTER_SEAL, WOODEN_ARMOR, WOODEN_SHIELD } from '../items.ts';
 import { getPromotions, PROMOTION_LEVEL } from '../promotions.ts';
 import { Soldier } from '../Soldier.ts';
 import { Villager } from '../Villager.ts';
@@ -138,7 +139,27 @@ describe('getDeployingUnits', () => {
 
 describe('planCamp', () => {
   it('marches when everyone is armed and well', () => {
-    expect(playCamp(makeRun({ a: soldier() }, { gold: 100 }))).toEqual([{ type: 'march' }]);
+    expect(playCamp(makeRun({ a: soldier() }, { gold: REST_COST }))).toEqual([{ type: 'march' }]);
+  });
+
+  it('buys better gear with gold to spare: a higher tier in its class armor weight, keeping its movement', () => {
+    const commands = playCamp(makeRun({ a: soldier() }, { gold: 100 }));
+    expect(commands).toEqual([
+      { type: 'buy', itemId: WOODEN_ARMOR.id, unitId: 'a' },
+      { type: 'buy', itemId: GEAR_LADDER.wooden.head.heavy, unitId: 'a' },
+      { type: 'march' },
+    ]);
+    // On the iron tier's stages it goes for the iron weapon and plate too.
+    const iron = playCamp(makeRun({ a: soldier() }, { gold: 300, stage: 4 }));
+    const bought = (commands: RunCommand[]) =>
+      commands.flatMap((command) => (command.type === 'buy' ? [command.itemId] : []));
+    expect(bought(iron)).toContain(GEAR_LADDER.iron.body.heavy);
+    // It never buys a piece that would cost it movement.
+    const weak = withUnit(makeRun({ a: soldier() }, { gold: 1000, stage: 20 }), 'a', (unit) => ({
+      ...unit,
+      strength: 0,
+    }));
+    expect(bought(playCamp(weak))).not.toContain(GEAR_LADDER.silver.body.heavy);
   });
 
   it('promotes a unit that can, to a promotion picked at random, the same each time', () => {
@@ -186,12 +207,16 @@ describe('planCamp', () => {
       ...unit,
       level: PROMOTION_LEVEL,
     }));
-    expect(playCamp(run).map((command) => command.type)).toEqual(['buy', 'promote', 'march']);
+    expect(
+      playCamp(run)
+        .map((command) => command.type)
+        .slice(0, 2),
+    ).toEqual(['buy', 'promote']);
     const poor = withUnit(makeRun({ a: villager() }, { gold: 60 }), 'a', (unit) => ({
       ...unit,
       level: PROMOTION_LEVEL,
     }));
-    expect(playCamp(poor)).toEqual([{ type: 'march' }]);
+    expect(playCamp(poor).map((command) => command.type)).not.toContain('promote');
   });
 
   it('rests at once when someone deploying is badly hurt', () => {
@@ -200,7 +225,7 @@ describe('planCamp', () => {
   });
 
   it('buys and hands over a weapon to a unit with an empty main hand', () => {
-    const run = withUnit(makeRun({ a: soldier() }, { gold: 100 }), 'a', (unit) => ({ ...unit, equipment: {} }));
+    const run = withUnit(makeRun({ a: soldier() }, { gold: 40 }), 'a', (unit) => ({ ...unit, equipment: {} }));
     expect(playCamp(run).map((command) => command.type)).toEqual(['buy', 'give', 'march']);
   });
 
@@ -218,7 +243,7 @@ describe('planCamp', () => {
 
   it('takes a weapon from the convoy before buying one', () => {
     const run = withUnit(
-      makeRun({ a: soldier() }, { gold: 100, convoy: [{ itemId: WOODEN_SPEAR.id, quantity: 1 }] }),
+      makeRun({ a: soldier() }, { gold: 25, convoy: [{ itemId: WOODEN_SPEAR.id, quantity: 1 }] }),
       'a',
       (unit) => ({ ...unit, equipment: {} }),
     );
@@ -231,13 +256,17 @@ describe('planCamp', () => {
       'a',
       (unit) => ({ ...unit, equipment: {} }),
     );
-    expect(playCamp(archer)[0]).toEqual({ type: 'buy', itemId: IRON_BOW.id });
+    expect(playCamp(archer)[0]).toEqual({ type: 'buy', itemId: WOODEN_BOW.id });
     const healer = withUnit(
       makeRun({ a: new Acolyte({ name: 'Cass', team: 'player' }) }, { gold: 100 }),
       'a',
       (unit) => ({ ...unit, equipment: {} }),
     );
-    expect(playCamp(healer).map((command) => command.type)).toEqual(['buy', 'give', 'march']);
+    expect(
+      playCamp(healer)
+        .map((command) => command.type)
+        .slice(0, 2),
+    ).toEqual(['buy', 'give']);
     expect(playCamp(healer)[0]).toEqual({ type: 'buy', itemId: HEAL_STAFF.id });
   });
 

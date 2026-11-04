@@ -34,7 +34,7 @@ export const BEAST_GROWTHS = Object.freeze({
 });
 
 // The weapon types it can wield.
-export const BEAST_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
+export const BEAST_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['natural']);
 
 // What it carries into battle: only its Bite, which never breaks.
 export const BEAST_ITEMS: Inventory = Object.freeze([weaponEntry(BITE)]);

@@ -45,10 +45,10 @@ describe('Acolyte', () => {
     expect(acolyte.items.map((entry) => entry.item)).toEqual([HEALTH_POTION, MANA_POTION]);
   });
 
-  it('is trained in magical weapons, and fights with Light', () => {
+  it('is trained in staves and tomes, and fights with Light', () => {
     expect(new Acolyte({ team: 'player' }).weapon).toBe(LIGHT);
     const acolyte = new Acolyte({ team: 'player', items: [weaponEntry(FIRE), weaponEntry(IRON_SPEAR)] });
-    expect(acolyte.weaponTypes).toEqual(['magical']);
+    expect(acolyte.weaponTypes).toEqual(['staff', 'tome']);
     expect(acolyte.weapon).toBe(FIRE);
   });
 

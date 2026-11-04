@@ -34,7 +34,7 @@ export const ARCHER_GROWTHS = Object.freeze({
 });
 
 // The weapon types an archer can wield.
-export const ARCHER_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
+export const ARCHER_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['bow', 'dagger']);
 
 // What an archer carries into battle: its bow and the potions.
 export const ARCHER_ITEMS: Inventory = Object.freeze([weaponEntry(IRON_BOW), ...STARTING_ITEMS]);

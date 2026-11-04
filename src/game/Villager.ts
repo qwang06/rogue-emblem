@@ -40,7 +40,7 @@ export const VILLAGER_GROWTHS = Object.freeze({
 export const VILLAGER_EXPERIENCE_RATE = 150;
 
 // The weapon types a villager can wield.
-export const VILLAGER_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
+export const VILLAGER_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['sword']);
 
 // What a villager carries into battle: a wooden sword, its fists (which
 // never break) for when the sword does, and the potions.

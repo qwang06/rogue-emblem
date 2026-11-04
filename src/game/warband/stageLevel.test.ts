@@ -20,6 +20,7 @@ import {
 } from './stageLevel.ts';
 import { getRegionStages, getStageRegion } from './regions.ts';
 import { LOOT_ITEMS } from '../loot.ts';
+import { GEAR_LADDER } from '../gearLadder.ts';
 import { ALL_STARTING_CLASSES, STARTING_CLASSES } from './startingClasses.ts';
 import { createUnitOfClass } from '../unitClasses.ts';
 import { calculateDamage, getAttackRange } from '../combat.ts';
@@ -214,6 +215,14 @@ describe('createStageLevel', () => {
   it('builds a different map from the same seed with a different region', () => {
     const maps = new Set(REGION_CONFIGS.map((region) => terrainToRows(createStageLevel(7, region).grid).join('\n')));
     expect(maps.size).toBe(REGION_CONFIGS.length);
+  });
+
+  it('outfits each enemy for its level (outfitEnemy)', () => {
+    const region = { ...FIRST, enemies: [{ count: 1, unitClass: 'soldier', level: 11 }] };
+    const level = createStageLevel(1, region);
+    const enemy = [...level.units.values()].find((unit) => unit.team === 'enemy')!;
+    expect(enemy.equipment.main?.id).toBe(GEAR_LADDER.steel.weapons.spear);
+    expect(enemy.equipment.body?.id).toBe(GEAR_LADDER.iron.body.heavy);
   });
 
   it('is sized by its region and offers the starting warband', () => {
