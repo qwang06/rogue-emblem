@@ -319,13 +319,14 @@ export function createStageLevel(
 }
 
 // Which archetypes suit each objective (see mapArchetypes.ts): a seize
-// wants a tile worth fighting over, a boss a stronghold, a survive enemies
-// closing in from more than one side.
+// wants a tile worth fighting over, a boss a stronghold (or the far camp),
+// a survive enemies closing in from more than one side, a rout enemies to
+// hunt down a pocket at a time.
 export const OBJECTIVE_ARCHETYPES: Readonly<Record<ObjectiveKind, readonly MapArchetype[]>> = Object.freeze({
-  rout: Object.freeze(['advance', 'ambush', 'gauntlet', 'islands'] as const),
+  rout: Object.freeze(['advance', 'ambush', 'gauntlet', 'islands', 'camps'] as const),
   seize: Object.freeze(['crossroads', 'islands', 'fortress'] as const),
-  boss: Object.freeze(['fortress', 'advance', 'gauntlet'] as const),
-  survive: Object.freeze(['ambush', 'crossroads'] as const),
+  boss: Object.freeze(['fortress', 'advance', 'gauntlet', 'camps'] as const),
+  survive: Object.freeze(['ambush', 'crossroads', 'pincer'] as const),
 });
 
 // Mixed into the stage seed so the archetype's draw doesn't follow the

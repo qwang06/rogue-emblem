@@ -51,6 +51,8 @@ export const ARCHETYPE_SHAPES: Readonly<Record<MapArchetype, Readonly<ArchetypeS
   ambush: Object.freeze({ aspect: 1.15 }),
   gauntlet: Object.freeze({ aspect: 1.1, maxWidth: 10, maxHeight: 9 }),
   fortress: Object.freeze({ aspect: 1.3 }),
+  pincer: Object.freeze({ aspect: 1.45 }),
+  camps: Object.freeze({ aspect: 1.45 }),
 });
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));

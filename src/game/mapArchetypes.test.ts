@@ -6,10 +6,12 @@ import {
   MAP_ARCHETYPES,
   planAmbush,
   planArchetype,
+  planCamps,
   planCrossroads,
   planFortress,
   planGauntlet,
   planIslands,
+  planPincer,
   rect,
   type ArchetypePlan,
   type MapArchetype,
@@ -248,6 +250,51 @@ describe('planFortress', () => {
         expect(path.has(key({ x: g.x, y: g.y - 1 }))).toBe(true);
       }
       expect(path.has(key(fort))).toBe(false);
+    }
+  });
+});
+
+describe('planPincer', () => {
+  it('deploys mid-map with the enemy on both side edges, north of it, a route out to each', () => {
+    for (const [width, height] of SIZES) {
+      for (const seed of SEEDS) {
+        const plan = planPincer(width, height, createSeededRng(seed));
+        const [west, east] = plan.enemyZones;
+        const deployY = plan.deploymentZone[0].y;
+        expect(deployY).toBeLessThan(height - 1);
+        expect(west.every((p) => p.x <= 1 && p.y < deployY)).toBe(true);
+        expect(east.every((p) => p.x >= width - 2 && p.y < deployY)).toBe(true);
+        expect(plan.routes.map((route) => route.at(-1)!.x)).toEqual([0, width - 1]);
+        expect(plan.path[0].y).toBe(height - 1);
+        expect(plan.path.at(-1)!.y).toBe(0);
+      }
+    }
+  });
+});
+
+describe('planCamps', () => {
+  it('splits the enemy between tents in clearings over the north half, a road or route to each', () => {
+    for (const [width, height] of SIZES) {
+      for (const seed of SEEDS) {
+        const plan = planCamps(width, height, createSeededRng(seed));
+        expect(plan.buildings).toHaveLength(width >= 10 ? 3 : 2);
+        expect(plan.enemyZones).toHaveLength(plan.buildings.length);
+        expect(1 + plan.routes.length).toBe(plan.buildings.length);
+        const reserved = new Set(plan.reserved.map(key));
+        const roadEnds = [plan.path, ...plan.routes].map((road) => key(road.at(-1)!));
+        for (const [i, tent] of plan.buildings.entries()) {
+          expect(tent.building).toBe('camp');
+          expect(tent.y).toBeGreaterThanOrEqual(1);
+          expect(tent.y).toBeLessThan(height / 2);
+          expect(plan.enemyZones[i]).toContainEqual({ x: tent.x, y: tent.y });
+          // Its art and its clearing stay clear of the fill.
+          expect(reserved.has(key({ x: tent.x, y: tent.y - 1 }))).toBe(true);
+          expect(roadEnds).toContain(key({ x: tent.x, y: tent.y + 1 }));
+        }
+        // The road goes to the nearest camp, never over a tent.
+        const tents = new Set(plan.buildings.map(key));
+        expect(plan.path.some((p) => tents.has(key(p)))).toBe(false);
+      }
     }
   });
 });

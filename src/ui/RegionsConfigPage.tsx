@@ -410,8 +410,8 @@ function RegionsFormat() {
           <code>generator</code> (<code>"classic"</code>, the default, or <code>"planned"</code>, which also carves side
           routes to the enemy), <code>routes</code> (1–5, how many routes the planned generator lays) and{' '}
           <code>archetype</code>, the map type (<code>"advance"</code>, <code>"crossroads"</code>, <code>"ambush"</code>
-          , <code>"gauntlet"</code>, <code>"islands"</code> or <code>"fortress"</code>; unset, each stage after the
-          first picks one to suit its objective).
+          , <code>"gauntlet"</code>, <code>"islands"</code>, <code>"fortress"</code>, <code>"pincer"</code> or{' '}
+          <code>"camps"</code>; unset, each stage after the first picks one to suit its objective).
         </li>
         <li>
           <code>enemies</code>: {REGION_LIMITS.enemyGroups[0]} to {REGION_LIMITS.enemyGroups[1]} groups, up to{' '}

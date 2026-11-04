@@ -24,6 +24,13 @@
 //   fortress   — a walled fort at the north end with one or two gates in
 //                its south wall; the enemy holds the inside, and the fort
 //                building in it is the tile to seize
+//   pincer     — deploy in the middle of the south half on a road running
+//                north; the enemy closes in from the west and east edges at
+//                once, a route in from each
+//   camps      — deploy south; the enemy is split into two or three camps
+//                (a tent in a clearing) spread over the north half, a road
+//                to the nearest and routes to the rest, so they can be
+//                taken in turn
 // Pure: the same size and Rng always give the same plan.
 
 import type { BuildingPlacement } from './buildings.ts';
@@ -31,7 +38,8 @@ import type { Rng } from './combatStats.ts';
 import type { Point } from './grid.ts';
 import { randomInt, shuffle } from './rng.ts';
 
-export type MapArchetype = 'advance' | 'crossroads' | 'ambush' | 'gauntlet' | 'islands' | 'fortress';
+export type MapArchetype =
+  'advance' | 'crossroads' | 'ambush' | 'gauntlet' | 'islands' | 'fortress' | 'pincer' | 'camps';
 
 export const MAP_ARCHETYPES: readonly MapArchetype[] = Object.freeze([
   'advance',
@@ -40,6 +48,8 @@ export const MAP_ARCHETYPES: readonly MapArchetype[] = Object.freeze([
   'gauntlet',
   'islands',
   'fortress',
+  'pincer',
+  'camps',
 ]);
 
 // A tile of terrain a plan lays before the fill.
@@ -444,12 +454,79 @@ export function planFortress(width: number, height: number, rng: Rng): Archetype
   };
 }
 
+// Pincer: the player deploys on a road running north through the middle of
+// the south half, and the enemy waits on both side edges, from a few rows
+// north of the deployment zone down to the row above it, so the two halves
+// close in at once. A route runs out from each end of the deployment zone
+// to its flank.
+export function planPincer(width: number, height: number, rng: Rng): ArchetypePlan {
+  const cx = randomInt(rng, Math.floor((width - 1) / 2), Math.ceil((width - 1) / 2));
+  const dy = Math.min(height - 2, Math.ceil(height * 0.6));
+  const deploymentZone = deployRow(cx, dy);
+  const top = Math.max(0, dy - 4);
+  const flank = (x0: number, x1: number) => rect(x0, top, x1, dy - 1);
+  const path = carveRoad({ x: cx, y: height - 1 }, { x: randomInt(rng, 1, width - 2), y: 0 }, rng);
+  const routes = [
+    carveRoad({ x: cx - 2, y: dy }, { x: 0, y: randomInt(rng, top, dy - 1) }, rng),
+    carveRoad({ x: cx + 2, y: dy }, { x: width - 1, y: randomInt(rng, top, dy - 1) }, rng),
+  ];
+  return {
+    deploymentZone,
+    enemyZones: [flank(0, 1), flank(width - 2, width - 1)],
+    path,
+    routes,
+    terrain: [],
+    reserved: withNeighbors(deploymentZone, width, height),
+    buildings: [],
+  };
+}
+
+// Camps: the player deploys on the south edge and the enemy is split into
+// two camps (three on maps 10 or more wide) over the north half: one in
+// the west third, one in the east third, and the third in the middle near
+// the north edge. Each camp is a tent with a clearing of 3x2 tiles round
+// and south of it that the fill leaves open, the enemy dealt among them in
+// turn. The dirt road runs from the deployment zone to the nearest camp's
+// clearing, and a route to each of the others.
+export function planCamps(width: number, height: number, rng: Rng): ArchetypePlan {
+  const deployX = randomInt(rng, 2, width - 3);
+  const deploymentZone = deployRow(deployX, height - 1);
+  const third = Math.max(1, Math.floor(width / 3));
+  const low = Math.max(1, Math.floor(height / 2) - 1);
+  const tents: Point[] = [
+    { x: randomInt(rng, 1, Math.max(1, third - 1)), y: randomInt(rng, 1, low) },
+    { x: width - 1 - randomInt(rng, 1, Math.max(1, third - 1)), y: randomInt(rng, 1, low) },
+    ...(width >= 10 ? [{ x: randomInt(rng, third, width - 1 - third), y: 1 }] : []),
+  ];
+  const deploy = { x: deployX, y: height - 1 };
+  const steps = (p: Point) => Math.abs(p.x - deploy.x) + Math.abs(p.y - deploy.y);
+  const byDistance = [...tents].sort((a, b) => steps(a) - steps(b));
+  // Each road ends on the clearing's tile south of the tent.
+  const [path, ...routes] = byDistance.map((tent) => carveRoad(deploy, { x: tent.x, y: tent.y + 1 }, rng));
+  const clearings = tents.map(({ x, y }) => rect(x - 1, y, x + 1, y + 1));
+  return {
+    deploymentZone,
+    enemyZones: clearings,
+    path,
+    routes,
+    terrain: [],
+    reserved: [
+      ...clearings.flat(),
+      ...tents.map(({ x, y }) => ({ x, y: y - 1 })),
+      ...withNeighbors(deploymentZone, width, height),
+    ],
+    buildings: tents.map(({ x, y }) => ({ x, y, building: 'camp' })),
+  };
+}
+
 const PLANNERS: Record<Exclude<MapArchetype, 'advance'>, (width: number, height: number, rng: Rng) => ArchetypePlan> = {
   crossroads: planCrossroads,
   ambush: planAmbush,
   gauntlet: planGauntlet,
   islands: planIslands,
   fortress: planFortress,
+  pincer: planPincer,
+  camps: planCamps,
 };
 
 // The plan for `archetype` (any but 'advance') on a `width` x `height` map.
