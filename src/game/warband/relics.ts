@@ -101,9 +101,12 @@ export const RELICS: readonly Relic[] = Object.freeze([
     { kind: 'phase-mana', amount: 1 },
   ]),
   relic('whetstone', 'Whetstone', 'Units have +{n} crit.', [{ kind: 'combat', term: 'crit', amount: 10 }]),
-  relic('lone-wolf', 'Lone Wolf', `A unit deployed alone has ${LONE_WOLF_PERCENT}% higher stats for the battle.`, [
-    { kind: 'lone-wolf', percent: LONE_WOLF_PERCENT },
-  ]),
+  relic(
+    'lone-wolf',
+    'Lone Wolf',
+    `A unit deployed alone deals ${LONE_WOLF_PERCENT}% more damage, takes ${LONE_WOLF_PERCENT / 2}% less, and has +20 hit and avoid.`,
+    [{ kind: 'lone-wolf', percent: LONE_WOLF_PERCENT }],
+  ),
   relic('scholars-quill', "Scholar's Quill", 'Every unit earns {n}% more XP.', [{ kind: 'experience', percent: 50 }]),
   BOUNTY_LEDGER,
   PHOENIX_FEATHER,

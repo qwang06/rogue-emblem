@@ -164,6 +164,8 @@ export function scoreReward(run: RunState, reward: Reward): number {
       return REWARD_SCORES.gold;
     case 'keystone':
       return REWARD_SCORES.keystone;
+    case 'gear':
+      return REWARD_SCORES.relic;
   }
 }
 

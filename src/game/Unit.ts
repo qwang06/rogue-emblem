@@ -43,11 +43,14 @@ import {
   getArmorAvoid,
   getArmorResistance,
   getArmorWeight,
+  getGearCurses,
   getGearLayout,
+  getGearModifiers,
   getMainStaff,
   getMainWeapon,
   getWornArmor,
   hasHandFree,
+  NO_EQUIPMENT,
   type Equipment,
   type GearLayout,
 } from './equipment.ts';
@@ -152,11 +155,12 @@ export class Unit {
   // warband/stageObjective.ts).
   holdsPosition = false;
   // What its relics and boons add for the battle (see modifiers.ts), set
-  // by applyModifiers when a Warband run fields it.
-  modifiers: readonly Modifier[] = Object.freeze([]);
-  // The curses its cursed gear lays on the enemies of any battle it's
-  // deployed in (see curses.ts).
-  curses: readonly Curse[] = Object.freeze([]);
+  // by applyModifiers when a Warband run fields it; `modifiers` adds its
+  // worn gear's.
+  ownModifiers: readonly Modifier[] = Object.freeze([]);
+  // The curses it lays on the enemies of any battle it's deployed in (see
+  // curses.ts), such as a keystone's; `curses` adds its worn gear's.
+  ownCurses: readonly Curse[] = Object.freeze([]);
   // Statuses a skill has left on it this battle (see statuses.ts), until
   // its team's next phase ends. Never saved.
   statuses: readonly StatusId[] = Object.freeze([]);
@@ -245,6 +249,32 @@ export class Unit {
   // A copy of this unit, of the same class, that can change without
   // changing this one. Stats are plain numbers and its inventory and tome
   // progress are replaced rather than edited, so a shallow copy is enough.
+  // Everything that bends its rules: its own modifiers, then its worn
+  // gear's (getGearModifiers). Setting it sets its own, leaving out the
+  // gear's (so `unit.modifiers = [...unit.modifiers, more]` adds to its
+  // own). A gear modifier of kind 'movement' or 'experience' isn't baked
+  // into MOV or XP rate: readers add getGearModifiers for those.
+  get modifiers(): readonly Modifier[] {
+    const gear = getGearModifiers(this.equipment ?? NO_EQUIPMENT);
+    return gear.length === 0 ? this.ownModifiers : Object.freeze([...this.ownModifiers, ...gear]);
+  }
+
+  set modifiers(value: readonly Modifier[]) {
+    const gear = getGearModifiers(this.equipment ?? NO_EQUIPMENT);
+    this.ownModifiers = Object.freeze(value.filter((modifier) => !gear.includes(modifier)));
+  }
+
+  // Its own curses, then its worn gear's; set like `modifiers`.
+  get curses(): readonly Curse[] {
+    const gear = getGearCurses(this.equipment ?? NO_EQUIPMENT);
+    return gear.length === 0 ? this.ownCurses : Object.freeze([...this.ownCurses, ...gear]);
+  }
+
+  set curses(value: readonly Curse[]) {
+    const gear = getGearCurses(this.equipment ?? NO_EQUIPMENT);
+    this.ownCurses = Object.freeze(value.filter((curse) => !gear.includes(curse)));
+  }
+
   clone(): this {
     return Object.assign(Object.create(Object.getPrototypeOf(this)), this);
   }

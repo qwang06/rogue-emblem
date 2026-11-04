@@ -332,6 +332,21 @@ const DEFINITIONS: readonly BoonDefinition[] = [
     (a) => `+${a} damage for each tenth of its max HP it's missing.`,
     3,
   ),
+  // Run trophies (trophies.ts): gains kept for the whole run.
+  passive(
+    'soul-harvest',
+    'Soul Harvest',
+    { kind: 'soul-harvest', amount: 1 },
+    (a) => `Gains ${a} max HP for good for each foe it defeats.`,
+    3,
+  ),
+  passive(
+    'trophy-hunter',
+    'Trophy Hunter',
+    { kind: 'trophy-hunter', amount: 1 },
+    (a) => `Each stage it defeats a foe in, its highest stat grows by ${a} for good.`,
+    3,
+  ),
 ];
 
 const DEFINITION_BY_ID: ReadonlyMap<string, BoonDefinition> = new Map(DEFINITIONS.map((d) => [d.id, d]));

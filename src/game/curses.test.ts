@@ -64,9 +64,18 @@ describe('the Lone Wolf at the start of a battle', () => {
     return applyCommand(state, { type: 'start-battle' }).state.units.get('hero')!;
   }
 
-  it('grows a unit deployed alone, and not one with company', () => {
-    expect(battle(false)).toMatchObject({ strength: 15, maxHealth: 30, health: 30 });
-    expect(battle(true)).toMatchObject({ strength: 10, maxHealth: 20 });
+  it('emboldens a unit deployed alone for the battle, leaving its stats alone, and not one with company', () => {
+    const alone = battle(false);
+    expect(alone).toMatchObject({ strength: 10, maxHealth: 20 });
+    expect(alone.modifiers).toEqual(
+      expect.arrayContaining([
+        { kind: 'combat', term: 'damage-percent', amount: 50 },
+        { kind: 'combat', term: 'guard-percent', amount: 25 },
+        { kind: 'combat', term: 'hit', amount: 20 },
+        { kind: 'combat', term: 'avoid', amount: 20 },
+      ]),
+    );
+    expect(battle(true).modifiers).toEqual([{ kind: 'lone-wolf', percent: 50 }]);
   });
 });
 

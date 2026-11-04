@@ -71,6 +71,8 @@ const TAGS_BY_BOON: Readonly<Record<string, readonly BoonTag[]>> = Object.freeze
   thorns: ['guard'],
   spite: ['guard', 'blood'],
   desperation: ['blood', 'power'],
+  'soul-harvest': ['kill', 'blood'],
+  'trophy-hunter': ['kill', 'power'],
   // Skill boons (skill-<skill id>).
   'skill-lend-a-hand': ['team', 'move'],
   'skill-piercing-shot': ['power'],

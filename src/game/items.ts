@@ -10,6 +10,8 @@
 // in one use.
 
 import type { MenuAction } from './actionMenu.ts';
+import type { Curse } from './curses.ts';
+import type { Modifier } from './modifiers.ts';
 import type { Staff } from './healing.ts';
 import type { Weapon } from './weapons.ts';
 import { LADDER_ARMORS } from './gearLadder.ts';
@@ -47,6 +49,10 @@ export interface Armor {
   resistance?: number;
   // For 'special' gear: the class id it's made for.
   forClass?: string;
+  // What wearing it adds (modifiers.ts) and costs (curses.ts), for gear
+  // that bends a rule; see getGearModifiers in equipment.ts.
+  modifiers?: readonly Modifier[];
+  curses?: readonly Curse[];
 }
 
 // Body and head armor come in three weights: heavy (plate and helms: the
