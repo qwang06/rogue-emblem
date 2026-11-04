@@ -9,7 +9,9 @@
 // knows) are its innate attacks, never gear. Gear never breaks and is set
 // between battles, never swapped mid-battle. No Phaser, no hidden state.
 
+import type { Curse } from './curses.ts';
 import type { Staff } from './healing.ts';
+import type { Modifier } from './modifiers.ts';
 import { MAX_INVENTORY_SLOTS, type Armor, type Inventory, type InventoryEntry, type Item } from './items.ts';
 import { NATURAL_WEAPON_IDS, type Weapon } from './weapons.ts';
 
@@ -147,6 +149,16 @@ export const GEAR_SLOT_ORDER: readonly GearSlot[] = Object.freeze([
 // Every piece of worn gear, in slot order.
 export function getWornGear(equipment: Equipment): Gear[] {
   return GEAR_SLOT_ORDER.map((slot) => equipment[slot]).filter((gear): gear is Gear => gear !== undefined);
+}
+
+// What the worn gear adds (its `modifiers`) and costs (its `curses`), in
+// slot order. Unit.modifiers and Unit.curses include them.
+export function getGearModifiers(equipment: Equipment): Modifier[] {
+  return getWornGear(equipment).flatMap((gear) => gear.modifiers ?? []);
+}
+
+export function getGearCurses(equipment: Equipment): Curse[] {
+  return getWornGear(equipment).flatMap((gear) => gear.curses ?? []);
 }
 
 // The armor worn (every slot but the main hand), in slot order.

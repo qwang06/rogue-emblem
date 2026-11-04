@@ -16,6 +16,7 @@ import { createStageLevel, DEFAULT_ENEMY_CLASS, pickStageArchetype, withArchetyp
 import { pickStageObjective, placeObjective } from './warband/stageObjective.ts';
 import { getStageLootCount } from './loot.ts';
 import { applyEliteAffixes, applyEliteCreep, rollEliteAffixes } from './warband/elites.ts';
+import { equipEnemyMonsters } from './gearKits.ts';
 import { WAVE_EVERY, WAVE_LIMIT, WAVES_FROM_STAGE, type ReinforcementRules } from './battle/reinforcements.ts';
 import { getRunSite, getSiteRegion } from './warband/travel.ts';
 import { applySurge, getSurgePercent, levelRegionForStage } from './warband/enemyCurve.ts';
@@ -141,6 +142,13 @@ export function createBattleLevel(
       } else {
         applyEliteCreep(level.units, setup.seed, setup.stage, bossUnitId);
       }
+      // Monsters wear their class's signature gear more often as the run
+      // goes on (gearKits.ts).
+      equipEnemyMonsters(
+        level.units.values(),
+        setup.stage,
+        createSeededRng((setup.seed ^ Math.imul(setup.stage + 0x67, 0x45d9f3b) ^ 0x67656172) >>> 0),
+      );
       return { ...level, objective, reinforcements: getStageReinforcements(setup.stage, baseRegion, surge) };
     }
   }
