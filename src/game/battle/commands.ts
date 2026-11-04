@@ -693,11 +693,12 @@ function encore(draft: Draft, unitId: string): boolean {
   return true;
 }
 
-// A unit with `veil-on-wait` that waits is Veiled (statuses.ts) until its
-// next phase.
+// A unit with `veil-on-wait` that waits is Veiled, or gets the modifier's
+// own `status` (statuses.ts), until its next phase.
 function veilOnWait(draft: Draft, unitId: string) {
-  if (!hasModifier(draft.unit(unitId).modifiers, 'veil-on-wait')) return;
-  layStatus(draft, unitId, unitId, 'veiled');
+  for (const modifier of draft.unit(unitId).modifiers) {
+    if (modifier.kind === 'veil-on-wait') layStatus(draft, unitId, unitId, modifier.status ?? 'veiled');
+  }
 }
 
 // Lays `status` on `targetId` for `unitId`, with a `status` event, unless

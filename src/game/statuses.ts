@@ -21,6 +21,8 @@
 // - Hastened: it moves 2 more tiles.
 // - Taunting: the foes it Taunted must come for it.
 // - Veiled: it has 30 more avoid (a Veil-on-wait modifier gives it).
+// - Lurking: it has 15 more avoid (the goblin's Ambush Cloak, a weaker
+//   Veil-on-wait, gives it).
 
 import type { Modifier } from './modifiers.ts';
 
@@ -34,6 +36,7 @@ export const STATUS_IDS = Object.freeze([
   'hastened',
   'taunting',
   'veiled',
+  'lurking',
 ] as const);
 export type StatusId = (typeof STATUS_IDS)[number];
 
@@ -111,6 +114,13 @@ export const STATUSES: Readonly<Record<StatusId, Status>> = Object.freeze({
     label: 'Veiled',
     description: '+30 avoid.',
     modifiers: Object.freeze([Object.freeze<Modifier>({ kind: 'combat', term: 'avoid', amount: 30 })]),
+  }),
+  lurking: Object.freeze({
+    id: 'lurking',
+    kind: 'buff',
+    label: 'Lurking',
+    description: '+15 avoid.',
+    modifiers: Object.freeze([Object.freeze<Modifier>({ kind: 'combat', term: 'avoid', amount: 15 })]),
   }),
 });
 

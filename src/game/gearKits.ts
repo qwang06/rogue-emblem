@@ -228,7 +228,7 @@ function special(id: string, label: string, forClass: string, modifiers: readonl
 
 export const MONSTER_GEAR: readonly Armor[] = Object.freeze([
   special('acid-core', 'Acid Core', 'slime', [{ kind: 'status-on-hit', status: 'sundered' }]),
-  special('ambush-cloak', 'Ambush Cloak', 'goblin', [{ kind: 'veil-on-wait' }]),
+  special('ambush-cloak', 'Ambush Cloak', 'goblin', [{ kind: 'veil-on-wait', status: 'lurking' }]),
   special('bone-spurs', 'Bone Spurs', 'skeleton', [{ kind: 'thorns', amount: 2 }]),
   special('vampire-fang', 'Vampire Fang', 'bat', [{ kind: 'lifesteal', percent: 50 }]),
   special('warchiefs-totem', "Warchief's Totem", 'orc', [{ kind: 'kill-stack', term: 'damage', amount: 2 }]),
@@ -273,7 +273,7 @@ export const GEAR_DESCRIPTIONS: Readonly<Record<string, string>> = Object.freeze
   'briar-charm': "The wearer's thorns and reflected damage leave the attacker Sundered.",
   'gravebound-plate': '+8 DEF, takes 4 less damage from every hit, 5 thorns. Curse: every enemy is Brutal.',
   'acid-core': 'A hit leaves the foe Sundered.',
-  'ambush-cloak': 'After waiting, +30 avoid until its next phase.',
+  'ambush-cloak': 'After waiting, +15 avoid until its next phase.',
   'bone-spurs': 'A foe that strikes it from the next tile takes 2 damage.',
   'vampire-fang': 'Heals half the damage it deals.',
   'warchiefs-totem': 'Each kill gives +2 damage for the rest of the battle.',

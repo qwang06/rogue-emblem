@@ -72,3 +72,11 @@ describe('statuses in combat', () => {
     expect(getFighterBonus({ ...foe, statuses: ['marked'] }, foe, true)?.avoid).toBe(-15);
   });
 });
+
+describe('Lurking', () => {
+  it('is a weaker Veiled: a buff with +15 avoid', () => {
+    expect(STATUSES.lurking.kind).toBe('buff');
+    expect(STATUSES.lurking.modifiers).toEqual([{ kind: 'combat', term: 'avoid', amount: 15 }]);
+    expect(STATUSES.veiled.modifiers).toEqual([{ kind: 'combat', term: 'avoid', amount: 30 }]);
+  });
+});

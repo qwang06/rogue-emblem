@@ -113,7 +113,7 @@ export type Modifier =
   // attack lets it act again, once per phase (`encore`); a foe it fells
   // passes its debuffs to the foe nearest it (`contagion`); as its phase
   // starts, it Taunts the foes beside it (`taunt-aura`); waiting leaves it
-  // Veiled (`veil-on-wait`); the debuffs it lays last one more of the
+  // Veiled, or with `status` instead (`veil-on-wait`); the debuffs it lays last one more of the
   // foe's phases (`linger-debuffs`).
   | { kind: 'status-on-hit'; status: StatusId; on?: 'hit' | 'crit' }
   | { kind: 'status-on-recoil'; status: StatusId }
@@ -122,7 +122,7 @@ export type Modifier =
   | { kind: 'encore' }
   | { kind: 'contagion' }
   | { kind: 'taunt-aura' }
-  | { kind: 'veil-on-wait' }
+  | { kind: 'veil-on-wait'; status?: StatusId }
   | { kind: 'linger-debuffs' }
   // When it's the only unit of its side deployed, it deals `percent` more
   // damage and takes half that less, with +20 hit and avoid, for the
