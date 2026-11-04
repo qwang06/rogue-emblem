@@ -253,6 +253,9 @@ export interface RelicView {
   id: string;
   name: string;
   description: string;
+  // The keystone this entry is (its icon, see KEYSTONE_ICON_URLS); absent
+  // on a relic.
+  keystoneId?: string;
 }
 
 export interface TurnView {
@@ -291,6 +294,9 @@ export interface RewardAction extends MenuAction {
   // The relic a Relic reward gives (its icon, see RELIC_ICONS); absent on
   // other rewards.
   relicId?: string;
+  // The keystone a Keystone reward gives (its icon, see
+  // KEYSTONE_ICON_URLS); absent on other rewards.
+  keystoneId?: string;
   // Each roster unit's HP after taking it, in roster order, for a reward
   // that restores HP (see previewRewardHealth), else null.
   healthAfter: readonly { health: number; maxHealth: number }[] | null;
@@ -827,6 +833,7 @@ export function toRewardAction(reward: Reward, index: number, run: RunState | nu
     ...(unit ? { sprite: getUnitSprite(unit.classId) } : {}),
     ...(itemIcon ? { itemIcon } : {}),
     ...(reward.kind === 'relic' ? { relicId: reward.relicId } : {}),
+    ...(reward.kind === 'keystone' ? { keystoneId: reward.keystoneId } : {}),
   });
 }
 
@@ -915,6 +922,7 @@ export function toRelicViews(relicIds: readonly string[], stage = 1, keystoneId?
             id: `keystone-${keystone.id}`,
             name: `Keystone: ${keystone.name}`,
             description: keystone.description,
+            keystoneId: keystone.id,
           }),
         ]
       : []),

@@ -65,7 +65,7 @@ export function CampMenu() {
           <ul className="camp-relics__list">
             {relics.map((relic) => (
               <li key={relic.id} className="camp-relics__relic">
-                <RelicIcon id={relic.id} className="camp-relics__icon" />
+                <RelicIcon id={relic.id} keystoneId={relic.keystoneId} className="camp-relics__icon" />
                 <span className="camp-relics__name">{relic.name}</span>
                 <span className="camp-relics__description">{relic.description}</span>
               </li>

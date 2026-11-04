@@ -738,6 +738,8 @@ describe('toRewardAction', () => {
   it('carries the relic a relic reward gives, and none for other rewards', () => {
     expect(toRewardAction({ kind: 'relic', relicId: 'whetstone' }, 0).relicId).toBe('whetstone');
     expect(toRewardAction({ kind: 'rest' }, 0)).not.toHaveProperty('relicId');
+    expect(toRewardAction({ kind: 'keystone', keystoneId: 'iron-legion' }, 0).keystoneId).toBe('iron-legion');
+    expect(toRewardAction({ kind: 'rest' }, 0)).not.toHaveProperty('keystoneId');
   });
 });
 
@@ -875,6 +877,7 @@ describe('toRelicViews with a keystone', () => {
   it('lists the keystone first, then the relics', () => {
     const views = toRelicViews(['hawk-lens'], 1, 'glass-lens');
     expect(views.map(({ name }) => name)).toEqual(['Keystone: Glass Lens', "Hawk's Lens"]);
+    expect(views.map(({ keystoneId }) => keystoneId)).toEqual(['glass-lens', undefined]);
     expect(toRelicViews([], 1, 'nonsense')).toEqual([]);
   });
 });

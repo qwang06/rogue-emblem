@@ -7,6 +7,7 @@ import { UnitSprite } from './UnitSprite.tsx';
 import { SPRITE_URLS } from '../assets/sprites.ts';
 import { REWARD_ICON_URLS } from '../assets/rewardIcons.ts';
 import { getRelicIconUrl } from '../assets/fantasyIcons.ts';
+import { KEYSTONE_ICON_URLS } from '../assets/keystoneIcons.ts';
 import type { RewardAction } from '../bridge/views.ts';
 
 // Shown after a won Warband Mode stage's result: what the clear paid, and
@@ -129,7 +130,7 @@ export function RewardScreen() {
 
 // A card's picture at 2x, so the pick reads at a glance: a recruit's unit
 // (idling while picked), the item a Supplies, Arms or Seal reward gives,
-// the relic a Relic reward gives, else the reward kind's icon. Every card in a row has one, so the cards
+// the relic a Relic reward gives, the keystone a Keystone reward gives, else the reward kind's icon. Every card in a row has one, so the cards
 // line up.
 function RewardPicture({ reward, selected }: { reward: RewardAction; selected: boolean }) {
   if (reward.sprite) {
@@ -141,7 +142,9 @@ function RewardPicture({ reward, selected }: { reward: RewardAction; selected: b
   }
   const url = reward.itemIcon
     ? SPRITE_URLS[reward.itemIcon]
-    : ((reward.relicId && getRelicIconUrl(reward.relicId)) ?? REWARD_ICON_URLS[reward.kind]);
+    : ((reward.relicId && getRelicIconUrl(reward.relicId)) ??
+      (reward.keystoneId && KEYSTONE_ICON_URLS[reward.keystoneId]) ??
+      REWARD_ICON_URLS[reward.kind]);
   if (!url) return null;
   return (
     <span className="reward-card__sprite" aria-hidden="true">
