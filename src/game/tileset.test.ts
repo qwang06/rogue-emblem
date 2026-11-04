@@ -172,16 +172,10 @@ describe('RANK_BADGES', () => {
 });
 
 describe('CURSOR_ANIMATION', () => {
-  it('pulses between two different tiles on the terrain sheet', () => {
-    const { tiles } = CURSOR_ANIMATION;
-    expect(tiles).toHaveLength(2);
-    expect(tiles[0]).not.toEqual(tiles[1]);
-    for (const [column, row] of tiles) {
-      expect(column).toBeGreaterThanOrEqual(0);
-      expect(column).toBeLessThan(TERRAIN_SHEET.columns);
-      expect(row).toBeGreaterThanOrEqual(0);
-      expect(row).toBeLessThan(TERRAIN_SHEET.rows);
-    }
+  it('pulses between the two frames of its own sheet', () => {
+    expect(CURSOR_ANIMATION.sheet).not.toBe(TERRAIN_SHEET.key);
+    expect(CURSOR_ANIMATION.frames).toEqual([0, 1]);
+    expect(CURSOR_ANIMATION.frameMs).toBeGreaterThan(0);
   });
 });
 

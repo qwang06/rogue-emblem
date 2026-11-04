@@ -805,15 +805,15 @@ export const TREE_SHADOW: Shadow = {
   alpha: 0.35,
 };
 
-// The tile cursor: corner brackets that pulse between two tiles of the
-// terrain sheet (brackets on the tile's corners, then 1px in), as [column,
-// row], holding each for frameMs.
-export const CURSOR_ANIMATION: { key: string; tiles: SheetTile[]; frameMs: number } = {
+// The tile cursor: cream corner brackets with a dark outline, so it reads on
+// pale tiles (snow, paths) as well as dark ones. Its own 64x32 sheet
+// (src/assets/ui/tile-cursor.png, texture `sheet`) holds two 32px frames,
+// brackets on the tile's corners and then one art pixel in; the cursor
+// pulses between them, holding each for frameMs.
+export const CURSOR_ANIMATION: { key: string; sheet: string; frames: number[]; frameMs: number } = {
   key: 'cursor',
-  tiles: [
-    [28, 62],
-    [29, 62],
-  ],
+  sheet: 'tile-cursor',
+  frames: [0, 1],
   frameMs: 400,
 };
 

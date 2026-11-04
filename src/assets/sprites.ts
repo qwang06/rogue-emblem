@@ -14,6 +14,7 @@ import overworldWinter from './overworld-winter.png';
 import overworld from './overworld.png';
 import trapPowderMine from './traps/powder-mine.png';
 import trapSpikes from './traps/spikes.png';
+import tileCursor from './ui/tile-cursor.png';
 import ballistaIcon from './items/ballista.png';
 import biteIcon from './items/bite.png';
 import boneClawsIcon from './items/bone-claws.png';
@@ -84,6 +85,7 @@ export const SPRITE_URLS: Readonly<Record<string, string>> = {
   'map-props': mapProps,
   'map-props-starship': mapPropsStarship,
   'trap-spikes': trapSpikes,
+  'tile-cursor': tileCursor,
   'trap-powder-mine': trapPowderMine,
   'ballista': ballistaIcon,
   'bite': biteIcon,
