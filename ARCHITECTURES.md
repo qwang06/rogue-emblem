@@ -441,7 +441,7 @@ Base `Unit` class that specific unit types extend. `clone()` copies a unit of th
 
 ### `src/game/factions.ts`
 
-The six factions, one per version of the unit art pack (`_01` … `_06`): `FACTIONS` lists `{ id, name, variant, color, description }` for azure, sunward, rose, ironhold, verdant and crimson. `PLAYER_FACTION` (`'sunward'`) and `DEFAULT_ENEMY_FACTION` (`'crimson'`) are the defaults `getDefaultFaction(team)` hands a `Unit`; `findFaction` and `isFactionId` look them up. A faction decides only a unit's art for now (`getUnitSprite` in `tileset.ts`); regions set their enemies' faction (`RegionConfig.faction`). Tested in `src/game/factions.test.ts`.
+The six factions, one per version of the unit art pack (`_01` … `_06`): `FACTIONS` lists `{ id, name, variant, color, description }` for azure, sunward, rose, ironhold, verdant and crimson. `PLAYER_FACTION` (`'azure'`) and `DEFAULT_ENEMY_FACTION` (`'crimson'`) are the defaults `getDefaultFaction(team)` hands a `Unit`; `findFaction` and `isFactionId` look them up. A faction decides only a unit's art for now (`getUnitSprite` in `tileset.ts`); regions set their enemies' faction (`RegionConfig.faction`). Tested in `src/game/factions.test.ts`.
 
 ### `src/game/Villager.ts`
 

@@ -115,13 +115,13 @@ describe('sprite keys', () => {
 
 describe('getUnitSprite', () => {
   it("picks a faction class's art by faction, the player's by default", () => {
-    expect(getUnitSprite('villager')).toBe('Villager_02');
+    expect(getUnitSprite('villager')).toBe('Villager_01');
     expect(getUnitSprite('soldier', 'azure')).toBe('Soldier_01');
     expect(getUnitSprite('archer', 'rose')).toBe('Archer_03');
     expect(getUnitSprite('vanguard', 'ironhold')).toBe('Vanguard_04');
     expect(getUnitSprite('beast-rider', 'verdant')).toBe('BeastRider_05');
     expect(getUnitSprite('siege', 'crimson')).toBe('Siege_06');
-    expect(getUnitSprite('acolyte', null)).toBe('Acolyte_02');
+    expect(getUnitSprite('acolyte', null)).toBe('Acolyte_01');
   });
 
   it('picks the same art for a faction-free class whatever the faction', () => {

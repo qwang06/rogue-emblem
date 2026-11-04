@@ -380,7 +380,7 @@
   "parkedRegions": [
     {
       "name": "Starship",
-      "description": "The decks of a habitable starship: steel plating, coolant channels, machinery stacks and hydroponic planters, held by an azure strike team.",
+      "description": "The decks of a habitable starship: steel plating, coolant channels, machinery stacks and hydroponic planters, held by a sunward strike team.",
       "terrain": {
         "generator": "planned",
         "width": 8,
@@ -403,7 +403,7 @@
       ],
       "treeChance": 0,
       "palette": "b-blue",
-      "faction": "azure",
+      "faction": "sunward",
       "season": "starship"
     }
   ]

@@ -28,7 +28,7 @@ Reference for every unit class: base stats, growth rates, weapons and skills. Ke
 
 Halves round down unless noted otherwise. Full formulas live in `ARCHITECTURES.md` (`combat.ts`, `combatStats.ts`, `weapons.ts`, `experience.ts`, `skills.ts`).
 
-- **Factions:** every unit but the elementals and the monsters belongs to one of six factions (`src/game/factions.ts`), which for now only picks which version of its class's art it wears. The player's warband is the Sunward Kingdom; enemies are their region's faction (`faction` in `src/data/regions.json`), or the Crimson Legion when it sets none.
+- **Factions:** every unit but the elementals and the monsters belongs to one of six factions (`src/game/factions.ts`), which for now only picks which version of its class's art it wears. The player's warband is the Azure Conclave; enemies are their region's faction (`faction` in `src/data/regions.json`), or the Crimson Legion when it sets none.
 
 ## Weapons
 

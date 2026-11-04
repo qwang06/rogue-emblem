@@ -120,8 +120,8 @@ The six versions of each unit are the same unit for six factions
 
 | Version | Faction         | Color         | Look (people)                                                                   |
 | ------- | --------------- | ------------- | ------------------------------------------------------------------------------- |
-| `01`    | Azure Conclave  | blue / teal   | Pointed wizard hats, teal accents                                               |
-| `02`    | Sunward Kingdom | orange / gold | Humans with hair buns or topknots, green eyes (the player's warband)            |
+| `01`    | Azure Conclave  | blue / teal   | Pointed wizard hats, teal accents (the player's warband)                        |
+| `02`    | Sunward Kingdom | orange / gold | Humans with hair buns or topknots, green eyes                                   |
 | `03`    | Rose Court      | pink / purple | Pale or lavender skin, crested helmets, yellow or red eyes                      |
 | `04`    | Ironhold Clans  | brown / tan   | Banded helmets or hoods that hide the face, tower shields                       |
 | `05`    | Verdant Wardens | green         | Same design as `03`, recolored                                                  |
@@ -132,7 +132,7 @@ share a design, and `01` and `02` are each unique. Units with no people's
 design (acolytes, boats, rams) are only recolored. A unit's art is
 `getUnitSprite(unitClass, faction)`: its class's body (`FACTION_BODIES`)
 in its faction's version, e.g. a Rose Court archer is `Archer_03`. The
-player's warband is Sunward (`PLAYER_FACTION`); enemies are their region's
+player's warband is Azure (`PLAYER_FACTION`); enemies are their region's
 faction, the Crimson Legion by default. Elementals and monsters belong to no
 faction and look the same on any side. Checked as a contact sheet of each
 down-facing idle frame (project files `art/factions/unit-variants.png`);
