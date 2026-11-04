@@ -39,7 +39,7 @@ describe('toEquipmentScreenView', () => {
       ['Body', null, false],
       ['Accessory', null, false],
     ]);
-    expect(view.slots.map((slot) => slot.tabLabel)).toEqual(['Weapons', 'Shields', 'Head', 'Body', 'Accessory']);
+    expect(view.slots.map((slot) => slot.tabLabel)).toEqual(['Weapons', 'Off-hand', 'Head', 'Body', 'Accessory']);
     expect(view.maxSlots).toBe(5);
     expect(view.slotLabel).toBe('Main hand');
     expect(view.detail?.label).toBe('Iron Spear');
