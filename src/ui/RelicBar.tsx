@@ -16,8 +16,11 @@ import './RelicBar.css';
 // Tab also reaches the icons, as plain buttons.
 export function RelicBar() {
   const relics = useGameStore((state) => (state.screen === 'title' ? null : state.runRelics));
+  // The equipment screen steps through units with Q and E, so while it's
+  // open Q is left to it and doesn't open the bar.
+  const keysTaken = useGameStore((state) => state.equipmentScreen !== null);
   if (!relics || relics.length === 0) return null;
-  return <RelicRow relics={relics} />;
+  return <RelicRow relics={relics} keysTaken={keysTaken} />;
 }
 
 // How far a tooltip keeps from the window's edges, and its widest.
@@ -30,7 +33,7 @@ const BROWSE_KEYS: readonly KeyHintEntry[] = [
   ['Q', 'Close'],
 ];
 
-function RelicRow({ relics }: { relics: readonly RelicView[] }) {
+function RelicRow({ relics, keysTaken }: { relics: readonly RelicView[]; keysTaken: boolean }) {
   // The relic the keyboard is on (kept while closed, to reopen there), and
   // whether keyboard browsing is open.
   const [index, setIndex] = useState(0);
@@ -50,7 +53,7 @@ function RelicRow({ relics }: { relics: readonly RelicView[] }) {
       const target = event.target;
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
       if (target instanceof HTMLSelectElement) return;
-      if (!browsing && (event.ctrlKey || event.metaKey || event.altKey)) return;
+      if (!browsing && (keysTaken || event.ctrlKey || event.metaKey || event.altKey)) return;
       const step = stepRelicBar(browsing, index, relics.length, event.key);
       if (!step) return;
       event.preventDefault();
@@ -62,7 +65,7 @@ function RelicRow({ relics }: { relics: readonly RelicView[] }) {
     }
     // Keys let go while browsing are the bar's too.
     function onKeyUp(event: KeyboardEvent) {
-      if (browsing || event.key.toLowerCase() === RELIC_BAR_KEY) event.stopImmediatePropagation();
+      if (browsing || (!keysTaken && event.key.toLowerCase() === RELIC_BAR_KEY)) event.stopImmediatePropagation();
     }
     window.addEventListener('keydown', onKeyDown, true);
     window.addEventListener('keyup', onKeyUp, true);
