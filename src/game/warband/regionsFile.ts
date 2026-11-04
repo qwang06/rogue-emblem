@@ -73,6 +73,7 @@ const TERRAIN_KEYS = [
   'height',
   ...PATCH_COUNTS,
   ...PATCH_SIZES,
+  'setPieces',
   'castle',
   'turnChance',
   'generator',
@@ -141,6 +142,9 @@ function parseTerrain(value: unknown, path: string): MapGenOptions {
   }
   for (const key of PATCH_SIZES) {
     if (json[key] !== undefined) terrain[key] = sizeRange(json[key], `${path}.${key}`);
+  }
+  if (json.setPieces !== undefined) {
+    terrain.setPieces = wholeNumber(json.setPieces, `${path}.setPieces`, REGION_LIMITS.patchCount);
   }
   if (json.castle !== undefined) {
     if (typeof json.castle !== 'boolean') fail(`${path}.castle`, 'must be true or false');

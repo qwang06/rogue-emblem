@@ -209,6 +209,7 @@ export function RegionEditor({
             label="Buildings"
             placeholder={String(MAP_GEN_DEFAULTS.buildings)}
           />
+          <NumberField form={form} path={at('terrain', 'setPieces')} label="Set pieces" placeholder="1 per 45 tiles" />
         </div>
       </fieldset>
 

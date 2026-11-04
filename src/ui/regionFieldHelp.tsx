@@ -84,8 +84,9 @@ const HELP: Record<string, FieldHelp> = {
     title: 'Width and height',
     body: (
       <p>
-        The map&apos;s size in tiles ({MIN_SIZE}–{MAX_SIZE}). Your units deploy at the middle of the bottom (south)
-        edge, and a dirt path winds from there to the top (north) edge.
+        The smallest the map may be, in tiles ({MIN_SIZE}–{MAX_SIZE}). Each stage grows its map to fit the fight (about
+        8 open tiles per unit on the field, up to 14x10) and adds patches and buildings to match. Your units deploy
+        along the bottom (south) edge, and a dirt path winds from there to the top (north) edge.
       </p>
     ),
   },
@@ -231,6 +232,16 @@ const HELP: Record<string, FieldHelp> = {
       <p>
         How many lone buildings (houses, farms, windmills, towers and so on) to place on open grass. Blank uses the
         default shown.
+      </p>
+    ),
+  },
+  setPieces: {
+    title: 'Set pieces',
+    body: (
+      <p>
+        How many hand-made set pieces (a bandit camp, a ruined chapel, a watchtower and so on, from
+        src/data/setPieces.json) to try to drop into each map, from those that suit the region&apos;s season. Blank
+        gives one per 45 tiles; 0 gives none.
       </p>
     ),
   },

@@ -20,6 +20,8 @@ import {
   WARBAND_MAX_DEPLOYED,
 } from './stageLevel.ts';
 import { getRegionStages, getStageRegion } from './regions.ts';
+import { SET_PIECES } from '../../data/setPieces.ts';
+import { levelRegionForStage } from './enemyCurve.ts';
 import { LOOT_ITEMS } from '../loot.ts';
 import { GEAR_LADDER } from '../gearLadder.ts';
 import { ALL_STARTING_CLASSES, STARTING_CLASSES } from './startingClasses.ts';
@@ -174,6 +176,25 @@ describe('createStageLevel', () => {
     }
   });
 
+  it('drops set pieces of the region’s season into most mid-run maps, and none where a region says so', () => {
+    const picks = REGION_CONFIGS.flatMap((base) =>
+      SEEDS.slice(0, 10).map((seed) => {
+        const region = sizeStageRegion(seed, levelRegionForStage(base, 15));
+        return { region, picked: pickStageLayout(seed, region) };
+      }),
+    );
+    const withPieces = picks.filter(({ picked }) => (picked.terrain.setPieces ?? []).length > 0);
+    expect(withPieces.length).toBeGreaterThan(picks.length * 0.7);
+    for (const { region, picked } of picks) {
+      if (region.terrain.setPieces === 0) expect(picked.terrain.setPieces).toEqual([]);
+      const season = region.season ?? DEFAULT_SEASON;
+      for (const { name } of picked.terrain.setPieces ?? []) {
+        const piece = SET_PIECES.find((p) => p.name === name)!;
+        expect(!piece.seasons || piece.seasons.includes(season)).toBe(true);
+      }
+    }
+  });
+
   it('lets every built-in region fight within the first turn or two', () => {
     // Most units move 5 and strike 1 tile away, so an enemy 11 or fewer
     // steps out can be struck by turn 2.
@@ -197,8 +218,7 @@ describe('createStageLevel', () => {
     expect(withTraps.length).toBeLessThan(BATTLES.length * 0.7);
     for (const { level } of withTraps) {
       const traps = level.grid.cells.filter((c) => c.terrain === SPIKES);
-      const scale = (level.grid.width * level.grid.height) / 64;
-      expect(traps.length).toBeLessThanOrEqual(Math.round(SPIKE_TRAP_COUNT.max * scale));
+      expect(traps.length).toBeLessThanOrEqual(SPIKE_TRAP_COUNT.max);
       const enemies = level.grid.cells.filter((c) => c.unitId?.startsWith('enemy-'));
       for (const trap of traps) {
         expect(trap.unitId).toBeNull();

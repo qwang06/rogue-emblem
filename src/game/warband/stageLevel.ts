@@ -22,6 +22,8 @@ import { checkMap } from '../mapCheck.ts';
 import { getMapMetrics, scoreMap, type MapMetrics } from '../mapScore.ts';
 import type { MapArchetype } from '../mapArchetypes.ts';
 import { getMapSize, resizeMapOptions } from '../mapSize.ts';
+import { drawSetPieces, getSeasonPieces, getSetPieceCount, type SetPiece } from '../setPieces.ts';
+import { SET_PIECES } from '../../data/setPieces.ts';
 import { DEFAULT_OBJECTIVE, type ObjectiveKind } from '../objectives.ts';
 import { createSeededRng, randomInt, randomItem } from '../rng.ts';
 import type { Unit } from '../Unit.ts';
@@ -106,14 +108,26 @@ export interface StageLayout {
   score: number;
 }
 
-// The candidate laid out from `seed`: the terrain from region.terrain, the
+// Mixed into a candidate's seed for its set pieces' draw.
+const PIECE_SEED_SALT = 0x5e7b1e;
+
+// The candidate laid out from `seed`: the terrain from region.terrain, with
+// region.terrain.setPieces (getSetPieceCount's worth when unset) of
+// `pieces` that suit the region's season dropped in (drawSetPieces, from
+// the seed apart from the rest of the map), the
 // deployment zone where the map's archetype puts it (on the path's south
 // end and the tiles either side of it for 'advance'), and the enemies'
 // tiles from region.enemies, dealt into the archetype's enemy zones when it
 // has them.
-export function layOutStage(seed: number, region: RegionConfig): StageLayout {
+export function layOutStage(seed: number, region: RegionConfig, pieces: readonly SetPiece[] = SET_PIECES): StageLayout {
   const rng = createSeededRng(seed);
-  const terrain = generateMap(region.terrain, rng);
+  const { width, height } = region.terrain;
+  const drawn = drawSetPieces(
+    getSeasonPieces(pieces, region.season ?? DEFAULT_SEASON),
+    region.terrain.setPieces ?? getSetPieceCount(width, height),
+    createSeededRng(seed ^ PIECE_SEED_SALT),
+  );
+  const terrain = generateMap(region.terrain, rng, drawn);
   const start = terrain.path[0];
   const baseZone = terrain.deploymentZone ?? [-1, 0, 1].map((dx) => ({ x: start.x + dx, y: start.y }));
   const deploymentZone = [...baseZone];
@@ -184,8 +198,7 @@ export function pickStageLayout(seed: number, region: RegionConfig, candidates =
 // - objective: a rout; battleSetup.ts places the stage's own (stageObjective.ts)
 // - seizeTile: the tile the map's archetype planned for a seize, if any
 // - spike traps (hazards.ts): on SPIKE_TRAP_CHANCE of seeds, a few near
-//   the enemies' starts (more on a bigger map: SPIKE_TRAP_COUNT is for
-//   8x8), drawn from the seed apart from everything else
+//   the enemies' starts, drawn from the seed apart from everything else
 // - loot: `lootCount` of the enemies (as many as there are, if fewer) each
 //   carry an item to drop (see assignLoot), picked after everything else so
 //   the map is the same whatever the count
@@ -246,13 +259,12 @@ export function createStageLevel(
   for (const [unitId, item] of assignLoot(enemyIds, lootCount, rng)) units.get(unitId)!.loot = item;
 
   const trapRng = createSeededRng(seed ^ SPIKE_SEED_SALT);
-  const trapScale = (grid.width * grid.height) / 64;
   if (trapRng() < SPIKE_TRAP_CHANCE) {
     const seizeTile = layout.terrain.seizeTile;
     const spikes = pickSpikeTiles(
       grid,
       {
-        count: Math.round(randomInt(trapRng, SPIKE_TRAP_COUNT.min, SPIKE_TRAP_COUNT.max) * trapScale),
+        count: randomInt(trapRng, SPIKE_TRAP_COUNT.min, SPIKE_TRAP_COUNT.max),
         enemyTiles,
         reach: SPIKE_TRAP_REACH,
         avoid: [...deploymentZone, ...decorations, ...buildingTiles, ...(seizeTile ? [seizeTile] : [])],

@@ -17,6 +17,7 @@ import {
   type MapGenOptions,
 } from './mapGen.ts';
 import { createSeededRng } from './rng.ts';
+import type { SetPiece } from './setPieces.ts';
 import { parseTerrainMap } from './terrainMap.ts';
 import { checkMap } from './mapCheck.ts';
 
@@ -265,6 +266,45 @@ describe('getReachable', () => {
 
   it('reaches nothing from an impassable start', () => {
     expect(getReachable(parseTerrainMap(['~.']), { x: 0, y: 0 }).size).toBe(0);
+  });
+});
+
+describe('fillTerrain with set pieces', () => {
+  const CAMP: SetPiece = { name: 'Camp', role: 'outpost', rows: ['#####', '#...#', '#c.c#', '##+##'] };
+  const GROVE: SetPiece = { name: 'Grove', role: 'cover', rows: ['TTT', 'T"T'] };
+  const options: MapGenOptions = { width: 12, height: 10, castle: false, ruins: 0, buildings: 0 };
+
+  it('drops the pieces in where they fit, says where, and keeps the road', () => {
+    for (const seed of SEEDS) {
+      const rng = createSeededRng(seed);
+      const path = carvePath(12, 10, rng);
+      const map = fillTerrain(options, rng, path, [], undefined, { setPieces: [CAMP, GROVE] });
+      expect(map.setPieces!.length).toBeGreaterThan(0);
+      for (const placed of map.setPieces!) {
+        const piece = placed.name === 'Camp' ? CAMP : GROVE;
+        piece.rows.forEach((row, dy) =>
+          [...row].forEach((char, dx) => {
+            const cell = getCell(map.grid, placed.x + dx, placed.y + dy)!;
+            if (path.some((p) => p.x === cell.x && p.y === cell.y)) expect(cell.terrain).toBe('dirt');
+            else if (char === '#') expect(cell.terrain).toBe('wall');
+            else if (char === 'T') expect(cell.terrain).toBe('forest');
+          }),
+        );
+        if (placed.name === 'Camp') {
+          expect(map.buildings).toContainEqual({ x: placed.x + 1, y: placed.y + 2, building: 'camp' });
+        }
+      }
+      expect(path.every(({ x, y }) => getCell(map.grid, x, y)!.terrain === 'dirt')).toBe(true);
+    }
+  });
+
+  it('leaves out a piece that fits nowhere, and says nothing of pieces when given none', () => {
+    const rng = createSeededRng(1);
+    const huge: SetPiece = { name: 'Huge', role: 'cover', rows: ['T'.repeat(20)] };
+    expect(fillTerrain(options, rng, carvePath(12, 10, rng), [], undefined, { setPieces: [huge] }).setPieces).toEqual(
+      [],
+    );
+    expect(fillTerrain(options, rng, carvePath(12, 10, rng)).setPieces).toBeUndefined();
   });
 });
 

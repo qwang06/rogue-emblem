@@ -16,7 +16,8 @@
         "meadows": 2,
         "meadowSize": [2, 4],
         "ruins": 0,
-        "buildings": 1
+        "buildings": 1,
+        "setPieces": 0
       },
       "enemies": [{ "count": 1, "unitClass": "slime", "minDistance": 3, "maxDistance": 3 }],
       "treeChance": 0.05,

@@ -60,6 +60,7 @@ describe('parseRegionSettings', () => {
       castle: false,
       ruins: 1,
       buildings: 2,
+      setPieces: 3,
       turnChance: 0.5,
       generator: 'planned',
       routes: 2,
@@ -186,6 +187,11 @@ describe('parseRegionSettings', () => {
       'an unknown map type',
       file([region({ terrain: { width: 12, height: 10, archetype: 'maze' } })]),
       /archetype must be one of advance, crossroads, ambush, gauntlet, islands, fortress/,
+    ],
+    [
+      'a negative set piece count',
+      file([region({ terrain: { width: 12, height: 10, setPieces: -1 } })]),
+      /setPieces must be a whole number from 0 to 50/,
     ],
     [
       'too many routes',
