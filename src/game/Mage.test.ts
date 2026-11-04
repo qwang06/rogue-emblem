@@ -26,7 +26,7 @@ describe('Mage', () => {
     expect(mage.innate).toEqual([FIRE_SPELL]);
     expect(mage.items.map((entry) => entry.item)).toEqual([HEALTH_POTION, MANA_POTION]);
     expect(mage.weapon).toBe(FIRE_SPELL);
-    expect(mage.weaponTypes).toEqual(['magical']);
+    expect(mage.weaponTypes).toEqual(['tome']);
   });
 
   it("keeps the acolyte's Mend and learns Flare, and is offered only its own picks", () => {

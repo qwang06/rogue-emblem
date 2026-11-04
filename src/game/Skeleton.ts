@@ -33,7 +33,7 @@ export const SKELETON_GROWTHS = Object.freeze({
 });
 
 // The weapon types a skeleton can wield.
-export const SKELETON_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
+export const SKELETON_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['natural']);
 
 // What a skeleton carries into battle: only its Bone Claws, which never breaks.
 // Monsters carry no potions.

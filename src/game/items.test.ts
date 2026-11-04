@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { LADDER_ARMORS } from './gearLadder.ts';
 import {
   ARMORS,
   WOODEN_ARMOR,
@@ -44,14 +45,17 @@ describe('item definitions', () => {
 });
 
 describe('armor', () => {
-  it('has a wooden shield and wooden armor, one per slot', () => {
-    expect(ARMORS).toEqual([WOODEN_SHIELD, WOODEN_ARMOR]);
-    expect(ARMORS.map((armor) => armor.slot)).toEqual(['shield', 'body']);
+  it('has the wooden shield and wooden armor, then the rest of the ladder', () => {
+    expect(ARMORS.slice(0, 2)).toEqual([WOODEN_SHIELD, WOODEN_ARMOR]);
+    expect(ARMORS.slice(2)).toEqual(LADDER_ARMORS);
+    expect(new Set(ARMORS.map((armor) => armor.id)).size).toBe(ARMORS.length);
     for (const armor of ARMORS) {
       expect(isArmor(armor)).toBe(true);
-      expect(armor.defense).toBeGreaterThan(0);
+      // Every piece guards somehow: DEF, avoid or RES.
+      expect(armor.defense + (armor.avoid ?? 0) + (armor.resistance ?? 0), armor.id).toBeGreaterThan(0);
       expect(Object.isFrozen(armor)).toBe(true);
     }
+    expect(WOODEN_ARMOR.weightClass).toBe('heavy');
     expect(isArmor(HEALTH_POTION)).toBe(false);
   });
 

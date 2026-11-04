@@ -83,6 +83,28 @@ describe('toEquipmentScreenView', () => {
     expect(stat(view, 'attack').after).toBeLessThan(stat(view, 'attack').before);
   });
 
+  it('tags each weapon with its family, marking one the unit is untrained in', () => {
+    const run = campRun([
+      { itemId: 'wooden-sword', quantity: 1 },
+      { itemId: 'iron-axe', quantity: 1 },
+    ]);
+    const view = toEquipmentScreenView(confirmEquipment(pointEquipmentCursor(openEquipmentScreen(run), 'slots', 0)));
+    expect(view.gear.map((choice) => [choice.label, choice.tag, choice.untrained])).toEqual([
+      ['Remove', null, false],
+      ['Wooden Sword', 'Sword', false],
+      ['Iron Axe', 'Axe', true],
+    ]);
+  });
+
+  it('tags armor with its weight, and shows movement lost to a heavy load', () => {
+    const run = campRun([{ itemId: 'silver-plate', quantity: 1 }]);
+    const body = confirmEquipment(pointEquipmentCursor(openEquipmentScreen(run), 'slots', 3));
+    const view = toEquipmentScreenView(pointEquipmentCursor(body, 'gear', 0));
+    expect(view.gear[0]).toMatchObject({ label: 'Silver Plate', tag: 'Heavy' });
+    // A level-1 soldier's strength is far under the plate and spear together.
+    expect(stat(view, 'movement').after).toBeLessThan(stat(view, 'movement').before);
+  });
+
   it('has nothing to show with an empty roster', () => {
     const view = toEquipmentScreenView(openEquipmentScreen({ ...campRun(), roster: [] }));
     expect(view).toMatchObject({ units: [], unitName: null, slots: [], gear: [], stats: [], detail: null });

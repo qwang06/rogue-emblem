@@ -113,7 +113,7 @@ describe('toUnitView', () => {
       defense: 0,
       movement: 5,
       team: 'player',
-      weaponTypes: ['magical'],
+      weaponTypes: ['tome'],
       items: [weaponEntry(FIRE)],
     });
     expect(toUnitView(unit)).toMatchObject({ range: '1–2', weapon: 'Fire Tome' });
@@ -127,7 +127,7 @@ describe('toUnitView', () => {
       defense: 2,
       movement: 5,
       team: 'player',
-      weaponTypes: ['physical'],
+      weaponTypes: ['spear'],
       items: [
         { item: HEALTH_POTION, quantity: 2 },
         weaponEntry(IRON_SPEAR),
@@ -207,27 +207,28 @@ describe('toUnitDetailView', () => {
       defense: 2,
       movement: 5,
       team: 'player',
-      weaponTypes: ['physical'],
+      weaponTypes: ['spear'],
       items: [weaponEntry(IRON_SPEAR)],
     });
     expect(toUnitDetailView(unit)).toMatchObject({
       damageType: 'physical',
       attack: 2 + IRON_SPEAR.power,
-      hit: IRON_SPEAR.hit + 3 * 2 + 2,
-      crit: IRON_SPEAR.crit + 1,
+      // Trained in spears: +15 hit and +5 crit.
+      hit: IRON_SPEAR.hit + 3 * 2 + 2 + 15,
+      crit: IRON_SPEAR.crit + 1 + 5,
       // The spear's weight (3) is 1 more than the unit's strength (2).
       attackSpeed: 4,
       avoid: 4 * 2 + 4,
       equippedWeapon: {
         label: 'Iron Spear',
-        type: 'physical',
+        type: 'spear',
         power: IRON_SPEAR.power,
         hit: IRON_SPEAR.hit,
         crit: IRON_SPEAR.crit,
         weight: IRON_SPEAR.weight,
         range: '1',
       },
-      weaponTypes: ['physical'],
+      weaponTypes: ['spear'],
     });
   });
 
@@ -240,7 +241,7 @@ describe('toUnitDetailView', () => {
       intelligence: 4,
       defense: 0,
       movement: 5,
-      weaponTypes: ['magical'],
+      weaponTypes: ['tome'],
       items: [weaponEntry(FIRE)],
     });
     const view = toUnitDetailView(unit)!;
@@ -502,7 +503,7 @@ describe('toCombatForecastView', () => {
       defense: 2,
       movement: 5,
       team: 'player',
-      weaponTypes: ['physical'],
+      weaponTypes: ['spear'],
       items: [weaponEntry(IRON_SPEAR)],
     });
     const defender = new Unit({ name: 'Bandit', health: 10, strength: 4, defense: 2, movement: 5, team: 'enemy' });

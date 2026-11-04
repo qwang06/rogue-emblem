@@ -5,6 +5,7 @@
 // state — the caller carries out the plan.
 
 import { getStatusMovement, isRooted, type StatusId } from './statuses.ts';
+import { getLoadMovementPenalty, type CombatStatLine } from './combatStats.ts';
 import { getAttackTargets, type TargetTile } from './combat.ts';
 import { getCell, type Grid, type Point } from './grid.ts';
 import {
@@ -35,13 +36,17 @@ export type AttackScorer = (from: Point, target: TargetTile) => number;
 
 // How far `unit` moves on its phase: its movement, or nowhere if it holds
 // its position (a boss) or is rooted (statuses.ts), in which case it only
-// strikes what it can reach from where it stands; Hastened adds to it.
-export function getPhaseMovement(unit: {
-  movement: number;
-  holdsPosition?: boolean;
-  statuses?: readonly StatusId[];
-}): number {
-  return unit.holdsPosition || isRooted(unit) ? 0 : unit.movement + getStatusMovement(unit);
+// strikes what it can reach from where it stands; Hastened adds to it, and
+// a load heavier than its strength takes from it (getLoadMovementPenalty).
+export function getPhaseMovement(
+  unit: {
+    movement: number;
+    holdsPosition?: boolean;
+    statuses?: readonly StatusId[];
+  } & Pick<CombatStatLine, 'strength' | 'armorWeight' | 'weapon'>,
+): number {
+  if (unit.holdsPosition || isRooted(unit)) return 0;
+  return Math.max(0, unit.movement + getStatusMovement(unit) - getLoadMovementPenalty(unit));
 }
 
 // Movement budget for "anywhere on the map". Finite on purpose: impassable

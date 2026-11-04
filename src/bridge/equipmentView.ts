@@ -6,7 +6,8 @@
 // the screen's state.
 
 import { GEAR_SLOT_LABELS, GEAR_SLOTS, type GearSlot } from '../game/equipment.ts';
-import type { Item } from '../game/items.ts';
+import { ARMOR_WEIGHT_LABELS, type Item } from '../game/items.ts';
+import { isTrained, WEAPON_TYPE_LABELS } from '../game/weapons.ts';
 import { getItemSprite, getUnitSprite } from '../game/tileset.ts';
 import { UNIT_CLASSES, type UnitClass } from '../game/unitClasses.ts';
 import { getUnitEquipment, lookUpItem } from '../game/warband/convoy.ts';
@@ -42,12 +43,17 @@ export interface EquipmentSlotView {
 }
 
 // A choice in the gear column: Remove, or a convoy item for the slot.
+// `tag` names a weapon's family or an armor piece's weight (null for
+// Remove and anything else); `untrained` marks a weapon of a family the
+// unit isn't trained in, which fights without the proficiency bonus.
 export interface GearChoiceView {
   key: string;
   label: string;
   icon: string | null;
   remove: boolean;
   disabled: boolean;
+  tag: string | null;
+  untrained: boolean;
 }
 
 // One of the unit's numbers, now and with the highlighted choice (`after`
@@ -59,7 +65,8 @@ export interface EquipmentStatView {
   after: number;
 }
 
-export type EquipmentStatId = 'attack' | 'hit' | 'crit' | 'attackSpeed' | 'avoid' | 'defense' | 'resistance';
+export type EquipmentStatId =
+  'attack' | 'hit' | 'crit' | 'attackSpeed' | 'avoid' | 'defense' | 'resistance' | 'movement';
 
 const STATS: readonly [EquipmentStatId, string][] = Object.freeze([
   ['attack', 'ATK'],
@@ -69,6 +76,7 @@ const STATS: readonly [EquipmentStatId, string][] = Object.freeze([
   ['avoid', 'AVO'],
   ['defense', 'DEF'],
   ['resistance', 'RES'],
+  ['movement', 'MOV'],
 ]);
 
 export interface EquipmentScreenView {
@@ -111,6 +119,7 @@ export function toEquipmentScreenView(
     });
   });
   const choices = getGearChoices(state, items);
+  const trained = unit ? restoreUnit(unit, classes, items).weaponTypes : [];
   const gear = choices.map((choice) =>
     Object.freeze<GearChoiceView>(
       choice.kind === 'remove'
@@ -120,6 +129,8 @@ export function toEquipmentScreenView(
             icon: null,
             remove: true,
             disabled: choice.disabled,
+            tag: null,
+            untrained: false,
           }
         : {
             key: `${choice.item.id}@${choice.convoyIndex}`,
@@ -127,6 +138,8 @@ export function toEquipmentScreenView(
             icon: getItemSprite(choice.item.id),
             remove: false,
             disabled: choice.disabled,
+            tag: getGearTag(choice.item),
+            untrained: choice.item.kind === 'weapon' && !isTrained(trained, choice.item),
           },
     ),
   );
@@ -166,6 +179,14 @@ export function toEquipmentScreenView(
     ),
     detail: shown ? describeItem(lookUpItem(shown.id, items)) : null,
   });
+}
+
+// What kind of gear `item` is, for its row: a weapon's family, an armor
+// piece's weight, or null.
+function getGearTag(item: Item): string | null {
+  if (item.kind === 'weapon') return WEAPON_TYPE_LABELS[item.type];
+  if (item.kind === 'armor' && item.weightClass) return ARMOR_WEIGHT_LABELS[item.weightClass];
+  return null;
 }
 
 // The unit `unitId`'s numbers in `run`, as its stat sheet works them out.

@@ -13,7 +13,7 @@ import { getExperienceToNextLevel, getLevelUpGains, type LevelUpResult } from '.
 import type { Rng } from '../combatStats.ts';
 import { createSeededRng, randomInt, randomItem, shuffle } from '../rng.ts';
 import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
-import { FIRE, IRON_AXE, IRON_BOW, IRON_SPEAR, canWield, type Weapon } from '../weapons.ts';
+import { FIRE, IRON_AXE, IRON_BOW, IRON_SPEAR, isTrained, type Weapon } from '../weapons.ts';
 import { addScrolls, getSecondaryClassIds, MENTORS_ENABLED } from './mentors.ts';
 import { WARBAND_NAMES } from './names.ts';
 import { findQuirk, rollQuirk } from './quirks.ts';
@@ -385,7 +385,7 @@ function wantsSeal(run: RunState): boolean {
 // The Arms Cache weapons someone in the run's roster can wield.
 export function eligibleWeapons(run: RunState, classes: readonly UnitClass[] = UNIT_CLASSES): Weapon[] {
   return ARMS_CACHE_WEAPONS.filter((weapon) =>
-    run.roster.some((snapshot) => canWield(restoreUnit(snapshot, classes).weaponTypes, weapon)),
+    run.roster.some((snapshot) => isTrained(restoreUnit(snapshot, classes).weaponTypes, weapon)),
   );
 }
 

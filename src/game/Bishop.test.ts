@@ -28,7 +28,7 @@ describe('Bishop', () => {
     expect(bishop.equipment).toEqual({ main: HEAL_STAFF });
     expect(bishop.items.map((entry) => entry.item)).toEqual([HEALTH_POTION, MANA_POTION]);
     expect(bishop.weapon).toBe(LIGHT);
-    expect(bishop.weaponTypes).toEqual(['magical']);
+    expect(bishop.weaponTypes).toEqual(['staff', 'tome']);
   });
 
   it("keeps the acolyte's Mend, learns Sanctuary and is offered the acolyte's picks", () => {

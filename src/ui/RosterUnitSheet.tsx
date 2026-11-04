@@ -1,3 +1,4 @@
+import { WEAPON_TYPE_LABELS } from '../game/weapons.ts';
 import type { UnitDetailView } from '../bridge/views.ts';
 import { getExperienceForLevel } from '../game/experience.ts';
 import { getRankLabel, RankBadge } from './RankBadge.tsx';
@@ -5,8 +6,6 @@ import { StatIcon, type StatIconKind } from './StatIcon.tsx';
 import { StatLabel } from './StatLabel.tsx';
 import { Meter } from './UnitPanel.tsx';
 import { UnitSprite } from './UnitSprite.tsx';
-
-const WEAPON_TYPE_LABELS = { physical: 'Physical', magical: 'Magic', siege: 'Siege' } as const;
 
 // The roster screen's pages for the picked unit, the way a tactics game's
 // formation screen shows one. Stats: who it is (sprite, name, class,
@@ -71,7 +70,7 @@ function Identity({ unit }: { unit: UnitDetailView }) {
           <dd>{unit.movement}</dd>
         </div>
         <div>
-          <dt>Wields</dt>
+          <dt>Trained</dt>
           <dd>
             {unit.weaponTypes.length > 0 ? unit.weaponTypes.map((type) => WEAPON_TYPE_LABELS[type]).join(', ') : '–'}
           </dd>

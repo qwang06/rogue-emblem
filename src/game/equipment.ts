@@ -171,6 +171,16 @@ export function getArmorDefense(equipment: Equipment): number {
   return getWornArmor(equipment).reduce((total, armor) => total + armor.defense, 0);
 }
 
+// What the worn armor adds to avoid (light armor).
+export function getArmorAvoid(equipment: Equipment): number {
+  return getWornArmor(equipment).reduce((total, armor) => total + (armor.avoid ?? 0), 0);
+}
+
+// What the worn armor adds to resistance against magical hits (cloth).
+export function getArmorResistance(equipment: Equipment): number {
+  return getWornArmor(equipment).reduce((total, armor) => total + (armor.resistance ?? 0), 0);
+}
+
 // What the worn armor weighs. It slows the unit along with its weapon.
 export function getArmorWeight(equipment: Equipment): number {
   return getWornArmor(equipment).reduce((total, armor) => total + armor.weight, 0);

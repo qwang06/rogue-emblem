@@ -3,8 +3,7 @@
 // items arrive in the convoy, fresh, or straight in a unit's inventory
 // (buyItemFor); selling takes from the convoy, so a unit's item is stored first.
 // A consumable is bought and sold one at a time (stacking in the convoy);
-// anything else as its whole entry. Selling pays half the price, and for
-// a weapon or staff that wears out, only for the uses it has left. A
+// anything else as its whole entry. Selling pays half the price. A
 // natural weapon (fists, claws) belongs to a body and is never sold.
 // Everything here is pure: each function returns a new frozen run and
 // leaves its input alone.
@@ -22,27 +21,53 @@ import {
   WOODEN_SPEAR,
   WOODEN_SWORD,
 } from '../weapons.ts';
+import { GEAR_LADDER, GEAR_TIERS, getTierItemIds, type GearTier } from '../gearLadder.ts';
 import { canCarry, giveFromConvoy, isMovable, isStackable, lookUpItem } from './convoy.ts';
 import { RUN_ITEMS, type ItemSnapshot, type RunState } from './run.ts';
 
-// What the merchant sells, by item id: the wooden set, plus a bow and a
-// Heal staff, so an archer or a healer whose own wears out can replace it,
-// and the Master Seal a promotion spends (see promotion.ts).
-export const MERCHANT_STOCK: readonly string[] = Object.freeze([
-  WOODEN_SWORD.id,
-  WOODEN_SPEAR.id,
-  WOODEN_AXE.id,
-  WOODEN_SHIELD.id,
-  WOODEN_ARMOR.id,
-  IRON_BOW.id,
-  HEAL_STAFF.id,
-  MASTER_SEAL.id,
-]);
+// The stage each tier of the gear ladder (gearLadder.ts) reaches the
+// merchant: wooden from the first, iron from the 4th, steel from the 11th
+// and silver from the 20th.
+export const TIER_STAGES: Readonly<Record<GearTier, number>> = Object.freeze({
+  wooden: 1,
+  iron: 4,
+  steel: 11,
+  silver: 20,
+});
+
+// How many of the newest unlocked tiers the merchant stocks at once.
+export const STOCKED_TIERS = 2;
+
+// What the merchant sells at `stage`, by item id: every piece of the two
+// newest tiers it has unlocked (TIER_STAGES), the newest first, then a
+// Heal staff and the Master Seal a promotion spends (see promotion.ts).
+export function getMerchantStock(stage: number): readonly string[] {
+  const unlocked = GEAR_TIERS.filter((tier) => stage >= TIER_STAGES[tier]);
+  const stocked = unlocked.slice(-STOCKED_TIERS).reverse();
+  return Object.freeze([...stocked.flatMap(getTierItemIds), HEAL_STAFF.id, MASTER_SEAL.id]);
+}
+
+// The price of every gear ladder piece ITEM_PRICES doesn't name: a
+// weapon or body piece costs WEAPON_TIER_PRICES for its tier, a shield
+// or head piece HEAD_TIER_PRICES.
+export const WEAPON_TIER_PRICES: Readonly<Record<GearTier, number>> = Object.freeze({
+  wooden: 20,
+  iron: 40,
+  steel: 70,
+  silver: 110,
+});
+export const HEAD_TIER_PRICES: Readonly<Record<GearTier, number>> = Object.freeze({
+  wooden: 15,
+  iron: 30,
+  steel: 55,
+  silver: 85,
+});
 
 // The full price of a fresh item, in gold, by item id. Gold per stage
 // cleared is about 15–35 (see rewards.ts), so a wooden weapon is a stage's
 // pay.
-export const ITEM_PRICES: Readonly<Record<string, number>> = Object.freeze({
+export const ITEM_PRICES: Readonly<Record<string, number>> = Object.freeze<Record<string, number>>({
+  ...getLadderPrices(),
   [WOODEN_SWORD.id]: 20,
   [WOODEN_SPEAR.id]: 20,
   [WOODEN_AXE.id]: 25,
@@ -92,7 +117,7 @@ export function getPurchaseQuantity(_item: Item): number {
 export function canBuy(
   run: RunState,
   itemId: string,
-  stock: readonly string[] = MERCHANT_STOCK,
+  stock: readonly string[] = getMerchantStock(run.stage),
   items: readonly Item[] = RUN_ITEMS,
 ): boolean {
   return stock.includes(itemId) && run.gold >= getItemPrice(lookUpItem(itemId, items));
@@ -104,7 +129,7 @@ export function canBuy(
 export function buyItem(
   run: RunState,
   itemId: string,
-  stock: readonly string[] = MERCHANT_STOCK,
+  stock: readonly string[] = getMerchantStock(run.stage),
   items: readonly Item[] = RUN_ITEMS,
 ): RunState {
   if (!stock.includes(itemId)) throw new Error(`The merchant doesn't sell ${itemId}`);
@@ -125,7 +150,7 @@ export function canBuyFor(
   run: RunState,
   itemId: string,
   unitId: string | null,
-  stock: readonly string[] = MERCHANT_STOCK,
+  stock: readonly string[] = getMerchantStock(run.stage),
   items: readonly Item[] = RUN_ITEMS,
 ): boolean {
   return canBuy(run, itemId, stock, items) && (unitId === null || canCarry(run, unitId, itemId, items));
@@ -138,7 +163,7 @@ export function buyItemFor(
   run: RunState,
   itemId: string,
   unitId: string | null,
-  stock: readonly string[] = MERCHANT_STOCK,
+  stock: readonly string[] = getMerchantStock(run.stage),
   items: readonly Item[] = RUN_ITEMS,
 ): RunState {
   if (unitId !== null && !canCarry(run, unitId, itemId, items)) throw new Error(`${unitId} has no room for ${itemId}`);
@@ -169,6 +194,17 @@ export function sellItem(run: RunState, convoyIndex: number, items: readonly Ite
     .map((held, index) => (index === convoyIndex ? { ...held, quantity: held.quantity - sold } : held))
     .filter((held) => held.quantity > 0);
   return freezeRun({ ...run, gold: run.gold + getSellPrice(entry, items), convoy });
+}
+
+function getLadderPrices(): Record<string, number> {
+  const prices: Record<string, number> = {};
+  for (const tier of GEAR_TIERS) {
+    const gear = GEAR_LADDER[tier];
+    for (const id of [...Object.values(gear.weapons), ...Object.values(gear.body)])
+      prices[id] = WEAPON_TIER_PRICES[tier];
+    for (const id of [gear.shield, ...Object.values(gear.head)]) prices[id] = HEAD_TIER_PRICES[tier];
+  }
+  return prices;
 }
 
 function freezeRun(run: RunState): RunState {

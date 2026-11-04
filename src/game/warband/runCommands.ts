@@ -18,7 +18,7 @@ import {
   giveFromConvoy,
   storeInConvoy,
 } from './convoy.ts';
-import { buyItemFor, canBuy, canBuyFor, canSell, MERCHANT_STOCK, sellItem } from './merchant.ts';
+import { buyItemFor, canBuy, canBuyFor, canSell, getMerchantStock, sellItem } from './merchant.ts';
 import {
   addGold,
   applyLessonReward,
@@ -451,7 +451,7 @@ export function applyRunCommand(
 // travelling, a trip to each site the roads lead to (given the realm).
 export function getLegalRunCommands(
   session: RunSession,
-  stock: readonly string[] = MERCHANT_STOCK,
+  stock: readonly string[] = getMerchantStock(session.run.stage),
   context: RunCommandContext = {},
 ): RunCommand[] {
   const commands: RunCommand[] = [];

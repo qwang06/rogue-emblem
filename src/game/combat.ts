@@ -46,6 +46,7 @@ export interface DamageStats {
   intelligence?: number;
   defense?: number;
   armorDefense?: number;
+  armorResistance?: number;
   resistance?: number;
   weapon?: Pick<CombatWeapon, 'type' | 'power'> | null;
   bonus?: Partial<CombatBonus>;
@@ -209,14 +210,14 @@ export function getDamageType(attacker: Pick<DamageStats, 'weapon'>): DamageType
 }
 
 // Damage one hit deals: strength plus weapon power minus defense (and
-// worn armor) for a physical hit, intelligence plus power minus resistance for a
-// magical one, plus the attacker's damage bonus and minus the defender's
+// worn armor's) for a physical hit, intelligence plus power minus resistance
+// (and worn cloth's) for a magical one, plus the attacker's damage bonus and minus the defender's
 // guard bonus, never below zero, then scaled by the percent bonuses
 // (scaleDamage). Missing stats count as 0.
 export function calculateDamage(attacker: DamageStats, defender: DamageStats): number {
   const { power: stat, guard } = DAMAGE_TYPES[getDamageType(attacker)];
   const power = attacker.weapon?.power ?? 0;
-  const armor = guard === 'defense' ? (defender.armorDefense ?? 0) : 0;
+  const armor = guard === 'defense' ? (defender.armorDefense ?? 0) : (defender.armorResistance ?? 0);
   const bonus = (attacker.bonus?.damage ?? 0) - (defender.bonus?.guard ?? 0);
   const base = Math.max(0, (attacker[stat] ?? 0) + power + bonus - (defender[guard] ?? 0) - armor);
   return scaleDamage(base, attacker.bonus?.['damage-percent'] ?? 0, defender.bonus?.['guard-percent'] ?? 0);
@@ -317,7 +318,10 @@ export function withCombatBonus<T extends Fighter>(unit: T, opponent: Fighter, a
     luck: unit.luck,
     defense: unit.defense,
     armorDefense: unit.armorDefense,
+    armorResistance: unit.armorResistance,
     armorWeight: unit.armorWeight,
+    armorAvoid: unit.armorAvoid,
+    weaponTypes: unit.weaponTypes,
     resistance: unit.resistance,
     weapon: unit.weapon,
     weaponUses: unit.weaponUses,

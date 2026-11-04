@@ -8,17 +8,20 @@
 import { planPlayerDeployment, planPlayerTurn } from '../battle/playerAI.ts';
 import type { BattleState } from '../battle/state.ts';
 import { isStaff } from '../healing.ts';
-import { MASTER_SEAL, type Item } from '../items.ts';
+import { isArmor, MASTER_SEAL, type Item } from '../items.ts';
+import { getLoadMovementPenalty } from '../combatStats.ts';
+import { equipGear, getArmorWeight, getGearSlot, getMainWeapon, isGear } from '../equipment.ts';
+import { getClassArmorWeight, getGearTier, isHigherTier } from '../gearLadder.ts';
 import { getPromotions } from '../promotions.ts';
 import { createSeededRng, randomItem } from '../rng.ts';
 import type { Unit } from '../Unit.ts';
 import { createUnitOfClass } from '../unitClasses.ts';
-import { canWield, isWeapon } from '../weapons.ts';
+import { isTrained, isWeapon } from '../weapons.ts';
 import type { RunPolicy } from './autoRun.ts';
 import { canRest, hasMerchant, REST_COST } from './camp.ts';
 import { canPromoteInRun, getPromotionCandidates } from './promotion.ts';
 import { canGiveFromConvoy, lookUpItem } from './convoy.ts';
-import { canBuy, getItemPrice, MERCHANT_STOCK } from './merchant.ts';
+import { canBuy, getItemPrice, getMerchantStock } from './merchant.ts';
 import { MAX_ROSTER_SIZE, type Reward } from './rewards.ts';
 import { restoreUnit, type RunState, type UnitSnapshot } from './run.ts';
 import type { Realm, Site } from './realm/realm.ts';
@@ -197,8 +200,12 @@ export function pickRecruit(session: RunSession): RunCommand {
 //    if what it holds is about to break, else take one from the convoy,
 //    else buy one
 // 3. rest if the deploying units are missing enough HP between them
-// 4. march
-export function planCamp(session: RunSession, stock: readonly string[] = MERCHANT_STOCK): RunCommand {
+// 4. each deploying unit: put on a better piece of gear (upgradeUnit)
+// 5. march
+export function planCamp(
+  session: RunSession,
+  stock: readonly string[] = getMerchantStock(session.run.stage),
+): RunCommand {
   const { run } = session;
   const deploying = getDeployingUnits(run);
   const [candidate] = getPromotionCandidates(run);
@@ -218,6 +225,10 @@ export function planCamp(session: RunSession, stock: readonly string[] = MERCHAN
     if (command) return command;
   }
   if (canRest(run) && getMissingHealthShare(deploying) >= REST_MISSING_HEALTH) return { type: 'rest' };
+  for (const snapshot of deploying) {
+    const command = upgradeUnit(run, snapshot, stock);
+    if (command) return command;
+  }
   return { type: 'march' };
 }
 
@@ -267,7 +278,7 @@ export const SITE_SCORES = Object.freeze({
 export const FORT_ROSTER = 3;
 
 // How much the policy wants to travel to `site` with `run`.
-export function scoreSite(run: RunState, site: Site, stock: readonly string[] = MERCHANT_STOCK): number {
+export function scoreSite(run: RunState, site: Site, stock: readonly string[] = getMerchantStock(run.stage)): number {
   const deploying = getDeployingUnits(run);
   const missing = getMissingHealthShare(deploying);
   switch (site.kind) {
@@ -339,7 +350,7 @@ function armUnit(run: RunState, snapshot: UnitSnapshot, stock: readonly string[]
   const unit = restoreUnit(snapshot);
   const heals = isHealer(snapshot.classId);
   if (unit.gearLayout !== 'humanoid') return null;
-  const fits = (item: Item) => (heals ? isStaff(item) : isWeapon(item) && canWield(unit.weaponTypes, item));
+  const fits = (item: Item) => (heals ? isStaff(item) : isWeapon(item) && isTrained(unit.weaponTypes, item));
   const main = unit.equipment.main;
   if (main && fits(main)) return null;
   // A unit wearing a shield would rather take a one-handed weapon.
@@ -358,6 +369,53 @@ function armUnit(run: RunState, snapshot: UnitSnapshot, stock: readonly string[]
         getItemPrice(lookUpItem(a)) - getItemPrice(lookUpItem(b)),
     );
   return buy ? { type: 'buy', itemId: buy } : null;
+}
+
+// A better piece of gear for `snapshot`: from the convoy, else bought for
+// it when the warband has gold to spare (UPGRADE_RESERVE kept back), the
+// highest tier first (the stock lists it first). See isUpgrade.
+function upgradeUnit(run: RunState, snapshot: UnitSnapshot, stock: readonly string[]): RunCommand | null {
+  const unit = restoreUnit(snapshot);
+  if (unit.gearLayout !== 'humanoid') return null;
+  const convoyIndex = run.convoy.findIndex(
+    (entry, index) => isUpgrade(unit, lookUpItem(entry.itemId)) && canGiveFromConvoy(run, snapshot.id, index),
+  );
+  if (convoyIndex >= 0) return { type: 'give', unitId: snapshot.id, convoyIndex };
+  if (!hasMerchant(run)) return null;
+  const itemId = stock.find((id) => {
+    const item = lookUpItem(id);
+    return isUpgrade(unit, item) && canBuy(run, id, stock) && run.gold >= getItemPrice(item) + UPGRADE_RESERVE;
+  });
+  return itemId ? { type: 'buy', itemId, unitId: snapshot.id } : null;
+}
+
+// Gold the policy keeps back from buying upgrades.
+export const UPGRADE_RESERVE = REST_COST;
+
+// Whether `item` is an upgrade for `unit`: a gear ladder piece (gearLadder.ts)
+// of a higher tier than what it wears there, either a weapon of its main
+// weapon's family or a body or head piece of its class's armor weight,
+// that wouldn't cost it movement.
+function isUpgrade(unit: Unit, item: Item): boolean {
+  const tier = getGearTier(item.id);
+  if (!tier || !isGear(item)) return false;
+  const main = unit.equipment.main;
+  if (isWeapon(item)) {
+    if (!main || !isWeapon(main) || main.type !== item.type) return false;
+  } else if (!isArmor(item) || item.slot === 'shield' || item.weightClass !== getClassArmorWeight(unit.unitClass)) {
+    return false;
+  }
+  const worn = unit.equipment[getGearSlot(item)];
+  const wornTier = worn ? getGearTier(worn.id) : null;
+  if (worn && (!wornTier || !isHigherTier(tier, wornTier))) return false;
+  const next = equipGear(unit.equipment, item, 'humanoid', unit.unitClass).equipment;
+  return (
+    getLoadMovementPenalty({
+      strength: unit.strength,
+      armorWeight: getArmorWeight(next),
+      weapon: getMainWeapon(next),
+    }) === 0
+  );
 }
 
 // Whether `item` leaves a shield on: anything but a two-handed weapon.

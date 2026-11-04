@@ -9,6 +9,9 @@ import {
   getDodge,
   getHit,
   getHitChance,
+  getLoadMovementPenalty,
+  getOverload,
+  isProficient,
   rollChance,
 } from './combatStats.ts';
 
@@ -28,6 +31,47 @@ describe('getHit', () => {
   it('has no weapon hit without a weapon', () => {
     expect(getHit({ dexterity: 3, luck: 3 })).toBe(7);
     expect(getHit({ dexterity: 3, weapon: null })).toBe(6);
+  });
+});
+
+describe('proficiency', () => {
+  const spear = weapon({ type: 'spear' as const });
+  it('adds 15 hit and 5 crit with a weapon of a trained family', () => {
+    expect(getHit({ weaponTypes: ['spear'], weapon: spear })).toBe(80 + 15);
+    expect(getCrit({ weaponTypes: ['spear'], weapon: spear })).toBe(5);
+    expect(isProficient({ weaponTypes: ['spear'], weapon: spear })).toBe(true);
+  });
+
+  it('adds nothing with an untrained family or a weapon without one', () => {
+    expect(getHit({ weaponTypes: ['bow'], weapon: spear })).toBe(80);
+    expect(getCrit({ weaponTypes: ['bow'], weapon: spear })).toBe(0);
+    expect(isProficient({ weaponTypes: ['spear'], weapon: weapon() })).toBe(false);
+    expect(isProficient({ weaponTypes: ['spear'] })).toBe(false);
+  });
+
+  it('counts a natural weapon as trained', () => {
+    expect(isProficient({ weaponTypes: [], weapon: weapon({ type: 'natural' as const }) })).toBe(true);
+  });
+});
+
+describe('getAvoid with armor', () => {
+  it('adds what light armor gives', () => {
+    expect(getAvoid({ speed: 3, luck: 2, armorAvoid: 10 }) - getAvoid({ speed: 3, luck: 2 })).toBe(10);
+  });
+});
+
+describe('getOverload and getLoadMovementPenalty', () => {
+  it('is how far weapon and armor weight exceed strength', () => {
+    expect(getOverload({ strength: 4, armorWeight: 2, weapon: weapon({ weight: 1 }) })).toBe(0);
+    expect(getOverload({ strength: 4, armorWeight: 6, weapon: weapon({ weight: 5 }) })).toBe(7);
+    expect(getOverload({ armorWeight: 3 })).toBe(3);
+  });
+
+  it('costs 1 movement for every 4 overload', () => {
+    expect(getLoadMovementPenalty({ strength: 4, armorWeight: 3 })).toBe(0);
+    expect(getLoadMovementPenalty({ strength: 4, armorWeight: 8 })).toBe(1);
+    expect(getLoadMovementPenalty({ strength: 4, armorWeight: 11 })).toBe(1);
+    expect(getLoadMovementPenalty({ strength: 4, armorWeight: 12 })).toBe(2);
   });
 });
 

@@ -35,7 +35,7 @@ export const ACOLYTE_GROWTHS = Object.freeze({
 
 // The weapon types an acolyte can wield: magical ones, i.e. its Light
 // spell, tomes (see tomes.ts) and the spells they teach.
-export const ACOLYTE_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['magical']);
+export const ACOLYTE_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['staff', 'tome']);
 
 // What an acolyte carries into battle: the Light spell it knows, its Heal
 // staff and the potions.

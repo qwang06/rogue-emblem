@@ -32,7 +32,7 @@ export const SOLDIER_GROWTHS = Object.freeze({
 });
 
 // The weapon types a soldier can wield.
-export const SOLDIER_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
+export const SOLDIER_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['spear', 'sword']);
 
 // What a soldier carries into battle: its spear and the potions.
 export const SOLDIER_ITEMS: Inventory = Object.freeze([weaponEntry(IRON_SPEAR), ...STARTING_ITEMS]);

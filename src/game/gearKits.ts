@@ -16,12 +16,13 @@ import type { Curse } from './curses.ts';
 import type { Equipment } from './equipment.ts';
 import type { Armor, ArmorSlot } from './items.ts';
 import type { Modifier } from './modifiers.ts';
-import type { Hands, Weapon } from './weapons.ts';
+import type { Hands, Weapon, WeaponType } from './weapons.ts';
 
 function gearWeapon(
   id: string,
   label: string,
   stats: {
+    type: WeaponType;
     hands: Hands;
     power: number;
     hit: number;
@@ -37,7 +38,6 @@ function gearWeapon(
     kind: 'weapon',
     id,
     label,
-    type: 'physical',
     minRange: 1,
     maxRange: 1,
     ...stats,
@@ -77,14 +77,14 @@ function freezeAll<T extends object>(list: readonly T[]): readonly T[] {
 export const REAPERS_SCYTHE = gearWeapon(
   'reapers-scythe',
   "Reaper's Scythe",
-  { hands: 2, power: 2, hit: 70, crit: 5, weight: 6 },
+  { type: 'axe', hands: 2, power: 2, hit: 70, crit: 5, weight: 6 },
   [{ kind: 'encore' }],
 );
 // Double damage to a foe under half HP, but clumsy against one unhurt.
 export const EXECUTIONERS_AXE = gearWeapon(
   'executioners-axe',
   "Executioner's Axe",
-  { hands: 1, power: 3, hit: 70, crit: 0, weight: 6 },
+  { type: 'axe', hands: 1, power: 3, hit: 70, crit: 0, weight: 6 },
   [
     { kind: 'combat', term: 'damage-percent', amount: 100, when: 'vs-wounded' },
     { kind: 'combat', term: 'hit', amount: -20, when: 'vs-unhurt' },
@@ -119,17 +119,22 @@ export const BLOOD_CROWN = gearArmor(
 export const HUNTERS_LONGBOW = gearWeapon(
   'hunters-longbow',
   "Hunter's Longbow",
-  { hands: 2, power: 2, hit: 75, crit: 0, weight: 3, minRange: 2, maxRange: 3 },
+  { type: 'bow', hands: 2, power: 2, hit: 75, crit: 0, weight: 3, minRange: 2, maxRange: 3 },
   [
     { kind: 'status-on-hit', status: 'marked' },
     { kind: 'combat', term: 'damage', amount: 3, when: 'vs-marked' },
   ],
 );
 // +10 crit for each debuff on the foe; a crit leaves it Sundered.
-export const STILETTO = gearWeapon('stiletto', 'Stiletto', { hands: 1, power: 0, hit: 90, crit: 10, weight: 1 }, [
-  { kind: 'crit-per-foe-debuff', amount: 10 },
-  { kind: 'status-on-hit', status: 'sundered', on: 'crit' },
-]);
+export const STILETTO = gearWeapon(
+  'stiletto',
+  'Stiletto',
+  { type: 'dagger', hands: 1, power: 0, hit: 90, crit: 10, weight: 1 },
+  [
+    { kind: 'crit-per-foe-debuff', amount: 10 },
+    { kind: 'status-on-hit', status: 'sundered', on: 'crit' },
+  ],
+);
 // Weightless; +30 avoid until its next phase after it waits.
 export const SHADOW_MANTLE = gearArmor('shadow-mantle', 'Shadow Mantle', 'body', {}, [{ kind: 'veil-on-wait' }]);
 // The debuffs the wearer lays last one more of the foe's phases.
@@ -156,7 +161,7 @@ export const WARLORDS_BANNER = gearArmor(
 export const RIPOSTE_BLADE = gearWeapon(
   'riposte-blade',
   'Riposte Blade',
-  { hands: 1, power: 2, hit: 80, crit: 0, weight: 3 },
+  { type: 'sword', hands: 1, power: 2, hit: 80, crit: 0, weight: 3 },
   [
     { kind: 'combat', term: 'damage-percent', amount: 50, when: 'defending' },
     { kind: 'sure-hit', when: 'defending' },

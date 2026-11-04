@@ -14,6 +14,7 @@ import { getBuildingSprites, getFeatureSprites } from '../mapArt.ts';
 import { pickZonedEnemyTiles } from '../enemySpawns.ts';
 import type { Rng } from '../combatStats.ts';
 import { growToLevel } from '../experience.ts';
+import { outfitEnemy } from '../enemyGear.ts';
 import { assignLoot } from '../loot.ts';
 import type { GeneratedTerrain } from '../mapGen.ts';
 import { generateMap } from '../mapPlan.ts';
@@ -27,6 +28,7 @@ import { createUnitOfClass, UNIT_CLASSES } from '../unitClasses.ts';
 import { BUILDING_ART, BUILDING_PALETTES, DEFAULT_SEASON, FOREST_ART, MOUNTAIN_ART, SEASON_TREES } from '../tileset.ts';
 import type { RegionConfig } from './regions.ts';
 import { DEFAULT_STARTING_CLASS } from './startingClasses.ts';
+import { RUN_ITEMS } from './run.ts';
 
 export const WARBAND_MAX_DEPLOYED = 5;
 
@@ -150,7 +152,7 @@ export function pickStageLayout(seed: number, region: RegionConfig, candidates =
 // - enemies: a unit of its group's class (a soldier when unset), of the
 //   region's faction, on each tile pickEnemyTiles finds for region.enemies
 //   (fewer than asked when a group's limits leave too few tiles), at its
-//   group's level (growToLevel), starting on its group's health when it
+//   group's level (growToLevel) and outfitted for it (outfitEnemy), starting on its group's health when it
 //   sets one, and levelling its killer up when the group sets
 //   levelUpOnKill
 // - bossUnitId: the first enemy of the first group that names a boss,
@@ -191,6 +193,7 @@ export function createStageLevel(
     const label = UNIT_CLASSES.find((c) => c.id === classId)?.label ?? classId;
     const enemy = createUnitOfClass(classId, { name: `Enemy ${label}`, team: 'enemy', faction: region.faction });
     growToLevel(enemy, group.level ?? 1);
+    enemy.equipment = outfitEnemy(enemy, group.level ?? 1, RUN_ITEMS);
     if (group.health !== undefined) enemy.health = Math.min(group.health, enemy.maxHealth);
     enemy.levelUpOnKill = group.levelUpOnKill ?? false;
     if (group.boss && !bossUnitId) {

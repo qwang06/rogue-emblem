@@ -35,7 +35,7 @@ export const SAPPER_GROWTHS = Object.freeze({
 });
 
 // The weapon types it can wield.
-export const SAPPER_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical', 'siege']);
+export const SAPPER_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['siege', 'axe']);
 
 // What it carries into battle: a Powder Keg and the potions.
 export const SAPPER_ITEMS: Inventory = Object.freeze([weaponEntry(POWDER_KEG), ...STARTING_ITEMS]);

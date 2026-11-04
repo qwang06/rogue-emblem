@@ -35,7 +35,7 @@ export const TROLL_GROWTHS = Object.freeze({
 });
 
 // The weapon types a troll can wield.
-export const TROLL_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
+export const TROLL_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['natural']);
 
 // What a troll carries into battle: only its Stone Maul, which never
 // breaks. Monsters carry no potions.
