@@ -281,6 +281,7 @@ import type { Facing } from '../game/facing.ts';
 import type { UnitAnimation } from '../game/tileset.ts';
 import type { PopupKind } from '../bridge/views.ts';
 import { isSameBossBar, toBossBarView, toBossIntroView } from '../bridge/bossView.ts';
+import { getBossRules } from '../game/bosses.ts';
 import type { Skill } from '../game/skills.ts';
 import type { BattleOutcome, Team, TurnState } from '../game/turns.ts';
 import type { LevelUpResult } from '../game/experience.ts';
@@ -977,7 +978,7 @@ export class GridScene extends Phaser.Scene {
     const pointer = this.drainPointerInput();
     const confirm = JustDown(this.actionKeys.confirm) || JustDown(this.actionKeys.confirmAlt) || pointer.confirm;
     const cancel = JustDown(this.actionKeys.cancel) || JustDown(this.actionKeys.cancelAlt) || pointer.cancel;
-    const info = JustDown(this.infoKey);
+    const info = JustDown(this.infoKey) || pointer.info;
     // Only shading, so it toggles even while the enemy phase plays out.
     if (JustDown(this.actionKeys.dangerZone)) this.toggleDangerZone();
     if (JustDown(this.actionKeys.autoPlay)) this.toggleAutoPlay();
@@ -1889,7 +1890,9 @@ export class GridScene extends Phaser.Scene {
 
   // ---- Unit info --------------------------------------------------------
   // Pressing I with the cursor on a unit, whenever the cursor is free to
-  // roam, opens React's full stat sheet for it (src/ui/UnitInfoScreen.tsx).
+  // roam, opens React's full stat sheet for it (src/ui/UnitInfoScreen.tsx);
+  // so do a right click on any unit and a left click on one the player
+  // can't command (see drainPointerInput).
   // It owns input while open, and I, confirm or cancel closes it.
 
   // Returns true when the unit info screen took this frame's input.
@@ -1907,7 +1910,9 @@ export class GridScene extends Phaser.Scene {
 
   showUnitInfo(unit: Unit) {
     this.unitInfoUnit = unit;
-    gameStore.setState({ unitInfo: toUnitDetailView(unit) });
+    const boss = this.preview ? null : this.battle.boss;
+    const rules = boss && this.units.get(boss.unitId) === unit ? getBossRules(boss.rulesId) : null;
+    gameStore.setState({ unitInfo: toUnitDetailView(unit, rules) });
   }
 
   hideUnitInfo() {
@@ -3833,9 +3838,14 @@ export class GridScene extends Phaser.Scene {
   // are queued as they arrive and applied at the start of update(), where
   // they respect inputLocked like keys do:
   //   - moving over the map moves the cursor while it's free to roam
-  //   - left click on the map moves the cursor there and confirms
+  //   - left click on the map moves the cursor there and confirms, except
+  //     on a unit the player can't command (an enemy, a guest, an ally done
+  //     for the phase), where it opens that unit's stats instead (see
+  //     clickInspects)
   //   - hovering / clicking a menu entry highlights / picks it
-  //   - right click anywhere on the stage cancels (sent by React)
+  //   - right click anywhere on the stage cancels (sent by React), except
+  //     on a unit on the map while no unit is mid-action, which opens its
+  //     stats (see canInspectHovered)
 
   createPointerInput() {
     this.pointerQueue = [];
@@ -3851,6 +3861,9 @@ export class GridScene extends Phaser.Scene {
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       const tile = toTile(pointer);
       if (tile && pointer.button === 0) this.pointerQueue.push({ type: 'click-tile', ...tile });
+      // A right click points the cursor at its tile first, so the 'inspect'
+      // React sends for it looks at the unit under the pointer.
+      if (tile && pointer.button === 2) this.pointerQueue.push({ type: 'hover-tile', ...tile });
     });
 
     const unsubscribe = gameCommands.subscribe((command) => this.pointerQueue.push(command));
@@ -3864,7 +3877,7 @@ export class GridScene extends Phaser.Scene {
   drainPointerInput() {
     const queue = this.pointerQueue;
     this.pointerQueue = [];
-    const result = { confirm: false, cancel: false };
+    const result = { confirm: false, cancel: false, info: false };
     // Leaving for the title works even mid-animation or during the enemy
     // phase; removing the scene stops whatever was playing out.
     if (queue.some((command) => command.type === 'main-menu')) {
@@ -3901,7 +3914,17 @@ export class GridScene extends Phaser.Scene {
             result.confirm = true;
           } else if (this.canRoamCursor()) {
             this.pointCursorAt(command.x, command.y);
-            result.confirm = true;
+            if (this.clickInspects()) {
+              // Its reach shows too, as a click on an enemy always did, so
+              // it's still marked once the sheet closes.
+              const unitId = getCell(this.grid, this.cursor.x, this.cursor.y)!.unitId!;
+              if (this.phase === 'battle' && unitId !== this.inspectedEnemyId && this.hoveredUnit!.team !== 'player') {
+                this.toggleEnemyReach(unitId);
+              }
+              result.info = true;
+            } else {
+              result.confirm = true;
+            }
           }
           break;
         case 'hover-menu':
@@ -3947,6 +3970,10 @@ export class GridScene extends Phaser.Scene {
         case 'cancel':
           result.cancel = true;
           break;
+        case 'inspect':
+          if (this.canInspectHovered()) result.info = true;
+          else result.cancel = true;
+          break;
       }
     }
     return result;
@@ -3968,6 +3995,26 @@ export class GridScene extends Phaser.Scene {
       !this.skillMenu &&
       !this.itemMenu
     );
+  }
+
+  // Whether the stats of the unit under the cursor can be opened now: the
+  // cursor is free on the bare map (or placing units), with no unit picked
+  // to move or act, and outside the config editor's preview.
+  canInspectHovered(): boolean {
+    return this.hoveredUnit !== null && !this.preview && !this.activeUnit && !this.rangeMode && this.canRoamCursor();
+  }
+
+  // Whether a left click on the unit under the cursor opens its stats
+  // rather than confirming: it's one the player can't command (an enemy, a
+  // guest, or an ally that's done for the phase). A click on an ally that
+  // can still act picks it to move, as ever (right click or I inspects it).
+  clickInspects(): boolean {
+    if (!this.canInspectHovered()) return false;
+    const unit = this.hoveredUnit!;
+    if (unit.team !== 'player') return true;
+    if (this.phase !== 'battle') return false;
+    const unitId = getCell(this.grid, this.cursor.x, this.cursor.y)!.unitId!;
+    return isDone(this.turnState!, unitId);
   }
 
   pointCursorAt(x: number, y: number) {

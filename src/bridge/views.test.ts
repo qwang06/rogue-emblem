@@ -32,7 +32,10 @@ import { Soldier } from '../game/Soldier.ts';
 import { Acolyte } from '../game/Acolyte.ts';
 import { advanceDialog, createDialog } from '../game/dialog.ts';
 import { HEALTH_POTION, WOODEN_ARMOR, WOODEN_SHIELD } from '../game/items.ts';
-import { FIRE, FISTS, IRON_SPEAR, weaponEntry } from '../game/weapons.ts';
+import { FIRE, FISTS, IRON_SPEAR, TACKLE, weaponEntry } from '../game/weapons.ts';
+import { Slime, SLIME_PASSIVE } from '../game/Slime.ts';
+import { Orc } from '../game/Orc.ts';
+import { ORC_WARLORD } from '../game/bosses.ts';
 import { createTurnState, markDone } from '../game/turns.ts';
 import { applyBattleResult, createRun, restoreRoster, restoreUnit, snapshotUnit } from '../game/warband/run.ts';
 import { getBoonOffer, queueLevelUpBoons } from '../game/warband/levelUpPicks.ts';
@@ -277,6 +280,41 @@ describe('toUnitDetailView', () => {
     expect(toUnitDetailView(unit)!.quirk).toBeNull();
     unit.quirk = 'lucky';
     expect(toUnitDetailView(unit)!.quirk).toEqual({ label: 'Lucky', description: '+10 avoid.' });
+  });
+
+  it("lists every attack and what's worn in each of a humanoid's slots", () => {
+    const unit = new Unit({
+      name: 'Spearman',
+      health: 10,
+      strength: 2,
+      defense: 2,
+      movement: 5,
+      team: 'player',
+      weaponTypes: ['spear'],
+      items: [weaponEntry(IRON_SPEAR)],
+    });
+    const view = toUnitDetailView(unit)!;
+    expect(view.attacks[0]).toMatchObject({ id: IRON_SPEAR.id, label: 'Iron Spear', equipped: true, innate: false });
+    expect(view.attacks.slice(1).every((attack) => attack.innate && !attack.equipped)).toBe(true);
+    expect(view.equipment.map((slot) => slot.label)).toEqual(['Main hand', 'Off hand', 'Head', 'Body', 'Accessory']);
+    expect(view.equipment[0].gear).toEqual({ id: IRON_SPEAR.id, label: 'Iron Spear', description: null });
+    expect(view.equipment[1].gear).toBeNull();
+  });
+
+  it("shows a monster's special attack, its slots and its own passive", () => {
+    const view = toUnitDetailView(new Slime({ team: 'enemy' }))!;
+    expect(view.attacks).toEqual([expect.objectContaining({ id: TACKLE.id, equipped: true, innate: true })]);
+    expect(view.equipment.map((slot) => slot.label)).toEqual(['Special', 'Accessory']);
+    expect(view.passives.map((passive) => passive.label)).toContain(SLIME_PASSIVE.name);
+  });
+
+  it("lists a boss's own rules among its passives", () => {
+    const orc = new Orc({ team: 'enemy' });
+    expect(toUnitDetailView(orc)!.passives.map((passive) => passive.label)).not.toContain('Enrage');
+    const passives = toUnitDetailView(orc, ORC_WARLORD)!.passives;
+    expect(passives.map((passive) => passive.label)).toEqual(expect.arrayContaining(['War Horn', 'Enrage']));
+    expect(passives.find((passive) => passive.label === 'War Horn')!.description).toContain('level 4 Goblin');
+    expect(passives.find((passive) => passive.label === 'Enrage')!.description).toContain('50% HP');
   });
 
   it('is a detached, frozen snapshot', () => {

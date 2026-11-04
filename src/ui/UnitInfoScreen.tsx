@@ -19,12 +19,14 @@ import { KeyHint } from './KeyHint.tsx';
 // name, class, level, HP/MP bars and an EXP bar for player units, movement,
 // the weapon types it can wield, and its quirk); then each stat with a bar
 // filled toward its class's cap, with its passive boons under them; then
-// the rates it fights with, its equipped weapon's numbers as icon chips
-// (WeaponNumbers), its items with their icons and its skills with their MP
-// and range. Stats are labelled with their abbreviation (StatLabel). The
+// the rates it fights with, every attack it can make with its numbers as
+// icon chips (WeaponNumbers; a monster's special attack among them), what
+// it wears in each gear slot, the items in its bag with their icons and its
+// skills with their MP and range. Stats are labelled with their abbreviation (StatLabel). The
 // hover UnitPanel stays the quick view. GridScene handles the
-// input (I, confirm or cancel closes it), and a click anywhere closes it
-// too.
+// input (I, a right click on a unit, or a left click on one the player
+// can't command opens it; I, confirm or cancel closes it), and a click
+// anywhere closes it too.
 export function UnitInfoScreen() {
   const unit = useGameStore((state) => state.unitInfo);
   if (!unit) return null;
@@ -145,7 +147,7 @@ function Passives({ unit }: { unit: UnitDetailView }) {
 }
 
 function Combat({ unit }: { unit: UnitDetailView }) {
-  const weapon = unit.equippedWeapon;
+  const bag = unit.items.filter((item) => !item.equipped);
   return (
     <div className="unit-info__column">
       <h3 className="unit-info__heading">Combat</h3>
@@ -158,21 +160,14 @@ function Combat({ unit }: { unit: UnitDetailView }) {
         <Rate label="RNG" value={unit.range} />
       </dl>
 
-      <h3 className="unit-info__heading">Weapon</h3>
-      {weapon ? (
-        <p className="unit-info__weapon">
-          <span className="unit-info__weapon-name">{weapon.label}</span>
-          <WeaponNumbers power={weapon.power} hit={weapon.hit} crit={weapon.crit} weight={weapon.weight} />
-        </p>
-      ) : (
-        <p className="unit-info__empty">None</p>
-      )}
+      <Attacks unit={unit} />
+      <Equipment unit={unit} />
 
       <h3 className="unit-info__heading">Items</h3>
-      {unit.items.length > 0 ? (
+      {bag.length > 0 ? (
         <ul className="unit-info__list">
-          {unit.items.map((item, index) => (
-            <li key={`${item.id}@${index}`} className={item.equipped ? 'unit-info__item--equipped' : undefined}>
+          {bag.map((item, index) => (
+            <li key={`${item.id}@${index}`}>
               <span className="unit-info__item">
                 <ItemIcon itemId={item.id} />
                 {item.label}
@@ -203,6 +198,69 @@ function Combat({ unit }: { unit: UnitDetailView }) {
         <p className="unit-info__empty">None</p>
       )}
     </div>
+  );
+}
+
+// Every attack it can make, the one it fights with in yellow: the weapon in
+// its main hand, then its innate ones (a monster's special attack, fists,
+// spells it knows), each with its numbers as icon chips.
+function Attacks({ unit }: { unit: UnitDetailView }) {
+  return (
+    <>
+      <h3 className="unit-info__heading">Attacks</h3>
+      {unit.attacks.length > 0 ? (
+        <ul className="unit-info__list unit-info__list--attacks">
+          {unit.attacks.map((attack) => (
+            <li
+              key={`${attack.id}@${attack.innate}`}
+              className={attack.equipped ? 'unit-info__attack--equipped' : undefined}
+            >
+              <span className="unit-info__item">
+                <ItemIcon itemId={attack.id} />
+                {attack.label}
+                <span className="unit-info__tag">· {WEAPON_TYPE_LABELS[attack.type]}</span>
+              </span>
+              <WeaponNumbers
+                power={attack.power}
+                hit={attack.hit}
+                crit={attack.crit}
+                weight={attack.weight}
+                range={attack.range}
+              />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="unit-info__empty">None</p>
+      )}
+    </>
+  );
+}
+
+// What it wears in each of its slots (a humanoid's main hand, off hand,
+// head, body and accessory; a monster's special and accessory), with a
+// line on what a piece that bends a rule does.
+function Equipment({ unit }: { unit: UnitDetailView }) {
+  return (
+    <>
+      <h3 className="unit-info__heading">Equipment</h3>
+      <ul className="unit-info__list unit-info__list--gear">
+        {unit.equipment.map(({ slot, label, gear }) => (
+          <li key={slot}>
+            <span className="unit-info__slot">{label}</span>
+            {gear ? (
+              <span className="unit-info__item unit-info__gear" title={gear.description ?? undefined}>
+                <ItemIcon itemId={gear.id} />
+                {gear.label}
+              </span>
+            ) : (
+              <span className="unit-info__gear unit-info__gear--empty">–</span>
+            )}
+            {gear?.description && <span className="unit-info__gear-note">{gear.description}</span>}
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
 

@@ -22,6 +22,8 @@ import type { RosterTarget } from '../game/warband/rosterScreen.ts';
 //   { type: 'select-mentor', column, index } — that entry was clicked
 //   { type: 'confirm' }                  — same as pressing Enter/Z
 //   { type: 'cancel' }                   — same as pressing Esc/X
+//   { type: 'inspect' }                  — right click on the map: open the stats of the unit under the
+//                                          pointer if one can be inspected now, else the same as cancel
 //   { type: 'main-menu' }                — leave the battle for the title screen, whatever is going on
 //   { type: 'toggle-danger-zone' }       — show or hide every enemy's reach, same as pressing D
 //   { type: 'toggle-auto-play' }         — turn auto play on or off, same as pressing A
@@ -55,6 +57,7 @@ export type Command =
   | { type: 'select-mentor'; column: MentorColumn; index: number }
   | { type: 'confirm' }
   | { type: 'cancel' }
+  | { type: 'inspect' }
   | { type: 'main-menu' }
   | { type: 'toggle-danger-zone' }
   | { type: 'toggle-auto-play' }

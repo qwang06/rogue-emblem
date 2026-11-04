@@ -25,7 +25,6 @@ import { getStandingCombatBonus } from '../game/modifiers.ts';
 import { getStatusModifiers, STATUSES } from '../game/statuses.ts';
 import { findBoon, getTakenBoonList, type BoonKind } from '../game/warband/boons.ts';
 import { completesEvolution, findEvolution } from '../game/warband/evolutions.ts';
-import { findPromotion } from '../game/promotions.ts';
 import { findEliteAffix } from '../game/warband/elites.ts';
 import { findQuirk } from '../game/warband/quirks.ts';
 import type { BoonOffer } from '../game/warband/levelUpPicks.ts';
@@ -35,8 +34,11 @@ import type { Unit, UnitRank } from '../game/Unit.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
 import { getItemSprite, getUnitSprite } from '../game/tileset.ts';
 import { MASTER_SEAL } from '../game/items.ts';
-import { getWornGear, NO_EQUIPMENT } from '../game/equipment.ts';
-import { formatWeaponRange, type WeaponType } from '../game/weapons.ts';
+import { GEAR_SLOT_LABELS, GEAR_SLOTS, getWornGear, NO_EQUIPMENT, type GearSlot } from '../game/equipment.ts';
+import { GEAR_DESCRIPTIONS } from '../game/gearKits.ts';
+import { getClassPassive } from '../game/classPassives.ts';
+import type { BossRules } from '../game/bosses.ts';
+import { formatWeaponRange, type Weapon, type WeaponType } from '../game/weapons.ts';
 
 // One thing a unit has: a worn piece of gear (`equipped`, quantity null)
 // or a consumable in its bag with how many are left.
@@ -102,6 +104,25 @@ export interface WeaponDetailView {
   range: string;
 }
 
+// One of a unit's attacks on the unit info screen: its weapon's numbers,
+// its item id (for the icon), whether it's the one the unit fights with,
+// and whether it's innate (a monster's special attack, fists, a spell it
+// knows) rather than held in the main hand.
+export interface AttackView extends WeaponDetailView {
+  id: string;
+  equipped: boolean;
+  innate: boolean;
+}
+
+// One of a unit's gear slots on the unit info screen: the slot, its label
+// and what's worn there (null when empty), with a line on what the gear
+// does when it bends a rule (GEAR_DESCRIPTIONS), else null.
+export interface GearSlotView {
+  slot: GearSlot;
+  label: string;
+  gear: { id: string; label: string; description: string | null } | null;
+}
+
 // A passive on the unit info screen: a promoted class's, a boon's, an elite
 // affix's or an evolution's.
 export interface PassiveView {
@@ -133,6 +154,10 @@ export interface UnitDetailView extends UnitView {
   crit: number;
   attackSpeed: number;
   equippedWeapon: WeaponDetailView | null;
+  // Every attack it can make (main-hand weapon first, then innate ones).
+  attacks: readonly AttackView[];
+  // Its slots, a humanoid's paper doll or a monster's, in order.
+  equipment: readonly GearSlotView[];
   weaponTypes: readonly WeaponType[];
   skills: readonly SkillView[];
   // The class whose skill set it learned on top of its own (see
@@ -427,9 +452,11 @@ const DETAIL_STATS: readonly (readonly [Exclude<GrowthStat, 'health' | 'mana'>, 
 // its class's display name, each stat, the rates it fights
 // with before any opponent is counted (attack is its power stat plus its
 // weapon's power; hit, avoid, crit and attack speed from combatStats.ts),
-// its equipped weapon's numbers, the weapon types it can wield and the
-// skills it has learned.
-export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView | null {
+// its equipped weapon's numbers, every attack it can make, what it wears
+// in each of its slots, the weapon types it can wield and the skills it has
+// learned. `boss` is the rules it fights by when it's a boss with rules
+// (bosses.ts), listed among its passives.
+export function toUnitDetailView(unit: Unit | null | undefined, boss: BossRules | null = null): UnitDetailView | null {
   const view = toUnitView(unit);
   if (!unit || !view) return null;
   const equipped = unit.equippedWeapon;
@@ -457,32 +484,84 @@ export function toUnitDetailView(unit: Unit | null | undefined): UnitDetailView 
     avoid: getAvoid({ ...rates, bonus }),
     crit: getCrit({ ...rates, bonus }),
     attackSpeed: getAttackSpeed(unit),
-    equippedWeapon: weapon
-      ? Object.freeze({
-          label: weapon.label,
-          type: weapon.type,
-          power: weapon.power,
-          hit: weapon.hit,
-          crit: weapon.crit,
-          weight: weapon.weight,
-          range: formatWeaponRange(weapon),
-        })
-      : null,
+    equippedWeapon: weapon ? toWeaponDetailView(weapon) : null,
+    attacks: Object.freeze(
+      unit.wieldableWeapons
+        .map((attack) => ({ ...attack, innate: unit.innate.includes(attack.weapon) }))
+        .sort((a, b) => a.index - b.index)
+        .map(({ weapon: attack, index, innate }) =>
+          Object.freeze({
+            ...toWeaponDetailView(attack),
+            id: attack.id,
+            equipped: index === equipped?.index,
+            innate,
+          }),
+        ),
+    ),
+    equipment: Object.freeze(
+      GEAR_SLOTS[unit.gearLayout].map((slot) => {
+        const gear = (unit.equipment ?? NO_EQUIPMENT)[slot];
+        return Object.freeze({
+          slot,
+          label: GEAR_SLOT_LABELS[slot],
+          gear: gear
+            ? Object.freeze({ id: gear.id, label: gear.label, description: GEAR_DESCRIPTIONS[gear.id] ?? null })
+            : null,
+        });
+      }),
+    ),
     weaponTypes: unit.weaponTypes,
     skills: Object.freeze(
       getUnitSkills(unit).map(({ id, label, manaCost, range }) => Object.freeze({ id, label, manaCost, range })),
     ),
     secondaryClass: unit.secondaryClass && getClassLabel(unit.secondaryClass),
-    passives: Object.freeze(getPassiveViews(unit)),
+    passives: Object.freeze([...getPassiveViews(unit), ...getBossRuleViews(boss)]),
     quirk: quirk && Object.freeze({ label: quirk.name, description: quirk.description }),
   });
 }
 
-// A unit's passives for the info screen: its class's (a promoted class's),
-// then its passive boons and elite affixes, then its evolutions, marked as
-// one.
+function toWeaponDetailView(weapon: Weapon): WeaponDetailView {
+  return Object.freeze({
+    label: weapon.label,
+    type: weapon.type,
+    power: weapon.power,
+    hit: weapon.hit,
+    crit: weapon.crit,
+    weight: weapon.weight,
+    range: formatWeaponRange(weapon),
+  });
+}
+
+// A boss's own rules as passives for the info screen: its war horn and its
+// rage, each with what it does.
+function getBossRuleViews(boss: BossRules | null): PassiveView[] {
+  if (!boss) return [];
+  const views: PassiveView[] = [];
+  if (boss.horn) {
+    const { every, unitClass, level, limit } = boss.horn;
+    const turns = every === 1 ? 'every turn' : `every ${every} turns`;
+    views.push({
+      id: 'boss-horn',
+      label: 'War Horn',
+      description: `Calls a level ${level} ${getClassLabel(unitClass)} to its side ${turns}, up to ${limit} a battle. A unit on the marked tile blocks it.`,
+    });
+  }
+  if (boss.enrage) {
+    const { below, strength } = boss.enrage;
+    views.push({
+      id: 'boss-enrage',
+      label: 'Enrage',
+      description: `At ${Math.round(below * 100)}% HP or less it gains +${strength} STR and leaves its post.`,
+    });
+  }
+  return views.map((view) => Object.freeze(view));
+}
+
+// A unit's passives for the info screen: its class's (a promoted class's or
+// a monster's own), then its passive boons and elite affixes, then its
+// evolutions, marked as one.
 function getPassiveViews(unit: Unit): PassiveView[] {
-  const classPassive = findPromotion(unit.unitClass ?? '')?.passive;
+  const classPassive = getClassPassive(unit.unitClass);
   const boons = getTakenBoonList(unit.boons).filter((boon) => boon.kind === 'passive');
   const affixes = unit.eliteAffixes.map(findEliteAffix).filter((affix) => affix !== null);
   const evolutions = unit.evolutions.map(findEvolution).filter((evolution) => evolution !== null);

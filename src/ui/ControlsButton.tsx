@@ -11,7 +11,9 @@ const CONTROLS = [
   { keys: ['A'], action: 'Auto play on / off' },
   { keys: ['Mouse'], action: 'Point to move cursor' },
   { keys: ['Left click'], action: 'Confirm' },
-  { keys: ['Right click'], action: 'Cancel / Pause' },
+  { keys: ['Left click'], action: 'Unit info (on an enemy, guest or unit that has acted)' },
+  { keys: ['Right click'], action: 'Unit info (on any unit)' },
+  { keys: ['Right click'], action: 'Cancel / Pause (elsewhere)' },
 ];
 
 // Header icon button (a keyboard) that drops down the key reference.

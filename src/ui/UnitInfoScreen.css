@@ -184,20 +184,6 @@
   gap: 6px;
 }
 
-.unit-info__weapon {
-  margin: 0;
-}
-
-.unit-info__weapon-name {
-  display: block;
-  color: var(--yellow);
-}
-
-.unit-info__weapon .weapon-numbers {
-  font-size: 0.8125rem;
-  color: var(--fg-dim);
-}
-
 /* An item's name after its icon, half a tile so the row stays one line. */
 .unit-info__item {
   display: flex;
@@ -254,10 +240,6 @@
   line-height: 1.2;
 }
 
-.unit-info__item--equipped span:first-child {
-  color: var(--yellow);
-}
-
 .unit-info__empty {
   margin: 0;
   color: var(--fg-dim);
@@ -278,4 +260,63 @@
 .unit-info__secondary {
   font-weight: 400;
   color: var(--muted);
+}
+
+/* An attack's name over its numbers; the one it fights with in yellow. */
+.unit-info__list--attacks li {
+  display: block;
+}
+
+.unit-info__list--attacks li + li {
+  margin-top: 3px;
+}
+
+.unit-info__list--attacks .weapon-numbers {
+  display: flex;
+  padding-left: 22px;
+  font-size: 0.8125rem;
+  color: var(--fg-dim);
+}
+
+.unit-info__attack--equipped .unit-info__item {
+  color: var(--yellow);
+}
+
+/* The weapon type after an attack's name ("Natural" for a monster's own). */
+.unit-info__tag {
+  font-size: 0.75rem;
+  color: var(--fg-dim);
+}
+
+/* "Main hand  [icon] Iron Sword", then what a rule-bending piece does. */
+.unit-info__list--gear li {
+  display: grid;
+  grid-template-columns: 4.6rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0 6px;
+}
+
+.unit-info__list--gear li + li {
+  margin-top: 2px;
+}
+
+.unit-info__list--gear li span.unit-info__slot {
+  color: var(--fg-dim);
+}
+
+.unit-info__list--gear li span.unit-info__gear {
+  color: var(--fg);
+}
+
+.unit-info__list--gear li span.unit-info__gear--empty {
+  color: var(--fg-dim);
+}
+
+.unit-info__list--gear li span.unit-info__gear-note {
+  grid-column: 1 / -1;
+  padding-left: 4.6rem;
+  margin-left: 6px;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  color: var(--fg-dim);
 }
