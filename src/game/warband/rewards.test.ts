@@ -45,6 +45,7 @@ import {
   type Reward,
   isBigClear,
   isEliteClear,
+  getOfferableGear,
   isFortClear,
 } from './rewards.ts';
 import { MENTORS_ENABLED } from './mentors.ts';
@@ -697,14 +698,32 @@ describe("an elite lair's reward pick", () => {
   });
   const run = () => createRun(4, new Map([['alden', new Soldier({ name: 'Alden', team: 'player' })]]));
 
-  it('offers 4 relics the run can take, the same on a reload and new on a reroll', () => {
-    const at = lair({ ...run(), relics: ['field-kitchen'] });
+  it('offers 4 pieces of kit gear the run holds none of, the same on a reload and new on a reroll', () => {
+    const at = lair({ ...run(), convoy: [{ itemId: 'reapers-scythe', quantity: 1 }] });
     expect(isEliteClear(at, 5)).toBe(true);
     const offers = rollStageRewards(at, 5);
     expect(offers).toHaveLength(4);
-    expect(offers.every((offer) => offer.kind === 'relic' && offer.relicId !== 'field-kitchen')).toBe(true);
+    expect(offers.every((offer) => offer.kind === 'gear' && offer.itemId !== 'reapers-scythe')).toBe(true);
+    expect(new Set(offers.map((offer) => (offer.kind === 'gear' ? offer.itemId : ''))).size).toBe(4);
     expect(rollStageRewards(at, 5)).toEqual(offers);
     expect(rollStageRewards(at, 5, 1)).not.toEqual(offers);
+  });
+
+  it('sends the picked gear to the convoy, described with what it does', () => {
+    const offer = { kind: 'gear', itemId: 'thornmail', label: 'Thornmail' } as const;
+    expect(applyReward(run(), offer).convoy).toContainEqual({ itemId: 'thornmail', quantity: 1 });
+    expect(describeReward(offer)).toEqual({
+      label: 'Thornmail',
+      description:
+        '30% of the damage the wearer takes goes back to the attacker, 50% while Taunting. Goes to the convoy.',
+    });
+  });
+
+  it('offers no gear the roster already wears', () => {
+    const base = run();
+    const worn = { ...base, roster: base.roster.map((unit) => ({ ...unit, equipment: { body: 'thornmail' } })) };
+    expect(getOfferableGear(worn).some((gear) => gear.id === 'thornmail')).toBe(false);
+    expect(getOfferableGear(base).some((gear) => gear.id === 'thornmail')).toBe(true);
   });
 
   it('is an ordinary pick for any other stage or site', () => {
