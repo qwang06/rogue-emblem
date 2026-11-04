@@ -9,6 +9,7 @@ const CONTROLS = [
   { keys: ['Esc'], action: 'Skip dialog' },
   { keys: ['D'], action: 'Show / hide enemy danger zone' },
   { keys: ['A'], action: 'Auto play on / off' },
+  { keys: ['Q'], action: 'Browse relics (Warband Mode; ←→ to step, Q or Esc to close)' },
   { keys: ['Mouse'], action: 'Point to move cursor' },
   { keys: ['Left click'], action: 'Confirm' },
   { keys: ['Left click'], action: 'Unit info (on an enemy, guest or unit that has acted)' },

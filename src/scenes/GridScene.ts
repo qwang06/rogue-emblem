@@ -90,6 +90,7 @@ import {
   countWarbandKills,
 } from '../game/warband/runCommands.ts';
 import { clearSavedRun, saveRun } from '../data/runSave.ts';
+import { publishRunRelics } from '../bridge/runRelics.ts';
 import { getClearGold, getRunSite, isInTown, isRealmRun, isSiteDone } from '../game/warband/travel.ts';
 import { enterRun } from '../bridge/warbandFlow.ts';
 import { loadMeta, saveMeta } from '../data/metaSave.ts';
@@ -758,6 +759,8 @@ export class GridScene extends Phaser.Scene {
     this.pinUnitSheetFrames();
 
     this.setup = setup;
+    // The header's relic bar shows a Warband run's relics all through it.
+    publishRunRelics(setup.mode === 'warband' ? (setup.run ?? null) : null);
     this.playClockFrom = Date.now(); // the run's play time is counted from here (takePlayTime)
     this.nextBattle = null; // the BattleSetup a victory leads to, once won
     this.rewardOffer = null; // the run and its reward picks after a won Warband stage
@@ -1493,7 +1496,7 @@ export class GridScene extends Phaser.Scene {
     if (!result) return;
     this.boonBanishing = false;
     const { run, phase } = result.session;
-    saveRun(run);
+    this.keepRun(run);
     if (phase === 'boon') {
       this.boonRun = run;
       this.openBoonMenu();
@@ -1599,7 +1602,7 @@ export class GridScene extends Phaser.Scene {
             : { type: 'pick-recruit', index };
         const result = tryRunCommand({ run, phase: 'recruit' }, command);
         if (!result) return;
-        saveRun(result.session.run);
+        this.keepRun(result.session.run);
         this.recruitOffer = null;
         gameStore.setState({ recruitmentStage: null, recruitDraft: false });
         if (result.session.phase === 'reward') {
@@ -1626,7 +1629,7 @@ export class GridScene extends Phaser.Scene {
         const rerolled = tryRunCommand(session, { type: 'reroll-rewards' });
         if (!rerolled) return;
         const { run } = rerolled.session;
-        saveRun(run);
+        this.keepRun(run);
         this.rewardOffer = { ...offer, run, rewards: getRewardOffers(rerolled.session), rerolls: offer.rerolls + 1 };
         const stageClear = gameStore.getState().stageClear;
         if (stageClear) gameStore.setState({ stageClear: { ...stageClear, totalGold: run.gold } });
@@ -1640,7 +1643,7 @@ export class GridScene extends Phaser.Scene {
       const result = tryRunCommand(session, command);
       if (!result) return;
       const after = result.session.run;
-      saveRun(after);
+      this.keepRun(after);
       this.rewardOffer = null;
       // A Recruit reward opens its draft.
       if (result.session.phase === 'recruit') {
@@ -1672,6 +1675,13 @@ export class GridScene extends Phaser.Scene {
   // screen (src/game/warband/mentorScreen.ts) to learn secondary skill
   // sets; and Next Stage. Every change at camp is saved straight away.
 
+  // Saves `run` (src/data/runSave.ts) and shows its relics on the header's
+  // relic bar, so a relic or keystone just taken shows up straight away.
+  keepRun(run: RunState) {
+    saveRun(run);
+    publishRunRelics(run);
+  }
+
   openCamp(run: RunState) {
     this.inputLocked = false;
     this.publishMenu('rewardMenu', null);
@@ -1684,7 +1694,7 @@ export class GridScene extends Phaser.Scene {
   // keeping its highlight; it opens on Next Stage, so moving straight on
   // is one confirm.
   setCampRun(run: RunState) {
-    if (this.campRun && run !== this.campRun) saveRun(run);
+    if (this.campRun && run !== this.campRun) this.keepRun(run);
     this.campRun = run;
     const actions = getCampActions(run);
     const selected = this.campMenu?.selectedIndex ?? actions.findIndex((action) => action.id === 'march');
@@ -2625,7 +2635,7 @@ export class GridScene extends Phaser.Scene {
           this.recruitOffer = { run, stage: before.stage, recruits: getRecruitOffers(finished), draft: false };
           gameStore.setState({ recruitmentStage: before.stage, recruitDraft: false });
         }
-        saveRun(run);
+        this.keepRun(run);
       }
       // On the realm the next stage is wherever the warband travels, so
       // there's no next battle to name; a win with nothing to pick goes to

@@ -1,0 +1,124 @@
+/* ---- Relic bar (a Warband run's relics, in the page header) ----------- */
+
+/* Between the wordmark and the status, giving way first when the header is
+   tight (it shrinks far faster than the status, down to its Q cap): the row
+   scrolls sideways, with no scrollbar, rather than wrapping or pushing the
+   status and buttons off. */
+.relic-bar {
+  flex: 0 1000 auto;
+  min-width: 2rem;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.page-header:has(.relic-bar) .page-header__end {
+  flex: 1 1 auto;
+}
+
+.relic-bar__key {
+  flex: none;
+  opacity: 0.75;
+}
+
+.relic-bar__key kbd {
+  color: #2a170a;
+  background: #f0d9a8;
+}
+
+.relic-bar--browsing .relic-bar__key {
+  opacity: 1;
+}
+
+.relic-bar__list {
+  display: flex;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+  /* Room for the shown relic's ring, which the scroll box would clip. */
+  padding: 3px;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.relic-bar__list::-webkit-scrollbar {
+  display: none;
+}
+
+/* A relic is its icon on a faint plate; the shown one (pointed at, focused
+   or browsed) only lights up its ring and plate, so nothing moves. */
+.relic-bar__relic {
+  position: relative;
+  display: block;
+  flex: none;
+  padding: 1px;
+  background: rgb(255 248 232 / 6%);
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: help;
+}
+
+.relic-bar__relic--keystone {
+  background: rgb(232 184 48 / 16%);
+}
+
+.relic-bar__relic:focus {
+  outline: none;
+}
+
+.relic-bar__relic--shown,
+.relic-bar__relic:focus-visible {
+  background: rgb(255 248 232 / 22%);
+  box-shadow: 0 0 0 2px var(--exp);
+}
+
+/* A relic held more than once shows its count in its corner. */
+.relic-bar__copies {
+  position: absolute;
+  right: -1px;
+  bottom: -2px;
+  min-width: 1.1em;
+  padding: 0 2px;
+  box-sizing: border-box;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: #fff8e8;
+  background: #3a2416;
+  border-radius: var(--radius-sm);
+}
+
+/* Fixed to the window (placed by RelicTooltip), over the header, the map
+   and the overworld alike, and never taking a pointer. */
+.relic-bar__tooltip {
+  position: fixed;
+  z-index: 60;
+  box-sizing: border-box;
+  margin: 0;
+  pointer-events: none;
+  font-size: 0.8125rem;
+}
+
+.relic-bar__name {
+  margin: 0 0 2px;
+  font-weight: 700;
+  color: var(--fg-bright);
+}
+
+.relic-bar__description {
+  margin: 0;
+  color: var(--fg);
+}
+
+.relic-bar__tooltip .relic-bar__hint {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  gap: 6px;
+  margin: 6px 0 0;
+  font-size: 0.6875rem;
+  white-space: nowrap;
+}

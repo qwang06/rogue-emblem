@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import { getSiteIconUrl, INK_STAMP_URLS } from '../assets/realmIcons.ts';
 import { gameStore } from '../bridge/gameStore.ts';
 import { getOverworldZoom, toEventView, toOverworldView, type OverworldView } from '../bridge/overworldView.ts';
+import { publishRunRelics } from '../bridge/runRelics.ts';
 import { enterRun, getRunScreen } from '../bridge/warbandFlow.ts';
 import { getActiveContent } from '../data/customContent.ts';
 import { loadSavedRun } from '../data/runSave.ts';
@@ -60,6 +61,8 @@ function prefersReducedMotion(): boolean {
 export function OverworldScreen() {
   const [run, setRun] = useState(() => loadSavedRun());
   const realm = useMemo(() => (run ? getRealm(run.seed, getActiveContent().regions) : null), [run]);
+  // The header's relic bar follows the run (a wayside event can grant a relic).
+  useEffect(() => publishRunRelics(run), [run]);
 
   if (!run || !realm) {
     return (

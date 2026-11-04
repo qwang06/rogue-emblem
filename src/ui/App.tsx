@@ -32,6 +32,7 @@ import { OverworldScreen } from './OverworldScreen.tsx';
 import { PageHeader } from './PageHeader.tsx';
 import { PauseMenu } from './PauseMenu.tsx';
 import { PhaseBanner } from './PhaseBanner.tsx';
+import { RelicBar } from './RelicBar.tsx';
 import { RewardScreen } from './RewardScreen.tsx';
 import { BoonPickScreen } from './BoonPickScreen.tsx';
 import { RosterMenu } from './RosterMenu.tsx';
@@ -81,6 +82,7 @@ export function App() {
   return (
     <div className="page">
       <PageHeader
+        center={route.page === 'game' && <RelicBar />}
         actions={
           <>
             <AutoPlayButton />
