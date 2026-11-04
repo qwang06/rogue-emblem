@@ -193,8 +193,8 @@ export function pickRecruit(session: RunSession): RunCommand {
 
 // Camp, one command at a time, in this order:
 // 0. promote the first unit that can, to one of its class's promotions
-//    picked at random (pickPromotion), or buy a seal for it when there's
-//    a merchant and gold to spare
+//    picked at random (pickPromotion), or buy a seal for it when its
+//    promotion needs one and there's a merchant and gold to spare
 // 1. rest if anyone deploying is badly hurt (REST_BELOW_HEALTH)
 // 2. each deploying unit armed: equip its best carried weapon (or staff)
 //    if what it holds is about to break, else take one from the convoy,
@@ -233,7 +233,7 @@ export function planCamp(
 }
 
 // The promotion `unit` takes, one of its class's it can take now picked at
-// random, or null when it can't promote (no seal). The dice are seeded by
+// random, or null when it can't promote (a second promotion and no seal). The dice are seeded by
 // the run's seed, the unit and its level, so a run replays the same.
 export function pickPromotion(run: RunState, unit: UnitSnapshot): string | null {
   const options = getPromotions(unit.classId).filter((promotion) => canPromoteInRun(run, unit.id, promotion.id));

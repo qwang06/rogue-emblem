@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { Acolyte } from '../Acolyte.ts';
 import { Archer } from '../Archer.ts';
 import { HEALTH_POTION, MASTER_SEAL, MAX_INVENTORY_SLOTS } from '../items.ts';
 import { PROMOTION_LEVEL } from '../promotions.ts';
@@ -59,12 +60,16 @@ function runOf(...units: [string, Unit][]): RunState {
 }
 
 // A three-unit warband, everyone at full HP.
-function fullRun(): RunState {
-  return runOf(
+function fullRunEntries(): [string, Unit][] {
+  return [
     ['alden', new Soldier({ name: 'Alden', team: 'player' })],
     ['bryn', new Archer({ name: 'Bryn', team: 'player' })],
     ['cato', new Villager({ name: 'Cato', team: 'player' })],
-  );
+  ];
+}
+
+function fullRun(): RunState {
+  return runOf(...fullRunEntries());
 }
 
 function withRoster(run: RunState, roster: UnitSnapshot[]): RunState {
@@ -674,11 +679,17 @@ describe('the seal reward', () => {
       run.roster.map((unit) => ({ ...unit, level })),
     );
 
-  it('is offered once someone is a level short of promoting and the warband holds no seal', () => {
-    expect(offered(atLevel(fullRun(), PROMOTION_LEVEL - 2))).not.toContain('seal');
-    expect(offered(atLevel(fullRun(), PROMOTION_LEVEL - 1))).toContain('seal');
-    const sealed = { ...atLevel(fullRun(), PROMOTION_LEVEL), convoy: [{ itemId: MASTER_SEAL.id, quantity: 1 }] };
+  const withAcolyte = () => runOf(...fullRunEntries(), ['ida', new Acolyte({ name: 'Ida', team: 'player' })]);
+
+  it('is offered once someone is a level short of a second promotion and the warband holds no seal', () => {
+    expect(offered(atLevel(withAcolyte(), PROMOTION_LEVEL - 2))).not.toContain('seal');
+    expect(offered(atLevel(withAcolyte(), PROMOTION_LEVEL - 1))).toContain('seal');
+    const sealed = { ...atLevel(withAcolyte(), PROMOTION_LEVEL), convoy: [{ itemId: MASTER_SEAL.id, quantity: 1 }] };
     expect(offered(sealed)).not.toContain('seal');
+  });
+
+  it('isn’t offered when only first promotions, which are free, are near', () => {
+    expect(offered(atLevel(fullRun(), PROMOTION_LEVEL - 1))).not.toContain('seal');
   });
 
   it('puts a Master Seal in the convoy', () => {

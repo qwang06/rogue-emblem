@@ -63,8 +63,8 @@ function Detail({ detail }: { detail: PromotionDetailView }) {
 
 // The camp's promotion screen (see src/game/warband/promotionScreen.ts):
 // every promotion the warband could make on the left, what the highlighted
-// one does on the right, and the Master Seals held in the window's top
-// border. GridScene handles the input; the mouse is forwarded to it.
+// one does on the right, and the Master Seals held (a second promotion
+// spends one; a first is free) in the window's top border. GridScene handles the input; the mouse is forwarded to it.
 export function PromotionScreen() {
   const view = useGameStore((state) => state.promotionScreen);
   if (!view) return null;
@@ -96,7 +96,7 @@ export function PromotionScreen() {
                       className={classes.join(' ')}
                       aria-current={selected ? 'true' : undefined}
                       aria-disabled={option.disabled ? 'true' : undefined}
-                      title={option.disabled ? 'Needs a Master Seal' : undefined}
+                      title={option.disabled ? 'A second promotion needs a Master Seal' : undefined}
                       {...pointerProps(index)}
                     >
                       <span className="roster-screen__label">{option.label}</span>
@@ -112,9 +112,11 @@ export function PromotionScreen() {
           </div>
           <p className="roster-screen__detail">
             <span className="roster-screen__detail-hint">
-              {view.seals > 0
-                ? 'Spends a Master Seal. Level, items and boons carry over.'
-                : 'Needs a Master Seal: buy one from the merchant, or win one as a reward.'}
+              {!view.detail?.needsSeal
+                ? 'First promotion: free. Level, items and boons carry over.'
+                : view.seals > 0
+                  ? 'Second promotion: spends a Master Seal. Level, items and boons carry over.'
+                  : 'Second promotion: needs a Master Seal, from the merchant or a reward.'}
             </span>
           </p>
           <KeyHint

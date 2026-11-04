@@ -1667,8 +1667,8 @@ export class GridScene extends Phaser.Scene {
   // from the convoy; Merchant, which opens the merchant screen
   // (src/game/warband/merchantScreen.ts) to buy into and sell from the
   // convoy; Promote, which opens the promotion screen
-  // (src/game/warband/promotionScreen.ts) to spend a Master Seal on a
-  // unit; Rest, a full heal for gold; Mentors, which opens the mentor
+  // (src/game/warband/promotionScreen.ts) to promote a unit (a second
+  // promotion spends a Master Seal); Rest, a full heal for gold; Mentors, which opens the mentor
   // screen (src/game/warband/mentorScreen.ts) to learn secondary skill
   // sets; and Next Stage. Every change at camp is saved straight away.
 

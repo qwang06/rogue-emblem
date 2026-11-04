@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { Acolyte } from '../Acolyte.ts';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
 import { Villager } from '../Villager.ts';
@@ -536,10 +537,30 @@ describe('promote', () => {
     roster: run.roster.map((unit) => ({ ...unit, level: PROMOTION_LEVEL })),
   });
 
-  it('promotes a unit at camp, spending the seal', () => {
-    const session = apply(campWith(sealed(newRun())), { type: 'promote', unitId: 'cato', promotionId: 'vanguard' });
+  // newRun with an acolyte, Ida, in place of Alden: her promotion is a
+  // second one, to tier 3, and needs a seal.
+  const withAcolyte = (run: RunState): RunState => {
+    const ida = createRun(7, new Map<string, Unit>([['ida', new Acolyte({ name: 'Ida', team: 'player' })]]));
+    return { ...run, roster: [ida.roster[0], run.roster[1]] };
+  };
+
+  it('promotes a unit at camp for free on a first promotion', () => {
+    const session = apply(campWith({ ...sealed(newRun()), convoy: [] }), {
+      type: 'promote',
+      unitId: 'cato',
+      promotionId: 'vanguard',
+    });
     expect(session.phase).toBe('camp');
     expect(session.run.roster.find((unit) => unit.id === 'cato')!.classId).toBe('vanguard');
+  });
+
+  it('spends the seal on a second promotion', () => {
+    const session = apply(campWith(sealed(withAcolyte(newRun()))), {
+      type: 'promote',
+      unitId: 'ida',
+      promotionId: 'mage',
+    });
+    expect(session.run.roster.find((unit) => unit.id === 'ida')!.classId).toBe('mage');
     expect(session.run.convoy.some((entry) => entry.itemId === MASTER_SEAL.id)).toBe(false);
   });
 
@@ -549,15 +570,15 @@ describe('promote', () => {
       RunCommandError,
     );
     expect(() =>
-      applyRunCommand(campWith({ ...sealed(newRun()), convoy: [] }), {
+      applyRunCommand(campWith({ ...sealed(withAcolyte(newRun())), convoy: [] }), {
         type: 'promote',
-        unitId: 'cato',
-        promotionId: 'vanguard',
+        unitId: 'ida',
+        promotionId: 'mage',
       }),
     ).toThrow(RunCommandError);
   });
 
-  it('is legal at camp for each promotion the warband has a seal for', () => {
+  it('is legal at camp for each promotion allowed, a second only with a seal', () => {
     const promotions = getLegalRunCommands(campWith(sealed(newRun()))).filter((c) => c.type === 'promote');
     expect(promotions).toEqual([
       { type: 'promote', unitId: 'cato', promotionId: 'archer' },
@@ -565,8 +586,12 @@ describe('promote', () => {
       { type: 'promote', unitId: 'cato', promotionId: 'vanguard' },
       { type: 'promote', unitId: 'cato', promotionId: 'sapper' },
     ]);
-    const unsealed = getLegalRunCommands(campWith({ ...sealed(newRun()), convoy: [] }));
-    expect(unsealed.some((c) => c.type === 'promote')).toBe(false);
+    const free = getLegalRunCommands(campWith({ ...sealed(newRun()), convoy: [] }));
+    expect(free.filter((c) => c.type === 'promote')).toHaveLength(4);
+    const unsealed = getLegalRunCommands(campWith({ ...sealed(withAcolyte(newRun())), convoy: [] }));
+    expect(unsealed.filter((c) => c.type === 'promote' && c.unitId === 'ida')).toEqual([]);
+    const withSeal = getLegalRunCommands(campWith(sealed(withAcolyte(newRun()))));
+    expect(withSeal.filter((c) => c.type === 'promote' && c.unitId === 'ida')).toHaveLength(2);
   });
 });
 

@@ -7,7 +7,7 @@
 
 import { HEALTH_POTION, MASTER_SEAL, MAX_INVENTORY_SLOTS, type Armor } from '../items.ts';
 import { GEAR_DESCRIPTIONS, KIT_GEAR } from '../gearKits.ts';
-import { getPromotions, PROMOTION_LEVEL } from '../promotions.ts';
+import { getPromotions, needsSeal, PROMOTION_LEVEL } from '../promotions.ts';
 import { countSeals } from './promotion.ts';
 import { getExperienceToNextLevel, getLevelUpGains, type LevelUpResult } from '../experience.ts';
 import type { Rng } from '../combatStats.ts';
@@ -302,8 +302,9 @@ export function getPendingRewardOffer(run: RunState): (PendingReward & { rewards
 // - arms, when anyone can wield an Arms Cache weapon
 // - relic, while there's a relic the run doesn't hold
 // - lesson, whenever there's a roster (there's no level cap)
-// - seal, while the warband holds none and someone is a level short of
-//   promoting or past it (see promotion.ts)
+// - seal, while the warband holds none and someone with a promotion that
+//   needs one (a second promotion) is a level short of it or past it (see
+//   promotion.ts)
 // - scroll, from stage 2 on, while anyone has a skill set to learn, and
 //   only while the camp has Mentors (MENTORS_ENABLED) to spend it at
 // - gold, always
@@ -374,11 +375,15 @@ function createReward(kind: RewardKind, run: RunState, stage: number, rng: Rng, 
 }
 
 // Whether a seal is worth offering: the warband holds none, and a unit
-// that has promotions is within a level of PROMOTION_LEVEL.
+// with a promotion that needs one (needsSeal) is within a level of
+// PROMOTION_LEVEL.
 function wantsSeal(run: RunState): boolean {
   return (
     countSeals(run) === 0 &&
-    run.roster.some((unit) => unit.level >= PROMOTION_LEVEL - 1 && getPromotions(unit.classId).length > 0)
+    run.roster.some(
+      (unit) =>
+        unit.level >= PROMOTION_LEVEL - 1 && getPromotions(unit.classId).some((promotion) => needsSeal(promotion)),
+    )
   );
 }
 
