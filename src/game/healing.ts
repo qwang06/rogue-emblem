@@ -6,6 +6,8 @@
 // counter (a healer fights with the spells it knows). No Phaser, no
 // rendering, no hidden state.
 
+import type { Curse } from './curses.ts';
+import type { Modifier } from './modifiers.ts';
 import { getAttackTargets, type TargetTile } from './combat.ts';
 import type { Grid, Point } from './grid.ts';
 import type { InventoryEntry } from './items.ts';
@@ -22,6 +24,10 @@ export interface Staff {
   power: number;
   minRange: number;
   maxRange: number;
+  // What wearing it adds (modifiers.ts) and costs (curses.ts), for gear
+  // that bends a rule; see getGearModifiers in equipment.ts.
+  modifiers?: readonly Modifier[];
+  curses?: readonly Curse[];
 }
 
 // A staff a unit holds, and its place in the unit's staff list (see

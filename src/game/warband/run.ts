@@ -35,6 +35,7 @@ import { createUnitOfClass, UNIT_CLASSES, type UnitClass } from '../unitClasses.
 import type { BattleOutcome } from '../turns.ts';
 import type { Unit } from '../Unit.ts';
 import { WEAPONS, type Weapon } from '../weapons.ts';
+import { SIGNATURE_GEAR } from '../gearKits.ts';
 
 // How many units deploy to a stage at the start of a run.
 export const STARTING_DEPLOY_CAP = 5;
@@ -43,6 +44,7 @@ export const STARTING_DEPLOY_CAP = 5;
 export const RUN_ITEMS: readonly Item[] = Object.freeze([
   ...WEAPONS,
   ...ARMORS,
+  ...SIGNATURE_GEAR,
   HEAL_STAFF,
   HEALTH_POTION,
   MANA_POTION,

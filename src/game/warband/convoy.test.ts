@@ -10,6 +10,8 @@ import {
   canGiveFromConvoy,
   canStoreInConvoy,
   canUnequip,
+  CLEANSE_COST,
+  getUnequipCost,
   getUnitEquipment,
   giveFromConvoy,
   isMovable,
@@ -176,6 +178,37 @@ describe('unequipToConvoy', () => {
     expect(canUnequip(run, 'alden', 'head')).toBe(false);
     expect(() => unequipToConvoy(run, 'alden', 'head')).toThrow();
     expect(canUnequip(run, 'nobody', 'main')).toBe(false);
+  });
+});
+
+describe('cursed gear', () => {
+  // Alden wears the Blood Crown; a Bloodstone Ring waits in the convoy.
+  const cursed = (gold: number): RunState => {
+    const run = campRun([{ itemId: 'bloodstone-ring', quantity: 1 }]);
+    return {
+      ...run,
+      gold,
+      roster: run.roster.map((unit) =>
+        unit.id === 'alden' ? { ...unit, equipment: { ...unit.equipment, accessory: 'blood-crown' } } : unit,
+      ),
+    };
+  };
+
+  it("can't be swapped out", () => {
+    expect(canCarry(cursed(999), 'alden', 'bloodstone-ring')).toBe(false);
+    expect(canGiveFromConvoy(cursed(999), 'alden', 0)).toBe(false);
+    expect(canCarry(cursed(999), 'cato', 'bloodstone-ring')).toBe(true);
+  });
+
+  it('comes off only for CLEANSE_COST gold', () => {
+    expect(getUnequipCost(cursed(0), 'alden', 'accessory')).toBe(CLEANSE_COST);
+    expect(getUnequipCost(cursed(0), 'alden', 'main')).toBe(0);
+    expect(canUnequip(cursed(CLEANSE_COST - 1), 'alden', 'accessory')).toBe(false);
+    expect(() => unequipToConvoy(cursed(CLEANSE_COST - 1), 'alden', 'accessory')).toThrow(/gold/);
+    const after = unequipToConvoy(cursed(CLEANSE_COST + 5), 'alden', 'accessory');
+    expect(after.gold).toBe(5);
+    expect(after.convoy).toContainEqual({ itemId: 'blood-crown', quantity: 1 });
+    expect(wornBy(after, 'alden').accessory).toBeUndefined();
   });
 });
 

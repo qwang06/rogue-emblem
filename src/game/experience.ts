@@ -9,6 +9,8 @@
 import type { CombatSide, Strike } from './combat.ts';
 import type { Unit } from './Unit.ts';
 import { SKILL_TREES, getSkillsLearnedBetween, type Skill, type SkillTrees } from './skills.ts';
+import { getGearModifiers, type Equipment } from './equipment.ts';
+import { sumModifiers } from './modifiers.ts';
 
 export const EXPERIENCE_PER_LEVEL = 100;
 // The XP from level 1 to 2, less than the rest so a new unit's first
@@ -61,8 +63,10 @@ export interface Experienced extends GrowthSource {
   experience?: number;
   growths?: GrowthTable;
   // Percent of each XP gain the unit actually earns (default
-  // DEFAULT_EXPERIENCE_RATE); see scaleExperience.
+  // DEFAULT_EXPERIENCE_RATE); see scaleExperience. Its worn gear's
+  // 'experience' modifiers add to it.
   experienceRate?: number;
+  equipment?: Equipment;
 }
 
 export interface LevelUpResult {
@@ -242,7 +246,9 @@ export function resolveExperienceGain(
   amount: number,
   { trees = SKILL_TREES, scaled = true }: { trees?: SkillTrees; scaled?: boolean } = {},
 ): ExperienceGain {
-  const earned = scaled ? scaleExperience(amount, unit.experienceRate) : Math.max(0, amount);
+  const gearRate = unit.equipment ? sumModifiers(getGearModifiers(unit.equipment), 'experience') : 0;
+  const rate = (unit.experienceRate ?? DEFAULT_EXPERIENCE_RATE) + gearRate;
+  const earned = scaled ? scaleExperience(amount, rate) : Math.max(0, amount);
   const result = addExperience(unit.level, unit.experience ?? 0, earned);
   const stats = Object.fromEntries(GROWTH_STATS.map((stat) => [stat, getGrowthStatValue(unit, stat)])) as StatGains;
   const levelUps: LevelUpResult[] = [];

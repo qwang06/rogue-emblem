@@ -250,6 +250,7 @@ export interface Modifiable {
 // warband/run.ts), whose MOV and XP rate come from its class.
 export function applyModifiers<T extends Modifiable>(unit: T, modifiers: readonly Modifier[]): T {
   if (modifiers.length === 0) return unit;
+  // (A Unit's setter keeps its gear's modifiers apart.)
   unit.modifiers = Object.freeze([...unit.modifiers, ...modifiers]);
   unit.movement += sumModifiers(modifiers, 'movement');
   unit.experienceRate += sumModifiers(modifiers, 'experience');

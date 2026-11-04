@@ -809,7 +809,7 @@ export function toRewardAction(reward: Reward, index: number, run: RunState | nu
     : null;
   const healthAfter = run && previewRewardHealth(run, reward);
   const itemId =
-    reward.kind === 'supplies' || reward.kind === 'arms'
+    reward.kind === 'supplies' || reward.kind === 'arms' || reward.kind === 'gear'
       ? reward.itemId
       : reward.kind === 'seal'
         ? MASTER_SEAL.id

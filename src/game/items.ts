@@ -10,6 +10,8 @@
 // in one use.
 
 import type { MenuAction } from './actionMenu.ts';
+import type { Curse } from './curses.ts';
+import type { Modifier } from './modifiers.ts';
 import type { Staff } from './healing.ts';
 import type { Weapon } from './weapons.ts';
 
@@ -41,6 +43,10 @@ export interface Armor {
   weight: number;
   // For 'special' gear: the class id it's made for.
   forClass?: string;
+  // What wearing it adds (modifiers.ts) and costs (curses.ts), for gear
+  // that bends a rule; see getGearModifiers in equipment.ts.
+  modifiers?: readonly Modifier[];
+  curses?: readonly Curse[];
 }
 
 // A seal: { kind: 'seal', id, label }. Spent at camp to promote a unit
