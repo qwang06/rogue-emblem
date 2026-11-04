@@ -63,9 +63,13 @@ import { useRoute } from './useRoute.ts';
 // individual panels opt back in via CSS. All in-battle UI goes there (the
 // unit panel included, so the map gets the whole width); reference panels
 // like the controls drop down from header buttons.
+//
+// A right click cancels, except on the map itself, where it asks to
+// inspect the unit under the pointer (the scene falls back to cancelling
+// when there's none, or a unit is mid-action).
 function cancelOnRightClick(event: MouseEvent) {
   event.preventDefault();
-  gameCommands.send({ type: 'cancel' });
+  gameCommands.send({ type: event.target instanceof HTMLCanvasElement ? 'inspect' : 'cancel' });
 }
 
 export function App() {
