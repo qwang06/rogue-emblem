@@ -59,8 +59,16 @@ export const TERRAIN_SHEET_URLS: Readonly<Record<string, string>> = {
   'overworld-starship': overworldStarship,
 };
 
+// One 32x32 icon per piece of signature, cursed and monster gear
+// (gearKits.ts), named by item id; see the tileset skill.
+const gearIconFiles = import.meta.glob<string>('./gear/*.png', { eager: true, import: 'default' });
+export const GEAR_ICON_URLS: Readonly<Record<string, string>> = Object.fromEntries(
+  Object.entries(gearIconFiles).map(([path, url]) => [path.slice('./gear/'.length, -'.png'.length), url]),
+);
+
 export const SPRITE_URLS: Readonly<Record<string, string>> = {
   ...UNIT_SHEET_URLS,
+  ...GEAR_ICON_URLS,
   gates,
   ginkgo_tree_green: ginkgoTreeGreen,
   gold_ginkgo_tree: goldGinkgoTree,
