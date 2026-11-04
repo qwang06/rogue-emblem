@@ -179,6 +179,15 @@ const HELP: Record<string, FieldHelp> = {
     title: 'Castle',
     body: <p>Whether a castle stands beside the north end of the path.</p>,
   },
+  caves: {
+    title: 'Caves',
+    body: (
+      <p>
+        Whether the map is a cave: rock walls grow over the open ground first, so the routes run through caverns. Lakes
+        and the rest still grow in the open.
+      </p>
+    ),
+  },
   lakes: {
     title: 'Lakes',
     body: (

@@ -75,6 +75,7 @@ const TERRAIN_KEYS = [
   ...PATCH_SIZES,
   'setPieces',
   'castle',
+  'caves',
   'turnChance',
   'generator',
   'routes',
@@ -149,6 +150,10 @@ function parseTerrain(value: unknown, path: string): MapGenOptions {
   if (json.castle !== undefined) {
     if (typeof json.castle !== 'boolean') fail(`${path}.castle`, 'must be true or false');
     terrain.castle = json.castle;
+  }
+  if (json.caves !== undefined) {
+    if (typeof json.caves !== 'boolean') fail(`${path}.caves`, 'must be true or false');
+    terrain.caves = json.caves;
   }
   if (json.turnChance !== undefined) terrain.turnChance = chance(json.turnChance, `${path}.turnChance`);
   if (json.generator !== undefined) {

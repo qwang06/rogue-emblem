@@ -13,6 +13,7 @@ const EXPLAINED = [
   'treeChance',
   'turnChance',
   'castle',
+  'caves',
   'lakes',
   'mountains',
   'forests',

@@ -165,6 +165,7 @@ export function RegionEditor({
             placeholder={String(MAP_GEN_DEFAULTS.turnChance)}
           />
           <CheckboxField form={form} path={at('terrain', 'castle')} label="Castle" fallback={MAP_GEN_DEFAULTS.castle} />
+          <CheckboxField form={form} path={at('terrain', 'caves')} label="Caves" fallback={MAP_GEN_DEFAULTS.caves} />
           <SelectField form={form} path={at('terrain', 'generator')} label="Generator" options={GENERATORS} />
           <NumberField
             form={form}

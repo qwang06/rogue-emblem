@@ -3,6 +3,7 @@ import { MAP_ARCHETYPES } from './mapArchetypes.ts';
 import { MAP_GEN_DEFAULTS } from './mapGen.ts';
 import {
   ARCHETYPE_SHAPES,
+  CAVE_OPEN_SHARE,
   getMapSize,
   getTargetArea,
   MAX_MAP_SIZE,
@@ -22,6 +23,13 @@ describe('getTargetArea', () => {
   it('gives every unit TILES_PER_UNIT walkable tiles', () => {
     expect(getTargetArea(10)).toBe(Math.ceil((TILES_PER_UNIT * 10) / OPEN_SHARE));
     expect(getTargetArea(0)).toBe(0);
+  });
+
+  it('sizes a map with less open ground bigger', () => {
+    expect(getTargetArea(10, CAVE_OPEN_SHARE)).toBeGreaterThan(getTargetArea(10));
+    const cave = getMapSize(10, 'advance', MIDDLE, MIN_MAP_SIZE, CAVE_OPEN_SHARE);
+    const field = getMapSize(10, 'advance', MIDDLE);
+    expect(cave.width * cave.height).toBeGreaterThan(field.width * field.height);
   });
 });
 

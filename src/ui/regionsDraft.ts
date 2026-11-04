@@ -150,6 +150,7 @@ const SETTING_LABELS: Readonly<Record<string, string>> = Object.freeze({
   buildings: 'Buildings',
   setPieces: 'Set pieces',
   castle: 'Castle',
+  caves: 'Caves',
   turnChance: 'Path winding',
   generator: 'Generator',
   routes: 'Routes',

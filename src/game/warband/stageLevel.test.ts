@@ -195,6 +195,22 @@ describe('createStageLevel', () => {
     }
   });
 
+  it('walls a cave region’s maps with rock, and leaves the others open', () => {
+    const rock = (picked: ReturnType<typeof pickStageLayout>) =>
+      picked.terrain.grid.cells.filter((c) => c.terrain === 'mountain').length / picked.terrain.grid.cells.length;
+    const share = (caves: boolean) => {
+      const picks = REGION_CONFIGS.filter((base) => !!base.terrain.caves === caves).flatMap((base) =>
+        SEEDS.slice(0, 6).map((seed) => {
+          const region = sizeStageRegion(seed, levelRegionForStage(base, 20));
+          return rock(pickStageLayout(seed, region));
+        }),
+      );
+      return picks.reduce((sum, r) => sum + r, 0) / picks.length;
+    };
+    expect(REGION_CONFIGS.some((region) => region.terrain.caves)).toBe(true);
+    expect(share(true)).toBeGreaterThan(2 * share(false));
+  });
+
   it('lets every built-in region fight within the first turn or two', () => {
     // Most units move 5 and strike 1 tile away, so an enemy 11 or fewer
     // steps out can be struck by turn 2.

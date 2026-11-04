@@ -58,6 +58,7 @@ describe('parseRegionSettings', () => {
       meadows: 0,
       meadowSize: [4, 4],
       castle: false,
+      caves: true,
       ruins: 1,
       buildings: 2,
       setPieces: 3,
@@ -202,6 +203,11 @@ describe('parseRegionSettings', () => {
       'a non-boolean castle',
       file([region({ terrain: { width: 12, height: 10, castle: 'yes' } })]),
       /castle must be true or false/,
+    ],
+    [
+      'a non-boolean caves',
+      file([region({ terrain: { width: 12, height: 10, caves: 1 } })]),
+      /caves must be true or false/,
     ],
     [
       'a typo in terrain',
