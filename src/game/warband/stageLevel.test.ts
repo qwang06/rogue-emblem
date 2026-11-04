@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PLAYER_ROSTER } from '../demoLevel.ts';
 import { REGION_CONFIGS, REGION_SETTINGS } from '../../data/regions.ts';
+import { MAP_ARCHETYPES } from '../mapArchetypes.ts';
 import {
   createStageLevel,
   DEFAULT_ENEMY_CLASS,
@@ -601,10 +602,10 @@ describe('map archetypes on stages', () => {
 
   it('every archetype appears for some objective', () => {
     const all = new Set(Object.values(OBJECTIVE_ARCHETYPES).flat());
-    expect(all.size).toBe(6);
+    expect(all).toEqual(new Set(MAP_ARCHETYPES));
   });
 
-  it.each(['crossroads', 'ambush', 'gauntlet', 'islands', 'fortress'] as const)(
+  it.each(['crossroads', 'ambush', 'gauntlet', 'islands', 'fortress', 'pincer', 'camps'] as const)(
     'builds a %s stage that keeps every rule, deploying and placing enemies where the plan says',
     (archetype) => {
       for (const seed of [1, 2, 3, 4, 5]) {

@@ -168,6 +168,12 @@ const HELP: Record<string, FieldHelp> = {
             <b>islands</b>: a river splits the map, crossed only by bridges and fords.
           </li>
           <li>
+            <b>pincer</b>: you start mid-map on a road and the enemy closes in from both side edges at once.
+          </li>
+          <li>
+            <b>camps</b>: the enemy is split between two or three camps you can take one at a time.
+          </li>
+          <li>
             <b>fortress</b>: the enemy holds a walled fort with one or two gates.
           </li>
         </ul>
