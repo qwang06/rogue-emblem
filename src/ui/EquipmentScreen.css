@@ -1,32 +1,109 @@
 /* ---- Equipment screen ------------------------------------------------- */
 
-/* Three columns: the units, the picked unit's paper doll over its numbers,
-   and the convoy's gear for the picked slot. Every list has a fixed height
-   (the doll always the five rows of a humanoid, a monster's two leaving
-   the rest blank), and each number row draws both values and the arrow,
-   so moving the cursor or changing gear never reflows anything (see "UI
-   layout" in AGENTS.md). The shared row, column and list styles are in
-   ui.css's "Roster screen" section. */
+/* Tactics Ogre style: the units as tabs across the top, then three
+   columns: the picked unit's slots, the gear for the picked slot under one
+   tab per slot, and the unit's stat sheet and load. The columns share one
+   fixed height (the slots always the five rows of a humanoid, a monster's
+   two leaving the rest blank, and the category tabs always five wide),
+   each number row draws both values, and the selected tab only changes
+   colors, so moving the cursor, switching units or changing gear never
+   reflows anything (see "UI layout" in AGENTS.md). The shared row, column
+   and list styles are in ui.css's "Roster screen" section. */
 .equipment-screen {
-  /* Two lines of text a row (a unit's name over its class, a slot's name
-     over its gear), as the roster's unit list. */
+  /* Two lines of text a row (a slot's name over its gear). */
   --row: 52px;
-  --stat-row: 28px;
+  /* Tall enough for the stat sheet: a heading, nine rows (sized in rem,
+     as the text is) and the load meter. */
+  --body: calc(5 * var(--row) + 4.2rem);
 }
+
+/* ---- The unit tabs ---- */
+
+/* At most eight units (MAX_ROSTER_SIZE) share the row evenly between the
+   step arrows; a long name is cut short rather than widening its tab.
+   Tabs are clicked, never hovered into: hovering one does nothing. */
+.equipment-units {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.equipment-units__tab,
+.equipment-units__step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 6px;
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--fg-dim);
+  background: var(--bg-light);
+  border: var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.equipment-units__tab {
+  flex: 1 1 0;
+}
+
+.equipment-units__step {
+  flex: none;
+  gap: 2px;
+  color: var(--fg-bright);
+  background: var(--bg);
+}
+
+.equipment-units__key {
+  font-size: 0.625rem;
+  color: var(--fg-dim);
+}
+
+.equipment-units__tab:hover,
+.equipment-units__step:hover {
+  color: var(--fg-bright);
+}
+
+.equipment-units__tab--selected,
+.equipment-units__tab--selected:hover {
+  color: var(--fg-bright);
+  background: var(--selection);
+  border-color: var(--accent);
+  box-shadow: inset 0 calc(-2 * var(--px)) 0 var(--accent);
+}
+
+.equipment-units__sprite {
+  flex: none;
+  width: 32px;
+  height: 32px;
+}
+
+.equipment-units__name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+}
+
+/* ---- The three columns ---- */
 
 .equipment-layout {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.25fr) minmax(0, 0.8fr);
   gap: 10px;
+  height: var(--body);
 }
 
-/* The units and the gear run as tall as the doll and its numbers. */
-.equipment-screen .equipment-list {
-  height: calc(5 * var(--row) + 4 * var(--stat-row) + 17px);
+.equipment-layout > .roster-screen__column {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .equipment-slots {
-  height: calc(5 * var(--row));
+  flex: 1;
 }
 
 .equipment-slots__blank {
@@ -47,6 +124,57 @@
   vertical-align: -2px;
 }
 
+/* ---- The gear, one tab per slot ---- */
+
+.equipment-categories {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-bottom: var(--rule);
+}
+
+.equipment-categories__tab {
+  min-width: 0;
+  padding: 4px 2px;
+  overflow: hidden;
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--fg-dim);
+  background: none;
+  border: 0;
+  border-right: var(--rule);
+  cursor: pointer;
+}
+
+.equipment-categories__tab:last-child {
+  border-right: 0;
+}
+
+span.equipment-categories__tab {
+  cursor: default;
+}
+
+button.equipment-categories__tab:hover {
+  color: var(--fg-bright);
+}
+
+.equipment-categories__tab--selected,
+.equipment-categories__tab--selected:hover {
+  color: var(--fg-bright);
+  background: var(--selection);
+}
+
+.equipment-layout__gear .scroll-list {
+  flex: 1;
+  min-height: 0;
+}
+
+.equipment-screen .equipment-list {
+  height: 100%;
+}
+
 .equipment-gear__remove {
   font-style: italic;
   color: var(--fg-dim);
@@ -65,54 +193,159 @@
   text-decoration: line-through;
 }
 
-/* The numbers: label, now, arrow, with the highlighted gear. Fixed columns
-   and tabular figures, so a value changing never moves another. */
-.equipment-stats {
-  display: grid;
-  grid-template-columns: repeat(2, max-content);
-  justify-content: space-evenly;
-  column-gap: 16px;
-  margin: 0;
-  padding: 8px 10px;
-  list-style: none;
-  border-top: var(--rule);
+/* The teammate wearing it, who loses it if it's taken. */
+.equipment-gear__worn {
+  flex: none;
+  max-width: 40%;
+  padding: 0 5px;
+  overflow: hidden;
+  font-size: 0.6875rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--bg);
+  background: var(--muted);
 }
 
-.equipment-stats__row {
+/* ---- The stat sheet ---- */
+
+/* The unit's stats beside the rates it fights with: label, now, with the
+   highlighted gear. Fixed columns and tabular figures, so a value changing
+   never moves another; an unchanged value is dimmed so the gains and
+   losses stand out. */
+.equipment-sheet {
   display: grid;
-  grid-template-columns: 44px 36px 22px 36px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 12px;
+  padding: 4px 10px;
+}
+
+.equipment-sheet__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.equipment-sheet__row {
+  display: grid;
+  grid-template-columns: 1fr 3.5ch 3.5ch;
+  column-gap: 6px;
   align-items: center;
-  height: var(--stat-row);
-  font-size: 0.8125rem;
+  height: 1.2em;
+  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
 
-.equipment-stats__label {
+.equipment-sheet__label {
   font-weight: 700;
   color: var(--fg-dim);
 }
 
-.equipment-stats__value {
+.equipment-sheet__value {
   text-align: right;
 }
 
-.equipment-stats__arrow {
-  text-align: center;
+.equipment-sheet__after--same {
   color: var(--fg-dim);
+  opacity: 0.6;
 }
 
-.equipment-stats__after--up {
+.equipment-sheet__after--up,
+.equipment-load__after--up {
   color: var(--green);
 }
 
-.equipment-stats__after--down {
+.equipment-sheet__after--down,
+.equipment-load__after--down {
   color: var(--red);
 }
 
-/* One column at a time on narrow stages, stacked; the lists shorten. */
+/* Weight against strength: the bar fills to the load with the
+   highlighted gear, red past the strength mark. Load going up is "down"
+   for the unit, so its colors run the other way. */
+.equipment-load {
+  margin-top: auto;
+  padding: 4px 10px 6px;
+  font-size: 0.8125rem;
+  border-top: var(--rule);
+}
+
+.equipment-load__text {
+  display: flex;
+  justify-content: space-between;
+  font-variant-numeric: tabular-nums;
+}
+
+.equipment-load__after--up {
+  color: var(--red);
+}
+
+.equipment-load__after--down {
+  color: var(--green);
+}
+
+.equipment-load__bar {
+  position: relative;
+  height: 8px;
+  margin: 3px 0 2px;
+  background: var(--bg-light);
+  border: var(--px) solid var(--muted);
+}
+
+.equipment-load__fill,
+.equipment-load__over,
+.equipment-load__mark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.equipment-load__fill {
+  left: 0;
+  background: var(--accent);
+}
+
+.equipment-load__over {
+  background: var(--red);
+}
+
+.equipment-load__mark {
+  width: var(--px);
+  margin-left: calc(-0.5 * var(--px));
+  background: var(--fg-bright);
+}
+
+.equipment-load__note {
+  font-size: 0.6875rem;
+  color: var(--fg-dim);
+}
+
+.equipment-load__note--over {
+  color: var(--red);
+}
+
+/* One column at a time on narrow stages, stacked: the tabs show only
+   sprites, and the lists shorten. */
 @container (max-width: 40rem) {
+  .equipment-units__name {
+    display: none;
+  }
+
+  .equipment-units__tab {
+    justify-content: center;
+  }
+
   .equipment-layout {
     grid-template-columns: minmax(0, 1fr);
+    height: auto;
+  }
+
+  .equipment-slots {
+    flex: none;
+    height: calc(5 * var(--row));
+  }
+
+  .equipment-layout__gear .scroll-list {
+    flex: none;
   }
 
   .equipment-screen .equipment-list {

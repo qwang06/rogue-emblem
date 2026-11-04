@@ -3,7 +3,12 @@ import { Beast } from '../game/Beast.ts';
 import { Soldier } from '../game/Soldier.ts';
 import type { Unit } from '../game/Unit.ts';
 import { WOODEN_ARMOR } from '../game/items.ts';
-import { confirmEquipment, openEquipmentScreen, pointEquipmentCursor } from '../game/warband/equipmentScreen.ts';
+import {
+  confirmEquipment,
+  openEquipmentScreen,
+  pickEquipmentUnit,
+  pointEquipmentCursor,
+} from '../game/warband/equipmentScreen.ts';
 import { createRun, type ItemSnapshot, type RunState } from '../game/warband/run.ts';
 import { toEquipmentScreenView } from './equipmentView.ts';
 
@@ -34,6 +39,7 @@ describe('toEquipmentScreenView', () => {
       ['Body', null, false],
       ['Accessory', null, false],
     ]);
+    expect(view.slots.map((slot) => slot.tabLabel)).toEqual(['Weapons', 'Shields', 'Head', 'Body', 'Accessory']);
     expect(view.maxSlots).toBe(5);
     expect(view.slotLabel).toBe('Main hand');
     expect(view.detail?.label).toBe('Iron Spear');
@@ -41,8 +47,11 @@ describe('toEquipmentScreenView', () => {
   });
 
   it('shows a monster’s two slots', () => {
-    const view = toEquipmentScreenView(pointEquipmentCursor(openEquipmentScreen(campRun()), 'units', 1));
-    expect(view.slots.map((slot) => slot.label)).toEqual(['Special', 'Accessory']);
+    const view = toEquipmentScreenView(pickEquipmentUnit(openEquipmentScreen(campRun()), 1));
+    expect(view.slots.map((slot) => [slot.label, slot.tabLabel])).toEqual([
+      ['Special', 'Special'],
+      ['Accessory', 'Accessory'],
+    ]);
   });
 
   it('locks the off hand beside a two-handed weapon', () => {
@@ -107,6 +116,47 @@ describe('toEquipmentScreenView', () => {
 
   it('has nothing to show with an empty roster', () => {
     const view = toEquipmentScreenView(openEquipmentScreen({ ...campRun(), roster: [] }));
-    expect(view).toMatchObject({ units: [], unitName: null, slots: [], gear: [], stats: [], detail: null });
+    expect(view).toMatchObject({ units: [], unitName: null, slots: [], gear: [], stats: [], load: null, detail: null });
+  });
+
+  it('shows the whole stat sheet, the stats before the rates', () => {
+    const view = toEquipmentScreenView(openEquipmentScreen(campRun()));
+    expect(view.stats.map((each) => `${each.group}:${each.label}`)).toEqual([
+      'stats:HP',
+      'stats:STR',
+      'stats:INT',
+      'stats:DEX',
+      'stats:SPD',
+      'stats:LCK',
+      'stats:DEF',
+      'stats:RES',
+      'stats:MOV',
+      'combat:ATK',
+      'combat:HIT',
+      'combat:CRIT',
+      'combat:AVO',
+      'combat:AS',
+    ]);
+  });
+
+  it('shows the load against strength, with the highlighted gear', () => {
+    const run = campRun([{ itemId: 'silver-plate', quantity: 1 }]);
+    const idle = toEquipmentScreenView(openEquipmentScreen(run)).load!;
+    expect(idle.before).toBe(idle.after);
+    const body = confirmEquipment(pointEquipmentCursor(openEquipmentScreen(run), 'slots', 3));
+    const load = toEquipmentScreenView(pointEquipmentCursor(body, 'gear', 0)).load!;
+    expect(load.after).toBeGreaterThan(load.before);
+    expect(load.after).toBeGreaterThan(load.capacity);
+    expect(load.capacity).toBe(run.roster[0].strength);
+  });
+
+  it('names the teammate wearing a choice', () => {
+    const run = campRun();
+    const withBram = { ...run, roster: [...run.roster, { ...run.roster[0], id: 'bram', name: 'Bram' }] };
+    const view = toEquipmentScreenView(confirmEquipment(openEquipmentScreen(withBram)));
+    expect(view.gear.map((choice) => [choice.label, choice.wornBy])).toEqual([
+      ['Remove', null],
+      ['Iron Spear', 'Bram'],
+    ]);
   });
 });

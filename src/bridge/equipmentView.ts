@@ -1,9 +1,10 @@
 // Snapshot of Warband Mode's equipment screen
-// (src/game/warband/equipmentScreen.ts) for React: the units, the picked
-// unit's slots with what each holds, the gear the convoy offers for the
-// picked slot, the unit's numbers before and after the highlighted choice,
-// and what the highlighted item does. Plain frozen data, built fresh from
-// the screen's state.
+// (src/game/warband/equipmentScreen.ts) for React: the units for its tabs,
+// the picked unit's slots with what each holds, the gear on offer for the
+// picked slot (the convoy's, then what teammates wear), the unit's whole
+// stat sheet and load before and after the highlighted choice, and what
+// the highlighted item does. Plain frozen data, built fresh from the
+// screen's state.
 
 import { GEAR_SLOT_LABELS, GEAR_SLOTS, type GearSlot } from '../game/equipment.ts';
 import { ARMOR_WEIGHT_LABELS, type Item } from '../game/items.ts';
@@ -38,6 +39,8 @@ export interface EquipmentUnitView {
 export interface EquipmentSlotView {
   slot: GearSlot;
   label: string;
+  // The slot's tab over the gear list: what goes in it ("Weapons").
+  tabLabel: string;
   item: { label: string; icon: string | null } | null;
   locked: boolean;
 }
@@ -46,6 +49,7 @@ export interface EquipmentSlotView {
 // `tag` names a weapon's family or an armor piece's weight (null for
 // Remove and anything else); `untrained` marks a weapon of a family the
 // unit isn't trained in, which fights without the proficiency bonus.
+// `wornBy` names the teammate wearing it, who loses it if it's taken.
 export interface GearChoiceView {
   key: string;
   label: string;
@@ -54,30 +58,72 @@ export interface GearChoiceView {
   disabled: boolean;
   tag: string | null;
   untrained: boolean;
+  wornBy: string | null;
 }
 
 // One of the unit's numbers, now and with the highlighted choice (`after`
-// is the same as `before` when nothing is highlighted).
+// is the same as `before` when nothing is highlighted). `group` splits the
+// sheet: the unit's stats, then the rates it fights with.
 export interface EquipmentStatView {
   id: EquipmentStatId;
   label: string;
+  group: 'stats' | 'combat';
   before: number;
   after: number;
 }
 
 export type EquipmentStatId =
-  'attack' | 'hit' | 'crit' | 'attackSpeed' | 'avoid' | 'defense' | 'resistance' | 'movement';
+  | 'maxHealth'
+  | 'strength'
+  | 'intelligence'
+  | 'dexterity'
+  | 'speed'
+  | 'luck'
+  | 'defense'
+  | 'resistance'
+  | 'movement'
+  | 'attack'
+  | 'hit'
+  | 'crit'
+  | 'avoid'
+  | 'attackSpeed';
 
-const STATS: readonly [EquipmentStatId, string][] = Object.freeze([
-  ['attack', 'ATK'],
-  ['hit', 'HIT'],
-  ['crit', 'CRIT'],
-  ['attackSpeed', 'AS'],
-  ['avoid', 'AVO'],
-  ['defense', 'DEF'],
-  ['resistance', 'RES'],
-  ['movement', 'MOV'],
+const STATS: readonly (readonly [EquipmentStatId, string, EquipmentStatView['group']])[] = Object.freeze([
+  ['maxHealth', 'HP', 'stats'],
+  ['strength', 'STR', 'stats'],
+  ['intelligence', 'INT', 'stats'],
+  ['dexterity', 'DEX', 'stats'],
+  ['speed', 'SPD', 'stats'],
+  ['luck', 'LCK', 'stats'],
+  ['defense', 'DEF', 'stats'],
+  ['resistance', 'RES', 'stats'],
+  ['movement', 'MOV', 'stats'],
+  ['attack', 'ATK', 'combat'],
+  ['hit', 'HIT', 'combat'],
+  ['crit', 'CRIT', 'combat'],
+  ['avoid', 'AVO', 'combat'],
+  ['attackSpeed', 'AS', 'combat'],
 ]);
+
+// What each slot's tab over the gear list says.
+const SLOT_TABS: Readonly<Record<GearSlot, string>> = Object.freeze({
+  main: 'Weapons',
+  off: 'Shields',
+  head: 'Head',
+  body: 'Body',
+  accessory: 'Accessory',
+  special: 'Special',
+});
+
+// What the unit carries (its weapon's weight and its armor's) against what
+// it carries freely (its strength), now and with the highlighted choice.
+// Every point over costs a point of attack speed, every 4 a point of
+// movement (combatStats.ts).
+export interface EquipmentLoadView {
+  before: number;
+  after: number;
+  capacity: number;
+}
 
 export interface EquipmentScreenView {
   column: EquipmentColumn;
@@ -95,6 +141,7 @@ export interface EquipmentScreenView {
   slotLabel: string | null;
   gear: readonly GearChoiceView[];
   stats: readonly EquipmentStatView[];
+  load: EquipmentLoadView | null;
   // The highlighted item (a gear choice, else the picked slot's gear): its
   // name and what it does. Null over an empty slot or Remove.
   detail: ItemDetail | null;
@@ -114,6 +161,7 @@ export function toEquipmentScreenView(
     return Object.freeze<EquipmentSlotView>({
       slot: each,
       label: GEAR_SLOT_LABELS[each],
+      tabLabel: SLOT_TABS[each],
       item: gear ? Object.freeze({ label: gear.label, icon: getItemSprite(gear.id) }) : null,
       locked: each === 'off' && locked,
     });
@@ -131,21 +179,31 @@ export function toEquipmentScreenView(
             disabled: choice.disabled,
             tag: null,
             untrained: false,
+            wornBy: null,
           }
         : {
-            key: `${choice.item.id}@${choice.convoyIndex}`,
+            key:
+              choice.kind === 'gear' ? `${choice.item.id}@${choice.convoyIndex}` : `${choice.item.id}@${choice.unitId}`,
             label: choice.item.label,
             icon: getItemSprite(choice.item.id),
             remove: false,
             disabled: choice.disabled,
             tag: getGearTag(choice.item),
             untrained: choice.item.kind === 'weapon' && !isTrained(trained, choice.item),
+            wornBy:
+              choice.kind === 'worn'
+                ? (state.run.roster.find((other) => other.id === choice.unitId)?.name ?? null)
+                : null,
           },
     ),
   );
   const highlighted = state.column === 'gear' ? choices[state.gearIndex] : undefined;
   const shown =
-    highlighted?.kind === 'gear' ? highlighted.item : state.column !== 'gear' && slot ? equipment[slot] : undefined;
+    highlighted && highlighted.kind !== 'remove'
+      ? highlighted.item
+      : state.column !== 'gear' && slot
+        ? equipment[slot]
+        : undefined;
 
   const before = unit ? toNumbers(state.run, unit.id, classes, items) : null;
   const preview = previewGearChoice(state, items);
@@ -174,9 +232,12 @@ export function toEquipmentScreenView(
     gear: Object.freeze(gear),
     stats: Object.freeze(
       before && after
-        ? STATS.map(([id, label]) => Object.freeze({ id, label, before: before[id], after: after[id] }))
+        ? STATS.map(([id, label, group]) =>
+            Object.freeze({ id, label, group, before: before.detail[id], after: after.detail[id] }),
+          )
         : [],
     ),
+    load: before && after ? Object.freeze({ before: before.load, after: after.load, capacity: before.capacity }) : null,
     detail: shown ? describeItem(lookUpItem(shown.id, items)) : null,
   });
 }
@@ -189,13 +250,18 @@ function getGearTag(item: Item): string | null {
   return null;
 }
 
-// The unit `unitId`'s numbers in `run`, as its stat sheet works them out.
+// The unit `unitId`'s numbers in `run`, as its stat sheet works them out,
+// with its load (weapon and armor weight) and its strength to carry it.
 function toNumbers(
   run: RunState,
   unitId: string,
   classes: readonly UnitClass[],
   items: readonly Item[],
-): UnitDetailView | null {
+): { detail: UnitDetailView; load: number; capacity: number } | null {
   const snapshot = run.roster.find((unit) => unit.id === unitId);
-  return snapshot ? toUnitDetailView(restoreUnit(snapshot, classes, items)) : null;
+  if (!snapshot) return null;
+  const unit = restoreUnit(snapshot, classes, items);
+  const detail = toUnitDetailView(unit);
+  if (!detail) return null;
+  return { detail, load: (unit.equippedWeapon?.weapon.weight ?? 0) + unit.armorWeight, capacity: unit.strength };
 }
