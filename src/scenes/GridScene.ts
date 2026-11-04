@@ -113,10 +113,11 @@ import { toMerchantScreenView } from '../bridge/merchantView.ts';
 import {
   cancelEquipment,
   confirmEquipment,
-  confirmsEquipmentClick,
   moveEquipmentCursor,
   openEquipmentScreen,
+  pickEquipmentUnit,
   pointEquipmentCursor,
+  stepEquipmentUnit,
   type EquipmentScreenState,
 } from '../game/warband/equipmentScreen.ts';
 import { toEquipmentScreenView } from '../bridge/equipmentView.ts';
@@ -429,6 +430,8 @@ export class GridScene extends Phaser.Scene {
   // The unit the info screen shows while it's open: see the Unit info section.
   unitInfoUnit: Unit | null = null;
   infoKey!: Phaser.Input.Keyboard.Key;
+  // Q and E step through the units' tabs on the equipment screen.
+  tabKeys!: Record<'previous' | 'next', Phaser.Input.Keyboard.Key>;
   keys!: Phaser.Types.Input.Keyboard.CursorKeys;
   arrowRepeat!: KeyRepeatState;
   actionKeys!: Record<ActionKey, Phaser.Input.Keyboard.Key>;
@@ -841,6 +844,10 @@ export class GridScene extends Phaser.Scene {
     }) as Record<ActionKey, Phaser.Input.Keyboard.Key>;
     this.createPointerInput();
     this.infoKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.I); // opens the unit info screen
+    this.tabKeys = this.input.keyboard!.addKeys({
+      previous: Phaser.Input.Keyboard.KeyCodes.Q,
+      next: Phaser.Input.Keyboard.KeyCodes.E,
+    }) as Record<'previous' | 'next', Phaser.Input.Keyboard.Key>;
 
     this.phase = 'deployment'; // 'deployment' | 'battle'
     this.actionMenu = null;
@@ -979,6 +986,8 @@ export class GridScene extends Phaser.Scene {
     const confirm = JustDown(this.actionKeys.confirm) || JustDown(this.actionKeys.confirmAlt) || pointer.confirm;
     const cancel = JustDown(this.actionKeys.cancel) || JustDown(this.actionKeys.cancelAlt) || pointer.cancel;
     const info = JustDown(this.infoKey) || pointer.info;
+    // Read every frame, so a press while nothing uses them doesn't linger.
+    const tab = (JustDown(this.tabKeys.next) ? 1 : 0) - (JustDown(this.tabKeys.previous) ? 1 : 0);
     // Only shading, so it toggles even while the enemy phase plays out.
     if (JustDown(this.actionKeys.dangerZone)) this.toggleDangerZone();
     if (JustDown(this.actionKeys.autoPlay)) this.toggleAutoPlay();
@@ -1012,7 +1021,7 @@ export class GridScene extends Phaser.Scene {
     }
 
     if (this.equipmentScreen) {
-      this.updateEquipmentScreen(dx, dy, confirm, cancel);
+      this.updateEquipmentScreen(dx, dy, confirm, cancel, tab);
       return;
     }
     if (this.merchantScreen) {
@@ -1765,10 +1774,12 @@ export class GridScene extends Phaser.Scene {
     gameStore.setState({ rosterScreen: state && toRosterScreenView(state) });
   }
 
-  updateEquipmentScreen(dx: number, dy: number, confirm: boolean, cancel: boolean) {
+  updateEquipmentScreen(dx: number, dy: number, confirm: boolean, cancel: boolean, tab: number) {
     const state = this.equipmentScreen!;
     if (cancel) {
       this.publishEquipmentScreen(cancelEquipment(state));
+    } else if (tab !== 0) {
+      this.publishEquipmentScreen(stepEquipmentUnit(state, tab));
     } else if (confirm) {
       this.publishEquipmentScreen(confirmEquipment(state));
     } else if (dx !== 0 || dy !== 0) {
@@ -3950,7 +3961,13 @@ export class GridScene extends Phaser.Scene {
         case 'select-equipment':
           if (!this.equipmentScreen) break;
           this.publishEquipmentScreen(pointEquipmentCursor(this.equipmentScreen, command.column, command.index));
-          if (command.type === 'select-equipment' && confirmsEquipmentClick(command.column)) result.confirm = true;
+          if (command.type === 'select-equipment') result.confirm = true;
+          break;
+        case 'select-equipment-unit':
+          if (this.equipmentScreen) this.publishEquipmentScreen(pickEquipmentUnit(this.equipmentScreen, command.index));
+          break;
+        case 'step-equipment-unit':
+          if (this.equipmentScreen) this.publishEquipmentScreen(stepEquipmentUnit(this.equipmentScreen, command.delta));
           break;
         case 'hover-promotion':
         case 'select-promotion':

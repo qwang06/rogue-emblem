@@ -16,6 +16,8 @@ import type { RosterTarget } from '../game/warband/rosterScreen.ts';
 //   { type: 'select-merchant', column, index } — that entry was clicked
 //   { type: 'hover-equipment', column, index }  — pointer is over entry `index` of an equipment screen column
 //   { type: 'select-equipment', column, index } — that entry was clicked
+//   { type: 'select-equipment-unit', index }   — the equipment screen's tab for roster unit `index` was clicked
+//   { type: 'step-equipment-unit', delta }     — step the equipment screen's unit tabs, same as pressing Q (-1) / E (+1)
 //   { type: 'hover-promotion', index }   — pointer is over option `index` of the promotion screen
 //   { type: 'select-promotion', index }  — that option was clicked
 //   { type: 'hover-mentor', column, index }  — pointer is over entry `index` of a mentor screen column
@@ -51,6 +53,8 @@ export type Command =
   | { type: 'select-merchant'; column: MerchantTarget; index: number }
   | { type: 'hover-equipment'; column: EquipmentColumn; index: number }
   | { type: 'select-equipment'; column: EquipmentColumn; index: number }
+  | { type: 'select-equipment-unit'; index: number }
+  | { type: 'step-equipment-unit'; delta: number }
   | { type: 'hover-promotion'; index: number }
   | { type: 'select-promotion'; index: number }
   | { type: 'hover-mentor'; column: MentorColumn; index: number }
