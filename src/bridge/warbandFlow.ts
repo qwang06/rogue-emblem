@@ -9,6 +9,7 @@ import { runStage } from '../game/battleSetup.ts';
 import type { RunState } from '../game/warband/run.ts';
 import { resumeRunSession } from '../game/warband/runCommands.ts';
 import { BATTLE_STATE_DEFAULTS, gameStore } from './gameStore.ts';
+import { publishRunRelics } from './runRelics.ts';
 
 // The screen `run` continues on: 'overworld' or 'battle'.
 export function getRunScreen(run: RunState): 'overworld' | 'battle' {
@@ -21,6 +22,7 @@ export function enterRun(run: RunState): void {
   saveRun(run);
   if (getRunScreen(run) === 'overworld') {
     gameStore.setState({ ...BATTLE_STATE_DEFAULTS, screen: 'overworld', battleSetup: null });
+    publishRunRelics(run);
   } else {
     gameStore.setState({ ...BATTLE_STATE_DEFAULTS, screen: 'battle', battleSetup: runStage(run) });
   }

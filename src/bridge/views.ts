@@ -273,11 +273,13 @@ export interface LevelUpView {
   durationMs: number;
 }
 
-// A relic as the camp lists it.
+// A relic as the camp and the relic bar list it.
 export interface RelicView {
   id: string;
   name: string;
   description: string;
+  // How many copies the warband holds (1 for a keystone).
+  copies: number;
   // The keystone this entry is (its icon, see KEYSTONE_ICON_URLS); absent
   // on a relic.
   keystoneId?: string;
@@ -1001,6 +1003,7 @@ export function toRelicViews(relicIds: readonly string[], stage = 1, keystoneId?
             id: `keystone-${keystone.id}`,
             name: `Keystone: ${keystone.name}`,
             description: keystone.description,
+            copies: 1,
             keystoneId: keystone.id,
           }),
         ]
@@ -1014,6 +1017,7 @@ export function toRelicViews(relicIds: readonly string[], stage = 1, keystoneId?
           id: relic.id,
           name: copies > 1 ? `${relic.name} ×${copies}` : relic.name,
           description: getRelicDescription(relic, stage, copies),
+          copies,
         });
       }),
   ]);
