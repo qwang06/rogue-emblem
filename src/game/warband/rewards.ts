@@ -560,7 +560,7 @@ export function describeReward(
     case 'rest':
       return { label: 'Rest', description: 'The whole warband recovers to full HP and mana.' };
     case 'supplies':
-      return { label: 'Supplies', description: `Every unit with room gets a ${reward.label}.` };
+      return { label: 'Supplies', description: `Every unit with room gets ${withArticle(reward.label, 'a')}.` };
     case 'relic': {
       const relic = findRelic(reward.relicId);
       if (!relic) return { label: reward.relicId, description: '' };
@@ -571,7 +571,7 @@ export function describeReward(
       };
     }
     case 'arms':
-      return { label: 'Arms Cache', description: `A ${reward.label} goes to the convoy.` };
+      return { label: 'Arms Cache', description: `${withArticle(reward.label)} goes to the convoy.` };
     case 'gear':
       return {
         label: reward.label,
@@ -603,9 +603,15 @@ export function describeReward(
   }
 }
 
+// `label` after "A" or "An" (`article` sets the case), as its first letter
+// sounds: "An Iron Spear", "A Health Potion".
+function withArticle(label: string, article: 'A' | 'a' = 'A'): string {
+  return `${/^[aeiou]/i.test(label) ? `${article}n` : article} ${label}`;
+}
+
 // Whether `unit` can take one more `itemId`: it already carries some (and
 // they stack), or has a free inventory slot.
-function canTakeItem(unit: UnitSnapshot, itemId: string): boolean {
+export function canTakeItem(unit: UnitSnapshot, itemId: string): boolean {
   return unit.items.some((entry) => entry.itemId === itemId) || unit.items.length < MAX_INVENTORY_SLOTS;
 }
 

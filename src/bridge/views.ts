@@ -19,6 +19,7 @@ import type { Point } from '../game/grid.ts';
 import type { Team, TurnState } from '../game/turns.ts';
 import type { RunState, UnitSnapshot } from '../game/warband/run.ts';
 import { describeReward, previewRewardHealth, type Reward, type RewardKind } from '../game/warband/rewards.ts';
+import { getRewardFacts, type RewardFact } from '../game/warband/rewardFacts.ts';
 import type { MenuAction } from '../game/actionMenu.ts';
 import { getUnitSkills } from '../game/skills.ts';
 import { getStandingCombatBonus } from '../game/modifiers.ts';
@@ -327,6 +328,12 @@ export interface RewardAction extends MenuAction {
   // Each roster unit's HP after taking it, in roster order, for a reward
   // that restores HP (see previewRewardHealth), else null.
   healthAfter: readonly { health: number; maxHealth: number }[] | null;
+  // What the reward does in numbers (getRewardFacts), for the card's
+  // numbers block; absent when there are none.
+  facts?: readonly RewardFact[];
+  // The gold a button pays (`gain`, Skip) or costs (Reroll), shown with
+  // the coin beside its label; absent on cards.
+  gold?: { amount: number; gain: boolean };
 }
 
 // A roster unit as the reward screen's team panel shows it, so the
@@ -904,6 +911,7 @@ export function toRewardAction(reward: Reward, index: number, run: RunState | nu
         ? MASTER_SEAL.id
         : null;
   const itemIcon = itemId ? getItemSprite(itemId) : null;
+  const facts = getRewardFacts(reward, run);
   return Object.freeze({
     id: `${reward.kind}-${index}`,
     label,
@@ -913,6 +921,7 @@ export function toRewardAction(reward: Reward, index: number, run: RunState | nu
     healthAfter,
     ...(unit ? { sprite: getUnitSprite(unit.classId) } : {}),
     ...(itemIcon ? { itemIcon } : {}),
+    ...(facts.length > 0 ? { facts } : {}),
     ...(reward.kind === 'relic' ? { relicId: reward.relicId } : {}),
     ...(reward.kind === 'keystone' ? { keystoneId: reward.keystoneId } : {}),
   });
@@ -1040,7 +1049,13 @@ export function toRewardMenuActions(
   rewards: readonly Reward[],
   { skipGold, rerollCost, run }: { skipGold: number; rerollCost: number; run: RunState },
 ): readonly RewardAction[] {
-  const button = (kind: 'skip' | 'reroll', label: string, description: string, disabled: boolean): RewardAction =>
+  const button = (
+    kind: 'skip' | 'reroll',
+    label: string,
+    gold: { amount: number; gain: boolean },
+    description: string,
+    disabled: boolean,
+  ): RewardAction =>
     Object.freeze({
       id: kind,
       label,
@@ -1048,12 +1063,19 @@ export function toRewardMenuActions(
       description,
       stats: null,
       healthAfter: null,
+      gold: Object.freeze(gold),
       ...(disabled ? { disabled } : {}),
     });
   return Object.freeze([
     ...rewards.map((reward, index) => toRewardAction(reward, index, run)),
-    button('skip', `Skip (+${skipGold} gold)`, 'Take a little gold instead of a reward.', false),
-    button('reroll', `Reroll (${rerollCost} gold)`, 'Offer three new rewards.', run.gold < rerollCost),
+    button('skip', 'Skip', { amount: skipGold, gain: true }, `Take ${skipGold} gold instead of a reward.`, false),
+    button(
+      'reroll',
+      'Reroll',
+      { amount: rerollCost, gain: false },
+      `Offer new rewards for ${rerollCost} gold.`,
+      run.gold < rerollCost,
+    ),
   ]);
 }
 

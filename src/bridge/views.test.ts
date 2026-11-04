@@ -749,6 +749,7 @@ describe('toRewardAction', () => {
       description: 'A purse of coin, for the camp to come.',
       stats: null,
       healthAfter: null,
+      facts: [{ label: 'Purse', value: '+40', gold: true, wide: true }],
     });
     expect(Object.isFrozen(action)).toBe(true);
   });
@@ -779,6 +780,14 @@ describe('toRewardAction', () => {
     expect(toRewardAction({ kind: 'keystone', keystoneId: 'iron-legion' }, 0).keystoneId).toBe('iron-legion');
     expect(toRewardAction({ kind: 'rest' }, 0)).not.toHaveProperty('keystoneId');
   });
+
+  it("carries the reward's numbers, and none when it has none", () => {
+    expect(toRewardAction({ kind: 'arms', itemId: 'iron-spear', label: 'Iron Spear' }, 0).facts?.[0]).toEqual({
+      label: 'Pow',
+      value: IRON_SPEAR.power,
+    });
+    expect(toRewardAction({ kind: 'seal' }, 0)).not.toHaveProperty('facts');
+  });
 });
 
 describe('toStageClearView', () => {
@@ -800,8 +809,13 @@ describe('toRewardMenuActions', () => {
     const actions = toRewardMenuActions([{ kind: 'rest' }], { skipGold: 15, rerollCost: 10, run: run(30) });
     expect(actions.map(({ id, label }) => [id, label])).toEqual([
       ['rest-0', 'Rest'],
-      ['skip', 'Skip (+15 gold)'],
-      ['reroll', 'Reroll (10 gold)'],
+      ['skip', 'Skip'],
+      ['reroll', 'Reroll'],
+    ]);
+    expect(actions.map(({ gold }) => gold)).toEqual([
+      undefined,
+      { amount: 15, gain: true },
+      { amount: 10, gain: false },
     ]);
     expect(actions.some((action) => action.disabled)).toBe(false);
   });
