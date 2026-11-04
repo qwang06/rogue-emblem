@@ -203,7 +203,11 @@ function EquipmentScreenPanel({ view }: { view: EquipmentScreenView }) {
                               <GlyphIcon kind="lock" /> Both hands busy
                             </span>
                           ) : (
-                            (slot.item?.label ?? <span className="equipment-slots__empty">Empty</span>)
+                            (slot.item?.label ?? (
+                              <span className="equipment-slots__empty" aria-label="Empty">
+                                -
+                              </span>
+                            ))
                           )}
                         </span>
                       </span>
