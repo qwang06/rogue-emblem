@@ -112,8 +112,8 @@ export type RunCommand =
   | { type: 'store'; unitId: string; itemIndex: number }
   // Camp: takes off a unit's gear in `slot`, into the convoy.
   | { type: 'unequip'; unitId: string; slot: GearSlot }
-  // Camp: spends a Master Seal to promote a unit to `promotionId` (see
-  // promotion.ts).
+  // Camp: promotes a unit to `promotionId`, spending a Master Seal on a
+  // second promotion (see promotion.ts).
   | { type: 'promote'; unitId: string; promotionId: string }
   // Camp: the unit `unitId` learns `classId`'s skill set as its secondary,
   // from a mentor or with a scroll (see mentors.ts).
@@ -447,7 +447,7 @@ export function applyRunCommand(
 // from: each starting relic or boon offered on those picks; each reward offer, skip, and reroll when affordable on the pick;
 // at camp, rest when it can, each affordable stock item, each sellable
 // convoy entry, each give, store and equip that's allowed, each promotion
-// the warband has a seal for, and march; while
+// allowed (a second one only with a seal), and march; while
 // travelling, a trip to each site the roads lead to (given the realm).
 export function getLegalRunCommands(
   session: RunSession,

@@ -183,6 +183,13 @@ export function isPromotedClass(classId: string | null): boolean {
   return classId !== null && findPromotion(classId) !== null;
 }
 
+// Whether promoting to `promotion` costs a Master Seal: a unit's first
+// promotion (a villager's, to tier 2) is free, and only the second, to a
+// tier 3 class (an acolyte's Mage or Bishop), needs one.
+export function needsSeal(promotion: Pick<Promotion, 'tier'>): boolean {
+  return promotion.tier > 2;
+}
+
 // Whether a unit of `classId` at `level` can promote: its class has
 // promotions and it has reached PROMOTION_LEVEL.
 export function canPromote(unit: { classId: string; level: number }): boolean {

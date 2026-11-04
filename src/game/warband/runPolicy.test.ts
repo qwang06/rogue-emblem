@@ -197,13 +197,21 @@ describe('planCamp', () => {
     );
   });
 
-  it("doesn't pick a promotion without a seal", () => {
+  const acolyte = () => new Acolyte({ name: 'Ida', team: 'player' });
+
+  it('picks a first promotion without a seal', () => {
     const run = withUnit(makeRun({ a: villager() }, { gold: 0 }), 'a', (unit) => ({ ...unit, level: PROMOTION_LEVEL }));
+    expect(pickPromotion(run, run.roster[0])).not.toBeNull();
+    expect(playCamp(run)[0].type).toBe('promote');
+  });
+
+  it("doesn't pick a second promotion without a seal", () => {
+    const run = withUnit(makeRun({ a: acolyte() }, { gold: 0 }), 'a', (unit) => ({ ...unit, level: PROMOTION_LEVEL }));
     expect(pickPromotion(run, run.roster[0])).toBeNull();
   });
 
-  it('buys a seal for a unit that can promote when it has gold to spare', () => {
-    const run = withUnit(makeRun({ a: villager() }, { gold: 200 }), 'a', (unit) => ({
+  it('buys a seal for a second promotion when it has gold to spare', () => {
+    const run = withUnit(makeRun({ a: acolyte() }, { gold: 200 }), 'a', (unit) => ({
       ...unit,
       level: PROMOTION_LEVEL,
     }));
@@ -212,7 +220,7 @@ describe('planCamp', () => {
         .map((command) => command.type)
         .slice(0, 2),
     ).toEqual(['buy', 'promote']);
-    const poor = withUnit(makeRun({ a: villager() }, { gold: 60 }), 'a', (unit) => ({
+    const poor = withUnit(makeRun({ a: acolyte() }, { gold: 60 }), 'a', (unit) => ({
       ...unit,
       level: PROMOTION_LEVEL,
     }));

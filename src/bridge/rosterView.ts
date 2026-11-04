@@ -181,7 +181,8 @@ export function describeItem(item: Item): ItemDetail {
     const weight = item.weightClass ? ` · ${ARMOR_WEIGHT_LABELS[item.weightClass]}` : '';
     return describe(`${ARMOR_SLOT_LABELS[item.slot]}${weight} · ${stats}`);
   }
-  if (item.kind === 'seal') return describe(`Spent at camp to promote a unit of level ${PROMOTION_LEVEL} or more.`);
+  if (item.kind === 'seal')
+    return describe(`Spent at camp on a second promotion (to a tier 3 class), from level ${PROMOTION_LEVEL}.`);
   return describe(`Restores up to ${item.amount} ${item.stat === 'health' ? 'HP' : 'mana'}.`);
 }
 

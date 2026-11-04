@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { Acolyte } from '../Acolyte.ts';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
 import { Villager } from '../Villager.ts';
@@ -77,9 +78,16 @@ describe('the Promote action', () => {
     ]);
   });
 
-  it('is disabled without a seal', () => {
-    const promote = (seals: number) =>
-      getCampActions(promotable(campRun(100), seals)).find((action) => action.id === 'promote');
+  it('is open without a seal for a first promotion', () => {
+    const promote = getCampActions(promotable(campRun(100), 0)).find((action) => action.id === 'promote');
+    expect(promote?.disabled).toBe(false);
+  });
+
+  it('is disabled without a seal when only a second promotion is open', () => {
+    const run = campRun(100);
+    const acolyte = createRun(7, new Map<string, Unit>([['ida', new Acolyte({ name: 'Ida', team: 'player' })]]));
+    const withAcolyte = (seals: number) => promotable({ ...run, roster: [run.roster[0], acolyte.roster[0]] }, seals);
+    const promote = (seals: number) => getCampActions(withAcolyte(seals)).find((action) => action.id === 'promote');
     expect(promote(1)?.disabled).toBe(false);
     expect(promote(0)?.disabled).toBe(true);
   });

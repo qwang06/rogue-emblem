@@ -9,6 +9,7 @@ import {
   getPromotionGains,
   getPromotions,
   isPromotedClass,
+  needsSeal,
   promoteUnit,
   PROMOTION_LEVEL,
   PROMOTIONS,
@@ -91,6 +92,13 @@ describe('lookups', () => {
     expect(isPromotedClass('villager')).toBe(false);
     expect(isPromotedClass('scout')).toBe(false);
     expect(isPromotedClass(null)).toBe(false);
+  });
+});
+
+describe('needsSeal', () => {
+  it('lets a first promotion (tier 2) go free and asks a seal for a second (tier 3)', () => {
+    for (const id of ['archer', 'soldier', 'vanguard', 'sapper']) expect(needsSeal(findPromotion(id)!)).toBe(false);
+    for (const id of ['mage', 'bishop']) expect(needsSeal(findPromotion(id)!)).toBe(true);
   });
 });
 

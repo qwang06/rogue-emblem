@@ -10,7 +10,7 @@
 // alone.
 
 import type { MenuAction } from '../actionMenu.ts';
-import { countSeals, getPromotionCandidates } from './promotion.ts';
+import { canAnyonePromote, getPromotionCandidates } from './promotion.ts';
 import { getLessons, MENTORS_ENABLED } from './mentors.ts';
 import { getRunHeatRules } from './heat.ts';
 import { FIELD_KITCHEN, hasRelic } from './relics.ts';
@@ -34,7 +34,8 @@ export interface CampAction extends MenuAction {
 }
 
 // The camp menu for `run`. Promote shows once a unit could promote, and is
-// disabled while the warband holds no Master Seal. Rest names its cost and
+// disabled while nobody can take a promotion now (a second promotion needs a
+// Master Seal the warband doesn't hold). Rest names its cost and
 // is disabled when the warband can't afford it or nobody needs it; Mentors
 // is disabled while nobody can take a lesson (canTakeLesson), and only shows
 // when `mentors` is on (MENTORS_ENABLED, off for now). A run on the realm (see
@@ -48,7 +49,7 @@ export function getCampActions(run: RunState, mentors: boolean = MENTORS_ENABLED
       { id: 'equipment', label: 'Equipment' },
       ...(hasMerchant(run) ? [{ id: 'merchant', label: 'Merchant' }] : []),
       ...(getPromotionCandidates(run).length > 0
-        ? [{ id: 'promote', label: 'Promote', disabled: countSeals(run) === 0 }]
+        ? [{ id: 'promote', label: 'Promote', disabled: !canAnyonePromote(run) }]
         : []),
       { id: 'rest', label: cost > 0 ? `Rest (${cost} gold)` : 'Rest (free)', disabled: !canRest(run) },
       ...(mentors ? [{ id: 'mentors', label: 'Mentors', disabled: !canTakeLesson(run) }] : []),

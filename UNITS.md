@@ -117,7 +117,7 @@ Carries a Wooden Sword (its Fists are innate), a Health Potion (+5 HP) and a Man
 
 ## Promotions
 
-In Warband Mode a villager or an acolyte that has reached **level 5** can promote at camp by spending a **Master Seal** (60 gold from the merchant, or a stage reward offered once someone is a level short of promoting and the warband holds none). A villager picks one of four tier-2 classes; an acolyte picks one of two tier-3 classes, the Mage or the Bishop, also with a Master Seal; they're defined in `src/game/promotions.ts`. A promotion:
+In Warband Mode a villager or an acolyte that has reached **level 5** can promote at camp. A villager's first promotion, to one of four tier-2 classes, is **free**. An acolyte's promotion to one of two tier-3 classes, the Mage or the Bishop, is a second promotion and spends a **Master Seal** (60 gold from the merchant, or a stage reward offered once someone is a level short of a second promotion and the warband holds none); they're defined in `src/game/promotions.ts`. A promotion:
 
 - makes the unit that class: its growths, weapon types, XP rate and skill tree;
 - adds whatever stats the class starts above the class it promotes from, on the spot, in full (a max HP or MP gain raises the current value too), and changes MOV by the difference;

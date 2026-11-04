@@ -4,7 +4,7 @@
 // built fresh from the screen's state.
 
 import type { GrowthStat } from '../game/experience.ts';
-import { findPromotion, getPromotionGains } from '../game/promotions.ts';
+import { findPromotion, getPromotionGains, needsSeal } from '../game/promotions.ts';
 import { SKILL_TREES } from '../game/skills.ts';
 import { getUnitSprite } from '../game/tileset.ts';
 import { UNIT_CLASSES, type UnitClass } from '../game/unitClasses.ts';
@@ -29,6 +29,9 @@ export interface PromotionDetailView {
   toClass: string;
   // The tier of the class it promotes to (2 or 3).
   tier: number;
+  // Whether it spends a Master Seal: a second promotion (tier 3) does, a
+  // first (tier 2) is free.
+  needsSeal: boolean;
   sprite: string;
   description: string;
   gains: readonly { label: string; value: number }[];
@@ -96,6 +99,7 @@ function toDetail(
     fromClass: classes.find((unitClass) => unitClass.id === snapshot.classId)?.label ?? snapshot.classId,
     toClass: promotion.label,
     tier: promotion.tier,
+    needsSeal: needsSeal(promotion),
     sprite: getUnitSprite(promotion.id),
     description: promotion.description,
     gains: Object.freeze(

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { Acolyte } from '../Acolyte.ts';
 import { MASTER_SEAL } from '../items.ts';
 import { PROMOTION_LEVEL } from '../promotions.ts';
 import type { Unit } from '../Unit.ts';
@@ -16,12 +17,15 @@ import { createRun, type RunState } from './run.ts';
 
 const SEAL = { itemId: MASTER_SEAL.id, quantity: 1 };
 
-function campRun(seals = 1): RunState {
+// Ada and Bryn at camp: villagers, whose first promotion is free, or with
+// `acolytes`, acolytes, whose promotion to tier 3 needs a seal.
+function campRun(seals = 1, acolytes = false): RunState {
+  const Class = acolytes ? Acolyte : Villager;
   const run = createRun(
     3,
     new Map<string, Unit>([
-      ['ada', new Villager({ name: 'Ada', team: 'player' })],
-      ['bryn', new Villager({ name: 'Bryn', team: 'player' })],
+      ['ada', new Class({ name: 'Ada', team: 'player' })],
+      ['bryn', new Class({ name: 'Bryn', team: 'player' })],
     ]),
   );
   return {
@@ -45,9 +49,13 @@ describe('getPromotionOptions', () => {
     ]);
   });
 
-  it('disables every option without a seal', () => {
-    expect(getPromotionOptions(campRun(0)).every((option) => option.disabled)).toBe(true);
-    expect(getPromotionOptions(campRun(1)).some((option) => option.disabled)).toBe(false);
+  it('leaves a first promotion open without a seal', () => {
+    expect(getPromotionOptions(campRun(0)).some((option) => option.disabled)).toBe(false);
+  });
+
+  it('disables a second promotion without a seal', () => {
+    expect(getPromotionOptions(campRun(0, true)).every((option) => option.disabled)).toBe(true);
+    expect(getPromotionOptions(campRun(1, true)).some((option) => option.disabled)).toBe(false);
   });
 });
 
@@ -75,7 +83,7 @@ describe('the promotion screen', () => {
   });
 
   it('does nothing on a disabled option', () => {
-    const open = openPromotionScreen(campRun(0));
+    const open = openPromotionScreen(campRun(0, true));
     expect(confirmPromotion(open)).toBe(open);
   });
 
