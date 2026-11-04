@@ -208,10 +208,9 @@ button.equipment-categories__tab:hover {
 
 /* ---- The stat sheet ---- */
 
-/* The unit's stats beside the rates it fights with: label, now, with the
-   highlighted gear. Fixed columns and tabular figures, so a value changing
-   never moves another; an unchanged value is dimmed so the gains and
-   losses stand out. */
+/* The unit's stats beside the rates it fights with: label, now, and the
+   change the highlighted gear makes. Fixed columns and tabular figures,
+   so a value changing never moves another. */
 .equipment-sheet {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -227,8 +226,8 @@ button.equipment-categories__tab:hover {
 
 .equipment-sheet__row {
   display: grid;
-  grid-template-columns: 1fr 3.5ch 3.5ch;
-  column-gap: 6px;
+  grid-template-columns: 1fr 3.5ch 5ch;
+  column-gap: 4px;
   align-items: center;
   height: 1.2em;
   font-size: 0.75rem;
@@ -244,19 +243,35 @@ button.equipment-categories__tab:hover {
   text-align: right;
 }
 
-.equipment-sheet__after--same {
-  color: var(--fg-dim);
-  opacity: 0.6;
+/* The arrow and the new number, only while the highlighted gear changes
+   the stat; hidden (its space kept) otherwise. */
+.equipment-sheet__change {
+  display: flex;
+  justify-content: space-between;
+  visibility: hidden;
 }
 
-.equipment-sheet__after--up,
-.equipment-load__after--up {
+.equipment-sheet__change--up,
+.equipment-sheet__change--down {
+  visibility: visible;
+}
+
+.equipment-sheet__change--up {
   color: var(--green);
 }
 
-.equipment-sheet__after--down,
-.equipment-load__after--down {
+.equipment-sheet__change--down {
   color: var(--red);
+}
+
+/* Like a stat's change, shown only when the load changes. */
+.equipment-load__after {
+  visibility: hidden;
+}
+
+.equipment-load__after--up,
+.equipment-load__after--down {
+  visibility: visible;
 }
 
 /* Weight against strength: the bar fills to the load with the

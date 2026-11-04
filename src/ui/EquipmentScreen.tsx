@@ -47,24 +47,21 @@ function Icon({ icon }: { icon: string | null }) {
   return url ? <img className="roster-screen__icon" src={url} alt="" /> : <span className="roster-screen__icon" />;
 }
 
-// One line of the stat sheet: the number now and with the highlighted
-// gear. Both are always drawn (the after one dimmed while it matches), so
-// moving through the gear only recolors the row.
+// One line of the stat sheet: the number now and, only when the
+// highlighted gear changes it, a colored arrow and the new number. The
+// change's cell is always laid out (hidden while nothing changes), so
+// moving through the gear never moves a number.
 function StatRow({ stat }: { stat: EquipmentStatView }) {
   const change = Math.sign(stat.after - stat.before);
-  const tone =
-    change > 0
-      ? ' equipment-sheet__after--up'
-      : change < 0
-        ? ' equipment-sheet__after--down'
-        : ' equipment-sheet__after--same';
+  const tone = change > 0 ? ' equipment-sheet__change--up' : change < 0 ? ' equipment-sheet__change--down' : '';
   return (
     <li className="equipment-sheet__row">
       <span className="equipment-sheet__label">{stat.label}</span>
       <span className="equipment-sheet__value">{stat.before}</span>
-      <span className={`equipment-sheet__value equipment-sheet__after${tone}`}>
+      <span className={`equipment-sheet__change${tone}`} aria-hidden={change === 0 ? 'true' : undefined}>
+        <span aria-hidden="true">→</span>
         <span className="visually-hidden"> becomes </span>
-        {stat.after}
+        <span className="equipment-sheet__value">{stat.after}</span>
       </span>
     </li>
   );
@@ -85,7 +82,12 @@ function LoadMeter({ load }: { load: EquipmentLoadView }) {
       <div className="equipment-load__text">
         <span className="equipment-sheet__label">Load</span>
         <span className="equipment-load__numbers">
-          {load.before} → <span className={`equipment-load__after${tone}`}>{load.after}</span> / {load.capacity}
+          {load.before}
+          <span className={`equipment-load__after${tone}`} aria-hidden={change === 0 ? 'true' : undefined}>
+            {' → '}
+            {load.after}
+          </span>{' '}
+          / {load.capacity}
         </span>
       </div>
       <div className="equipment-load__bar" aria-hidden="true">
