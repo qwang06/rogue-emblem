@@ -29,6 +29,7 @@ import {
   type MapGenOptions,
 } from './mapGen.ts';
 import { getZones, pickZonedStart } from './mapZones.ts';
+import type { SetPiece } from './setPieces.ts';
 import { randomInt, randomItem } from './rng.ts';
 
 export interface BattlePlan {
@@ -108,8 +109,13 @@ export interface PlannedTerrain extends GeneratedTerrain {
 // Builds a map the planned way (see the top of this file) from the same
 // options generateTerrain takes; `routes` sets how many routes lead north.
 // The path starts in the middle of the deployment zone, and each side
-// route from the deployment tile on its anchor's side.
-export function generatePlannedTerrain(options: MapGenOptions, rng: Rng): PlannedTerrain {
+// route from the deployment tile on its anchor's side. `setPieces` are
+// dropped in where their roles' zones are (see fillTerrain).
+export function generatePlannedTerrain(
+  options: MapGenOptions,
+  rng: Rng,
+  setPieces: readonly SetPiece[] = [],
+): PlannedTerrain {
   const { width, height, turnChance, routes } = { ...MAP_GEN_DEFAULTS, ...withoutUndefined(options) };
   if (width < 3 || height < 3) throw new Error('A generated map needs to be at least 3x3');
   const plan = planBattle(width, height, routes, rng);
@@ -120,8 +126,13 @@ export function generatePlannedTerrain(options: MapGenOptions, rng: Rng): Planne
   );
   const enemySide = [...plan.anchors, path[path.length - 1]];
   const zones = getZones(width, height, plan.deploymentZone, enemySide, [...path, ...sideRoutes.flat()]);
-  const terrain = fillTerrain(options, rng, path, sideRoutes.flat(), (kind, index, starts, r) =>
-    pickZonedStart(zones, kind, index, starts, r),
+  const terrain = fillTerrain(
+    options,
+    rng,
+    path,
+    sideRoutes.flat(),
+    (kind, index, starts, r) => pickZonedStart(zones, kind, index, starts, r),
+    { setPieces },
   );
   return { ...terrain, plan, routes: sideRoutes };
 }
@@ -137,6 +148,7 @@ export function generateArchetypeTerrain(
   options: MapGenOptions,
   archetype: Exclude<MapArchetype, 'advance'>,
   rng: Rng,
+  setPieces: readonly SetPiece[] = [],
 ): GeneratedTerrain {
   const { width, height } = options;
   if (width < 6 || height < 6) throw new Error(`A ${archetype} map needs to be at least 6x6`);
@@ -150,7 +162,7 @@ export function generateArchetypeTerrain(
     plan.path,
     routes,
     (kind, index, starts, r) => pickZonedStart(zones, kind, index, starts, r),
-    { grid, reserved: plan.reserved, buildings: plan.buildings },
+    { grid, reserved: plan.reserved, buildings: plan.buildings, setPieces },
   );
   return {
     ...terrain,
@@ -162,9 +174,11 @@ export function generateArchetypeTerrain(
 
 // The map from `options.archetype`'s plan when it names one other than
 // 'advance', else from whichever generator `options.generator` names
-// (classic when unset).
-export function generateMap(options: MapGenOptions, rng: Rng): GeneratedTerrain {
+// (classic when unset), with `setPieces` dropped in.
+export function generateMap(options: MapGenOptions, rng: Rng, setPieces: readonly SetPiece[] = []): GeneratedTerrain {
   const { archetype } = options;
-  if (archetype && archetype !== 'advance') return generateArchetypeTerrain(options, archetype, rng);
-  return options.generator === 'planned' ? generatePlannedTerrain(options, rng) : generateTerrain(options, rng);
+  if (archetype && archetype !== 'advance') return generateArchetypeTerrain(options, archetype, rng, setPieces);
+  return options.generator === 'planned'
+    ? generatePlannedTerrain(options, rng, setPieces)
+    : generateTerrain(options, rng, setPieces);
 }

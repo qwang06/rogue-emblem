@@ -19,6 +19,7 @@ const EXPLAINED = [
   'meadows',
   'ruins',
   'buildings',
+  'setPieces',
   'enemies',
   'count',
   'minDistance',

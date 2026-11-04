@@ -1,0 +1,70 @@
+{
+  "pieces": [
+    {
+      "name": "Bandit camp",
+      "role": "outpost",
+      "rows": ["#####", "#...#", "#c.c#", "##+##"]
+    },
+    {
+      "name": "Ruined chapel",
+      "role": "cover",
+      "rows": [".#.#.", "#.t.#", "....."]
+    },
+    {
+      "name": "Watchtower",
+      "role": "cover",
+      "rows": ["?...?", "T.p.T", ".....", "?\".\"?"]
+    },
+    {
+      "name": "Grove",
+      "role": "cover",
+      "seasons": ["summer", "autumn", "winter"],
+      "rows": ["?TT??", "TT\"TT", "?T\"\"T", "??TT?"]
+    },
+    {
+      "name": "Shrine",
+      "role": "cover",
+      "rows": ["?\"?", "\"o\"", "?\"?"]
+    },
+    {
+      "name": "Pond",
+      "role": "flank",
+      "rows": ["?\"\"\"?", "\"~~~\"", "\"~~~\"", "?\"\"\"?"]
+    },
+    {
+      "name": "Rock garden",
+      "role": "flank",
+      "rows": ["?^^?", "^^T^", "?T\"?"]
+    },
+    {
+      "name": "Mine works",
+      "role": "flank",
+      "seasons": ["summer", "winter", "underworld"],
+      "rows": ["?^^.^", "^^.m.", "?.k.."]
+    },
+    {
+      "name": "Farmstead",
+      "role": "homestead",
+      "seasons": ["summer", "autumn"],
+      "rows": ["\"\"\"\"", "\"h\"w", "\"\"\"\"", "r\"\"?"]
+    },
+    {
+      "name": "Broken wall",
+      "role": "cover",
+      "seasons": ["underworld", "winter"],
+      "rows": ["#..", "..#", "#.."]
+    },
+    {
+      "name": "Stone circle",
+      "role": "cover",
+      "seasons": ["winter", "autumn", "underworld"],
+      "rows": ["?^.^?", "^...^", "?^.^?"]
+    },
+    {
+      "name": "Gold strike",
+      "role": "outpost",
+      "seasons": ["underworld", "winter", "autumn"],
+      "rows": ["?.?", "^g^", "?.?"]
+    }
+  ]
+}

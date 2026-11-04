@@ -7,9 +7,10 @@
 //   1. carvePath      — a one-tile-wide dirt path, south edge to north edge
 //   2. placeCastle    — a castle beside the path near the north edge
 //   3. placeRuin      — a ring of wall with a gap, a building inside
-//   4. placeBuildings — a few lone buildings on open grass
-//   5. growPatch      — blobs of water, mountain, forest and meadow
-//   6. getReachable   — which tiles can be walked to from the south end
+//   4. set pieces     — hand-made bits of map (setPieces.ts), when given
+//   5. placeBuildings — a few lone buildings on open grass
+//   6. growPatch      — blobs of water, mountain, forest and meadow
+//   7. getReachable   — which tiles can be walked to from the south end
 // The path is laid first and nothing impassable (water, mountains, walls)
 // goes on it or next to it, so the two ends of the map are always
 // connected. Buildings stand on grass and keep a tile of open ground around
@@ -23,6 +24,7 @@ import { randomInt, randomItem, shuffle } from './rng.ts';
 import { DEFAULT_TERRAIN_LEGEND } from './terrainMap.ts';
 import { BUILDING_ART } from './tileset.ts';
 import type { MapArchetype } from './mapArchetypes.ts';
+import { getPieceCenter, getPieceOrigins, stampPiece, type SetPiece } from './setPieces.ts';
 
 type Range = readonly [number, number];
 
@@ -50,6 +52,10 @@ export interface MapGenOptions {
   forestSize?: Range;
   meadows?: number;
   meadowSize?: Range;
+  // How many hand-made set pieces (setPieces.ts) a stage's map tries to
+  // drop in; one per TILES_PER_SET_PIECE tiles when unset (see layOutStage
+  // in warband/stageLevel.ts).
+  setPieces?: number;
   // Whether to try to put a castle beside the north end of the path.
   castle?: boolean;
   // How many walled ruins and lone buildings to try to place.
@@ -73,6 +79,13 @@ export interface GeneratedTerrain {
   deploymentZone?: Point[];
   enemyZones?: Point[][];
   seizeTile?: Point;
+  // The set pieces dropped in (setPieces.ts), each by name with its
+  // top-left corner; unset when none were given.
+  setPieces?: PlacedSetPiece[];
+}
+
+export interface PlacedSetPiece extends Point {
+  name: string;
 }
 
 // What the lone buildings are picked from: everything but the castle, the
@@ -318,7 +331,7 @@ export const MAP_GEN_DEFAULTS = Object.freeze({
   generator: 'classic',
   routes: 3,
   archetype: 'advance',
-}) satisfies Required<Omit<MapGenOptions, 'width' | 'height'>>;
+}) satisfies Required<Omit<MapGenOptions, 'width' | 'height' | 'setPieces'>>;
 
 // `options` without its unset keys, so spreading it keeps the defaults.
 export function withoutUndefined(options: MapGenOptions): MapGenOptions {
@@ -330,10 +343,15 @@ export function withoutUndefined(options: MapGenOptions): MapGenOptions {
 // deploys). Water, mountains and the ruin's walls also keep a tile clear of
 // the path; forests and meadows may run right up to it. Every building
 // and the ruin keep a tile of open grass around them.
-export function generateTerrain(options: MapGenOptions, rng: Rng): GeneratedTerrain {
+// `setPieces` are dropped in after the castle (see fillTerrain).
+export function generateTerrain(
+  options: MapGenOptions,
+  rng: Rng,
+  setPieces: readonly SetPiece[] = [],
+): GeneratedTerrain {
   const { width, height, turnChance } = { ...MAP_GEN_DEFAULTS, ...withoutUndefined(options) };
   if (width < 3 || height < 3) throw new Error('A generated map needs to be at least 3x3');
-  return fillTerrain(options, rng, carvePath(width, height, rng, turnChance));
+  return fillTerrain(options, rng, carvePath(width, height, rng, turnChance), [], undefined, { setPieces });
 }
 
 // Everything generateTerrain does after carving the path: lays `path` as
@@ -347,11 +365,13 @@ export type PatchStartPicker = (terrain: string, index: number, starts: readonly
 // What a map archetype lays down before the fill (see mapArchetypes.ts):
 // `grid`, the terrain to fill around (grass where it's open; all grass when
 // unset), `reserved`, tiles nothing is placed on (the top row and bottom two
-// rows when unset), and `buildings` already standing.
+// rows when unset), and `buildings` already standing. `setPieces` are
+// hand-made bits of map to drop in (setPieces.ts).
 export interface FillFrame {
   grid?: Grid;
   reserved?: readonly Point[];
   buildings?: readonly BuildingPlacement[];
+  setPieces?: readonly SetPiece[];
 }
 
 export function fillTerrain(
@@ -408,6 +428,27 @@ export function fillTerrain(
     const placed = placeCastle(grid, path, rng, edges);
     if (placed) addBuilding(placed);
   }
+  // Each set piece goes where it fits (see canPlacePiece), centered in the
+  // zone its role asks for (pickStart with "piece:<role>"), then keeps a
+  // tile of its own around it, like a building; one that fits nowhere is
+  // left out. Its walls and water keep clear of the road only, not of the
+  // other routes (it may close one off; the map's checks and score see to
+  // it that enough stay open), or a walled camp would never fit.
+  const nearRoad = withMargin(path);
+  const placedPieces: PlacedSetPiece[] = [];
+  (frame.setPieces ?? []).forEach((piece, i) => {
+    const limits = { blocked: union(edges, structures), nearRoutes: nearRoad, covered: covered() };
+    const origins = getPieceOrigins(grid, piece, limits);
+    if (origins.length === 0) return;
+    const centers = origins.map((origin) => getPieceCenter(piece, origin));
+    const center = pickStart(`piece:${piece.role}`, i, centers, rng);
+    const origin = origins[centers.indexOf(center)];
+    const stamped = stampPiece(grid, piece, origin);
+    placedPieces.push({ name: piece.name, ...origin });
+    grid = stamped.tiles.reduce((g, p) => setTerrain(g, p.x, p.y, p.terrain), grid);
+    withMargin(stamped.tiles).forEach((k) => structures.add(k));
+    stamped.buildings.forEach(addBuilding);
+  });
   for (let i = 0; i < ruins; i++) {
     const ruin = placeRuin(grid, rng, union(edges, nearPath, structures));
     if (!ruin) break;
@@ -436,7 +477,7 @@ export function fillTerrain(
     }
   }
 
-  return { grid, path: [...path], buildings };
+  return { grid, path: [...path], buildings, ...(frame.setPieces ? { setPieces: placedPieces } : {}) };
 }
 
 // The grid as text rows, one character per tile, using the inverse of a

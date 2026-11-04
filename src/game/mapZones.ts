@@ -54,14 +54,21 @@ export function getZones(
   return zones;
 }
 
-// Which zones each terrain's patches start in. A terrain with several
-// lists takes them in turn, patch by patch (so forests alternate between
-// the midfield and each side's start, keeping cover even); a terrain not
+// Which zones each terrain's patches start in, and each set piece role's
+// pieces are centered in ("piece:<role>", see setPieces.ts). A terrain with
+// several lists takes them in turn, patch by patch (so forests alternate
+// between the midfield and each side's start, keeping cover even); one not
 // listed starts anywhere.
 export const PATCH_ZONES: Readonly<Record<string, readonly (readonly Zone[])[]>> = Object.freeze({
   water: [['flank']],
   mountain: [['flank']],
   forest: [['midfield'], ['home'], ['enemyHome']],
+  // Cover where the sides meet, obstacles and ponds out of the way, a
+  // camp where the enemy starts, a farm off to the side or near home.
+  'piece:cover': [['midfield']],
+  'piece:flank': [['flank']],
+  'piece:outpost': [['enemyHome']],
+  'piece:homestead': [['home', 'flank']],
 });
 
 // Picks where patch number `index` of `terrain` starts, out of `starts`
