@@ -108,7 +108,7 @@ const STATS: readonly (readonly [EquipmentStatId, string, EquipmentStatView['gro
 // What each slot's tab over the gear list says.
 const SLOT_TABS: Readonly<Record<GearSlot, string>> = Object.freeze({
   main: 'Weapons',
-  off: 'Shields',
+  off: 'Off-hand',
   head: 'Head',
   body: 'Body',
   accessory: 'Accessory',
