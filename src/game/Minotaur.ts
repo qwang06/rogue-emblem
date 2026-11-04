@@ -34,7 +34,7 @@ export const MINOTAUR_GROWTHS = Object.freeze({
 });
 
 // The weapon types a minotaur can wield.
-export const MINOTAUR_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
+export const MINOTAUR_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['natural']);
 
 // What a minotaur carries into battle: only its Great Axe, which never
 // breaks. Monsters carry no potions.

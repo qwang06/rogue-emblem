@@ -36,7 +36,7 @@ export const BISHOP_GROWTHS = Object.freeze({
 });
 
 // The weapon types a bishop can wield: magical ones, like the acolyte.
-export const BISHOP_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['magical']);
+export const BISHOP_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['staff', 'tome']);
 
 // What a fresh bishop carries into battle: the Light spell it knows, a
 // Heal staff and the potions.

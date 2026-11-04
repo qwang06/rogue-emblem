@@ -40,6 +40,8 @@ import {
 import {
   createLoadout,
   getArmorDefense,
+  getArmorAvoid,
+  getArmorResistance,
   getArmorWeight,
   getGearCurses,
   getGearLayout,
@@ -355,6 +357,16 @@ export class Unit {
   // What its worn armor adds to its defense against physical hits.
   get armorDefense(): number {
     return getArmorDefense(this.equipment);
+  }
+
+  // What its worn armor adds to avoid (light armor).
+  get armorAvoid(): number {
+    return getArmorAvoid(this.equipment);
+  }
+
+  // What its worn armor adds to resistance against magical hits (cloth).
+  get armorResistance(): number {
+    return getArmorResistance(this.equipment);
   }
 
   // What its worn armor weighs; it slows the unit along with its weapon.

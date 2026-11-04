@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { Soldier } from '../Soldier.ts';
 import type { Unit } from '../Unit.ts';
 import { FISTS, IRON_BOW, IRON_SPEAR, WOODEN_SWORD } from '../weapons.ts';
-import { MERCHANT_STOCK } from './merchant.ts';
+import { WOODEN_BOW } from '../gearLadder.ts';
+import { getMerchantStock } from './merchant.ts';
+
+// What the merchant sells on the first stage, where these runs stand.
+const MERCHANT_STOCK = getMerchantStock(1);
 import {
   cancelMerchant,
   confirmMerchant,
@@ -70,15 +74,15 @@ describe('pointMerchantCursor', () => {
 
 describe('confirmMerchant', () => {
   it('asks who a stock item is for, opening on the convoy when it suits no unit', () => {
-    const bow = pointMerchantCursor(openMerchantScreen(campRun(45)), 'stock', MERCHANT_STOCK.indexOf(IRON_BOW.id));
+    const bow = pointMerchantCursor(openMerchantScreen(campRun(20)), 'stock', MERCHANT_STOCK.indexOf(WOODEN_BOW.id));
     const asking = confirmMerchant(bow);
-    expect(asking.run.gold).toBe(45);
+    expect(asking.run.gold).toBe(20);
     expect(asking.recipients!.actions.map((action) => action.id)).toEqual(['alden', CONVOY_RECIPIENT]);
     expect(asking.recipients!.selectedIndex).toBe(1);
     const after = confirmMerchant(asking);
     expect(after.recipients).toBeNull();
     expect(after.run.gold).toBe(0);
-    expect(after.run.convoy).toEqual([{ itemId: IRON_BOW.id, quantity: 1 }]);
+    expect(after.run.convoy).toEqual([{ itemId: WOODEN_BOW.id, quantity: 1 }]);
   });
 
   it('opens on a unit the item suits, and equips it straight on that unit', () => {

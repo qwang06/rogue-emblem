@@ -37,9 +37,9 @@ describe('Vanguard', () => {
     expect(vanguard.growths).toBe(VANGUARD_GROWTHS);
   });
 
-  it('is trained in physical weapons and wields any', () => {
+  it('is trained in its families and wields any weapon', () => {
     const vanguard = new Vanguard({ team: 'player', items: [weaponEntry(FIRE)] });
-    expect(vanguard.weaponTypes).toEqual(['physical']);
+    expect(vanguard.weaponTypes).toEqual(['axe', 'sword']);
     expect(vanguard.weapon).toBe(FIRE);
   });
 

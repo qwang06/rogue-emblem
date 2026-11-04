@@ -33,7 +33,7 @@ export const RAM_GROWTHS = Object.freeze({
 });
 
 // The weapon types it can wield.
-export const RAM_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
+export const RAM_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['natural']);
 
 // What it carries into battle: only its Tackle, which never breaks.
 export const RAM_ITEMS: Inventory = Object.freeze([weaponEntry(TACKLE)]);

@@ -65,11 +65,10 @@ describe('Unit', () => {
   });
 
   describe('weapons', () => {
-    const armed = (items: InventoryEntry[], weaponTypes: WeaponType[] = ['physical']) =>
-      makeUnit({ items, weaponTypes });
+    const armed = (items: InventoryEntry[], weaponTypes: WeaponType[] = ['spear']) => makeUnit({ items, weaponTypes });
 
     describe('learning from a tome', () => {
-      const mage = (items: InventoryEntry[]) => armed(items, ['magical']);
+      const mage = (items: InventoryEntry[]) => armed(items, ['tome']);
 
       it('learns Fire on the fifth strike with the Fire tome and keeps the tome in hand', () => {
         const unit = mage([weaponEntry(FIRE)]);

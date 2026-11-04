@@ -44,7 +44,7 @@ describe('Villager', () => {
 
   it('fights with its wooden sword, or its fists', () => {
     const villager = new Villager({ team: 'player' });
-    expect(villager.weaponTypes).toEqual(['physical']);
+    expect(villager.weaponTypes).toEqual(['sword']);
     expect(villager.weapon).toBe(WOODEN_SWORD);
     expect(villager.wieldableWeapons.map(({ weapon }) => weapon)).toEqual([WOODEN_SWORD, FISTS]);
   });

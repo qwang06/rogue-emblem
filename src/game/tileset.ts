@@ -382,6 +382,48 @@ export const ITEM_SPRITES: Record<string, string> = {
   // The troll's maul shows the club until it has an icon of its own.
   'stone-maul': 'club',
   tackle: 'tackle',
+  // The rest of the gear ladder (gearLadder.ts) shows its family's or
+  // slot's icon until each piece has one of its own.
+  ...Object.fromEntries(
+    [
+      [
+        'wooden-sword',
+        ['iron-sword', 'steel-sword', 'silver-sword', 'wooden-dagger', 'iron-dagger', 'steel-dagger', 'silver-dagger'],
+      ],
+      ['iron-spear', ['steel-spear', 'silver-spear']],
+      ['iron-axe', ['steel-axe', 'silver-axe']],
+      ['iron-bow', ['wooden-bow', 'steel-bow', 'silver-bow']],
+      ['wooden-shield', ['iron-shield', 'steel-shield', 'silver-shield']],
+      [
+        'wooden-armor',
+        [
+          'iron-plate',
+          'steel-plate',
+          'silver-plate',
+          'wooden-helm',
+          'iron-helm',
+          'steel-helm',
+          'silver-helm',
+          'hide-vest',
+          'leather-armor',
+          'studded-leather',
+          'silverweave-coat',
+          'hide-cap',
+          'leather-hood',
+          'studded-hood',
+          'silverweave-hood',
+          'linen-robe',
+          'wool-robe',
+          'silk-robe',
+          'silver-robe',
+          'linen-hat',
+          'wool-hat',
+          'silk-hat',
+          'silver-circlet',
+        ],
+      ],
+    ].flatMap(([icon, ids]) => (ids as string[]).map((id) => [id, icon as string])),
+  ),
   // Signature, cursed and monster gear (gearKits.ts): one icon each in
   // src/assets/gear/, keyed by item id (GEAR_ICON_URLS in sprites.ts).
   'reapers-scythe': 'reapers-scythe',

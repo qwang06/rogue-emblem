@@ -180,13 +180,26 @@ function EquipmentScreenPanel({ view }: { view: EquipmentScreenView }) {
                       className={rowClass(selected, column === 'gear', choice.disabled)}
                       aria-current={selected ? 'true' : undefined}
                       aria-disabled={choice.disabled ? 'true' : undefined}
-                      title={choice.disabled ? "Can't be worn now" : undefined}
+                      title={
+                        choice.disabled
+                          ? "Can't be worn now"
+                          : choice.untrained
+                            ? 'Untrained: no +15 hit and +5 crit'
+                            : undefined
+                      }
                       {...pointerProps('gear', index)}
                     >
                       <Icon icon={choice.icon} />
                       <span className={`roster-screen__label${choice.remove ? ' equipment-gear__remove' : ''}`}>
                         {choice.label}
                       </span>
+                      {choice.tag && (
+                        <span
+                          className={`equipment-gear__tag${choice.untrained ? ' equipment-gear__tag--untrained' : ''}`}
+                        >
+                          {choice.tag}
+                        </span>
+                      )}
                     </li>
                   );
                 })}

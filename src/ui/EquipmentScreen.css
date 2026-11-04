@@ -52,6 +52,19 @@
   color: var(--fg-dim);
 }
 
+/* A weapon's family or an armor piece's weight, at the row's end; a
+   family the unit isn't trained in is struck through in red. */
+.equipment-gear__tag {
+  flex: none;
+  font-size: 0.75rem;
+  color: var(--fg-dim);
+}
+
+.equipment-gear__tag--untrained {
+  color: var(--red);
+  text-decoration: line-through;
+}
+
 /* The numbers: label, now, arrow, with the highlighted gear. Fixed columns
    and tabular figures, so a value changing never moves another. */
 .equipment-stats {

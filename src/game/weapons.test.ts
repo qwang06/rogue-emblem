@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BALLISTA,
-  canWield,
+  isTrained,
   FIRE,
   FISTS,
   formatWeaponRange,
@@ -24,8 +24,7 @@ import {
   type Weapon,
 } from './weapons.ts';
 import { HEALTH_POTION } from './items.ts';
-
-const PHYSICAL = ['physical'] as const;
+import { WOODEN_BOW } from './gearLadder.ts';
 
 describe('the starter weapons', () => {
   it('each have a unique id, a known type, and a sane range', () => {
@@ -40,12 +39,14 @@ describe('the starter weapons', () => {
   });
 
   it('give fists no power', () => {
-    expect(FISTS).toMatchObject({ type: 'physical', power: 0, hit: 80, weight: 0 });
+    expect(FISTS).toMatchObject({ type: 'natural', power: 0, hit: 80, weight: 0 });
   });
 
   it('take both hands for bows, the great axe, the stone maul and siege weapons, and one for the rest', () => {
-    const twoHanded = WEAPONS.filter((w) => w.hands === 2).map((w) => w.id);
-    expect(twoHanded).toEqual([IRON_BOW.id, POWDER_KEG.id, BALLISTA.id, GREAT_AXE.id, STONE_MAUL.id]);
+    const twoHanded = WEAPONS.filter((w) => w.hands === 2 && w.type !== 'bow').map((w) => w.id);
+    expect(twoHanded).toEqual([POWDER_KEG.id, BALLISTA.id, GREAT_AXE.id, STONE_MAUL.id]);
+    for (const bow of WEAPONS.filter((w) => w.type === 'bow')) expect(bow.hands, bow.id).toBe(2);
+    expect(IRON_BOW.hands).toBe(2);
     for (const weapon of [FISTS, IRON_SPEAR, IRON_AXE, FIRE, WOODEN_SWORD, WOODEN_SPEAR, WOODEN_AXE]) {
       expect(weapon.hands, weapon.id).toBe(1);
     }
@@ -53,14 +54,16 @@ describe('the starter weapons', () => {
 
   it('keep bows and siege engines off adjacent tiles', () => {
     expect(IRON_BOW.minRange).toBe(2);
+    expect(WOODEN_BOW.minRange).toBe(2);
     expect(BALLISTA.minRange).toBe(2);
   });
 
-  it('include a wooden sword, spear and axe that are lighter than iron and break sooner', () => {
+  it('include a wooden sword, spear and axe that are lighter and weaker than iron', () => {
     for (const wooden of [WOODEN_SWORD, WOODEN_SPEAR, WOODEN_AXE]) {
       expect(WEAPONS).toContain(wooden);
-      expect(wooden).toMatchObject({ type: 'physical', minRange: 1, maxRange: 1 });
+      expect(wooden).toMatchObject({ minRange: 1, maxRange: 1 });
     }
+    expect([WOODEN_SWORD.type, WOODEN_SPEAR.type, WOODEN_AXE.type]).toEqual(['sword', 'spear', 'axe']);
     expect(WOODEN_SPEAR.weight).toBeLessThan(IRON_SPEAR.weight);
     expect(WOODEN_AXE.weight).toBeLessThan(IRON_AXE.weight);
     expect(WOODEN_AXE.power).toBeLessThan(IRON_AXE.power);
@@ -68,14 +71,24 @@ describe('the starter weapons', () => {
     expect(WOODEN_SPEAR.hit).toBeGreaterThan(WOODEN_AXE.hit);
   });
 
-  it('cover every weapon type', () => {
-    expect(new Set(WEAPONS.map((w) => w.type))).toEqual(new Set(WEAPON_TYPES));
+  it('cover every weapon family but staves (staves are their own kind, see healing.ts)', () => {
+    expect(new Set(WEAPONS.map((w) => w.type))).toEqual(new Set(WEAPON_TYPES.filter((type) => type !== 'staff')));
   });
 });
 
 describe('WEAPON_DAMAGE_TYPES', () => {
-  it('hits physically with physical and siege weapons and magically with magical ones', () => {
-    expect(WEAPON_DAMAGE_TYPES).toEqual({ physical: 'physical', magical: 'magical', siege: 'physical' });
+  it('hits magically with tomes and staves and physically with everything else', () => {
+    expect(WEAPON_DAMAGE_TYPES).toEqual({
+      sword: 'physical',
+      spear: 'physical',
+      axe: 'physical',
+      bow: 'physical',
+      dagger: 'physical',
+      tome: 'magical',
+      staff: 'magical',
+      siege: 'physical',
+      natural: 'physical',
+    });
   });
 });
 
@@ -93,15 +106,17 @@ describe('isWeapon', () => {
   });
 });
 
-describe('canWield', () => {
-  it('needs the weapon type mastered', () => {
-    expect(canWield(PHYSICAL, IRON_SPEAR)).toBe(true);
-    expect(canWield(PHYSICAL, FIRE)).toBe(false);
-    expect(canWield(['magical', 'siege'], POWDER_KEG)).toBe(true);
+describe('isTrained', () => {
+  it('needs the weapon family trained', () => {
+    expect(isTrained(['spear', 'sword'], IRON_SPEAR)).toBe(true);
+    expect(isTrained(['spear', 'sword'], FIRE)).toBe(false);
+    expect(isTrained(['tome', 'siege'], POWDER_KEG)).toBe(true);
+    expect(isTrained(undefined, IRON_SPEAR)).toBe(false);
   });
 
-  it('wields nothing with no weapon types', () => {
-    expect(canWield([], FISTS)).toBe(false);
+  it('always counts a natural weapon as trained', () => {
+    expect(isTrained([], FISTS)).toBe(true);
+    expect(isTrained(undefined, FISTS)).toBe(true);
   });
 });
 
@@ -139,7 +154,7 @@ describe('getWeaponActions', () => {
       itemId: 'iron-bow',
       label: 'Iron Bow',
       index: 1,
-      type: 'physical',
+      type: 'bow',
       power: 2,
       hit: 80,
       crit: 0,

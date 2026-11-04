@@ -34,7 +34,7 @@ export const SCOUT_GROWTHS = Object.freeze({
 });
 
 // The weapon types it can wield.
-export const SCOUT_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical']);
+export const SCOUT_WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['spear', 'dagger']);
 
 // What it carries into battle: a Wooden Spear and the potions.
 export const SCOUT_ITEMS: Inventory = Object.freeze([weaponEntry(WOODEN_SPEAR), ...STARTING_ITEMS]);

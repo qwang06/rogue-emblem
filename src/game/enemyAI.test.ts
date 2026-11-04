@@ -232,4 +232,17 @@ describe('getPhaseMovement', () => {
     expect(getPhaseMovement({ movement: 5, holdsPosition: false })).toBe(5);
     expect(getPhaseMovement({ movement: 5, holdsPosition: true })).toBe(0);
   });
+
+  it('loses 1 for every 4 its load exceeds its strength, never going below 0', () => {
+    const load = (weight: number, armorWeight: number) => ({
+      movement: 5,
+      strength: 4,
+      armorWeight,
+      weapon: { hit: 80, crit: 0, weight },
+    });
+    expect(getPhaseMovement(load(4, 3))).toBe(5);
+    expect(getPhaseMovement(load(4, 4))).toBe(4);
+    expect(getPhaseMovement(load(5, 10))).toBe(3);
+    expect(getPhaseMovement({ ...load(30, 30), movement: 2 })).toBe(0);
+  });
 });

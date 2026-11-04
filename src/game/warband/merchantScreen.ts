@@ -14,7 +14,7 @@ import type { Item } from '../items.ts';
 import { UNIT_CLASSES, type UnitClass } from '../unitClasses.ts';
 import { isWeapon } from '../weapons.ts';
 import { canCarry, isSuitedTo, lookUpItem } from './convoy.ts';
-import { buyItemFor, canBuy, canBuyFor, canSell, MERCHANT_STOCK, sellItem } from './merchant.ts';
+import { buyItemFor, canBuy, canBuyFor, canSell, getMerchantStock, sellItem } from './merchant.ts';
 import { RUN_ITEMS, type RunState } from './run.ts';
 
 export type MerchantColumn = 'stock' | 'convoy';
@@ -58,7 +58,10 @@ const DEFAULT_RULES: MerchantRules = Object.freeze({ classes: UNIT_CLASSES, item
 const COLUMNS: readonly MerchantColumn[] = Object.freeze(['stock', 'convoy']);
 
 // The screen opened on `run`, on the first stock item.
-export function openMerchantScreen(run: RunState, stock: readonly string[] = MERCHANT_STOCK): MerchantScreenState {
+export function openMerchantScreen(
+  run: RunState,
+  stock: readonly string[] = getMerchantStock(run.stage),
+): MerchantScreenState {
   return freeze({ run, stock, column: 'stock', stockIndex: 0, convoyIndex: 0, recipients: null });
 }
 

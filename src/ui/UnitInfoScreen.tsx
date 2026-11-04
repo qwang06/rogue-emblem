@@ -1,3 +1,4 @@
+import { WEAPON_TYPE_LABELS } from '../game/weapons.ts';
 import { MenuExitButton } from './MenuExitButton.tsx';
 import { gameCommands } from '../bridge/commands.ts';
 import type { UnitDetailView } from '../bridge/views.ts';
@@ -12,8 +13,6 @@ import { Meter } from './UnitPanel.tsx';
 import { useGameStore } from './useGameStore.ts';
 import './UnitInfoScreen.css';
 import { KeyHint } from './KeyHint.tsx';
-
-const WEAPON_TYPE_LABELS = { physical: 'Physical', magical: 'Magic', siege: 'Siege' } as const;
 
 // The unit info screen: a full stat sheet for the unit the cursor was on
 // when I was pressed, over a dimmed map. On the left, who it is (sprite,
@@ -74,7 +73,7 @@ function Identity({ unit }: { unit: UnitDetailView }) {
           <dd>{unit.movement}</dd>
         </div>
         <div>
-          <dt>Wields</dt>
+          <dt>Trained</dt>
           <dd>
             {unit.weaponTypes.length > 0 ? unit.weaponTypes.map((type) => WEAPON_TYPE_LABELS[type]).join(', ') : '–'}
           </dd>

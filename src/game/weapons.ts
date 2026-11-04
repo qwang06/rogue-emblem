@@ -12,11 +12,17 @@ import type { Modifier } from './modifiers.ts';
 import type { MenuAction } from './actionMenu.ts';
 import type { DamageType } from './combat.ts';
 import type { InventoryEntry } from './items.ts';
+import { LADDER_WEAPONS } from './gearLadder.ts';
 
-// What a class can master. Physical and siege weapons hit with strength
-// against defense, magical ones with intelligence against resistance; siege
-// weapons are the long-range engines and bombs only siege units wield.
-export type WeaponType = 'physical' | 'magical' | 'siege';
+// A weapon's family. It sets the damage a weapon deals (tomes hit with
+// intelligence against resistance, everything else with strength against
+// defense, see WEAPON_DAMAGE_TYPES) and is what a class is trained in:
+// each class is trained in one or two families (its `weaponTypes`), and a
+// weapon of a trained family gets the proficiency bonus (see isTrained).
+// `natural` is a body's own weapon (fists, claws, a monster's maul), which
+// every unit is trained in. Staves (healing.ts) aren't weapons, but `staff`
+// is a family a healer class is trained in.
+export type WeaponType = 'sword' | 'spear' | 'axe' | 'bow' | 'dagger' | 'tome' | 'staff' | 'siege' | 'natural';
 
 // How many hands a weapon (or staff, see healing.ts) takes to hold. A unit
 // whose equipped weapon takes one hand has the other free for a shield;
@@ -74,13 +80,46 @@ export interface WeaponAction extends MenuAction {
   range: string;
 }
 
-export const WEAPON_TYPES: readonly WeaponType[] = Object.freeze(['physical', 'magical', 'siege']);
+export const WEAPON_TYPES: readonly WeaponType[] = Object.freeze([
+  'sword',
+  'spear',
+  'axe',
+  'bow',
+  'dagger',
+  'tome',
+  'staff',
+  'siege',
+  'natural',
+]);
+
+// Each family's name, as the UI shows it.
+export const WEAPON_TYPE_LABELS: Readonly<Record<WeaponType, string>> = Object.freeze({
+  sword: 'Sword',
+  spear: 'Spear',
+  axe: 'Axe',
+  bow: 'Bow',
+  dagger: 'Dagger',
+  tome: 'Tome',
+  staff: 'Staff',
+  siege: 'Siege',
+  natural: 'Natural',
+});
+
+// What a trained weapon adds to its wielder's hit and crit.
+export const PROFICIENCY_HIT = 15;
+export const PROFICIENCY_CRIT = 5;
 
 // The kind of damage each weapon type deals.
 export const WEAPON_DAMAGE_TYPES: Readonly<Record<WeaponType, DamageType>> = Object.freeze({
-  physical: 'physical',
-  magical: 'magical',
+  sword: 'physical',
+  spear: 'physical',
+  axe: 'physical',
+  bow: 'physical',
+  dagger: 'physical',
+  tome: 'magical',
+  staff: 'magical',
   siege: 'physical',
+  natural: 'physical',
 });
 
 function weapon(fields: Omit<Weapon, 'kind'>): Weapon {
@@ -97,7 +136,7 @@ function weapon(fields: Omit<Weapon, 'kind'>): Weapon {
 export const FISTS = weapon({
   id: 'fists',
   label: 'Fists',
-  type: 'physical',
+  type: 'natural',
   hands: 1,
   power: 0,
   hit: 80,
@@ -111,7 +150,7 @@ export const FISTS = weapon({
 export const IRON_SPEAR = weapon({
   id: 'iron-spear',
   label: 'Iron Spear',
-  type: 'physical',
+  type: 'spear',
   hands: 1,
   power: 1,
   hit: 80,
@@ -125,7 +164,7 @@ export const IRON_SPEAR = weapon({
 export const IRON_AXE = weapon({
   id: 'iron-axe',
   label: 'Iron Axe',
-  type: 'physical',
+  type: 'axe',
   hands: 1,
   power: 3,
   hit: 65,
@@ -140,7 +179,7 @@ export const IRON_AXE = weapon({
 export const IRON_BOW = weapon({
   id: 'iron-bow',
   label: 'Iron Bow',
-  type: 'physical',
+  type: 'bow',
   hands: 2,
   power: 2,
   hit: 80,
@@ -155,7 +194,7 @@ export const IRON_BOW = weapon({
 export const FIRE = weapon({
   id: 'fire',
   label: 'Fire Tome',
-  type: 'magical',
+  type: 'tome',
   hands: 1,
   power: 2,
   hit: 85,
@@ -170,7 +209,7 @@ export const FIRE = weapon({
 export const FIRE_SPELL = weapon({
   id: 'fire-spell',
   label: 'Fire',
-  type: 'magical',
+  type: 'tome',
   hands: 1,
   power: 2,
   hit: 85,
@@ -186,7 +225,7 @@ export const FIRE_SPELL = weapon({
 export const LIGHT = weapon({
   id: 'light',
   label: 'Light',
-  type: 'magical',
+  type: 'tome',
   hands: 1,
   power: 0,
   hit: 90,
@@ -229,7 +268,7 @@ export const BALLISTA = weapon({
 export const TACKLE = weapon({
   id: 'tackle',
   label: 'Tackle',
-  type: 'physical',
+  type: 'natural',
   hands: 1,
   power: 0,
   hit: 75,
@@ -243,7 +282,7 @@ export const TACKLE = weapon({
 export const CLUB = weapon({
   id: 'club',
   label: 'Club',
-  type: 'physical',
+  type: 'natural',
   hands: 1,
   power: 2,
   hit: 75,
@@ -257,7 +296,7 @@ export const CLUB = weapon({
 export const BONE_CLAWS = weapon({
   id: 'bone-claws',
   label: 'Bone Claws',
-  type: 'physical',
+  type: 'natural',
   hands: 1,
   power: 2,
   hit: 80,
@@ -271,7 +310,7 @@ export const BONE_CLAWS = weapon({
 export const FANGS = weapon({
   id: 'fangs',
   label: 'Fangs',
-  type: 'physical',
+  type: 'natural',
   hands: 1,
   power: 1,
   hit: 85,
@@ -285,7 +324,7 @@ export const FANGS = weapon({
 export const BITE = weapon({
   id: 'bite',
   label: 'Bite',
-  type: 'physical',
+  type: 'natural',
   hands: 1,
   power: 2,
   hit: 75,
@@ -299,7 +338,7 @@ export const BITE = weapon({
 export const GREAT_AXE = weapon({
   id: 'great-axe',
   label: 'Great Axe',
-  type: 'physical',
+  type: 'natural',
   hands: 2,
   power: 3,
   hit: 65,
@@ -314,7 +353,7 @@ export const GREAT_AXE = weapon({
 export const STONE_MAUL = weapon({
   id: 'stone-maul',
   label: 'Stone Maul',
-  type: 'physical',
+  type: 'natural',
   hands: 2,
   power: 4,
   hit: 60,
@@ -329,7 +368,7 @@ export const STONE_MAUL = weapon({
 export const FIRE_BREATH = weapon({
   id: 'fire-breath',
   label: 'Fire Breath',
-  type: 'physical',
+  type: 'natural',
   hands: 1,
   power: 4,
   hit: 75,
@@ -345,7 +384,7 @@ export const FIRE_BREATH = weapon({
 export const WOODEN_SWORD = weapon({
   id: 'wooden-sword',
   label: 'Wooden Sword',
-  type: 'physical',
+  type: 'sword',
   hands: 1,
   power: 1,
   hit: 90,
@@ -359,7 +398,7 @@ export const WOODEN_SWORD = weapon({
 export const WOODEN_SPEAR = weapon({
   id: 'wooden-spear',
   label: 'Wooden Spear',
-  type: 'physical',
+  type: 'spear',
   hands: 1,
   power: 1,
   hit: 75,
@@ -373,7 +412,7 @@ export const WOODEN_SPEAR = weapon({
 export const WOODEN_AXE = weapon({
   id: 'wooden-axe',
   label: 'Wooden Axe',
-  type: 'physical',
+  type: 'axe',
   hands: 1,
   power: 2,
   hit: 60,
@@ -404,6 +443,7 @@ export const WEAPONS: readonly Weapon[] = Object.freeze([
   WOODEN_SWORD,
   WOODEN_SPEAR,
   WOODEN_AXE,
+  ...LADDER_WEAPONS,
 ]);
 
 // The weapons a body comes with rather than carries: fists, the monsters'
@@ -431,9 +471,12 @@ export function isWeapon(item: { kind: string }): item is Weapon {
   return item.kind === 'weapon';
 }
 
-// Whether a class that masters `weaponTypes` is trained in weapon.
-export function canWield(weaponTypes: readonly WeaponType[], weapon: Weapon): boolean {
-  return weaponTypes.includes(weapon.type);
+// Whether a unit trained in `weaponTypes` is trained in `weapon`: its
+// family is one of them, or it's a body's own (natural) weapon. A trained
+// weapon gets the proficiency bonus (PROFICIENCY_HIT, PROFICIENCY_CRIT);
+// any other weapon is used at its plain numbers.
+export function isTrained(weaponTypes: readonly WeaponType[] | undefined, weapon: Pick<Weapon, 'type'>): boolean {
+  return weapon.type === 'natural' || (weaponTypes?.includes(weapon.type) ?? false);
 }
 
 // The span of tiles any of `weapons` can strike, as { minRange, maxRange }

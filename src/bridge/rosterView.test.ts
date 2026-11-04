@@ -7,6 +7,7 @@ import { Villager } from '../game/Villager.ts';
 import { FISTS, formatWeaponRange, IRON_AXE } from '../game/weapons.ts';
 import { createRun, type ItemSnapshot, type RunState } from '../game/warband/run.ts';
 import { confirmRoster, openRosterScreen, pointRosterCursor } from '../game/warband/rosterScreen.ts';
+import { SILK_HAT, STUDDED_LEATHER } from '../game/gearLadder.ts';
 import { describeItem, toRosterScreenView } from './rosterView.ts';
 
 function campRun(convoy: ItemSnapshot[] = []): RunState {
@@ -105,7 +106,7 @@ describe('describeItem', () => {
   it('describes weapons, staves and consumables', () => {
     expect(describeItem(IRON_AXE)).toEqual({
       label: IRON_AXE.label,
-      description: 'Physical weapon · 1H',
+      description: 'Axe · Physical · 1H',
       numbers: { power: 3, hit: 65, crit: 0, weight: 5, range: '1' },
     });
     expect(describeItem(FISTS).numbers?.range).toBe('1');
@@ -114,10 +115,10 @@ describe('describeItem', () => {
       numbers: { range: formatWeaponRange(HEAL_STAFF) },
     });
     expect(describeItem(WOODEN_SHIELD).numbers).toBeUndefined();
-    expect(describeItem(WOODEN_SHIELD).description).toBe(
-      'Shield · DEF +1 against physical hits · Wt 1 · With a 1H weapon only',
-    );
-    expect(describeItem(WOODEN_ARMOR).description).toMatch(/^Body armor · DEF \+1/);
+    expect(describeItem(WOODEN_SHIELD).description).toBe('Shield · DEF +1 · Wt 1 · With a 1H weapon only');
+    expect(describeItem(WOODEN_ARMOR).description).toBe('Body armor · Heavy · DEF +1 · Wt 2');
+    expect(describeItem(STUDDED_LEATHER).description).toBe('Body armor · Light · DEF +2 · AVO +10 · Wt 2');
+    expect(describeItem(SILK_HAT).description).toBe('Headgear · Cloth · RES +2 · Wt 0');
     expect(describeItem(HEALTH_POTION)).toEqual({ label: 'Health Potion', description: 'Restores up to 5 HP.' });
   });
 });

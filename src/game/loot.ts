@@ -7,17 +7,15 @@
 // No Phaser, no rendering, no hidden state.
 
 import type { Rng } from './combatStats.ts';
-import { addItem, canAddItem, WOODEN_ARMOR, WOODEN_SHIELD, type Inventory, type Item } from './items.ts';
+import { getTierItemIds } from './gearLadder.ts';
+import { addItem, ARMORS, canAddItem, type Inventory, type Item } from './items.ts';
 import { randomItem, shuffle } from './rng.ts';
-import { FIRE, WOODEN_AXE, WOODEN_SPEAR, WOODEN_SWORD } from './weapons.ts';
+import { FIRE, WEAPONS } from './weapons.ts';
 
-// What an enemy can drop: the wooden set and the Fire tome.
+// What an enemy can drop: the gear ladder's wooden tier (gearLadder.ts)
+// and the Fire tome.
 export const LOOT_ITEMS: readonly Item[] = Object.freeze([
-  WOODEN_SWORD,
-  WOODEN_SPEAR,
-  WOODEN_AXE,
-  WOODEN_SHIELD,
-  WOODEN_ARMOR,
+  ...getTierItemIds('wooden').map((id) => [...WEAPONS, ...ARMORS].find((item) => item.id === id)!),
   FIRE,
 ]);
 

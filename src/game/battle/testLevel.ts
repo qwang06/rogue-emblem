@@ -21,7 +21,7 @@ export function makeTestUnit(options: Partial<UnitOptions> & Pick<UnitOptions, '
     luck: 100,
     defense: 0,
     movement: 3,
-    weaponTypes: ['physical'],
+    weaponTypes: ['spear'],
     items: [weaponEntry(IRON_SPEAR)],
     ...options,
   });

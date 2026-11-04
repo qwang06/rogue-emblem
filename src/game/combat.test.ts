@@ -26,7 +26,7 @@ import type { WeaponType } from './weapons.ts';
 // A plain test weapon: physical, no power, 80 hit, no crit, no weight,
 // range 1 — so a fighter with it reads like its bare stats.
 function arms(overrides: Partial<CombatWeapon> = {}): CombatWeapon {
-  return { type: 'physical', power: 0, hit: 80, crit: 0, weight: 0, minRange: 1, maxRange: 1, ...overrides };
+  return { type: 'sword', power: 0, hit: 80, crit: 0, weight: 0, minRange: 1, maxRange: 1, ...overrides };
 }
 
 // Rolls 0 every time: every strike with a hit chance above 0 lands, and
@@ -179,7 +179,7 @@ describe('calculateDamage', () => {
   });
 
   it('is intelligence minus resistance for a magical hit', () => {
-    expect(calculateDamage({ strength: 9, intelligence: 7, weapon: arms({ type: 'magical' }) }, defender)).toBe(2);
+    expect(calculateDamage({ strength: 9, intelligence: 7, weapon: arms({ type: 'tome' }) }, defender)).toBe(2);
   });
 
   it('hits physically with a siege weapon', () => {
@@ -188,23 +188,23 @@ describe('calculateDamage', () => {
 
   it("adds the weapon's power to the attack power", () => {
     expect(calculateDamage({ strength: 5, weapon: arms({ power: 3 }) }, { defense: 2 })).toBe(6);
-    expect(calculateDamage({ intelligence: 6, weapon: arms({ type: 'magical', power: 2 }) }, defender)).toBe(3);
+    expect(calculateDamage({ intelligence: 6, weapon: arms({ type: 'tome', power: 2 }) }, defender)).toBe(3);
   });
 
   it('never goes below zero', () => {
     expect(calculateDamage({ strength: 1 }, { defense: 4 })).toBe(0);
-    expect(calculateDamage({ intelligence: 3, weapon: arms({ type: 'magical' }) }, defender)).toBe(0);
+    expect(calculateDamage({ intelligence: 3, weapon: arms({ type: 'tome' }) }, defender)).toBe(0);
   });
 
   it('subtracts worn armor from physical hits only', () => {
     const armored = { defense: 2, armorDefense: 2, resistance: 1 };
     expect(calculateDamage({ strength: 7, weapon: arms() }, armored)).toBe(3);
-    expect(calculateDamage({ intelligence: 7, weapon: arms({ type: 'magical' }) }, armored)).toBe(6);
+    expect(calculateDamage({ intelligence: 7, weapon: arms({ type: 'tome' }) }, armored)).toBe(6);
     expect(calculateDamage({ strength: 3 }, armored)).toBe(0);
   });
 
   it('counts a missing guard stat as 0', () => {
-    expect(calculateDamage({ intelligence: 4, weapon: arms({ type: 'magical' }) }, { defense: 3 })).toBe(4);
+    expect(calculateDamage({ intelligence: 4, weapon: arms({ type: 'tome' }) }, { defense: 3 })).toBe(4);
   });
 });
 
@@ -216,7 +216,7 @@ describe('getDamageType', () => {
 
   it("follows the weapon's type", () => {
     expect(getDamageType({ weapon: arms() })).toBe('physical');
-    expect(getDamageType({ weapon: arms({ type: 'magical' }) })).toBe('magical');
+    expect(getDamageType({ weapon: arms({ type: 'tome' }) })).toBe('magical');
     expect(getDamageType({ weapon: arms({ type: 'siege' }) })).toBe('physical');
   });
 
@@ -233,7 +233,7 @@ describe('resolveCombat damage types', () => {
       intelligence: 6,
       defense: 1,
       resistance: 4,
-      weapon: arms({ type: 'magical' }),
+      weapon: arms({ type: 'tome' }),
     };
     const knight: Fighter = { health: 10, strength: 6, intelligence: 0, defense: 8, resistance: 0, weapon: arms() };
     const { strikes } = resolveCombat(mage, knight, { distance: 1, rng: alwaysHit });
