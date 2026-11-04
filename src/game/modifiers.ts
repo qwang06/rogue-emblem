@@ -124,10 +124,15 @@ export type Modifier =
   | { kind: 'taunt-aura' }
   | { kind: 'veil-on-wait' }
   | { kind: 'linger-debuffs' }
-  // When it's the only unit of its side deployed, its stats grow by
-  // `percent` as the battle starts (the Lone Wolf relic; see startBattle
-  // in battle/commands.ts).
-  | { kind: 'lone-wolf'; percent: number };
+  // When it's the only unit of its side deployed, it deals `percent` more
+  // damage and takes half that less, with +20 hit and avoid, for the
+  // battle (the Lone Wolf relic; see startBattle in battle/commands.ts).
+  | { kind: 'lone-wolf'; percent: number }
+  // Run trophies (see warband/trophies.ts): after a won stage, `amount`
+  // max HP for each foe it felled (`soul-harvest`), and `amount` to its
+  // highest stat if it felled any (`trophy-hunter`), kept for the run.
+  | { kind: 'soul-harvest'; amount: number }
+  | { kind: 'trophy-hunter'; amount: number };
 
 export type ModifierKind = Modifier['kind'];
 

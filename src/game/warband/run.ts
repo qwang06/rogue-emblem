@@ -15,6 +15,7 @@ import { getQuirkModifiers } from './quirks.ts';
 import { growUpWhelp } from './whelp.ts';
 import { getRelicModifiers, hasRelic, PHOENIX_FEATHER } from './relics.ts';
 import { findKeystone } from './keystones.ts';
+import { applyTrophies } from './trophies.ts';
 import { MAX_HEAT } from './heat.ts';
 import { EMPTY_CHRONICLE, parseChronicle, recordBattle, type RunChronicle } from './chronicle.ts';
 import {
@@ -450,7 +451,8 @@ export function isRunOver(run: RunState): boolean {
 }
 
 // The run after a stage's battle ends with `outcome`: the battle's result
-// written back (applyBattleResult), then on a victory the next stage. A
+// written back (applyBattleResult), then on a victory each unit that
+// fought grown by its run trophies (trophies.ts) and the next stage. A
 // defeat ends the run, as does a victory that somehow leaves nobody on the
 // roster; `over` says so. A victory on `finalStage` (or later) wins the
 // run: it's over too, staying on that stage, and `won` says so.
@@ -460,8 +462,14 @@ export function finishStage(
   outcome: BattleOutcome,
   finalStage?: number,
 ): { run: RunState; over: boolean; won: boolean } {
-  const after = applyBattleResult(run, result);
-  if (outcome === 'defeat' || isRunOver(after)) return { run: after, over: true, won: false };
+  const written = applyBattleResult(run, result);
+  if (outcome === 'defeat' || isRunOver(written)) return { run: written, over: true, won: false };
+  const after = freezeRun({
+    ...written,
+    roster: written.roster.map((snapshot) =>
+      result.units.has(snapshot.id) ? applyTrophies(snapshot, result.kills?.get(snapshot.id) ?? 0) : snapshot,
+    ),
+  });
   if (finalStage !== undefined && run.stage >= finalStage) return { run: after, over: true, won: true };
   return { run: advanceStage(after), over: false, won: false };
 }

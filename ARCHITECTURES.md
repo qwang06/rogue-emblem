@@ -229,7 +229,11 @@ Build tags for level-up boons (Power, Precision, Guard, Evasion, Kill, Blood, Ma
 
 Keystones, Path of Exile style: one rule-breaking pact for the whole warband. Clearing every `KEYSTONE_INTERVAL` (10) stages replaces the stage's reward pick with `KEYSTONE_CHOICES` keystones (`rollStageRewards`, a `keystone` reward); the warband holds one at a time (`RunState.keystone`), a new pick replacing it. Each `{ id, name, description, modifiers, curses }` gives every unit its modifiers in `restoreRoster` (Frenzy Pact always doubles, Glass Lens ×5 crits, Avatar of War `encore`, Vampire Court lifesteal, Iron Legion thorns + reflect, Plague Host marks, exploits and spreads debuffs) and pays with curses that strengthen the enemy side (`curses.ts`). The curses are marked `shared`, so `getDeployedCurses` lays them once a battle however many holders deploy. The camp's relic list shows the keystone first (`toRelicViews`). Tested in `src/game/warband/keystones.test.ts`.
 
-The Lone Wolf relic (`relics.ts`) gives a `lone-wolf` modifier: `startBattle` grows a unit deployed alone by its percent (`applySurge`), so a one-unit run is a real choice.
+The Lone Wolf relic (`relics.ts`) gives a `lone-wolf` modifier: `startBattle` gives a unit deployed alone combat modifiers for that battle (its percent more damage, half that less taken, +20 hit and avoid). Modifiers aren't snapshotted, so nothing outlasts the battle; a one-unit run is a real choice.
+
+### `src/game/warband/trophies.ts`
+
+Run trophies: passives whose gains stay for the whole run. After a won stage, `finishStage` (`run.ts`) runs `applyTrophies(snapshot, kills)` on each unit that fought: Soul Harvest (`soul-harvest`) adds its amount of max HP per foe felled, Trophy Hunter (`trophy-hunter`) adds its amount to the unit's highest stat of STR, INT, DEX, SPD, DEF and RES if it felled any. Both reach rank III and don't scale with rarity. Tested in `src/game/warband/trophies.test.ts`.
 
 ### `src/game/warband/evolutions.ts`
 
