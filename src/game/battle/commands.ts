@@ -152,6 +152,8 @@ export type BattleEvent =
       crit: boolean;
       damage: number;
       health: number;
+      // What it was struck with (the sound it makes, see soundKinds.ts).
+      weapon: Weapon;
       learned: Weapon | null;
     }
   // A skill's blow. `splash`: one of an area skill's blows past the tile it
@@ -782,7 +784,7 @@ function applyStrike(
 ): 'struck' | 'striker' | null {
   const strikerId = ids[strike.by];
   const struckId = ids[strike.target];
-  const { learned } = draft.edit(strikerId).recordStrike();
+  const { weapon, learned } = draft.edit(strikerId).recordStrike();
   const struck = draft.edit(struckId);
   if (strike.hit) struck.takeDamage(strike.damage);
   draft.events.push({
@@ -793,6 +795,7 @@ function applyStrike(
     crit: strike.crit,
     damage: strike.hit ? strike.damage : 0,
     health: struck.health,
+    weapon,
     learned,
   });
   // A lifesteal strike heals its striker (see resolveCombat).

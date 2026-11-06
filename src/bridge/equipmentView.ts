@@ -10,6 +10,7 @@ import { GEAR_SLOT_LABELS, GEAR_SLOTS, type GearSlot } from '../game/equipment.t
 import { ARMOR_WEIGHT_LABELS, type Item } from '../game/items.ts';
 import { isTrained, WEAPON_TYPE_LABELS } from '../game/weapons.ts';
 import { getItemSprite, getUnitSprite } from '../game/tileset.ts';
+import { getGearSound, type GearSound } from '../audio/soundKinds.ts';
 import { UNIT_CLASSES, type UnitClass } from '../game/unitClasses.ts';
 import { getUnitEquipment, lookUpItem } from '../game/warband/convoy.ts';
 import {
@@ -41,7 +42,8 @@ export interface EquipmentSlotView {
   label: string;
   // The slot's tab over the gear list: what goes in it ("Weapons").
   tabLabel: string;
-  item: { label: string; icon: string | null } | null;
+  // `sound`: what putting it on or taking it off sounds like.
+  item: { label: string; icon: string | null; sound: GearSound } | null;
   locked: boolean;
 }
 
@@ -162,7 +164,7 @@ export function toEquipmentScreenView(
       slot: each,
       label: GEAR_SLOT_LABELS[each],
       tabLabel: SLOT_TABS[each],
-      item: gear ? Object.freeze({ label: gear.label, icon: getItemSprite(gear.id) }) : null,
+      item: gear ? Object.freeze({ label: gear.label, icon: getItemSprite(gear.id), sound: getGearSound(gear) }) : null,
       locked: each === 'off' && locked,
     });
   });

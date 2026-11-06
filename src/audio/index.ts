@@ -6,6 +6,7 @@
 import { gameStore, type GameState } from '../bridge/gameStore.ts';
 import { FEATURE_FLAGS } from '../featureFlags.ts';
 import { browserStorage } from '../data/customStorage.ts';
+import { getAmbience } from './ambience.ts';
 import { getSoundCues } from './cues.ts';
 import { createMusicPlayer, type MusicPlayer } from './musicPlayer.ts';
 import { getMusicTrack } from './musicTrack.ts';
@@ -35,9 +36,19 @@ export function startAudio(): void {
     const state = gameStore.getState();
     applyVolumes(state.audio);
     music?.play(getMusicTrack(state));
+    sounds.setAmbience(getAmbience(state));
   };
   window.addEventListener('pointerdown', unlock);
   window.addEventListener('keydown', unlock);
+
+  // Every click on a button in the React UI clicks, wherever it is (the
+  // title, the overworld, the camp's screens). A click that also opens or
+  // closes a menu plays the one click (see REPEAT_S in player.ts).
+  document.addEventListener('click', (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest('button:not(:disabled), [role="button"], [role="menuitem"], [role="option"]'))
+      sounds?.play('button');
+  });
 
   let prev: GameState = gameStore.getState();
   gameStore.subscribe((next) => {
@@ -49,6 +60,7 @@ export function startAudio(): void {
     }
     if (sounds) for (const cue of getSoundCues(prev, next)) sounds.play(cue);
     music?.play(getMusicTrack(next));
+    sounds?.setAmbience(getAmbience(next));
     prev = next;
   });
 }

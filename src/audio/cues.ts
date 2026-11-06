@@ -7,13 +7,14 @@
 import type { GameState } from '../bridge/gameStore.ts';
 import type { Menu } from '../game/actionMenu.ts';
 import type { PopupKind } from '../bridge/views.ts';
+import type { EquipmentScreenView } from '../bridge/equipmentView.ts';
+import type { GearSound, StrikeSound } from './soundKinds.ts';
 
 export type SoundCue =
   | 'hit'
   | 'crit'
   | 'miss'
   | 'heal'
-  | 'loot'
   | 'break'
   | 'learn'
   | 'defeat'
@@ -27,9 +28,17 @@ export type SoundCue =
   | 'enrage'
   | 'victory'
   | 'gameOver'
-  | 'menuOpen'
+  | 'button'
   | 'menuMove'
-  | 'dialog';
+  | 'dialog'
+  // Recorded only (samples.ts), with a synthesized stand-in in sfx.ts.
+  | StrikeSound
+  | 'potion'
+  | 'healSpell'
+  | 'coins'
+  | 'promote'
+  | `equip-${GearSound}`
+  | `unequip-${GearSound}`;
 
 // The slice of GameState the cues are read from.
 export type SoundState = Pick<
@@ -52,6 +61,12 @@ export type SoundState = Pick<
   | 'itemMenu'
   | 'rewardMenu'
   | 'campMenu'
+  | 'campGold'
+  | 'rosterScreen'
+  | 'merchantScreen'
+  | 'equipmentScreen'
+  | 'promotionScreen'
+  | 'mentorScreen'
 >;
 
 const POPUP_CUES: Readonly<Record<PopupKind, SoundCue>> = Object.freeze({
@@ -60,8 +75,8 @@ const POPUP_CUES: Readonly<Record<PopupKind, SoundCue>> = Object.freeze({
   miss: 'miss',
   health: 'heal',
   mana: 'heal',
-  loot: 'loot',
-  stored: 'loot',
+  loot: 'coins',
+  stored: 'coins',
   learned: 'learn',
   horn: 'warHorn',
   arrived: 'hit',
@@ -86,12 +101,34 @@ const MENU_KEYS = [
   'campMenu',
 ] as const satisfies readonly (keyof SoundState)[];
 
-// What changing one menu sounds like: opening it, or moving its pointer.
-// Closing it is silent, since whatever the pick leads to makes its own.
+// The camp's screens, which click like a menu as they open and close.
+const SCREEN_KEYS = [
+  'rosterScreen',
+  'merchantScreen',
+  'equipmentScreen',
+  'promotionScreen',
+  'mentorScreen',
+] as const satisfies readonly (keyof SoundState)[];
+
+// What changing one menu sounds like: a click as it opens or closes (a
+// pick or a cancel), or a tick as its pointer moves.
 function getMenuCue(prev: Menu | null, next: Menu | null): SoundCue | null {
-  if (!next) return null;
-  if (!prev) return 'menuOpen';
+  if (!prev && !next) return null;
+  if (!prev || !next) return 'button';
   return prev.selectedIndex !== next.selectedIndex ? 'menuMove' : null;
+}
+
+// Putting gear on or taking it off on the equipment screen: the sound of
+// what went on (or, with the slot left empty, what came off).
+function getEquipCue(prev: EquipmentScreenView | null, next: EquipmentScreenView | null): SoundCue | null {
+  if (!prev || !next || prev.units[prev.unitIndex]?.id !== next.units[next.unitIndex]?.id) return null;
+  for (const slot of next.slots) {
+    const before = prev.slots.find((each) => each.slot === slot.slot)?.item ?? null;
+    const after = slot.item;
+    if (after && (!before || before.label !== after.label)) return `equip-${after.sound}`;
+    if (before && !after) return `unequip-${before.sound}`;
+  }
+  return null;
 }
 
 // The cues to play going from `prev` to `next`, in order, without
@@ -100,7 +137,12 @@ export function getSoundCues(prev: SoundState, next: SoundState): SoundCue[] {
   const cues = new Set<SoundCue>();
 
   const shown = new Set(prev.damagePopups.map((popup) => popup.id));
-  for (const popup of next.damagePopups) if (!shown.has(popup.id)) cues.add(POPUP_CUES[popup.kind]);
+  for (const popup of next.damagePopups) {
+    if (shown.has(popup.id)) continue;
+    // A blow tagged with its weapon's sound plays that; a crit adds its ring.
+    cues.add(popup.sound ?? POPUP_CUES[popup.kind]);
+    if (popup.sound && popup.kind === 'crit') cues.add('crit');
+  }
 
   if (next.defeats > prev.defeats) cues.add('defeat');
   if (next.experienceGain && next.experienceGain.id !== prev.experienceGain?.id) cues.add('experience');
@@ -115,10 +157,20 @@ export function getSoundCues(prev: SoundState, next: SoundState): SoundCue[] {
     cues.add(next.battleOutcome === 'victory' ? 'victory' : 'gameOver');
   if (next.dialog && next.dialog.id !== prev.dialog?.id) cues.add('dialog');
 
+  // Gold changing hands at camp: buying, selling, paying for a rest.
+  const goldBefore = prev.merchantScreen?.gold ?? prev.campGold;
+  const goldAfter = next.merchantScreen?.gold ?? next.campGold;
+  if (goldBefore !== null && goldAfter !== null && goldBefore !== goldAfter) cues.add('coins');
+  if (next.promotionScreen && prev.promotionScreen && next.promotionScreen.seals < prev.promotionScreen.seals)
+    cues.add('promote');
+  const equipCue = getEquipCue(prev.equipmentScreen, next.equipmentScreen);
+  if (equipCue) cues.add(equipCue);
+
   // One menu sound per update, however many menus changed: picking an
   // action closes one menu and opens the next.
   const menuCues = MENU_KEYS.map((key) => getMenuCue(prev[key] as Menu | null, next[key] as Menu | null));
-  const menuCue = menuCues.includes('menuOpen') ? 'menuOpen' : menuCues.find((cue) => cue !== null);
+  for (const key of SCREEN_KEYS) if (!prev[key] !== !next[key]) menuCues.push('button');
+  const menuCue = menuCues.includes('button') ? 'button' : menuCues.find((cue) => cue !== null);
   if (menuCue) cues.add(menuCue);
 
   return [...cues];

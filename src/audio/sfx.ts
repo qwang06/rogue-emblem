@@ -4,6 +4,7 @@
 // plays them with Web Audio.
 
 import type { SoundCue } from './cues.ts';
+import { GEAR_SOUNDS, type GearSound } from './soundKinds.ts';
 
 export type Wave = 'square' | 'triangle' | 'sawtooth' | 'sine' | 'noise';
 
@@ -37,9 +38,34 @@ const A3 = 220;
 const arpeggio = (wave: Wave, notes: readonly number[], step: number, length: number, gain: number): Voice[] =>
   notes.map((note, i) => tone(wave, note, note, i * step, length, gain));
 
+const HIT = [tone('square', 180, 60, 0, 0.12, 0.35), tone('noise', 3000, 400, 0, 0.1, 0.4)];
+const HEAL = arpeggio('triangle', [C5, E5, G5, C6], 0.06, 0.18, 0.25);
+const COIN = [tone('square', 988, 988, 0, 0.07, 0.15), tone('square', 1319, 1319, 0.07, 0.2, 0.15)];
+const LEARN = arpeggio('sine', [G5, C6, G5 * 2], 0.07, 0.25, 0.2);
+// A rustle and a clink, for gear going on (rising) or coming off (falling).
+const EQUIP = [tone('noise', 1500, 4000, 0, 0.12, 0.2), tone('square', 900, 1300, 0.08, 0.06, 0.06)];
+const UNEQUIP = [tone('noise', 4000, 1500, 0, 0.12, 0.2), tone('square', 1300, 900, 0.08, 0.06, 0.06)];
+
+// Cues that are recorded (samples.ts) fall back on these until their
+// sample has loaded, or if it can't.
+const GEAR_CUES = Object.fromEntries(
+  GEAR_SOUNDS.flatMap((gear) => [
+    [`equip-${gear}`, EQUIP],
+    [`unequip-${gear}`, UNEQUIP],
+  ]),
+) as unknown as Record<`equip-${GearSound}` | `unequip-${GearSound}`, readonly Voice[]>;
+
 export const SOUND_EFFECTS: Readonly<Record<SoundCue, readonly Voice[]>> = Object.freeze({
+  ...GEAR_CUES,
   // A thump with a crunch of noise on top.
-  hit: [tone('square', 180, 60, 0, 0.12, 0.35), tone('noise', 3000, 400, 0, 0.1, 0.4)],
+  hit: HIT,
+  sword: HIT,
+  axe: HIT,
+  bow: HIT,
+  hammer: HIT,
+  fire: HIT,
+  shock: HIT,
+  air: [tone('noise', 800, 3000, 0, 0.25, 0.3)],
   // Like a hit, but heavier, with a bright ring after it.
   crit: [
     tone('sawtooth', 220, 40, 0, 0.22, 0.4),
@@ -49,13 +75,16 @@ export const SOUND_EFFECTS: Readonly<Record<SoundCue, readonly Voice[]>> = Objec
   // A whiff of air.
   miss: [tone('noise', 1200, 4000, 0, 0.16, 0.25)],
   // A rising sparkle.
-  heal: arpeggio('triangle', [C5, E5, G5, C6], 0.06, 0.18, 0.25),
+  heal: HEAL,
+  healSpell: HEAL,
+  potion: HEAL,
   // A coin: two quick high notes.
-  loot: [tone('square', 988, 988, 0, 0.07, 0.15), tone('square', 1319, 1319, 0.07, 0.2, 0.15)],
+  coins: COIN,
   // A snap and a falling clatter.
   break: [tone('noise', 6000, 800, 0, 0.12, 0.4), tone('square', 600, 120, 0.02, 0.25, 0.18)],
   // A shimmer for learning a spell.
-  learn: arpeggio('sine', [G5, C6, G5 * 2], 0.07, 0.25, 0.2),
+  learn: LEARN,
+  promote: LEARN,
   // A falling groan and a burst.
   defeat: [tone('sawtooth', 300, 50, 0, 0.45, 0.3), tone('noise', 2000, 100, 0.05, 0.4, 0.35)],
   // A soft rising tick for the XP bar.
@@ -89,7 +118,7 @@ export const SOUND_EFFECTS: Readonly<Record<SoundCue, readonly Voice[]>> = Objec
   ],
   gameOver: [...arpeggio('triangle', [A4, F4, D4], 0.22, 0.3, 0.22), tone('triangle', A3, A3, 0.66, 0.8, 0.22)],
   // UI blips.
-  menuOpen: [tone('square', 660, 880, 0, 0.06, 0.08)],
+  button: [tone('square', 660, 880, 0, 0.06, 0.08)],
   menuMove: [tone('square', 1200, 1200, 0, 0.03, 0.05)],
   dialog: [tone('triangle', 520, 520, 0, 0.05, 0.1)],
 });
