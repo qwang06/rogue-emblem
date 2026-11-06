@@ -17,7 +17,7 @@ import {
   POWDER_KEG,
   WOODEN_SWORD,
 } from '../game/weapons.ts';
-import { getGearSound, getSkillSound, getWeaponSound } from './soundKinds.ts';
+import { getGearSound, getSkillSound, getStrikeSoundTiming, getWeaponSound } from './soundKinds.ts';
 
 const armor = (fields: Partial<Armor>): Armor => ({
   kind: 'armor',
@@ -85,5 +85,17 @@ describe('getGearSound', () => {
   it('chimes trinkets', () => {
     expect(getGearSound(armor({ slot: 'accessory' }))).toBe('jewel');
     expect(getGearSound(armor({ slot: 'special' }))).toBe('jewel');
+  });
+});
+
+describe('getStrikeSoundTiming', () => {
+  it('draws a bow as the attack starts, leaving the landing to the synthesized hit', () => {
+    expect(getStrikeSoundTiming('bow')).toEqual({ windup: 'bow', impact: null });
+  });
+
+  it('plays every other blow as it lands', () => {
+    expect(getStrikeSoundTiming('sword')).toEqual({ windup: null, impact: 'sword' });
+    expect(getStrikeSoundTiming('fire')).toEqual({ windup: null, impact: 'fire' });
+    expect(getStrikeSoundTiming(null)).toEqual({ windup: null, impact: null });
   });
 });
