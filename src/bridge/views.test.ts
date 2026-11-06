@@ -384,7 +384,7 @@ describe('toDamagePopupView', () => {
   it('copies the popup fields into a frozen snapshot', () => {
     // @ts-expect-error extra fields are dropped
     const view = toDamagePopupView({ id: 1, amount: 3, x: 40, y: 20, durationMs: 700, extra: true });
-    expect(view).toEqual({ id: 1, amount: 3, kind: 'damage', text: '3', x: 40, y: 20, durationMs: 700 });
+    expect(view).toEqual({ id: 1, amount: 3, kind: 'damage', text: '3', x: 40, y: 20, durationMs: 700, sound: null });
     expect(Object.isFrozen(view)).toBe(true);
   });
 

@@ -18,7 +18,7 @@ describe('SOUND_EFFECTS', () => {
   });
 
   it('keeps combat and menu sounds short, so they never pile up', () => {
-    for (const cue of ['hit', 'crit', 'miss', 'menuOpen', 'menuMove', 'dialog'] as const)
+    for (const cue of ['hit', 'crit', 'miss', 'button', 'menuMove', 'dialog'] as const)
       expect(getSoundLength(SOUND_EFFECTS[cue]), cue).toBeLessThanOrEqual(0.3);
   });
 });

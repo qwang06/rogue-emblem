@@ -12,6 +12,7 @@ import {
   type ForecastSide,
 } from '../game/combat.ts';
 import { getAttackSpeed, getAvoid, getCrit, getHit, getLoadMovementPenalty } from '../game/combatStats.ts';
+import type { SoundCue } from '../audio/cues.ts';
 import type { Dialog, DialogSide } from '../game/dialog.ts';
 import { getExperienceForLevel, type ExperienceGain, type GrowthStat, type LevelUpResult } from '../game/experience.ts';
 import type { ObjectiveText } from '../game/objectives.ts';
@@ -236,6 +237,10 @@ export interface DamagePopupView {
   x: number;
   y: number;
   durationMs: number;
+  // The sound to play as it pops up in place of its kind's (see
+  // getSoundCues): a blow's weapon, a potion, a healing spell. Null for
+  // the kind's own.
+  sound: SoundCue | null;
 }
 
 export interface RosterEntryView {
@@ -711,9 +716,14 @@ export function toDamagePopupView({
   x,
   y,
   durationMs,
-}: Omit<DamagePopupView, 'kind' | 'text'> & { kind?: PopupKind; label?: string }): DamagePopupView {
+  sound = null,
+}: Omit<DamagePopupView, 'kind' | 'text' | 'sound'> & {
+  kind?: PopupKind;
+  label?: string;
+  sound?: SoundCue | null;
+}): DamagePopupView {
   const text = (POPUP_TEXT[kind] ?? POPUP_TEXT.damage)(amount, label);
-  return Object.freeze({ id, amount, kind, text, x, y, durationMs });
+  return Object.freeze({ id, amount, kind, text, x, y, durationMs, sound });
 }
 
 // Snapshot of one unit in the deployment roster menu: its id, the name to
