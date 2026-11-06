@@ -44,6 +44,7 @@ export type SoundCue =
 export type SoundState = Pick<
   GameState,
   | 'damagePopups'
+  | 'windupSound'
   | 'defeats'
   | 'experienceGain'
   | 'levelUp'
@@ -144,6 +145,7 @@ export function getSoundCues(prev: SoundState, next: SoundState): SoundCue[] {
     if (popup.sound && popup.kind === 'crit') cues.add('crit');
   }
 
+  if (next.windupSound && next.windupSound.id !== prev.windupSound?.id) cues.add(next.windupSound.sound);
   if (next.defeats > prev.defeats) cues.add('defeat');
   if (next.experienceGain && next.experienceGain.id !== prev.experienceGain?.id) cues.add('experience');
   if (

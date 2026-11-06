@@ -54,6 +54,20 @@ const SKILL_SOUND_BY_ID: Readonly<Record<string, StrikeSound>> = Object.freeze({
   earthshaker: 'hammer',
 });
 
+// Sounds recorded as the blow is readied (a bow being drawn), so they
+// play as the striker starts its attack rather than as it lands.
+const WINDUP_SOUNDS: ReadonlySet<StrikeSound> = new Set<StrikeSound>(['bow']);
+
+// When a blow's sound plays: `windup` as the striker starts its attack,
+// `impact` as it lands (null: the kind's synthesized hit).
+export function getStrikeSoundTiming(sound: StrikeSound | null): {
+  windup: StrikeSound | null;
+  impact: StrikeSound | null;
+} {
+  if (sound && WINDUP_SOUNDS.has(sound)) return { windup: sound, impact: null };
+  return { windup: null, impact: sound };
+}
+
 // The sound of a blow struck with `weapon`, or null for one with no
 // recording (fists, claws, fangs: the synthesized hit plays).
 export function getWeaponSound(weapon: Weapon | null | undefined): StrikeSound | null {

@@ -213,4 +213,11 @@ describe('getSoundCues', () => {
     expect(getSoundCues(at(screen('a', null)), at(screen('b', plate)))).toEqual([]);
     expect(getSoundCues(at(screen('a', plate)), at(screen('a', plate)))).toEqual([]);
   });
+
+  it('plays a windup sound once each time a striker readies its blow', () => {
+    const drawn = { ...base, windupSound: { id: 1, sound: 'bow' as const } };
+    expect(getSoundCues(base, drawn)).toEqual(['bow']);
+    expect(getSoundCues(drawn, { ...drawn })).toEqual([]);
+    expect(getSoundCues(drawn, { ...base, windupSound: { id: 2, sound: 'bow' } })).toEqual(['bow']);
+  });
 });

@@ -1,3 +1,4 @@
+import type { SoundCue } from '../audio/cues.ts';
 import type { ItemAction } from '../game/items.ts';
 import type { MenuAction, Menu } from '../game/actionMenu.ts';
 import type { SkillAction } from '../game/skills.ts';
@@ -74,6 +75,7 @@ export interface BattleState {
   experienceGain: ExperienceGainView | null;
   levelUp: LevelUpView | null;
   damagePopups: readonly DamagePopupView[];
+  windupSound: { id: number; sound: SoundCue } | null;
   defeats: number;
   turn: TurnView | null;
   phaseBanner: PhaseBannerView | null;
@@ -142,6 +144,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   experienceGain: null, // ExperienceGainView from toExperienceGainView() while a unit's XP bar fills after combat, or null
   levelUp: null, // LevelUpView from toLevelUpView() while a level up is being shown, or null
   damagePopups: [], // DamagePopupViews (damage or recovery) from toDamagePopupView() currently on screen
+  windupSound: null, // the last sound a striker made readying its blow (a bow being drawn), by a fresh id each time, or null
   defeats: 0, // how many units have fallen this battle (each one plays the defeat sound)
   turn: null, // TurnView from toTurnView() once the battle starts, else null
   phaseBanner: null, // PhaseBannerView from toPhaseBannerView() while a phase is being announced, or null

@@ -1,5 +1,5 @@
 import type { SoundCue } from '../audio/cues.ts';
-import { getSkillSound, getWeaponSound } from '../audio/soundKinds.ts';
+import { getSkillSound, getStrikeSoundTiming, getWeaponSound } from '../audio/soundKinds.ts';
 import Phaser from 'phaser';
 import { SPRITE_URLS, TERRAIN_SHEET_URLS } from '../assets/sprites.ts';
 import { gameCommands, type Command, type MenuField } from '../bridge/commands.ts';
@@ -3267,6 +3267,8 @@ export class GridScene extends Phaser.Scene {
     const tiles = Math.round(
       Math.max(Math.abs(sprite.x - strikerSprite.x), Math.abs(sprite.y - strikerSprite.y)) / TILE_SIZE,
     );
+    const sound = getStrikeSoundTiming(getWeaponSound(strike.weapon));
+    this.playWindupSound(sound.windup);
 
     // Done once the target's flash (or the miss pause) and the striker's
     // return have both ended — exactly once, since next moves the battle on.
@@ -3291,13 +3293,7 @@ export class GridScene extends Phaser.Scene {
         return;
       }
       this.showStats(strike.targetId, { health: strike.health });
-      this.showDamagePopup(
-        sprite,
-        strike.damage,
-        strike.crit ? 'crit' : 'damage',
-        undefined,
-        getWeaponSound(strike.weapon),
-      );
+      this.showDamagePopup(sprite, strike.damage, strike.crit ? 'crit' : 'damage', undefined, sound.impact);
       if (juice.shake) this.shakeCamera(juice.shake);
       // Art with a hit animation flinches (it holds its last frame until
       // the flash is over, then idles).
@@ -3402,10 +3398,10 @@ export class GridScene extends Phaser.Scene {
     const targetSprite = this.unitSprites.get(targetId)!;
     // A skill that only leaves a status shows that, not a 0.
     const quiet = damage === 0 && (skill.push || skill.status !== undefined);
-    const sound = getSkillSound(skill, this.units.get(unitId)?.weapon);
+    const sound = getStrikeSoundTiming(getSkillSound(skill, this.units.get(unitId)?.weapon));
     if (splash) {
       this.showStats(targetId, { health });
-      if (!quiet) this.showDamagePopup(targetSprite, damage, 'damage', undefined, sound);
+      if (!quiet) this.showDamagePopup(targetSprite, damage, 'damage', undefined, sound.impact);
       playHitFlash(this, targetSprite, next);
       return;
     }
@@ -3415,8 +3411,9 @@ export class GridScene extends Phaser.Scene {
       this.showStats(targetId, { health });
       // A Shove's blow does nothing itself: the push that follows shows
       // what it cost.
-      if (!quiet) this.showDamagePopup(targetSprite, damage, 'damage', undefined, sound);
+      if (!quiet) this.showDamagePopup(targetSprite, damage, 'damage', undefined, sound.impact);
     };
+    this.playWindupSound(sound.windup);
     this.playSkillAnimation(skill.animation, userSprite, targetSprite, onImpact, next);
   }
 
@@ -3801,6 +3798,12 @@ export class GridScene extends Phaser.Scene {
   // React HUD to draw — damage by default, a recovery when `kind` is
   // 'health' / 'mana', or loot named by `label` when it's 'loot' / 'stored'
   // — and takes it back down once it's run its course.
+  // Plays the sound of a striker readying its blow (a bow being drawn) as
+  // its attack starts; see getStrikeSoundTiming.
+  playWindupSound(sound: SoundCue | null) {
+    if (sound) gameStore.setState({ windupSound: { id: this.nextPopupId++, sound } });
+  }
+
   // `sound` plays in place of the kind's own (see getSoundCues).
   showDamagePopup(
     sprite: Sprite,
