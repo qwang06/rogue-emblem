@@ -12,6 +12,8 @@ import { DamagePopups } from './DamagePopups.tsx';
 import { MapBackButton } from './MapBackButton.tsx';
 import { MapTags } from './MapTags.tsx';
 import { AutoPlayButton } from './AutoPlayButton.tsx';
+import { BattleBar } from './BattleBar.tsx';
+import { BattleDock } from './BattleDock.tsx';
 import { AutoCommandQueue } from './AutoCommandQueue.tsx';
 import { BossBar } from './BossBar.tsx';
 import { BossIntro } from './BossIntro.tsx';
@@ -100,55 +102,59 @@ export function App() {
           <>
             <DeploymentBanner />
             <TurnIndicator />
+            {/* A Warband run's relics, after the phase on the status strip. */}
+            <RelicBar />
           </>
         )}
       </PageHeader>
-      {/* A Warband run's relics, in a row of their own under the header. */}
-      {route.page === 'game' && <RelicBar />}
 
       <main className="page__main">
         {/* Above the stage rather than over it, so it never hides a tile: the stage gives up its height. */}
         <BossBar />
-        {/* The stage fills this area, and the canvas fills the stage (see ui.css). */}
+        {/* The stage fills this area, and the canvas fills the stage (see ui.css). In a battle the dock takes a column on its left and the command bar a strip under it, so the board is framed, never covered. */}
         <div className="stage-area">
-          {/* Right click anywhere on the map or its menus cancels, like Esc. A wheel over the map around an overlay's window scrolls the window. */}
-          <div className="stage" onContextMenu={cancelOnRightClick} onWheel={scrollOverlayOnWheel}>
-            <div id="game" role="img" aria-label="Battle map" />
-            <div className="hud">
-              {/* The map's own labels first, so every window paints over them. */}
-              <MapTags />
-              {/* Then the unit panel, so every other overlay paints over it. */}
-              <UnitPanel />
-              {generator && <MapGeneratorPanel {...generator} />}
-              <MapBackButton />
-              <AutoCommandQueue />
-              <DeploymentMenu />
-              <RosterMenu />
-              <ActionMenu />
-              <WeaponMenu />
-              <SkillMenu />
-              <ItemMenu />
-              <CombatForecast />
-              <DamagePopups />
-              <ExperienceBar />
-              <PhaseBanner />
-              <BossIntro />
-              <DialogBox />
-              <ObjectiveScreen />
-              <UnitInfoScreen />
-              <PauseMenu />
-              <BattleResult />
-              <RewardScreen />
-              <BoonPickScreen />
-              <CampMenu />
-              <RosterScreen />
-              <EquipmentScreen />
-              <MerchantScreen />
-              <PromotionScreen />
-              <MentorScreen />
-              {/* Over the reward screen too, for a Veteran's Lesson's level ups, and over a cleared stage for its guaranteed ones. */}
-              <LevelUpPanel />
+          <BattleDock />
+          <div className="stage-column">
+            {/* Right click anywhere on the map or its menus cancels, like Esc. A wheel over the map around an overlay's window scrolls the window. */}
+            <div className="stage" onContextMenu={cancelOnRightClick} onWheel={scrollOverlayOnWheel}>
+              <div id="game" role="img" aria-label="Battle map" />
+              <div className="hud">
+                {/* The map's own labels first, so every window paints over them. */}
+                <MapTags />
+                {/* Then the unit panel (on narrow windows, where the dock is hidden), so every other overlay paints over it. */}
+                <UnitPanel />
+                {generator && <MapGeneratorPanel {...generator} />}
+                <MapBackButton />
+                <AutoCommandQueue />
+                <DeploymentMenu />
+                <RosterMenu />
+                <ActionMenu />
+                <WeaponMenu />
+                <SkillMenu />
+                <ItemMenu />
+                <CombatForecast />
+                <DamagePopups />
+                <ExperienceBar />
+                <PhaseBanner />
+                <BossIntro />
+                <DialogBox />
+                <ObjectiveScreen />
+                <UnitInfoScreen />
+                <PauseMenu />
+                <BattleResult />
+                <RewardScreen />
+                <BoonPickScreen />
+                <CampMenu />
+                <RosterScreen />
+                <EquipmentScreen />
+                <MerchantScreen />
+                <PromotionScreen />
+                <MentorScreen />
+                {/* Over the reward screen too, for a Veteran's Lesson's level ups, and over a cleared stage for its guaranteed ones. */}
+                <LevelUpPanel />
+              </div>
             </div>
+            <BattleBar />
           </div>
         </div>
       </main>

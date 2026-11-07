@@ -1,10 +1,20 @@
-// Pure camera rules for the map view. The map is always drawn at one zoom
-// (the game never shrinks to fit a small window); when it's bigger than
+// Pure camera rules for the map view. The map is drawn at a whole-number
+// zoom, the largest that fits the canvas within limits (the game never
+// shrinks below its minimum to fit a small window); when it's bigger than
 // the canvas the camera scrolls to keep the cursor in view.
 
 export interface Size {
   width: number;
   height: number;
+}
+
+// The zoom to draw a `world`-sized map (in unzoomed pixels) at in a
+// `view`-sized canvas: the largest whole number at which the whole map
+// fits, kept between `min` and `max`. A map too big for the canvas even at
+// `min` is drawn at `min` and scrolled (see getFollowView).
+export function getFitZoom(view: Size, world: Size, min = 2, max = 4): number {
+  const fit = Math.floor(Math.min(view.width / world.width, view.height / world.height));
+  return Math.min(max, Math.max(min, Number.isFinite(fit) ? fit : min));
 }
 
 export interface Point {

@@ -3,11 +3,18 @@ import { gameStore, type BattleSetup, type GameState } from './bridge/gameStore.
 import { GridScene } from './scenes/GridScene.ts';
 import { mountUI } from './ui/mountUI.tsx';
 import { startAudio } from './audio/index.ts';
+import { gameCommands } from './bridge/commands.ts';
 
 // React renders the page first: it owns the layout, including the #game
 // element the canvas goes in.
 mountUI(document.getElementById('root')!);
 startAudio();
+
+// The dev server exposes the store and the command queue on the window,
+// so screenshot and automation scripts can read the game's state and
+// drive it (a dynamic import from the page would get its own copy of a
+// module once the dev server has hot-reloaded it).
+if (import.meta.env.DEV) Object.assign(window, { __rogueEmblem: { gameStore, gameCommands } });
 
 // No scenes run at boot: the React title screen is shown first, and the map
 // scene is only started once the player picks a battle.

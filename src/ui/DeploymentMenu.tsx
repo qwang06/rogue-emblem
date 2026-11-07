@@ -3,20 +3,25 @@ import { GlyphIcon } from './GlyphIcon.tsx';
 import { menuItemPointerProps } from './menuPointer.ts';
 import { MenuIcon } from './MenuIcon.tsx';
 
-// The Place Units / Start menu of the deployment phase, docked on the map's left edge,
-// under the battle's objective (what wins it, after its kind's icon, and
-// what loses it, after a skull), so the
-// objective needs no screen of its own. Selection is driven by GridScene;
-// this renders the snapshot and forwards the mouse. Start shows as disabled
-// until a unit has been placed.
-export function DeploymentMenu() {
+// The Place Units / Start menu of the deployment phase. `docked`, it's a
+// list in the battle dock under the objective card (BattleDock); otherwise
+// a window docked on the map's left edge, under the battle's objective
+// (what wins it, after its kind's icon, and what loses it, after a skull),
+// so the objective needs no screen of its own (for windows too narrow for
+// the dock; ui.css shows one or the other). Selection is driven by
+// GridScene; this renders the snapshot and forwards the mouse. Start shows
+// as disabled until a unit has been placed.
+export function DeploymentMenu({ docked = false }: { docked?: boolean }) {
   const menu = useGameStore((state) => state.deploymentMenu);
   const objective = useGameStore((state) => state.deploymentObjective);
   if (!menu) return null;
 
+  const classes = docked
+    ? 'dock-section action-menu deployment-menu deployment-menu--docked'
+    : 'panel action-menu action-menu--centered deployment-menu deployment-menu--float';
   return (
-    <nav className="panel action-menu action-menu--centered deployment-menu" aria-label="Deployment">
-      {objective && (
+    <nav className={classes} aria-label="Deployment">
+      {objective && !docked && (
         <>
           <h2 className="deployment-menu__title">Objective</h2>
           <div className="deployment-menu__objective" title={objective.battle}>

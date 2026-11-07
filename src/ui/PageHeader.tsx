@@ -1,23 +1,16 @@
 import type { ReactNode } from 'react';
-// The bar across the top of the battle page: the game's wordmark on the
-// left, and whatever status the current phase shows (`children`) on the
-// right, followed by `actions` (buttons). The status is a live region, so
-// screen readers announce phase changes.
+// The status strip across the top of the page: whatever status the current
+// phase shows (`children`) on the left, where the eye starts, and `actions`
+// (the small buttons) at the far right. No wordmark: the title screen
+// carries the game's name, and the strip's job is the battle's state. The
+// status is a live region, so screen readers announce phase changes.
 export function PageHeader({ children, actions }: { children?: ReactNode; actions?: ReactNode }) {
   return (
     <header className="page-header">
-      <div className="page-header__brand">
-        <span className="page-header__gem" aria-hidden="true">
-          ◆
-        </span>
-        <span className="page-header__name">Rogue Emblem</span>
+      <div className="page-header__status" aria-live="polite">
+        {children}
       </div>
-      <div className="page-header__end">
-        <div className="page-header__status" aria-live="polite">
-          {children}
-        </div>
-        {actions}
-      </div>
+      <div className="page-header__end">{actions}</div>
     </header>
   );
 }

@@ -16,7 +16,8 @@ import type { SoundCue } from '../audio/cues.ts';
 import type { Dialog, DialogSide } from '../game/dialog.ts';
 import { getExperienceForLevel, type ExperienceGain, type GrowthStat, type LevelUpResult } from '../game/experience.ts';
 import type { ObjectiveText } from '../game/objectives.ts';
-import type { Point } from '../game/grid.ts';
+import type { Cell, Point } from '../game/grid.ts';
+import { describeTerrain } from '../game/terrainInfo.ts';
 import type { Team, TurnState } from '../game/turns.ts';
 import type { RunState, UnitSnapshot } from '../game/warband/run.ts';
 import { describeReward, previewRewardHealth, type Reward, type RewardKind } from '../game/warband/rewards.ts';
@@ -182,6 +183,23 @@ export interface Size {
 }
 
 // A map tile's edges, as fractions (0–1) of the canvas.
+// The tile under the cursor, for the battle dock's terrain card: its
+// terrain's name and move cost (describeTerrain), and whether a unit stands
+// on it.
+export interface TileView {
+  x: number;
+  y: number;
+  terrain: string | null;
+  label: string;
+  moveCost: number | null;
+}
+
+export function toTileView(cell: Cell | null | undefined): TileView | null {
+  if (!cell) return null;
+  const { label, moveCost } = describeTerrain(cell.terrain);
+  return Object.freeze({ x: cell.x, y: cell.y, terrain: cell.terrain, label, moveCost });
+}
+
 export interface TileAnchorView {
   left: number;
   top: number;

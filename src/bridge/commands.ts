@@ -27,6 +27,8 @@ import type { RosterTarget } from '../game/warband/rosterScreen.ts';
 //   { type: 'inspect' }                  — right click on the map: open the stats of the unit under the
 //                                          pointer if one can be inspected now, else the same as cancel
 //   { type: 'main-menu' }                — leave the battle for the title screen, whatever is going on
+//   { type: 'end-turn' }                 — end the player phase from the command bar, when the map is idle
+//   { type: 'undo' }                     — take the last player action back from the command bar, when the map is idle
 //   { type: 'toggle-danger-zone' }       — show or hide every enemy's reach, same as pressing D
 //   { type: 'toggle-auto-play' }         — turn auto play on or off, same as pressing A
 //   { type: 'change-auto-speed', direction } — move between 1x, 2x, 4x and 8x
@@ -63,6 +65,8 @@ export type Command =
   | { type: 'cancel' }
   | { type: 'inspect' }
   | { type: 'main-menu' }
+  | { type: 'end-turn' }
+  | { type: 'undo' }
   | { type: 'toggle-danger-zone' }
   | { type: 'toggle-auto-play' }
   | { type: 'change-auto-speed'; direction: -1 | 1 }
