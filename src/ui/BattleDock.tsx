@@ -8,7 +8,8 @@ import { useGameStore } from './useGameStore.ts';
 // The column docked on the stage's left all through a battle, so nothing
 // it shows ever covers the board: the battle's objective and turn at the
 // top (with the enemies to face under it during deployment, when no unit
-// is hovered yet), the unit under the cursor (UnitPanel) in the middle,
+// is hovered yet), the unit under the cursor (UnitPanel; the defender,
+// headed so, while an attack is aimed) in the middle,
 // and the tile under the cursor at the bottom. Its mirror on the right is
 // BattleSide. Hidden on narrow windows, where the unit panel floats over
 // the map instead (see ui.css).
@@ -16,6 +17,7 @@ export function BattleDock() {
   const onField = useGameStore(isOnField);
   const deploying = useGameStore((state) => state.phase === 'deployment');
   const enemies = useGameStore((state) => state.enemies);
+  const forecastOpen = useGameStore((state) => state.combatForecast !== null);
   if (!onField) return null;
 
   return (
@@ -33,7 +35,7 @@ export function BattleDock() {
           }
         />
       )}
-      <UnitPanel docked />
+      <UnitPanel docked heading={forecastOpen ? 'Defender' : undefined} />
       <TerrainCard />
     </aside>
   );

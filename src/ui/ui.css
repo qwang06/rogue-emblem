@@ -469,14 +469,23 @@ a.header-button {
   line-height: 0;
   border-radius: var(--radius);
   overflow: hidden;
-  /* The table the board sits on: a faint tile grid on ink lit from the
-     middle, so a map smaller than the stage reads as set on a board, not
-     adrift. */
+  /* The table the board sits on: ink lit from the middle (the grid is
+     BoardFrame's mat, aligned to the tiles), so a map smaller than the
+     stage reads as set on a board, not adrift. The canvas is clear. */
+  background: radial-gradient(ellipse at center, transparent 45%, rgb(0 0 0 / 32%) 100%), #0f1120;
+}
+
+/* The mat under the board: a 1px grid of half tiles, sized and placed by
+   BoardFrame so its lines run through the board's tile edges. */
+.hud .board-mat {
+  position: absolute;
+  pointer-events: none;
+  /* The board's own rectangle is cut out (BoardFrame sets the polygon),
+     so the grid shows round the map and never over it. */
+  clip-path: var(--mat-cutout);
   background:
-    radial-gradient(ellipse at center, transparent 50%, rgb(0 0 0 / 28%) 100%),
-    linear-gradient(#1c2034 1px, transparent 1px) 0 0 / 32px 32px,
-    linear-gradient(90deg, #1c2034 1px, transparent 1px) 0 0 / 32px 32px,
-    #0f1120;
+    linear-gradient(#1e2238 1px, transparent 1px) 0 0 / calc(100% / 128) calc(100% / 128),
+    linear-gradient(90deg, #1e2238 1px, transparent 1px) 0 0 / calc(100% / 128) calc(100% / 128);
 }
 
 /* The frame round the board (BoardFrame): a bronze hairline at a small
@@ -492,6 +501,14 @@ a.header-button {
   outline: 1px solid rgb(138 109 59 / 35%);
   outline-offset: 4px;
   pointer-events: none;
+}
+
+/* A third, fainter line 24px out, where the mat's grid meets the frame. */
+.hud .board-frame::before {
+  content: '';
+  position: absolute;
+  inset: -25px;
+  border: 1px solid rgb(138 109 59 / 18%);
 }
 
 .board-frame__label {
@@ -512,6 +529,14 @@ a.header-button {
 
 .board-frame__label--name {
   left: 12px;
+}
+
+/* The cursor's tile, on the frame's bottom-right. */
+.board-frame__label--tile {
+  top: auto;
+  bottom: -5px;
+  right: 12px;
+  transform: translateY(50%);
 }
 
 .board-frame__size {
@@ -1131,8 +1156,9 @@ kbd {
 }
 
 .unit-panel--docked .meter__value {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   color: var(--fg-bright);
 }
 
@@ -1198,6 +1224,11 @@ kbd {
 
 .unit-panel--docked.unit-panel--enemy {
   background: linear-gradient(var(--red-bg), var(--red-bg)), var(--bezel);
+}
+
+/* The attacker's card beside the forecast reads in the forecast's blue. */
+.battle-side .unit-panel--docked.unit-panel--player {
+  background: linear-gradient(rgb(70 110 200 / 14%), rgb(70 110 200 / 14%)), var(--bezel);
 }
 
 .unit-panel--docked.unit-panel--guest {
@@ -1281,6 +1312,18 @@ kbd {
   list-style: none;
 }
 
+.roster-card {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.roster-card__list {
+  overflow: hidden auto;
+  scrollbar-width: none;
+}
+
 .roster-card__unit,
 .team-card__unit {
   display: grid;
@@ -1290,6 +1333,15 @@ kbd {
   min-height: 2.25rem;
   padding: 2px 0;
   border-bottom: 1px solid rgb(138 109 59 / 25%);
+}
+
+.roster-card__unit {
+  min-height: 3.25rem;
+  row-gap: 3px;
+}
+
+.roster-card__sprite {
+  grid-row: 1 / 3;
 }
 
 .roster-card__unit:last-child,
@@ -1329,6 +1381,33 @@ kbd {
   color: var(--accent);
 }
 
+.roster-card__class {
+  grid-column: 2;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.roster-card__hp {
+  grid-column: 3;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.roster-card__hp-value {
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-bright);
+}
+
 .roster-card__unit--placed .roster-card__name {
   color: var(--fg-bright);
 }
@@ -1345,6 +1424,12 @@ kbd {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--fg-dim);
+}
+
+/* The roster's count sits at the column's foot, like the terrain card. */
+.roster-card__count {
+  margin-top: auto;
+  padding-top: 8px;
 }
 
 .roster-card__count-number,
@@ -1369,7 +1454,7 @@ kbd {
 .team-card__hp {
   grid-column: 2;
   display: block;
-  height: 8px;
+  height: 10px;
   background: var(--desktop);
   box-shadow: 0 0 0 1px rgb(138 109 59 / 55%);
 }
@@ -1382,7 +1467,7 @@ kbd {
 
 .team-card__hp-value {
   grid-column: 3;
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--fg-bright);
@@ -1657,24 +1742,6 @@ kbd {
   outline-offset: 2px;
 }
 
-/* Whose turn it is while the player waits, in that side's color. */
-.battle-bar__phase {
-  padding-right: 6px;
-  font-size: 0.9375rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--red);
-}
-
-.battle-bar__phase--guest {
-  color: var(--green);
-}
-
-.battle-bar__phase--player {
-  color: var(--blue);
-}
-
 /* The unit card's docked header: the name big in its side's color, the
    class and level on one dim line under it. */
 .unit-panel__lines--docked p {
@@ -1731,6 +1798,11 @@ kbd {
 .page--field .page-header .main-menu-button,
 .page--field .page-header .relic-bar__key {
   display: none;
+}
+
+/* On the field the strip's relic icons sit flat, the bar carrying their key. */
+.page--field .page-header .relic-bar__relic {
+  background: transparent;
 }
 
 /* The attacker's card under the forecast: its heading on the card. */

@@ -74,7 +74,8 @@ function EnemiesCard() {
 }
 
 // During deployment, who can take the field: each roster unit with its
-// sprite, marked once placed, dim once the map's limit leaves it no room.
+// sprite, class, level and HP, marked once placed, dim once the map's
+// limit leaves it no room; how many are placed at the column's foot.
 function RosterCard() {
   const roster = useGameStore((state) => state.deploymentRoster);
   const limit = useGameStore((state) => state.deploymentLimit);
@@ -97,6 +98,15 @@ function RosterCard() {
                 {entry.label}
               </span>
               <span className="roster-card__tag">{entry.placed ? 'Placed' : ''}</span>
+              <span className="roster-card__class" title={entry.classLabel ?? undefined}>
+                {entry.classLabel ?? '–'} Lv {entry.level}
+              </span>
+              <span className="roster-card__hp">
+                HP{' '}
+                <span className="roster-card__hp-value">
+                  {entry.health}/{entry.maxHealth}
+                </span>
+              </span>
             </li>
           );
         })}
