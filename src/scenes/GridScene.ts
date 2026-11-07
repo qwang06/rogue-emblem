@@ -106,6 +106,7 @@ import { toRunSummaryView, type RunSummaryView } from '../bridge/runSummaryView.
 import { getBestOfferIndex, pickBoonOffer, pickReward, planCamp } from '../game/warband/runPolicy.ts';
 import { planPlayerDeployment, planPlayerTurn } from '../game/battle/playerAI.ts';
 import { getCampActions } from '../game/warband/camp.ts';
+import { toCampView } from '../bridge/campView.ts';
 import {
   cancelMerchant,
   confirmMerchant,
@@ -486,6 +487,7 @@ export class GridScene extends Phaser.Scene {
   // After the reward is taken: the run as it then stands, while the camp
   // menu (Manage Roster / Next Stage) or the roster screen is up.
   campRun: RunState | null = null;
+  campUnitIndex = 0;
   campMenu: Menu | null = null;
   // A won realm stage with nothing to pick: the run, for confirm on the
   // result to open its camp.
@@ -1090,7 +1092,8 @@ export class GridScene extends Phaser.Scene {
     }
 
     if (this.campMenu) {
-      this.updateCampMenu(dy, confirm);
+      const picked = this.pickMenuEntry('campMenu', this.campMenu);
+      this.updateCampMenu(dx, dy, confirm || picked);
       return;
     }
 
@@ -1483,6 +1486,8 @@ export class GridScene extends Phaser.Scene {
     if (menu === menus[key]) return;
     menus[key] = menu;
     gameStore.setState({ [key]: menu } as Partial<GameState>);
+    // The camp screen's readouts go with its menu.
+    if (key === 'campMenu' && !menu) gameStore.setState({ camp: null });
   }
 
   // While the pause menu is open it owns input: cancel closes it, End Turn
@@ -1799,10 +1804,35 @@ export class GridScene extends Phaser.Scene {
     const actions = getCampActions(run);
     const selected = this.campMenu?.selectedIndex ?? actions.findIndex((action) => action.id === 'march');
     this.publishMenu('campMenu', selectIndex(createActionMenu(actions), selected));
-    gameStore.setState({ campGold: run.gold, campRelics: toRelicViews(run.relics, run.stage, run.keystone) });
+    this.publishCamp();
   }
 
-  updateCampMenu(dy: number, confirm: boolean) {
+  // Publishes the camp screen's readouts for the camp's run, with the unit
+  // shown in full (campUnitIndex, kept on the roster).
+  publishCamp() {
+    const run = this.campRun!;
+    const camp = toCampView(run, this.content.regions, this.campUnitIndex);
+    this.campUnitIndex = Math.max(0, camp.unitIndex);
+    gameStore.setState({
+      camp,
+      campGold: run.gold,
+      campRelics: toRelicViews(run.relics, run.stage, run.keystone),
+    });
+  }
+
+  // Shows roster unit `index` in full on the camp screen.
+  pickCampUnit(index: number) {
+    if (!this.campRun || this.campRun.roster.length === 0) return;
+    const count = this.campRun.roster.length;
+    this.campUnitIndex = ((index % count) + count) % count;
+    this.publishCamp();
+  }
+
+  // Up and down move the action highlight, left and right the unit shown
+  // in full, a digit picks an action, and confirm takes the highlighted
+  // action.
+  updateCampMenu(dx: number, dy: number, confirm: boolean) {
+    if (dx !== 0) this.pickCampUnit(this.campUnitIndex + dx);
     if (confirm) {
       const action = getSelectedAction(this.campMenu!);
       if (!action || action.disabled) return;
@@ -4098,6 +4128,9 @@ export class GridScene extends Phaser.Scene {
           if (!this[command.menu]) break;
           this.publishMenu(command.menu, selectIndex(this[command.menu]!, command.index));
           if (command.type === 'select-menu') result.confirm = true;
+          break;
+        case 'pick-camp-unit':
+          this.pickCampUnit(command.index);
           break;
         case 'hover-roster':
         case 'select-roster':

@@ -71,7 +71,7 @@ export interface OverworldView {
   leaderSprite: string | null;
 }
 
-const KIND_TEXT: Readonly<Record<SiteKind, { label: string; blurb: string }>> = {
+export const KIND_TEXT: Readonly<Record<SiteKind, { label: string; blurb: string }>> = {
   home: { label: 'Camp', blurb: 'Where the warband set out.' },
   battle: { label: 'Battle', blurb: 'Fight for the road ahead.' },
   village: { label: 'Village', blurb: 'Defend the village. A villager fights beside you and may join after.' },

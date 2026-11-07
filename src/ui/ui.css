@@ -5573,7 +5573,7 @@ textarea.draft-input {
 }
 
 /* The purse: a gold name plate on the window's bottom frame, as on the
-   camp menu (see .camp-menu__gold), at its left end. */
+   merchant (see .merchant-screen__gold), at its left end. */
 .reward-screen .reward-screen__purse {
   left: 10px;
   right: auto;
@@ -6190,9 +6190,16 @@ textarea.draft-input {
 /* ---- Camp menu and merchant ----------------------------------------- */
 
 /* The warband's gold, a name plate on a window's frame like its title:
-   on the camp menu's bottom edge and the merchant's top-right one, so it
-   taking more digits never moves anything inside. */
-.camp-menu__gold,
+   on the merchant's top-right edge, so it taking more digits never moves
+   anything inside. */
+.relic-icon {
+  display: block;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  image-rendering: pixelated;
+}
+
 .merchant-screen__gold,
 .reward-screen__purse {
   position: absolute;
@@ -6217,70 +6224,6 @@ textarea.draft-input {
   border-width: 0 calc(8 * var(--px));
   border-image: url('../assets/ui/name-plate.png') 0 8 fill / 0 calc(8 * var(--px)) stretch;
   image-rendering: pixelated;
-}
-
-.camp-menu {
-  padding-bottom: 12px;
-}
-
-/* The camp menu with the warband's relics beside it, wrapping under it
-   when the stage is too narrow for both. */
-.camp-overlay {
-  flex-wrap: wrap;
-  align-content: center;
-  /* Rows far enough apart that the gold plate hanging off the menu's
-     bottom edge clears the Relics plate on top of the box under it. */
-  gap: 44px 24px;
-  padding: 16px;
-  overflow-y: auto;
-}
-
-.camp-relics {
-  position: relative;
-  width: min(20rem, 100%);
-  padding-top: 12px;
-}
-
-.camp-relics__list {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.camp-relics__relic {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: 8px;
-  row-gap: 2px;
-}
-
-.camp-relics__icon {
-  grid-row: span 2;
-}
-
-.relic-icon {
-  display: block;
-  width: 32px;
-  height: 32px;
-  flex: none;
-  image-rendering: pixelated;
-}
-
-.camp-relics__name {
-  font-weight: 700;
-  color: var(--fg-bright);
-}
-
-.camp-relics__description {
-  font-size: 0.8125rem;
-  color: var(--fg-dim);
-}
-
-.camp-menu__gold {
-  bottom: 0;
-  transform: translateY(80%);
 }
 
 .merchant-screen__gold {

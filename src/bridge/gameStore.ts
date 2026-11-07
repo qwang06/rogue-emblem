@@ -11,6 +11,7 @@ import type { MentorScreenView } from './mentorView.ts';
 import type { BossBarView, BossIntroView } from './bossView.ts';
 import type { IntentView, ThreatSummaryView } from './intentView.ts';
 import type { MapTagView } from './mapTagView.ts';
+import type { CampView } from './campView.ts';
 import type { PartyUnitView } from './partyView.ts';
 import type { Season } from '../game/tileset.ts';
 import type { MerchantScreenView } from './merchantView.ts';
@@ -117,6 +118,8 @@ export interface BattleState {
   recruitDraft: boolean;
   boonPick: BoonPickView | null;
   campMenu: Menu | null;
+  // The camp screen's readouts (campView.ts) while the camp menu is up.
+  camp: CampView | null;
   campGold: number | null;
   campRelics: readonly RelicView[] | null;
   runRelics: readonly RelicView[] | null;
@@ -196,6 +199,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   recruitmentStage: null,
   recruitDraft: false,
   boonPick: null, // BoonPickView from toBoonPickView() while the level-up screen shows a level up's boon pick (its entries are rewardMenu's), or null
+  camp: null, // CampView from toCampView() while at camp (the roster, the shown unit's sheet, supplies, relics and the actions' notes), or null
   campMenu: null, // frozen camp menu (getCampActions: Manage Roster / Merchant / Promote / Rest / Mentors / Next Stage) once a won stage's reward is taken, or null
   campGold: null, // the warband's gold while at camp (shown on the camp menu), or null
   campRelics: null, // RelicViews from toRelicViews() of the warband's relics while at camp (listed on the camp menu), or null

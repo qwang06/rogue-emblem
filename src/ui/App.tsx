@@ -3,7 +3,7 @@ import { scrollOverlayOnWheel } from './overlayWheel.ts';
 import { gameCommands } from '../bridge/commands.ts';
 import { ActionMenu } from './ActionMenu.tsx';
 import { BattleResult } from './BattleResult.tsx';
-import { CampMenu } from './CampMenu.tsx';
+import { CampScreen } from './CampScreen.tsx';
 import { CombatForecast } from './CombatForecast.tsx';
 import { AnimationViewer } from './AnimationViewer.tsx';
 import { ConfigEditor } from './ConfigEditor.tsx';
@@ -151,7 +151,7 @@ export function App() {
                 <BattleResult />
                 <RewardScreen />
                 <BoonPickScreen />
-                <CampMenu />
+                <CampScreen />
                 <RosterScreen />
                 <EquipmentScreen />
                 <MerchantScreen />
