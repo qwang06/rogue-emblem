@@ -9,7 +9,7 @@ import {
   type SiteDetailView,
 } from '../bridge/overworldView.ts';
 import { publishRunRelics } from '../bridge/runRelics.ts';
-import { enterRun, getRunScreen } from '../bridge/warbandFlow.ts';
+import { enterCamp, enterRun, getRunScreen } from '../bridge/warbandFlow.ts';
 import { getActiveContent } from '../data/customContent.ts';
 import { loadSavedRun } from '../data/runSave.ts';
 import type { Point } from '../game/grid.ts';
@@ -39,6 +39,7 @@ import './Overworld.css';
 const KEYS = [
   ['←→', 'Road'],
   ['R', 'Roster'],
+  ['C', 'Camp'],
   ['Enter', 'Travel'],
 ] as const;
 
@@ -62,7 +63,8 @@ function prefersReducedMotion(): boolean {
 // inkRaster.ts) at native size and scaled up whole, with the place names,
 // route lines and sites laid over it in layers of the same size. Roster
 // (or R) opens the roster screen over the map to manage the warband's
-// items before choosing (OverworldRoster).
+// items before choosing (OverworldRoster); Camp (or C) goes back to the
+// camp at the site it stands at (warbandFlow.enterCamp).
 export function OverworldScreen() {
   const [run, setRun] = useState(() => loadSavedRun());
   const realm = useMemo(() => (run ? getRealm(run.seed, getActiveContent().regions) : null), [run]);
@@ -163,6 +165,11 @@ function Overworld({
   function openRoster() {
     if (canOpenRoster) setRosterOpen(true);
   }
+  // Camp (or C) goes back to the camp over the site the warband stands at
+  // (warbandFlow.enterCamp); Travel there returns here.
+  function goToCamp() {
+    if (canOpenRoster) enterCamp(run);
+  }
 
   useEffect(() => {
     if (!autoPlay || walk || rosterOpen || view.choices.length === 0) return;
@@ -185,6 +192,11 @@ function Overworld({
       if (event.key === 'r' || event.key === 'R') {
         event.preventDefault();
         openRoster();
+        return;
+      }
+      if (event.key === 'c' || event.key === 'C') {
+        event.preventDefault();
+        goToCamp();
         return;
       }
       const count = view.choices.length;
@@ -262,6 +274,10 @@ function Overworld({
         >
           <kbd className="overworld__key">R</kbd>
           Roster
+        </button>
+        <button type="button" className="overworld__tool" disabled={!canOpenRoster} onClick={goToCamp}>
+          <kbd className="overworld__key">C</kbd>
+          Camp
         </button>
       </header>
 

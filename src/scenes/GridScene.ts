@@ -972,8 +972,9 @@ export class GridScene extends Phaser.Scene {
       return;
     }
     // A run arriving in a town (see warband/travel.ts) opens its camp over
-    // the town, with the merchant and a free rest.
-    if (savedRun && isInTown(savedRun) && !isSiteDone(savedRun)) {
+    // the town, with the merchant and a free rest; so does one back at camp
+    // from the realm (warbandFlow.enterCamp), over its site.
+    if (savedRun && ((setup.mode === 'warband' && setup.camp) || (isInTown(savedRun) && !isSiteDone(savedRun)))) {
       this.setCursorVisible(false);
       this.openCamp(savedRun);
       gameStore.setState({ mapLoadProgress: 1, mapReady: true });

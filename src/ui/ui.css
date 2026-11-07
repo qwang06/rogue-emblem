@@ -687,10 +687,10 @@ a.header-button {
   image-rendering: pixelated;
 }
 
-/* A window's Back / Close tab (MenuExitButton): the rose button, small,
-   hung off the top-right of the frame opposite the name plate, so it takes
-   no room in the window. One fixed width fits either word, so switching
-   between them never moves it. */
+/* A window's Back / Close tab (MenuExitButton): a small ink chip with a
+   bronze hairline, hung off the top-right of the frame opposite the name
+   plate, so it takes no room in the window. One fixed width fits either
+   word, so switching between them never moves it. */
 .menu-exit {
   position: absolute;
   top: 0;
@@ -700,7 +700,7 @@ a.header-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 4px;
   box-sizing: border-box;
   width: var(--menu-exit-width);
   height: calc(13 * var(--px));
@@ -710,11 +710,25 @@ a.header-button {
   line-height: 1;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  color: var(--fg);
+  background: var(--ink);
+  border: 1px solid rgb(138 109 59 / 75%);
+  box-shadow: var(--lift);
+}
+
+.menu-exit:hover {
+  color: var(--fg-bright);
+  background: #2b3050;
 }
 
 .menu-exit .pixel-icon {
   width: calc(8 * var(--px));
   height: calc(8 * var(--px));
+  color: var(--accent);
+}
+
+.menu-exit:active .pixel-icon {
+  color: inherit;
 }
 
 /* The map's own Back button (MapBackButton), while picking a tile with no
@@ -5525,13 +5539,11 @@ textarea.draft-input {
    the convoy. Each list keeps its height whatever it holds (the convoy
    scrolls), so moving the cursor or moving an item never resizes the
    screen (see "UI layout" in AGENTS.md). */
-/* Scrolls on short stages; the top padding keeps the title cut into the
-   window's border inside the scroll box. */
+/* Scrolls on short stages. */
 .roster-screen__scroll {
   box-sizing: border-box;
   width: min(54rem, calc(100% - 32px));
   max-height: calc(100% - 24px);
-  padding-top: 12px;
   overflow-y: auto;
   container-type: inline-size;
 }
@@ -5540,11 +5552,40 @@ textarea.draft-input {
   /* Room for a unit's two lines of text, or a 32px item icon. */
   --row: max(40px, 2.4rem);
   position: relative;
-  padding: 16px 12px 10px;
+  padding: 10px 12px 10px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   border-color: var(--accent);
+}
+
+/* The sheets (roster, merchant, promotion, mentors) head themselves with
+   a row inside the window: the title a caps heading at the left over a
+   hairline the full width, and the Back / Close chip at the row's right,
+   instead of plates hung on the frame. */
+.roster-screen > .roster-screen__title {
+  position: static;
+  transform: none;
+  display: flex;
+  align-items: center;
+  height: calc(13 * var(--px));
+  margin: 0;
+  padding: 0 0 8px;
+  box-sizing: content-box;
+  border: 0;
+  border-bottom: var(--hairline);
+  border-image: none;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  color: var(--accent);
+}
+
+.roster-screen > .menu-exit {
+  top: 10px;
+  right: 12px;
+  transform: none;
+  box-shadow: none;
 }
 
 .roster-screen__columns {
