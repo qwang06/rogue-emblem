@@ -370,8 +370,8 @@ const ATTACK_DEPTH = 0.78;
 // How long the "Player Phase" / "Enemy Phase" banner holds the screen.
 const PHASE_BANNER_DURATION_MS = 800;
 // Pauses in the enemy phase: on each enemy before it moves, and between enemies.
-const ENEMY_FOCUS_DELAY_MS = 250;
-const ENEMY_ACTION_DELAY_MS = 300;
+const ENEMY_FOCUS_DELAY_MS = 120;
+const ENEMY_ACTION_DELAY_MS = 150;
 // How long auto play waits between its steps (a unit's action, a menu
 // pick, moving past a screen), so it can be followed.
 const AUTO_STEP_MS = 450;
