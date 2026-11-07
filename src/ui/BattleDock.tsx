@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import type { GameState } from '../bridge/gameStore.ts';
-import { DeploymentMenu } from './DeploymentMenu.tsx';
 import { GlyphIcon } from './GlyphIcon.tsx';
 import { UnitPanel } from './UnitPanel.tsx';
 import { useGameStore } from './useGameStore.ts';
@@ -28,10 +27,10 @@ export function isOnField(state: GameState): boolean {
 
 // The column docked on the stage's left all through a battle, so nothing
 // it shows ever covers the board: the battle's objective and turn at the
-// top (with the Place Units / Start menu under it during deployment), the
-// unit under the cursor (UnitPanel) in the middle, and the tile under the
-// cursor at the bottom. Hidden on narrow windows, where the unit
-// panel floats over the map instead (see ui.css).
+// top, the unit under the cursor (UnitPanel) in the middle, and the tile
+// under the cursor at the bottom. Its mirror on the right is BattleSide. Hidden on
+// narrow windows, where the unit panel floats over the map instead (see
+// ui.css).
 export function BattleDock() {
   const onField = useGameStore(isOnField);
   if (!onField) return null;
@@ -39,7 +38,6 @@ export function BattleDock() {
   return (
     <aside className="battle-dock" aria-label="Battle readouts">
       <ObjectiveCard />
-      <DeploymentMenu docked />
       <UnitPanel docked />
       <TerrainCard />
     </aside>

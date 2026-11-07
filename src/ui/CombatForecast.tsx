@@ -11,21 +11,26 @@ import { useGameStore } from './useGameStore.ts';
 // would take if every strike lands, damage per hit (with ×2 when it strikes twice), hit and crit
 // chances, attacker on the left and defender on the right. A defender that
 // can't counter shows "–". GridScene publishes the numbers (from
-// getCombatForecast) and where the two units stand; this opens beside
-// them, covering neither. Each row's label carries a small stat icon, as
-// on the GBA's battle window.
-export function CombatForecast() {
+// getCombatForecast) and where the two units stand. Each row's label
+// carries a small stat icon, as on the GBA's battle window.
+//
+// `docked`, it's the right column's readout (BattleSide): a flat section
+// of the column, always in the same place, with the damage also drawn on
+// the target's tile (MapTags). Otherwise it floats beside the fighters,
+// covering neither (for windows too narrow for the columns; ui.css shows
+// one or the other).
+export function CombatForecast({ docked = false }: { docked?: boolean }) {
   const forecast = useGameStore((state) => state.combatForecast);
-  const placement = usePanelBesideAnchor(Boolean(forecast), forecast?.anchor ?? null);
+  const placement = usePanelBesideAnchor(Boolean(forecast) && !docked, forecast?.anchor ?? null);
   if (!forecast) return null;
 
   const { attacker, defender } = forecast;
+  const sides = `combat-forecast--attacker-${attacker.team} combat-forecast--defender-${defender.team}`;
+  const classes = docked
+    ? `dock-section combat-forecast combat-forecast--docked ${sides}`
+    : `panel combat-forecast combat-forecast--float ${sides}`;
   return (
-    <section
-      className={`panel combat-forecast combat-forecast--attacker-${attacker.team} combat-forecast--defender-${defender.team}`}
-      aria-label="Combat forecast"
-      {...placement}
-    >
+    <section className={classes} aria-label="Combat forecast" {...(docked ? {} : placement)}>
       <div className="combat-forecast__head">
         <div className="combat-forecast__names">
           <Name side={attacker} />

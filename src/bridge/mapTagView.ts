@@ -1,16 +1,18 @@
 // Snapshots of the small tags React pins over map tiles (MapTags.tsx): the
 // HP the enemies' intents threaten a unit with (src/game/battle/intents.ts),
-// and what a Shove being aimed would do (src/game/push.ts). Plain frozen
-// data; GridScene says where each tile shows on the canvas.
+// what a Shove being aimed would do (src/game/push.ts), and the damage the
+// attack being aimed would do (the combat forecast). Plain frozen data;
+// GridScene says where each tile shows on the canvas.
 
 import type { IntentThreat } from '../game/battle/intents.ts';
 import type { PushResult } from '../game/push.ts';
-import type { TileAnchorView } from './views.ts';
+import type { CombatForecastView, TileAnchorView } from './views.ts';
 
-// How a tag reads: a threat or a shove that would fell its unit is
-// 'lethal', other threats 'threat', a shove that hurts 'hazard', and one
-// that only moves (or can't) 'push'.
-export type MapTagTone = 'threat' | 'lethal' | 'hazard' | 'push';
+// How a tag reads: a threat, a shove or an aimed attack that would fell
+// its unit is 'lethal', other threats 'threat', the aimed attack's damage
+// 'forecast', a shove that hurts 'hazard', and one that only moves (or
+// can't) 'push'.
+export type MapTagTone = 'threat' | 'lethal' | 'hazard' | 'push' | 'forecast';
 
 // One tag: `x` the middle and `y` the top of its tile, as fractions of the
 // canvas (see toTileAnchorView), so it sits on the tile's top edge.
@@ -49,4 +51,20 @@ export function describePush(push: PushResult, health: number): { text: string; 
 export function toPushTagView(push: PushResult, health: number, anchor: TileAnchorView): MapTagView {
   const { text, tone } = describePush(push, health);
   return tagAt('push', anchor, text, tone);
+}
+
+// The HP the aimed attack would take off its target if every strike lands
+// (the forecast's health before and after), over the target's tile: "KO"
+// when that fells it, and 'forecast' toned, so it tells apart from an
+// enemy's intent.
+export function toForecastTagView(forecast: CombatForecastView): MapTagView {
+  const { health, healthAfter } = forecast.defender;
+  const damage = health - healthAfter;
+  const lethal = healthAfter <= 0;
+  return tagAt(
+    'forecast',
+    forecast.defenderAnchor,
+    lethal ? `-${damage} KO` : `-${damage}`,
+    lethal ? 'lethal' : 'forecast',
+  );
 }

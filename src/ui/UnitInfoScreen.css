@@ -14,7 +14,7 @@
   flex-direction: column;
   box-sizing: border-box;
   max-width: calc(100% - 24px);
-  max-height: calc(100% - 12px);
+  max-height: calc(100% - 16px);
   padding-top: 18px;
   animation: level-up-pop 120ms ease-out;
 }
@@ -33,20 +33,56 @@
   max-width: 100%;
   min-height: 0;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
   box-sizing: border-box;
-  padding: 10px 14px;
-  font-size: 0.875rem;
+  padding: 8px 14px 10px;
+  font-size: 0.8125rem;
   line-height: 1.3;
 }
 
 .unit-info--enemy {
-  border-color: var(--red);
-  --well: var(--red-bg);
+  background: linear-gradient(var(--red-bg), var(--red-bg)), var(--bg);
 }
 
 .unit-info--guest {
-  border-color: var(--green);
-  --well: var(--green-bg);
+  background: linear-gradient(var(--green-bg), var(--green-bg)), var(--bg);
+}
+
+/* Where the battle columns show (see ui.css), the sheet is the stage: a
+   flat ink surface filling it edge to edge, no window frame, its three
+   columns given room so the longest names ("Wooden Sword", "Natural")
+   never clip; the command bar carries its Close key. */
+@media (min-width: 44.01rem) {
+  .unit-info-window {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    padding-top: 0;
+    animation: none;
+  }
+
+  /* Scoped under the layer: ui.css's window frame (.panel) loads later. */
+  .unit-info-layer .unit-info {
+    flex: 1;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.15fr);
+    gap: 6px 28px;
+    width: 100%;
+    padding: 14px 24px 16px;
+    border: 0;
+    border-image: none;
+    background: var(--bezel);
+    font-size: 0.875rem;
+  }
+
+  .unit-info-layer .unit-info--enemy {
+    background: linear-gradient(var(--red-bg), var(--red-bg)), var(--bezel);
+  }
+
+  .unit-info-layer .unit-info--guest {
+    background: linear-gradient(var(--green-bg), var(--green-bg)), var(--bezel);
+  }
 }
 
 @media (width < 72rem) {
@@ -80,12 +116,22 @@
 .unit-info__name {
   margin: 0;
   overflow: hidden;
-  font-size: 1.25rem;
-  font-weight: 800;
+  font-family: var(--serif);
+  font-size: 1.375rem;
+  font-weight: 400;
   line-height: 1.2;
+  letter-spacing: 0.02em;
   white-space: nowrap;
   text-overflow: ellipsis;
-  color: var(--fg-bright);
+  color: var(--blue);
+}
+
+.unit-info--enemy .unit-info__name {
+  color: var(--red);
+}
+
+.unit-info--guest .unit-info__name {
+  color: var(--green);
 }
 
 .unit-info__class {
@@ -125,10 +171,12 @@
 .unit-info__heading {
   margin: 0 0 4px;
   padding-bottom: 2px;
-  border-bottom: var(--rule);
-  font-size: 0.8125rem;
+  border-bottom: var(--hairline);
+  font-size: 0.6875rem;
   font-weight: 700;
-  line-height: 1.4;
+  line-height: 1.6;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--accent);
 }
 
@@ -161,14 +209,14 @@
 
 .unit-info__stat-track {
   height: 6px;
-  background: var(--bg-light);
+  background: var(--well);
   overflow: hidden;
 }
 
 .unit-info__stat-fill {
   display: block;
   height: 100%;
-  background: var(--fg);
+  background: var(--fg-dim);
 }
 
 .unit-info__rates {
@@ -243,11 +291,6 @@
 .unit-info__empty {
   margin: 0;
   color: var(--fg-dim);
-}
-
-.unit-info__hint {
-  grid-column: 1 / -1;
-  margin: 10px 0 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

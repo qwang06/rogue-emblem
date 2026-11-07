@@ -14,6 +14,7 @@ import { MapTags } from './MapTags.tsx';
 import { AutoPlayButton } from './AutoPlayButton.tsx';
 import { BattleBar } from './BattleBar.tsx';
 import { BattleDock } from './BattleDock.tsx';
+import { BattleSide } from './BattleSide.tsx';
 import { AutoCommandQueue } from './AutoCommandQueue.tsx';
 import { BossBar } from './BossBar.tsx';
 import { BossIntro } from './BossIntro.tsx';
@@ -111,7 +112,7 @@ export function App() {
       <main className="page__main">
         {/* Above the stage rather than over it, so it never hides a tile: the stage gives up its height. */}
         <BossBar />
-        {/* The stage fills this area, and the canvas fills the stage (see ui.css). In a battle the dock takes a column on its left and the command bar a strip under it, so the board is framed, never covered. */}
+        {/* The stage fills this area, and the canvas fills the stage (see ui.css). In a battle the dock takes a column on its left, the roster (or forecast) a column on its right and the command bar a strip under it, so the board is framed, never covered. */}
         <div className="stage-area">
           <BattleDock />
           <div className="stage-column">
@@ -156,6 +157,7 @@ export function App() {
             </div>
             <BattleBar />
           </div>
+          <BattleSide />
         </div>
       </main>
 

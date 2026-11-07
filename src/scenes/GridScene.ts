@@ -32,6 +32,7 @@ import {
   toPhaseBannerView,
   toCanvasFraction,
   toRosterEntryView,
+  type RosterEntryView,
   toTileAnchorView,
   toTileView,
   toTurnView,
@@ -206,6 +207,7 @@ import { getEnemyIntents, getIntentThreats, type EnemyIntent } from '../game/bat
 import { getIntentArrowShape } from '../game/intentArrow.ts';
 import { getPushDirection, getPushResult } from '../game/push.ts';
 import { toIntentTagView, toPushTagView } from '../bridge/mapTagView.ts';
+import { toPartyView } from '../bridge/partyView.ts';
 import {
   findEvent,
   getMovementOptions,
@@ -650,6 +652,7 @@ export class GridScene extends Phaser.Scene {
   syncShown() {
     this.shown = this.battle;
     this.shownStats.clear();
+    gameStore.setState({ party: toPartyView(this.shown) });
     this.publishBossBar();
     this.refreshIncomingMarker();
     this.refreshTerrain(this.grid);
@@ -1078,23 +1081,25 @@ export class GridScene extends Phaser.Scene {
       return;
     }
 
+    // A unit's menus are a row of chips in the command bar (or a list in a
+    // window on narrow screens), so either arrow axis moves their pick.
     if (this.weaponMenu) {
-      this.updateWeaponMenu(dy, confirm, cancel);
+      this.updateWeaponMenu(dx || dy, confirm, cancel);
       return;
     }
 
     if (this.skillMenu) {
-      this.updateSkillMenu(dy, confirm, cancel);
+      this.updateSkillMenu(dx || dy, confirm, cancel);
       return;
     }
 
     if (this.itemMenu) {
-      this.updateItemMenu(dy, confirm, cancel);
+      this.updateItemMenu(dx || dy, confirm, cancel);
       return;
     }
 
     if (this.actionMenu) {
-      this.updateActionMenu(dy, confirm, cancel);
+      this.updateActionMenu(dx || dy, confirm, cancel);
       return;
     }
 
@@ -2077,13 +2082,30 @@ export class GridScene extends Phaser.Scene {
     this.openDeploymentMenu(canStartBattle(this.grid, this.roster) ? START_INDEX : PLACE_UNITS_INDEX);
   }
 
+  // Publishes the step and, with it, the roster card's entries (who's
+  // placed, who still can be), which change with every placement.
   setDeploymentStep(step: DeploymentStep | null) {
-    gameStore.setState({ deploymentStep: step });
+    gameStore.setState({ deploymentStep: step, deploymentRoster: step ? this.getRosterEntries() : [] });
+  }
+
+  // Every roster unit as the deployment roster shows it: placed or not,
+  // and greyed out once the map's limit leaves no room for it.
+  getRosterEntries(): readonly RosterEntryView[] {
+    return this.roster.map((id) => {
+      const unit = this.units.get(id)!;
+      return toRosterEntryView({
+        id,
+        unit,
+        sprite: getUnitSprite(unit.unitClass),
+        placed: isPlaced(this.grid, id),
+        disabled: !canPickToDeploy(this.grid, this.roster, this.deploymentLimit, id),
+      });
+    });
   }
 
   updateDeployment(dx: number, dy: number, confirm: boolean, cancel: boolean) {
     if (this.deploymentMenu) {
-      this.updateDeploymentMenu(dy, confirm);
+      this.updateDeploymentMenu(dx || dy, confirm);
       return;
     }
 
@@ -2129,17 +2151,7 @@ export class GridScene extends Phaser.Scene {
   }
 
   openRosterMenu() {
-    const entries = this.roster.map((id) => {
-      const unit = this.units.get(id)!;
-      return toRosterEntryView({
-        id,
-        unit,
-        sprite: getUnitSprite(unit.unitClass),
-        placed: isPlaced(this.grid, id),
-        disabled: !canPickToDeploy(this.grid, this.roster, this.deploymentLimit, id),
-      });
-    });
-    this.publishMenu('rosterMenu', createActionMenu(entries));
+    this.publishMenu('rosterMenu', createActionMenu(this.getRosterEntries()));
     this.setDeploymentStep('roster');
   }
 
@@ -2218,6 +2230,7 @@ export class GridScene extends Phaser.Scene {
     gameStore.setState({
       phase: 'battle',
       deploymentStep: null,
+      deploymentRoster: [],
       deploymentLimit: null,
       deploymentObjective: null,
       battleObjective: this.getObjectiveView(),
@@ -2870,8 +2883,11 @@ export class GridScene extends Phaser.Scene {
       const defender = this.units.get(target.unitId)!;
       const distance = getDistance({ x, y }, target);
       const forecast = getCombatForecast(unit, defender, { distance });
-      const anchor = mergeTileAnchors(this.getTileAnchor({ x, y }), this.getTileAnchor(target));
-      gameStore.setState({ combatForecast: toCombatForecastView({ forecast, attacker: unit, defender, anchor }) });
+      const defenderAnchor = this.getTileAnchor(target);
+      const anchor = mergeTileAnchors(this.getTileAnchor({ x, y }), defenderAnchor);
+      gameStore.setState({
+        combatForecast: toCombatForecastView({ forecast, attacker: unit, defender, anchor, defenderAnchor }),
+      });
       return;
     }
     if (
@@ -2890,9 +2906,12 @@ export class GridScene extends Phaser.Scene {
       const defender = this.units.get(target.unitId)!;
       const push = skill.push ? getPushResult(this.grid, this.units, target, getPushDirection({ x, y }, target)) : null;
       const forecast = getSkillForecast(skill, unit, defender, push);
-      const anchor = mergeTileAnchors(this.getTileAnchor({ x, y }), this.getTileAnchor(target));
+      const defenderAnchor = this.getTileAnchor(target);
+      const anchor = mergeTileAnchors(this.getTileAnchor({ x, y }), defenderAnchor);
       const attacker = { name: unit.name, team: unit.team, rank: unit.rank, weapon: { label: skill.label, id: null } };
-      gameStore.setState({ combatForecast: toCombatForecastView({ forecast, attacker, defender, anchor }) });
+      gameStore.setState({
+        combatForecast: toCombatForecastView({ forecast, attacker, defender, anchor, defenderAnchor }),
+      });
       return;
     }
     gameStore.setState({ combatForecast: null });

@@ -73,7 +73,7 @@
      ink surface, its sections parted by thin gold hairlines, the gold kept
      faint so the numbers on it stay the loudest thing. */
   --bezel: #171a2c;
-  --hairline: 1px solid rgb(240 181 65 / 35%);
+  --hairline: 1px solid rgb(138 109 59 / 75%);
   /* One face for everything: a pixel font, set in caps where the GBA
      would. */
   --pixel: 'Silver', ui-monospace, monospace;
@@ -190,9 +190,10 @@ body {
   color: var(--fg);
   font-family: var(--sans);
   /* Every size is in rem, so this sets the scale of all the UI's text
-     and the boxes sized around it: 28px from a 560px wide window up,
-     shrinking with the window below that so phones still fit. */
-  font-size: clamp(16px, 5vw, 28px);
+     and the boxes sized around it: 28px at 1920px wide and up, scaling
+     down with the window (about 22px at 1280) so the board keeps its
+     room, and never under 16px so phones still fit. */
+  font-size: clamp(16px, 0.75vw + 9px, 26px);
   font-variant-numeric: tabular-nums;
   /* Pixel fonts' "fi" and "fl" ligatures can draw as other letters
      ("Flawless" read "Aawless" in Pixelify Sans), so letters are never
@@ -208,13 +209,13 @@ body {
    the header (the overworld, a battle's loading screen) start at
    --below-header: the padding, the header's height and the gap. */
 .page {
-  --below-header: calc(6px + 2.75rem + 6px);
+  --below-header: calc(2.75rem + 6px);
   height: 100vh;
   height: 100dvh;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 6px 10px 10px;
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -229,8 +230,9 @@ body {
      never wraps or grows, so the map below never resizes as the status
      changes. .page's --below-header counts on it. */
   height: 2.75rem;
-  padding: 0 4px;
+  padding: 0 10px;
   font-size: 0.8125rem;
+  border-bottom: var(--hairline);
 }
 
 /* The status takes whatever width the buttons leave, and clips rather
@@ -262,14 +264,14 @@ body {
   padding: 3px 9px;
   white-space: nowrap;
   font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   line-height: 1.4;
-  color: var(--button-fg);
-  text-shadow: 0 var(--px) 0 rgb(61 41 54 / 55%);
+  color: var(--fg);
   background: transparent;
-  border: 1px solid transparent;
-  border-image: url('../assets/ui/button-slate.png') 4 4 5 fill / calc(4 * var(--px)) calc(4 * var(--px))
-    calc(5 * var(--px)) / var(--px) stretch;
-  image-rendering: pixelated;
+  border: 1px solid rgb(138 109 59 / 60%);
   border-radius: 0;
   cursor: pointer;
 }
@@ -281,24 +283,26 @@ a.header-button {
 }
 
 .header-button:hover {
-  color: var(--button-fg);
-  border-image-source: url('../assets/ui/button-slate-hover.png');
+  color: var(--fg-bright);
+  background: rgb(138 109 59 / 25%);
 }
 
 .header-button:active,
 .header-button[aria-pressed='true'],
 .header-button[aria-expanded='true'] {
-  color: var(--button-fg);
-  border-image-source: url('../assets/ui/button-slate-pressed.png');
+  color: #2a1a10;
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 /* A button that can't act on this screen stays in place, faded, so the
    bar looks the same everywhere. */
 .header-button:disabled,
 .header-button:disabled:hover {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: default;
-  border-image-source: url('../assets/ui/button-slate.png');
+  color: var(--fg);
+  background: transparent;
 }
 
 .header-button:focus-visible {
@@ -461,11 +465,10 @@ a.header-button {
   /* Never size to the canvas: the canvas follows the stage, not the reverse. */
   min-width: 0;
   min-height: 0;
-  margin: 2px;
+  margin: 0;
   line-height: 0;
   border-radius: var(--radius);
   overflow: hidden;
-  box-shadow: 0 0 0 1px var(--muted);
   /* The table the board sits on: ink lit from the middle, so a map
      smaller than the stage reads as centered on purpose, not adrift. */
   background: radial-gradient(ellipse at center, #1c2036 0%, #141729 55%, var(--desktop) 100%);
@@ -482,10 +485,6 @@ a.header-button {
    + and the keyboard reference (no keys on a phone) make way for the
    status and the icon buttons. */
 @media (max-width: 48rem) {
-  .page {
-    padding: 4px 6px 6px;
-  }
-
   .page-header {
     gap: 8px;
   }
@@ -929,6 +928,10 @@ a.header-button {
   color: var(--yellow);
 }
 
+.unit-panel__loot .unit-panel__item-quantity {
+  text-transform: uppercase;
+}
+
 .controls-list {
   min-width: 17rem;
   margin: 0;
@@ -980,11 +983,10 @@ kbd {
   gap: 0;
   width: 15rem;
   min-height: 0;
-  margin: 2px 0 2px 2px;
+  margin: 0;
   overflow: hidden;
   background: var(--bezel);
   border-right: var(--hairline);
-  box-shadow: 0 0 0 1px var(--muted);
 }
 
 /* One readout: a dim caps heading on a hairline, then its contents. */
@@ -1118,45 +1120,313 @@ kbd {
   color: var(--fg-bright);
 }
 
-/* The command bar under the board (BattleBar): the mode's keys on the
-   left, Undo and End Turn on the right. Fixed height, so the board never
-   resizes as the mode changes. */
+/* The column on the stage's right (BattleSide), the dock's mirror: the
+   party roster, or the forecast while an attack is aimed. */
+.battle-side {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  width: 15rem;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bezel);
+  border-left: var(--hairline);
+}
+
+/* The roster to deploy (the dock, during deployment) and the party
+   (the right column, in battle): one unit per row, its sprite, its name
+   in the serif, then what the card tracks. */
+.roster-card__list,
+.party-card__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roster-card__unit,
+.party-card__unit {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+  min-height: 2.25rem;
+  padding: 2px 0;
+  border-bottom: 1px solid rgb(138 109 59 / 25%);
+}
+
+.roster-card__unit:last-child,
+.party-card__unit:last-child {
+  border-bottom: 0;
+}
+
+.roster-card__sprite,
+.party-card__sprite {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.party-card__sprite {
+  grid-row: 1 / 3;
+}
+
+.roster-card__name,
+.party-card__name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--serif);
+  font-size: 1rem;
+  line-height: 1.15;
+  color: var(--blue);
+}
+
+.roster-card__tag {
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.roster-card__unit--placed .roster-card__name {
+  color: var(--fg-bright);
+}
+
+.roster-card__unit--disabled:not(.roster-card__unit--placed) {
+  opacity: 0.45;
+}
+
+/* "2 / 3 placed" under the roster, "3 to move" under the party: the number loud. */
+.roster-card__count,
+.party-card__left {
+  margin: 6px 0 0;
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.roster-card__count-number,
+.party-card__left-count {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--fg-bright);
+}
+
+.party-card__class {
+  grid-column: 2 / 4;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.party-card__hp {
+  grid-column: 2;
+  display: block;
+  height: 6px;
+  background: var(--desktop);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 35%);
+}
+
+.party-card__hp-fill {
+  display: block;
+  height: 100%;
+  background: var(--green);
+}
+
+.party-card__hp-value {
+  grid-column: 3;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-bright);
+}
+
+/* Done for the phase: the whole row dims. Fallen: dim and struck through. */
+.party-card__unit--acted {
+  opacity: 0.45;
+}
+
+.party-card__unit--fallen {
+  opacity: 0.35;
+}
+
+.party-card__unit--fallen .party-card__name {
+  text-decoration: line-through;
+  color: var(--red);
+}
+
+/* The command bar under the board (BattleBar): two rows on the left (the
+   command row or the mode's keys, then the detail line) and the big
+   commands on the right. Fixed height, so the board never resizes as the
+   mode changes. */
 .battle-bar {
   flex: none;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
   gap: 12px;
-  height: 2.5rem;
-  margin: 0 2px 2px;
-  padding: 0 10px;
+  height: 3.5rem;
+  margin: 0;
+  padding: 0 12px;
   background: var(--bezel);
   border-top: var(--hairline);
-  box-shadow: 0 0 0 1px var(--muted);
+}
+
+.battle-bar__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
 }
 
 .battle-bar__hints {
   justify-content: flex-start;
+  flex-wrap: nowrap;
   min-width: 0;
   overflow: hidden;
+}
+
+.battle-bar__hints .key-hint__entry {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* The detail line: one line, dim, cut short rather than wrapped. */
+.command-detail {
+  min-height: 1.2em;
+  overflow: hidden;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--fg-dim);
+}
+
+/* A weapon's numbers on the detail line: "POW 1  HIT 90  CRT 0". */
+.command-detail__numbers {
+  display: flex;
+  gap: 14px;
+  margin: 0;
+}
+
+.command-detail__number {
+  display: flex;
+  gap: 5px;
+}
+
+.command-detail__number dt {
+  text-transform: uppercase;
+}
+
+.command-detail__number dd {
+  margin: 0;
+  color: var(--fg-bright);
+}
+
+.command-detail__type {
+  text-transform: uppercase;
+}
+
+/* The command row: a unit's commands (or weapons, skills, items) as chips
+   side by side. The chosen chip gets the selection band and gold ring,
+   taking no room; a chip that can't be picked is dim. */
+.command-row {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+}
+
+.command-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-sizing: border-box;
+  height: 1.5rem;
+  padding: 0 10px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--fg);
+  background: var(--well);
+  box-shadow: inset 0 0 0 1px rgb(138 109 59 / 45%);
+  cursor: pointer;
+}
+
+.command-chip .menu-icon,
+.command-chip .item-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.command-chip__note {
+  font-weight: 400;
+  text-transform: none;
+  color: var(--cyan);
+}
+
+.command-chip--selected {
+  color: var(--fg-bright);
+  background: var(--selection);
+  box-shadow: var(--selection-ring);
+}
+
+.command-chip--disabled {
+  color: var(--fg-dim);
+  cursor: default;
+}
+
+.command-chip--disabled .menu-icon,
+.command-chip--disabled .item-icon {
+  opacity: 0.45;
+  filter: grayscale(1);
 }
 
 .battle-bar__commands {
   flex: none;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
+/* Undo and End Turn: flat chips on a bronze hairline; End Turn, the
+   bar's loudest control, is filled bronze with dark text. */
 .battle-bar__button {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 12px;
+  gap: 5px;
+  height: 1.75rem;
+  padding: 0 14px;
+  font: inherit;
   font-size: 0.8125rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  color: var(--fg-bright);
+  background: transparent;
+  border: 1px solid rgb(138 109 59 / 85%);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.battle-bar__button:hover {
+  background: rgb(138 109 59 / 25%);
 }
 
 .battle-bar__button .menu-icon {
@@ -1164,15 +1434,33 @@ kbd {
   height: 16px;
 }
 
-/* End Turn is the bar's loudest control: gold text. */
 .battle-bar__button--end {
-  color: var(--accent);
-  padding-inline: 16px;
+  padding-inline: 18px;
+  color: #2a1a10;
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
-.battle-bar__button--end:hover,
-.battle-bar__button--end:active {
-  color: var(--accent);
+.battle-bar__button--end:hover {
+  background: #ffd36a;
+}
+
+.battle-bar__button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.battle-bar__button:disabled:hover {
+  background: transparent;
+}
+
+.battle-bar__button--end:disabled:hover {
+  background: var(--accent);
+}
+
+.battle-bar__button:focus-visible {
+  outline: 1px solid var(--fg-bright);
+  outline-offset: 2px;
 }
 
 /* Whose turn it is while the player waits, in that side's color. */
@@ -1189,20 +1477,6 @@ kbd {
 
 .battle-bar__phase--player {
   color: var(--blue);
-}
-
-/* The deployment menu as the dock's second readout: the entries only, in
-   a list under the objective card. */
-.battle-dock .deployment-menu--docked {
-  position: static;
-  width: auto;
-  max-width: none;
-  padding: 6px 4px 8px;
-  border-color: transparent;
-}
-
-.deployment-menu--docked .action-menu__list {
-  font-size: 0.8125rem;
 }
 
 /* The unit card's docked header: the name big in its side's color, the
@@ -1228,33 +1502,89 @@ kbd {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  color: var(--fg-dim);
+  font-family: var(--serif);
+  font-size: 0.9375rem;
+  color: var(--fg);
 }
 
 .unit-panel__level {
   flex: none;
-  color: var(--fg);
+  font-family: var(--pixel);
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  color: var(--fg-dim);
 }
 
-/* Where the dock shows, the floating unit panel and deployment menu
-   don't, and the header needn't repeat the objective's count; windows too
-   narrow for both the dock and the board get the floating ones back. */
+/* Where the dock and the bar show, the floating unit panel, deployment
+   menu, unit menus and map Back button don't (the bar has them), and the
+   header needn't repeat the objective's count; windows too narrow for
+   both the dock and the board get the floating ones back. */
 .hud .unit-panel--float,
 .hud .deployment-menu--float,
-.page-header .turn-indicator__objective {
+.hud .action-menu--beside-unit,
+.hud .combat-forecast--float,
+.hud .menu-exit.map-back,
+.hud .unit-info-window > .menu-exit,
+.hud .pause-menu > .menu-exit,
+.page-header .turn-indicator__objective,
+.page-header .deployment-banner__hint {
   display: none;
 }
 
+/* The pause menu as a flat ink box, its title a caps heading on a
+   hairline inside it rather than a plate on its frame. */
+.hud .pause-menu {
+  min-width: 13rem;
+  padding: 8px 0 6px;
+  border: 1px solid rgb(138 109 59 / 85%);
+  border-image: none;
+  background: var(--bezel);
+  box-shadow: 0 0 0 1px var(--desktop);
+}
+
+.hud .pause-menu__title {
+  position: static;
+  transform: none;
+  height: auto;
+  margin: 0 14px 6px;
+  padding: 0 0 4px;
+  border: 0;
+  border-bottom: var(--hairline);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  line-height: 1.6;
+  color: var(--accent);
+}
+
+.hud .pause-menu .action-menu__list {
+  font-size: 0.8125rem;
+}
+
+.hud .pause-menu .action-menu__item {
+  padding: 4px 14px 4px 30px;
+}
+
 @media (max-width: 44rem) {
-  .battle-dock {
+  .battle-dock,
+  .battle-side,
+  .battle-bar {
     display: none;
   }
 
-  .hud .unit-panel--float {
+  .hud .unit-panel--float,
+  .hud .deployment-menu--float,
+  .hud .action-menu--beside-unit,
+  .hud .combat-forecast--float {
     display: block;
   }
 
-  .hud .deployment-menu--float {
+  .hud .menu-exit.map-back,
+  .hud .unit-info-window > .menu-exit,
+  .hud .pause-menu > .menu-exit {
+    display: inline-flex;
+  }
+
+  .page-header .deployment-banner__hint {
     display: block;
   }
 
@@ -1542,6 +1872,46 @@ kbd {
 
 .combat-forecast__row .combat-forecast__value:last-child {
   text-align: right;
+}
+
+/* Docked in the right column: flat, the column's width, the two names
+   stacked over the table, and the numbers twice their labels. */
+.combat-forecast--docked {
+  position: static;
+  min-width: 0;
+  padding: 8px 0 10px;
+  pointer-events: none;
+}
+
+.combat-forecast--docked .combat-forecast__head {
+  padding: 0 14px 6px;
+  border-bottom: var(--hairline);
+}
+
+.combat-forecast--docked .combat-forecast__names {
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  font-weight: 400;
+  text-transform: none;
+}
+
+.combat-forecast--docked .combat-forecast__rows {
+  padding: 6px 14px 0;
+  background: linear-gradient(
+    90deg,
+    var(--left) 0 calc(50% - 1.75rem),
+    transparent calc(50% - 1.75rem) calc(50% + 1.75rem),
+    var(--right) calc(50% + 1.75rem)
+  );
+}
+
+.combat-forecast--docked .combat-forecast__row {
+  grid-template-columns: 1fr 3.5rem 1fr;
+  min-height: 2.25rem;
+}
+
+.combat-forecast--docked .combat-forecast__value {
+  font-size: 1.5rem;
 }
 
 /* HP's drop if every strike lands: a small arrow, then the HP left, in red
@@ -2066,13 +2436,16 @@ kbd {
 /* ---- Deployment phase ------------------------------------------------- */
 
 .deployment-banner {
-  text-align: right;
+  text-align: left;
 }
 
+/* "DEPLOYMENT" where the phase goes once the battle starts, in gold. */
 .deployment-banner__title {
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: 1rem;
   font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   line-height: 1.4;
   color: var(--accent);
 }
@@ -2238,6 +2611,13 @@ kbd {
   background: #a84e14;
 }
 
+/* The damage the aimed attack would do, on the target: gold on ink, so it
+   reads as the player's own number, not an enemy's threat. */
+.map-tag--forecast {
+  color: #2a1a10;
+  background: var(--accent);
+}
+
 .map-tag--push {
   background: var(--bar);
 }
@@ -2367,11 +2747,37 @@ kbd {
 .page-header .turn-indicator__phase,
 .page-header .turn-indicator__turn,
 .page-header .turn-indicator__objective {
-  padding: 0 4px;
+  padding: 0;
   line-height: 1.3;
   font-weight: 700;
-  border-width: calc(5 * var(--px));
-  border-image-width: calc(5 * var(--px));
+  border: 0;
+  border-image: none;
+  box-shadow: none;
+}
+
+/* On the status strip the phase is flat text in its side's color, the
+   loudest thing on the strip, the turn beside it in dim caps. */
+.page-header .turn-indicator {
+  gap: 12px;
+}
+
+.page-header .turn-indicator__phase {
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  color: var(--blue);
+}
+
+.page-header .frame--banner-red.turn-indicator__phase {
+  color: var(--red);
+}
+
+.page-header .frame--banner-green.turn-indicator__phase {
+  color: var(--green);
+}
+
+.page-header .turn-indicator__turn,
+.page-header .turn-indicator__objective {
+  color: var(--fg-dim);
 }
 
 /* Bright cyan caps on the blue banner (pale on the red one), as on the
@@ -2391,25 +2797,40 @@ kbd {
   color: #d8ffc0;
 }
 
-/* The phase announcement: a big banner in the middle of the map, in its
-   side's color. */
+/* The phase announcement: a translucent band in the side's color across
+   the whole stage, mid-map, ruled top and bottom. */
 .phase-banner {
   position: absolute;
-  left: 50%;
+  left: 0;
+  right: 0;
   top: 50%;
-  transform: translate(-50%, -50%);
-  padding: 4px 20px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 3.5rem;
   white-space: nowrap;
   text-align: center;
   text-transform: uppercase;
-  font-size: 2rem;
+  font-size: 1.75rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  line-height: 1.2;
+  letter-spacing: 0.18em;
+  line-height: 1;
   text-shadow: var(--px) var(--px) 0 rgb(0 0 0 / 45%);
+  background: rgb(40 64 140 / 78%);
+  border-top: var(--hairline);
+  border-bottom: var(--hairline);
   animation-name: phase-banner-sweep;
   animation-timing-function: ease-in-out;
   animation-fill-mode: forwards;
+}
+
+.phase-banner--enemy {
+  background: rgb(140 32 32 / 78%);
+}
+
+.phase-banner--guest {
+  background: rgb(36 110 48 / 78%);
 }
 
 /* Wipes in from the left, holds, and wipes out to the right. */
