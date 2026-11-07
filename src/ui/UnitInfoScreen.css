@@ -77,44 +77,77 @@
     line-height: 1.4;
   }
 
-  /* The rows run taller, so the sheet's columns reach toward the bar. */
+  /* The rows run taller, so the sheet's columns reach down to the bar,
+     and the lists keep room for a few entries even when empty. */
   .unit-info-layer .unit-info__stats {
-    gap: 8px;
+    gap: 6px;
   }
 
   .unit-info-layer .unit-info__stat {
-    min-height: 1.75rem;
+    min-height: 2.5rem;
   }
 
   .unit-info-layer .unit-info__stat-track {
     height: 10px;
   }
 
-  .unit-info-layer .unit-info__stat dd {
-    font-size: 1.125rem;
+  .unit-info-layer .unit-info__stat dd,
+  .unit-info-layer .unit-info__rate dd {
+    font-size: 1.25rem;
     font-weight: 700;
+    font-variant-numeric: tabular-nums;
     color: var(--fg-bright);
   }
 
   .unit-info-layer .unit-info__list li,
   .unit-info-layer .unit-info__rate,
   .unit-info-layer .unit-info__pairs div {
-    min-height: 1.75rem;
+    min-height: 2rem;
     align-items: center;
   }
 
-  .unit-info-layer .unit-info__rate dd,
+  .unit-info-layer .unit-info__list--gear li {
+    min-height: 2.5rem;
+  }
+
+  .unit-info-layer .unit-info__list--attacks li {
+    min-height: 3rem;
+  }
+
+  .unit-info-layer .unit-info__identity .unit-info__list,
+  .unit-info-layer .unit-info__identity .unit-info__empty {
+    min-height: 7rem;
+    margin-bottom: 0;
+  }
+
   .unit-info-layer .unit-info__pairs dd {
+    font-size: 1.125rem;
     font-weight: 700;
     color: var(--fg-bright);
   }
 
   .unit-info-layer .unit-info__heading {
-    margin-top: 14px;
+    margin-top: 16px;
   }
 
   .unit-info-layer .unit-info__name {
-    font-size: 1.625rem;
+    font-size: 1.75rem;
+  }
+
+  .unit-info-layer .unit-info__portrait {
+    padding: 12px 0;
+  }
+
+  .unit-info-layer .unit-info__identity .meter__value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--fg-bright);
+  }
+
+  .unit-info-layer .unit-info__identity .meter__track {
+    height: 10px;
+    box-shadow: 0 0 0 1px rgb(138 109 59 / 55%);
   }
 
   .unit-info-layer .unit-info--enemy {

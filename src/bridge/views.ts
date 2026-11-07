@@ -266,6 +266,12 @@ export interface DamagePopupView {
 export interface RosterEntryView {
   id: string;
   label: string;
+  // The class's display name and the unit's level and HP, for the roster
+  // card's rows.
+  classLabel: string | null;
+  level: number;
+  health: number;
+  maxHealth: number;
   sprite: string;
   placed: boolean;
   disabled: boolean;
@@ -762,12 +768,22 @@ export function toRosterEntryView({
   disabled = false,
 }: {
   id: string;
-  unit: Pick<Unit, 'name'>;
+  unit: Pick<Unit, 'name' | 'unitClass' | 'level' | 'health' | 'maxHealth'>;
   sprite: string;
   placed: boolean;
   disabled?: boolean;
 }): RosterEntryView {
-  return Object.freeze({ id, label: unit.name, sprite, placed, disabled });
+  return Object.freeze({
+    id,
+    label: unit.name,
+    classLabel: getClassLabel(unit.unitClass),
+    level: unit.level,
+    health: unit.health,
+    maxHealth: unit.maxHealth,
+    sprite,
+    placed,
+    disabled,
+  });
 }
 
 // Snapshot of the XP bar shown after a player unit's combat: its name, the

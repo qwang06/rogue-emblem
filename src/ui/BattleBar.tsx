@@ -81,6 +81,9 @@ const HINTS: Readonly<Record<Mode, readonly KeyHintEntry[]>> = {
   waiting: [],
 };
 
+// Browsing a Warband run's relics (RelicBar), while the map is idle.
+const RELICS_HINT: KeyHintEntry = ['Q', 'Relics'];
+
 // One line on what the mode expects, under the hints (while the other
 // side moves, that it is).
 const PROMPTS: Readonly<Record<Mode, string>> = {
@@ -221,10 +224,11 @@ function Number({ label, value }: { label: string; value: number | string }) {
 // deployment menu is open, its entries as a row of chips with the chosen
 // one's detail on the line under them (GridScene drives the choice; the
 // mouse is forwarded to it), otherwise the keys that matter in the
-// current mode and a line on what it expects. On the right, the player
-// phase's two big commands, Undo and End Turn (what the pause menu also
-// offers), which GridScene carries out when the map is idle. Both rows
-// are always laid out, so the board never resizes as the mode changes.
+// current mode and a line on what it expects. On the right, the two big
+// commands, Undo and End Turn (what the pause menu also offers), which
+// GridScene carries out when the map is idle in the player's phase (they
+// stay, dimmed, through the other sides' phases). Both rows are always
+// laid out, so the board never resizes as the mode changes.
 export function BattleBar() {
   const onField = useGameStore(isOnField);
   const mode = useGameStore(getMode);
@@ -237,9 +241,11 @@ export function BattleBar() {
   const menu = getOpenMenu({ weaponMenu, skillMenu, itemMenu, actionMenu, deploymentMenu, deploymentStep });
   const turn = useGameStore((state) => state.turn);
   const phase = useGameStore((state) => state.phase);
+  const hasRelics = useGameStore((state) => (state.runRelics?.length ?? 0) > 0);
   if (!onField) return null;
 
   const idle = mode === 'roam';
+  const hints = mode === 'roam' && hasRelics ? [...HINTS.roam, RELICS_HINT] : HINTS[mode];
   const chosen = menu?.actions[menu.selectedIndex] ?? null;
   return (
     <footer className="battle-bar">
@@ -266,16 +272,14 @@ export function BattleBar() {
             })}
           </ul>
         ) : (
-          <KeyHint className="battle-bar__hints" entries={HINTS[mode]} />
+          <KeyHint className="battle-bar__hints" entries={hints} />
         )}
         <div className="command-detail">{menu && chosen ? menu.detail(chosen) : PROMPTS[mode]}</div>
       </div>
       <div className="battle-bar__commands">
         {menu ? (
-          <KeyHint className="battle-bar__hints" entries={HINTS[mode]} />
-        ) : phase === 'battle' && turn && turn.team !== 'player' ? (
-          <span className={`battle-bar__phase battle-bar__phase--${turn.team}`}>{turn.label}</span>
-        ) : phase === 'battle' && turn?.team === 'player' ? (
+          <KeyHint className="battle-bar__hints" entries={hints} />
+        ) : phase === 'battle' && turn ? (
           <>
             <button
               type="button"

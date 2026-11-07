@@ -27,7 +27,8 @@ const game = new Phaser.Game({
   scale: {
     mode: Phaser.Scale.RESIZE,
   },
-  backgroundColor: '#0d0f19',
+  // The canvas is clear: the stage's mat (ui.css) shows round the board.
+  transparent: true,
   pixelArt: true,
   scene: [],
 });

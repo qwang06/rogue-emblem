@@ -420,7 +420,17 @@ describe('toDamagePopupView', () => {
 describe('toRosterEntryView', () => {
   it('snapshots the unit for the roster menu', () => {
     const view = toRosterEntryView({ id: 'soldier', unit: makeUnit(), sprite: 'Warrior_01', placed: false });
-    expect(view).toEqual({ id: 'soldier', label: 'Soldier', sprite: 'Warrior_01', placed: false, disabled: false });
+    expect(view).toEqual({
+      id: 'soldier',
+      label: 'Soldier',
+      classLabel: null,
+      level: 1,
+      health: 10,
+      maxHealth: 10,
+      sprite: 'Warrior_01',
+      placed: false,
+      disabled: false,
+    });
     expect(Object.isFrozen(view)).toBe(true);
   });
 
