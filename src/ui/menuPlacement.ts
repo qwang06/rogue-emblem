@@ -16,6 +16,11 @@ export interface MenuPlacement {
 // Its top lines up with the tile's, moved up or down to stay on the stage,
 // and at least `topInset` further down from the stage's top for anything
 // hanging off the menu's top edge (its Back tab).
+//
+// `avoid` is another window's rect on the stage (the unit panel) the menu
+// must not cover. When the usual spot would, the menu tries the tile's
+// other side, then slides below or above that window on either side, and
+// only lands on it when there's no room anywhere else.
 // Returns { side: 'right' | 'left', left, top }.
 export function placeMenuBesideTile(
   tile: TileAnchorView,
@@ -23,12 +28,39 @@ export function placeMenuBesideTile(
   stage: Size,
   gap = 8,
   topInset = 0,
+  avoid: TileAnchorView | null = null,
 ): MenuPlacement {
   const rightLeft = tile.right + gap;
-  const side: MenuPlacement['side'] = rightLeft + menu.width + gap <= stage.width ? 'right' : 'left';
-  const left = side === 'right' ? rightLeft : Math.max(gap, tile.left - gap - menu.width);
-  const top = clamp(tile.top, gap + topInset, stage.height - gap - menu.height);
-  return { side, left, top };
+  const rightFits = rightLeft + menu.width + gap <= stage.width;
+  const leftLeft = tile.left - gap - menu.width;
+  const leftFits = leftLeft >= gap;
+  const minTop = gap + topInset;
+  const maxTop = stage.height - gap - menu.height;
+  const at = (side: MenuPlacement['side'], top = tile.top): MenuPlacement => ({
+    side,
+    left: side === 'right' ? rightLeft : Math.max(gap, leftLeft),
+    top: clamp(top, minTop, maxTop),
+  });
+  const usual = at(rightFits ? 'right' : 'left');
+  if (!avoid || !overlaps(usual, menu, avoid)) return usual;
+
+  const sides: MenuPlacement['side'][] = usual.side === 'right' ? ['right', 'left'] : ['left', 'right'];
+  const open = sides.filter((side) => (side === 'right' ? rightFits : leftFits));
+  const candidates = [
+    ...open.map((side) => at(side)),
+    ...open.flatMap((side) => [at(side, avoid.bottom + gap), at(side, avoid.top - gap - menu.height)]),
+  ];
+  return candidates.find((spot) => !overlaps(spot, menu, avoid)) ?? usual;
+}
+
+// Whether a menu of size `menu` at `spot` covers any of `rect`.
+function overlaps(spot: { left: number; top: number }, menu: Size, rect: TileAnchorView): boolean {
+  return (
+    spot.left < rect.right &&
+    spot.left + menu.width > rect.left &&
+    spot.top < rect.bottom &&
+    spot.top + menu.height > rect.top
+  );
 }
 
 // Clamps value to [min, max], preferring min when the range is empty (the

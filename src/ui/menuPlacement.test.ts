@@ -46,6 +46,48 @@ describe('placeMenuBesideTile', () => {
     // The bottom edge is unaffected.
     expect(placeMenuBesideTile(tileAt(100, 330), menu, stage, 8, 22).top).toBe(400 - 8 - 150);
   });
+
+  describe('keeping off another window', () => {
+    const rect = (left: number, top: number, right: number, bottom: number) => ({ left, top, right, bottom });
+
+    it('stays put when the window is elsewhere', () => {
+      const panel = rect(400, 0, 600, 200);
+      expect(placeMenuBesideTile(tileAt(100, 100), menu, stage, 8, 0, panel)).toEqual({
+        side: 'right',
+        left: 172,
+        top: 100,
+      });
+    });
+
+    it("opens on the tile's other side when the usual one is covered", () => {
+      expect(
+        placeMenuBesideTile(tileAt(200, 50), { width: 120, height: 150 }, stage, 8, 0, rect(272, 0, 600, 300)),
+      ).toEqual({
+        side: 'left',
+        left: 72,
+        top: 50,
+      });
+    });
+
+    it('slides below the window when the other side has no room', () => {
+      const panel = rect(160, 0, 360, 180);
+      expect(placeMenuBesideTile(tileAt(100, 50), menu, stage, 8, 0, panel)).toMatchObject({ side: 'right', top: 188 });
+    });
+
+    it('slides above the window when there is no room below', () => {
+      const panel = rect(150, 200, 400, 400);
+      expect(placeMenuBesideTile(tileAt(100, 300), menu, stage, 8, 0, panel)).toMatchObject({ side: 'right', top: 42 });
+    });
+
+    it('falls back to the usual spot when nothing clears the window', () => {
+      const panel = rect(0, 0, 600, 400);
+      expect(placeMenuBesideTile(tileAt(100, 100), menu, stage, 8, 0, panel)).toEqual({
+        side: 'right',
+        left: 172,
+        top: 100,
+      });
+    });
+  });
 });
 
 describe('pickCornerAwayFromTile', () => {
