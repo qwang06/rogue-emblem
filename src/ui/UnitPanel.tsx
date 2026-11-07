@@ -37,42 +37,61 @@ const TEAM_NOUNS: Readonly<Record<Team, string>> = { player: 'Ally', enemy: 'Ene
 // covers it, and steps aside while the combat forecast (which already
 // shows both fighters) or the unit info screen (the full sheet, see
 // UnitInfoScreen.tsx) is up.
-export function UnitPanel() {
+//
+// `docked`, it's the battle dock's middle readout (BattleDock): a flat
+// section of the column rather than a window, always in the same place, so
+// it keeps showing while the forecast is up. Otherwise it floats over the
+// map, in the corner away from the hovered unit (for windows too narrow for
+// the dock; ui.css shows one or the other).
+export function UnitPanel({ docked = false }: { docked?: boolean }) {
   const unit = useGameStore((state) => state.hoveredUnit);
   const anchor = useGameStore((state) => state.hoveredAnchor);
   const forecastOpen = useGameStore((state) => state.combatForecast !== null);
   const infoOpen = useGameStore((state) => state.unitInfo !== null);
 
-  if (!unit || forecastOpen || infoOpen) return null;
+  if (!unit || infoOpen || (forecastOpen && !docked)) return null;
 
   const corner = pickCornerAwayFromTile(anchor);
   const showExperience = unit.team !== 'enemy';
+  const classes = docked
+    ? `dock-section unit-panel unit-panel--docked unit-panel--${unit.team}`
+    : `panel unit-panel unit-panel--float unit-panel--${unit.team} unit-panel--${corner}`;
   return (
-    <section
-      className={`panel unit-panel unit-panel--${unit.team} unit-panel--${corner}`}
-      aria-label={`${TEAM_NOUNS[unit.team]} ${unit.name}'s stats`}
-    >
+    <section className={classes} aria-label={`${TEAM_NOUNS[unit.team]} ${unit.name}'s stats`}>
       <div className="unit-panel__header">
         <span className="unit-panel__portrait">
           <UnitSprite sprite={unit.sprite} scale={2} />
           {unit.rank && <RankBadge rank={unit.rank} scale={2} className="rank-badge--portrait" />}
         </span>
-        <dl className="unit-panel__lines">
-          <div className="unit-panel__line">
-            <dt>Name</dt>
-            <dd className="unit-panel__name" title={unit.name}>
+        {docked ? (
+          // The name on its own line, then "Villager · Lv 1", as a status strip reads.
+          <div className="unit-panel__lines unit-panel__lines--docked">
+            <p className="unit-panel__name" title={unit.name}>
               {unit.name}
-            </dd>
+            </p>
+            <p className="unit-panel__class" title={unit.classLabel ?? undefined}>
+              <span>{unit.classLabel ?? '–'}</span>
+              <span className="unit-panel__level">Lv {unit.level}</span>
+            </p>
           </div>
-          <div className="unit-panel__line">
-            <dt>Class</dt>
-            <dd title={unit.classLabel ?? undefined}>{unit.classLabel ?? '–'}</dd>
-          </div>
-          <div className="unit-panel__line">
-            <dt>LV</dt>
-            <dd>{unit.level}</dd>
-          </div>
-        </dl>
+        ) : (
+          <dl className="unit-panel__lines">
+            <div className="unit-panel__line">
+              <dt>Name</dt>
+              <dd className="unit-panel__name" title={unit.name}>
+                {unit.name}
+              </dd>
+            </div>
+            <div className="unit-panel__line">
+              <dt>Class</dt>
+              <dd title={unit.classLabel ?? undefined}>{unit.classLabel ?? '–'}</dd>
+            </div>
+            <div className="unit-panel__line">
+              <dt>LV</dt>
+              <dd>{unit.level}</dd>
+            </div>
+          </dl>
+        )}
       </div>
 
       <div className="unit-panel__bars">

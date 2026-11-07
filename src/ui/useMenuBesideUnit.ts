@@ -12,12 +12,13 @@ const BACK_TAB_OVERHANG = 22;
 // otherwise to its left (see placeMenuBesideTile). Returns the ref to put
 // on the menu and its inline style. The menu is measured before it's
 // painted, and re-placed whenever it or the HUD changes size. It keeps off
-// the unit panel (which shows the same unit while its menus are up).
+// the unit panel when it floats over the map (which shows the same unit
+// while its menus are up); the docked one is off the map already.
 export function useMenuBesideUnit<E extends HTMLElement = HTMLElement>(open: boolean) {
   const anchor = useGameStore((state) => state.menuAnchor);
   // The panel moves or changes size with the hovered unit, so re-place then.
   const hovered = useGameStore((state) => state.hoveredAnchor);
-  return usePanelBesideAnchor<E>(open, anchor, BACK_TAB_OVERHANG, '.unit-panel', hovered);
+  return usePanelBesideAnchor<E>(open, anchor, BACK_TAB_OVERHANG, '.unit-panel--float', hovered);
 }
 
 // Places an open panel beside any TileAnchorView the same way (e.g. the

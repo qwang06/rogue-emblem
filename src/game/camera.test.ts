@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getFollowView } from './camera.ts';
+import { getFitZoom, getFollowView } from './camera.ts';
 
 const TILE = 64;
 const tile = (x: number, y: number) => ({ x: x * TILE, y: y * TILE, width: TILE, height: TILE });
@@ -44,5 +44,28 @@ describe('getFollowView', () => {
     expect(at.x + tiny.width).toBeGreaterThanOrEqual(11 * TILE);
     expect(at.y).toBeLessThanOrEqual(5 * TILE);
     expect(at.y + tiny.height).toBeGreaterThanOrEqual(6 * TILE);
+  });
+});
+
+describe('getFitZoom', () => {
+  const map = { width: 8 * 32, height: 8 * 32 };
+
+  it('picks the largest whole zoom the map fits at', () => {
+    expect(getFitZoom({ width: 1460, height: 860 }, map)).toBe(3);
+    expect(getFitZoom({ width: 1100, height: 1100 }, map)).toBe(4);
+  });
+
+  it('never goes below the minimum, even when the map does not fit', () => {
+    expect(getFitZoom({ width: 826, height: 580 }, map)).toBe(2);
+    expect(getFitZoom({ width: 100, height: 100 }, map)).toBe(2);
+  });
+
+  it('never goes above the maximum', () => {
+    expect(getFitZoom({ width: 5000, height: 5000 }, map)).toBe(4);
+    expect(getFitZoom({ width: 5000, height: 5000 }, map, 2, 3)).toBe(3);
+  });
+
+  it('falls back to the minimum for an empty map', () => {
+    expect(getFitZoom({ width: 800, height: 600 }, { width: 0, height: 0 })).toBe(2);
   });
 });

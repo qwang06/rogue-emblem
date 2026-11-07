@@ -69,9 +69,18 @@
   --bar-fg: #fff8e8;
   --rule: var(--px) solid var(--muted);
   --border: var(--px) solid var(--muted);
+  /* The bezel round the board (the battle dock and command bar): a flat
+     ink surface, its sections parted by thin gold hairlines, the gold kept
+     faint so the numbers on it stay the loudest thing. */
+  --bezel: #171a2c;
+  --hairline: 1px solid rgb(240 181 65 / 35%);
   /* One face for everything: a pixel font, set in caps where the GBA
      would. */
   --pixel: 'Silver', ui-monospace, monospace;
+  /* The old printer's face the overworld sets its place names in (see
+     Overworld.css), for the names the tactics games set in a serif: a
+     unit's on its card. */
+  --serif: 'IM Fell English SC', Georgia, serif;
   --sans: var(--pixel);
   --display: var(--pixel);
   --mono: var(--pixel);
@@ -224,36 +233,18 @@ body {
   font-size: 0.8125rem;
 }
 
-.page-header__brand {
-  flex: none;
+/* The status takes whatever width the buttons leave, and clips rather
+   than wrapping when that runs out. */
+.page-header__status {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 700;
-  color: var(--fg-bright);
-}
-
-.page-header__name {
-  font-family: var(--display);
-  font-size: 1rem;
-  letter-spacing: 0.04em;
-}
-
-.page-header__gem {
-  font-size: 0.75rem;
-  color: var(--accent);
-}
-
-/* The status takes whatever width the brand and buttons leave, and clips
-   rather than wrapping when that runs out. */
-.page-header__status {
-  min-width: 0;
   overflow: hidden;
 }
 
 .page-header__end {
-  flex: 1;
-  min-width: 0;
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -451,6 +442,15 @@ a.header-button {
   display: flex;
 }
 
+/* The board and, in a battle, the command bar under it. */
+.stage-column {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 /* The canvas and the HUD overlay share this box, which fills the stage
    area. Phaser's RESIZE mode keeps the canvas the same size, and the map
    scene centers the map in it, framed by a thin border drawn as a shadow
@@ -466,6 +466,9 @@ a.header-button {
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: 0 0 0 1px var(--muted);
+  /* The table the board sits on: ink lit from the middle, so a map
+     smaller than the stage reads as centered on purpose, not adrift. */
+  background: radial-gradient(ellipse at center, #1c2036 0%, #141729 55%, var(--desktop) 100%);
 }
 
 #game {
@@ -503,7 +506,6 @@ a.header-button {
     padding: 3px 4px;
   }
 
-  .page-header__brand,
   .turn-indicator__word,
   .auto-speed-button,
   .deployment-banner__hint,
@@ -654,13 +656,14 @@ a.header-button {
   pointer-events: auto;
 }
 
-/* ---- Unit panel (docked in a top corner of the map) ----------------- */
+/* ---- Unit panel (the battle dock's, or floating in a corner of the map) --- */
 
-/* Nested so it beats .panel. It's read-only, so the pointer passes
-   through to the map: hovering a tile under it moves the cursor there,
-   and the panel then flips to the other corner. The team shows as the
-   window's color. */
-.hud .unit-panel {
+/* Floating (windows too narrow for the dock): nested so it beats .panel.
+   It's read-only, so the pointer passes through to the map: hovering a
+   tile under it moves the cursor there, and the panel then flips to the
+   other corner. The team shows as the window's color. Hidden wherever the
+   dock shows (see the battle dock). */
+.hud .unit-panel--float {
   position: absolute;
   top: 12px;
   width: 18rem;
@@ -685,7 +688,7 @@ a.header-button {
 
 /* Phones: a narrower card, so it covers less of the map. */
 @media (max-width: 36rem) {
-  .hud .unit-panel {
+  .hud .unit-panel--float {
     width: 15rem;
   }
 }
@@ -962,6 +965,302 @@ kbd {
   text-align: center;
   color: var(--accent);
   background: var(--bg-light);
+}
+
+/* ---- Battle dock and command bar (the bezel round the board) -------- */
+
+/* The column on the stage's left all through a battle (BattleDock): a
+   flat ink surface, no window frame, parted from the board by a gold
+   hairline. Its readouts stack from the top; the terrain card is pushed
+   to the bottom. Too tall a unit card scrolls inside it, unseen. */
+.battle-dock {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 15rem;
+  min-height: 0;
+  margin: 2px 0 2px 2px;
+  overflow: hidden;
+  background: var(--bezel);
+  border-right: var(--hairline);
+  box-shadow: 0 0 0 1px var(--muted);
+}
+
+/* One readout: a dim caps heading on a hairline, then its contents. */
+.dock-section {
+  flex: none;
+  padding: 8px 14px 10px;
+  border-bottom: var(--hairline);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--fg);
+}
+
+.dock-section__title {
+  margin: 0 0 4px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.dock-section:last-child {
+  border-bottom: 0;
+}
+
+/* The objective: the goal in bright text after its icon, the loss in dim
+   text, the turn count big against its limit. */
+.objective-card__goal {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-weight: 700;
+  color: var(--fg-bright);
+}
+
+.objective-card__defeat {
+  margin: 0;
+  color: var(--fg-dim);
+}
+
+.objective-card__turn {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 4px 0 0;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.objective-card__turn-count {
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-bright);
+}
+
+.objective-card__turn-limit {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--fg-dim);
+}
+
+/* The unit card as the dock's middle readout: the same card, flat, filling
+   the width, and scrolling inside the column when it's taller than the
+   room left (no scrollbar: the dock is read, not browsed). */
+.unit-panel--docked {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden auto;
+  scrollbar-width: none;
+  line-height: 1.3;
+}
+
+.unit-panel--docked .unit-panel__header {
+  margin-bottom: 6px;
+}
+
+.unit-panel--docked .unit-panel__portrait {
+  width: 56px;
+  height: 56px;
+}
+
+.unit-panel--docked .unit-panel__stats {
+  margin-top: 4px;
+}
+
+.unit-panel--docked .unit-panel__items {
+  margin-top: 4px;
+}
+
+.unit-panel--docked.unit-panel--enemy {
+  background: linear-gradient(var(--red-bg), var(--red-bg)), var(--bezel);
+}
+
+.unit-panel--docked.unit-panel--guest {
+  background: linear-gradient(var(--green-bg), var(--green-bg)), var(--bezel);
+}
+
+/* The terrain card, pinned to the dock's bottom: the tile's name, then
+   its facts in a row. */
+.terrain-card {
+  margin-top: auto;
+}
+
+.terrain-card__name {
+  margin: 0;
+  font-weight: 700;
+  color: var(--fg-bright);
+}
+
+.terrain-card__facts {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+}
+
+.terrain-card__fact {
+  display: flex;
+  gap: 6px;
+}
+
+.terrain-card__fact dt {
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.terrain-card__fact dd {
+  margin: 0;
+  color: var(--fg-bright);
+}
+
+/* The command bar under the board (BattleBar): the mode's keys on the
+   left, Undo and End Turn on the right. Fixed height, so the board never
+   resizes as the mode changes. */
+.battle-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 2.5rem;
+  margin: 0 2px 2px;
+  padding: 0 10px;
+  background: var(--bezel);
+  border-top: var(--hairline);
+  box-shadow: 0 0 0 1px var(--muted);
+}
+
+.battle-bar__hints {
+  justify-content: flex-start;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.battle-bar__commands {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.battle-bar__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 12px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.battle-bar__button .menu-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* End Turn is the bar's loudest control: gold text. */
+.battle-bar__button--end {
+  color: var(--accent);
+  padding-inline: 16px;
+}
+
+.battle-bar__button--end:hover,
+.battle-bar__button--end:active {
+  color: var(--accent);
+}
+
+/* Whose turn it is while the player waits, in that side's color. */
+.battle-bar__phase {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--red);
+}
+
+.battle-bar__phase--guest {
+  color: var(--green);
+}
+
+.battle-bar__phase--player {
+  color: var(--blue);
+}
+
+/* The deployment menu as the dock's second readout: the entries only, in
+   a list under the objective card. */
+.battle-dock .deployment-menu--docked {
+  position: static;
+  width: auto;
+  max-width: none;
+  padding: 6px 4px 8px;
+  border-color: transparent;
+}
+
+.deployment-menu--docked .action-menu__list {
+  font-size: 0.8125rem;
+}
+
+/* The unit card's docked header: the name big in its side's color, the
+   class and level on one dim line under it. */
+.unit-panel__lines--docked p {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.unit-panel__lines--docked .unit-panel__name {
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: var(--blue);
+}
+
+.unit-panel__class {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--fg-dim);
+}
+
+.unit-panel__level {
+  flex: none;
+  color: var(--fg);
+}
+
+/* Where the dock shows, the floating unit panel and deployment menu
+   don't, and the header needn't repeat the objective's count; windows too
+   narrow for both the dock and the board get the floating ones back. */
+.hud .unit-panel--float,
+.hud .deployment-menu--float,
+.page-header .turn-indicator__objective {
+  display: none;
+}
+
+@media (max-width: 44rem) {
+  .battle-dock {
+    display: none;
+  }
+
+  .hud .unit-panel--float {
+    display: block;
+  }
+
+  .hud .deployment-menu--float {
+    display: block;
+  }
+
+  .page-header .turn-indicator__objective {
+    display: inline-flex;
+  }
 }
 
 /* ---- HUD overlay (on top of the canvas) ---------------------------- */

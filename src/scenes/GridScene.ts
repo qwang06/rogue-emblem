@@ -33,6 +33,7 @@ import {
   toCanvasFraction,
   toRosterEntryView,
   toTileAnchorView,
+  toTileView,
   toTurnView,
   toUnitDetailView,
   toUnitView,
@@ -60,7 +61,7 @@ import {
   isTileSkill,
 } from '../game/skills.ts';
 import { getAttackRange, getAttackTargets, getCombatForecast, getThreatRange } from '../game/combat.ts';
-import { getFollowView } from '../game/camera.ts';
+import { getFitZoom, getFollowView } from '../game/camera.ts';
 import { createCursor, moveCursor } from '../game/cursor.ts';
 import {
   createBattleLevel,
@@ -294,11 +295,14 @@ import type { ItemAction, RestoreStat } from '../game/items.ts';
 import type { SkillAction } from '../game/skills.ts';
 import type { RosterMenuEntry, TargetingMode } from '../bridge/gameStore.ts';
 
-// The canvas is sized by the page (see main.ts); maps are always drawn at
-// MAP_ZOOM (crisp pixel art, never shrunk to fit a small window), centered
-// on an axis they fit, and scrolled to follow the cursor on one they don't
-// (getFollowView), keeping it FOLLOW_MARGIN tiles from the canvas's edge.
-const MAP_ZOOM = 2;
+// The canvas is sized by the page (see main.ts); maps are drawn at the
+// largest whole zoom between MIN_MAP_ZOOM and MAX_MAP_ZOOM they fit the
+// canvas at (getFitZoom: crisp pixel art, never shrunk to fit a small
+// window), centered on an axis they fit, and scrolled to follow the cursor
+// on one they don't (getFollowView), keeping it FOLLOW_MARGIN tiles from
+// the canvas's edge.
+const MIN_MAP_ZOOM = 2;
+const MAX_MAP_ZOOM = 4;
 const FOLLOW_MARGIN = 2;
 const MOVE_RANGE_COLOR = 0x3b82f6;
 const MOVE_RANGE_ALPHA = 0.45;
@@ -954,7 +958,8 @@ export class GridScene extends Phaser.Scene {
   // Sets the map's zoom and puts the view on the cursor. Runs on create
   // and whenever the page resizes the canvas.
   fitCamera() {
-    this.cameras.main.setZoom(MAP_ZOOM);
+    const world = { width: this.grid.width * TILE_SIZE, height: this.grid.height * TILE_SIZE };
+    this.cameras.main.setZoom(getFitZoom(this.scale.gameSize, world, MIN_MAP_ZOOM, MAX_MAP_ZOOM));
     this.followCursor(true);
   }
 
@@ -962,7 +967,8 @@ export class GridScene extends Phaser.Scene {
   // inside it (see getFollowView), and, when it moved (or `force`), moves
   // everything React anchors to the map once the view has updated.
   followCursor(force = false) {
-    const view = { width: this.scale.gameSize.width / MAP_ZOOM, height: this.scale.gameSize.height / MAP_ZOOM };
+    const { zoom } = this.cameras.main;
+    const view = { width: this.scale.gameSize.width / zoom, height: this.scale.gameSize.height / zoom };
     const world = { width: this.grid.width * TILE_SIZE, height: this.grid.height * TILE_SIZE };
     const focus = { ...gridToWorld(this.cursor.x, this.cursor.y, TILE_SIZE), width: TILE_SIZE, height: TILE_SIZE };
     const corner = getFollowView(this.viewCorner, focus, view, world, FOLLOW_MARGIN * TILE_SIZE);
@@ -2209,7 +2215,13 @@ export class GridScene extends Phaser.Scene {
     this.zoneTiles = null;
     this.publishMenu('deploymentMenu', null);
     this.phase = 'battle';
-    gameStore.setState({ phase: 'battle', deploymentStep: null, deploymentLimit: null, deploymentObjective: null });
+    gameStore.setState({
+      phase: 'battle',
+      deploymentStep: null,
+      deploymentLimit: null,
+      deploymentObjective: null,
+      battleObjective: this.getObjectiveView(),
+    });
 
     const events = this.dispatch({ type: 'start-battle' });
     this.setCursorVisible(true);
@@ -4021,9 +4033,29 @@ export class GridScene extends Phaser.Scene {
           if (this.canInspectHovered()) result.info = true;
           else result.cancel = true;
           break;
+        case 'end-turn':
+          if (this.canUseCommandBar()) this.endPlayerPhase();
+          break;
+        case 'undo':
+          if (this.canUseCommandBar()) this.undoLastPlayerAction();
+          break;
       }
     }
     return result;
+  }
+
+  // Whether the command bar's End Turn and Undo act now: the player's turn
+  // on the bare map, with no unit picked and nothing playing out.
+  canUseCommandBar(): boolean {
+    return (
+      this.phase === 'battle' &&
+      this.canRoamCursor() &&
+      !this.preview &&
+      !this.activeUnit &&
+      !this.rangeMode &&
+      !this.inspectedEnemyId &&
+      this.turnState?.team === 'player'
+    );
   }
 
   // The cursor follows the pointer only when no menu has input: on the bare
@@ -4075,6 +4107,7 @@ export class GridScene extends Phaser.Scene {
     this.updateCursorSprite();
     this.followCursor();
     this.updateHoveredUnit();
+    this.publishHoveredTile();
     if (this.rangeMode === 'attack' || this.rangeMode === 'skill') this.updateCombatForecast();
     if (this.rangeMode === 'skill') this.updatePushPreview();
   }
@@ -4091,6 +4124,13 @@ export class GridScene extends Phaser.Scene {
     this.hoveredUnit = unit;
     this.hoveredUnitId = unit ? cell!.unitId : null;
     this.publishHoveredUnit();
+  }
+
+  // Publishes the tile under the cursor (its terrain, for the dock's
+  // terrain card), or null while the cursor is hidden.
+  publishHoveredTile() {
+    const cell = this.cursorSprite.visible ? getCell(this.grid, this.cursor.x, this.cursor.y) : null;
+    gameStore.setState({ hoveredTile: toTileView(cell) });
   }
 
   // Publishes a fresh snapshot of the hovered unit — also needed when that
@@ -4130,6 +4170,7 @@ export class GridScene extends Phaser.Scene {
   setCursorVisible(visible: boolean) {
     this.cursorSprite.setVisible(visible);
     this.updateHoveredUnit();
+    this.publishHoveredTile();
   }
 
   updateCursorSprite() {

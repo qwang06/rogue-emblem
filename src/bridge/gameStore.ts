@@ -33,6 +33,7 @@ import type {
   StageClearView,
   TeamUnitView,
   TileAnchorView,
+  TileView,
   TurnView,
   UnitDetailView,
   UnitView,
@@ -62,6 +63,7 @@ export interface BattleState {
   pauseMenu: Menu | null;
   hoveredUnit: UnitView | null;
   hoveredAnchor: TileAnchorView | null;
+  hoveredTile: TileView | null;
   unitInfo: UnitDetailView | null;
   actionMenu: Menu | null;
   weaponMenu: Menu<WeaponAction> | null;
@@ -84,6 +86,7 @@ export interface BattleState {
   battleOutcome: BattleOutcome | null;
   dialog: DialogView | null;
   objective: ObjectiveView | null;
+  battleObjective: ObjectiveView | null;
   deploymentObjective: ObjectiveView | null;
   objectiveStatus: ObjectiveStatus | null;
   nextBattle: string | null;
@@ -131,6 +134,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   pauseMenu: null, // frozen End Turn / Main Menu / Settings menu while open, or null
   hoveredUnit: null, // UnitView from toUnitView(), or null
   hoveredAnchor: null, // TileAnchorView from toTileAnchorView() of the hovered unit's tile (the unit panel docks away from it), or null
+  hoveredTile: null, // TileView from toTileView() of the tile under the cursor while it shows (the dock's terrain card), or null
   unitInfo: null, // UnitDetailView from toUnitDetailView() while the unit info screen is open, or null
   actionMenu: null, // frozen menu from src/game/actionMenu.ts while open, or null
   weaponMenu: null, // frozen menu of the active unit's weapons (from getWeaponActions) after choosing Attack, or null
@@ -153,6 +157,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   battleOutcome: null, // 'victory' | 'defeat' once the battle is decided, else null
   dialog: null, // DialogView from toDialogView() of the line being spoken, or null
   objective: null, // ObjectiveView from toObjectiveView() while the Objective screen is up, or null
+  battleObjective: null, // ObjectiveView from toObjectiveView() all through a battle, for the dock's objective card, or null outside one
   deploymentObjective: null, // ObjectiveView from toObjectiveView() during deployment, which the deployment menu shows instead of the Objective screen, else null
   objectiveStatus: null, // getObjectiveStatus() of the battle's objective on the current turn (the header's readout) once the battle starts, else null
   nextBattle: null, // describeBattle() of the battle a victory leads to (shown on the result), or null

@@ -1,22 +1,18 @@
 /* ---- Relic bar (a Warband run's relics, in a row under the header) --- */
 
-/* A row of a fixed height between the header and the stage, so the stage
-   (and the overworld and loading screen, placed by --below-header) start
-   below it. Too many relics for the width scroll sideways, with no
-   scrollbar, rather than wrapping. */
-.page:has(> .relic-bar) {
-  --relic-bar-height: 40px;
-  --below-header: calc(6px + 2.75rem + 6px + var(--relic-bar-height) + 6px);
-}
-
+/* A row on the header's status strip, after the phase readout, parted
+   from it by a hairline. Too many relics for the width scroll sideways,
+   with no scrollbar, rather than wrapping. */
 .relic-bar {
-  flex: none;
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   gap: 4px;
-  height: var(--relic-bar-height);
+  height: 2.5rem;
   min-width: 0;
-  padding: 0 4px;
+  margin-left: 12px;
+  padding: 0 4px 0 12px;
+  border-left: var(--hairline);
 }
 
 .relic-bar__key {
