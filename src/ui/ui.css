@@ -444,6 +444,7 @@ a.header-button {
 }
 
 .stage-area {
+  position: relative;
   flex: 1;
   min-width: 0;
   min-height: 0;
@@ -1808,6 +1809,10 @@ kbd {
    commands on the right. Fixed height, so the board never resizes as the
    mode changes. */
 .battle-bar {
+  /* Above the unit info sheet, which covers the rest of the stage area
+     (UnitInfoScreen.css), so its Close key stays in view. */
+  position: relative;
+  z-index: 6;
   flex: none;
   display: flex;
   align-items: stretch;
@@ -2164,7 +2169,7 @@ kbd {
 .hud .action-menu--beside-unit,
 .hud .combat-forecast--float,
 .hud .menu-exit.map-back,
-.hud .unit-info-window > .menu-exit,
+.unit-info-window > .menu-exit,
 .hud .pause-menu > .menu-exit,
 .page-header .turn-indicator__objective,
 .page-header .deployment-banner__hint,
@@ -2236,7 +2241,7 @@ kbd {
   }
 
   .hud .menu-exit.map-back,
-  .hud .unit-info-window > .menu-exit,
+  .unit-info-window > .menu-exit,
   .hud .pause-menu > .menu-exit {
     display: inline-flex;
   }
@@ -2851,7 +2856,6 @@ kbd {
 
 /* Item art is painted at 32px, so shrinking it pixelated drops whole rows
    and columns; the smaller spots smooth it instead. */
-.unit-info__item .item-icon,
 .unit-panel__item .item-icon,
 .combat-forecast__weapon .item-icon,
 .item-menu__item .item-icon {

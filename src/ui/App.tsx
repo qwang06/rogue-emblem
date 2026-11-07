@@ -147,7 +147,6 @@ export function App() {
                 <BossIntro />
                 <DialogBox />
                 <ObjectiveScreen />
-                <UnitInfoScreen />
                 <PauseMenu />
                 <BattleResult />
                 <RewardScreen />
@@ -165,6 +164,8 @@ export function App() {
             <BattleBar />
           </div>
           <BattleSide />
+          {/* Over the columns too (the whole stage area but the command bar, which carries its Close key), since the sheet needs the width. */}
+          <UnitInfoScreen />
         </div>
       </main>
 

@@ -1,9 +1,16 @@
 /* ---- Unit info screen -------------------------------------------------- */
 
-/* Covers the map so a click anywhere closes it (see UnitInfoScreen.tsx). */
+/* Covers the stage area, the battle columns too, so a click anywhere
+   closes it (see UnitInfoScreen.tsx); above the columns, which are
+   positioned siblings. */
 .unit-info-layer {
+  z-index: 5;
   pointer-events: auto;
   cursor: pointer;
+  user-select: none;
+  font-family: var(--sans);
+  line-height: normal;
+  color: var(--fg-bright);
 }
 
 /* Holds the sheet and its Close tab: the sheet scrolls, which would cut
@@ -24,35 +31,47 @@
   top: 22px;
 }
 
-/* Three columns: who the unit is, its stats, and how it fights. They stack
-   when the stage is too narrow. */
+/* Three columns: who the unit is, its stats, and how it fights. They
+   stack on a narrow window. */
 .unit-info {
   display: grid;
-  grid-template-columns: 10rem 11rem 14.5rem;
-  gap: 4px 20px;
+  grid-template-columns: 17rem 18rem minmax(0, 1fr);
   max-width: 100%;
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--muted) transparent;
   box-sizing: border-box;
-  padding: 8px 14px 10px;
+  padding: 0;
   font-size: 0.8125rem;
   line-height: 1.3;
 }
 
-.unit-info--enemy {
-  background: linear-gradient(var(--red-bg), var(--red-bg)), var(--bg);
+.unit-info__column {
+  min-width: 0;
+  padding: 12px 16px 14px;
 }
 
-.unit-info--guest {
-  background: linear-gradient(var(--green-bg), var(--green-bg)), var(--bg);
+.unit-info__column + .unit-info__column {
+  border-left: var(--hairline);
+}
+
+/* The first column is washed with the unit's team color from the top. */
+.unit-info__identity {
+  background: linear-gradient(180deg, var(--blue-bg), transparent 40%);
+}
+
+.unit-info--enemy .unit-info__identity {
+  background: linear-gradient(180deg, var(--red-bg), transparent 40%);
+}
+
+.unit-info--guest .unit-info__identity {
+  background: linear-gradient(180deg, var(--green-bg), transparent 40%);
 }
 
 /* Where the battle columns show (see ui.css), the sheet is the stage: a
-   flat ink surface filling it edge to edge, no window frame, its three
-   columns given room so the longest names ("Wooden Sword", "Natural")
-   never clip; the command bar carries its Close key. */
+   flat ink surface filling it edge to edge, no window frame; the command
+   bar carries its Close key. */
 @media (min-width: 44.01rem) {
   .unit-info-window {
     width: 100%;
@@ -66,10 +85,8 @@
   /* Scoped under the layer: ui.css's window frame (.panel) loads later. */
   .unit-info-layer .unit-info {
     flex: 1;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr);
-    gap: 6px 28px;
+    grid-template-columns: minmax(0, 18.5rem) minmax(0, 18.5rem) minmax(0, 1fr);
     width: 100%;
-    padding: 16px 24px 18px;
     border: 0;
     border-image: none;
     background: var(--bezel);
@@ -77,123 +94,144 @@
     line-height: 1.4;
   }
 
-  /* The rows run taller, so the sheet's columns reach down to the bar,
-     and the lists keep room for a few entries even when empty. */
-  .unit-info-layer .unit-info__stats {
-    gap: 6px;
-  }
-
-  .unit-info-layer .unit-info__stat {
-    min-height: 2.5rem;
-  }
-
-  .unit-info-layer .unit-info__stat-track {
-    height: 10px;
-  }
-
-  .unit-info-layer .unit-info__stat dd,
-  .unit-info-layer .unit-info__rate dd {
-    font-size: 1.25rem;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    color: var(--fg-bright);
-  }
-
-  .unit-info-layer .unit-info__list li,
-  .unit-info-layer .unit-info__rate,
-  .unit-info-layer .unit-info__pairs div {
-    min-height: 2rem;
-    align-items: center;
-  }
-
-  .unit-info-layer .unit-info__list--gear li {
-    min-height: 2.5rem;
-  }
-
-  .unit-info-layer .unit-info__list--attacks li {
-    min-height: 3rem;
-  }
-
-  .unit-info-layer .unit-info__identity .unit-info__list,
-  .unit-info-layer .unit-info__identity .unit-info__empty {
-    min-height: 7rem;
-    margin-bottom: 0;
-  }
-
-  .unit-info-layer .unit-info__pairs dd {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: var(--fg-bright);
-  }
-
-  .unit-info-layer .unit-info__heading {
-    margin-top: 16px;
-  }
-
-  .unit-info-layer .unit-info__name {
-    font-size: 1.75rem;
-  }
-
-  .unit-info-layer .unit-info__portrait {
-    padding: 12px 0;
-  }
-
-  .unit-info-layer .unit-info__identity .meter__value {
-    font-size: 1.25rem;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    color: var(--fg-bright);
-  }
-
-  .unit-info-layer .unit-info__identity .meter__track {
-    height: 10px;
-    box-shadow: 0 0 0 1px rgb(138 109 59 / 55%);
-  }
-
-  .unit-info-layer .unit-info--enemy {
-    background: linear-gradient(var(--red-bg), var(--red-bg)), var(--bezel);
-  }
-
-  .unit-info-layer .unit-info--guest {
-    background: linear-gradient(var(--green-bg), var(--green-bg)), var(--bezel);
+  .unit-info-layer .unit-info__column {
+    padding: 14px 20px 16px;
   }
 }
 
 @media (width < 72rem) {
   .unit-info {
-    grid-template-columns: minmax(0, 15rem);
+    grid-template-columns: minmax(0, 20rem);
   }
 
-  .unit-info__column {
-    margin-top: 8px;
+  .unit-info__column + .unit-info__column {
+    border-left: 0;
+    border-top: var(--hairline);
   }
 }
 
-.unit-info__identity {
-  min-width: 0;
-}
+/* ---- Headings and shared text ---- */
 
-.unit-info__portrait {
+/* A section's caps heading on a hairline, a dim note at its end. */
+.unit-info__heading {
   display: flex;
-  justify-content: center;
-  margin-bottom: 6px;
-  background: var(--well, var(--bg-light));
-  border: var(--rule);
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin: 14px 0 6px;
+  padding-bottom: 4px;
+  border-bottom: var(--hairline);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.6;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
-/* Holds the sprite and, for a boss or an elite, its badge on its corner. */
-.unit-info__sprite {
+.unit-info__heading:first-child {
+  margin-top: 0;
+}
+
+.unit-info__heading-note {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--fg-dim);
+}
+
+/* Names of weapons, gear, skills and items, in the serif. */
+.unit-info__serif {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--serif);
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  color: var(--fg);
+}
+
+/* The small caps the sheet's labels use. */
+.unit-info__trained,
+.unit-info__level-label,
+.unit-info__tag,
+.unit-info__slot-label,
+.unit-info__entry-line,
+.unit-info__entry-note,
+.unit-info__number dt,
+.unit-info__tile dt,
+.unit-info__carry-note,
+.unit-info__empty,
+.unit-info__slot-name--empty {
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.unit-info__empty {
+  margin: 0;
+}
+
+/* ---- Identity ---- */
+
+/* The portrait beside the name, class and level, as a dossier opens. */
+.unit-info__head {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+/* The sprite enlarged in a well with gold brackets on its corners. */
+.unit-info__portrait {
   position: relative;
+  flex: none;
   display: inline-flex;
+  padding: 4px;
+  background: var(--well);
+  outline: 1px solid rgb(138 109 59 / 55%);
+  background-image:
+    linear-gradient(var(--accent), var(--accent)), linear-gradient(var(--accent), var(--accent)),
+    linear-gradient(var(--accent), var(--accent)), linear-gradient(var(--accent), var(--accent)),
+    linear-gradient(var(--accent), var(--accent)), linear-gradient(var(--accent), var(--accent)),
+    linear-gradient(var(--accent), var(--accent)), linear-gradient(var(--accent), var(--accent));
+  background-repeat: no-repeat;
+  background-size:
+    12px 2px,
+    2px 12px,
+    12px 2px,
+    2px 12px,
+    12px 2px,
+    2px 12px,
+    12px 2px,
+    2px 12px;
+  background-position:
+    0 0,
+    0 0,
+    100% 0,
+    100% 0,
+    0 100%,
+    0 100%,
+    100% 100%,
+    100% 100%;
+}
+
+.unit-info__lines {
+  min-width: 0;
+  flex: 1;
 }
 
 .unit-info__name {
   margin: 0;
   overflow: hidden;
   font-family: var(--serif);
-  font-size: 1.375rem;
+  font-size: 1.5rem;
   font-weight: 400;
-  line-height: 1.2;
+  line-height: 1;
   letter-spacing: 0.02em;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -208,210 +246,401 @@
   color: var(--green);
 }
 
-/* "VILLAGER · LV 1": the class line, and every label of the sheet, in
-   the compact caps the chrome uses. */
-.unit-info__class,
-.unit-info__caps,
-.unit-info__pairs dt,
-.unit-info__rate dt,
-.unit-info__slot,
-.unit-info__tag,
-.unit-info__empty,
-.unit-info__number dt {
-  font-size: 0.75rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
 .unit-info__class {
-  margin: 0 0 2px;
-  color: var(--fg-dim);
-}
-
-/* Item and gear names in the serif. */
-.unit-info__item,
-.unit-info__list--gear .unit-info__gear {
+  margin: 6px 0 0;
   font-family: var(--serif);
-  font-size: 0.9375rem;
-  letter-spacing: 0.02em;
+  font-size: 1.0625rem;
+  line-height: 1.1;
+  color: var(--fg);
 }
 
-.unit-info__pairs {
-  margin: 8px 0 0;
-}
-
-.unit-info__pairs div {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.unit-info__pairs dt,
-.unit-info__rate dt {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.unit-info__rank {
+  font-family: var(--pixel);
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--fg-dim);
 }
 
-/* Keeps a rate without an icon (AS, RNG) lined up with those that have one. */
-.unit-info__no-icon {
-  flex: none;
-  width: 20px;
+.unit-info__level {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 10px 0 0;
 }
 
-.unit-info__pairs dd,
-.unit-info__rate dd {
+.unit-info__level-value {
+  font-size: 1.625rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-bright);
+}
+
+.unit-info__trained {
+  margin: 6px 0 0;
+}
+
+.unit-info__meters {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.unit-info__meters .meter__track {
+  height: 10px;
+  box-shadow: 0 0 0 1px rgb(138 109 59 / 55%);
+}
+
+.unit-info__meters .meter__value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-bright);
+}
+
+.unit-info__quirk {
   margin: 0;
 }
 
-.unit-info__heading {
-  margin: 0 0 4px;
-  padding-bottom: 2px;
-  border-bottom: var(--hairline);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  line-height: 1.6;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--accent);
+.unit-info__quirk-name {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1rem;
+  color: var(--fg-bright);
 }
 
-.unit-info__heading:not(:first-child) {
-  margin-top: 10px;
+.unit-info__quirk-text {
+  margin: 2px 0 0;
+  color: var(--fg-dim);
 }
 
-/* "STR [=====   ] 5/12": the bar fills toward the class's cap. */
+.unit-info__promotions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.unit-info__promotion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.unit-info__promotion-sprite {
+  flex: none;
+  display: inline-flex;
+  padding: 2px;
+  background: var(--well);
+  outline: 1px solid rgb(138 109 59 / 55%);
+}
+
+.unit-info__promotion-name {
+  font-family: var(--serif);
+  font-size: 1rem;
+  color: var(--fg);
+}
+
+/* ---- Stats ---- */
+
 .unit-info__stats {
   display: grid;
-  gap: 5px;
+  gap: 4px;
   margin: 0;
 }
 
+/* "STR [=====   ] 5   40%": label, bar, value, growth. */
 .unit-info__stat {
   display: grid;
-  grid-template-columns: 3.6rem 1fr 3rem;
+  grid-template-columns: 2.6rem minmax(0, 1fr) 2.4rem 2.6rem;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  min-height: 1.9rem;
 }
 
 .unit-info__stat dt {
-  color: var(--fg-dim);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  color: rgb(190 160 105 / 85%);
 }
 
 .unit-info__stat dd {
   margin: 0;
   text-align: right;
+  font-size: 1.125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-bright);
 }
 
 .unit-info__stat-track {
-  height: 6px;
-  background: var(--well);
+  height: 10px;
+  background: #0f1220;
+  box-shadow: 0 0 0 1px rgb(138 109 59 / 45%);
   overflow: hidden;
 }
 
 .unit-info__stat-fill {
   display: block;
   height: 100%;
-  background: var(--fg-dim);
+  background: linear-gradient(#9fb2ff 50%, #5b73c9 50%);
 }
 
-.unit-info__rates {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 3px 16px;
-  margin: 0;
+.unit-info__stat-fill--hp {
+  background: var(--hp-fill);
 }
 
-.unit-info__rate {
-  display: flex;
-  justify-content: space-between;
-  gap: 6px;
-}
-
-/* An attack's numbers under its name: "POW 1  HIT 90  CRT 0  WT 1  RNG 1". */
-.unit-info__numbers {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 12px;
-  margin: 0;
-}
-
-.unit-info__number {
-  display: flex;
-  gap: 4px;
-  white-space: nowrap;
-}
-
-.unit-info__number dt {
+.unit-info__growth {
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
   color: var(--fg-dim);
 }
 
-.unit-info__number dd {
-  margin: 0;
+.unit-info__growth--high {
+  color: var(--green);
+}
+
+.unit-info__growth--low,
+.unit-info__growth--none {
+  color: var(--muted);
+}
+
+/* The load against the unit's strength, gold while it's within it. */
+.unit-info__carry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 3rem;
+  align-items: center;
+  gap: 10px;
+}
+
+.unit-info__carry-track {
+  height: 10px;
+  background: #0f1220;
+  box-shadow: 0 0 0 1px rgb(138 109 59 / 45%);
+  overflow: hidden;
+}
+
+.unit-info__carry-fill {
+  display: block;
+  height: 100%;
+  background: var(--exp-fill);
+}
+
+.unit-info__carry-fill--over {
+  background: var(--red);
+}
+
+.unit-info__carry-value {
+  text-align: right;
+  font-size: 1.125rem;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   color: var(--fg-bright);
 }
 
-/* An item's name after its icon, half a tile so the row stays one line. */
-.unit-info__item {
+.unit-info__carry-max {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--fg-dim);
+}
+
+.unit-info__carry-note {
+  margin: 4px 0 0;
+}
+
+/* ---- Combat ---- */
+
+/* Six tiles in a row, each a caps label over its number. */
+.unit-info__tiles {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+}
+
+.unit-info__tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 7px 8px 5px;
+  background: var(--ink);
+  border: 1px solid rgb(138 109 59 / 45%);
+}
+
+.unit-info__tile dt {
   display: flex;
   align-items: center;
-  gap: 6px;
-  min-width: 0;
+  gap: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  font-weight: 700;
 }
 
-.unit-info__item .item-icon {
-  width: 16px;
-  height: 16px;
+.unit-info__tile dd {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-bright);
 }
 
-.unit-info__skill-cost {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
+.unit-info__tile--lit {
+  border-color: var(--accent);
 }
 
-.unit-info__list {
+.unit-info__tile--lit dd {
+  color: var(--accent);
+}
+
+.unit-info__attacks {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.unit-info__list li {
+/* An attack: icon, name and type, its numbers at the row's end. */
+.unit-info__attack {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 2.25rem;
+  border-bottom: 1px solid rgb(255 255 255 / 6%);
+}
+
+.unit-info__attack .item-icon,
+.unit-info__slot .item-icon,
+.unit-info__entry .item-icon {
+  width: 24px;
+  height: 24px;
+  image-rendering: auto;
+}
+
+.unit-info__attack-name {
   display: flex;
-  justify-content: space-between;
+  align-items: baseline;
   gap: 8px;
+  min-width: 0;
 }
 
-.unit-info__list li span:last-child {
-  flex-shrink: 0;
-  color: var(--fg-dim);
+.unit-info__attack--equipped .unit-info__serif {
+  color: var(--yellow);
 }
 
-/* A boon's name over its description, which can run long. */
-.unit-info__list--boons li {
-  display: block;
+.unit-info__numbers {
+  display: flex;
+  gap: 10px;
+  margin: 0;
 }
 
-.unit-info__list--boons li + li {
-  margin-top: 2px;
+.unit-info__number {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  white-space: nowrap;
 }
 
-.unit-info__list--boons li span:first-child {
-  display: block;
+.unit-info__number dd {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
   color: var(--fg-bright);
 }
 
-.unit-info__list--boons li span:last-child {
-  display: block;
-  font-size: 0.8125rem;
-  line-height: 1.2;
+/* Equipment and passives beside skills and items. */
+.unit-info__two {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 24px;
 }
 
-.unit-info__empty {
+.unit-info__two > div {
+  min-width: 0;
+}
+
+.unit-info__slots,
+.unit-info__entries {
   margin: 0;
-  color: var(--fg-dim);
+  padding: 0;
+  list-style: none;
+}
+
+/* "MAIN HAND  [icon] Iron Spear" */
+.unit-info__slot {
+  display: grid;
+  grid-template-columns: 4.5rem 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 2.25rem;
+  border-bottom: 1px solid rgb(255 255 255 / 6%);
+}
+
+.unit-info__slot-name--empty {
+  color: var(--muted);
+}
+
+/* The spot an empty slot keeps for an icon. */
+.unit-info__placeholder {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border: 1px dashed var(--muted);
+}
+
+/* A skill, passive or item: icon, name over its line, its note at the end. */
+.unit-info__entry {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 2.5rem;
+  border-bottom: 1px solid rgb(255 255 255 / 6%);
+}
+
+.unit-info__entry-icon {
+  width: 24px;
+  height: 24px;
+  image-rendering: pixelated;
+}
+
+.unit-info__entry-icon--missing {
+  display: inline-block;
+  box-sizing: border-box;
+  border: 1px dashed var(--muted);
+}
+
+.unit-info__entry-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.unit-info__entry-line {
+  text-transform: none;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+}
+
+.unit-info__entry-note {
+  white-space: nowrap;
+}
+
+.unit-info__entry-note--cost {
+  color: var(--cyan);
+}
+
+.unit-info__entry-note--passive {
+  color: var(--bronze-bright);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -420,93 +649,18 @@
   }
 }
 
-/* "Skills + Acolyte set": the secondary skill set, quieter than the heading. */
-.unit-info__secondary {
-  font-weight: 400;
-  color: var(--muted);
-}
-
-/* An attack's name over its numbers; the one it fights with in yellow. */
-.unit-info__list--attacks li {
-  display: block;
-}
-
-.unit-info__list--attacks li + li {
-  margin-top: 3px;
-}
-
-.unit-info__list--attacks .weapon-numbers {
-  display: flex;
-  padding-left: 22px;
-  font-size: 0.8125rem;
-  color: var(--fg-dim);
-}
-
-.unit-info__attack--equipped .unit-info__item {
-  color: var(--yellow);
-}
-
-/* The weapon type after an attack's name ("Natural" for a monster's own). */
-.unit-info__tag {
-  font-size: 0.75rem;
-  color: var(--fg-dim);
-}
-
-/* "Main hand  [icon] Iron Sword", then what a rule-bending piece does. */
-.unit-info__list--gear li {
-  display: grid;
-  grid-template-columns: 5.5rem minmax(0, 1fr);
-  align-items: center;
-  gap: 0 6px;
-}
-
-/* A name beside its icon is cut short with an ellipsis, never wrapped. */
-.unit-info__item-label {
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.unit-info__list--gear li + li {
-  margin-top: 2px;
-}
-
-.unit-info__list--gear li span.unit-info__slot {
-  color: var(--fg-dim);
-}
-
-.unit-info__list--gear li span.unit-info__gear {
-  color: var(--fg);
-}
-
-.unit-info__list--gear li span.unit-info__gear--empty {
-  color: var(--fg-dim);
-}
-
-.unit-info__list--gear li span.unit-info__gear-note {
-  grid-column: 1 / -1;
-  padding-left: 4.6rem;
-  margin-left: 6px;
-  font-size: 0.8125rem;
-  line-height: 1.2;
-  color: var(--fg-dim);
-}
-
 /* On a tall window the sheet's type grows with the stage, so it doesn't
    sit in the top half of it. */
 @media (min-width: 44.01rem) and (min-height: 60rem) {
   .unit-info-layer .unit-info {
-    gap: 8px 36px;
-    padding: 20px 32px 24px;
-    font-size: 1.0625rem;
+    font-size: 1rem;
   }
 
-  .unit-info-layer .unit-info__name {
-    font-size: 1.75rem;
+  .unit-info-layer .unit-info__column {
+    padding: 20px 28px 24px;
   }
 
   .unit-info-layer .unit-info__stats {
-    gap: 9px;
+    gap: 8px;
   }
 }
