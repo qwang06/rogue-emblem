@@ -2,3 +2,5 @@ dist
 package-lock.json
 src/assets
 .claude/worktrees
+.claude/skills/impeccable
+.claude/agents
