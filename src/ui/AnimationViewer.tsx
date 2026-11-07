@@ -73,7 +73,7 @@ function ViewerBody({ art }: { art: string }) {
   const stage = useMemo(() => getStageRect(sheets), [sheets]);
   const [sheetKey, setSheetKey] = useState(sheets[0].key);
   const [facing, setFacing] = useState<FacingPick>(ALL_FACINGS);
-  const [zoom, setZoom] = useState<number>(4);
+  const [zoom, setZoom] = useState<number>(2);
   const [speed, setSpeed] = useState<number>(1);
   const [playing, setPlaying] = useState(true);
   const [playback, setPlayback] = useState<Playback>({ frame: 0, elapsedMs: 0 });
