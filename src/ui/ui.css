@@ -469,9 +469,57 @@ a.header-button {
   line-height: 0;
   border-radius: var(--radius);
   overflow: hidden;
-  /* The table the board sits on: ink lit from the middle, so a map
-     smaller than the stage reads as centered on purpose, not adrift. */
-  background: radial-gradient(ellipse at center, #1c2036 0%, #141729 55%, var(--desktop) 100%);
+  /* The table the board sits on: a faint tile grid on ink lit from the
+     middle, so a map smaller than the stage reads as set on a board, not
+     adrift. */
+  background:
+    linear-gradient(rgb(138 109 59 / 9%) 1px, transparent 1px) 0 0 / 48px 48px,
+    linear-gradient(90deg, rgb(138 109 59 / 9%) 1px, transparent 1px) 0 0 / 48px 48px,
+    radial-gradient(ellipse at center, #1c2036 0%, #141729 55%, var(--desktop) 100%);
+}
+
+/* The frame round the board (BoardFrame): a bronze hairline at a small
+   margin, the battle's name and the board's size as a tab on its top-left
+   edge and the cursor's tile on its top-right, over ink so they read on
+   the map when the board overflows the stage. */
+.hud .board-frame {
+  --board-margin: 8px;
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px solid rgb(138 109 59 / 70%);
+  pointer-events: none;
+}
+
+.board-frame__label {
+  position: absolute;
+  top: 0;
+  transform: translateY(-50%);
+  padding: 0 6px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1.4;
+  white-space: nowrap;
+  color: var(--accent);
+  background: var(--desktop);
+}
+
+.board-frame__label--name {
+  left: 10px;
+}
+
+.board-frame__label--tile {
+  right: 10px;
+  min-width: 3em;
+  text-align: right;
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.board-frame__size {
+  margin-left: 10px;
+  color: var(--fg-dim);
 }
 
 #game {
@@ -895,6 +943,9 @@ a.header-button {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  font-family: var(--serif);
+  font-size: 0.9375rem;
+  letter-spacing: 0.02em;
 }
 
 .unit-panel__item-quantity {
@@ -1067,12 +1118,47 @@ kbd {
 }
 
 .unit-panel--docked .unit-panel__portrait {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
+}
+
+/* The numbers that matter read bigger than their labels: HP / MP values
+   at 1.25x, the bars 10px tall, each stat on a 1.75rem row. */
+.unit-panel--docked .meter {
+  margin-top: 4px;
+}
+
+.unit-panel--docked .meter__track {
+  height: 10px;
+}
+
+.unit-panel--docked .meter__value {
+  font-size: 1rem;
+  font-weight: 700;
 }
 
 .unit-panel--docked .unit-panel__stats {
-  margin-top: 4px;
+  margin-top: 8px;
+  padding-top: 6px;
+  row-gap: 2px;
+}
+
+.unit-panel--docked .unit-panel__stat {
+  min-height: 1.75rem;
+}
+
+.unit-panel--docked .unit-panel__stat dd {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.unit-panel--docked .unit-panel__items {
+  margin-top: 8px;
+  padding-top: 6px;
+}
+
+.unit-panel--docked .unit-panel__item {
+  min-height: 1.5rem;
 }
 
 .unit-panel--docked .unit-panel__items {
@@ -1093,9 +1179,29 @@ kbd {
   margin-top: auto;
 }
 
+/* The tile's art beside its name and facts. */
+.terrain-card__body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.terrain-tile {
+  flex: none;
+  image-rendering: pixelated;
+  background-repeat: no-repeat;
+  box-shadow: 0 0 0 1px rgb(138 109 59 / 60%);
+}
+
+.terrain-card__text {
+  min-width: 0;
+}
+
 .terrain-card__name {
   margin: 0;
-  font-weight: 700;
+  font-family: var(--serif);
+  font-size: 1.125rem;
+  line-height: 1.2;
   color: var(--fg-bright);
 }
 
@@ -1134,18 +1240,18 @@ kbd {
   border-left: var(--hairline);
 }
 
-/* The roster to deploy (the dock, during deployment) and the party
-   (the right column, in battle): one unit per row, its sprite, its name
-   in the serif, then what the card tracks. */
+/* The roster to deploy (the right column, during deployment) and a side's
+   units (TeamCard: the party and the enemies): one unit per row, its
+   sprite, its name in the serif, then what the card tracks. */
 .roster-card__list,
-.party-card__list {
+.team-card__list {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .roster-card__unit,
-.party-card__unit {
+.team-card__unit {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr) auto;
   align-items: center;
@@ -1156,12 +1262,12 @@ kbd {
 }
 
 .roster-card__unit:last-child,
-.party-card__unit:last-child {
+.team-card__unit:last-child {
   border-bottom: 0;
 }
 
 .roster-card__sprite,
-.party-card__sprite {
+.team-card__sprite {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1169,12 +1275,12 @@ kbd {
   height: 32px;
 }
 
-.party-card__sprite {
+.team-card__sprite {
   grid-row: 1 / 3;
 }
 
 .roster-card__name,
-.party-card__name {
+.team-card__name {
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
@@ -1200,9 +1306,9 @@ kbd {
   opacity: 0.45;
 }
 
-/* "2 / 3 placed" under the roster, "3 to move" under the party: the number loud. */
+/* "2 / 3 placed" under the roster, "3 to move" under a side: the number loud. */
 .roster-card__count,
-.party-card__left {
+.team-card__footer {
   margin: 6px 0 0;
   font-size: 0.6875rem;
   letter-spacing: 0.06em;
@@ -1211,13 +1317,13 @@ kbd {
 }
 
 .roster-card__count-number,
-.party-card__left-count {
+.team-card__count {
   font-size: 1rem;
   font-weight: 700;
   color: var(--fg-bright);
 }
 
-.party-card__class {
+.team-card__class {
   grid-column: 2 / 4;
   min-width: 0;
   overflow: hidden;
@@ -1229,7 +1335,7 @@ kbd {
   color: var(--fg-dim);
 }
 
-.party-card__hp {
+.team-card__hp {
   grid-column: 2;
   display: block;
   height: 6px;
@@ -1237,29 +1343,43 @@ kbd {
   box-shadow: 0 0 0 1px rgb(0 0 0 / 35%);
 }
 
-.party-card__hp-fill {
+.team-card__hp-fill {
   display: block;
   height: 100%;
   background: var(--green);
 }
 
-.party-card__hp-value {
+.team-card__hp-value {
   grid-column: 3;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--fg-bright);
 }
 
+/* The enemies' rows read in crimson. */
+.team-card--enemy .team-card__name {
+  color: var(--red);
+}
+
+.team-card--enemy .team-card__hp-fill {
+  background: var(--red);
+}
+
+.team-card--enemy .team-card__unit--fallen .team-card__name {
+  color: var(--fg-dim);
+}
+
 /* Done for the phase: the whole row dims. Fallen: dim and struck through. */
-.party-card__unit--acted {
+.team-card__unit--acted {
   opacity: 0.45;
 }
 
-.party-card__unit--fallen {
+.team-card__unit--fallen {
   opacity: 0.35;
 }
 
-.party-card__unit--fallen .party-card__name {
+.team-card__unit--fallen .team-card__name {
   text-decoration: line-through;
   color: var(--red);
 }
@@ -1363,6 +1483,7 @@ kbd {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
+  border: 1px solid rgb(138 109 59 / 60%);
   color: var(--fg);
   background: var(--well);
   box-shadow: inset 0 0 0 1px rgb(138 109 59 / 45%);
@@ -1382,9 +1503,22 @@ kbd {
 }
 
 .command-chip--selected {
-  color: var(--fg-bright);
-  background: var(--selection);
-  box-shadow: var(--selection-ring);
+  color: #2a1a10;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.command-chip--selected .command-chip__note {
+  color: #4a3418;
+}
+
+/* A weapon's or an item's name reads in the serif, as everywhere. */
+.command-chip__label--name {
+  font-family: var(--serif);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: none;
 }
 
 .command-chip--disabled {
@@ -1527,8 +1661,18 @@ kbd {
 .hud .unit-info-window > .menu-exit,
 .hud .pause-menu > .menu-exit,
 .page-header .turn-indicator__objective,
-.page-header .deployment-banner__hint {
+.page-header .deployment-banner__hint,
+.page--field .page-header .turn-indicator__turn,
+.page--field .page-header .auto-play-controls,
+.page--field .page-header .danger-zone-button,
+.page--field .page-header .controls-button,
+.page--field .page-header .main-menu-button {
   display: none;
+}
+
+/* The attacker's card under the forecast: its heading on the card. */
+.unit-panel--docked > .dock-section__title {
+  margin-bottom: 6px;
 }
 
 /* The pause menu as a flat ink box, its title a caps heading on a
@@ -1586,6 +1730,17 @@ kbd {
 
   .page-header .deployment-banner__hint {
     display: block;
+  }
+
+  .page--field .page-header .turn-indicator__turn,
+  .page--field .page-header .auto-play-controls {
+    display: inline-flex;
+  }
+
+  .page--field .page-header .danger-zone-button,
+  .page--field .page-header .controls-button,
+  .page--field .page-header .main-menu-button {
+    display: flex;
   }
 
   .page-header .turn-indicator__objective {
@@ -1812,6 +1967,10 @@ kbd {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  font-family: var(--serif);
+  font-size: 0.9375rem;
+  letter-spacing: 0.02em;
+  color: var(--fg);
 }
 
 .combat-forecast__rows {

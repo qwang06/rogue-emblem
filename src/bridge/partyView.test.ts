@@ -62,3 +62,26 @@ describe('toPartyView', () => {
     expect(view[0]?.acted).toBe(false);
   });
 });
+
+describe('toPartyView for the enemy', () => {
+  it('lists every enemy on the map in map order, then the fallen', () => {
+    const view = toPartyView(
+      {
+        units: new Map([
+          ['e2', unit('Goblin', 'enemy', 4)],
+          ['a', unit('Ash', 'player')],
+          ['e1', unit('Slime', 'enemy')],
+        ]),
+        deployed: ['a'],
+        fallen: new Map([['e3', unit('Bandit', 'enemy')]]),
+        turnState: { turn: 1, team: 'player', moved: [], done: [] },
+      },
+      'enemy',
+    );
+    expect(view.map((entry) => [entry.id, entry.health, entry.fallen])).toEqual([
+      ['e2', 4, false],
+      ['e1', 10, false],
+      ['e3', 0, true],
+    ]);
+  });
+});

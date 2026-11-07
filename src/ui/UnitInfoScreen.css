@@ -66,7 +66,7 @@
   /* Scoped under the layer: ui.css's window frame (.panel) loads later. */
   .unit-info-layer .unit-info {
     flex: 1;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.15fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr);
     gap: 6px 28px;
     width: 100%;
     padding: 14px 24px 16px;
@@ -134,9 +134,30 @@
   color: var(--green);
 }
 
+/* "VILLAGER · LV 1": the class line, and every label of the sheet, in
+   the compact caps the chrome uses. */
+.unit-info__class,
+.unit-info__pairs dt,
+.unit-info__rate dt,
+.unit-info__slot,
+.unit-info__tag,
+.unit-info__empty {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .unit-info__class {
   margin: 0 0 2px;
   color: var(--fg-dim);
+}
+
+/* Item and gear names in the serif. */
+.unit-info__item,
+.unit-info__list--gear .unit-info__gear {
+  font-family: var(--serif);
+  font-size: 0.9375rem;
+  letter-spacing: 0.02em;
 }
 
 .unit-info__pairs {
@@ -334,9 +355,17 @@
 /* "Main hand  [icon] Iron Sword", then what a rule-bending piece does. */
 .unit-info__list--gear li {
   display: grid;
-  grid-template-columns: 4.6rem minmax(0, 1fr);
+  grid-template-columns: 5.5rem minmax(0, 1fr);
   align-items: center;
   gap: 0 6px;
+}
+
+/* A name beside its icon is cut short with an ellipsis, never wrapped. */
+.unit-info__item-label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .unit-info__list--gear li + li {

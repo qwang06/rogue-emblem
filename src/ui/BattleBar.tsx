@@ -5,7 +5,7 @@ import type { Menu, MenuAction } from '../game/actionMenu.ts';
 import type { ItemAction } from '../game/items.ts';
 import type { SkillAction } from '../game/skills.ts';
 import type { WeaponAction } from '../game/weapons.ts';
-import { isOnField } from './BattleDock.tsx';
+import { isOnField } from './dock.tsx';
 import { ItemIcon } from './ItemIcon.tsx';
 import { KeyHint, type KeyHintEntry } from './KeyHint.tsx';
 import { MenuIcon } from './MenuIcon.tsx';
@@ -146,7 +146,7 @@ function getOpenMenu(state: OpenMenus): OpenMenu | null {
       (weapon) => (
         <>
           <ItemIcon itemId={weapon.itemId} />
-          <span className="command-chip__label">{weapon.label}</span>
+          <span className="command-chip__label command-chip__label--name">{weapon.label}</span>
         </>
       ),
       (weapon) => (
@@ -181,7 +181,7 @@ function getOpenMenu(state: OpenMenus): OpenMenu | null {
       (item) => (
         <>
           <ItemIcon itemId={item.id} />
-          <span className="command-chip__label">{item.label}</span>
+          <span className="command-chip__label command-chip__label--name">{item.label}</span>
           <span className="command-chip__note">×{item.quantity}</span>
         </>
       ),

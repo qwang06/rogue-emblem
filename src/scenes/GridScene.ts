@@ -600,6 +600,8 @@ export class GridScene extends Phaser.Scene {
       origin: active.origin,
       movedAt: active.movedAt,
     };
+    // Its card for the UI (the attacker's, beside the forecast).
+    gameStore.setState({ activeUnit: active ? toUnitView(this.units.get(active.unitId) ?? null) : null });
   }
 
   // Gives the battle a command and records it, returning what happened.
@@ -652,11 +654,17 @@ export class GridScene extends Phaser.Scene {
   syncShown() {
     this.shown = this.battle;
     this.shownStats.clear();
-    gameStore.setState({ party: toPartyView(this.shown) });
+    this.publishRosters();
     this.publishBossBar();
     this.refreshIncomingMarker();
     this.refreshTerrain(this.grid);
     this.refreshMines(this.shown.mines);
+  }
+
+  // The two sides' rosters for the battle frame's columns, as the map
+  // shows them.
+  publishRosters() {
+    gameStore.setState({ party: toPartyView(this.shown), enemies: toPartyView(this.shown, 'enemy') });
   }
 
   // Draws the map's terrain art for `grid` (set up in create), first
@@ -804,6 +812,7 @@ export class GridScene extends Phaser.Scene {
     // the run for a Warband stage, else fresh.
     this.history = createHistory(createBattleState(level, getBattleDiceSeed(setup) ?? randomSeed()));
     this.shown = this.battle;
+    this.publishRosters();
     this.shownStats = new Map();
     this.incomingMarker = null; // the last battle's marker went with its scene
     this.incomingMarkerKey = null;
@@ -812,8 +821,15 @@ export class GridScene extends Phaser.Scene {
     const paletteName = level.palette ?? DEFAULT_BUILDING_PALETTE;
     const palette = BUILDING_PALETTES[paletteName];
     // The map's terrain, forests, mountains and buildings in its season's art.
-    const sheet = SEASON_TERRAIN_SHEETS[level.season ?? DEFAULT_SEASON];
-    const props = SEASON_PROPS_SHEETS[level.season ?? DEFAULT_SEASON];
+    const season = level.season ?? DEFAULT_SEASON;
+    const sheet = SEASON_TERRAIN_SHEETS[season];
+    const props = SEASON_PROPS_SHEETS[season];
+    gameStore.setState({
+      season,
+      battleName: describeBattle(setup, this.content),
+      boardSize: { width: this.grid.width, height: this.grid.height },
+      boardAnchor: null,
+    });
     this.terrainKey = null; // the last battle's art went with its scene
     this.terrainArt = [];
     this.terrainTimers = [];
@@ -984,6 +1000,7 @@ export class GridScene extends Phaser.Scene {
     this.anchorsPending = true;
     this.events.once(Phaser.Scenes.Events.RENDER, () => {
       this.anchorsPending = false;
+      this.publishBoardAnchor();
       if (this.activeUnit) this.publishMenuAnchor();
       if (this.rangeMode === 'attack' || this.rangeMode === 'skill') this.updateCombatForecast();
       if (this.rangeMode === 'skill') this.updatePushPreview();
@@ -1175,8 +1192,7 @@ export class GridScene extends Phaser.Scene {
       return;
     } else if (cancel) {
       // Nothing to back out of on the bare map, so cancel opens the pause menu.
-      const canUndo = undoLastAction(this.history) !== null;
-      this.publishMenu('pauseMenu', createActionMenu(getPauseActions({ canUndo })));
+      this.publishMenu('pauseMenu', createActionMenu(this.getPauseActions()));
       return;
     }
 
@@ -1408,6 +1424,17 @@ export class GridScene extends Phaser.Scene {
     gameStore.setState({ menuAnchor: this.getTileAnchor({ x, y }) });
   }
 
+  // Where the whole board shows on the canvas right now, for the frame
+  // React draws round it (BoardFrame).
+  publishBoardAnchor() {
+    const { width, height } = this.grid;
+    const anchor = mergeTileAnchors(
+      this.getTileAnchor({ x: 0, y: 0 }),
+      this.getTileAnchor({ x: width - 1, y: height - 1 }),
+    );
+    gameStore.setState({ boardAnchor: anchor });
+  }
+
   // Where a map tile shows on the canvas right now (see toTileAnchorView).
   getTileAnchor(tile: Point) {
     const { worldView, zoom } = this.cameras.main;
@@ -1429,6 +1456,13 @@ export class GridScene extends Phaser.Scene {
   // hands over to the enemy phase, Undo takes the last player action back,
   // Main Menu leaves the battle for the title screen. Settings isn't built
   // yet.
+  // The pause menu's entries as things stand: whether there's a player
+  // action to undo, and auto play's state and speed.
+  getPauseActions() {
+    const { autoPlay, autoSpeed } = gameStore.getState();
+    return getPauseActions({ canUndo: undoLastAction(this.history) !== null, autoPlay, autoSpeed });
+  }
+
   updatePauseMenu(dy: number, confirm: boolean, cancel: boolean) {
     if (cancel) {
       this.publishMenu('pauseMenu', null);
@@ -1441,7 +1475,18 @@ export class GridScene extends Phaser.Scene {
       if (action?.id === 'end-turn') this.endPlayerPhase();
       else if (action?.id === 'undo') this.undoLastPlayerAction();
       else if (action?.id === 'main-menu') this.exitToTitle();
-      else console.info(`Pause action selected: ${action?.id}`);
+      else if (action?.id === 'auto-play') {
+        // Auto play takes over the map, so the menu closes with it.
+        this.publishMenu('pauseMenu', null);
+        this.toggleAutoPlay();
+      } else if (action?.id === 'auto-speed') {
+        // Steps the speed and shows the new one in place.
+        this.cycleAutoSpeed();
+        this.publishMenu('pauseMenu', {
+          ...createActionMenu(this.getPauseActions()),
+          selectedIndex: this.pauseMenu!.selectedIndex,
+        });
+      } else console.info(`Pause action selected: ${action?.id}`);
       return;
     }
 

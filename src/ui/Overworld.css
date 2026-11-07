@@ -541,6 +541,11 @@
   margin: 0;
 }
 
+.overworld__hint .key-hint__entry {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .overworld__site--selected .overworld__icon,
   .overworld__pointer,

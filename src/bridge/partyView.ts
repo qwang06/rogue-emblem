@@ -1,12 +1,12 @@
-// Snapshot of the player's side for the battle frame's party roster
-// (BattleSide.tsx): every deployed unit, in deployment order, with its
-// health and whether it has acted this phase, the fallen kept dim at the
-// end so the roster never shrinks mid-battle. Plain frozen data.
+// Snapshot of a side for the battle frame's rosters (BattleSide.tsx):
+// every unit of the team, with its health and whether it has acted this
+// phase, the fallen kept dim at the end so a roster never shrinks
+// mid-battle. Plain frozen data.
 
 import type { BattleState } from '../game/battle/state.ts';
 import { getClassLabel } from './views.ts';
 import { getUnitSprite } from '../game/tileset.ts';
-import { isDone } from '../game/turns.ts';
+import { isDone, type Team } from '../game/turns.ts';
 import type { Unit } from '../game/Unit.ts';
 
 export interface PartyUnitView {
@@ -38,27 +38,28 @@ function toPartyUnitView(id: string, unit: Unit, acted: boolean, fallen: boolean
   });
 }
 
-// The player's units in `deployed` order (every player unit on the map
-// before the battle starts, in map order), standing ones first.
+// A team's units, standing ones first: the player's in `deployed` order
+// (every player unit on the map before the battle starts, in map order),
+// any other team's in map order with its fallen after.
 export function toPartyView(
   state: Pick<BattleState, 'units' | 'turnState' | 'fallen' | 'deployed'>,
+  team: Team = 'player',
 ): readonly PartyUnitView[] {
-  const ids =
-    state.deployed.length > 0
-      ? state.deployed
-      : [...state.units].filter(([, unit]) => unit.team === 'player').map(([id]) => id);
+  const onMap = [...state.units].filter(([, unit]) => unit.team === team).map(([id]) => id);
+  const lost = [...state.fallen].filter(([, unit]) => unit.team === team).map(([id]) => id);
+  const ids = team === 'player' && state.deployed.length > 0 ? state.deployed : [...onMap, ...lost];
   const standing: PartyUnitView[] = [];
   const fallen: PartyUnitView[] = [];
   for (const id of ids) {
     const unit = state.units.get(id);
     if (unit) {
-      if (unit.team !== 'player') continue;
-      const acted = state.turnState?.team === 'player' && isDone(state.turnState, id);
+      if (unit.team !== team) continue;
+      const acted = state.turnState?.team === team && isDone(state.turnState, id);
       standing.push(toPartyUnitView(id, unit, acted, false));
       continue;
     }
-    const lost = state.fallen.get(id);
-    if (lost && lost.team === 'player') fallen.push(toPartyUnitView(id, lost, false, true));
+    const gone = state.fallen.get(id);
+    if (gone && gone.team === team) fallen.push(toPartyUnitView(id, gone, false, true));
   }
   return Object.freeze([...standing, ...fallen]);
 }
