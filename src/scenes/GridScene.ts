@@ -42,6 +42,7 @@ import {
   type RewardAction,
   type RunOverView,
   type StageClearView,
+  type StageTallyView,
 } from '../bridge/views.ts';
 import {
   createActionMenu,
@@ -73,7 +74,7 @@ import {
   runStage,
   type GameContent,
 } from '../game/battleSetup.ts';
-import type { PendingReward, RunState } from '../game/warband/run.ts';
+import type { BattleResult, PendingReward, RunState } from '../game/warband/run.ts';
 import {
   getRerollCost,
   getSkipGold,
@@ -185,7 +186,7 @@ import { areAllied, getTeamUnitIds, isAllyOf, isHostileTo } from '../game/teams.
 import type { Mine } from '../game/terrainSkills.ts';
 import { advanceDialog, createDialog, DIALOG_CHARS_PER_SECOND, getCurrentLine } from '../game/dialog.ts';
 import { getTriggeredDialog, turnTrigger } from '../game/dialogScript.ts';
-import { describeObjective, getObjectiveStatus, type Objective } from '../game/objectives.ts';
+import { describeObjective, getObjectiveStatus, TURN_LIMIT, type Objective } from '../game/objectives.ts';
 import { getPathFacings, getStepFacing } from '../game/facing.ts';
 import { createKeyRepeat, updateKeyRepeat } from '../game/keyRepeat.ts';
 import { getArrowPieces } from '../game/moveArrow.ts';
@@ -1098,8 +1099,10 @@ export class GridScene extends Phaser.Scene {
     }
 
     if (this.rewardMenu) {
-      // The cards sit side by side, so either arrow axis moves the pick.
-      this.updateRewardMenu(dx || dy, confirm && this.time.now >= this.rewardPickOpensAt);
+      // The cards sit side by side, so either arrow axis moves the pick;
+      // a digit picks a card outright.
+      const picked = this.pickMenuEntry('rewardMenu', this.rewardMenu);
+      this.updateRewardMenu(dx || dy, (confirm || picked) && this.time.now >= this.rewardPickOpensAt);
       return;
     }
 
@@ -1629,9 +1632,36 @@ export class GridScene extends Phaser.Scene {
         { gold: pending.clearGold, flawless: pending.flawless },
         run.gold,
         blessing,
+        { site: this.describeRunSite(run) },
       ),
     });
     this.openRewardMenu();
+  }
+
+  // The battle's tally for the spoils screen: the turn it ended on and
+  // the turns it had, the warband's kills and losses, and the HP its
+  // surviving units were down at the end.
+  getStageTally(before: RunState, result: BattleResult, after: RunState): StageTallyView {
+    const objective = this.battle.objective;
+    const hpLost = before.roster.reduce((sum, { id }) => {
+      const unit = result.units.get(id);
+      return unit ? sum + Math.max(0, unit.maxHealth - unit.health) : sum;
+    }, 0);
+    return {
+      turns: this.battle.turnState?.turn ?? 1,
+      turnLimit: objective.kind === 'survive' ? objective.turns : TURN_LIMIT,
+      kills: countWarbandKills(before, result),
+      losses: after.fallen.length - before.fallen.length,
+      hpLost,
+    };
+  }
+
+  // The realm site the run stands at, named with its region, or null off
+  // a realm.
+  describeRunSite(run: RunState): { name: string; region: string | null } | null {
+    const site = getRunSite(run);
+    if (!site) return null;
+    return { name: site.name, region: this.content.regions.regions[site.region]?.name ?? null };
   }
 
   // Opens the guest's recruitment, or with no guest owed, the draft a
@@ -2747,7 +2777,7 @@ export class GridScene extends Phaser.Scene {
         boonRerolled: this.battleRedraws.rerolled && getBoonRedraws(before, before.stage).reroll,
         banishedBoons: this.battleRedraws.banished,
       };
-      const { session: finished } = finishBattleWithEvents(
+      const { session: finished, events: finishEvents } = finishBattleWithEvents(
         { run: before, phase: 'battle' },
         result,
         outcome,
@@ -2769,7 +2799,15 @@ export class GridScene extends Phaser.Scene {
           relics: before.relics,
           heat: getRunHeat(before),
         });
-        stageClear = toStageClearView(before.stage, clear, run.gold);
+        stageClear = toStageClearView(before.stage, clear, run.gold, null, {
+          tally: this.getStageTally(before, result, run),
+          site: this.describeRunSite(run),
+          levelUps: finishEvents.flatMap((event) =>
+            event.type === 'level-ups'
+              ? event.levelUps.map((levelUp) => ({ name: levelUp.name, level: levelUp.levelUp.level }))
+              : [],
+          ),
+        });
         // The run is saved owing the pick, so a reload reopens the reward
         // screen (resumeRewardPick) instead of skipping it. Boon picks come
         // first, and the recruit and reward picks are set up once they're

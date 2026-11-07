@@ -438,6 +438,24 @@ export interface StageClearView {
   // At a shrine (a realm site with no battle, see warband/travel.ts), its
   // name: nothing was cleared, the pick is its blessing. Else null.
   blessing: string | null;
+  // The battle's tally, for the spoils screen's top row: null when the
+  // screen reopens for a saved run, whose battle is gone.
+  tally: StageTallyView | null;
+  // The site the stage was fought at, on a realm; null off one.
+  site: { name: string; region: string | null } | null;
+  // The level ups the clear's XP paid (stageClearExperience.ts), by name.
+  levelUps: readonly { name: string; level: number }[];
+}
+
+export interface StageTallyView {
+  // The turn the battle ended on, and the turns it had (null without a limit).
+  turns: number;
+  turnLimit: number | null;
+  // Foes the warband's own units felled, units it lost, and the HP its
+  // survivors were down at the end.
+  kills: number;
+  losses: number;
+  hpLost: number;
 }
 
 // What the result screen says when a Warband Mode run ends.
@@ -1169,8 +1187,22 @@ export function toStageClearView(
   clear: { gold: number; flawless: boolean },
   totalGold: number,
   blessing: string | null = null,
+  details: {
+    tally?: StageTallyView | null;
+    site?: { name: string; region: string | null } | null;
+    levelUps?: readonly { name: string; level: number }[];
+  } = {},
 ): StageClearView {
-  return Object.freeze({ stage, gold: clear.gold, flawless: clear.flawless, totalGold, blessing });
+  return Object.freeze({
+    stage,
+    gold: clear.gold,
+    flawless: clear.flawless,
+    totalGold,
+    blessing,
+    tally: details.tally ? Object.freeze({ ...details.tally }) : null,
+    site: details.site ? Object.freeze({ ...details.site }) : null,
+    levelUps: Object.freeze((details.levelUps ?? []).map((levelUp) => Object.freeze({ ...levelUp }))),
+  });
 }
 
 // The reward screen's menu entries: a card per reward, then Skip (with the
