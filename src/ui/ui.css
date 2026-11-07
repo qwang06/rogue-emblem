@@ -1533,9 +1533,49 @@ kbd {
   overflow: hidden;
 }
 
+/* The bar's hints: no ink chip behind each entry (the bar is ink), the
+   key drawn as a raised keycap (bronze rim, a darker lip under it, gold
+   letters) at a fixed height with its letters centred in it, the action
+   beside it in dim caps. The command chips' number keys match it. */
+.battle-bar__hints {
+  flex: none;
+  align-items: center;
+  gap: 4px 18px;
+  min-height: 1.5rem;
+  margin: 0;
+}
+
 .battle-bar__hints .key-hint__entry {
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  background: none;
+  font-size: 0.75rem;
+  line-height: 1;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.battle-bar__hints .key-hint__entry kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 1.5rem;
+  height: 1.375rem;
+  padding: 1px 6px 0;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
   letter-spacing: 0.04em;
+  color: var(--accent);
+  background: linear-gradient(#2c2a3a, #1d1c2a);
+  border: 1px solid rgb(138 109 59 / 85%);
+  border-bottom-width: 3px;
+  border-bottom-color: #5a4526;
+  border-radius: 3px;
 }
 
 /* The detail line: one line, dim, cut short rather than wrapped. */
@@ -1636,19 +1676,26 @@ kbd {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
   flex: none;
-  min-width: 1.1em;
-  padding: 0 3px;
+  min-width: 1.125rem;
+  height: 1.0625rem;
+  padding: 1px 4px 0;
   font-family: inherit;
   font-size: 0.6875rem;
-  line-height: 1.3;
-  color: #2a1a10;
-  background: var(--accent);
+  line-height: 1;
+  color: var(--accent);
+  background: #1d1c2a;
+  border: 1px solid rgb(138 109 59 / 85%);
+  border-bottom-width: 2px;
+  border-bottom-color: #5a4526;
+  border-radius: 2px;
 }
 
 .command-chip--selected .command-chip__key {
   color: var(--accent);
   background: #2a1a10;
+  border-color: #2a1a10;
 }
 
 .command-chip__label {
@@ -1664,6 +1711,11 @@ kbd {
   font-weight: 400;
   letter-spacing: 0.02em;
   text-transform: none;
+}
+
+/* On the gold fill of the chosen chip, a name reads dark like every label. */
+.command-chip--selected .command-chip__label--name {
+  color: #2a1a10;
 }
 
 .command-chip--disabled {
