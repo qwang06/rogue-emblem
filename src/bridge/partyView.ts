@@ -24,7 +24,7 @@ export interface PartyUnitView {
   fallen: boolean;
 }
 
-function toPartyUnitView(id: string, unit: Unit, acted: boolean, fallen: boolean): PartyUnitView {
+export function toPartyUnitView(id: string, unit: Unit, acted: boolean, fallen: boolean): PartyUnitView {
   return Object.freeze({
     id,
     name: unit.name,

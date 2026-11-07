@@ -67,7 +67,7 @@ describe('toPushTagView', () => {
 });
 
 describe('toForecastTagView', () => {
-  const side = { name: 'Ash', team: 'player', rank: null, weapon: null, weaponId: null } as const;
+  const side = { name: 'Ash', team: 'player', rank: null, weapon: null, weaponId: null, sprite: 'soldier' } as const;
   const forecast = (health: number, healthAfter: number) => ({
     attacker: {
       ...side,

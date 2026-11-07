@@ -140,6 +140,7 @@ export function App() {
                 <SkillMenu />
                 <ItemMenu />
                 <CombatForecast />
+                <CombatForecast band />
                 <DamagePopups />
                 <ExperienceBar />
                 <PhaseBanner />
