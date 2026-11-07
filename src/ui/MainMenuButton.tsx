@@ -15,7 +15,7 @@ export function MainMenuButton() {
   return (
     <button
       type="button"
-      className="header-button header-button--icon"
+      className="header-button header-button--icon main-menu-button"
       aria-label="Main menu"
       title="Main menu"
       disabled={waiting}

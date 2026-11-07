@@ -15,6 +15,8 @@ import { AutoPlayButton } from './AutoPlayButton.tsx';
 import { BattleBar } from './BattleBar.tsx';
 import { BattleDock } from './BattleDock.tsx';
 import { BattleSide } from './BattleSide.tsx';
+import { BoardFrame } from './BoardFrame.tsx';
+import { isOnField } from './dock.tsx';
 import { AutoCommandQueue } from './AutoCommandQueue.tsx';
 import { BossBar } from './BossBar.tsx';
 import { BossIntro } from './BossIntro.tsx';
@@ -78,12 +80,13 @@ function cancelOnRightClick(event: MouseEvent) {
 
 export function App() {
   const screen = useGameStore((state) => state.screen);
+  const onField = useGameStore(isOnField);
   const route = useRoute();
   const preview = route.page === 'region-preview' ? route : null;
   const generator = route.page === 'map-generator' ? route : null;
 
   return (
-    <div className="page">
+    <div className={onField ? 'page page--field' : 'page'}>
       <PageHeader
         actions={
           <>
@@ -120,7 +123,8 @@ export function App() {
             <div className="stage" onContextMenu={cancelOnRightClick} onWheel={scrollOverlayOnWheel}>
               <div id="game" role="img" aria-label="Battle map" />
               <div className="hud">
-                {/* The map's own labels first, so every window paints over them. */}
+                {/* The board's frame and the map's own labels first, so every window paints over them. */}
+                <BoardFrame />
                 <MapTags />
                 {/* Then the unit panel (on narrow windows, where the dock is hidden), so every other overlay paints over it. */}
                 <UnitPanel />

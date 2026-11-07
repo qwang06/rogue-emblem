@@ -1,3 +1,4 @@
+import type { UnitView } from '../bridge/views.ts';
 import type { Team } from '../game/turns.ts';
 import { ItemIcon } from './ItemIcon.tsx';
 import { pickCornerAwayFromTile } from './menuPlacement.ts';
@@ -43,13 +44,25 @@ const TEAM_NOUNS: Readonly<Record<Team, string>> = { player: 'Ally', enemy: 'Ene
 // it keeps showing while the forecast is up. Otherwise it floats over the
 // map, in the corner away from the hovered unit (for windows too narrow for
 // the dock; ui.css shows one or the other).
-export function UnitPanel({ docked = false }: { docked?: boolean }) {
-  const unit = useGameStore((state) => state.hoveredUnit);
+//
+// Given a `unit`, it shows that one instead of the hovered unit (the
+// attacker beside the forecast), under `heading` when docked.
+export function UnitPanel({
+  docked = false,
+  unit: given,
+  heading,
+}: {
+  docked?: boolean;
+  unit?: UnitView;
+  heading?: string;
+}) {
+  const hovered = useGameStore((state) => state.hoveredUnit);
   const anchor = useGameStore((state) => state.hoveredAnchor);
   const forecastOpen = useGameStore((state) => state.combatForecast !== null);
   const infoOpen = useGameStore((state) => state.unitInfo !== null);
+  const unit = given ?? hovered;
 
-  if (!unit || infoOpen || (forecastOpen && !docked)) return null;
+  if (!unit || (!given && (infoOpen || (forecastOpen && !docked)))) return null;
 
   const corner = pickCornerAwayFromTile(anchor);
   const showExperience = unit.team !== 'enemy';
@@ -58,6 +71,7 @@ export function UnitPanel({ docked = false }: { docked?: boolean }) {
     : `panel unit-panel unit-panel--float unit-panel--${unit.team} unit-panel--${corner}`;
   return (
     <section className={classes} aria-label={`${TEAM_NOUNS[unit.team]} ${unit.name}'s stats`}>
+      {heading && docked && <h2 className="dock-section__title">{heading}</h2>}
       <div className="unit-panel__header">
         <span className="unit-panel__portrait">
           <UnitSprite sprite={unit.sprite} scale={2} />

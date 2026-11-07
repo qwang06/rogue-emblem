@@ -3,10 +3,23 @@ import { createActionMenu, getSelectedAction, moveSelection } from './actionMenu
 import { getPauseActions } from './pauseMenu.ts';
 
 describe('getPauseActions', () => {
-  it('lists End Turn, Undo, Main Menu, then Settings', () => {
+  it('lists End Turn, Undo, Auto Play, Auto Speed, Main Menu, then Settings', () => {
     const actions = getPauseActions({ canUndo: true });
-    expect(actions.map((a) => a.id)).toEqual(['end-turn', 'undo', 'main-menu', 'settings']);
-    expect(actions.map((a) => a.label)).toEqual(['End Turn', 'Undo', 'Main Menu', 'Settings']);
+    expect(actions.map((a) => a.id)).toEqual(['end-turn', 'undo', 'auto-play', 'auto-speed', 'main-menu', 'settings']);
+    expect(actions.map((a) => a.label)).toEqual([
+      'End Turn',
+      'Undo',
+      'Auto Play: Off',
+      'Auto Speed: 1x',
+      'Main Menu',
+      'Settings',
+    ]);
+  });
+
+  it('says whether auto play is on and how fast it runs', () => {
+    const actions = getPauseActions({ canUndo: true, autoPlay: true, autoSpeed: 4 });
+    expect(actions.find((a) => a.id === 'auto-play')!.label).toBe('Auto Play: On');
+    expect(actions.find((a) => a.id === 'auto-speed')!.label).toBe('Auto Speed: 4x');
   });
 
   it('greys out Undo when there is nothing to undo', () => {

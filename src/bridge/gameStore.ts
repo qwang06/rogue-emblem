@@ -11,6 +11,7 @@ import type { MentorScreenView } from './mentorView.ts';
 import type { BossBarView, BossIntroView } from './bossView.ts';
 import type { MapTagView } from './mapTagView.ts';
 import type { PartyUnitView } from './partyView.ts';
+import type { Season } from '../game/tileset.ts';
 import type { MerchantScreenView } from './merchantView.ts';
 import type { PromotionScreenView } from './promotionView.ts';
 import type { RosterScreenView } from './rosterView.ts';
@@ -55,6 +56,7 @@ export interface BattleState {
   autoCommandQueue: readonly string[];
   mapLoadProgress: number;
   mapReady: boolean;
+  season: Season;
   phase: BattlePhase | null;
   deploymentStep: DeploymentStep | null;
   targeting: TargetingMode | null;
@@ -63,8 +65,13 @@ export interface BattleState {
   rosterMenu: Menu<RosterMenuEntry> | null;
   deploymentRoster: readonly RosterEntryView[];
   party: readonly PartyUnitView[];
+  enemies: readonly PartyUnitView[];
+  boardAnchor: TileAnchorView | null;
+  battleName: string;
+  boardSize: { width: number; height: number } | null;
   pauseMenu: Menu | null;
   hoveredUnit: UnitView | null;
+  activeUnit: UnitView | null;
   hoveredAnchor: TileAnchorView | null;
   hoveredTile: TileView | null;
   unitInfo: UnitDetailView | null;
@@ -128,6 +135,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   autoCommandQueue: [], // upcoming AI battle commands, shown while Auto is on
   mapLoadProgress: 0, // 0–1, how much of the map's art has loaded (the loading screen's bar)
   mapReady: false, // true once the map scene has loaded and built the map, lifting the loading screen
+  season: 'summer', // the season (terrain sheet) the current map is drawn in, for terrain icons in the UI
   phase: null, // 'deployment' (placing units) | 'battle' while the map runs, else null
   deploymentStep: null, // 'menu' | 'roster' | 'placing' during deployment, else null
   targeting: null, // TargetingMode while the player picks a tile for the active unit (cancel backs out a step), else null
@@ -136,8 +144,13 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   rosterMenu: null, // frozen menu of RosterEntryViews while picking a unit to place, or null
   deploymentRoster: [], // RosterEntryViews of every unit that can deploy, all through deployment (the dock's roster card), else empty
   party: [], // PartyUnitViews from toPartyView(): the player's deployed units with their HP and whether they've acted, all through a battle
+  enemies: [], // PartyUnitViews from toPartyView(state, 'enemy'): every enemy on the map (the fallen dim), all through a battle
+  boardAnchor: null, // TileAnchorView of the whole board on the canvas (the frame React draws round it), or null before the map is built
+  battleName: '', // the battle's name (a chapter's, a stage's), on the board's frame
+  boardSize: null, // the board's size in tiles, on the board's frame, or null before the map is built
   pauseMenu: null, // frozen End Turn / Main Menu / Settings menu while open, or null
   hoveredUnit: null, // UnitView from toUnitView(), or null
+  activeUnit: null, // UnitView from toUnitView() of the unit whose menu or range is open (the attacker, while aiming), or null
   hoveredAnchor: null, // TileAnchorView from toTileAnchorView() of the hovered unit's tile (the unit panel docks away from it), or null
   hoveredTile: null, // TileView from toTileView() of the tile under the cursor while it shows (the dock's terrain card), or null
   unitInfo: null, // UnitDetailView from toUnitDetailView() while the unit info screen is open, or null

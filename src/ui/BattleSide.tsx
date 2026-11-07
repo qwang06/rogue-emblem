@@ -1,25 +1,75 @@
-import type { PartyUnitView } from '../bridge/partyView.ts';
-import { DockSection, isOnField } from './BattleDock.tsx';
 import { CombatForecast } from './CombatForecast.tsx';
+import { DockSection, isOnField } from './dock.tsx';
+import { TeamCard } from './TeamCard.tsx';
+import { UnitPanel } from './UnitPanel.tsx';
 import { UnitSprite } from './UnitSprite.tsx';
 import { useGameStore } from './useGameStore.ts';
 
 // The column docked on the stage's right all through a battle, the mirror
-// of BattleDock: the roster to deploy during deployment, then the combat
-// forecast while an attack is being aimed (CombatForecast docked), and
-// otherwise the party, so the player always sees who is left to move.
-// Hidden on narrow windows, where the forecast floats beside the fighters
-// instead (see ui.css).
+// of BattleDock: the roster to deploy during deployment; then the combat
+// forecast while an attack is being aimed (CombatForecast docked) with the
+// attacker's card under it (the left column shows the target, under the
+// cursor); and otherwise the party, so the player always sees who is left
+// to move, with the enemies under it. Hidden on narrow windows, where the
+// forecast floats beside the fighters instead (see ui.css).
 export function BattleSide() {
   const onField = useGameStore(isOnField);
   const deploying = useGameStore((state) => state.phase === 'deployment');
   const forecastOpen = useGameStore((state) => state.combatForecast !== null);
+  const attacker = useGameStore((state) => state.activeUnit);
   if (!onField) return null;
 
   return (
     <aside className="battle-side" aria-label="Battle roster">
-      {deploying ? <RosterCard /> : forecastOpen ? <CombatForecast docked /> : <PartyCard />}
+      {deploying ? (
+        <RosterCard />
+      ) : forecastOpen ? (
+        <>
+          <CombatForecast docked />
+          {attacker && <UnitPanel docked unit={attacker} heading="Attacker" />}
+        </>
+      ) : (
+        <>
+          <PartyCard />
+          <EnemiesCard />
+        </>
+      )}
     </aside>
+  );
+}
+
+// Who is left to move, then who is left to beat.
+function PartyCard() {
+  const party = useGameStore((state) => state.party);
+  const left = party.filter((unit) => !unit.acted && !unit.fallen).length;
+  return (
+    <TeamCard
+      title="Party"
+      team="player"
+      units={party}
+      footer={
+        <>
+          <span className="team-card__count">{left}</span> to move
+        </>
+      }
+    />
+  );
+}
+
+function EnemiesCard() {
+  const enemies = useGameStore((state) => state.enemies);
+  const left = enemies.filter((unit) => !unit.fallen).length;
+  return (
+    <TeamCard
+      title="Enemies"
+      team="enemy"
+      units={enemies}
+      footer={
+        <>
+          <span className="team-card__count">{left}</span> to defeat
+        </>
+      }
+    />
   );
 }
 
@@ -56,53 +106,5 @@ function RosterCard() {
         {limit !== null && <span className="roster-card__count-limit"> / {limit}</span>} placed
       </p>
     </DockSection>
-  );
-}
-
-// Every deployed player unit with its HP: dim once it has acted this
-// phase, struck through once it has fallen.
-function PartyCard() {
-  const party = useGameStore((state) => state.party);
-  if (party.length === 0) return null;
-
-  const left = party.filter((unit) => !unit.acted && !unit.fallen).length;
-  return (
-    <DockSection title="Party" className="party-card">
-      <ul className="party-card__list">
-        {party.map((unit) => (
-          <PartyRow key={unit.id} unit={unit} />
-        ))}
-      </ul>
-      <p className="party-card__left">
-        <span className="party-card__left-count">{left}</span> to move
-      </p>
-    </DockSection>
-  );
-}
-
-function PartyRow({ unit }: { unit: PartyUnitView }) {
-  const classes = ['party-card__unit'];
-  if (unit.acted) classes.push('party-card__unit--acted');
-  if (unit.fallen) classes.push('party-card__unit--fallen');
-  const percent = unit.maxHealth > 0 ? (unit.health / unit.maxHealth) * 100 : 0;
-  return (
-    <li className={classes.join(' ')}>
-      <span className="party-card__sprite">
-        <UnitSprite sprite={unit.sprite} />
-      </span>
-      <span className="party-card__name" title={unit.name}>
-        {unit.name}
-      </span>
-      <span className="party-card__class" title={unit.classLabel ?? undefined}>
-        {unit.classLabel ?? '–'}
-        <span className="party-card__level"> Lv {unit.level}</span>
-      </span>
-      <span className="party-card__hp">
-        <span className="party-card__hp-fill" style={{ width: `${percent}%` }} />
-      </span>
-      <span className="party-card__hp-value">
-        {unit.health}/{unit.maxHealth}
-      </span>
-    </li>
   );
 }

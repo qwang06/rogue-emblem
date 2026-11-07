@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeTerrain, getTerrainLabel } from './terrainInfo.ts';
+import { describeTerrain, getTerrainIconTiles, getTerrainLabel } from './terrainInfo.ts';
 
 describe('getTerrainLabel', () => {
   it('names the known terrains', () => {
@@ -27,5 +27,26 @@ describe('describeTerrain', () => {
 
   it('takes other cost tables', () => {
     expect(describeTerrain('water', { water: 1 })).toEqual({ label: 'Water', moveCost: 1 });
+  });
+});
+
+describe('getTerrainIconTiles', () => {
+  it('layers grass under a patch, a feature or a crossing', () => {
+    expect(getTerrainIconTiles(null)).toEqual([[0, 0]]);
+    expect(getTerrainIconTiles('grass')).toEqual([[0, 0]]);
+    expect(getTerrainIconTiles('water')).toEqual([
+      [0, 0],
+      [5, 9],
+    ]);
+    expect(getTerrainIconTiles('forest')).toEqual([
+      [0, 0],
+      [0, 1],
+    ]);
+    expect(getTerrainIconTiles('bridge')).toHaveLength(3);
+  });
+
+  it('shows the grass under a terrain with no plain tile', () => {
+    expect(getTerrainIconTiles('wall')).toEqual([[0, 0]]);
+    expect(getTerrainIconTiles('spikes')).toEqual([[0, 0]]);
   });
 });

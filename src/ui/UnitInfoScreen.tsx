@@ -58,7 +58,7 @@ function Identity({ unit }: { unit: UnitDetailView }) {
         {unit.name}
       </h2>
       <p className="unit-info__class">
-        {unit.classLabel ?? 'No class'}, level {unit.level}
+        {unit.classLabel ?? 'No class'} · Lv {unit.level}
         {unit.rank && ` · ${getRankLabel(unit.rank)}`}
       </p>
       <Meter label="HP" value={unit.health} max={unit.maxHealth} kind="hp" />
@@ -91,7 +91,52 @@ function Identity({ unit }: { unit: UnitDetailView }) {
           </ul>
         </>
       )}
+      <Bag unit={unit} />
     </div>
+  );
+}
+
+// The items in its bag and its skills, under who it is, so the three
+// columns run to about the same depth.
+function Bag({ unit }: { unit: UnitDetailView }) {
+  const bag = unit.items.filter((item) => !item.equipped);
+  return (
+    <>
+      <h3 className="unit-info__heading">Items</h3>
+      {bag.length > 0 ? (
+        <ul className="unit-info__list">
+          {bag.map((item, index) => (
+            <li key={`${item.id}@${index}`}>
+              <span className="unit-info__item">
+                <ItemIcon itemId={item.id} />
+                {item.label}
+              </span>
+              <span>{item.quantity === null ? '' : `×${item.quantity}`}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="unit-info__empty">None</p>
+      )}
+
+      <h3 className="unit-info__heading">
+        Skills{unit.secondaryClass && <span className="unit-info__secondary"> + {unit.secondaryClass} set</span>}
+      </h3>
+      {unit.skills.length > 0 ? (
+        <ul className="unit-info__list">
+          {unit.skills.map((skill) => (
+            <li key={skill.id}>
+              <span>{skill.label}</span>
+              <span className="unit-info__skill-cost" title={`Costs ${skill.manaCost} MP, range ${skill.range}`}>
+                {skill.manaCost} MP · Rng {skill.range}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="unit-info__empty">None</p>
+      )}
+    </>
   );
 }
 
@@ -146,7 +191,6 @@ function Passives({ unit }: { unit: UnitDetailView }) {
 }
 
 function Combat({ unit }: { unit: UnitDetailView }) {
-  const bag = unit.items.filter((item) => !item.equipped);
   return (
     <div className="unit-info__column">
       <h3 className="unit-info__heading">Combat</h3>
@@ -161,41 +205,6 @@ function Combat({ unit }: { unit: UnitDetailView }) {
 
       <Attacks unit={unit} />
       <Equipment unit={unit} />
-
-      <h3 className="unit-info__heading">Items</h3>
-      {bag.length > 0 ? (
-        <ul className="unit-info__list">
-          {bag.map((item, index) => (
-            <li key={`${item.id}@${index}`}>
-              <span className="unit-info__item">
-                <ItemIcon itemId={item.id} />
-                {item.label}
-              </span>
-              <span>{item.quantity === null ? '' : `×${item.quantity}`}</span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="unit-info__empty">None</p>
-      )}
-
-      <h3 className="unit-info__heading">
-        Skills{unit.secondaryClass && <span className="unit-info__secondary"> + {unit.secondaryClass} set</span>}
-      </h3>
-      {unit.skills.length > 0 ? (
-        <ul className="unit-info__list">
-          {unit.skills.map((skill) => (
-            <li key={skill.id}>
-              <span>{skill.label}</span>
-              <span className="unit-info__skill-cost" title={`Costs ${skill.manaCost} MP, range ${skill.range}`}>
-                {skill.manaCost} MP · Rng {skill.range}
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="unit-info__empty">None</p>
-      )}
     </div>
   );
 }
@@ -216,7 +225,7 @@ function Attacks({ unit }: { unit: UnitDetailView }) {
             >
               <span className="unit-info__item">
                 <ItemIcon itemId={attack.id} />
-                {attack.label}
+                <span className="unit-info__item-label">{attack.label}</span>
                 <span className="unit-info__tag">· {WEAPON_TYPE_LABELS[attack.type]}</span>
               </span>
               <WeaponNumbers
@@ -248,9 +257,9 @@ function Equipment({ unit }: { unit: UnitDetailView }) {
           <li key={slot}>
             <span className="unit-info__slot">{label}</span>
             {gear ? (
-              <span className="unit-info__item unit-info__gear" title={gear.description ?? undefined}>
+              <span className="unit-info__item unit-info__gear" title={gear.description ?? gear.label}>
                 <ItemIcon itemId={gear.id} />
-                {gear.label}
+                <span className="unit-info__item-label">{gear.label}</span>
               </span>
             ) : (
               <span className="unit-info__gear unit-info__gear--empty">–</span>
