@@ -2,12 +2,13 @@ import { MenuExitButton } from './MenuExitButton.tsx';
 import { useGameStore } from './useGameStore.ts';
 import { menuItemPointerProps } from './menuPointer.ts';
 import { MenuIcon } from './MenuIcon.tsx';
+import { MenuKey } from './MenuKey.tsx';
 import { useMenuBesideUnit } from './useMenuBesideUnit.ts';
 
 // Displays the unit action menu while one is open. Selection is driven by
 // GridScene; this component renders the snapshot and forwards the mouse.
 // Disabled actions (e.g. Skill before any are learned) are greyed out.
-// Each entry leads with its icon (MenuIcon).
+// Each entry leads with its number key (MenuKey) and its icon (MenuIcon).
 export function ActionMenu() {
   const menu = useGameStore((state) => state.actionMenu);
   const placement = useMenuBesideUnit(Boolean(menu));
@@ -30,6 +31,7 @@ export function ActionMenu() {
               {...menuItemPointerProps('actionMenu', index)}
               aria-disabled={action.disabled ? 'true' : undefined}
             >
+              <MenuKey index={index} />
               <MenuIcon id={action.id} />
               {action.label}
             </li>

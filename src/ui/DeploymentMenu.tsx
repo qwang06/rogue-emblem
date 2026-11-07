@@ -2,13 +2,15 @@ import { useGameStore } from './useGameStore.ts';
 import { GlyphIcon } from './GlyphIcon.tsx';
 import { menuItemPointerProps } from './menuPointer.ts';
 import { MenuIcon } from './MenuIcon.tsx';
+import { MenuKey } from './MenuKey.tsx';
 
 // The Place Units / Start menu of the deployment phase. `docked`, it's a
 // list in the battle dock under the objective card (BattleDock); otherwise
-// a window docked on the map's left edge, under the battle's objective
-// (what wins it, after its kind's icon, and what loses it, after a skull),
-// so the objective needs no screen of its own (for windows too narrow for
-// the dock; ui.css shows one or the other). Selection is driven by
+// a box on the map: mid-map as a flat list where the dock shows the
+// objective, or, on windows too narrow for the dock, a window on the map's
+// left edge under the battle's objective (what wins it, after its kind's
+// icon, and what loses it, after a skull), so the objective needs no screen
+// of its own (ui.css decides). Selection is driven by
 // GridScene; this renders the snapshot and forwards the mouse. Start shows
 // as disabled until a unit has been placed.
 export function DeploymentMenu({ docked = false }: { docked?: boolean }) {
@@ -51,6 +53,7 @@ export function DeploymentMenu({ docked = false }: { docked?: boolean }) {
               {...menuItemPointerProps('deploymentMenu', index)}
               aria-disabled={action.disabled ? 'true' : undefined}
             >
+              <MenuKey index={index} />
               <MenuIcon id={action.id} />
               {action.label}
             </li>

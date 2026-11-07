@@ -1,4 +1,5 @@
 import { MenuExitButton } from './MenuExitButton.tsx';
+import { MenuKey } from './MenuKey.tsx';
 import { useGameStore } from './useGameStore.ts';
 import { menuItemPointerProps } from './menuPointer.ts';
 import { useMenuBesideUnit } from './useMenuBesideUnit.ts';
@@ -29,7 +30,8 @@ export function SkillMenu() {
               {...menuItemPointerProps('skillMenu', index)}
               aria-disabled={skill.disabled ? 'true' : undefined}
             >
-              <span>{skill.label}</span>
+              <MenuKey index={index} />
+              <span className="skill-menu__label">{skill.label}</span>
               <span className="skill-menu__cost">{skill.manaCost} MP</span>
             </li>
           );
