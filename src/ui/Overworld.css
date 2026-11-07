@@ -26,10 +26,8 @@
   z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px 10px 10px;
   box-sizing: border-box;
-  background: radial-gradient(ellipse at 50% 40%, #232842 0%, #0d0f19 100%);
+  background: var(--bezel);
   color: var(--fg);
 }
 
@@ -38,44 +36,168 @@
   justify-content: center;
 }
 
-.overworld__bar {
+/* The strip over the map: the phase word, the realm's name, the stage
+   and region, the stage tape, the purse and the Roster key, on flat ink
+   with bronze hairlines like the battle's bezel. */
+.overworld__strip {
   display: flex;
   align-items: center;
-  gap: 6px 16px;
-  flex-wrap: wrap;
-  padding: 0 6px;
+  gap: 14px;
+  height: 3rem;
+  padding: 0 12px;
+  box-sizing: border-box;
+  background: var(--bezel);
+  border-bottom: var(--hairline);
   font-size: 0.75rem;
 }
 
-.overworld__title {
-  display: flex;
-  align-items: baseline;
-  gap: 4px 14px;
-  flex-wrap: wrap;
-  margin-right: auto;
+.overworld__phase {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.overworld__vrule {
+  align-self: stretch;
+  width: 1px;
+  background: rgb(138 109 59 / 75%);
 }
 
 .overworld__realm {
   margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-family: var(--map-face);
-  font-size: 1.5rem;
+  font-size: 1.375rem;
   font-weight: normal;
-  line-height: 1.1;
-  color: var(--map-fg);
-  text-shadow: 0 2px 0 #000;
+  line-height: 1;
+  color: var(--fg-bright);
 }
 
-.overworld__stat {
+.overworld__stage {
   margin: 0;
   white-space: nowrap;
-  color: var(--map-label);
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+/* One tick a stage: done filled deep gold, the one the warband stands on
+   lit, a depth with an elite lair edged red, the Hold's red and a little
+   bigger. */
+.overworld__tape-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 0 auto;
+  min-width: 0;
+}
+
+.overworld__tape {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  max-width: 24rem;
+}
+
+.overworld__tick {
+  display: block;
+  width: 9px;
+  height: 9px;
+  background: var(--pip-empty);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 35%);
+}
+
+.overworld__tick--done {
+  background: #9a7324;
+}
+
+.overworld__tick--now {
+  background: var(--accent);
+  outline: 2px solid var(--fg-bright);
+  outline-offset: 1px;
+}
+
+.overworld__tick--elite {
+  box-shadow: inset 0 0 0 1px var(--red);
+}
+
+.overworld__tick--boss {
+  width: 11px;
+  height: 11px;
+  background: var(--red);
+}
+
+.overworld__tape-label {
+  white-space: nowrap;
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
 }
 
 .overworld__gold {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  color: var(--yellow);
+  gap: 5px;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+/* A tool on the strip's right: its key in a cap, then its name. */
+.overworld__tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 2.125rem;
+  padding: 0 10px 0 6px;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg);
+  background: var(--ink);
+  border: 1px solid rgb(138 109 59 / 55%);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.overworld__tool:hover {
+  color: var(--fg-bright);
+  background: rgb(255 255 255 / 5%);
+}
+
+.overworld__tool:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.overworld__key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.375rem;
+  height: 1.375rem;
+  padding: 0 4px;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--accent);
+  background: #1b1e33;
+  border: 1px solid rgb(138 109 59 / 75%);
+  border-bottom-width: 2px;
 }
 
 /* The map's window: as tall as the screen leaves, scrolling sideways,
@@ -85,9 +207,13 @@
   display: flex;
   flex: 1;
   min-height: 0;
+  margin: 10px;
   overflow-x: auto;
   overflow-y: hidden;
-  box-shadow: 0 0 0 var(--px) #120a04;
+  background: radial-gradient(ellipse at 50% 40%, #232842 0%, #0d0f19 100%);
+  box-shadow:
+    0 0 0 1px rgb(138 109 59 / 75%),
+    inset 0 0 60px rgb(0 0 0 / 55%);
 }
 
 .overworld__map {
@@ -322,6 +448,62 @@
   color: #ffe08a;
 }
 
+/* A road's end named on a plate over its disc, with a tail pointing at
+   it: the highlighted one bright on an accent border, the others dim.
+   The plate hangs off the site's point, so it takes no room. */
+.overworld__callout {
+  position: absolute;
+  left: 0;
+  bottom: calc(var(--tile) * 1.9);
+  translate: -50% 0;
+  padding: 4px 10px 3px;
+  white-space: nowrap;
+  font-family: var(--map-face);
+  font-size: max(0.75rem, calc(var(--tile) * 0.5));
+  line-height: 1.2;
+  color: var(--fg-bright);
+  background: var(--bezel);
+  border: 1px solid var(--accent);
+  box-shadow: 0 3px 0 rgb(0 0 0 / 45%);
+  pointer-events: none;
+}
+
+.overworld__callout::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 10px;
+  height: 10px;
+  background: var(--bezel);
+  border-right: 1px solid var(--accent);
+  border-bottom: 1px solid var(--accent);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.overworld__callout-kind {
+  margin-left: 8px;
+  font-family: var(--pixel);
+  font-size: 0.5625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.overworld__callout--dim {
+  color: var(--fg);
+  font-size: max(0.7rem, calc(var(--tile) * 0.44));
+  border-color: rgb(138 109 59 / 75%);
+}
+
+.overworld__callout--dim::after {
+  border-color: rgb(138 109 59 / 75%);
+}
+
+.overworld__callout--dim .overworld__callout-kind {
+  color: var(--fg-dim);
+}
+
 /* The warband's leader, standing on the site's disc (or the road). */
 .overworld__leader {
   position: absolute;
@@ -335,215 +517,386 @@
   translate: -50% -85%;
 }
 
-/* Under the map: the site banner, and the warband's window beside it
-   (under it on a phone). */
-.overworld__footer {
+/* Under the map: the highlighted road's card in four cells (where it
+   leads, the foes, the spoils, the warband), then the foot with the keys,
+   the other roads and the Travel button. The card keeps one height, so
+   moving between roads never moves the map. */
+.overworld__card {
   flex: none;
-  display: flex;
-  align-items: center;
-  gap: 8px 12px;
-  min-width: 0;
-}
-
-.overworld__footer > .overworld__banner {
-  flex: 1;
-  min-width: 0;
-}
-
-@media (max-width: 640px) {
-  .overworld__footer {
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
-
-/* The warband: a parchment window like the reward screen's, its tiles a
-   sprite beside its level over an HP bar. */
-.warband-panel {
-  position: relative;
-  flex: none;
-  margin-top: 0.6rem;
-  padding: 10px 10px 6px;
-}
-
-.warband-panel__units {
   display: grid;
-  grid-template-columns: repeat(4, auto);
-  gap: 4px 12px;
+  grid-template-columns: 19rem minmax(0, 1fr) 14rem 20rem;
+  height: 8rem;
+  box-sizing: border-box;
+  background: var(--bezel);
+  border-top: var(--hairline);
+  border-bottom: var(--hairline);
+}
+
+.overworld__cell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 10px 16px;
+  border-right: var(--hairline);
+  overflow: hidden;
+}
+
+.overworld__cell:last-child {
+  border-right: 0;
+}
+
+.overworld__cell-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.overworld__cell-note {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--fg-dim);
+}
+
+/* ---- Destination ---- */
+
+.overworld__destination {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  column-gap: 14px;
+  align-items: center;
+}
+
+.overworld__destination-icon {
+  width: 64px;
+  height: 64px;
+}
+
+.overworld__destination-icon img {
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+}
+
+.overworld__destination-lines {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.overworld__destination-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--map-face);
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--fg-bright);
+}
+
+.overworld__destination-meta {
+  min-height: 1.2em;
+  margin-top: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.overworld__destination-meta b {
+  color: var(--fg);
+}
+
+.overworld__destination-blurb {
+  display: -webkit-box;
+  height: 2.2em;
+  margin-top: 4px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  font-family: var(--map-face);
+  font-size: 0.875rem;
+  font-style: italic;
+  line-height: 1.1;
+  color: var(--fg);
+}
+
+/* ---- Foes ---- */
+
+.overworld__foes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  height: 3.6rem;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+}
+
+.overworld__foe {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 4rem;
+}
+
+.overworld__foe-name {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--map-face);
+  font-size: 0.8125rem;
+  line-height: 1;
+  color: var(--red);
+}
+
+.overworld__foe--leader .overworld__foe-name {
+  color: var(--accent);
+}
+
+.overworld__foe-level {
+  white-space: nowrap;
+  font-size: 0.5625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.overworld__foes-none {
+  align-self: center;
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.overworld__objective {
+  display: flex;
+  gap: 16px;
+  min-height: 1.2em;
+  margin: 6px 0 0;
+  white-space: nowrap;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.overworld__objective b {
+  color: var(--fg);
+}
+
+.overworld__objective .glyph-icon {
+  width: 14px;
+  height: 14px;
+  vertical-align: -3px;
+}
+
+/* ---- Spoils ---- */
+
+.overworld__spoils {
+  display: flex;
+  gap: 12px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.warband-panel__unit {
-  display: grid;
-  grid-template-columns: 32px 2.6rem;
-  grid-template-rows: 1fr auto;
-  align-items: center;
-  column-gap: 4px;
-  font-size: 0.6875rem;
-  line-height: 1.2;
-}
-
-.warband-panel__sprite {
-  grid-row: 1 / 3;
-}
-
-.warband-panel__level {
-  white-space: nowrap;
-  font-weight: 700;
-  color: var(--fg-bright);
-}
-
-/* A GBA trough like the reward screen's. */
-.warband-panel__bar {
+.overworld__spoil {
   display: flex;
-  height: calc(4 * var(--px));
-  border-style: solid;
-  border-width: var(--trough-width);
-  border-image: var(--trough);
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 4rem;
+  text-align: center;
+}
+
+.overworld__spoil-icon {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+}
+
+.overworld__spoil-icon img,
+.overworld__spoil-icon .glyph-icon {
+  width: 32px;
+  height: 32px;
   image-rendering: pixelated;
-  overflow: hidden;
 }
 
-.warband-panel__bar > span {
-  background: var(--hp-fill);
-}
-
-/* On a phone: all eight in a row, each sprite over its bar. */
-@media (max-width: 640px) {
-  .warband-panel__units {
-    grid-template-columns: repeat(8, 32px);
-    justify-content: space-between;
-  }
-
-  .warband-panel__unit {
-    grid-template-columns: 32px;
-    grid-template-rows: auto auto;
-  }
-
-  .warband-panel__sprite {
-    grid-row: auto;
-  }
-
-  .warband-panel__level {
-    display: none;
-  }
-}
-
-/* The highlighted site's banner: its kind and stage and its name over a
-   gold rule across the top, then a line on what happens there beside the
-   battle's facts, one to a line, so none of it is cut off. A fixed height,
-   so swapping sites never moves the map. */
-.overworld__banner {
-  flex: none;
-  display: grid;
-  grid-template-columns: minmax(0, 4fr) minmax(0, 5fr);
-  grid-template-rows: auto auto 1fr;
-  column-gap: 20px;
-  height: 6.4rem;
-  box-sizing: border-box;
-  padding: 2px 18px 0;
-  overflow: hidden;
-  color: var(--map-fg);
-}
-
-.overworld__kind,
-.overworld__name {
-  grid-column: 1 / -1;
-}
-
-.overworld__kind {
-  margin: 0;
+.overworld__spoil-label {
   font-size: 0.75rem;
-  color: var(--map-label);
-}
-
-.overworld__name {
-  margin: 0 0 4px;
-  padding-bottom: 2px;
-  max-width: 34rem;
-  font-family: var(--map-face);
-  font-size: 1.6rem;
-  font-weight: normal;
-  line-height: 1.15;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-weight: 700;
+  line-height: 1.2;
   color: var(--fg-bright);
-  text-shadow: 0 2px 0 #000;
-  border-bottom: var(--px) solid;
-  border-image: linear-gradient(
-      90deg,
-      var(--accent),
-      color-mix(in srgb, var(--accent) 50%, transparent) 60%,
-      transparent
-    )
-    1;
 }
 
-/* Up to three lines; the longest blurb takes two at 1280 wide. */
-.overworld__blurb {
-  display: -webkit-box;
-  margin: 0;
-  font-size: 0.85rem;
-  line-height: 1.2;
+.overworld__spoil-note {
+  max-width: 100%;
   overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.5625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  color: var(--fg-dim);
 }
 
-/* Label and value in two columns; a long enemy list wraps to a second
-   line rather than being cut. */
-.overworld__facts {
+/* ---- Warband ---- */
+
+/* Up to eight across: a sprite over its serif name over an HP bar, the
+   hurt in red. */
+.overworld__party {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-content: start;
-  gap: 1px 8px;
+  grid-template-columns: repeat(auto-fit, minmax(0, 2.75rem));
+  column-gap: 4px;
   margin: 0;
-  font-size: 0.75rem;
-  line-height: 1.2;
+  padding: 0;
+  list-style: none;
 }
 
-.overworld__facts > div {
-  display: contents;
+.overworld__member {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
 }
 
-.overworld__facts dt {
-  color: var(--map-label);
-}
-
-.overworld__facts dd {
-  display: -webkit-box;
-  margin: 0;
+.overworld__member-name {
+  max-width: 100%;
   overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--map-face);
+  font-size: 0.75rem;
+  line-height: 1;
+  color: var(--blue);
 }
 
-/* On a phone the blurb and the facts stack. */
-@media (max-width: 640px) {
-  .overworld__banner {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto auto 1fr;
-    height: 9.6rem;
-    padding: 0 8px;
-  }
+.overworld__member--hurt .overworld__member-name {
+  color: var(--red);
+}
 
-  .overworld__blurb {
-    height: 2.4em;
-    margin-bottom: 4px;
-    -webkit-line-clamp: 2;
-  }
+.overworld__member-bar {
+  position: relative;
+  width: 40px;
+  height: 5px;
+  margin-top: 2px;
+  background: #0f1220;
+  box-shadow: 0 0 0 1px rgb(138 109 59 / 45%);
+}
+
+.overworld__member-bar > span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--green);
+}
+
+.overworld__member--hurt .overworld__member-bar > span {
+  background: var(--red);
+}
+
+/* ---- Foot ---- */
+
+.overworld__foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 2.5rem;
+  padding: 0 4px;
 }
 
 .overworld__hint {
+  flex: none;
+  justify-content: flex-start;
   margin: 0;
 }
 
 .overworld__hint .key-hint__entry {
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.overworld__other {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.overworld__travel {
+  flex: none;
+  height: 2.25rem;
+}
+
+/* Narrower: the card in two rows, the destination and the foes over the
+   spoils and the warband; narrower still, the destination alone. */
+@media (max-width: 70rem) {
+  .overworld__card {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: 1fr 1fr;
+    height: 15rem;
+  }
+
+  .overworld__cell--foes {
+    border-right: 0;
+  }
+
+  .overworld__cell--destination,
+  .overworld__cell--foes {
+    border-bottom: var(--hairline);
+  }
+
+  .overworld__tape-wrap {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .overworld__card {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 1fr;
+    height: 8rem;
+  }
+
+  .overworld__cell--foes,
+  .overworld__cell--spoils,
+  .overworld__cell--warband,
+  .overworld__other,
+  .overworld__stage {
+    display: none;
+  }
+
+  .overworld__cell--destination {
+    border: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

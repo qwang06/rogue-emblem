@@ -1,7 +1,15 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { getSiteIconUrl, INK_STAMP_URLS } from '../assets/realmIcons.ts';
+import { REWARD_ICON_URLS } from '../assets/rewardIcons.ts';
 import { gameStore } from '../bridge/gameStore.ts';
-import { getOverworldZoom, toEventView, toOverworldView, type OverworldView } from '../bridge/overworldView.ts';
+import {
+  getOverworldZoom,
+  toEventView,
+  toOverworldView,
+  type OverworldView,
+  type SiteDetailView,
+  type SpoilKind,
+} from '../bridge/overworldView.ts';
 import { publishRunRelics } from '../bridge/runRelics.ts';
 import { enterRun, getRunScreen } from '../bridge/warbandFlow.ts';
 import { getActiveContent } from '../data/customContent.ts';
@@ -23,18 +31,17 @@ import { getCurrentSiteId } from '../game/warband/travel.ts';
 import { applyRunCommand, resumeRunSession } from '../game/warband/runCommands.ts';
 import { planTravel } from '../game/warband/runPolicy.ts';
 import { Frame } from './Frame.tsx';
-import { GlyphIcon } from './GlyphIcon.tsx';
+import { GlyphIcon, type GlyphKind } from './GlyphIcon.tsx';
 import { KeyHint } from './KeyHint.tsx';
 import { OverworldRoster } from './OverworldRoster.tsx';
 import { UnitSprite } from './UnitSprite.tsx';
 import { useGameStore } from './useGameStore.ts';
-import { WarbandPanel } from './WarbandPanel.tsx';
 import './Overworld.css';
 
 const KEYS = [
-  ['←→', 'Choose'],
-  ['Enter', 'Travel'],
+  ['←→', 'Road'],
   ['R', 'Roster'],
+  ['Enter', 'Travel'],
 ] as const;
 
 // How long the warband takes per road tile when it travels, and how long
@@ -221,24 +228,28 @@ function Overworld({
 
   return (
     <div className="overworld on-dark">
-      <header className="overworld__bar">
-        <div className="overworld__title">
-          <h1 className="overworld__realm">{view.realmName}</h1>
-          <p className="overworld__stat">
-            {view.depth === 0 ? `Setting out · ${view.finalStage} stages` : `Stage ${view.depth} of ${view.finalStage}`}
-          </p>
-        </div>
-        <p className="overworld__stat overworld__gold" title={`${view.gold} gold`}>
+      <header className="overworld__strip">
+        <span className="overworld__phase">Realm</span>
+        <span className="overworld__vrule" aria-hidden="true" />
+        <h1 className="overworld__realm">{view.realmName}</h1>
+        <p className="overworld__stage">
+          {view.depth === 0
+            ? `Setting out · ${view.finalStage} stages`
+            : [`Stage ${view.depth} of ${view.finalStage}`, view.currentRegion].filter(Boolean).join(' · ')}
+        </p>
+        <StageTape view={view} />
+        <p className="overworld__gold" title={`${view.gold} gold`}>
           <GlyphIcon kind="gold" />
           {view.gold}
         </p>
         <button
           type="button"
-          className="header-button overworld__roster-button"
+          className="overworld__tool"
           disabled={!canOpenRoster}
           aria-expanded={rosterOpen}
           onClick={openRoster}
         >
+          <kbd className="overworld__key">R</kbd>
           Roster
         </button>
       </header>
@@ -299,7 +310,8 @@ function Overworld({
             const isSelected = index >= 0 && index === selected && !walk;
             const classes = ['overworld__site', `overworld__site--${site.state}`, `overworld__site--${site.kind}`];
             if (isSelected) classes.push('overworld__site--selected');
-            const labelled = isSelected || site.state === 'current' || site.kind === 'hold';
+            const choiceCard = index >= 0 && !walk ? view.choices[index] : null;
+            const labelled = site.state === 'current' || site.kind === 'hold';
             return (
               <button
                 key={site.id}
@@ -319,7 +331,15 @@ function Overworld({
                 />
                 <span className={`overworld__pennant overworld__pennant--${pennantOf(site)}`} aria-hidden="true" />
                 {isSelected && <span className="overworld__pointer" aria-hidden="true" />}
-                {labelled && <span className="overworld__label">{site.name}</span>}
+                {choiceCard && (
+                  <span className={`overworld__callout${isSelected ? '' : ' overworld__callout--dim'}`}>
+                    {site.name}
+                    <span className="overworld__callout-kind">
+                      {isSelected ? `${choiceCard.kindLabel} · next` : choiceCard.kindLabel}
+                    </span>
+                  </span>
+                )}
+                {labelled && !choiceCard && <span className="overworld__label">{site.name}</span>}
               </button>
             );
           })}
@@ -334,51 +354,217 @@ function Overworld({
         </div>
       </div>
 
-      <div className="overworld__footer">
-        <SiteBanner choice={choice} />
-        <WarbandPanel team={view.team} />
-      </div>
-      <KeyHint className="overworld__hint" entries={KEYS} />
+      <RouteCard view={view} choice={choice} selected={selected} />
+      <footer className="overworld__foot">
+        <KeyHint className="overworld__hint" entries={KEYS} />
+        <p className="overworld__other">{describeOtherRoads(view, selected)}</p>
+        <button
+          type="button"
+          className="battle-bar__button battle-bar__button--end overworld__travel"
+          disabled={!choice || walk !== null}
+          onClick={() => travel(selected)}
+        >
+          {choice ? `Travel to ${choice.name}` : 'No road on'}
+        </button>
+      </footer>
       {run.pendingEvent && <EventPanel run={run} autoPlay={autoPlay} onDone={onRun} />}
       {rosterOpen && <OverworldRoster run={run} onRun={onRoster} onClose={() => setRosterOpen(false)} />}
     </div>
   );
 }
 
-// The highlighted site's name and what waits there, across the foot of
-// the screen like Final Fantasy Tactics' map: a fixed height, so moving
-// between sites never moves the map.
-function SiteBanner({ choice }: { choice: OverworldView['choices'][number] | null }) {
+// The stages as a tape of ticks across the header: the ones behind the
+// warband filled, the one it stands on lit, depths with an elite lair
+// marked, the Hold's red, and how far the Hold is.
+function StageTape({ view }: { view: OverworldView }) {
   return (
-    <section className="overworld__banner" aria-live="polite">
-      {choice ? (
-        <>
-          <p className="overworld__kind">
-            {choice.kindLabel} · Stage {choice.stage}
-          </p>
-          <h2 className="overworld__name">{choice.name}</h2>
-          <p className="overworld__blurb">{choice.blurb}</p>
-          <dl className="overworld__facts">
-            <div>
-              <dt>Region</dt>
-              <dd>{choice.region ?? '—'}</dd>
-            </div>
-            <div>
-              <dt>Enemies</dt>
-              <dd>{choice.enemies ?? '—'}</dd>
-            </div>
-            <div>
-              <dt>Objective</dt>
-              <dd>{choice.objective ?? '—'}</dd>
-            </div>
-          </dl>
-        </>
-      ) : (
-        <p className="overworld__blurb">The road ends here.</p>
-      )}
+    <p className="overworld__tape-wrap" title={`Stage ${view.depth} of ${view.finalStage}`}>
+      <span className="overworld__tape" aria-hidden="true">
+        {view.tape.map((tick, index) => (
+          <i key={index} className={`overworld__tick overworld__tick--${tick}`} />
+        ))}
+      </span>
+      <span className="overworld__tape-label">{view.holdIn === 0 ? 'The Hold' : `Hold in ${view.holdIn}`}</span>
+    </p>
+  );
+}
+
+// The highlighted road's card across the foot of the map, in four cells:
+// where it leads, who fights there and what wins it, what it pays, and
+// the warband as it stands. A fixed height, so moving between roads
+// never moves the map; a road with no battle leaves the foes cell quiet.
+function RouteCard({
+  view,
+  choice,
+  selected,
+}: {
+  view: OverworldView;
+  choice: SiteDetailView | null;
+  selected: number;
+}) {
+  const hurt = view.team.filter((unit) => unit.health < unit.maxHealth).length;
+  const foeCount = choice?.foes.reduce((sum, foe) => sum + foe.count, 0) ?? 0;
+  const levels = choice?.foes.map((foe) => foe.level) ?? [];
+  const low = Math.min(...levels);
+  const high = Math.max(...levels);
+  const site = choice ? view.sites.find((each) => each.id === choice.siteId) : undefined;
+  return (
+    <section className="overworld__card" aria-live="polite">
+      <div className="overworld__cell overworld__cell--destination">
+        <h3 className="overworld__cell-title">
+          <span>Destination</span>
+          <span className="overworld__cell-note">
+            {view.choices.length > 0
+              ? `${selected + 1} of ${view.choices.length} ${view.choices.length === 1 ? 'road' : 'roads'}`
+              : 'no road on'}
+          </span>
+        </h3>
+        <div className="overworld__destination">
+          <span className="overworld__destination-icon">
+            {site && <img src={getSiteIconUrl(site.kind, site.season)} alt="" draggable={false} />}
+          </span>
+          <span className="overworld__destination-lines">
+            <span className="overworld__destination-name">{choice?.name ?? 'The road ends here'}</span>
+            <span className="overworld__destination-meta">
+              {choice ? (
+                <>
+                  {choice.kindLabel} · <b>Stage {choice.stage}</b>
+                  {choice.region && ` · ${choice.region}`}
+                </>
+              ) : (
+                ' '
+              )}
+            </span>
+            <span className="overworld__destination-blurb">{choice?.blurb ?? ''}</span>
+          </span>
+        </div>
+      </div>
+
+      <div className="overworld__cell overworld__cell--foes">
+        <h3 className="overworld__cell-title">
+          <span>Foes</span>
+          <span className="overworld__cell-note">
+            {choice && foeCount > 0 ? `${foeCount} · LV ${low === high ? low : `${low}–${high}`}` : 'none'}
+          </span>
+        </h3>
+        <ul className="overworld__foes">
+          {choice?.foes.map((foe) => (
+            <li key={foe.label} className={foe.leader ? 'overworld__foe overworld__foe--leader' : 'overworld__foe'}>
+              <span className="overworld__foe-sprite">
+                <UnitSprite sprite={foe.sprite} />
+              </span>
+              <span className="overworld__foe-name">{foe.label}</span>
+              <span className="overworld__foe-level">
+                LV {foe.level}
+                {foe.leader ? ' · leader' : foe.count > 1 ? ` ×${foe.count}` : ''}
+              </span>
+            </li>
+          ))}
+          {choice && choice.foes.length === 0 && <li className="overworld__foes-none">No battle here.</li>}
+        </ul>
+        <p className="overworld__objective">
+          {choice?.objective && (
+            <span>
+              <GlyphIcon kind="rout" /> <b>{choice.objective}</b>
+            </span>
+          )}
+          {choice?.turns !== null && choice?.turns !== undefined && (
+            <span>
+              <GlyphIcon kind="turn" /> <b>{choice.turns}</b> turns
+            </span>
+          )}
+        </p>
+      </div>
+
+      <div className="overworld__cell overworld__cell--spoils">
+        <h3 className="overworld__cell-title">
+          <span>Spoils</span>
+          <span className="overworld__cell-note">{choice && choice.foes.length > 0 ? 'on victory' : 'on arrival'}</span>
+        </h3>
+        <ul className="overworld__spoils">
+          {choice?.spoils.map((spoil) => (
+            <li key={spoil.kind} className="overworld__spoil">
+              <SpoilIcon kind={spoil.kind} />
+              <span className="overworld__spoil-label">{spoil.label}</span>
+              <span className="overworld__spoil-note">{spoil.note}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="overworld__cell overworld__cell--warband">
+        <h3 className="overworld__cell-title">
+          <span>Warband</span>
+          <span className="overworld__cell-note">
+            {view.team.length}
+            {hurt > 0 && ` · ${hurt} hurt`}
+          </span>
+        </h3>
+        <ul className="overworld__party">
+          {view.team.map((unit) => {
+            const percent = unit.maxHealth > 0 ? (unit.health / unit.maxHealth) * 100 : 0;
+            const isHurt = unit.health < unit.maxHealth;
+            const summary = `${unit.name}, ${unit.unitClass} · Lv ${unit.level} · ${unit.health}/${unit.maxHealth} HP`;
+            return (
+              <li
+                key={unit.id}
+                className={isHurt ? 'overworld__member overworld__member--hurt' : 'overworld__member'}
+                title={summary}
+              >
+                <span className="visually-hidden">{summary}</span>
+                <span className="overworld__member-sprite" aria-hidden="true">
+                  <UnitSprite sprite={unit.sprite} />
+                </span>
+                <span className="overworld__member-name" aria-hidden="true">
+                  {unit.name}
+                </span>
+                <span className="overworld__member-bar" aria-hidden="true">
+                  <span style={{ width: `${percent}%` }} />
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </section>
   );
 }
+
+// A spoil plate's icon: a reward card's art, or a glyph.
+const SPOIL_ICONS: Readonly<Record<SpoilKind, { reward: string } | { glyph: GlyphKind }>> = {
+  gold: { reward: 'gold' },
+  pick: { reward: 'scroll' },
+  relic: { reward: 'relic' },
+  exp: { glyph: 'exp' },
+  recruit: { reward: 'draft' },
+  rest: { reward: 'rest' },
+  merchant: { glyph: 'item' },
+  blessing: { reward: 'keystone' },
+  choice: { glyph: 'book' },
+  victory: { glyph: 'seize' },
+};
+
+function SpoilIcon({ kind }: { kind: SpoilKind }) {
+  const icon = SPOIL_ICONS[kind];
+  return (
+    <span className="overworld__spoil-icon" aria-hidden="true">
+      {'reward' in icon ? <img src={REWARD_ICON_URLS[icon.reward]} alt="" /> : <GlyphIcon kind={icon.glyph} />}
+    </span>
+  );
+}
+
+// The foot's line on the roads not highlighted: "Two other roads:
+// Thornmere (village) and Greyfort (elite lair)".
+function describeOtherRoads(view: OverworldView, selected: number): string {
+  const others = view.choices.filter((_, index) => index !== selected);
+  if (view.choices.length === 0) return 'No road leads on from here.';
+  if (others.length === 0) return 'The only road on.';
+  const named = others.map((site) => `${site.name} (${site.kindLabel.toLowerCase()})`);
+  const list = named.length > 1 ? `${named.slice(0, -1).join(', ')} and ${named.at(-1)}` : named[0];
+  return `${others.length === 1 ? 'One other road' : `${COUNT_WORDS[others.length] ?? others.length} other roads`}: ${list}`;
+}
+
+const COUNT_WORDS: Readonly<Record<number, string>> = { 2: 'Two', 3: 'Three', 4: 'Four' };
 
 // The flag over a site: blue where the warband has been, red over a fight
 // ahead, black and gold over an elite lair or the Hold, and white over a
