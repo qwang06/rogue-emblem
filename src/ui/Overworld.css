@@ -264,7 +264,10 @@
 }
 
 /* The roads it has come along (red ink), the ones it could take next
-   (faint dashes) and the highlighted one (gold, marching toward its end). */
+   (gold on a dark edge, pulsing) and the highlighted one (brighter gold,
+   marching toward its end). A veil dims the rest of the realm, with
+   soft holes cut around the warband, its roads on and their ends, so
+   where it can go is the lit part of the map. */
 .overworld__routes {
   position: absolute;
   inset: 0;
@@ -272,6 +275,17 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
+}
+
+.overworld__veil {
+  fill: rgb(28 14 6 / 27%);
+}
+
+.overworld__reach {
+  fill: none;
+  stroke: #000;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .overworld__route {
@@ -287,28 +301,43 @@
   opacity: 0.85;
 }
 
-.overworld__route--choice {
-  stroke: #f2c14a;
-  stroke-width: 3;
-  stroke-dasharray: 3 6;
-  filter: drop-shadow(0 0 1px #3a2010);
-}
-
-.overworld__route--chosen-edge {
+.overworld__route--choice-edge {
   stroke: #3a2010;
   stroke-width: 7;
 }
 
-.overworld__route--chosen {
-  stroke: #f2c14a;
+.overworld__route--choice {
+  stroke: #e6ad3a;
   stroke-width: 3.5;
-  stroke-dasharray: 9 6;
+  stroke-dasharray: 10 7;
+  animation: overworld-pulse 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes overworld-pulse {
+  from {
+    stroke: #d79a2c;
+  }
+
+  to {
+    stroke: #ffd55e;
+  }
+}
+
+.overworld__route--chosen-edge {
+  stroke: #3a2010;
+  stroke-width: 9;
+}
+
+.overworld__route--chosen {
+  stroke: #ffd55e;
+  stroke-width: 4.5;
+  stroke-dasharray: 10 7;
   animation: overworld-march 0.6s linear infinite;
 }
 
 @keyframes overworld-march {
   to {
-    stroke-dashoffset: -15;
+    stroke-dashoffset: -17;
   }
 }
 
@@ -345,6 +374,47 @@
 
 .overworld__site--visited .overworld__icon {
   filter: saturate(0.35) brightness(0.92) drop-shadow(0 calc(var(--tile) * 0.08) 0 rgb(40 20 6 / 45%));
+}
+
+/* Sites further on sit under the veil: duller, their pennants too. */
+.overworld__site--ahead .overworld__icon {
+  filter: saturate(0.7) brightness(0.78) drop-shadow(0 calc(var(--tile) * 0.08) 0 rgb(40 20 6 / 45%));
+}
+
+.overworld__site--ahead .overworld__pennant {
+  opacity: 0.7;
+}
+
+/* A gold ring on the ground under each site a road leads to. */
+.overworld__ring {
+  position: absolute;
+  left: 0;
+  top: calc(var(--tile) * 0.08);
+  width: calc(var(--tile) * 2.1);
+  height: calc(var(--tile) * 0.95);
+  translate: -50% -50%;
+  border: max(2px, calc(var(--tile) * 0.07)) solid #e6ad3a;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1px #3a2010,
+    inset 0 0 0 1px #3a2010;
+  pointer-events: none;
+  animation: overworld-pulse-ring 1.4s ease-in-out infinite alternate;
+}
+
+.overworld__site--selected .overworld__ring {
+  border-color: #ffd55e;
+  animation: none;
+}
+
+@keyframes overworld-pulse-ring {
+  from {
+    border-color: #d79a2c;
+  }
+
+  to {
+    border-color: #ffd55e;
+  }
 }
 
 /* The highlighted site glows from under its disc. */
@@ -396,33 +466,6 @@
 
 .overworld__pennant--white {
   --pennant: #f4ead0;
-}
-
-/* The hand, pointing down at the highlighted site and bobbing. */
-.overworld__pointer {
-  position: absolute;
-  left: 0;
-  top: calc(var(--tile) * -1.55);
-  width: calc(16 * var(--px));
-  height: calc(22 * var(--px));
-  translate: -50% -100%;
-  pointer-events: none;
-  animation: overworld-bob 0.6s ease-in-out infinite alternate;
-}
-
-.overworld__pointer::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: url('../assets/ui/hand-pointer-down.png') center / 100% 100% no-repeat;
-  image-rendering: pixelated;
-  filter: drop-shadow(0 var(--px) 0 rgb(0 0 0 / 50%));
-}
-
-@keyframes overworld-bob {
-  to {
-    transform: translateY(-35%);
-  }
 }
 
 /* A site's name: white with a dark edge, under its disc. */
@@ -479,6 +522,30 @@
   border-right: 1px solid var(--accent);
   border-bottom: 1px solid var(--accent);
   transform: translateX(-50%) rotate(45deg);
+}
+
+/* The road's number, a keycap at the plate's left: press it to pick the road. */
+.overworld__callout-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: -2px 8px -2px -4px;
+  font-family: var(--pixel);
+  font-size: 0.625rem;
+  line-height: 1;
+  color: #1a0f07;
+  background: var(--accent);
+  border: 1px solid #3a2010;
+  border-bottom-width: 2px;
+  vertical-align: 0.05em;
+}
+
+.overworld__callout--dim .overworld__callout-key {
+  color: var(--fg-bright);
+  background: #4a3a22;
+  border-color: rgb(138 109 59 / 75%);
 }
 
 .overworld__callout-kind {
@@ -901,7 +968,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .overworld__site--selected .overworld__icon,
-  .overworld__pointer,
+  .overworld__ring,
+  .overworld__route--choice,
   .overworld__route--chosen {
     animation: none;
   }
