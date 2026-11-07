@@ -1,5 +1,4 @@
 import { gameCommands } from '../bridge/commands.ts';
-import { CombatForecast } from './CombatForecast.tsx';
 import { DockSection, isOnField } from './dock.tsx';
 import { TeamCard } from './TeamCard.tsx';
 import { UnitPanel } from './UnitPanel.tsx';
@@ -7,12 +6,13 @@ import { UnitSprite } from './UnitSprite.tsx';
 import { useGameStore } from './useGameStore.ts';
 
 // The column docked on the stage's right all through a battle, the mirror
-// of BattleDock: the roster to deploy during deployment; then the combat
-// forecast while an attack is being aimed (CombatForecast docked) with the
-// attacker's card under it (the left column shows the target, under the
-// cursor); and otherwise the party, so the player always sees who is left
-// to move, with the enemies under it. Hidden on narrow windows, where the
-// forecast floats beside the fighters instead (see ui.css).
+// of BattleDock: the roster to deploy during deployment; then, while an
+// attack is being aimed (the forecast band is across the stage's foot,
+// CombatForecast), the attacker's card with the other targets in reach
+// under it (the left column shows the target, under the cursor); and
+// otherwise the party, so the player always sees who is left to move, with
+// the enemies under it. Hidden on narrow windows, where the forecast
+// floats beside the fighters instead (see ui.css).
 export function BattleSide() {
   const onField = useGameStore(isOnField);
   const deploying = useGameStore((state) => state.phase === 'deployment');
@@ -26,8 +26,8 @@ export function BattleSide() {
         <RosterCard />
       ) : forecastOpen ? (
         <>
-          <CombatForecast docked />
           {attacker && <UnitPanel docked unit={attacker} heading="Attacker" />}
+          <OtherTargetsCard />
         </>
       ) : (
         <>
@@ -37,6 +37,24 @@ export function BattleSide() {
         </>
       )}
     </aside>
+  );
+}
+
+// While an attack is aimed, the other units it could hit instead, so the
+// player sees the choice without walking the cursor round.
+function OtherTargetsCard() {
+  const targets = useGameStore((state) => state.otherTargets);
+  return (
+    <TeamCard
+      title="Other targets"
+      team="enemy"
+      units={targets}
+      footer={
+        <>
+          <span className="team-card__count">{targets.length}</span> in reach
+        </>
+      }
+    />
   );
 }
 

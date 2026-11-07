@@ -81,6 +81,9 @@ export interface BattleState {
   skillMenu: Menu<SkillAction> | null;
   itemMenu: Menu<ItemAction> | null;
   combatForecast: CombatForecastView | null;
+  // The other hostile units the aimed attack or skill could hit instead
+  // (forecastView.ts), for the right column's Other targets card.
+  otherTargets: readonly PartyUnitView[];
   dangerZoneVisible: boolean;
   intentTags: readonly MapTagView[];
   enemyIntents: readonly IntentView[];
@@ -162,6 +165,7 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   skillMenu: null, // frozen menu of the active unit's skills (from getSkillActions) while open, or null
   itemMenu: null, // frozen menu of the active unit's items (from getItemActions) while open, or null
   combatForecast: null, // CombatForecastView from toCombatForecastView() while aiming an attack at a target, or null
+  otherTargets: [],
   dangerZoneVisible: false, // whether the map shades every tile an enemy could strike next phase (toggled with D)
   intentTags: [], // MapTagViews from toIntentTagView(): the HP the enemies' intents threaten each unit with, during the player phase
   enemyIntents: [], // IntentViews from toIntentViews(): what each enemy means to do next phase (the right column's enemy rows), during the player phase

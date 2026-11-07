@@ -18,6 +18,7 @@ import { getExperienceForLevel, type ExperienceGain, type GrowthStat, type Level
 import type { ObjectiveText } from '../game/objectives.ts';
 import type { Cell, Point } from '../game/grid.ts';
 import { describeTerrain } from '../game/terrainInfo.ts';
+import type { FactionId } from '../game/factions.ts';
 import type { Team, TurnState } from '../game/turns.ts';
 import type { RunState, UnitSnapshot } from '../game/warband/run.ts';
 import { describeReward, previewRewardHealth, type Reward, type RewardKind } from '../game/warband/rewards.ts';
@@ -215,6 +216,8 @@ export interface ForecastSideView extends ForecastSide {
   weapon: string | null;
   // The weapon's item id, for its icon.
   weaponId: string | null;
+  // Its art name (getUnitSprite), for its sprite on the forecast band.
+  sprite: string;
   // The health it's left on if every strike lands without a crit
   // (getForecastHealthAfter), which its health bar marks as the part lost.
   healthAfter: number;
@@ -664,6 +667,9 @@ export interface ForecastFighter {
   team: Team;
   rank?: UnitRank | null;
   weapon: { label: string; id?: string | null } | null;
+  // Its class and faction, for its art (getUnitSprite); a Unit carries both.
+  unitClass?: string | null;
+  faction?: FactionId | null;
 }
 
 // Snapshot of the combat forecast shown while aiming an attack or skill, from
@@ -696,6 +702,7 @@ export function toCombatForecastView({
       rank: unit.rank ?? null,
       weapon: unit.weapon?.label ?? null,
       weaponId: unit.weapon?.id ?? null,
+      sprite: getUnitSprite(unit.unitClass, unit.faction),
       ...forecast[role],
       healthAfter: healthAfter[role],
     });

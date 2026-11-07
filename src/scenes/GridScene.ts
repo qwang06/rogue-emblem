@@ -208,6 +208,7 @@ import { getIntentArrowShape } from '../game/intentArrow.ts';
 import { getPushDirection, getPushResult } from '../game/push.ts';
 import { summarizeThreats, toIntentViews } from '../bridge/intentView.ts';
 import { toIntentTagView, toPushTagView } from '../bridge/mapTagView.ts';
+import { toOtherTargetViews } from '../bridge/forecastView.ts';
 import { toPartyView } from '../bridge/partyView.ts';
 import {
   findEvent,
@@ -2954,7 +2955,7 @@ export class GridScene extends Phaser.Scene {
     if (this.rangeMode === 'attack') {
       const target = this.getAttackTargetUnderCursor();
       if (!target) {
-        gameStore.setState({ combatForecast: null });
+        gameStore.setState({ combatForecast: null, otherTargets: [] });
         return;
       }
       const { unit, x, y } = this.activeUnit!;
@@ -2963,8 +2964,10 @@ export class GridScene extends Phaser.Scene {
       const forecast = getCombatForecast(unit, defender, { distance });
       const defenderAnchor = this.getTileAnchor(target);
       const anchor = mergeTileAnchors(this.getTileAnchor({ x, y }), defenderAnchor);
+      const targets = this.getWeaponTargets(unit, { x, y }, unit.weapon!);
       gameStore.setState({
         combatForecast: toCombatForecastView({ forecast, attacker: unit, defender, anchor, defenderAnchor }),
+        otherTargets: toOtherTargetViews(this.units, targets, target.unitId),
       });
       return;
     }
@@ -2976,23 +2979,32 @@ export class GridScene extends Phaser.Scene {
     ) {
       const target = this.getSkillTargetUnderCursor();
       if (!target) {
-        gameStore.setState({ combatForecast: null });
+        gameStore.setState({ combatForecast: null, otherTargets: [] });
         return;
       }
-      const { unit, x, y } = this.activeUnit!;
+      const { unitId, unit, x, y } = this.activeUnit!;
       const skill = this.activeSkill;
       const defender = this.units.get(target.unitId)!;
       const push = skill.push ? getPushResult(this.grid, this.units, target, getPushDirection({ x, y }, target)) : null;
       const forecast = getSkillForecast(skill, unit, defender, push);
       const defenderAnchor = this.getTileAnchor(target);
       const anchor = mergeTileAnchors(this.getTileAnchor({ x, y }), defenderAnchor);
-      const attacker = { name: unit.name, team: unit.team, rank: unit.rank, weapon: { label: skill.label, id: null } };
+      const attacker = {
+        name: unit.name,
+        team: unit.team,
+        rank: unit.rank,
+        weapon: { label: skill.label, id: null },
+        unitClass: unit.unitClass,
+        faction: unit.faction,
+      };
+      const targets = getSkillTargets(this.grid, this.units, unitId, { x, y }, skill);
       gameStore.setState({
         combatForecast: toCombatForecastView({ forecast, attacker, defender, anchor, defenderAnchor }),
+        otherTargets: toOtherTargetViews(this.units, targets, target.unitId),
       });
       return;
     }
-    gameStore.setState({ combatForecast: null });
+    gameStore.setState({ combatForecast: null, otherTargets: [] });
   }
 
   showRange(mode: RangeMode, tiles: readonly Point[], color: number, alpha: number) {
