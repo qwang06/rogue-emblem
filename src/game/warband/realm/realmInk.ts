@@ -37,6 +37,12 @@ export const INK_STAMPS = [
   'crack-1',
   'crack-2',
   'waves-1',
+  'ship-1',
+  'serpent-1',
+  'reeds-1',
+  'ruin-1',
+  'stones-1',
+  'windmill-1',
   'bridge-h',
   'bridge-v',
 ] as const;
@@ -94,7 +100,7 @@ export interface InkPlacement {
   y: number;
 }
 
-export type InkLabelKind = 'water' | 'forest' | 'mountain';
+export type InkLabelKind = 'water' | 'forest' | 'mountain' | 'province';
 
 export interface InkLabel {
   text: string;
@@ -125,6 +131,14 @@ export interface InkBand {
   to: number;
 }
 
+// A province by columns of tiles, `from` up to (not including) `to`,
+// with its name; a dotted border is drawn where one meets the next.
+export interface InkProvince {
+  name: string;
+  from: number;
+  to: number;
+}
+
 export interface RealmInk {
   // The map's size, in pixels.
   width: number;
@@ -139,6 +153,11 @@ export interface RealmInk {
   rivers: readonly InkRiver[];
   // West to east, covering every column.
   bands: readonly InkBand[];
+  provinces: readonly InkProvince[];
+  // Which cells are mountain and forest (index y * columns + x), for the
+  // engraver's hatching and stipple around them.
+  mountains: readonly boolean[];
+  forests: readonly boolean[];
   labels: readonly InkLabel[];
 }
 
@@ -168,6 +187,17 @@ export const INK_RULES = Object.freeze({
   roadWobble: 0.3,
   // A river wanders more than a road.
   riverWobble: 0.45,
+  // Ships and serpents on open sea (and serpents on open lakes), reeds on
+  // open ground beside water, and landmarks (ruins, standing stones, a
+  // windmill on a meadow) out on open ground away from sites and roads.
+  ship: 0.06,
+  serpent: 0.025,
+  reeds: 0.35,
+  ruin: 0.009,
+  stones: 0.009,
+  windmill: 0.006,
+  // A sea's name needs it to run along the edge this many cells.
+  seaCells: 10,
 });
 
 const inkCache = new WeakMap<Realm, RealmInk>();
@@ -183,6 +213,8 @@ export function getRealmInk(realm: Realm): RealmInk {
       ? undefined
       : (grid.cells[y * grid.width + x].terrain as RealmTerrain);
   const siteTiles = new Set(realm.sites.map((site) => `${site.x},${site.y}`));
+  const nearSite = (x: number, y: number) =>
+    realm.sites.some((site) => Math.abs(site.x - x) <= 2 && Math.abs(site.y - y) <= 2);
   const bands = getSeasonBands(realm);
   const seasonAt = (x: number) => SEASON_INK[(bands.find((band) => x >= band.from && x < band.to) ?? bands[0]).season];
   const placements: InkPlacement[] = [];
@@ -213,12 +245,41 @@ export function getRealmInk(realm: Realm): RealmInk {
       if (terrainAt(x, y + 1) !== 'mountain' && roll(4) < INK_RULES.foothill)
         placements.push({ stamp: 'hill-1', x: left + jitter(5, 6), y: top + 12 });
     } else if (terrain === 'water') {
-      const open = [-1, 0, 1].every((dy) => [-1, 0, 1].every((dx) => terrainAt(x + dx, y + dy) === 'water'));
-      if (open && roll(1) < INK_RULES.waves)
+      // Beyond the map's edge counts as water, so the sea along it is open.
+      const wet = (dx: number, dy: number) => (terrainAt(x + dx, y + dy) ?? 'water') === 'water';
+      const open = [-1, 0, 1].every((dy) => [-1, 0, 1].every((dx) => wet(dx, dy)));
+      const atSea = realm.sea !== null && (realm.sea === 'north' ? y < 4 : y >= grid.height - 4);
+      if (!open) {
+        // Nothing on a shore.
+      } else if (atSea && roll(8) < INK_RULES.ship) {
+        placements.push({ stamp: 'ship-1', x: left + jitter(2, 3), y: top + jitter(3, 3) });
+      } else if (roll(8) < INK_RULES.ship + INK_RULES.serpent) {
+        placements.push({ stamp: 'serpent-1', x: left + jitter(2, 3), y: top + jitter(3, 3) });
+      } else if (roll(1) < INK_RULES.waves) {
         placements.push({ stamp: 'waves-1', x: left + jitter(2, 4), y: top + jitter(3, 4) });
+      }
     } else if ((terrain === 'meadow' || terrain === 'grass') && !siteTiles.has(`${x},${y}`)) {
+      const shore = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ].some(([dx, dy]) => terrainAt(x + dx, y + dy) === 'water');
       const chance = terrain === 'meadow' ? INK_RULES.meadowTuft : INK_RULES.grassTuft;
-      if (season.tufts.length > 0 && roll(1) < chance)
+      const landmark = roll(11);
+      if (shore && roll(12) < INK_RULES.reeds) {
+        placements.push({ stamp: 'reeds-1', x: left + jitter(13, 4), y: top + jitter(14, 3) });
+      } else if (!nearSite(x, y) && landmark < INK_RULES.ruin) {
+        placements.push({ stamp: 'ruin-1', x: left, y: top - 4 });
+      } else if (!nearSite(x, y) && landmark < INK_RULES.ruin + INK_RULES.stones) {
+        placements.push({ stamp: 'stones-1', x: left, y: top - 4 });
+      } else if (
+        terrain === 'meadow' &&
+        !nearSite(x, y) &&
+        landmark < INK_RULES.ruin + INK_RULES.stones + INK_RULES.windmill
+      ) {
+        placements.push({ stamp: 'windmill-1', x: left, y: top - 8 });
+      } else if (season.tufts.length > 0 && roll(1) < chance)
         placements.push({
           stamp: pick(roll(2), season.tufts),
           x: left + jitter(3, 8),
@@ -248,6 +309,7 @@ export function getRealmInk(realm: Realm): RealmInk {
   });
   placements.sort((a, b) => a.y - b.y || a.x - b.x);
 
+  const provinces = getProvinceBands(realm);
   const roads = getRoadChains(realm, crossingTiles).map((tiles) =>
     Object.freeze({
       tiles: Object.freeze(tiles),
@@ -263,7 +325,10 @@ export function getRealmInk(realm: Realm): RealmInk {
     roads: Object.freeze(roads),
     rivers: Object.freeze(rivers),
     bands: Object.freeze(bands),
-    labels: Object.freeze(nameFeatures(realm)),
+    provinces: Object.freeze(provinces),
+    mountains: Object.freeze(grid.cells.map((cell) => cell.terrain === 'mountain')),
+    forests: Object.freeze(grid.cells.map((cell) => cell.terrain === 'forest')),
+    labels: Object.freeze(nameFeatures(realm, nameProvinces(realm, provinces))),
   });
   inkCache.set(realm, ink);
   return ink;
@@ -303,6 +368,38 @@ export function getSeasonBands(realm: Realm): InkBand[] {
   }
   bands[bands.length - 1].to = columns;
   return bands;
+}
+
+// The provinces (realm.ts) as stretches of columns, cut like the season
+// bands: halfway between the columns of neighboring depths. Named after
+// the region each plays, when the realm knows one.
+export function getProvinceBands(realm: Realm): InkProvince[] {
+  const columns = realm.grid.width;
+  return realm.provinces.map((province, i) => ({
+    name: province.name,
+    from: i === 0 ? 0 : REALM_MARGIN + (province.from - 0.5) * REALM_COLUMN_SPACING,
+    to: i === realm.provinces.length - 1 ? columns : REALM_MARGIN + (province.to + 0.5) * REALM_COLUMN_SPACING,
+  }));
+}
+
+// Each province's name lettered along the map's edge (the one the sea
+// isn't on), over the middle of its stretch, kept inside the map, on two
+// rows by turns so neighbors' names don't run together.
+function nameProvinces(realm: Realm, provinces: readonly InkProvince[]): InkLabel[] {
+  const width = realm.grid.width * TILE_SIZE;
+  const rows = realm.sea === 'north' ? [realm.grid.height - 0.7, realm.grid.height - 1.55] : [0.7, 1.55];
+  return provinces
+    .filter((province) => province.name)
+    .map((province, i) => {
+      const reach = Math.min(width / 2, (province.name.length * INK_RULES.letterWidth * 1.5 * TILE_SIZE) / 2);
+      const middle = ((province.from + province.to) / 2) * TILE_SIZE;
+      return Object.freeze({
+        text: province.name,
+        kind: 'province' as const,
+        x: Math.min(width - reach, Math.max(reach, middle)),
+        y: rows[i % 2] * TILE_SIZE,
+      });
+    });
 }
 
 // The drawn line for a route of road tiles (a site's tile, the road's
@@ -512,28 +609,33 @@ const FEATURE_PREFIXES = [
   'Weeping',
   'Whisper',
 ];
-const FEATURE_PATTERNS: Readonly<Record<InkLabelKind, readonly ((prefix: string) => string)[]>> = {
+const FEATURE_PATTERNS: Readonly<Record<Exclude<InkLabelKind, 'province'>, readonly ((prefix: string) => string)[]>> = {
   water: [(p) => `Lake ${p}`, (p) => `${p}mere`, (p) => `The ${p} Water`],
   forest: [(p) => `${p}wood`, (p) => `The ${p} Wood`, (p) => `${p} Forest`],
   mountain: [(p) => `The ${p} Peaks`, (p) => `${p} Spine`, (p) => `${p} Heights`],
 };
+// A lake that runs along the map's edge is a sea.
+const SEA_PATTERNS: readonly ((prefix: string) => string)[] = [(p) => `The ${p} Sea`, (p) => `The Sea of ${p}`];
 
 // Names for the realm's biggest lakes, woods and ranges, placed on each
 // patch's middle cell nearest its center (so a C-shaped lake's name sits on
-// the lake), never twice the same name.
-function nameFeatures(realm: Realm): InkLabel[] {
+// the lake) and clear of the names already `placed` (the provinces'),
+// never twice the same name; the placed names come first in the result.
+function nameFeatures(realm: Realm, placed: readonly InkLabel[] = []): InkLabel[] {
   const rng: Rng = createSeededRng((realm.seed ^ 0x696e6b) >>> 0);
   const taken = new Set(realm.sites.map((site) => site.name));
   const width = realm.grid.width * TILE_SIZE;
-  const labels: InkLabel[] = [];
+  const labels: InkLabel[] = [...placed];
   for (const kind of ['water', 'forest', 'mountain'] as const) {
     const patches = findPatches(realm, kind)
       .filter((patch) => patch.length >= INK_RULES.minNamed[kind])
       .slice(0, INK_RULES.maxNamed);
     for (const patch of patches) {
+      const edgeCells = patch.filter((cell) => cell.y === 0 || cell.y === realm.grid.height - 1).length;
+      const patterns = kind === 'water' && edgeCells >= INK_RULES.seaCells ? SEA_PATTERNS : FEATURE_PATTERNS[kind];
       let text = '';
       for (let attempt = 0; attempt < 20 && (!text || taken.has(text)); attempt++)
-        text = randomItem(rng, FEATURE_PATTERNS[kind])(randomItem(rng, FEATURE_PREFIXES));
+        text = randomItem(rng, patterns)(randomItem(rng, FEATURE_PREFIXES));
       if (taken.has(text)) continue;
       taken.add(text);
       // Kept far enough from the map's sides that the whole name shows.

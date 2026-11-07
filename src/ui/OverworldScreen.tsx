@@ -15,7 +15,7 @@ import { loadSavedRun } from '../data/runSave.ts';
 import type { Point } from '../game/grid.ts';
 import { TILE_SIZE } from '../game/tileset.ts';
 import { paintRealmInk, type RgbaImage } from '../game/warband/realm/inkRaster.ts';
-import { BATTLE_SITES, getRealm, type Realm } from '../game/warband/realm/realm.ts';
+import { BATTLE_SITES, getRealm, REALM_COLUMN_SPACING, REALM_MARGIN, type Realm } from '../game/warband/realm/realm.ts';
 import {
   getRealmInk,
   getRouteLine,
@@ -209,6 +209,13 @@ function Overworld({
   const current = view.sites.find((site) => site.id === view.currentSiteId);
   const mapWidth = view.width * TILE_SIZE;
   const mapHeight = view.height * TILE_SIZE;
+  // How far the map is inked in: the land up to the roads' ends is drawn
+  // in full, and beyond it the map is only a faint sketch, inked in as the
+  // warband travels. Everything, once the road ends.
+  const frontier =
+    view.choices.length > 0 && current
+      ? (REALM_MARGIN + (current.depth + 1.5) * REALM_COLUMN_SPACING + 1) * TILE_SIZE
+      : mapWidth;
   const tileCenter = (point: Point): Point => ({
     x: (point.x + 0.5) * TILE_SIZE,
     y: (point.y + 0.5) * TILE_SIZE,
@@ -268,7 +275,7 @@ function Overworld({
             {ink.labels.map((label) => (
               <span
                 key={label.text}
-                className={`overworld__land overworld__land--${label.kind}`}
+                className={`overworld__land overworld__land--${label.kind}${label.x > frontier ? ' overworld__land--sketch' : ''}`}
                 style={at(label)}
                 aria-hidden="true"
               >
@@ -280,6 +287,35 @@ function Overworld({
               viewBox={`0 0 ${view.width * TILE_SIZE} ${view.height * TILE_SIZE}`}
               aria-hidden="true"
             >
+              {frontier < mapWidth && (
+                <>
+                  <defs>
+                    <filter id="overworld-torn" x="-5%" y="-5%" width="110%" height="110%">
+                      <feTurbulence
+                        type="fractalNoise"
+                        baseFrequency="0.012 0.05"
+                        numOctaves="2"
+                        seed={realm.seed % 97}
+                      />
+                      <feDisplacementMap
+                        in="SourceGraphic"
+                        scale={TILE_SIZE * 2.4}
+                        xChannelSelector="R"
+                        yChannelSelector="G"
+                      />
+                    </filter>
+                  </defs>
+                  <rect
+                    className="overworld__sketch"
+                    x={0}
+                    y={-TILE_SIZE}
+                    width={mapWidth}
+                    height={mapHeight + TILE_SIZE * 2}
+                    filter="url(#overworld-torn)"
+                    style={{ transform: `translateX(${frontier}px)` }}
+                  />
+                </>
+              )}
               {view.choices.length > 0 && (
                 <>
                   <defs>
@@ -352,6 +388,7 @@ function Overworld({
               const isSelected = index >= 0 && index === selected && !walk;
               const classes = ['overworld__site', `overworld__site--${site.state}`, `overworld__site--${site.kind}`];
               if (isSelected) classes.push('overworld__site--selected');
+              if (tileCenter(site).x > frontier) classes.push('overworld__site--sketch');
               const choiceCard = index >= 0 && !walk ? view.choices[index] : null;
               const labelled = site.state === 'current' || site.kind === 'hold';
               return (

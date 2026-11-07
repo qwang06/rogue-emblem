@@ -18,6 +18,7 @@ import {
   TOWN_EVERY,
   type Realm,
 } from './realm.ts';
+import { REALM_SHAPES } from './realmTerrain.ts';
 
 const SETTINGS = DEFAULT_CONTENT.regions;
 const SEEDS = Array.from({ length: 24 }, (_, i) => i * 7919 + 3);
@@ -295,5 +296,39 @@ describe('rivers and seasons', () => {
     }
     const first = REALMS[0];
     expect(seasonsByDepth(first.sites, SETTINGS, first.depth)).toEqual([...first.seasons]);
+  });
+});
+
+describe('shapes, seas and provinces', () => {
+  it('gives every realm a shape, and a sea along its edge when it has one', () => {
+    const shapes = new Set(REALMS.map((realm) => realm.shape));
+    expect([...shapes].every((shape) => REALM_SHAPES.includes(shape))).toBe(true);
+    expect(shapes.size).toBeGreaterThan(1);
+    expect(REALMS.some((realm) => realm.sea !== null)).toBe(true);
+    for (const realm of REALMS) {
+      if (realm.shape === 'coast') expect(realm.sea).not.toBeNull();
+      if (!realm.sea) continue;
+      const row = realm.sea === 'north' ? 0 : realm.grid.height - 1;
+      const wet = Array.from({ length: realm.grid.width }, (_, x) => terrainAt(realm, x, row) === 'water');
+      // Nearly the whole edge row is sea; a site's cleared ground may notch it.
+      expect(wet.filter(Boolean).length).toBeGreaterThan(realm.grid.width * 0.8);
+    }
+  });
+
+  it('cuts the depths into provinces of two or more depths, each named for its region', () => {
+    for (const realm of REALMS) {
+      const { provinces } = realm;
+      expect(provinces[0].from).toBe(0);
+      expect(provinces[provinces.length - 1].to).toBe(realm.depth);
+      for (let i = 0; i < provinces.length; i++) {
+        const province = provinces[i];
+        expect(province.name).toBe(SETTINGS.regions[province.region].name);
+        if (i > 0) {
+          expect(province.from).toBe(provinces[i - 1].to + 1);
+          expect(province.region).not.toBe(provinces[i - 1].region);
+        }
+        if (provinces.length > 1) expect(province.to - province.from).toBeGreaterThanOrEqual(1);
+      }
+    }
   });
 });

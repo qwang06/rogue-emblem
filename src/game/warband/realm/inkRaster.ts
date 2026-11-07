@@ -3,8 +3,10 @@
 // they meet along a ragged edge), a faint graticule, lakes as a darker
 // wash with a thick ink coast and a faint red line offset outside it (as
 // on the Tactics Ogre map), rivers as thin water lines edged in ink
-// widening to their mouths, roads as pale lines edged in ink, the map
-// symbols back to front, over a double ink border inside the edge. The
+// widening to their mouths, hatching east of the ranges and stipple round
+// the woods, dotted province borders, roads as pale lines edged in ink,
+// the map symbols back to front, over a double ink border inside the
+// edge. The
 // overworld screen puts the buffer on a canvas; the realm preview script
 // writes it to a PNG. Pure: no DOM, the same inputs give the same pixels.
 
@@ -68,6 +70,14 @@ const BAND_BLEND = 1.5;
 const GRATICULE = { columns: 8, rows: 6, ink: 0.13 };
 // The border: a thick line this far in from the edge, a thin one further in.
 const BORDER = { outer: 6, outerWidth: 2, inner: 12, innerWidth: 1 };
+// The engraver's relief: hatching east of a range (so many pixels wide,
+// a stroke every so many, this dark) and stipple round a wood (so many
+// pixels out from it, this many dots in a hundred, this dark).
+const HATCH = { width: 9, every: 4, ink: 0.3 };
+const STIPPLE = { width: 7, chance: 0.11, ink: 0.4 };
+// A province border: ink dots this long every so many pixels, wandering
+// this many tiles either side of its column.
+const PROVINCE = { dot: 3, every: 7, ragged: 1.5, ink: 0.65 };
 // A river's half-widths at its source and its mouth: the ink edge, and
 // the water inside.
 const RIVER_EDGE = [2.1, 2.9] as const;
@@ -100,7 +110,9 @@ export function paintRealmInk(ink: RealmInk, seed: number, stamps: Readonly<Reco
   paintParchment(image, seed, paper);
   paintGraticule(image);
   paintWater(image, ink, seed, paper);
+  paintRelief(image, ink, seed);
   for (const river of ink.rivers) paintRiver(image, river.line, paper);
+  paintProvinceBorders(image, ink, seed);
   paintBorder(image);
   for (const road of ink.roads) paintLine(image, road.line, ROAD_EDGE, INK_COLORS.roadEdge);
   for (const road of ink.roads) paintLine(image, road.line, ROAD_FILL, INK_COLORS.road);
@@ -188,6 +200,63 @@ function paintBorder(image: RgbaImage): void {
   };
   ring(BORDER.outer, BORDER.outerWidth, 0.9);
   ring(BORDER.inner, BORDER.innerWidth, 0.7);
+}
+
+// Hatching down the east face of every range and stipple round every
+// wood, as an engraver shades a map: on dry ground only, under the stamps.
+function paintRelief(image: RgbaImage, ink: RealmInk, seed: number): void {
+  const { width, height, data } = image;
+  const columns = Math.round(width / TILE_SIZE);
+  const rows = Math.round(height / TILE_SIZE);
+  const at = (cells: readonly boolean[], cx: number, cy: number) =>
+    cx >= 0 && cy >= 0 && cx < columns && cy < rows ? cells[cy * columns + cx] : false;
+  for (let cy = 0; cy < rows; cy++) {
+    for (let cx = 0; cx < columns; cx++) {
+      if (at(ink.mountains, cx, cy) && !at(ink.mountains, cx + 1, cy) && !ink.water[cy * columns + cx + 1]) {
+        const left = (cx + 1) * TILE_SIZE - 2;
+        for (let y = cy * TILE_SIZE; y < (cy + 1) * TILE_SIZE; y++)
+          for (let x = left; x < left + HATCH.width && x < width; x++)
+            if ((x + y) % HATCH.every === 0) mix(data, (y * width + x) * 4, INK_COLORS.ink, HATCH.ink);
+      }
+      if (!at(ink.forests, cx, cy)) continue;
+      for (const [dx, dy] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        const nx = cx + dx;
+        const ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= columns || ny >= rows) continue;
+        if (at(ink.forests, nx, ny) || ink.water[ny * columns + nx]) continue;
+        // The strip of the neighbor cell along the shared edge.
+        const x0 = nx * TILE_SIZE + (dx > 0 ? 0 : dx < 0 ? TILE_SIZE - STIPPLE.width : 0);
+        const x1 = dx === 0 ? (nx + 1) * TILE_SIZE : x0 + STIPPLE.width;
+        const y0 = ny * TILE_SIZE + (dy > 0 ? 0 : dy < 0 ? TILE_SIZE - STIPPLE.width : 0);
+        const y1 = dy === 0 ? (ny + 1) * TILE_SIZE : y0 + STIPPLE.width;
+        for (let y = y0; y < y1; y++)
+          for (let x = x0; x < x1; x++)
+            if (hashCell(seed, x, y, 13) < STIPPLE.chance) mix(data, (y * width + x) * 4, INK_COLORS.ink, STIPPLE.ink);
+      }
+    }
+  }
+}
+
+// A dotted ink line where one province meets the next, wandering a little
+// as a surveyor's boundary does.
+function paintProvinceBorders(image: RgbaImage, ink: RealmInk, seed: number): void {
+  const { width, height, data } = image;
+  const wander = createValueNoise(1, height, 48, createSeededRng((seed ^ 0x70726f76) >>> 0));
+  for (const province of ink.provinces.slice(1)) {
+    const column = province.from * TILE_SIZE;
+    for (let y = 0; y < height; y++) {
+      if (y % PROVINCE.every >= PROVINCE.dot) continue;
+      const x = Math.round(column + (wander(0, y) - 0.5) * 2 * PROVINCE.ragged * TILE_SIZE);
+      if (x < 0 || x >= width) continue;
+      mix(data, (y * width + x) * 4, INK_COLORS.ink, PROVINCE.ink);
+      if (x + 1 < width) mix(data, (y * width + x + 1) * 4, INK_COLORS.ink, PROVINCE.ink);
+    }
+  }
 }
 
 // A river: an ink line with water inside, both widening from its source

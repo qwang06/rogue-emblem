@@ -400,6 +400,15 @@
   font-size: calc(var(--tile) * 0.72);
 }
 
+/* A province's name: big, spaced small capitals in faded ink along the
+   map's edge. */
+.overworld__land--province {
+  font-size: calc(var(--tile) * 0.6);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgb(74 48 26 / 85%);
+}
+
 /* The roads it has come along (red ink), the ones it could take next
    (gold on a dark edge, pulsing) and the highlighted one (brighter gold,
    marching toward its end). A veil dims the rest of the realm, with
@@ -415,7 +424,27 @@
 }
 
 .overworld__veil {
-  fill: rgb(28 14 6 / 27%);
+  fill: rgb(28 14 6 / 22%);
+}
+
+/* The unexplored map east of the frontier: a wash of paper over the ink,
+   so it reads as a faint sketch, with a torn edge; it slides east as the
+   warband travels, inking the land in. */
+.overworld__sketch {
+  fill: rgb(236 220 178 / 58%);
+  transition: transform 1.2s ease-in-out;
+}
+
+.overworld__land--sketch {
+  opacity: 0.4;
+}
+
+.overworld__site--sketch .overworld__icon {
+  filter: saturate(0.25) brightness(0.9) opacity(0.6) drop-shadow(0 calc(var(--tile) * 0.08) 0 rgb(40 20 6 / 25%));
+}
+
+.overworld__site--sketch .overworld__pennant {
+  opacity: 0.45;
 }
 
 .overworld__reach {
@@ -996,6 +1025,10 @@
   .overworld__route--choice,
   .overworld__route--chosen {
     animation: none;
+  }
+
+  .overworld__sketch {
+    transition: none;
   }
 }
 

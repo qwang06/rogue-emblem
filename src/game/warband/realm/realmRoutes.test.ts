@@ -24,8 +24,11 @@ const realm: Realm = {
   name: 'Junctions',
   depth: 3,
   grid: createGrid(9, 4),
+  shape: 'ranges',
+  sea: null,
   rivers: [],
   seasons: ['summer', 'summer', 'summer', 'summer'],
+  provinces: [],
   buildings: [],
   palette: 'a-orange',
   sites: [

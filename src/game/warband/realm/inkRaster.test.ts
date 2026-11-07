@@ -19,6 +19,9 @@ function inkOf(columns: number, rows: number, water: number[] = [], extra: Parti
     roads: [],
     rivers: [],
     bands: [{ season: 'summer', from: 0, to: columns }],
+    provinces: [],
+    mountains: grid.cells.map(() => false),
+    forests: grid.cells.map(() => false),
     labels: [],
     ...extra,
   };
