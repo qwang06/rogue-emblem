@@ -15,7 +15,8 @@ import { useGameStore } from './useGameStore.ts';
 // What the player can do right now, for the bar's key hints: whether a
 // menu or the unit info sheet owns the input, a tile is being picked, or
 // the cursor roams the map.
-type Mode = 'deploy-menu' | 'deploy-roster' | 'placing' | 'info' | 'menu' | 'move' | 'target' | 'roam' | 'waiting';
+type Mode =
+  'deploy-menu' | 'deploy-roster' | 'placing' | 'info' | 'pause' | 'menu' | 'move' | 'target' | 'roam' | 'waiting';
 
 function getMode(state: GameState): Mode {
   if (state.unitInfo) return 'info';
@@ -24,7 +25,8 @@ function getMode(state: GameState): Mode {
     return state.deploymentStep === 'roster' ? 'deploy-roster' : 'deploy-menu';
   }
   if (state.turn?.team !== 'player' || state.autoPlay) return 'waiting';
-  if (state.pauseMenu || state.actionMenu || state.weaponMenu || state.skillMenu || state.itemMenu) return 'menu';
+  if (state.pauseMenu) return 'pause';
+  if (state.actionMenu || state.weaponMenu || state.skillMenu || state.itemMenu) return 'menu';
   if (state.targeting === 'move') return 'move';
   if (state.targeting) return 'target';
   return 'roam';
@@ -49,8 +51,14 @@ const HINTS: Readonly<Record<Mode, readonly KeyHintEntry[]>> = {
     ['I', 'Close'],
     ['Esc', 'Close'],
   ],
+  pause: [
+    ['↑↓', 'Choose'],
+    ['Enter', 'Confirm'],
+    ['Esc', 'Back'],
+  ],
+  // The chips carry their number keys, so the row needs no Choose hint
+  // and keeps its width for the entries.
   menu: [
-    ['←→', 'Choose'],
     ['Enter', 'Confirm'],
     ['Esc', 'Back'],
   ],
@@ -80,6 +88,7 @@ const PROMPTS: Readonly<Record<Mode, string>> = {
   'deploy-roster': 'Pick a unit to place',
   placing: 'Pick a highlighted tile for the unit',
   info: "The unit's full sheet",
+  pause: '',
   menu: '',
   move: 'Pick where the unit moves',
   target: 'Pick a target',
