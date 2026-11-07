@@ -148,4 +148,37 @@ describe('elite lair cards', () => {
     if (!lair) return;
     expect(toSiteDetailView(home, lair, SETTINGS).enemies).toMatch(/· [A-Z]\w+, [A-Z]\w+$/);
   });
+
+  it('tapes the stages, the Hold last, and counts the stages to it', () => {
+    const view = toOverworldView(home, realm, SETTINGS);
+    expect(view.tape).toHaveLength(realm.depth);
+    expect(view.tape.at(-1)).toBe('boss');
+    expect(view.tape.filter((tick) => tick === 'now')).toHaveLength(0);
+    expect(view.holdIn).toBe(realm.depth);
+    expect(view.currentRegion).toBeNull();
+    const [first] = getNextSites(realm, '0-0');
+    const there = toOverworldView(travelTo(home, realm, first.id), realm, SETTINGS);
+    expect(there.tape[0]).toBe('now');
+    expect(there.holdIn).toBe(realm.depth - 1);
+    expect(there.currentRegion).toBe(SETTINGS.regions[first.region].name);
+  });
+
+  it('lists a battle’s foes by class with their spoils, and a town’s without', () => {
+    const battle = toSiteDetailView(
+      home,
+      realm.sites.find((site) => site.kind === 'battle')!,
+      SETTINGS,
+    );
+    expect(battle.foes.length).toBeGreaterThan(0);
+    expect(battle.foes.every((foe) => foe.count > 0 && foe.level > 0 && foe.sprite)).toBe(true);
+    expect(battle.turns).toBeGreaterThan(0);
+    expect(battle.spoils.map((spoil) => spoil.kind)).toEqual(['gold', 'pick', 'exp']);
+    const town = toSiteDetailView(
+      home,
+      realm.sites.find((site) => site.kind === 'town')!,
+      SETTINGS,
+    );
+    expect(town).toMatchObject({ foes: [], turns: null });
+    expect(town.spoils.map((spoil) => spoil.kind)).toEqual(['merchant', 'rest']);
+  });
 });
