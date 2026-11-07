@@ -994,9 +994,17 @@ kbd {
   transform: translate(-50%, -50%);
 }
 
-/* The battle's objective, above the deployment menu's entries. */
-/* Sized to its text (not squeezed into the half of the map right of its
-   centered left edge), up to a width the objective wraps at. */
+/* The battle's objective, above the deployment menu's entries. Docked on
+   the stage's left edge rather than centered, so the formation and the
+   enemy stay in view while choosing to start (the deployment zones run
+   along the map's top or bottom). Sized to its text, up to a width the
+   objective wraps at. */
+.deployment-menu.action-menu--centered {
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
+}
+
 .deployment-menu {
   width: max-content;
   max-width: min(18rem, calc(100% - 24px));
