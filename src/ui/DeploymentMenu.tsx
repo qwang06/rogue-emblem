@@ -3,7 +3,7 @@ import { GlyphIcon } from './GlyphIcon.tsx';
 import { menuItemPointerProps } from './menuPointer.ts';
 import { MenuIcon } from './MenuIcon.tsx';
 
-// The Place Units / Start menu of the deployment phase, centered on the map,
+// The Place Units / Start menu of the deployment phase, docked on the map's left edge,
 // under the battle's objective (what wins it, after its kind's icon, and
 // what loses it, after a skull), so the
 // objective needs no screen of its own. Selection is driven by GridScene;
