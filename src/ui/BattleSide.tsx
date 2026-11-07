@@ -1,3 +1,4 @@
+import { gameCommands } from '../bridge/commands.ts';
 import { CombatForecast } from './CombatForecast.tsx';
 import { DockSection, isOnField } from './dock.tsx';
 import { TeamCard } from './TeamCard.tsx';
@@ -32,6 +33,7 @@ export function BattleSide() {
         <>
           <PartyCard />
           <EnemiesCard />
+          <ThreatCard />
         </>
       )}
     </aside>
@@ -58,18 +60,56 @@ function PartyCard() {
 
 function EnemiesCard() {
   const enemies = useGameStore((state) => state.enemies);
+  const intents = useGameStore((state) => state.enemyIntents);
   const left = enemies.filter((unit) => !unit.fallen).length;
   return (
     <TeamCard
       title="Enemies"
       team="enemy"
       units={enemies}
+      intents={intents}
       footer={
         <>
           <span className="team-card__count">{left}</span> to defeat
         </>
       }
     />
+  );
+}
+
+// What the enemies' intents add up to, pinned at the column's foot
+// during the player's phase: how many units they have in their sights and
+// the HP those would lose if nothing moved (with how many it would fell),
+// or that no one is in reach, and the key that shades their reach.
+function ThreatCard() {
+  const threat = useGameStore((state) => state.threat);
+  const danger = useGameStore((state) => state.dangerZoneVisible);
+  if (!threat) return null;
+
+  return (
+    <DockSection title="Threat" className="threat-card">
+      <p className="threat-card__line">
+        {threat.units === 0 ? (
+          <span className="threat-card__calm">No one is in reach</span>
+        ) : (
+          <>
+            <span className="threat-card__units">
+              {threat.units} {threat.units === 1 ? 'unit' : 'units'}
+            </span>{' '}
+            take <span className="threat-card__damage">{threat.damage}</span> if nothing moves
+            {threat.lethal > 0 && <span className="threat-card__lethal"> · {threat.lethal} would fall</span>}
+          </>
+        )}
+      </p>
+      <button
+        type="button"
+        className="threat-card__toggle"
+        aria-pressed={danger}
+        onClick={() => gameCommands.send({ type: 'toggle-danger-zone' })}
+      >
+        <kbd>D</kbd> {danger ? 'Hide danger' : 'Show danger'}
+      </button>
+    </DockSection>
   );
 }
 
