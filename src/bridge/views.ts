@@ -224,6 +224,8 @@ export interface CombatForecastView {
   attacker: ForecastSideView;
   defender: ForecastSideView;
   anchor: TileAnchorView;
+  // The defender's own tile, for the damage marker drawn over it.
+  defenderAnchor: TileAnchorView;
 }
 
 export type PopupKind =
@@ -412,7 +414,7 @@ export interface DialogView {
   isLast: boolean;
 }
 
-function getClassLabel(unitClass: string | null): string | null {
+export function getClassLabel(unitClass: string | null): string | null {
   return UNIT_CLASSES.find((c) => c.id === unitClass)?.label ?? unitClass;
 }
 
@@ -665,17 +667,20 @@ export interface ForecastFighter {
 // (damage / hit / crit are null for a defender that can't counter, which the
 // UI shows as "–") and the health it's left on if every strike lands
 // (getForecastHealthAfter). `anchor` is a TileAnchorView covering both units,
-// which the panel opens beside.
+// which the panel opens beside, and `defenderAnchor` the defender's tile,
+// over which the map marks the damage (toForecastTagView).
 export function toCombatForecastView({
   forecast,
   attacker,
   defender,
   anchor,
+  defenderAnchor,
 }: {
   forecast: Record<CombatSide, ForecastSide>;
   attacker: ForecastFighter;
   defender: ForecastFighter;
   anchor: TileAnchorView;
+  defenderAnchor: TileAnchorView;
 }): CombatForecastView {
   const healthAfter = getForecastHealthAfter(forecast);
   const side = (unit: ForecastFighter, role: CombatSide) =>
@@ -692,6 +697,7 @@ export function toCombatForecastView({
     attacker: side(attacker, 'attacker'),
     defender: side(defender, 'defender'),
     anchor,
+    defenderAnchor,
   });
 }
 

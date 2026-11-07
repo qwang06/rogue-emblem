@@ -512,6 +512,7 @@ describe('mergeTileAnchors', () => {
 
 describe('toCombatForecastView', () => {
   const anchor = { left: 0.1, top: 0.2, right: 0.3, bottom: 0.4 };
+  const defenderAnchor = { left: 0.2, top: 0.2, right: 0.3, bottom: 0.4 };
   const forecast = {
     attacker: {
       health: 10,
@@ -545,7 +546,7 @@ describe('toCombatForecastView', () => {
       items: [weaponEntry(IRON_SPEAR)],
     });
     const defender = new Unit({ name: 'Bandit', health: 10, strength: 4, defense: 2, movement: 5, team: 'enemy' });
-    const view = toCombatForecastView({ forecast, attacker, defender, anchor });
+    const view = toCombatForecastView({ forecast, attacker, defender, anchor, defenderAnchor });
     expect(view).toEqual({
       attacker: {
         name: 'Soldier',
@@ -566,6 +567,7 @@ describe('toCombatForecastView', () => {
         healthAfter: 0,
       },
       anchor,
+      defenderAnchor,
     });
     expect(Object.isFrozen(view)).toBe(true);
     expect(Object.isFrozen(view.attacker)).toBe(true);
@@ -582,6 +584,7 @@ describe('toCombatForecastView', () => {
       attacker: { name: 'Soldier', team: 'player', weapon: { label: 'Power Strike', id: null } },
       defender,
       anchor,
+      defenderAnchor,
     });
     expect(view.attacker).toMatchObject({
       name: 'Soldier',
@@ -599,7 +602,7 @@ describe('toCombatForecastView', () => {
     const defender = new Unit({ name: 'Grukk', health: 10, strength: 4, defense: 2, movement: 5, team: 'enemy' });
     defender.rank = 'boss';
     const attacker = { name: 'Soldier', team: 'player' as const, rank: 'elite' as const, weapon: null };
-    const view = toCombatForecastView({ forecast, attacker, defender, anchor });
+    const view = toCombatForecastView({ forecast, attacker, defender, anchor, defenderAnchor });
     expect(view.defender.rank).toBe('boss');
     expect(view.attacker.rank).toBe('elite');
   });

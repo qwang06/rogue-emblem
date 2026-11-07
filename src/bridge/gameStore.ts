@@ -10,6 +10,7 @@ import type { BoonPickView } from './boonPickView.ts';
 import type { MentorScreenView } from './mentorView.ts';
 import type { BossBarView, BossIntroView } from './bossView.ts';
 import type { MapTagView } from './mapTagView.ts';
+import type { PartyUnitView } from './partyView.ts';
 import type { MerchantScreenView } from './merchantView.ts';
 import type { PromotionScreenView } from './promotionView.ts';
 import type { RosterScreenView } from './rosterView.ts';
@@ -60,6 +61,8 @@ export interface BattleState {
   deploymentLimit: number | null;
   deploymentMenu: Menu | null;
   rosterMenu: Menu<RosterMenuEntry> | null;
+  deploymentRoster: readonly RosterEntryView[];
+  party: readonly PartyUnitView[];
   pauseMenu: Menu | null;
   hoveredUnit: UnitView | null;
   hoveredAnchor: TileAnchorView | null;
@@ -131,6 +134,8 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   deploymentLimit: null, // how many units can be deployed (getDeploymentLimit) during deployment, else null
   deploymentMenu: null, // frozen Place Units / Start menu while open, or null
   rosterMenu: null, // frozen menu of RosterEntryViews while picking a unit to place, or null
+  deploymentRoster: [], // RosterEntryViews of every unit that can deploy, all through deployment (the dock's roster card), else empty
+  party: [], // PartyUnitViews from toPartyView(): the player's deployed units with their HP and whether they've acted, all through a battle
   pauseMenu: null, // frozen End Turn / Main Menu / Settings menu while open, or null
   hoveredUnit: null, // UnitView from toUnitView(), or null
   hoveredAnchor: null, // TileAnchorView from toTileAnchorView() of the hovered unit's tile (the unit panel docks away from it), or null

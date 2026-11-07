@@ -12,10 +12,10 @@ import { WeaponNumbers } from './WeaponNumbers.tsx';
 import { Meter } from './UnitPanel.tsx';
 import { useGameStore } from './useGameStore.ts';
 import './UnitInfoScreen.css';
-import { KeyHint } from './KeyHint.tsx';
 
 // The unit info screen: a full stat sheet for the unit the cursor was on
-// when I was pressed, over a dimmed map. On the left, who it is (sprite,
+// when I was pressed, over a dimmed map, an ink window like every other
+// (the name in the serif, as on the dock's card). On the left, who it is (sprite,
 // name, class, level, HP/MP bars and an EXP bar for player units, movement,
 // the weapon types it can wield, and its quirk); then each stat with a bar
 // filled toward its class's cap, with its passive boons under them; then
@@ -34,15 +34,10 @@ export function UnitInfoScreen() {
   return (
     <div className="pause-overlay unit-info-layer" onClick={() => gameCommands.send({ type: 'cancel' })}>
       <div className="unit-info-window">
-        <section
-          className={`panel panel--page unit-info unit-info--${unit.team}`}
-          role="dialog"
-          aria-labelledby="unit-info-name"
-        >
+        <section className={`panel unit-info unit-info--${unit.team}`} role="dialog" aria-labelledby="unit-info-name">
           <Identity unit={unit} />
           <Stats unit={unit} />
           <Combat unit={unit} />
-          <KeyHint className="unit-info__hint" entries={[['I', 'Close']]} />
         </section>
         <MenuExitButton kind="close" />
       </div>
