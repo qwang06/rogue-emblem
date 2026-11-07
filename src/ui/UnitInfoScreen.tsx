@@ -8,7 +8,6 @@ import { getRankLabel, RankBadge } from './RankBadge.tsx';
 import { StatIcon, type StatIconKind } from './StatIcon.tsx';
 import { StatLabel } from './StatLabel.tsx';
 import { UnitSprite } from './UnitSprite.tsx';
-import { WeaponNumbers } from './WeaponNumbers.tsx';
 import { Meter } from './UnitPanel.tsx';
 import { useGameStore } from './useGameStore.ts';
 import './UnitInfoScreen.css';
@@ -75,7 +74,7 @@ function Identity({ unit }: { unit: UnitDetailView }) {
         </div>
         <div>
           <dt>Trained</dt>
-          <dd>
+          <dd className="unit-info__caps">
             {unit.weaponTypes.length > 0 ? unit.weaponTypes.map((type) => WEAPON_TYPE_LABELS[type]).join(', ') : '–'}
           </dd>
         </div>
@@ -228,13 +227,13 @@ function Attacks({ unit }: { unit: UnitDetailView }) {
                 <span className="unit-info__item-label">{attack.label}</span>
                 <span className="unit-info__tag">· {WEAPON_TYPE_LABELS[attack.type]}</span>
               </span>
-              <WeaponNumbers
-                power={attack.power}
-                hit={attack.hit}
-                crit={attack.crit}
-                weight={attack.weight}
-                range={attack.range}
-              />
+              <dl className="unit-info__numbers">
+                <Number label="Pow" value={attack.power} />
+                <Number label="Hit" value={attack.hit} />
+                <Number label="Crt" value={attack.crit} />
+                <Number label="Wt" value={attack.weight} />
+                <Number label="Rng" value={attack.range} />
+              </dl>
             </li>
           ))}
         </ul>
@@ -269,6 +268,16 @@ function Equipment({ unit }: { unit: UnitDetailView }) {
         ))}
       </ul>
     </>
+  );
+}
+
+// One of an attack's numbers: "POW 1", as the command bar's chips read.
+function Number({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="unit-info__number">
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </div>
   );
 }
 

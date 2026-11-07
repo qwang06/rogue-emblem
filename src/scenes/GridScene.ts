@@ -276,7 +276,7 @@ import { CRIT_SHAKE, getLungeDistance, getStrikeJuice, type Shake } from './hitJ
 import { addTreeShadow, addUnitShadow } from './unitShadow.ts';
 import { addUnitOutline } from './unitOutline.ts';
 import { addRankBadge } from './rankBadge.ts';
-import type { Menu } from '../game/actionMenu.ts';
+import type { Menu, MenuAction } from '../game/actionMenu.ts';
 import type { Dialog, DialogLine } from '../game/dialog.ts';
 import type { DialogScripts } from '../game/dialogScript.ts';
 import type { Grid, Point } from '../game/grid.ts';
@@ -444,6 +444,10 @@ export class GridScene extends Phaser.Scene {
   keys!: Phaser.Types.Input.Keyboard.CursorKeys;
   arrowRepeat!: KeyRepeatState;
   actionKeys!: Record<ActionKey, Phaser.Input.Keyboard.Key>;
+  // The number keys, which pick a chip of the open menu by its place.
+  digitKeys: Phaser.Input.Keyboard.Key[] = [];
+  // The entry a number key picked this update (0-based), or -1.
+  menuPick = -1;
   phase!: BattlePhase;
   actionMenu: Menu | null = null;
   weaponMenu: Menu<WeaponAction> | null = null;
@@ -871,6 +875,18 @@ export class GridScene extends Phaser.Scene {
       autoPlay: Phaser.Input.Keyboard.KeyCodes.A,
     }) as Record<ActionKey, Phaser.Input.Keyboard.Key>;
     this.createPointerInput();
+    const { KeyCodes } = Phaser.Input.Keyboard;
+    this.digitKeys = [
+      KeyCodes.ONE,
+      KeyCodes.TWO,
+      KeyCodes.THREE,
+      KeyCodes.FOUR,
+      KeyCodes.FIVE,
+      KeyCodes.SIX,
+      KeyCodes.SEVEN,
+      KeyCodes.EIGHT,
+      KeyCodes.NINE,
+    ].map((code) => this.input.keyboard!.addKey(code));
     this.infoKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.I); // opens the unit info screen
     this.tabKeys = this.input.keyboard!.addKeys({
       previous: Phaser.Input.Keyboard.KeyCodes.Q,
@@ -1017,6 +1033,7 @@ export class GridScene extends Phaser.Scene {
     const confirm = JustDown(this.actionKeys.confirm) || JustDown(this.actionKeys.confirmAlt) || pointer.confirm;
     const cancel = JustDown(this.actionKeys.cancel) || JustDown(this.actionKeys.cancelAlt) || pointer.cancel;
     const info = JustDown(this.infoKey) || pointer.info;
+    this.menuPick = this.digitKeys.findIndex((key) => JustDown(key));
     // Read every frame, so a press while nothing uses them doesn't linger.
     const tab = (JustDown(this.tabKeys.next) ? 1 : 0) - (JustDown(this.tabKeys.previous) ? 1 : 0);
     // Only shading, so it toggles even while the enemy phase plays out.
@@ -1101,22 +1118,26 @@ export class GridScene extends Phaser.Scene {
     // A unit's menus are a row of chips in the command bar (or a list in a
     // window on narrow screens), so either arrow axis moves their pick.
     if (this.weaponMenu) {
-      this.updateWeaponMenu(dx || dy, confirm, cancel);
+      const picked = this.pickMenuEntry('weaponMenu', this.weaponMenu);
+      this.updateWeaponMenu(dx || dy, confirm || picked, cancel);
       return;
     }
 
     if (this.skillMenu) {
-      this.updateSkillMenu(dx || dy, confirm, cancel);
+      const picked = this.pickMenuEntry('skillMenu', this.skillMenu);
+      this.updateSkillMenu(dx || dy, confirm || picked, cancel);
       return;
     }
 
     if (this.itemMenu) {
-      this.updateItemMenu(dx || dy, confirm, cancel);
+      const picked = this.pickMenuEntry('itemMenu', this.itemMenu);
+      this.updateItemMenu(dx || dy, confirm || picked, cancel);
       return;
     }
 
     if (this.actionMenu) {
-      this.updateActionMenu(dx || dy, confirm, cancel);
+      const picked = this.pickMenuEntry('actionMenu', this.actionMenu);
+      this.updateActionMenu(dx || dy, confirm || picked, cancel);
       return;
     }
 
@@ -1215,6 +1236,16 @@ export class GridScene extends Phaser.Scene {
     const { state, step } = updateKeyRepeat(this.arrowRepeat, { isDown, justPressed }, delta);
     this.arrowRepeat = state;
     return step ?? { dx: 0, dy: 0 };
+  }
+
+  // A number key pressed this update picks that entry of the open menu
+  // (the command bar shows each chip's number), so the caller confirms
+  // it: true when one was picked.
+  pickMenuEntry<A extends MenuAction>(field: MenuField, menu: Menu<A>): boolean {
+    const pick = this.menuPick;
+    if (pick < 0 || pick >= menu.actions.length) return false;
+    this.publishMenu(field, Object.freeze({ ...menu, selectedIndex: pick }) as never);
+    return true;
   }
 
   // While the action menu is open it owns input: up/down move the
@@ -2150,7 +2181,8 @@ export class GridScene extends Phaser.Scene {
 
   updateDeployment(dx: number, dy: number, confirm: boolean, cancel: boolean) {
     if (this.deploymentMenu) {
-      this.updateDeploymentMenu(dx || dy, confirm);
+      const picked = this.pickMenuEntry('deploymentMenu', this.deploymentMenu);
+      this.updateDeploymentMenu(dx || dy, confirm || picked);
       return;
     }
 

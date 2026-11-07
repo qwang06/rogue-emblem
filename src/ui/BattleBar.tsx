@@ -73,7 +73,8 @@ const HINTS: Readonly<Record<Mode, readonly KeyHintEntry[]>> = {
   waiting: [],
 };
 
-// One line on what the mode expects, under the hints.
+// One line on what the mode expects, under the hints (while the other
+// side moves, that it is).
 const PROMPTS: Readonly<Record<Mode, string>> = {
   'deploy-menu': 'Start the battle, or place units to move or swap them',
   'deploy-roster': 'Pick a unit to place',
@@ -83,7 +84,7 @@ const PROMPTS: Readonly<Record<Mode, string>> = {
   move: 'Pick where the unit moves',
   target: 'Pick a target',
   roam: 'Pick a unit to move it',
-  waiting: '',
+  waiting: 'The other side is moving',
 };
 
 // What each entry of the action and deployment menus does, for the
@@ -249,6 +250,7 @@ export function BattleBar() {
                   aria-disabled={action.disabled ? 'true' : undefined}
                   {...menuItemPointerProps(menu.field, index)}
                 >
+                  {index < 9 && <kbd className="command-chip__key">{index + 1}</kbd>}
                   {menu.chip(action)}
                 </li>
               );
@@ -262,6 +264,8 @@ export function BattleBar() {
       <div className="battle-bar__commands">
         {menu ? (
           <KeyHint className="battle-bar__hints" entries={HINTS[mode]} />
+        ) : phase === 'battle' && turn && turn.team !== 'player' ? (
+          <span className={`battle-bar__phase battle-bar__phase--${turn.team}`}>{turn.label}</span>
         ) : phase === 'battle' && turn?.team === 'player' ? (
           <>
             <button
