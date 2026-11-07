@@ -65,9 +65,9 @@ describe('toOverworldView', () => {
     // A 13-stage realm, whose roads from this seed have the junction below.
     const realm = generateRealm(1, { ...SETTINGS, stagesPerRegion: 1, finalStage: 13 });
     // These roads share a junction, but their original links omit the turn
-    // from 3-2 to 4-1.
-    const from = getSite(realm, '3-2')!;
-    const to = getSite(realm, '4-1')!;
+    // from 2-0 to 3-1.
+    const from = getSite(realm, '2-0')!;
+    const to = getSite(realm, '3-1')!;
     expect(realm.roads.some((road) => road.from === from.id && road.to === to.id)).toBe(false);
     const run = { ...home, stage: from.depth + 1, route: { visited: [from.id], at: from } };
     const view = toOverworldView(run, realm, SETTINGS);

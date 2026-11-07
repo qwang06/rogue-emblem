@@ -36,8 +36,11 @@ function tinyRealm(terrain: string[]): Realm {
     grid: { ...grid, cells: grid.cells.map((cell, i) => ({ ...cell, terrain: terrain[i] })) },
     sites: [],
     roads: [],
+    shape: 'ranges',
+    sea: null,
     rivers: [],
     seasons: ['summer', 'summer'],
+    provinces: [],
     buildings: [],
     palette: 'a-orange',
   };
@@ -302,6 +305,55 @@ describe('seasons and rivers on the map', () => {
           const middle = center(tile);
           expect(river.line.some((p) => p.x === middle.x && p.y === middle.y)).toBe(true);
           expect(ink.roads.some((road) => road.line.some((p) => p.x === middle.x && p.y === middle.y))).toBe(true);
+        }
+      }
+    }
+  });
+});
+
+describe('seas, provinces and landmarks on the map', () => {
+  it('names a province for each of the realm’s, along the edge away from the sea', () => {
+    for (const realm of REALMS) {
+      const ink = getRealmInk(realm);
+      const names = ink.labels.filter((label) => label.kind === 'province');
+      expect(names.map((label) => label.text)).toEqual(realm.provinces.map((province) => province.name));
+      expect(ink.labels.slice(0, names.length)).toEqual(names);
+      for (const label of names) {
+        if (realm.sea === 'north') expect(label.y).toBeGreaterThan((realm.grid.height - 2) * TILE_SIZE);
+        else expect(label.y).toBeLessThan(2 * TILE_SIZE);
+        expect(label.x).toBeGreaterThanOrEqual(0);
+        expect(label.x).toBeLessThanOrEqual(realm.grid.width * TILE_SIZE);
+      }
+      expect(ink.provinces).toHaveLength(realm.provinces.length);
+      expect(ink.provinces[0].from).toBe(0);
+      expect(ink.provinces[ink.provinces.length - 1].to).toBe(realm.grid.width);
+    }
+  });
+
+  it('sails ships only on the sea, and keeps reeds by the water and landmarks off the sites', () => {
+    const cellOf = (p: { x: number; y: number }) => ({
+      x: Math.floor((p.x + INK_STAMP_SIZE / 2) / TILE_SIZE),
+      y: Math.floor((p.y + INK_STAMP_SIZE / 2) / TILE_SIZE),
+    });
+    for (const realm of REALMS) {
+      const terrain = (x: number, y: number) => realm.grid.cells[y * realm.grid.width + x]?.terrain;
+      for (const placement of getRealmInk(realm).placements) {
+        const cell = cellOf(placement);
+        if (placement.stamp === 'ship-1') {
+          expect(realm.sea).not.toBeNull();
+          expect(terrain(cell.x, cell.y)).toBe('water');
+        } else if (placement.stamp === 'reeds-1') {
+          const beside = [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1],
+          ].some(([dx, dy]) => terrain(cell.x + dx, cell.y + dy) === 'water');
+          expect(beside).toBe(true);
+        } else if (placement.stamp === 'ruin-1' || placement.stamp === 'stones-1' || placement.stamp === 'windmill-1') {
+          expect(realm.sites.some((site) => Math.abs(site.x - cell.x) <= 2 && Math.abs(site.y - cell.y) <= 2)).toBe(
+            false,
+          );
         }
       }
     }

@@ -14,7 +14,7 @@
 import type { BuildingKind, BuildingPlacement } from '../../buildings.ts';
 import type { Rng } from '../../combatStats.ts';
 import { createGrid, type Grid, type Point } from '../../grid.ts';
-import { createSeededRng, randomInt, shuffle } from '../../rng.ts';
+import { createSeededRng, randomInt, randomItem, shuffle } from '../../rng.ts';
 import { DEFAULT_SEASON, type BuildingPaletteName, type Season } from '../../tileset.ts';
 import type { RegionSettings } from '../regions.ts';
 import { nameRealm, nameSite } from './realmNames.ts';
@@ -22,7 +22,17 @@ import { detectBiome, pickSiteRegion } from './realmRegions.ts';
 import { layRivers } from './realmRivers.ts';
 import { carveRoad, linkColumns } from './realmRoads.ts';
 import { getOnwardRoads } from './realmRoutes.ts';
-import { clearSpecks, generateRealmLand, LAND_RULES, landAt, setLand, type RealmLand } from './realmTerrain.ts';
+import {
+  clearSpecks,
+  generateRealmLand,
+  LAND_RULES,
+  landAt,
+  REALM_SHAPES,
+  setLand,
+  type RealmLand,
+  type RealmShape,
+  type SeaSide,
+} from './realmTerrain.ts';
 
 // What stands at a site, which says what happens there:
 //   'home'    the warband's starting camp (nothing happens)
@@ -66,11 +76,25 @@ export interface Road {
   path: readonly Point[];
 }
 
+// A stretch of depths whose sites mostly play one region: named on the
+// map with the region's name, with a border drawn at each end.
+export interface Province {
+  region: number;
+  // The region's name, as lettered on the map.
+  name: string;
+  // Depths, `from` to `to` inclusive.
+  from: number;
+  to: number;
+}
+
 export interface Realm {
   seed: number;
   name: string;
   // The Hold's depth: the run's final stage.
   depth: number;
+  // The lie of the land (realmTerrain.ts) and the edge its sea runs along.
+  shape: RealmShape;
+  sea: SeaSide | null;
   grid: Grid;
   sites: readonly Site[];
   roads: readonly Road[];
@@ -80,6 +104,8 @@ export interface Realm {
   // The season of the land at each depth (index), from the regions the
   // sites there play: the map's paper changes with it.
   seasons: readonly Season[];
+  // The provinces, west to east, covering every depth.
+  provinces: readonly Province[];
   buildings: readonly BuildingPlacement[];
   palette: BuildingPaletteName;
 }
@@ -139,7 +165,12 @@ export function generateRealm(seed: number, settings: RegionSettings): Realm {
   const depth = getRealmDepth(settings);
   const width = depth * REALM_COLUMN_SPACING + REALM_MARGIN * 2 + 1;
   const height = REALM_HEIGHT;
-  const land = generateRealmLand(width, height, rng);
+  // The shape and the sea roll from their own dice, so the land's noise
+  // is drawn as it always was.
+  const shapeRng = createSeededRng((seed ^ 0x73686170) >>> 0);
+  const shape = randomItem(shapeRng, REALM_SHAPES);
+  const sea: SeaSide | null = shape === 'coast' || shapeRng() < 0.5 ? (shapeRng() < 0.5 ? 'north' : 'south') : null;
+  const land = generateRealmLand(width, height, rng, { shape, sea });
   const columns = layOutColumns(depth, height, rng);
   const kinds = pickKinds(
     columns.map((column) => column.length),
@@ -202,14 +233,59 @@ export function generateRealm(seed: number, settings: RegionSettings): Realm {
     seed,
     name,
     depth,
+    shape,
+    sea,
     grid: toGrid(land),
     sites: Object.freeze(sites),
     roads: Object.freeze(roads.map((road) => Object.freeze(road))),
     rivers: Object.freeze(rivers.map((river) => Object.freeze(river))),
     seasons: Object.freeze(seasonsByDepth(sites, settings, depth)),
+    provinces: Object.freeze(provincesByDepth(sites, settings, depth)),
     buildings: Object.freeze(buildings),
     palette: REALM_PALETTE,
   });
+}
+
+// The provinces: each depth's region is the one most of its sites play
+// (the first when tied; home takes the first stop's), and runs of one
+// region become a province, a run of a single depth joining the province
+// before it (or after it, at the start) so no province is a sliver.
+export function provincesByDepth(sites: readonly Site[], settings: RegionSettings, depth: number): Province[] {
+  const regions: number[] = [];
+  for (let d = 0; d <= depth; d++) {
+    const counts = new Map<number, number>();
+    for (const site of sites) if (site.depth === d) counts.set(site.region, (counts.get(site.region) ?? 0) + 1);
+    let pick = regions[d - 1] ?? 0;
+    let most = 0;
+    for (const [region, count] of counts)
+      if (count > most) {
+        pick = region;
+        most = count;
+      }
+    regions.push(pick);
+  }
+  if (depth >= 1) regions[0] = regions[1];
+  const provinces: Province[] = [];
+  for (let d = 0; d <= depth; d++) {
+    const last = provinces[provinces.length - 1];
+    if (last && last.region === regions[d]) last.to = d;
+    else provinces.push({ region: regions[d], name: settings.regions[regions[d]]?.name ?? '', from: d, to: d });
+  }
+  for (let i = provinces.length - 1; i >= 0 && provinces.length > 1; i--) {
+    const province = provinces[i];
+    if (province.to - province.from >= 1) continue;
+    const into = provinces[i - 1] ?? provinces[i + 1];
+    into.from = Math.min(into.from, province.from);
+    into.to = Math.max(into.to, province.to);
+    provinces.splice(i, 1);
+  }
+  // Joining slivers can leave one region's provinces side by side.
+  for (let i = provinces.length - 1; i > 0; i--) {
+    if (provinces[i].region !== provinces[i - 1].region) continue;
+    provinces[i - 1].to = provinces[i].to;
+    provinces.splice(i, 1);
+  }
+  return provinces;
 }
 
 // The season at each depth: the one most of the sites there play in
