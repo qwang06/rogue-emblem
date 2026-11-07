@@ -29,7 +29,7 @@ export function CampMenu() {
 
   return (
     <div className="pause-overlay camp-overlay">
-      <nav className="panel action-menu pause-menu camp-menu" aria-label="Camp">
+      <nav className="panel panel--focus action-menu pause-menu camp-menu" aria-label="Camp">
         <h2 className="pause-menu__title">Camp</h2>
         <ul className="action-menu__list">
           {menu.actions.map((action, index) => {

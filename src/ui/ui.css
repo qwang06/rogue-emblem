@@ -34,6 +34,8 @@
   --ink: #22263d;
   --bg: #22263d;
   --bg-light: #2f3557;
+  /* A sunken well inside a window: a list or page that sits in it. */
+  --well: #191c2f;
   --selection: #3b4373;
   /* The chosen row's ring, drawn inside it so it takes no room. */
   --selection-ring: inset 0 0 0 var(--px) rgb(240 181 65 / 75%);
@@ -137,6 +139,7 @@
   --muted: #c48a7e;
   --bg: #ffc2a1;
   --bg-light: #f5ad8c;
+  --well: #f5b394;
   --blue: #2f5fc8;
   --red: #c0342a;
   --green: #2e9a3a;
@@ -542,8 +545,10 @@ a.header-button {
   border-image-source: url('../assets/ui/frame-parchment.png');
 }
 
-/* The focused or chosen window: the same box with a gold rim. */
-.frame--focus {
+/* The focused or chosen window: the same box with a gold rim (the camp
+   menu beside its relic list). */
+.frame--focus,
+.panel--focus {
   border-image-source: url('../assets/ui/frame-ink-gold.png');
 }
 
@@ -1216,9 +1221,9 @@ kbd {
 
 .combat-forecast__value {
   margin: 0;
-  font-size: 1.0625rem;
+  font-size: 1.375rem;
   font-weight: 700;
-  line-height: 1.4;
+  line-height: 1.15;
   font-variant-numeric: tabular-nums;
   color: var(--fg-bright);
 }
@@ -1235,7 +1240,7 @@ kbd {
    when it's a kill. */
 .combat-forecast__after {
   margin-left: 2px;
-  font-size: 0.8125rem;
+  font-size: 1rem;
   color: var(--orange);
 }
 
@@ -4379,7 +4384,10 @@ textarea.draft-input {
 
 .roster-screen__column {
   min-width: 0;
-  border: var(--border);
+  /* A sunken well, not a box: its border is there only for the focused
+     column's gold, so focusing one never moves anything. */
+  background: var(--well);
+  border: var(--px) solid transparent;
   border-radius: var(--radius-sm);
 }
 
@@ -4396,11 +4404,13 @@ textarea.draft-input {
   white-space: nowrap;
   text-overflow: ellipsis;
   color: var(--fg-dim);
-  border-bottom: var(--rule);
+  background: var(--bg-light);
 }
 
+/* The focused column's heading is a gold bar, like a window's title tab. */
 .roster-screen__column--focused .roster-screen__heading {
-  color: var(--accent);
+  color: var(--tab-fg);
+  background: var(--accent);
 }
 
 /* Room for the most units a warband holds (eight) where the window is

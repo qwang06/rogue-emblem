@@ -39,8 +39,8 @@
   font: inherit;
   font-size: 0.8125rem;
   color: var(--fg-dim);
-  background: var(--bg-light);
-  border: var(--border);
+  background: var(--well);
+  border: var(--px) solid transparent;
   border-radius: var(--radius-sm);
   cursor: pointer;
 }
@@ -129,7 +129,7 @@
 .equipment-categories {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  border-bottom: var(--rule);
+  background: var(--bg-light);
 }
 
 .equipment-categories__tab {
@@ -144,7 +144,6 @@
   color: var(--fg-dim);
   background: none;
   border: 0;
-  border-right: var(--rule);
   cursor: pointer;
 }
 
