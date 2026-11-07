@@ -1,369 +1,881 @@
 /* ---- Equipment screen ------------------------------------------------- */
 
-/* Tactics Ogre style: the units as tabs across the top, then three
-   columns: the picked unit's slots, the gear for the picked slot under one
-   tab per slot, and the unit's stat sheet and load. The columns share one
-   fixed height (the slots always the five rows of a humanoid, a monster's
-   two leaving the rest blank, and the category tabs always five wide),
-   each number row draws both values, and the selected tab only changes
-   colors, so moving the cursor, switching units or changing gear never
-   reflows anything (see "UI layout" in AGENTS.md). The shared row, column
-   and list styles are in ui.css's "Roster screen" section. */
-.equipment-screen {
-  /* Two lines of text a row (a slot's name over its gear). */
-  --row: 52px;
-  /* Tall enough for the stat sheet: a heading, nine rows (sized in rem,
-     as the text is) and the load meter. */
-  --body: calc(5 * var(--row) + 4.2rem);
-}
-
-/* ---- The unit tabs ---- */
-
-/* At most eight units (MAX_ROSTER_SIZE) share the row evenly between the
-   step arrows; a long name is cut short rather than widening its tab.
-   Tabs are clicked, never hovered into: hovering one does nothing. */
-.equipment-units {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 8px;
-}
-
-.equipment-units__tab,
-.equipment-units__step {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  height: 40px;
-  padding: 0 6px;
-  font: inherit;
-  font-size: 0.8125rem;
-  color: var(--fg-dim);
-  background: var(--well);
-  border: var(--px) solid transparent;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.equipment-units__tab {
-  flex: 1 1 0;
-}
-
-.equipment-units__step {
-  flex: none;
-  gap: 2px;
-  color: var(--fg-bright);
-  background: var(--bg);
-}
-
-.equipment-units__key {
-  font-size: 0.625rem;
-  color: var(--fg-dim);
-}
-
-.equipment-units__tab:hover,
-.equipment-units__step:hover {
-  color: var(--fg-bright);
-}
-
-.equipment-units__tab--selected,
-.equipment-units__tab--selected:hover {
-  color: var(--fg-bright);
-  background: var(--selection);
-  border-color: var(--accent);
-  box-shadow: inset 0 calc(-2 * var(--px)) 0 var(--accent);
-}
-
-.equipment-units__sprite {
-  flex: none;
-  width: 32px;
-  height: 32px;
-}
-
-.equipment-units__name {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-}
-
-/* ---- The three columns ---- */
-
-.equipment-layout {
+/* The equipment screen over the whole stage, like the camp: the warband
+   down the left, the worn gear and the convoy table in the middle, the
+   preview down the right, and the bar across the foot, on flat ink like
+   the battle's columns. Every list keeps its size (a monster's two slots
+   leave the rest blank, every change row is drawn, the selected row only
+   changes colors), so moving the cursor, switching units or changing
+   gear never reflows anything (see "UI layout" in AGENTS.md). */
+.hud .equipment-screen {
+  position: absolute;
+  inset: 0;
   display: grid;
-  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.25fr) minmax(0, 0.8fr);
-  gap: 10px;
-  height: var(--body);
+  grid-template-columns: 14rem minmax(0, 1fr) 15rem;
+  grid-template-rows: minmax(0, 1fr) 3.5rem;
+  background: var(--bezel);
+  pointer-events: auto;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--fg);
 }
 
-.equipment-layout > .roster-screen__column {
+.equipment-screen__column {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
 }
 
-.equipment-slots {
+.equipment-screen__warband {
+  border-right: var(--hairline);
+}
+
+.equipment-screen__side {
+  border-left: var(--hairline);
+}
+
+.equipment-screen__roster {
   flex: 1;
 }
 
-.equipment-slots__blank {
-  pointer-events: none;
+.equipment-screen__convoy,
+.equipment-screen__fits {
+  margin-top: auto;
+  border-top: var(--hairline);
+  border-bottom: 0;
 }
 
-.equipment-slots__item {
-  display: block;
-  color: var(--fg-bright);
+.equipment-screen__up {
+  color: var(--green);
 }
 
-.equipment-slots__empty,
-.equipment-slots__locked {
-  color: var(--fg-dim);
-}
-
-.equipment-slots__locked .glyph-icon {
-  vertical-align: -2px;
-}
-
-/* ---- The gear, one tab per slot ---- */
-
-.equipment-categories {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  background: var(--bg-light);
-}
-
-.equipment-categories__tab {
-  min-width: 0;
-  padding: 4px 2px;
-  overflow: hidden;
-  font: inherit;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: var(--fg-dim);
-  background: none;
-  border: 0;
-  cursor: pointer;
-}
-
-.equipment-categories__tab:last-child {
-  border-right: 0;
-}
-
-span.equipment-categories__tab {
-  cursor: default;
-}
-
-button.equipment-categories__tab:hover {
-  color: var(--fg-bright);
-}
-
-.equipment-categories__tab--selected,
-.equipment-categories__tab--selected:hover {
-  color: var(--fg-bright);
-  background: var(--selection);
-  box-shadow: var(--selection-ring);
-}
-
-.equipment-layout__gear .scroll-list {
-  flex: 1;
-  min-height: 0;
-}
-
-.equipment-screen .equipment-list {
-  height: 100%;
-}
-
-.equipment-gear__remove {
-  font-style: italic;
-  color: var(--fg-dim);
-}
-
-/* A weapon's family or an armor piece's weight, at the row's end; a
-   family the unit isn't trained in is struck through in red. */
-.equipment-gear__tag {
-  flex: none;
-  font-size: 0.75rem;
-  color: var(--fg-dim);
-}
-
-.equipment-gear__tag--untrained {
+.equipment-screen__down {
   color: var(--red);
-  text-decoration: line-through;
 }
 
-/* The teammate wearing it, who loses it if it's taken. */
-.equipment-gear__worn {
+.equipment-screen__dim {
+  color: var(--fg-dim);
+}
+
+/* An item's icon, or a dashed spot of the same size. */
+.equipment-screen__icon {
   flex: none;
-  max-width: 40%;
-  padding: 0 5px;
-  overflow: hidden;
-  font-size: 0.6875rem;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: var(--bg);
-  background: var(--muted);
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  box-sizing: border-box;
+  image-rendering: pixelated;
 }
 
-/* ---- The stat sheet ---- */
-
-/* The unit's stats beside the rates it fights with: label, now, and the
-   change the highlighted gear makes. Fixed columns and tabular figures,
-   so a value changing never moves another. */
-.equipment-sheet {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 12px;
-  padding: 4px 10px;
+.equipment-screen__icon--empty {
+  border: 1px dashed var(--muted);
 }
 
-.equipment-sheet__list {
+/* ---- Warband ---- */
+
+.equipment-screen__units {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.equipment-sheet__row {
+/* A unit's row like the camp's: sprite, serif name with the HP number at
+   the row's end, class and level with the HP blocks under them; the
+   picked one lit. Clicked, never hovered into. */
+.equipment-screen__unit {
   display: grid;
-  grid-template-columns: 1fr 3.5ch 5ch;
-  column-gap: 4px;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
   align-items: center;
-  height: 1.2em;
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
+  column-gap: 10px;
+  row-gap: 2px;
+  min-height: 2.25rem;
+  margin: 0 -14px;
+  padding: 4px 14px 5px;
+  border-bottom: 1px solid rgb(138 109 59 / 25%);
+  cursor: pointer;
 }
 
-.equipment-sheet__label {
+.equipment-screen__unit:hover {
+  background: rgb(255 255 255 / 4%);
+}
+
+.equipment-screen__unit--picked {
+  background: var(--blue-bg);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.equipment-screen__unit-sprite {
+  grid-row: 1 / 3;
+  display: inline-flex;
+}
+
+.equipment-screen__unit-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1;
+  color: var(--blue);
+}
+
+.equipment-screen__unit-hp {
+  font-size: 1.0625rem;
   font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-bright);
+}
+
+.equipment-screen__unit-hp-max {
+  font-size: 0.75rem;
+  font-weight: 400;
   color: var(--fg-dim);
 }
 
-.equipment-sheet__value {
-  text-align: right;
+.equipment-screen__unit-class {
+  grid-column: 2;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
 }
 
-/* The arrow and the new number, only while the highlighted gear changes
-   the stat; hidden (its space kept) otherwise. */
-.equipment-sheet__change {
+.equipment-screen__unit-pips {
+  grid-column: 3;
+  justify-self: end;
+}
+
+.equipment-screen__count,
+.equipment-screen__offer,
+.equipment-screen__fits-line {
+  margin: 0;
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.equipment-screen__offer {
+  margin-top: 4px;
+  line-height: 1.6;
+}
+
+.equipment-screen__count-number {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--fg-bright);
+}
+
+.equipment-screen__fits-line {
+  min-height: 2.2em;
+  color: var(--fg-bright);
+}
+
+/* ---- The middle: worn gear and the convoy table ---- */
+
+.equipment-screen__stage {
+  display: grid;
+  grid-template-columns: 13.5rem minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+.equipment-screen__worn,
+.equipment-screen__table {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 14px;
+}
+
+.equipment-screen__worn {
+  border-right: var(--hairline);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+
+/* A column's heading: small caps on a hairline, with a dim note at the
+   end (the unit's name, the load's numbers). */
+.equipment-screen__heading {
   display: flex;
   justify-content: space-between;
-  visibility: hidden;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding-bottom: 4px;
+  border-bottom: var(--hairline);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
-.equipment-sheet__change--up,
-.equipment-sheet__change--down {
-  visibility: visible;
-}
-
-.equipment-sheet__change--up {
-  color: var(--green);
-}
-
-.equipment-sheet__change--down {
-  color: var(--red);
-}
-
-/* Like a stat's change, shown only when the load changes. */
-.equipment-load__after {
-  visibility: hidden;
-}
-
-.equipment-load__after--up,
-.equipment-load__after--down {
-  visibility: visible;
-}
-
-/* Weight against strength: the bar fills to the load with the
-   highlighted gear, red past the strength mark. Load going up is "down"
-   for the unit, so its colors run the other way. */
-.equipment-load {
-  margin-top: auto;
-  padding: 4px 10px 6px;
-  font-size: 0.8125rem;
-  border-top: var(--rule);
-}
-
-.equipment-load__text {
-  display: flex;
-  justify-content: space-between;
+.equipment-screen__heading-note {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 400;
+  letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
+  color: var(--fg-dim);
 }
 
-.equipment-load__after--up {
-  color: var(--red);
+.equipment-screen__slots {
+  margin: 0 -8px;
+  padding: 0;
+  list-style: none;
 }
 
-.equipment-load__after--down {
-  color: var(--green);
+/* A worn slot: its icon, then the slot's name in small caps, the gear's
+   serif name and a line of its numbers. The picked one is lit; the slot
+   column being the cursor's lights it in the accent. */
+.equipment-screen__slot {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: center;
+  min-height: 56px;
+  margin-bottom: 4px;
+  padding: 6px 8px;
+  cursor: pointer;
 }
 
-.equipment-load__bar {
+.equipment-screen__slot:hover {
+  background: rgb(255 255 255 / 4%);
+}
+
+.equipment-screen__slot--selected {
+  background: var(--ink2, rgb(255 255 255 / 6%));
+  box-shadow: inset 2px 0 0 var(--muted);
+}
+
+.equipment-screen__worn--focused .equipment-screen__slot--selected {
+  background: linear-gradient(90deg, rgb(240 181 65 / 16%), rgb(240 181 65 / 4%));
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.equipment-screen__slot--locked {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.equipment-screen__slot--blank {
+  pointer-events: none;
+}
+
+.equipment-screen__slot-lines {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.equipment-screen__slot-label {
+  font-size: 0.5625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.equipment-screen__slot-name {
+  margin-top: 2px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1.1;
+  color: var(--fg);
+}
+
+.equipment-screen__worn--focused .equipment-screen__slot--selected .equipment-screen__slot-name {
+  color: var(--fg-bright);
+}
+
+.equipment-screen__slot-name--empty {
+  font-family: inherit;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-faint, var(--muted));
+}
+
+.equipment-screen__slot-name--empty .glyph-icon {
+  vertical-align: -2px;
+}
+
+.equipment-screen__slot-meta {
+  margin-top: 2px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.equipment-screen__slot-meta--offer {
+  color: var(--accent);
+}
+
+/* ---- Load ---- */
+
+/* Weight against strength: the bar fills to the load with the highlighted
+   gear, red past the strength mark. */
+.equipment-screen__load {
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+.equipment-screen__load-bar {
   position: relative;
   height: 8px;
-  margin: 3px 0 2px;
-  background: var(--bg-light);
-  border: var(--px) solid var(--muted);
+  margin: 2px 0 4px;
+  background: var(--well);
+  border: 1px solid rgb(138 109 59 / 55%);
 }
 
-.equipment-load__fill,
-.equipment-load__over,
-.equipment-load__mark {
+.equipment-screen__load-fill,
+.equipment-screen__load-over,
+.equipment-screen__load-mark {
   position: absolute;
   top: 0;
   bottom: 0;
 }
 
-.equipment-load__fill {
+.equipment-screen__load-fill {
   left: 0;
   background: var(--accent);
 }
 
-.equipment-load__over {
+.equipment-screen__load-over {
   background: var(--red);
 }
 
-.equipment-load__mark {
-  width: var(--px);
-  margin-left: calc(-0.5 * var(--px));
+.equipment-screen__load-mark {
+  width: 2px;
+  margin-left: -1px;
   background: var(--fg-bright);
 }
 
-.equipment-load__note {
-  font-size: 0.6875rem;
+.equipment-screen__load-note {
+  margin: 0;
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--fg-dim);
 }
 
-.equipment-load__note--over {
+/* ---- The convoy table ---- */
+
+/* One tab per slot: its icon and how many pieces are on offer; the picked
+   slot's is filled with the accent. Tabs keep one width, so picking one
+   moves nothing. */
+.equipment-screen__tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.equipment-screen__tab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 4rem;
+  height: 30px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  background: var(--bezel);
+  border: 1px solid var(--bronze-dim, rgb(138 109 59 / 55%));
+  border-bottom: 0;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+span.equipment-screen__tab {
+  border-color: transparent;
+  background: none;
+  cursor: default;
+}
+
+button.equipment-screen__tab:hover {
+  color: var(--fg-bright);
+  background: rgb(255 255 255 / 5%);
+}
+
+.equipment-screen__tab--selected,
+button.equipment-screen__tab--selected:hover {
+  color: var(--tab-fg, #2a1a10);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.equipment-screen__tab-icon {
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+}
+
+.equipment-screen__tab--selected .equipment-screen__tab-icon {
+  filter: brightness(0.25);
+}
+
+.equipment-screen__tabs-fill {
+  flex: 1;
+  border-bottom: 1px solid rgb(138 109 59 / 55%);
+}
+
+/* The header and each gear row share one grid: icon, name and kind,
+   three numbers, and what wearing it changes. */
+.equipment-screen__row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 2.25rem 2.25rem 2.25rem 6rem;
+  column-gap: 6px;
+  align-items: center;
+  height: 48px;
+  padding: 0 6px;
+  border-bottom: 1px solid rgb(255 255 255 / 5%);
+  cursor: pointer;
+}
+
+.equipment-screen__row--header {
+  height: 24px;
+  font-size: 0.5625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+  cursor: default;
+}
+
+.equipment-screen__row--header > span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.equipment-screen__row--header .equipment-screen__delta {
+  display: block;
+  text-align: right;
+}
+
+.equipment-screen__row--empty {
+  display: flex;
+  justify-content: center;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+  cursor: default;
+}
+
+.equipment-screen__row:hover {
+  background: rgb(255 255 255 / 4%);
+}
+
+.equipment-screen__row--picked {
+  background: rgb(255 255 255 / 6%);
+  box-shadow: inset 2px 0 0 var(--muted);
+}
+
+.equipment-screen__row--selected {
+  background: linear-gradient(90deg, rgb(240 181 65 / 16%), rgb(240 181 65 / 4%));
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.equipment-screen__row--disabled {
+  opacity: 0.4;
+}
+
+.equipment-screen__row-lines {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.equipment-screen__row-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1;
+  color: var(--fg);
+}
+
+.equipment-screen__row--selected .equipment-screen__row-name {
+  color: var(--fg-bright);
+}
+
+.equipment-screen__row--remove .equipment-screen__row-name {
+  font-style: italic;
+  color: var(--fg-dim);
+}
+
+.equipment-screen__row-worn {
+  font-family: inherit;
+  font-size: 0.5625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--bronze-bright, var(--accent));
+}
+
+.equipment-screen__row-kind {
+  margin-top: 3px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.5625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.equipment-screen__num {
+  text-align: right;
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-bright);
+}
+
+.equipment-screen__row--header .equipment-screen__num {
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+
+.equipment-screen__num--none {
+  font-weight: 400;
+  color: var(--fg-faint, var(--muted));
+}
+
+/* Up to two lines of what the gear changes, at the row's end. */
+.equipment-screen__delta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  min-width: 0;
+  font-size: 0.6875rem;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.equipment-screen__delta-line {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.equipment-screen__delta-line--up {
+  color: var(--green);
+}
+
+.equipment-screen__delta-line--down {
   color: var(--red);
 }
 
-/* One column at a time on narrow stages, stacked: the tabs show only
-   sprites, and the lists shorten. */
-@container (max-width: 40rem) {
-  .equipment-units__name {
+.equipment-screen__delta-line--flat {
+  color: var(--fg-faint, var(--muted));
+}
+
+.equipment-screen__table .scroll-list {
+  flex: 1;
+  min-height: 0;
+}
+
+.equipment-screen__rows {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ---- Preview ---- */
+
+.equipment-screen__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: center;
+}
+
+.equipment-screen__portrait {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+  background: var(--well);
+  outline: 1px solid rgb(138 109 59 / 55%);
+}
+
+.equipment-screen__head-lines {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.equipment-screen__head-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--blue);
+}
+
+.equipment-screen__head-class {
+  min-height: 1.2em;
+  margin-top: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+/* The swap: what the slot holds, an arrow, what the choice puts there.
+   The boxes keep two lines for a name, and the arrow and the new box
+   light up only while a choice is highlighted. */
+.equipment-screen__swap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr);
+  align-items: stretch;
+  column-gap: 6px;
+  margin-top: 10px;
+}
+
+.equipment-screen__swap-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  background: var(--well);
+  border: 1px solid rgb(138 109 59 / 55%);
+  text-align: center;
+}
+
+/* Without a choice in hand the new box repeats the worn gear, faded. */
+.equipment-screen__swap-item--new {
+  opacity: 0.45;
+}
+
+.equipment-screen__swap--live .equipment-screen__swap-item--new {
+  opacity: 1;
+  border-color: var(--accent);
+}
+
+.equipment-screen__swap-name {
+  display: -webkit-box;
+  height: 2.2em;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  font-family: var(--serif);
+  font-size: 0.875rem;
+  line-height: 1.1;
+  color: var(--fg);
+}
+
+.equipment-screen__swap--live .equipment-screen__swap-item--new .equipment-screen__swap-name {
+  color: var(--fg-bright);
+}
+
+.equipment-screen__swap-arrow {
+  align-self: center;
+  font-size: 1rem;
+  text-align: center;
+  color: var(--fg-faint, var(--muted));
+}
+
+.equipment-screen__swap--live .equipment-screen__swap-arrow {
+  color: var(--accent);
+}
+
+.equipment-screen__swap-hint {
+  margin: 6px 0 0;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+/* ---- Changes ---- */
+
+.equipment-screen__change-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A rate's row: its name, the number now, an arrow and the number after,
+   colored where it moves. Fixed columns and tabular figures, so a value
+   changing never moves another. */
+.equipment-screen__change {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) 20px 3.25rem;
+  column-gap: 6px;
+  align-items: center;
+  height: 28px;
+  border-bottom: 1px solid rgb(255 255 255 / 5%);
+  font-variant-numeric: tabular-nums;
+}
+
+.equipment-screen__change-label {
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  color: rgb(190 160 105 / 85%);
+}
+
+.equipment-screen__change-before {
+  text-align: right;
+  font-size: 1rem;
+  color: var(--fg-dim);
+}
+
+.equipment-screen__change-arrow {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--fg-faint, var(--muted));
+}
+
+.equipment-screen__change-after {
+  text-align: right;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--fg-bright);
+}
+
+.equipment-screen__change-after--up {
+  color: var(--green);
+}
+
+.equipment-screen__change-after--down {
+  color: var(--red);
+}
+
+/* ---- The item ---- */
+
+.equipment-screen__detail {
+  flex: 1;
+}
+
+.equipment-screen__detail .dock-section__title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--fg-bright);
+}
+
+.equipment-screen__detail-kind {
+  margin: 0;
+  font-size: 0.6875rem;
+  line-height: 1.7;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.equipment-screen__detail-numbers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin: 2px 0 0;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.equipment-screen__detail-number b {
+  font-size: 0.8125rem;
+  color: var(--fg-bright);
+}
+
+/* ---- Bar ---- */
+
+.equipment-screen__bar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  border-top: var(--hairline);
+}
+
+.equipment-screen__hints {
+  flex: none;
+  justify-content: flex-start;
+}
+
+/* What confirming does now, between the keys and the buttons; one line,
+   cut short rather than wrapping. */
+.equipment-screen__line {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: right;
+  font-size: 0.75rem;
+  color: var(--fg-dim);
+}
+
+/* Too narrow for the side columns: the worn gear and the table alone. */
+@media (max-width: 60rem) {
+  .hud .equipment-screen {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .equipment-screen__warband,
+  .equipment-screen__side,
+  .equipment-screen__line {
     display: none;
   }
 
-  .equipment-units__tab {
-    justify-content: center;
-  }
-
-  .equipment-layout {
+  .equipment-screen__stage {
     grid-template-columns: minmax(0, 1fr);
-    height: auto;
+    grid-template-rows: auto minmax(0, 1fr);
   }
 
-  .equipment-slots {
-    flex: none;
-    height: calc(5 * var(--row));
+  .equipment-screen__worn {
+    border-right: 0;
+    border-bottom: var(--hairline);
   }
 
-  .equipment-layout__gear .scroll-list {
-    flex: none;
-  }
-
-  .equipment-screen .equipment-list {
-    height: calc(4 * var(--row));
+  .equipment-screen__load {
+    display: none;
   }
 }
