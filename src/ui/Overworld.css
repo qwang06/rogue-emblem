@@ -584,14 +584,14 @@
   translate: -50% -85%;
 }
 
-/* Under the map: the highlighted road's card in four cells (where it
-   leads, the foes, the spoils, the warband), then the foot with the keys,
-   the other roads and the Travel button. The card keeps one height, so
-   moving between roads never moves the map. */
+/* Under the map: the highlighted road's card in two cells (where it
+   leads, the warband), then the foot with the keys, the other roads and
+   the Travel button. The card keeps one height, so moving between roads
+   never moves the map. */
 .overworld__card {
   flex: none;
   display: grid;
-  grid-template-columns: 19rem minmax(0, 1fr) 14rem 20rem;
+  grid-template-columns: 27rem minmax(0, 1fr);
   height: 8rem;
   box-sizing: border-box;
   background: var(--bezel);
@@ -701,63 +701,12 @@
   color: var(--fg);
 }
 
-/* ---- Foes ---- */
-
-.overworld__foes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px 10px;
-  height: 3.6rem;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  list-style: none;
-}
-
-.overworld__foe {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  width: 4rem;
-}
-
-.overworld__foe-name {
-  max-width: 100%;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  font-family: var(--map-face);
-  font-size: 0.8125rem;
-  line-height: 1;
-  color: var(--red);
-}
-
-.overworld__foe--leader .overworld__foe-name {
-  color: var(--accent);
-}
-
-.overworld__foe-level {
-  white-space: nowrap;
-  font-size: 0.5625rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--fg-dim);
-}
-
-.overworld__foes-none {
-  align-self: center;
-  font-size: 0.6875rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--fg-dim);
-}
-
 .overworld__objective {
   display: flex;
   gap: 16px;
   min-height: 1.2em;
-  margin: 6px 0 0;
+  margin: 5px 0 0;
+  overflow: hidden;
   white-space: nowrap;
   font-size: 0.6875rem;
   letter-spacing: 0.08em;
@@ -773,57 +722,6 @@
   width: 14px;
   height: 14px;
   vertical-align: -3px;
-}
-
-/* ---- Spoils ---- */
-
-.overworld__spoils {
-  display: flex;
-  gap: 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.overworld__spoil {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  width: 4rem;
-  text-align: center;
-}
-
-.overworld__spoil-icon {
-  display: inline-flex;
-  width: 32px;
-  height: 32px;
-}
-
-.overworld__spoil-icon img,
-.overworld__spoil-icon .glyph-icon {
-  width: 32px;
-  height: 32px;
-  image-rendering: pixelated;
-}
-
-.overworld__spoil-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--fg-bright);
-}
-
-.overworld__spoil-note {
-  max-width: 100%;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  font-size: 0.5625rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  line-height: 1.2;
-  color: var(--fg-dim);
 }
 
 /* ---- Warband ---- */
@@ -923,22 +821,11 @@
   height: 2.25rem;
 }
 
-/* Narrower: the card in two rows, the destination and the foes over the
-   spoils and the warband; narrower still, the destination alone. */
+/* Narrower: the warband's cell takes what the destination leaves; narrower
+   still, the destination alone. */
 @media (max-width: 70rem) {
   .overworld__card {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: 1fr 1fr;
-    height: 15rem;
-  }
-
-  .overworld__cell--foes {
-    border-right: 0;
-  }
-
-  .overworld__cell--destination,
-  .overworld__cell--foes {
-    border-bottom: var(--hairline);
   }
 
   .overworld__tape-wrap {
@@ -953,8 +840,6 @@
     height: 8rem;
   }
 
-  .overworld__cell--foes,
-  .overworld__cell--spoils,
   .overworld__cell--warband,
   .overworld__other,
   .overworld__stage {
