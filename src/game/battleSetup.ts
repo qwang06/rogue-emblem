@@ -29,7 +29,9 @@ import { createSeededRng, randomInt } from './rng.ts';
 export type BattleSetup =
   | { mode: 'story'; chapter: number }
   | { mode: 'training'; unitClass: string }
-  | { mode: 'warband'; seed: number; stage: number; run?: RunState };
+  // `camp` is a run back at camp over its site's map, with nothing to
+  // fight there (see warbandFlow.enterCamp).
+  | { mode: 'warband'; seed: number; stage: number; run?: RunState; camp?: boolean };
 
 // A battle's starting state, whichever mode built it.
 export type BattleLevel = Level & Partial<DemoLevel>;
@@ -66,6 +68,13 @@ export function runStage(run: RunState): BattleSetup {
   return { mode: 'warband', seed: getStageSeed(run.seed, run.stage), stage: run.stage, run };
 }
 
+// The run's camp, reopened from the realm while it chooses where to go
+// (see warbandFlow.enterCamp): its site's map with no enemies, the camp
+// over it.
+export function runCamp(run: RunState): BattleSetup {
+  return { mode: 'warband', seed: getStageSeed(run.seed, run.stage), stage: run.stage, run, camp: true };
+}
+
 // The seed a battle's dice roll from when it's fixed: a stage of a run
 // rolls from the run's seed (getBattleSeed), so the run replays from it.
 // Null for any other battle, which rolls fresh each time.
@@ -100,7 +109,7 @@ export function createBattleLevel(
       const baseRegion =
         (setup.run && getSiteRegion(setup.run, content.regions)) ??
         levelRegionForStage(getStageRegion(setup.stage, content.regions), setup.stage);
-      if (setup.run && isVisit(setup.run)) return createVisitLevel(setup, setup.run, baseRegion);
+      if (setup.run && (isVisit(setup.run) || setup.camp)) return createVisitLevel(setup, setup.run, baseRegion);
       const spec = pickStageObjective(setup.stage, baseRegion, setup.seed);
       const region = withArchetype(baseRegion, pickStageArchetype(setup.stage, baseRegion, setup.seed, spec.kind));
       const lootCount = getStageLootCount(setup.stage);
@@ -178,9 +187,10 @@ function isVisit(run: RunState): boolean {
   return kind === 'town' || kind === 'shrine';
 }
 
-// The map shown while the warband visits a town or shrine: the site's
-// region with no enemies (a town grows a few more buildings), and the
-// roster off the map. The scene opens the camp or the blessing over it.
+// The map shown while the warband visits a town or shrine, or is back at
+// camp from the realm: the site's region with no enemies (a town grows a
+// few more buildings), and the roster off the map. The scene opens the
+// camp or the blessing over it.
 function createVisitLevel(setup: { seed: number }, run: RunState, region: RegionConfig): BattleLevel {
   const town = getRunSite(run)?.kind === 'town';
   const peaceful: RegionConfig = {

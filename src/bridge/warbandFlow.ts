@@ -5,7 +5,7 @@
 // all hand a run on through here, so they agree.
 
 import { saveRun } from '../data/runSave.ts';
-import { runStage } from '../game/battleSetup.ts';
+import { runCamp, runStage } from '../game/battleSetup.ts';
 import type { RunState } from '../game/warband/run.ts';
 import { resumeRunSession } from '../game/warband/runCommands.ts';
 import { BATTLE_STATE_DEFAULTS, gameStore } from './gameStore.ts';
@@ -26,4 +26,13 @@ export function enterRun(run: RunState): void {
   } else {
     gameStore.setState({ ...BATTLE_STATE_DEFAULTS, screen: 'battle', battleSetup: runStage(run) });
   }
+}
+
+// Saves `run` and reopens its camp over its site's map, from the realm
+// while it's choosing where to travel: the warband can still manage its
+// roster, trade in a town or rest before it sets out. Travel from the camp
+// comes back to the realm (GridScene.marchOn).
+export function enterCamp(run: RunState): void {
+  saveRun(run);
+  gameStore.setState({ ...BATTLE_STATE_DEFAULTS, screen: 'battle', battleSetup: runCamp(run) });
 }

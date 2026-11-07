@@ -8,6 +8,7 @@ import {
   FIRST_STORY_CHAPTER,
   getBattleDiceSeed,
   getNextBattle,
+  runCamp,
   runStage,
   STORY_CHAPTERS,
   type GameContent,
@@ -15,6 +16,8 @@ import {
 } from './battleSetup.ts';
 import { REGION_CONFIGS, REGION_SETTINGS } from '../data/regions.ts';
 import { getStageRegion } from './warband/regions.ts';
+import { generateRealm } from './warband/realm/realm.ts';
+import { HOME_SITE_ID } from './warband/travel.ts';
 import {
   advanceStage,
   applyBattleResult,
@@ -278,5 +281,25 @@ describe('stage reinforcements', () => {
     const enemies = [...level.units.values()].filter((unit) => unit.team === 'enemy');
     expect(enemies.length).toBe(getStageEnemyCount(28));
     expect(enemies.some((unit) => unit.eliteAffixes.length > 0)).toBe(true);
+  });
+});
+
+describe('runCamp', () => {
+  it("reopens the camp over the run's site, with nothing to fight", () => {
+    const realm = generateRealm(1, DEFAULT_CONTENT.regions);
+    const site = realm.sites.find((candidate) => candidate.kind === 'battle')!;
+    const { id, name, kind, depth, region, levelOffset } = site;
+    const run = {
+      ...createRun(42, new Map([['faye', new Villager({ name: 'Faye', team: 'player' })]])),
+      stage: depth + 1,
+      route: { visited: [HOME_SITE_ID, id], at: { id, name, kind, depth, region, levelOffset } },
+    };
+    const setup = runCamp(run);
+    expect(setup).toEqual({ ...runStage(run), camp: true });
+    const level = createBattleLevel(setup);
+    expect([...level.units.values()].some((unit) => unit.team === 'enemy')).toBe(false);
+    expect([...level.units.values()].every((unit) => unit.team === 'player')).toBe(true);
+    // The stage itself still has enemies to fight.
+    expect([...createBattleLevel(runStage(run)).units.values()].some((unit) => unit.team === 'enemy')).toBe(true);
   });
 });
