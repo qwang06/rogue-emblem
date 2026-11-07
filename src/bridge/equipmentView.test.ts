@@ -3,6 +3,7 @@ import { Beast } from '../game/Beast.ts';
 import { Soldier } from '../game/Soldier.ts';
 import type { Unit } from '../game/Unit.ts';
 import { WOODEN_ARMOR } from '../game/items.ts';
+import { IRON_SPEAR, WOODEN_SWORD } from '../game/weapons.ts';
 import {
   confirmEquipment,
   openEquipmentScreen,
@@ -158,5 +159,59 @@ describe('toEquipmentScreenView', () => {
       ['Remove', null],
       ['Iron Spear', 'Bram'],
     ]);
+  });
+
+  it('sums up each slot’s gear, with its tab icon and what the convoy offers for it', () => {
+    const view = toEquipmentScreenView(openEquipmentScreen(campRun([{ itemId: WOODEN_SWORD.id, quantity: 1 }])));
+    expect(view.slots[0].item?.meta).toBe(`Spear · Pow ${IRON_SPEAR.power} · Wt ${IRON_SPEAR.weight}`);
+    expect(view.slots.map((slot) => [slot.tabIcon, slot.count])).toEqual([
+      ['sword', 1],
+      ['shield', 0],
+      ['helmet', 0],
+      ['chestplate', 0],
+      ['ring', 0],
+    ]);
+    expect(view.convoyCount).toBe(1);
+    expect(view.units[0]).toMatchObject({ health: view.units[0].maxHealth });
+  });
+
+  it('tables each weapon’s numbers and what wearing it changes', () => {
+    const run = campRun([{ itemId: WOODEN_SWORD.id, quantity: 1 }]);
+    const view = toEquipmentScreenView(confirmEquipment(pointEquipmentCursor(openEquipmentScreen(run), 'slots', 0)));
+    expect(view.columns).toEqual(['Pow', 'Hit', 'Wt']);
+    const [remove, sword] = view.gear;
+    expect(remove).toMatchObject({ kind: 'Back to the convoy', cells: ['', '', ''] });
+    // Taking the spear off loses the most hit (bare hands), listed first.
+    expect(remove.deltas[0]).toMatchObject({ tone: 'down' });
+    expect(remove.deltas[0].text).toMatch(/^−\d+ HIT$/);
+    expect(remove.deltas).toHaveLength(2);
+    expect(remove.deltas.every((delta) => delta.tone === 'down')).toBe(true);
+    expect(sword).toMatchObject({
+      kind: 'Sword · 1H',
+      cells: [String(WOODEN_SWORD.power), String(WOODEN_SWORD.hit), String(WOODEN_SWORD.weight)],
+    });
+    // Same power, but the sword hits more often (a soldier is trained in both).
+    expect(sword.deltas[0]).toEqual({ text: `+${WOODEN_SWORD.hit - IRON_SPEAR.hit} HIT`, tone: 'up' });
+    // Remove is highlighted: bare hands reach nothing.
+    expect(view.range).toEqual({ before: '1', after: '–' });
+  });
+
+  it('tables armor by its defense, and lists what it adds', () => {
+    const run = campRun([{ itemId: WOODEN_ARMOR.id, quantity: 1 }]);
+    const view = toEquipmentScreenView(confirmEquipment(pointEquipmentCursor(openEquipmentScreen(run), 'slots', 3)));
+    expect(view.columns).toEqual(['Def', 'Res', 'Wt']);
+    expect(view.gear[0]).toMatchObject({ cells: [String(WOODEN_ARMOR.defense), '', String(WOODEN_ARMOR.weight)] });
+    // Its biggest gain first, then its biggest loss (the weight slows a weak soldier).
+    expect(view.gear[0].deltas[0]).toEqual({ text: `+${WOODEN_ARMOR.defense} DEF`, tone: 'up' });
+    expect(view.gear[0].deltas[1]).toMatchObject({ tone: 'down' });
+  });
+
+  it('names the teammates the highlighted item fits', () => {
+    const run = campRun();
+    const withBram = { ...run, roster: [...run.roster, { ...run.roster[0], id: 'bram', name: 'Bram' }] };
+    // The picked unit's own spear is shown over the slots column; Bram is
+    // trained in spears, the beast Rex isn't.
+    expect(toEquipmentScreenView(openEquipmentScreen(withBram)).alsoFits).toEqual(['Bram']);
+    expect(toEquipmentScreenView(openEquipmentScreen(campRun())).alsoFits).toEqual([]);
   });
 });
