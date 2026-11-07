@@ -58,7 +58,7 @@ function prefersReducedMotion(): boolean {
 // the manner of Tactics Ogre and Final Fantasy Tactics: the land the
 // warband crosses, an illustrated icon with a pennant on every site, the
 // roads it has come along and the ones on from where it stands. Picking a
-// site (arrows and Enter, or a click) walks the warband there along the
+// site (arrows or its number, then Enter, or a click) walks the warband there along the
 // road and carries on with what's there (warbandFlow.ts). With auto play
 // on, it picks a road itself. The map is painted on a canvas (realmInk.ts,
 // inkRaster.ts) at native size and scaled up whole, with the place names,
@@ -191,7 +191,11 @@ function Overworld({
       }
       const count = view.choices.length;
       if (count === 0) return;
-      if (['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(event.key)) {
+      const digit = /^[1-9]$/.test(event.key) ? Number(event.key) : 0;
+      if (digit > 0 && digit <= count) {
+        event.preventDefault();
+        setSelected(digit - 1);
+      } else if (['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(event.key)) {
         event.preventDefault();
         const step = event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? -1 : 1;
         setSelected((current) => (current + step + count) % count);
@@ -205,6 +209,8 @@ function Overworld({
   });
 
   const current = view.sites.find((site) => site.id === view.currentSiteId);
+  const mapWidth = view.width * TILE_SIZE;
+  const mapHeight = view.height * TILE_SIZE;
   const tileCenter = (point: Point): Point => ({
     x: (point.x + 0.5) * TILE_SIZE,
     y: (point.y + 0.5) * TILE_SIZE,
@@ -275,6 +281,35 @@ function Overworld({
             viewBox={`0 0 ${view.width * TILE_SIZE} ${view.height * TILE_SIZE}`}
             aria-hidden="true"
           >
+            {view.choices.length > 0 && (
+              <>
+                <defs>
+                  <filter id="overworld-soft" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation={TILE_SIZE * 0.7} />
+                  </filter>
+                  <mask id="overworld-reach" maskUnits="userSpaceOnUse" x="0" y="0" width={mapWidth} height={mapHeight}>
+                    <rect width={mapWidth} height={mapHeight} fill="#fff" />
+                    <g filter="url(#overworld-soft)">
+                      {current && <circle cx={tileCenter(current).x} cy={tileCenter(current).y} r={TILE_SIZE * 2.4} />}
+                      {routes.choices.map((line, i) => (
+                        <polyline
+                          key={`m${i}`}
+                          className="overworld__reach"
+                          points={toPoints(line)}
+                          strokeWidth={TILE_SIZE * 2.2}
+                        />
+                      ))}
+                      {view.sites
+                        .filter((site) => site.state === 'choice')
+                        .map((site) => (
+                          <circle key={site.id} cx={tileCenter(site).x} cy={tileCenter(site).y} r={TILE_SIZE * 2.6} />
+                        ))}
+                    </g>
+                  </mask>
+                </defs>
+                <rect className="overworld__veil" width={mapWidth} height={mapHeight} mask="url(#overworld-reach)" />
+              </>
+            )}
             {routes.travelled.map((line, i) => (
               <polyline
                 key={`t${i}`}
@@ -285,11 +320,10 @@ function Overworld({
             {!walk &&
               routes.choices.map((line, i) =>
                 i === selected ? null : (
-                  <polyline
-                    key={`c${i}`}
-                    className="overworld__route overworld__route--choice"
-                    points={toPoints(line)}
-                  />
+                  <g key={`c${i}`}>
+                    <polyline className="overworld__route overworld__route--choice-edge" points={toPoints(line)} />
+                    <polyline className="overworld__route overworld__route--choice" points={toPoints(line)} />
+                  </g>
                 ),
               )}
             {(walk ? walk.line : routes.choices[selected]) && (
@@ -323,6 +357,7 @@ function Overworld({
                 onMouseEnter={() => index >= 0 && !walk && setSelected(index)}
                 onClick={() => index >= 0 && travel(index)}
               >
+                {index >= 0 && !walk && <span className="overworld__ring" aria-hidden="true" />}
                 <img
                   className="overworld__icon"
                   src={getSiteIconUrl(site.kind, site.season)}
@@ -330,9 +365,9 @@ function Overworld({
                   draggable={false}
                 />
                 <span className={`overworld__pennant overworld__pennant--${pennantOf(site)}`} aria-hidden="true" />
-                {isSelected && <span className="overworld__pointer" aria-hidden="true" />}
                 {choiceCard && (
                   <span className={`overworld__callout${isSelected ? '' : ' overworld__callout--dim'}`}>
+                    <kbd className="overworld__callout-key">{index + 1}</kbd>
                     {site.name}
                     <span className="overworld__callout-kind">
                       {isSelected ? `${choiceCard.kindLabel} · next` : choiceCard.kindLabel}
