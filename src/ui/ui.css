@@ -1792,10 +1792,6 @@ kbd {
 .page-header .turn-indicator__objective,
 .page-header .deployment-banner__hint,
 .page--field .page-header .turn-indicator__turn,
-.page--field .page-header .auto-play-controls,
-.page--field .page-header .danger-zone-button,
-.page--field .page-header .controls-button,
-.page--field .page-header .main-menu-button,
 .page--field .page-header .relic-bar__key {
   display: none;
 }
@@ -1867,15 +1863,8 @@ kbd {
     display: block;
   }
 
-  .page--field .page-header .turn-indicator__turn,
-  .page--field .page-header .auto-play-controls {
+  .page--field .page-header .turn-indicator__turn {
     display: inline-flex;
-  }
-
-  .page--field .page-header .danger-zone-button,
-  .page--field .page-header .controls-button,
-  .page--field .page-header .main-menu-button {
-    display: flex;
   }
 
   .page-header .turn-indicator__objective {
