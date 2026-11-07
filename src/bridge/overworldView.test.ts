@@ -6,7 +6,6 @@ import { getRealmInk, getRouteLine } from '../game/warband/realm/realmInk.ts';
 import { createRun } from '../game/warband/run.ts';
 import { startRoute, travelTo } from '../game/warband/travel.ts';
 import {
-  describeEnemies,
   describeObjectiveSpec,
   getOverworldZoom,
   toOverworldView,
@@ -87,7 +86,7 @@ describe('toOverworldView', () => {
 });
 
 describe('toSiteDetailView', () => {
-  it('tells what fights at a battle, and nothing of the sort at a town', () => {
+  it('names a battle’s region and objective, and a town has neither', () => {
     const battle = realm.sites.find((site) => site.kind === 'battle')!;
     const card = toSiteDetailView(home, battle, SETTINGS);
     expect(card).toMatchObject({
@@ -95,23 +94,9 @@ describe('toSiteDetailView', () => {
       stage: battle.depth,
       region: SETTINGS.regions[battle.region].name,
     });
-    expect(card.enemies).toMatch(/Lv/);
     expect(card.objective).not.toBeNull();
     const town = realm.sites.find((site) => site.kind === 'town')!;
-    expect(toSiteDetailView(home, town, SETTINGS)).toMatchObject({ kindLabel: 'Town', region: null, enemies: null });
-  });
-});
-
-describe('describeEnemies', () => {
-  it('counts each class and spans the levels', () => {
-    expect(
-      describeEnemies([
-        { count: 2, unitClass: 'goblin', level: 2 },
-        { count: 1, unitClass: 'goblin', level: 3 },
-      ]),
-    ).toBe('Goblin ×3 · Lv 2–3');
-    expect(describeEnemies([{ count: 1 }])).toBe('Soldier · Lv 1');
-    expect(describeEnemies([])).toBeNull();
+    expect(toSiteDetailView(home, town, SETTINGS)).toMatchObject({ kindLabel: 'Town', region: null, objective: null });
   });
 });
 
@@ -142,13 +127,7 @@ describe('toEventView', () => {
   });
 });
 
-describe('elite lair cards', () => {
-  it("list the lair's affixes after its enemies", () => {
-    const lair = generateRealm(3, SETTINGS).sites.find((site) => site.kind === 'elite');
-    if (!lair) return;
-    expect(toSiteDetailView(home, lair, SETTINGS).enemies).toMatch(/· [A-Z]\w+, [A-Z]\w+$/);
-  });
-
+describe('the realm view', () => {
   it('tapes the stages, the Hold last, and counts the stages to it', () => {
     const view = toOverworldView(home, realm, SETTINGS);
     expect(view.tape).toHaveLength(realm.depth);
@@ -163,22 +142,21 @@ describe('elite lair cards', () => {
     expect(there.currentRegion).toBe(SETTINGS.regions[first.region].name);
   });
 
-  it('lists a battle’s foes by class with their spoils, and a town’s without', () => {
+  it('gives a battle its turns and keeps its foes and spoils unknown, and a town has neither', () => {
     const battle = toSiteDetailView(
       home,
       realm.sites.find((site) => site.kind === 'battle')!,
       SETTINGS,
     );
-    expect(battle.foes.length).toBeGreaterThan(0);
-    expect(battle.foes.every((foe) => foe.count > 0 && foe.level > 0 && foe.sprite)).toBe(true);
     expect(battle.turns).toBeGreaterThan(0);
-    expect(battle.spoils.map((spoil) => spoil.kind)).toEqual(['gold', 'pick', 'exp']);
+    expect(battle).not.toHaveProperty('foes');
+    expect(battle).not.toHaveProperty('spoils');
+    expect(battle).not.toHaveProperty('enemies');
     const town = toSiteDetailView(
       home,
       realm.sites.find((site) => site.kind === 'town')!,
       SETTINGS,
     );
-    expect(town).toMatchObject({ foes: [], turns: null });
-    expect(town.spoils.map((spoil) => spoil.kind)).toEqual(['merchant', 'rest']);
+    expect(town).toMatchObject({ objective: null, turns: null });
   });
 });

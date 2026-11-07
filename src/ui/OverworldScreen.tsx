@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { getSiteIconUrl, INK_STAMP_URLS } from '../assets/realmIcons.ts';
-import { REWARD_ICON_URLS } from '../assets/rewardIcons.ts';
 import { gameStore } from '../bridge/gameStore.ts';
 import {
   getOverworldZoom,
@@ -8,7 +7,6 @@ import {
   toOverworldView,
   type OverworldView,
   type SiteDetailView,
-  type SpoilKind,
 } from '../bridge/overworldView.ts';
 import { publishRunRelics } from '../bridge/runRelics.ts';
 import { enterRun, getRunScreen } from '../bridge/warbandFlow.ts';
@@ -31,7 +29,7 @@ import { getCurrentSiteId } from '../game/warband/travel.ts';
 import { applyRunCommand, resumeRunSession } from '../game/warband/runCommands.ts';
 import { planTravel } from '../game/warband/runPolicy.ts';
 import { Frame } from './Frame.tsx';
-import { GlyphIcon, type GlyphKind } from './GlyphIcon.tsx';
+import { GlyphIcon } from './GlyphIcon.tsx';
 import { KeyHint } from './KeyHint.tsx';
 import { OverworldRoster } from './OverworldRoster.tsx';
 import { UnitSprite } from './UnitSprite.tsx';
@@ -424,10 +422,11 @@ function StageTape({ view }: { view: OverworldView }) {
   );
 }
 
-// The highlighted road's card across the foot of the map, in four cells:
-// where it leads, who fights there and what wins it, what it pays, and
-// the warband as it stands. A fixed height, so moving between roads
-// never moves the map; a road with no battle leaves the foes cell quiet.
+// The highlighted road's card across the foot of the map, in two cells:
+// where it leads (and, for a battle, what wins it and in how many turns)
+// and the warband as it stands. Who fights there and what it pays stay
+// unknown until the warband arrives. A fixed height, so moving between
+// roads never moves the map.
 function RouteCard({
   view,
   choice,
@@ -438,10 +437,6 @@ function RouteCard({
   selected: number;
 }) {
   const hurt = view.team.filter((unit) => unit.health < unit.maxHealth).length;
-  const foeCount = choice?.foes.reduce((sum, foe) => sum + foe.count, 0) ?? 0;
-  const levels = choice?.foes.map((foe) => foe.level) ?? [];
-  const low = Math.min(...levels);
-  const high = Math.max(...levels);
   const site = choice ? view.sites.find((each) => each.id === choice.siteId) : undefined;
   return (
     <section className="overworld__card" aria-live="polite">
@@ -471,60 +466,20 @@ function RouteCard({
               )}
             </span>
             <span className="overworld__destination-blurb">{choice?.blurb ?? ''}</span>
+            <span className="overworld__objective">
+              {choice?.objective && (
+                <span>
+                  <GlyphIcon kind="rout" /> <b>{choice.objective}</b>
+                </span>
+              )}
+              {choice?.turns !== null && choice?.turns !== undefined && (
+                <span>
+                  <GlyphIcon kind="turn" /> <b>{choice.turns}</b> turns
+                </span>
+              )}
+            </span>
           </span>
         </div>
-      </div>
-
-      <div className="overworld__cell overworld__cell--foes">
-        <h3 className="overworld__cell-title">
-          <span>Foes</span>
-          <span className="overworld__cell-note">
-            {choice && foeCount > 0 ? `${foeCount} · LV ${low === high ? low : `${low}–${high}`}` : 'none'}
-          </span>
-        </h3>
-        <ul className="overworld__foes">
-          {choice?.foes.map((foe) => (
-            <li key={foe.label} className={foe.leader ? 'overworld__foe overworld__foe--leader' : 'overworld__foe'}>
-              <span className="overworld__foe-sprite">
-                <UnitSprite sprite={foe.sprite} />
-              </span>
-              <span className="overworld__foe-name">{foe.label}</span>
-              <span className="overworld__foe-level">
-                LV {foe.level}
-                {foe.leader ? ' · leader' : foe.count > 1 ? ` ×${foe.count}` : ''}
-              </span>
-            </li>
-          ))}
-          {choice && choice.foes.length === 0 && <li className="overworld__foes-none">No battle here.</li>}
-        </ul>
-        <p className="overworld__objective">
-          {choice?.objective && (
-            <span>
-              <GlyphIcon kind="rout" /> <b>{choice.objective}</b>
-            </span>
-          )}
-          {choice?.turns !== null && choice?.turns !== undefined && (
-            <span>
-              <GlyphIcon kind="turn" /> <b>{choice.turns}</b> turns
-            </span>
-          )}
-        </p>
-      </div>
-
-      <div className="overworld__cell overworld__cell--spoils">
-        <h3 className="overworld__cell-title">
-          <span>Spoils</span>
-          <span className="overworld__cell-note">{choice && choice.foes.length > 0 ? 'on victory' : 'on arrival'}</span>
-        </h3>
-        <ul className="overworld__spoils">
-          {choice?.spoils.map((spoil) => (
-            <li key={spoil.kind} className="overworld__spoil">
-              <SpoilIcon kind={spoil.kind} />
-              <span className="overworld__spoil-label">{spoil.label}</span>
-              <span className="overworld__spoil-note">{spoil.note}</span>
-            </li>
-          ))}
-        </ul>
       </div>
 
       <div className="overworld__cell overworld__cell--warband">
@@ -562,29 +517,6 @@ function RouteCard({
         </ul>
       </div>
     </section>
-  );
-}
-
-// A spoil plate's icon: a reward card's art, or a glyph.
-const SPOIL_ICONS: Readonly<Record<SpoilKind, { reward: string } | { glyph: GlyphKind }>> = {
-  gold: { reward: 'gold' },
-  pick: { reward: 'scroll' },
-  relic: { reward: 'relic' },
-  exp: { glyph: 'exp' },
-  recruit: { reward: 'draft' },
-  rest: { reward: 'rest' },
-  merchant: { glyph: 'item' },
-  blessing: { reward: 'keystone' },
-  choice: { glyph: 'book' },
-  victory: { glyph: 'seize' },
-};
-
-function SpoilIcon({ kind }: { kind: SpoilKind }) {
-  const icon = SPOIL_ICONS[kind];
-  return (
-    <span className="overworld__spoil-icon" aria-hidden="true">
-      {'reward' in icon ? <img src={REWARD_ICON_URLS[icon.reward]} alt="" /> : <GlyphIcon kind={icon.glyph} />}
-    </span>
   );
 }
 

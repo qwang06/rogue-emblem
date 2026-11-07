@@ -4,21 +4,13 @@
 // choice saying what waits there. Pure: the React OverworldScreen draws
 // this over the realm's parchment map (realmInk.ts).
 
-import type { EnemyGroup } from '../game/enemySpawns.ts';
 import type { Point } from '../game/grid.ts';
 import { SURVIVE_TURNS, TURN_LIMIT, type ObjectiveSpec } from '../game/objectives.ts';
 import { DEFAULT_SEASON, getUnitSprite, type Season } from '../game/tileset.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
 import { BATTLE_SITES, getRoad, getSite, type Realm, type Site, type SiteKind } from '../game/warband/realm/realm.ts';
-import { rollEliteAffixes } from '../game/warband/elites.ts';
 import { findEvent, getEventChoices } from '../game/warband/events.ts';
 import type { RegionSettings } from '../game/warband/regions.ts';
-import {
-  BIG_CLEAR_EXTRA_CHOICES,
-  getRewardChoices,
-  STAGE_CLEAR_GOLD,
-  STAGE_CLEAR_GOLD_PER_STAGE,
-} from '../game/warband/rewards.ts';
 import { getStageSeed, type RunState } from '../game/warband/run.ts';
 import { pickStageObjective } from '../game/warband/stageObjective.ts';
 import { levelRegionForStage } from '../game/warband/enemyCurve.ts';
@@ -40,29 +32,6 @@ export interface OverworldSiteView {
   season: Season;
 }
 
-// One class of enemy at a site: its art, name, level and how many, and
-// whether its first is the battle's named boss.
-export interface FoeView {
-  sprite: string;
-  label: string;
-  level: number;
-  count: number;
-  leader: boolean;
-}
-
-// What a site pays on the way out: gold, a reward pick, a relic, team
-// XP, a recruit, a rest, the merchant, a blessing, a choice, or the run.
-export type SpoilKind =
-  'gold' | 'pick' | 'relic' | 'exp' | 'recruit' | 'rest' | 'merchant' | 'blessing' | 'choice' | 'victory';
-
-export interface SpoilView {
-  kind: SpoilKind;
-  // The plate's big word ("80", "Relic") and the small one under it
-  // ("gold", "pick 1 of 3").
-  label: string;
-  note: string;
-}
-
 // A card for a site the warband can travel to next.
 export interface SiteDetailView {
   siteId: string;
@@ -71,18 +40,14 @@ export interface SiteDetailView {
   kindLabel: string;
   // One line on what happens there.
   blurb: string;
-  // For a battle: the region it plays, what fights there and what wins it.
+  // For a battle: the region it plays and what wins it. Who fights there
+  // and what it pays stay unknown until the warband arrives.
   region: string | null;
-  enemies: string | null;
   objective: string | null;
   // The stage it plays as.
   stage: number;
-  // For a battle: each enemy class, in the order they first appear, and
-  // the turns the battle has (the limit, or a survive objective's count).
-  foes: readonly FoeView[];
+  // For a battle: the turns it has (the limit, or a survive objective's count).
   turns: number | null;
-  // What it pays, up to three plates.
-  spoils: readonly SpoilView[];
 }
 
 // One stage on the tape across the header: behind the warband, where it
@@ -205,7 +170,7 @@ function getRoadTiles(realm: Realm, from: string, to: string): readonly Point[] 
 }
 
 // The card for `site`: its kind's text, and for a battle the region it
-// plays (its enemies at the site's depth's level, plus a fort's offset), what fights there
+// plays (its enemies at the site's depth's level, plus a fort's offset)
 // and the objective the stage draws.
 export function toSiteDetailView(run: RunState, site: Site, settings: RegionSettings): SiteDetailView {
   const { label, blurb } = KIND_TEXT[site.kind];
@@ -220,115 +185,10 @@ export function toSiteDetailView(run: RunState, site: Site, settings: RegionSett
     kindLabel: label,
     blurb,
     region: region?.name ?? null,
-    enemies: region ? describeSiteEnemies(run, site, region.enemies) : null,
     objective: spec ? describeObjectiveSpec(spec) : null,
     stage: site.depth,
-    foes: Object.freeze(region ? toFoeViews(region.enemies) : []),
     turns: spec ? (spec.kind === 'survive' ? (spec.turns ?? SURVIVE_TURNS) : TURN_LIMIT) : null,
-    spoils: Object.freeze(toSpoilViews(run, site)),
   });
-}
-
-// Each enemy class at a site, in the order they first appear, with its
-// count and the level its groups reach.
-function toFoeViews(groups: readonly EnemyGroup[]): FoeView[] {
-  const foes = new Map<string, FoeView>();
-  for (const group of groups) {
-    const classId = group.unitClass ?? 'soldier';
-    const level = group.level ?? 1;
-    const known = foes.get(classId);
-    if (known) {
-      foes.set(classId, {
-        ...known,
-        count: known.count + group.count,
-        level: Math.max(known.level, level),
-        leader: known.leader || group.boss !== undefined,
-      });
-    } else {
-      foes.set(classId, {
-        sprite: getUnitSprite(classId),
-        label: UNIT_CLASSES.find((unitClass) => unitClass.id === classId)?.label ?? classId,
-        level,
-        count: group.count,
-        leader: group.boss !== undefined,
-      });
-    }
-  }
-  return [...foes.values()].map((foe) => Object.freeze(foe));
-}
-
-// What `site` pays: a battle's clear gold (a fort's doubled) and reward
-// pick (more at a big clear; all relics at an elite lair) and the team's
-// XP; a village's chance of a recruit; a town's merchant and rest; a
-// shrine's blessing; a wayside's choice; the Hold's victory.
-function toSpoilViews(run: RunState, site: Site): SpoilView[] {
-  const spoil = (kind: SpoilKind, label: string, note: string): SpoilView => Object.freeze({ kind, label, note });
-  const clearGold = STAGE_CLEAR_GOLD + STAGE_CLEAR_GOLD_PER_STAGE * site.depth;
-  const choices = getRewardChoices(run);
-  const big = `1 of ${choices + BIG_CLEAR_EXTRA_CHOICES}`;
-  switch (site.kind) {
-    case 'battle':
-      return [
-        spoil('gold', String(clearGold), 'gold'),
-        spoil('pick', 'Pick', `1 of ${choices}`),
-        spoil('exp', '+EXP', 'team'),
-      ];
-    case 'village':
-      return [
-        spoil('gold', String(clearGold), 'gold'),
-        spoil('recruit', 'Recruit', 'may join'),
-        spoil('exp', '+EXP', 'team'),
-      ];
-    case 'fort':
-      return [
-        spoil('gold', String(clearGold * 2), 'gold ×2'),
-        spoil('pick', 'Pick', big),
-        spoil('exp', '+EXP', 'team'),
-      ];
-    case 'elite':
-      return [spoil('gold', String(clearGold), 'gold'), spoil('relic', 'Relic', big), spoil('exp', '+EXP', 'team')];
-    case 'hold':
-      return [spoil('gold', String(clearGold), 'gold'), spoil('victory', 'Victory', 'wins the run')];
-    case 'town':
-      return [spoil('merchant', 'Merchant', 'buy and sell'), spoil('rest', 'Rest', 'free')];
-    case 'shrine':
-      return [spoil('blessing', 'Blessing', `1 of ${choices}`)];
-    case 'event':
-      return [spoil('choice', 'A choice', 'for better or worse')];
-    case 'home':
-      return [];
-  }
-}
-
-// The enemies at `site` (describeEnemies), with an elite lair's affixes
-// after them: "Goblin ×2 · Lv 4 · Armored, Keen".
-function describeSiteEnemies(run: RunState, site: Site, groups: Parameters<typeof describeEnemies>[0]): string | null {
-  const enemies = describeEnemies(groups);
-  if (site.kind !== 'elite' || !enemies) return enemies;
-  return `${enemies} · ${rollEliteAffixes(run.seed, site.depth)
-    .map((affix) => affix.name)
-    .join(', ')}`;
-}
-
-// "Goblin ×2, Skeleton · Lv 2–3": the enemies by class, in the order they
-// first appear, and the levels they span.
-export function describeEnemies(
-  groups: readonly { count: number; unitClass?: string; level?: number }[],
-): string | null {
-  if (groups.length === 0) return null;
-  const counts = new Map<string, number>();
-  for (const group of groups) {
-    const classId = group.unitClass ?? 'soldier';
-    counts.set(classId, (counts.get(classId) ?? 0) + group.count);
-  }
-  const names = [...counts].map(([classId, count]) => {
-    const label = UNIT_CLASSES.find((unitClass) => unitClass.id === classId)?.label ?? classId;
-    return count > 1 ? `${label} ×${count}` : label;
-  });
-  const levels = groups.map((group) => group.level ?? 1);
-  const low = Math.min(...levels);
-  const high = Math.max(...levels);
-  return `${names.join(', ')} · Lv ${low === high ? low : `${low}–${high}`}`;
 }
 
 // What wins a battle with objective `spec`, in a few words.
