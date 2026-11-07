@@ -1,0 +1,571 @@
+/* ---- Camp screen -------------------------------------------------------- */
+
+/* The camp over the whole stage: the warband down the left, the picked
+   unit's dossier in the middle, the actions down the right, and the bar
+   across the foot, on flat ink like the battle's columns. */
+.hud .camp-screen {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 17.5rem minmax(0, 1fr) 17.5rem;
+  grid-template-rows: minmax(0, 1fr) 3.5rem;
+  background: var(--bezel);
+  pointer-events: auto;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--fg);
+}
+
+.camp-screen__column {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+
+.camp-screen__warband {
+  border-right: var(--hairline);
+}
+
+.camp-screen__side {
+  border-left: var(--hairline);
+}
+
+/* The roster and the actions grow; the supplies, relics and site sit
+   at their columns' feet. */
+.camp-screen__roster,
+.camp-screen__actions {
+  flex: 1;
+}
+
+.camp-screen__supplies,
+.camp-screen__here {
+  margin-top: auto;
+  border-top: var(--hairline);
+  border-bottom: 0;
+}
+
+/* ---- Warband ---- */
+
+.camp-screen__units {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A unit's row like the battle's party rows, lit when picked: sprite,
+   serif name with the HP number at the row's end, class and level with
+   the HP blocks under them. */
+.camp-screen__unit {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 2px;
+  min-height: 2.25rem;
+  margin: 0 -14px;
+  padding: 4px 14px 5px;
+  border-bottom: 1px solid rgb(138 109 59 / 25%);
+  cursor: pointer;
+}
+
+.camp-screen__unit:hover {
+  background: rgb(255 255 255 / 4%);
+}
+
+.camp-screen__unit--picked {
+  background: var(--blue-bg);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.camp-screen__unit-sprite {
+  grid-row: 1 / 3;
+  display: inline-flex;
+}
+
+.camp-screen__unit-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1;
+  color: var(--blue);
+}
+
+.camp-screen__unit-hp {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-bright);
+}
+
+.camp-screen__unit-hp-max {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--fg-dim);
+}
+
+.camp-screen__unit-class {
+  grid-column: 2;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.camp-screen__unit-flag {
+  color: var(--accent);
+}
+
+.camp-screen__unit-flag--hurt {
+  color: var(--red);
+}
+
+.camp-screen__unit-pips {
+  grid-column: 3;
+  justify-self: end;
+}
+
+.camp-screen__count,
+.camp-screen__convoy,
+.camp-screen__here-line {
+  margin: 6px 0 0;
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.camp-screen__count-number {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--fg-bright);
+}
+
+/* ---- Supplies ---- */
+
+.camp-screen__supply-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin: 0;
+}
+
+.camp-screen__supply {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-bright);
+}
+
+.camp-screen__supply .item-icon {
+  width: 20px;
+  height: 20px;
+  image-rendering: auto;
+}
+
+/* ---- Actions ---- */
+
+.camp-screen__action-list {
+  margin: 0 -14px;
+  padding: 0;
+  list-style: none;
+}
+
+/* An action's row: its digit in a keycap, its icon, its name, and a note
+   at the end; the highlighted one is filled with the accent. */
+.camp-screen__action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 2.75rem;
+  padding: 0 14px 0 10px;
+  border-bottom: 1px solid rgb(255 255 255 / 5%);
+  font-size: 0.875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.camp-screen__action .menu-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.camp-screen__action-label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.camp-screen__action-note {
+  flex: none;
+  margin-left: auto;
+  max-width: 45%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-align: right;
+  color: var(--fg-dim);
+}
+
+.camp-screen__key {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.375rem;
+  height: 1.375rem;
+  padding: 0 4px;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--accent);
+  background: #1b1e33;
+  border: 1px solid rgb(138 109 59 / 75%);
+  border-bottom-width: 2px;
+}
+
+.camp-screen__action--selected {
+  background: var(--accent);
+  color: var(--tab-fg);
+  font-weight: 700;
+}
+
+.camp-screen__action--selected .camp-screen__action-note {
+  color: #5a3a10;
+}
+
+.camp-screen__action--selected .camp-screen__key {
+  color: var(--tab-fg);
+  background: #e2a53a;
+  border-color: #8a5a14;
+}
+
+.camp-screen__action--disabled {
+  opacity: 0.45;
+}
+
+/* ---- Relics and the site ---- */
+
+.camp-screen__relic-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.camp-screen__relic {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  column-gap: 10px;
+  row-gap: 2px;
+  align-items: center;
+}
+
+.camp-screen__relic-icon {
+  grid-row: span 2;
+}
+
+.camp-screen__relic-name {
+  font-family: var(--serif);
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--fg);
+}
+
+.camp-screen__relic-copies {
+  font-family: var(--pixel);
+  font-size: 0.75rem;
+  color: var(--fg-dim);
+}
+
+.camp-screen__relic-text {
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--fg-dim);
+}
+
+.camp-screen__here-name {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.125rem;
+  line-height: 1.1;
+  color: var(--fg-bright);
+}
+
+/* ---- Dossier ---- */
+
+.camp-screen__dossier {
+  min-width: 0;
+  min-height: 0;
+  padding: 16px 22px 18px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+
+.camp-screen__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: 16px;
+  align-items: center;
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: var(--hairline);
+}
+
+.camp-screen__portrait {
+  position: relative;
+  display: inline-flex;
+  padding: 4px;
+  background: var(--well);
+  outline: 1px solid rgb(138 109 59 / 55%);
+}
+
+.camp-screen__lines {
+  min-width: 0;
+}
+
+.camp-screen__name {
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--serif);
+  font-size: 1.625rem;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--blue);
+}
+
+.camp-screen__class {
+  margin: 5px 0 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1.1;
+  color: var(--fg);
+}
+
+.camp-screen__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+}
+
+.camp-screen__tag {
+  padding: 3px 7px 2px;
+  border: 1px solid rgb(138 109 59 / 55%);
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.camp-screen__tag--hot {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.camp-screen__level {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.camp-screen__level-label,
+.camp-screen__level-next {
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--fg-dim);
+}
+
+.camp-screen__level-value {
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-bright);
+}
+
+.camp-screen__pages {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 28px;
+}
+
+.camp-screen__page {
+  min-width: 0;
+}
+
+.camp-screen__meters {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.camp-screen__meters .meter__track {
+  height: 10px;
+  box-shadow: 0 0 0 1px rgb(138 109 59 / 55%);
+}
+
+.camp-screen__meters .meter__value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-bright);
+}
+
+/* Stats and rates three to a row: "STR 7 60%". */
+.camp-screen__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px 12px;
+  margin: 0;
+}
+
+.camp-screen__cell {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 1.9rem;
+}
+
+.camp-screen__cell dt {
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--fg-dim);
+}
+
+.camp-screen__cell dd {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--fg-bright);
+}
+
+.camp-screen__cell-max {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--fg-dim);
+}
+
+.camp-screen__cell--over dd {
+  color: var(--red);
+}
+
+.camp-screen__growth {
+  display: inline-block;
+  width: 2.2rem;
+  margin-left: 4px;
+  font-size: 0.625rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-align: right;
+  color: var(--fg-dim);
+}
+
+.camp-screen__growth--high {
+  color: var(--green);
+}
+
+.camp-screen__growth--low {
+  color: var(--muted);
+}
+
+.camp-screen__quirk {
+  margin: 0;
+  color: var(--fg-dim);
+}
+
+.camp-screen__quirk-name {
+  font-family: var(--serif);
+  font-size: 1rem;
+  color: var(--fg-bright);
+}
+
+/* The dossier's skill and item rows are one line each, the line on what
+   they do kept for the tooltip. */
+.camp-screen__entry {
+  min-height: 2.25rem;
+}
+
+/* ---- Bar ---- */
+
+.camp-screen__bar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 14px;
+  border-top: var(--hairline);
+}
+
+.camp-screen__hints {
+  justify-content: flex-start;
+}
+
+/* Too narrow for three columns: the dossier alone, scrolling, with the
+   actions under it. */
+@media (max-width: 60rem) {
+  .hud .camp-screen {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) 3.5rem;
+  }
+
+  .camp-screen__warband {
+    display: none;
+  }
+
+  .camp-screen__side {
+    order: -1;
+    border-left: 0;
+    border-bottom: var(--hairline);
+  }
+
+  .camp-screen__relics,
+  .camp-screen__here {
+    display: none;
+  }
+
+  .camp-screen__pages {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

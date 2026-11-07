@@ -56,6 +56,7 @@ export type Command =
   | { type: 'hover-equipment'; column: EquipmentColumn; index: number }
   | { type: 'select-equipment'; column: EquipmentColumn; index: number }
   | { type: 'select-equipment-unit'; index: number }
+  | { type: 'pick-camp-unit'; index: number }
   | { type: 'step-equipment-unit'; delta: number }
   | { type: 'hover-promotion'; index: number }
   | { type: 'select-promotion'; index: number }
