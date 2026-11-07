@@ -44,6 +44,7 @@
 .anim-viewer__choice[aria-pressed='true'] {
   color: var(--accent);
   background: var(--selection);
+  box-shadow: var(--selection-ring);
   border-color: var(--accent);
 }
 

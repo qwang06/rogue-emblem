@@ -164,6 +164,7 @@ button.equipment-categories__tab:hover {
 .equipment-categories__tab--selected:hover {
   color: var(--fg-bright);
   background: var(--selection);
+  box-shadow: var(--selection-ring);
 }
 
 .equipment-layout__gear .scroll-list {

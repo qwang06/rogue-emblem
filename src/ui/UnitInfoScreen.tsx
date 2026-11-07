@@ -34,7 +34,11 @@ export function UnitInfoScreen() {
   return (
     <div className="pause-overlay unit-info-layer" onClick={() => gameCommands.send({ type: 'cancel' })}>
       <div className="unit-info-window">
-        <section className={`panel unit-info unit-info--${unit.team}`} role="dialog" aria-labelledby="unit-info-name">
+        <section
+          className={`panel panel--page unit-info unit-info--${unit.team}`}
+          role="dialog"
+          aria-labelledby="unit-info-name"
+        >
           <Identity unit={unit} />
           <Stats unit={unit} />
           <Combat unit={unit} />

@@ -32,7 +32,7 @@ export function DialogBox() {
         if (event.detail > 1) event.preventDefault();
       }}
     >
-      <section className={`panel dialog-box dialog-box--${line.side}`} aria-label="Dialog">
+      <section className={`panel panel--page dialog-box dialog-box--${line.side}`} aria-label="Dialog">
         <DialogPortrait portrait={line.portrait} sprite={line.sprite} />
         <div className="dialog-box__body">
           {line.speaker && <h2 className="dialog-box__speaker">{line.speaker}</h2>}

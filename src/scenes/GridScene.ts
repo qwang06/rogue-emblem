@@ -359,7 +359,7 @@ const ENRAGE_PAUSE_MS = 600;
 const PLACE_UNITS_INDEX = 0;
 const START_INDEX = 1;
 // How long a walking unit takes to glide from one tile to the next.
-const MOVE_STEP_MS = 140;
+const MOVE_STEP_MS = 110;
 // How long a damage number stays on screen (the React HUD animates it).
 const DAMAGE_POPUP_DURATION_MS = 700;
 // How long a missed strike holds before the next one (about a hit flash).
@@ -368,7 +368,7 @@ const MISS_PAUSE_MS = 420;
 // its breath or swing spills over their tiles (under roofs, 0.8).
 const ATTACK_DEPTH = 0.78;
 // How long the "Player Phase" / "Enemy Phase" banner holds the screen.
-const PHASE_BANNER_DURATION_MS = 1200;
+const PHASE_BANNER_DURATION_MS = 800;
 // Pauses in the enemy phase: on each enemy before it moves, and between enemies.
 const ENEMY_FOCUS_DELAY_MS = 250;
 const ENEMY_ACTION_DELAY_MS = 300;
@@ -376,9 +376,9 @@ const ENEMY_ACTION_DELAY_MS = 300;
 // pick, moving past a screen), so it can be followed.
 const AUTO_STEP_MS = 450;
 // How long a player unit's XP bar shows after combat (the React HUD fills it).
-const EXPERIENCE_BAR_MS = 1100;
+const EXPERIENCE_BAR_MS = 700;
 // How long each level-up panel holds the screen.
-const LEVEL_UP_MS = 2400;
+const LEVEL_UP_MS = 1800;
 // How long the reward pick a won stage opens on ignores confirm.
 const REWARD_PICK_GRACE_MS = 500;
 // How long a boon pick waits before taking confirm: its level-up effect.
