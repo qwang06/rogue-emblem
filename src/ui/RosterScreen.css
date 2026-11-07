@@ -117,8 +117,8 @@
   font-weight: 700;
   text-transform: uppercase;
   color: var(--fg-dim);
-  background: var(--bg);
-  border: var(--border);
+  background: var(--bg-light);
+  border: var(--px) solid transparent;
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   cursor: pointer;
 }
@@ -130,8 +130,8 @@
 .roster-tabs__tab--selected,
 .roster-tabs__tab--selected:hover {
   color: var(--accent);
-  background: var(--bg-light);
-  border-bottom-color: var(--bg-light);
+  background: var(--well);
+  border-bottom-color: var(--well);
   box-shadow: inset 0 calc(2 * var(--px)) 0 var(--accent);
 }
 
@@ -141,8 +141,8 @@
   min-height: var(--tab-body);
   padding: 8px;
   overflow-y: auto;
-  background: var(--bg-light);
-  border: var(--border);
+  background: var(--well);
+  border: var(--px) solid transparent;
   border-radius: 0 var(--radius-sm) var(--radius-sm);
 }
 
