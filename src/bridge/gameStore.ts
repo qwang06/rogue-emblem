@@ -9,6 +9,7 @@ import type { ObjectiveStatus } from '../game/objectives.ts';
 import type { BoonPickView } from './boonPickView.ts';
 import type { MentorScreenView } from './mentorView.ts';
 import type { BossBarView, BossIntroView } from './bossView.ts';
+import type { IntentView, ThreatSummaryView } from './intentView.ts';
 import type { MapTagView } from './mapTagView.ts';
 import type { PartyUnitView } from './partyView.ts';
 import type { Season } from '../game/tileset.ts';
@@ -82,6 +83,8 @@ export interface BattleState {
   combatForecast: CombatForecastView | null;
   dangerZoneVisible: boolean;
   intentTags: readonly MapTagView[];
+  enemyIntents: readonly IntentView[];
+  threat: ThreatSummaryView | null;
   pushTag: MapTagView | null;
   menuAnchor: TileAnchorView | null;
   experienceGain: ExperienceGainView | null;
@@ -161,6 +164,8 @@ export const BATTLE_STATE_DEFAULTS: Readonly<BattleState> = Object.freeze({
   combatForecast: null, // CombatForecastView from toCombatForecastView() while aiming an attack at a target, or null
   dangerZoneVisible: false, // whether the map shades every tile an enemy could strike next phase (toggled with D)
   intentTags: [], // MapTagViews from toIntentTagView(): the HP the enemies' intents threaten each unit with, during the player phase
+  enemyIntents: [], // IntentViews from toIntentViews(): what each enemy means to do next phase (the right column's enemy rows), during the player phase
+  threat: null, // ThreatSummaryView from summarizeThreats(): what the intents add up to (the right column's threat readout) during the player phase, else null
   pushTag: null, // MapTagView from toPushTagView() of what the Shove being aimed would do, or null
   menuAnchor: null, // TileAnchorView from toTileAnchorView() of the active unit's tile, which its menus open beside, or null
   experienceGain: null, // ExperienceGainView from toExperienceGainView() while a unit's XP bar fills after combat, or null

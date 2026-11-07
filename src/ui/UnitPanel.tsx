@@ -2,6 +2,7 @@ import type { UnitView } from '../bridge/views.ts';
 import type { Team } from '../game/turns.ts';
 import { ItemIcon } from './ItemIcon.tsx';
 import { pickCornerAwayFromTile } from './menuPlacement.ts';
+import { Pips } from './Pips.tsx';
 import { RankBadge } from './RankBadge.tsx';
 import { StatLabel } from './StatLabel.tsx';
 import { UnitSprite } from './UnitSprite.tsx';
@@ -74,18 +75,22 @@ export function UnitPanel({
       {heading && docked && <h2 className="dock-section__title">{heading}</h2>}
       <div className="unit-panel__header">
         <span className="unit-panel__portrait">
-          <UnitSprite sprite={unit.sprite} scale={2} />
+          <UnitSprite sprite={unit.sprite} scale={docked ? 3 : 2} />
           {unit.rank && <RankBadge rank={unit.rank} scale={2} className="rank-badge--portrait" />}
         </span>
         {docked ? (
-          // The name on its own line, then "Villager · Lv 1", as a status strip reads.
+          // The name on its own line, the class under it, then the level as
+          // the stack's one loud number, as a dossier reads.
           <div className="unit-panel__lines unit-panel__lines--docked">
             <p className="unit-panel__name" title={unit.name}>
               {unit.name}
             </p>
             <p className="unit-panel__class" title={unit.classLabel ?? undefined}>
               <span>{unit.classLabel ?? '–'}</span>
-              <span className="unit-panel__level">Lv {unit.level}</span>
+            </p>
+            <p className="unit-panel__level-line">
+              <span className="unit-panel__level-label">Level</span>
+              <span className="unit-panel__level-value">{unit.level}</span>
             </p>
           </div>
         ) : (
@@ -109,8 +114,19 @@ export function UnitPanel({
       </div>
 
       <div className="unit-panel__bars">
-        <Meter label="HP" value={unit.health} max={unit.maxHealth} kind="hp" />
-        <Meter label="MP" value={unit.mana} max={unit.maxMana} kind="mp" />
+        {docked ? (
+          // Docked, HP and MP are blocks (Pips) with the number loud at the
+          // row's edge; EXP keeps its bar.
+          <>
+            <PipRow label="HP" value={unit.health} max={unit.maxHealth} kind="hp" />
+            <PipRow label="MP" value={unit.mana} max={unit.maxMana} kind="mp" />
+          </>
+        ) : (
+          <>
+            <Meter label="HP" value={unit.health} max={unit.maxHealth} kind="hp" />
+            <Meter label="MP" value={unit.mana} max={unit.maxMana} kind="mp" />
+          </>
+        )}
         {showExperience && <Meter label="EXP" value={unit.experience} max={unit.experienceToLevel} kind="exp" />}
       </div>
 
@@ -161,6 +177,23 @@ export function UnitPanel({
         </p>
       )}
     </section>
+  );
+}
+
+// A stat as blocks: its abbreviation, the blocks, and the value at the
+// edge, the maximum after it only when they differ.
+function PipRow({ label, value, max, kind }: { label: string; value: number; max: number; kind: 'hp' | 'mp' }) {
+  return (
+    <div className={`pip-row pip-row--${kind}`}>
+      <span className="pip-row__label">
+        <StatLabel label={label} />
+      </span>
+      <Pips value={value} max={max} kind={kind} label={label} />
+      <span className="pip-row__value">
+        {value}
+        {value !== max && <span className="pip-row__max">/{max}</span>}
+      </span>
+    </div>
   );
 }
 

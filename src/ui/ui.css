@@ -73,6 +73,10 @@
      ink surface, its sections parted by thin gold hairlines, the gold kept
      faint so the numbers on it stay the loudest thing. */
   --bezel: #171a2c;
+  /* HP as blocks (Pips): lit, dark, and the red of a point about to go. */
+  --pip-empty: #2b3049;
+  --pip-lost: #d8453a;
+  --bronze-bright: #c9a15a;
   --hairline: 1px solid rgb(138 109 59 / 75%);
   /* One face for everything: a pixel font, set in caps where the GBA
      would. */
@@ -1085,20 +1089,78 @@ kbd {
   border-bottom: 0;
 }
 
-/* The objective: the goal in bright text after its icon, the loss in dim
-   text, the turn count big against its limit. */
-.objective-card__goal {
+/* The objective as a WIN / LOSE pair: each line led by its word in its
+   color (green, red) at a fixed width, then its icon and text (the goal
+   bright, the loss dim), then the turn count big against its limit over
+   a row of ten ticks that fill as the turns go. */
+.objective-card__goal,
+.objective-card__defeat {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
   margin: 0;
+}
+
+.objective-card__goal {
   font-weight: 700;
   color: var(--fg-bright);
 }
 
 .objective-card__defeat {
-  margin: 0;
+  margin-top: 2px;
   color: var(--fg-dim);
+}
+
+.objective-card__goal > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The defeat line is often two clauses ("all your units fall, or turn 40
+   ends"), so it wraps to a second line instead of cutting off. */
+.objective-card__defeat {
+  align-items: flex-start;
+}
+
+.objective-card__defeat > span:last-child {
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.objective-card__key {
+  flex: none;
+  width: 2rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.objective-card__key--win {
+  color: var(--green);
+}
+
+.objective-card__key--lose {
+  color: var(--red);
+}
+
+.objective-card__ticks {
+  display: flex;
+  gap: 2px;
+  margin-top: 5px;
+}
+
+.objective-card__tick {
+  flex: 1;
+  height: 4px;
+  background: var(--pip-empty);
+}
+
+.objective-card__tick--spent {
+  background: var(--bronze-bright);
 }
 
 .objective-card__turn {
@@ -1140,8 +1202,130 @@ kbd {
 }
 
 .unit-panel--docked .unit-panel__portrait {
-  width: 64px;
-  height: 64px;
+  width: 108px;
+  height: 108px;
+}
+
+/* The header's stack beside the portrait: the name, the class, then
+   "LEVEL 6" with the number loud at the stack's foot. */
+.unit-panel--docked .unit-panel__header {
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.unit-panel--docked .unit-panel__lines--docked {
+  display: flex;
+  flex-direction: column;
+  min-height: 108px;
+}
+
+.unit-panel__level-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin: auto 0 0 !important;
+}
+
+.unit-panel__level-label {
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.unit-panel__level-value {
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--fg-bright);
+}
+
+/* HP and MP as blocks (Pips) with the number loud at the row's edge. */
+.pip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 1.75rem;
+}
+
+.pip-row__label {
+  flex: none;
+  width: 2.5em;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.pip-row--hp .pip-row__label {
+  color: var(--green);
+}
+
+.pip-row--mp .pip-row__label {
+  color: var(--cyan);
+}
+
+.pip-row__value {
+  margin-left: auto;
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-bright);
+}
+
+.pip-row--mp .pip-row__value {
+  font-size: 1.125rem;
+}
+
+.pip-row__max {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--fg-dim);
+}
+
+/* A row of blocks, one per point (pips.ts): lit in the stat's color, dark
+   when empty, red for a point a preview says is about to go. */
+.pips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  align-items: center;
+  max-width: 100%;
+}
+
+.pips__pip {
+  display: block;
+  width: 8px;
+  height: 13px;
+  background: var(--pip-empty);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 35%);
+}
+
+.pips--hp .pips__pip--on {
+  background: var(--green);
+}
+
+.pips--mp .pips__pip--on {
+  background: var(--cyan);
+}
+
+.pips__pip--lost {
+  background: var(--pip-lost);
+}
+
+.pips--small .pips__pip {
+  width: 6px;
+  height: 10px;
+}
+
+.pips--small {
+  gap: 1px;
+}
+
+.pips--big .pips__pip {
+  width: 11px;
+  height: 18px;
 }
 
 /* The numbers that matter read bigger than their labels: HP / MP values
@@ -1198,11 +1382,6 @@ kbd {
   .dock-section {
     padding: 12px 16px 14px;
     font-size: 0.9375rem;
-  }
-
-  .unit-panel--docked .unit-panel__portrait {
-    width: 80px;
-    height: 80px;
   }
 
   .unit-panel--docked .unit-panel__stat {
@@ -1288,6 +1467,77 @@ kbd {
   color: var(--fg-bright);
 }
 
+/* The threat readout pinned at the right column's foot: the count and the
+   damage loud, the toggle a keycap hint that also takes the click. */
+.threat-card {
+  margin-top: auto;
+}
+
+.threat-card__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 5px;
+  margin: 0;
+  color: var(--fg-dim);
+}
+
+.threat-card__units,
+.threat-card__damage {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--fg-bright);
+}
+
+.threat-card__damage,
+.threat-card__lethal {
+  color: var(--red);
+}
+
+.threat-card__calm {
+  color: var(--fg-dim);
+}
+
+.threat-card__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+
+.threat-card__toggle kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 1.5rem;
+  height: 1.375rem;
+  padding: 1px 6px 0;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+  background: linear-gradient(#2c2a3a, #1d1c2a);
+  border: 1px solid rgb(138 109 59 / 85%);
+  border-bottom-width: 3px;
+  border-bottom-color: #5a4526;
+  border-radius: 3px;
+}
+
+.threat-card__toggle[aria-pressed='true'] {
+  color: var(--accent);
+}
+
 /* The column on the stage's right (BattleSide), the dock's mirror: the
    party roster, or the forecast while an attack is aimed. */
 .battle-side {
@@ -1329,10 +1579,14 @@ kbd {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr) auto;
   align-items: center;
-  column-gap: 8px;
+  column-gap: 10px;
   min-height: 2.25rem;
-  padding: 2px 0;
+  padding: 4px 0 5px;
   border-bottom: 1px solid rgb(138 109 59 / 25%);
+}
+
+.team-card__unit {
+  row-gap: 2px;
 }
 
 .roster-card__unit {
@@ -1440,50 +1694,99 @@ kbd {
 }
 
 .team-card__class {
-  grid-column: 2 / 4;
+  grid-column: 2;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 0.6875rem;
-  letter-spacing: 0.04em;
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--fg-dim);
 }
 
-.team-card__hp {
-  grid-column: 2;
-  display: block;
-  height: 10px;
-  background: var(--desktop);
-  box-shadow: 0 0 0 1px rgb(138 109 59 / 55%);
+/* "· Moved" after the class, in bronze, once the unit is done. */
+.team-card__flag {
+  color: var(--bronze-bright);
 }
 
-.team-card__hp-fill {
-  display: block;
-  height: 100%;
-  background: var(--green);
+/* The HP blocks under the number, flush with the row's edge. */
+.team-card__hp {
+  grid-column: 3;
+  justify-self: end;
+  display: flex;
+  justify-content: flex-end;
+  max-width: 7.5rem;
 }
 
 .team-card__hp-value {
   grid-column: 3;
-  font-size: 1.125rem;
+  justify-self: end;
+  font-size: 1.0625rem;
   font-weight: 700;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
   color: var(--fg-bright);
 }
 
-/* The enemies' rows read in crimson. */
+.team-card__hp-max {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--fg-dim);
+}
+
 .team-card--enemy .team-card__name {
   color: var(--red);
 }
 
-.team-card--enemy .team-card__hp-fill {
-  background: var(--red);
-}
-
 .team-card--enemy .team-card__unit--fallen .team-card__name {
   color: var(--fg-dim);
+}
+
+.team-card__unit--acted {
+  opacity: 0.45;
+}
+
+.team-card__unit--fallen {
+  opacity: 0.4;
+}
+
+.team-card__unit--fallen .team-card__name {
+  text-decoration: line-through;
+}
+
+/* An enemy's intent under its row (Into the Breach): a red arrow, the
+   target's name, the damage red, the hit chance dim. */
+.team-card__intent {
+  grid-column: 2 / 4;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.team-card__intent--idle {
+  color: var(--fg-faint, #6c7194);
+}
+
+.team-card__intent-arrow {
+  font-size: 0.875rem;
+  color: var(--red);
+}
+
+.team-card__intent-target {
+  color: var(--fg);
+}
+
+.team-card__intent-damage {
+  font-weight: 700;
+  color: var(--red);
 }
 
 /* Done for the phase: the whole row dims. Fallen: dim and struck through. */
@@ -1580,13 +1883,35 @@ kbd {
 
 /* The detail line: one line, dim, cut short rather than wrapped. */
 .command-detail {
-  min-height: 1.2em;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 1.375rem;
   overflow: hidden;
   font-size: 0.75rem;
   line-height: 1.2;
   white-space: nowrap;
-  text-overflow: ellipsis;
   color: var(--fg-dim);
+}
+
+.command-detail__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* While a menu is open, its keys sit at the line's end. */
+.battle-bar__hints--detail {
+  flex: none;
+  min-height: 0;
+}
+
+.battle-bar__hints--detail .key-hint__entry kbd {
+  height: 1.125rem;
+  min-width: 1.25rem;
+  font-size: 0.6875rem;
+  border-bottom-width: 2px;
 }
 
 /* A weapon's numbers on the detail line: "POW 1  HIT 90  CRT 0". */

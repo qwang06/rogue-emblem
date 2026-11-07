@@ -206,6 +206,7 @@ import { planNextTurn } from '../game/battle/ai.ts';
 import { getEnemyIntents, getIntentThreats, type EnemyIntent } from '../game/battle/intents.ts';
 import { getIntentArrowShape } from '../game/intentArrow.ts';
 import { getPushDirection, getPushResult } from '../game/push.ts';
+import { summarizeThreats, toIntentViews } from '../bridge/intentView.ts';
 import { toIntentTagView, toPushTagView } from '../bridge/mapTagView.ts';
 import { toPartyView } from '../bridge/partyView.ts';
 import {
@@ -3095,10 +3096,13 @@ export class GridScene extends Phaser.Scene {
     const showing = !this.preview && stage === 'battle' && !outcome && turnState?.team === 'player';
     const intents = showing ? getEnemyIntents(this.shown) : [];
     for (const intent of intents) this.drawIntent(this.intentGraphics, this.intentArrowGraphics, intent);
-    const tags = getIntentThreats(this.shown, intents).map((threat) =>
-      toIntentTagView(threat, this.getTileAnchor(threat.at)),
-    );
-    gameStore.setState({ intentTags: tags });
+    const threats = getIntentThreats(this.shown, intents);
+    const tags = threats.map((threat) => toIntentTagView(threat, this.getTileAnchor(threat.at)));
+    gameStore.setState({
+      intentTags: tags,
+      enemyIntents: toIntentViews(this.shown, intents),
+      threat: showing ? summarizeThreats(threats) : null,
+    });
   }
 
   // Draws an intent's shape (getIntentArrowShape): the dashed route on
