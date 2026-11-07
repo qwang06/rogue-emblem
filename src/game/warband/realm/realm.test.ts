@@ -14,6 +14,7 @@ import {
   layOutColumns,
   pickKinds,
   REALM_HEIGHT,
+  seasonsByDepth,
   TOWN_EVERY,
   type Realm,
 } from './realm.ts';
@@ -246,5 +247,53 @@ describe('pickKinds', () => {
       });
       expect(kinds.at(-2)).toContain('town');
     }
+  });
+});
+
+describe('rivers and seasons', () => {
+  const key = (p: { x: number; y: number }) => `${p.x},${p.y}`;
+
+  it('run from a range over open ground to a lake or the edge, clear of sites, roads and each other', () => {
+    expect(REALMS.some((realm) => realm.rivers.length > 0)).toBe(true);
+    for (const realm of REALMS) {
+      const roadTiles = new Set([...realm.roads.flatMap((road) => road.path), ...realm.sites].map(key));
+      const nearSites = new Set(
+        realm.sites.flatMap((site) =>
+          [-1, 0, 1].flatMap((dy) => [-1, 0, 1].map((dx) => key({ x: site.x + dx, y: site.y + dy }))),
+        ),
+      );
+      const seen = new Set<string>();
+      for (const river of realm.rivers) {
+        expect(river.length).toBeGreaterThanOrEqual(6);
+        expect(terrainAt(realm, river[0].x, river[0].y)).toBe('mountain');
+        const last = river[river.length - 1];
+        const { width, height } = realm.grid;
+        const atEdge = last.x === 0 || last.y === 0 || last.x === width - 1 || last.y === height - 1;
+        expect(terrainAt(realm, last.x, last.y) === 'water' || atEdge).toBe(true);
+        for (let i = 1; i < river.length; i++) {
+          const tile = river[i];
+          expect(Math.abs(tile.x - river[i - 1].x) + Math.abs(tile.y - river[i - 1].y)).toBe(1);
+          expect(terrainAt(realm, tile.x, tile.y)).not.toBe('mountain');
+          expect(nearSites.has(key(tile))).toBe(false);
+          expect(roadTiles.has(key(tile)) && roadTiles.has(key(river[i - 1]))).toBe(false);
+          expect(seen.has(key(tile))).toBe(false);
+        }
+        for (const tile of river) seen.add(key(tile));
+      }
+    }
+  });
+
+  it('give each depth the season its sites play in, home taking the first stop’s', () => {
+    for (const realm of REALMS) {
+      expect(realm.seasons).toHaveLength(realm.depth + 1);
+      expect(realm.seasons[0]).toBe(realm.seasons[1]);
+      for (const site of realm.sites.filter((site) => site.depth > 0)) {
+        const season = SETTINGS.regions[site.region].season ?? 'summer';
+        const atDepth = realm.sites.filter((other) => other.depth === site.depth);
+        if (atDepth.length === 1) expect(realm.seasons[site.depth]).toBe(season);
+      }
+    }
+    const first = REALMS[0];
+    expect(seasonsByDepth(first.sites, SETTINGS, first.depth)).toEqual([...first.seasons]);
   });
 });

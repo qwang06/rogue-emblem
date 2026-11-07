@@ -15,10 +15,11 @@ import type { BuildingKind, BuildingPlacement } from '../../buildings.ts';
 import type { Rng } from '../../combatStats.ts';
 import { createGrid, type Grid, type Point } from '../../grid.ts';
 import { createSeededRng, randomInt, shuffle } from '../../rng.ts';
-import type { BuildingPaletteName } from '../../tileset.ts';
+import { DEFAULT_SEASON, type BuildingPaletteName, type Season } from '../../tileset.ts';
 import type { RegionSettings } from '../regions.ts';
 import { nameRealm, nameSite } from './realmNames.ts';
 import { detectBiome, pickSiteRegion } from './realmRegions.ts';
+import { layRivers } from './realmRivers.ts';
 import { carveRoad, linkColumns } from './realmRoads.ts';
 import { getOnwardRoads } from './realmRoutes.ts';
 import { clearSpecks, generateRealmLand, LAND_RULES, landAt, setLand, type RealmLand } from './realmTerrain.ts';
@@ -73,6 +74,12 @@ export interface Realm {
   grid: Grid;
   sites: readonly Site[];
   roads: readonly Road[];
+  // The rivers drawn on the map (realmRivers.ts), each its tiles from
+  // its source in a range to its mouth at a lake or the map's edge.
+  rivers: readonly (readonly Point[])[];
+  // The season of the land at each depth (index), from the regions the
+  // sites there play: the map's paper changes with it.
+  seasons: readonly Season[];
   buildings: readonly BuildingPlacement[];
   palette: BuildingPaletteName;
 }
@@ -80,7 +87,7 @@ export interface Realm {
 // The map's size: four columns per stop, with a margin, and this tall.
 export const REALM_COLUMN_SPACING = 4;
 export const REALM_HEIGHT = 18;
-const REALM_MARGIN = 2;
+export const REALM_MARGIN = 2;
 
 // The palette every building on the realm is drawn in.
 export const REALM_PALETTE: BuildingPaletteName = 'a-orange';
@@ -184,16 +191,50 @@ export function generateRealm(seed: number, settings: RegionSettings): Realm {
     }),
   );
 
+  const name = nameRealm(rng);
+  const buildings = placeBuildings(sites, land, rng);
+  // Rivers roll from their own dice, so a realm's land, sites and roads
+  // are what they were before it had rivers.
+  const roadTiles = new Set([...roads.flatMap((road) => road.path), ...sitePoints].map((p) => `${p.x},${p.y}`));
+  const rivers = layRivers(land, sitePoints, roadTiles, createSeededRng((seed ^ 0x72697665) >>> 0));
+
   return Object.freeze({
     seed,
-    name: nameRealm(rng),
+    name,
     depth,
     grid: toGrid(land),
     sites: Object.freeze(sites),
     roads: Object.freeze(roads.map((road) => Object.freeze(road))),
-    buildings: Object.freeze(placeBuildings(sites, land, rng)),
+    rivers: Object.freeze(rivers.map((river) => Object.freeze(river))),
+    seasons: Object.freeze(seasonsByDepth(sites, settings, depth)),
+    buildings: Object.freeze(buildings),
     palette: REALM_PALETTE,
   });
+}
+
+// The season at each depth: the one most of the sites there play in
+// (the first of them when tied), and at home the first stop's, so the
+// map's paper starts the way the first battles are drawn.
+export function seasonsByDepth(sites: readonly Site[], settings: RegionSettings, depth: number): Season[] {
+  const seasons: Season[] = [];
+  for (let d = 0; d <= depth; d++) {
+    const counts = new Map<Season, number>();
+    for (const site of sites) {
+      if (site.depth !== d) continue;
+      const season = settings.regions[site.region]?.season ?? DEFAULT_SEASON;
+      counts.set(season, (counts.get(season) ?? 0) + 1);
+    }
+    let pick: Season = seasons[d - 1] ?? DEFAULT_SEASON;
+    let most = 0;
+    for (const [season, count] of counts)
+      if (count > most) {
+        pick = season;
+        most = count;
+      }
+    seasons.push(pick);
+  }
+  if (depth >= 1) seasons[0] = seasons[1];
+  return seasons;
 }
 
 // The site with `id`, or undefined.
