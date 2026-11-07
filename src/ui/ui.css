@@ -1502,13 +1502,16 @@ kbd {
 }
 
 .command-chip {
-  flex: none;
+  /* Chips give way together when the row is too narrow, their labels
+     trailing off, rather than the last chip dropping out of the bar. */
+  flex: 0 1 auto;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   gap: 5px;
   box-sizing: border-box;
   height: 1.5rem;
-  padding: 0 10px;
+  padding: 0 8px;
   font-size: 0.8125rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -1548,6 +1551,7 @@ kbd {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: none;
   min-width: 1.1em;
   padding: 0 3px;
   font-family: inherit;
@@ -1560,6 +1564,12 @@ kbd {
 .command-chip--selected .command-chip__key {
   color: var(--accent);
   background: #2a1a10;
+}
+
+.command-chip__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* A weapon's or an item's name reads in the serif, as everywhere. */
