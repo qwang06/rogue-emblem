@@ -37,7 +37,7 @@ const TEAM_NOUNS: Readonly<Record<Team, string>> = { player: 'Ally', enemy: 'Ene
 // color. It sits in the corner away from the hovered unit so it never
 // covers it, and steps aside while the combat forecast (which already
 // shows both fighters) or the unit info screen (the full sheet, see
-// UnitInfoScreen.tsx) is up.
+// UnitInfoScreen.tsx) is up; docked, it stays through both.
 //
 // `docked`, it's the battle dock's middle readout (BattleDock): a flat
 // section of the column rather than a window, always in the same place, so
@@ -62,7 +62,7 @@ export function UnitPanel({
   const infoOpen = useGameStore((state) => state.unitInfo !== null);
   const unit = given ?? hovered;
 
-  if (!unit || (!given && (infoOpen || (forecastOpen && !docked)))) return null;
+  if (!unit || (!given && !docked && (infoOpen || forecastOpen))) return null;
 
   const corner = pickCornerAwayFromTile(anchor);
   const showExperience = unit.team !== 'enemy';

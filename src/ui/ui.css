@@ -473,9 +473,10 @@ a.header-button {
      middle, so a map smaller than the stage reads as set on a board, not
      adrift. */
   background:
-    linear-gradient(rgb(138 109 59 / 9%) 1px, transparent 1px) 0 0 / 48px 48px,
-    linear-gradient(90deg, rgb(138 109 59 / 9%) 1px, transparent 1px) 0 0 / 48px 48px,
-    radial-gradient(ellipse at center, #1c2036 0%, #141729 55%, var(--desktop) 100%);
+    radial-gradient(ellipse at center, transparent 50%, rgb(0 0 0 / 28%) 100%),
+    linear-gradient(#1c2034 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, #1c2034 1px, transparent 1px) 0 0 / 32px 32px,
+    #0f1120;
 }
 
 /* The frame round the board (BoardFrame): a bronze hairline at a small
@@ -483,18 +484,21 @@ a.header-button {
    edge and the cursor's tile on its top-right, over ink so they read on
    the map when the board overflows the stage. */
 .hud .board-frame {
-  --board-margin: 8px;
+  --board-margin: 16px;
   position: absolute;
   box-sizing: border-box;
-  border: 1px solid rgb(138 109 59 / 70%);
+  border: 1px solid rgb(138 109 59 / 75%);
+  /* A second, dimmer line 4px outside the first. */
+  outline: 1px solid rgb(138 109 59 / 35%);
+  outline-offset: 4px;
   pointer-events: none;
 }
 
 .board-frame__label {
   position: absolute;
-  top: 0;
+  top: -5px;
   transform: translateY(-50%);
-  padding: 0 6px;
+  padding: 1px 8px;
   font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -502,19 +506,12 @@ a.header-button {
   line-height: 1.4;
   white-space: nowrap;
   color: var(--accent);
-  background: var(--desktop);
+  background: #0f1120;
+  box-shadow: 0 0 0 1px rgb(138 109 59 / 45%);
 }
 
 .board-frame__label--name {
-  left: 10px;
-}
-
-.board-frame__label--tile {
-  right: 10px;
-  min-width: 3em;
-  text-align: right;
-  color: var(--fg-dim);
-  font-variant-numeric: tabular-nums;
+  left: 12px;
 }
 
 .board-frame__size {
@@ -1130,11 +1127,17 @@ kbd {
 
 .unit-panel--docked .meter__track {
   height: 10px;
+  box-shadow: 0 0 0 1px rgb(138 109 59 / 55%);
 }
 
 .unit-panel--docked .meter__value {
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 700;
+  color: var(--fg-bright);
+}
+
+.unit-panel--docked .unit-panel__stat dt {
+  color: rgb(190 160 105 / 85%);
 }
 
 .unit-panel--docked .unit-panel__stats {
@@ -1148,8 +1151,10 @@ kbd {
 }
 
 .unit-panel--docked .unit-panel__stat dd {
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 700;
+  text-align: right;
+  padding-right: 6px;
 }
 
 .unit-panel--docked .unit-panel__items {
@@ -1159,6 +1164,32 @@ kbd {
 
 .unit-panel--docked .unit-panel__item {
   min-height: 1.5rem;
+}
+
+/* On a tall window the columns' type grows with them, so their readouts
+   fill the height rather than the top half. */
+@media (min-height: 60rem) {
+  .dock-section {
+    padding: 12px 16px 14px;
+    font-size: 0.9375rem;
+  }
+
+  .unit-panel--docked .unit-panel__portrait {
+    width: 80px;
+    height: 80px;
+  }
+
+  .unit-panel--docked .unit-panel__stat {
+    min-height: 2rem;
+  }
+
+  .unit-panel--docked .unit-panel__item {
+    min-height: 1.75rem;
+  }
+
+  .team-card__unit {
+    min-height: 2.75rem;
+  }
 }
 
 .unit-panel--docked .unit-panel__items {
@@ -1338,9 +1369,9 @@ kbd {
 .team-card__hp {
   grid-column: 2;
   display: block;
-  height: 6px;
+  height: 8px;
   background: var(--desktop);
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 35%);
+  box-shadow: 0 0 0 1px rgb(138 109 59 / 55%);
 }
 
 .team-card__hp-fill {
@@ -1351,7 +1382,7 @@ kbd {
 
 .team-card__hp-value {
   grid-column: 3;
-  font-size: 0.875rem;
+  font-size: 1rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--fg-bright);
@@ -1512,6 +1543,25 @@ kbd {
   color: #4a3418;
 }
 
+/* The chip's number key, as a small cap at its left. */
+.command-chip__key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1em;
+  padding: 0 3px;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  color: #2a1a10;
+  background: var(--accent);
+}
+
+.command-chip--selected .command-chip__key {
+  color: var(--accent);
+  background: #2a1a10;
+}
+
 /* A weapon's or an item's name reads in the serif, as everywhere. */
 .command-chip__label--name {
   font-family: var(--serif);
@@ -1599,8 +1649,10 @@ kbd {
 
 /* Whose turn it is while the player waits, in that side's color. */
 .battle-bar__phase {
+  padding-right: 6px;
+  font-size: 0.9375rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--red);
 }
@@ -1666,7 +1718,8 @@ kbd {
 .page--field .page-header .auto-play-controls,
 .page--field .page-header .danger-zone-button,
 .page--field .page-header .controls-button,
-.page--field .page-header .main-menu-button {
+.page--field .page-header .main-menu-button,
+.page--field .page-header .relic-bar__key {
   display: none;
 }
 

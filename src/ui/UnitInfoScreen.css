@@ -69,11 +69,52 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr);
     gap: 6px 28px;
     width: 100%;
-    padding: 14px 24px 16px;
+    padding: 16px 24px 18px;
     border: 0;
     border-image: none;
     background: var(--bezel);
     font-size: 0.875rem;
+    line-height: 1.4;
+  }
+
+  /* The rows run taller, so the sheet's columns reach toward the bar. */
+  .unit-info-layer .unit-info__stats {
+    gap: 8px;
+  }
+
+  .unit-info-layer .unit-info__stat {
+    min-height: 1.75rem;
+  }
+
+  .unit-info-layer .unit-info__stat-track {
+    height: 10px;
+  }
+
+  .unit-info-layer .unit-info__stat dd {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--fg-bright);
+  }
+
+  .unit-info-layer .unit-info__list li,
+  .unit-info-layer .unit-info__rate,
+  .unit-info-layer .unit-info__pairs div {
+    min-height: 1.75rem;
+    align-items: center;
+  }
+
+  .unit-info-layer .unit-info__rate dd,
+  .unit-info-layer .unit-info__pairs dd {
+    font-weight: 700;
+    color: var(--fg-bright);
+  }
+
+  .unit-info-layer .unit-info__heading {
+    margin-top: 14px;
+  }
+
+  .unit-info-layer .unit-info__name {
+    font-size: 1.625rem;
   }
 
   .unit-info-layer .unit-info--enemy {
@@ -137,11 +178,13 @@
 /* "VILLAGER · LV 1": the class line, and every label of the sheet, in
    the compact caps the chrome uses. */
 .unit-info__class,
+.unit-info__caps,
 .unit-info__pairs dt,
 .unit-info__rate dt,
 .unit-info__slot,
 .unit-info__tag,
-.unit-info__empty {
+.unit-info__empty,
+.unit-info__number dt {
   font-size: 0.75rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -251,6 +294,30 @@
   display: flex;
   justify-content: space-between;
   gap: 6px;
+}
+
+/* An attack's numbers under its name: "POW 1  HIT 90  CRT 0  WT 1  RNG 1". */
+.unit-info__numbers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+  margin: 0;
+}
+
+.unit-info__number {
+  display: flex;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.unit-info__number dt {
+  color: var(--fg-dim);
+}
+
+.unit-info__number dd {
+  margin: 0;
+  font-weight: 700;
+  color: var(--fg-bright);
 }
 
 /* An item's name after its icon, half a tile so the row stays one line. */
@@ -391,4 +458,22 @@
   font-size: 0.8125rem;
   line-height: 1.2;
   color: var(--fg-dim);
+}
+
+/* On a tall window the sheet's type grows with the stage, so it doesn't
+   sit in the top half of it. */
+@media (min-width: 44.01rem) and (min-height: 60rem) {
+  .unit-info-layer .unit-info {
+    gap: 8px 36px;
+    padding: 20px 32px 24px;
+    font-size: 1.0625rem;
+  }
+
+  .unit-info-layer .unit-info__name {
+    font-size: 1.75rem;
+  }
+
+  .unit-info-layer .unit-info__stats {
+    gap: 9px;
+  }
 }
