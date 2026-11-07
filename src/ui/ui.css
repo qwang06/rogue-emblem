@@ -1905,18 +1905,6 @@ kbd {
 }
 
 /* While a menu is open, its keys sit at the line's end. */
-.battle-bar__hints--detail {
-  flex: none;
-  min-height: 0;
-}
-
-.battle-bar__hints--detail .key-hint__entry kbd {
-  height: 1.125rem;
-  min-width: 1.25rem;
-  font-size: 0.6875rem;
-  border-bottom-width: 2px;
-}
-
 /* A weapon's numbers on the detail line: "POW 1  HIT 90  CRT 0". */
 .command-detail__numbers {
   display: flex;
@@ -1940,121 +1928,6 @@ kbd {
 
 .command-detail__type {
   text-transform: uppercase;
-}
-
-/* The command row: a unit's commands (or weapons, skills, items) as chips
-   side by side. The chosen chip gets the selection band and gold ring,
-   taking no room; a chip that can't be picked is dim. */
-.command-row {
-  display: flex;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  overflow: hidden;
-}
-
-.command-chip {
-  /* Chips give way together when the row is too narrow, their labels
-     trailing off, rather than the last chip dropping out of the bar. */
-  flex: 0 1 auto;
-  min-width: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  box-sizing: border-box;
-  height: 1.5rem;
-  padding: 0 8px;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  border: 1px solid rgb(138 109 59 / 60%);
-  color: var(--fg);
-  background: var(--well);
-  box-shadow: inset 0 0 0 1px rgb(138 109 59 / 45%);
-  cursor: pointer;
-}
-
-.command-chip .menu-icon,
-.command-chip .item-icon {
-  width: 16px;
-  height: 16px;
-}
-
-.command-chip__note {
-  font-weight: 400;
-  text-transform: none;
-  color: var(--cyan);
-}
-
-.command-chip--selected {
-  color: #2a1a10;
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.command-chip--selected .command-chip__note {
-  color: #4a3418;
-}
-
-/* The chip's number key, as a small cap at its left. */
-.command-chip__key {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  flex: none;
-  min-width: 1.125rem;
-  height: 1.0625rem;
-  padding: 1px 4px 0;
-  font-family: inherit;
-  font-size: 0.6875rem;
-  line-height: 1;
-  color: var(--accent);
-  background: #1d1c2a;
-  border: 1px solid rgb(138 109 59 / 85%);
-  border-bottom-width: 2px;
-  border-bottom-color: #5a4526;
-  border-radius: 2px;
-}
-
-.command-chip--selected .command-chip__key {
-  color: var(--accent);
-  background: #2a1a10;
-  border-color: #2a1a10;
-}
-
-.command-chip__label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* A weapon's or an item's name reads in the serif, as everywhere. */
-.command-chip__label--name {
-  font-family: var(--serif);
-  font-size: 0.9375rem;
-  font-weight: 400;
-  letter-spacing: 0.02em;
-  text-transform: none;
-}
-
-/* On the gold fill of the chosen chip, a name reads dark like every label. */
-.command-chip--selected .command-chip__label--name {
-  color: #2a1a10;
-}
-
-.command-chip--disabled {
-  color: var(--fg-dim);
-  cursor: default;
-}
-
-.command-chip--disabled .menu-icon,
-.command-chip--disabled .item-icon {
-  opacity: 0.45;
-  filter: grayscale(1);
 }
 
 .battle-bar__commands {
@@ -2158,13 +2031,11 @@ kbd {
   color: var(--fg-dim);
 }
 
-/* Where the dock and the bar show, the floating unit panel, deployment
-   menu, unit menus and map Back button don't (the bar has them), and the
+/* Where the dock and the bar show, the floating unit panel, forecast and
+   map Back button don't (the columns and the bar have them), and the
    header needn't repeat the objective's count; windows too narrow for
    both the dock and the board get the floating ones back. */
 .hud .unit-panel--float,
-.hud .deployment-menu--float,
-.hud .action-menu--beside-unit,
 .hud .combat-forecast--float,
 .hud .menu-exit.map-back,
 .unit-info-window > .menu-exit,
@@ -2179,6 +2050,67 @@ kbd {
 /* On the field the strip's relic icons sit flat, the bar carrying their key. */
 .page--field .page-header .relic-bar__relic {
   background: transparent;
+}
+
+/* A unit's menus (action, weapon, skill, item) open beside it on the map,
+   and the deployment menu sits mid-map, as flat ink boxes on a bronze
+   hairline rather than framed windows, like the pause menu: the choice
+   stays where the mouse already is. Their Back tab goes (Esc and a right
+   click go back, as the bar says), and weapon icons lose their slot tile. */
+.hud .action-menu--beside-unit,
+.hud .deployment-menu--float {
+  padding: 6px 0;
+  border: 1px solid rgb(138 109 59 / 85%);
+  border-image: none;
+  background: var(--bezel);
+  box-shadow: 0 0 0 1px var(--desktop);
+}
+
+.hud .action-menu--beside-unit > .menu-exit,
+.hud .deployment-menu--float .deployment-menu__title,
+.hud .deployment-menu--float .deployment-menu__objective {
+  display: none;
+}
+
+.hud .action-menu--beside-unit .action-menu__list,
+.hud .deployment-menu--float .action-menu__list {
+  font-size: 0.8125rem;
+}
+
+.hud .action-menu--beside-unit .action-menu__item,
+.hud .deployment-menu--float .action-menu__item {
+  padding: 4px 14px 4px 26px;
+}
+
+.hud .action-menu--beside-unit .weapon-menu__item .item-icon {
+  border: 0;
+  border-image: none;
+}
+
+.hud .action-menu--beside-unit .weapon-menu__side {
+  padding-right: 12px;
+}
+
+/* Weapon and item names read in the serif, as in the dock's card. */
+.hud .action-menu--beside-unit .weapon-menu__label,
+.hud .action-menu--beside-unit .item-menu__label {
+  font-family: var(--serif);
+  font-size: 0.9375rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--fg-bright);
+}
+
+.hud .action-menu--beside-unit .skill-menu__descriptions {
+  margin: 6px 14px 0;
+  width: auto;
+  min-width: 12rem;
+}
+
+.hud .deployment-menu.action-menu--centered {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 /* The attacker's card under the forecast: its heading on the card. */
@@ -2222,16 +2154,25 @@ kbd {
 @media (max-width: 44rem) {
   .battle-dock,
   .battle-side,
-  .battle-bar,
-  .hud .deploy-callout {
+  .battle-bar {
     display: none;
   }
 
   .hud .unit-panel--float,
-  .hud .deployment-menu--float,
-  .hud .action-menu--beside-unit,
   .hud .combat-forecast--float {
     display: block;
+  }
+
+  /* With the dock gone, the deployment menu carries the objective again
+     and sits on the stage's left edge in its window frame. */
+  .hud .deployment-menu--float .deployment-menu__title,
+  .hud .deployment-menu--float .deployment-menu__objective {
+    display: block;
+  }
+
+  .hud .deployment-menu.action-menu--centered {
+    left: 10px;
+    transform: translateY(-50%);
   }
 
   .hud .combat-forecast--band {
@@ -2349,6 +2290,34 @@ kbd {
   padding: 0;
   font-size: 0.875rem;
   text-transform: uppercase;
+}
+
+/* A row's number key (GridScene picks the entry on it), as a small raised
+   cap before its icon. */
+.menu-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  flex: none;
+  min-width: 1.125rem;
+  height: 1.0625rem;
+  margin-right: 2px;
+  padding: 1px 4px 0;
+  font-family: var(--pixel, inherit);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+  background: #1d1c2a;
+  border: 1px solid rgb(138 109 59 / 85%);
+  border-bottom-width: 2px;
+  border-bottom-color: #5a4526;
+  border-radius: 2px;
+}
+
+.action-menu__item--disabled .menu-key {
+  opacity: 0.5;
 }
 
 /* Room on the left for the chevron. */
@@ -3140,8 +3109,13 @@ kbd {
 
 .skill-menu__item {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.skill-menu__label {
+  flex: 1;
 }
 
 .skill-menu__cost {
@@ -6088,115 +6062,4 @@ textarea.draft-input {
   position: absolute;
   top: 0;
   right: 0;
-}
-
-/* ---- Deployment callout ---- */
-
-/* At the foot of the board, over the command bar's deployment chips: a
-   gold-ruled ink tag saying what to do, with an arrow bobbing down at the
-   chips. It sits in the stage's bottom-left, where the chips start. */
-.hud .deploy-callout {
-  position: absolute;
-  left: 12px;
-  bottom: 10px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  pointer-events: none;
-  animation: deploy-callout-bob 1.4s ease-in-out infinite;
-}
-
-.deploy-callout__text {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 7px 12px;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: var(--accent);
-  background: rgb(15 17 32 / 92%);
-  border: 1px solid var(--accent);
-  box-shadow:
-    0 0 0 3px rgb(15 17 32 / 70%),
-    0 0 14px rgb(240 181 65 / 35%);
-}
-
-.deploy-callout__keys {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.6875rem;
-  letter-spacing: 0.06em;
-  color: var(--fg-dim);
-}
-
-.deploy-callout__keys kbd {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  min-width: 1.125rem;
-  height: 1.0625rem;
-  padding: 1px 4px 0;
-  font-family: inherit;
-  font-size: 0.6875rem;
-  line-height: 1;
-  color: var(--accent);
-  background: #1d1c2a;
-  border: 1px solid rgb(138 109 59 / 85%);
-  border-bottom-width: 2px;
-  border-bottom-color: #5a4526;
-  border-radius: 2px;
-}
-
-.deploy-callout__keys kbd:not(:first-child) {
-  margin-left: 6px;
-}
-
-/* A gold triangle under the tag's left end, pointing at the chips. */
-.deploy-callout__arrow {
-  width: 0;
-  height: 0;
-  margin-left: 22px;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-top: 9px solid var(--accent);
-}
-
-@keyframes deploy-callout-bob {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(5px);
-  }
-}
-
-/* The deployment chips glow in time with the callout until one is picked. */
-.command-row--attention .command-chip {
-  animation: command-chip-attention 1.4s ease-in-out infinite;
-}
-
-@keyframes command-chip-attention {
-  0%,
-  100% {
-    box-shadow: inset 0 0 0 1px rgb(138 109 59 / 45%);
-  }
-  50% {
-    border-color: var(--accent);
-    box-shadow:
-      inset 0 0 0 1px rgb(240 181 65 / 70%),
-      inset 0 0 10px rgb(240 181 65 / 35%);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hud .deploy-callout,
-  .command-row--attention .command-chip {
-    animation: none;
-  }
 }

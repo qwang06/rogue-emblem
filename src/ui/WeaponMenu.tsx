@@ -1,5 +1,6 @@
 import { MenuExitButton } from './MenuExitButton.tsx';
 import { ItemIcon } from './ItemIcon.tsx';
+import { MenuKey } from './MenuKey.tsx';
 import { StatIcon } from './StatIcon.tsx';
 import { useGameStore } from './useGameStore.ts';
 import { menuItemPointerProps } from './menuPointer.ts';
@@ -36,6 +37,7 @@ export function WeaponMenu() {
               {...menuItemPointerProps('weaponMenu', index)}
               aria-disabled={weapon.disabled ? 'true' : undefined}
             >
+              <MenuKey index={index} />
               <ItemIcon itemId={weapon.itemId} />
               <span className="weapon-menu__text">
                 <span className="weapon-menu__label">{weapon.label}</span>
