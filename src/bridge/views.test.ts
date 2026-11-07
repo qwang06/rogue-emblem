@@ -814,8 +814,30 @@ describe('toRewardAction', () => {
 describe('toStageClearView', () => {
   it('carries the stage, the gold paid and the total, frozen', () => {
     const view = toStageClearView(3, { gold: 35, flawless: true }, 80);
-    expect(view).toEqual({ stage: 3, gold: 35, flawless: true, totalGold: 80, blessing: null });
+    expect(view).toEqual({
+      stage: 3,
+      gold: 35,
+      flawless: true,
+      totalGold: 80,
+      blessing: null,
+      tally: null,
+      site: null,
+      levelUps: [],
+    });
     expect(Object.isFrozen(view)).toBe(true);
+  });
+
+  it("carries the battle's tally, the site and the clear's level ups", () => {
+    const tally = { turns: 9, turnLimit: 40, kills: 5, losses: 0, hpLost: 14 };
+    const view = toStageClearView(7, { gold: 80, flawless: true }, 240, null, {
+      tally,
+      site: { name: 'Old Cairns', region: 'Barrow Hills' },
+      levelUps: [{ name: 'Kestrel', level: 7 }],
+    });
+    expect(view.tally).toEqual(tally);
+    expect(view.site).toEqual({ name: 'Old Cairns', region: 'Barrow Hills' });
+    expect(view.levelUps).toEqual([{ name: 'Kestrel', level: 7 }]);
+    expect(Object.isFrozen(view.tally)).toBe(true);
   });
 
   it("names the shrine for a shrine's blessing", () => {

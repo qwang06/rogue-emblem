@@ -1,0 +1,624 @@
+/* ---- Reward screen (after a won Warband stage) ---------------------- */
+
+/* The spoils over the whole stage, on flat ink like the camp: a strip
+   across the top, the page in the middle (the tally, the offers, the
+   warband) and the bar across the foot. Every plate keeps its size and
+   the picked one only changes colors, so moving the pick never reflows
+   anything (see "UI layout" in AGENTS.md). */
+.hud .reward-screen {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: 3rem minmax(0, 1fr) 3.5rem;
+  background: var(--bezel);
+  pointer-events: auto;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--fg);
+}
+
+/* ---- Strip ---- */
+
+.reward-screen__strip {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 14px;
+  border-bottom: var(--hairline);
+}
+
+.reward-screen__phase {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.reward-screen__vrule {
+  align-self: stretch;
+  width: 1px;
+  background: rgb(138 109 59 / 75%);
+}
+
+.reward-screen__where {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.reward-screen__site {
+  color: var(--fg-bright);
+}
+
+.reward-screen__purse {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+.reward-screen__purse-gain {
+  color: var(--green);
+}
+
+/* ---- Page ---- */
+
+.reward-screen__page {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  min-height: 0;
+  padding: 14px 40px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+
+/* The tally: a tile a number, the outcome's first and widest. */
+.reward-screen__tally {
+  display: grid;
+  grid-template-columns: 1.4fr repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reward-screen__tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px 6px;
+  background: var(--ink);
+  border: 1px solid rgb(138 109 59 / 55%);
+}
+
+.reward-screen__tile-label {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--fg-dim);
+}
+
+.reward-screen__tile b {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 1.5rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-bright);
+}
+
+.reward-screen__tile b small {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--fg-dim);
+}
+
+.reward-screen__tile--outcome {
+  background: linear-gradient(90deg, rgb(240 181 65 / 18%), var(--ink));
+  border-color: var(--accent);
+}
+
+.reward-screen__tile--outcome b {
+  font-family: var(--serif);
+  font-weight: 400;
+  color: var(--accent);
+}
+
+.reward-screen__tile--gold b {
+  color: var(--accent);
+}
+
+.reward-screen__tile--gold .glyph-icon {
+  align-self: center;
+}
+
+.reward-screen__tile--bad b {
+  color: var(--red);
+}
+
+/* A section's heading: small caps with a dim note at the end. */
+.reward-screen__heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.reward-screen__heading-note {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--fg-dim);
+}
+
+/* ---- Offers ---- */
+
+/* The offers in one row, as many columns as there are (--reward-cards),
+   so a 4th or 5th never wraps under the rest. */
+.reward-screen__offers {
+  display: grid;
+  grid-template-columns: repeat(var(--reward-cards, 3), minmax(0, 1fr));
+  gap: 14px;
+  height: 15.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A lone plate (a guest's recruitment) sits in the middle at a card's width. */
+.reward-screen__offers--single {
+  grid-template-columns: minmax(0, 24rem);
+  justify-content: center;
+}
+
+/* A plate: its digit in the corner, picture and name, the description,
+   and its numbers pinned to the foot. The picked one lights up, with a
+   "Chosen" tag on its top edge that takes no room. */
+.reward-plate {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 16px 18px;
+  background: var(--bezel);
+  border: 1px solid rgb(138 109 59 / 55%);
+  cursor: pointer;
+}
+
+.reward-plate:hover {
+  background: rgb(255 255 255 / 3%);
+}
+
+.reward-plate--selected,
+.reward-plate--selected:hover {
+  background: linear-gradient(180deg, rgb(240 181 65 / 10%), var(--bezel) 40%);
+  border-color: var(--accent);
+}
+
+.reward-plate__chosen {
+  position: absolute;
+  top: -12px;
+  left: 14px;
+  padding: 2px 8px 1px;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tab-fg);
+  background: var(--accent);
+  visibility: hidden;
+}
+
+.reward-plate--selected .reward-plate__chosen {
+  visibility: visible;
+}
+
+.reward-plate__key {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.375rem;
+  height: 1.375rem;
+  padding: 0 4px;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: #1b1e33;
+  border: 1px solid rgb(138 109 59 / 75%);
+  border-bottom-width: 2px;
+}
+
+.reward-plate--selected .reward-plate__key {
+  color: var(--tab-fg);
+  background: var(--accent);
+  border-color: #8a5a14;
+}
+
+.reward-plate__top {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  column-gap: 12px;
+  align-items: center;
+  /* Room for the digit at the right. */
+  padding-right: 1.5rem;
+}
+
+.reward-plate__picture {
+  display: inline-flex;
+  width: 64px;
+  height: 64px;
+}
+
+.reward-plate__icon {
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+}
+
+.reward-plate__lines {
+  min-width: 0;
+}
+
+.reward-plate__name {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  font-family: var(--serif);
+  font-size: 1.375rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--fg-bright);
+}
+
+.reward-plate__kind {
+  display: block;
+  margin-top: 5px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* Up to three lines. */
+.reward-plate__description {
+  display: -webkit-box;
+  height: 4.35em;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--fg);
+}
+
+/* The numbers at the foot: a row a fact, label left and value right,
+   with fixed-width digits so a value ticking never moves its neighbors. */
+.reward-plate__facts,
+.reward-plate__stats {
+  margin: auto 0 0;
+  padding-top: 8px;
+  border-top: var(--hairline);
+  font-variant-numeric: tabular-nums;
+}
+
+.reward-plate__facts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 2.9em;
+}
+
+.reward-plate__fact {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.reward-plate__fact dt {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.reward-plate__fact dd {
+  flex: none;
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--fg-bright);
+}
+
+.reward-plate__arrow {
+  font-weight: 400;
+  color: var(--fg-dim);
+}
+
+.reward-plate__after {
+  color: var(--green);
+}
+
+.reward-screen__gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+/* A recruit's stat line, four to a row. */
+.reward-plate__stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2px 8px;
+}
+
+.reward-plate__stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  font-size: 0.6875rem;
+}
+
+.reward-plate__stat dt {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.reward-plate__stat dd {
+  margin: 0;
+  font-weight: 700;
+  color: var(--fg-bright);
+}
+
+/* ---- The warband ---- */
+
+.reward-screen__team {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A unit's tile: sprite beside its name and level, the HP bar and the
+   XP track under them. */
+.reward-screen__member {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  column-gap: 8px;
+  row-gap: 3px;
+  align-items: center;
+  padding: 6px 10px;
+  background: var(--ink);
+  border: 1px solid rgb(255 255 255 / 6%);
+}
+
+.reward-screen__member--leveled {
+  border-color: var(--accent);
+}
+
+.reward-screen__member-sprite {
+  grid-row: 1 / 4;
+  display: inline-flex;
+}
+
+.reward-screen__member-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.reward-screen__member-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--serif);
+  font-size: 0.9375rem;
+  line-height: 1;
+  color: var(--blue);
+}
+
+.reward-screen__member-name--hurt {
+  color: var(--red);
+}
+
+.reward-screen__member-level {
+  flex: none;
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  color: var(--fg-dim);
+}
+
+.reward-screen__member-level b {
+  color: var(--fg-bright);
+}
+
+.reward-screen__member-up {
+  color: var(--green);
+}
+
+.reward-screen__member-hp,
+.reward-screen__member-xp {
+  position: relative;
+  display: flex;
+  height: 6px;
+  background: #0f1220;
+  box-shadow: 0 0 0 1px rgb(138 109 59 / 45%);
+}
+
+.reward-screen__member-xp {
+  height: 4px;
+}
+
+.reward-screen__member-kept,
+.reward-screen__member-gained,
+.reward-screen__member-xp > span {
+  display: block;
+  height: 100%;
+}
+
+.reward-screen__member-kept {
+  background: var(--green);
+}
+
+.reward-screen__member-name--hurt ~ .reward-screen__member-hp .reward-screen__member-kept {
+  background: var(--red);
+}
+
+/* What a healing reward would add, blinking after the kept HP. */
+.reward-screen__member-gained {
+  background: var(--fg-bright);
+  opacity: 0.9;
+  animation: reward-gain-blink 0.8s steps(1) infinite;
+}
+
+@keyframes reward-gain-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.reward-screen__member-xp > span {
+  background: linear-gradient(#ffee83 50%, #f0b541 50%);
+}
+
+/* ---- Bar ---- */
+
+.reward-screen__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border-top: var(--hairline);
+}
+
+.reward-screen__hints {
+  flex: none;
+  justify-content: flex-start;
+}
+
+/* The picked offer's line, between the keys and the buttons. */
+.reward-screen__line {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: right;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.reward-screen__button {
+  flex: none;
+  gap: 8px;
+}
+
+.reward-screen__button--selected {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgb(240 181 65 / 12%);
+}
+
+.reward-screen__button-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--accent);
+}
+
+.reward-screen__take {
+  flex: none;
+  max-width: 22rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Narrow: the offers stack and the page scrolls. */
+@media (max-width: 60rem) {
+  .reward-screen__page {
+    justify-content: flex-start;
+    padding: 12px 14px;
+  }
+
+  .reward-screen__tally {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .reward-screen__offers {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+  }
+
+  .reward-plate {
+    min-height: 12rem;
+  }
+
+  .reward-screen__line {
+    display: none;
+  }
+
+  .reward-screen__team {
+    grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  }
+}

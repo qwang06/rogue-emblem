@@ -1,34 +1,38 @@
 import type { CSSProperties } from 'react';
+import { gameCommands } from '../bridge/commands.ts';
 import { useGameStore } from './useGameStore.ts';
 import { GlyphIcon } from './GlyphIcon.tsx';
-import { KeyHint } from './KeyHint.tsx';
+import { KeyHint, type KeyHintEntry } from './KeyHint.tsx';
 import { menuItemPointerProps } from './menuPointer.ts';
-import { RewardTeam } from './RewardTeam.tsx';
 import { StatLabel } from './StatLabel.tsx';
 import { UnitSprite } from './UnitSprite.tsx';
 import { SPRITE_URLS } from '../assets/sprites.ts';
 import { REWARD_ICON_URLS } from '../assets/rewardIcons.ts';
 import { getRelicIconUrl } from '../assets/fantasyIcons.ts';
 import { KEYSTONE_ICON_URLS } from '../assets/keystoneIcons.ts';
-import type { RewardAction } from '../bridge/views.ts';
+import type { RewardAction, StageClearView, TeamUnitView } from '../bridge/views.ts';
+import type { Menu } from '../game/actionMenu.ts';
 import type { RewardFact } from '../game/warband/rewardFacts.ts';
+import './RewardScreen.css';
 
-// Shown after a won Warband Mode stage's result, in one window: what the
-// clear paid on its top line, the warband as a strip of small tiles, the
-// rewards to pick one of side by side in a single row like Slay the
-// Spire's card pick (as many columns as there are offers, 3 to 5), and a
-// footer with the key hints and the Skip and Reroll buttons. The purse
-// hangs off the window's bottom frame as a gold plate, as on the camp menu.
-// GridScene handles the input (arrows move the pick through the cards and
-// then the buttons, confirm takes it); the mouse is forwarded to it. Each
-// card shows its picture small beside its name, then its description, then
-// what it does in numbers (RewardAction.facts) pinned to the card's foot.
-// The same screen shows a surviving guest's recruitment and a Recruit
-// reward's draft of recruits to pick one from; a recruit's card shows its
-// stat line in the numbers' place. A level up's boon pick (`boonPick`)
-// shares its menu but has a screen of its own (BoonPickScreen). A lone
-// card (a guest's recruitment) lies across the window's width, its
-// picture, text and stats side by side.
+// Shown after a won Warband Mode stage's result, as one screen over the
+// stage: a strip with the phase word, the stage, its site and the purse
+// (with what the clear added); the battle's tally in a row of tiles
+// (outcome, turns, kills, HP lost, losses, gold); the rewards to pick one
+// of as a row of plates like Slay the Spire's card pick (as many as there
+// are offers, 3 to 5), each with its digit, picture, serif name, kind,
+// description and numbers (RewardAction.facts, or a recruit's stat
+// line); the warband as a row of tiles (sprite, name, level with the
+// clear's level ups marked, HP bar with a healing reward's preview, XP
+// track); and a bar with the keys, the Skip / Reroll / Banish buttons
+// and the Take button. GridScene handles the input (arrows move the pick
+// through the cards and then the buttons, a digit picks a card, confirm
+// takes it); the mouse is forwarded to it. The same screen shows a
+// surviving guest's recruitment and a Recruit reward's draft of recruits
+// to pick one from. A level up's boon pick (`boonPick`) shares its menu
+// but has a screen of its own (BoonPickScreen). Every plate keeps its
+// size and the selected one only changes colors, so moving the pick
+// never reflows anything.
 export function RewardScreen() {
   const menu = useGameStore((state) => state.rewardMenu);
   const stageClear = useGameStore((state) => state.stageClear);
@@ -37,156 +41,333 @@ export function RewardScreen() {
   const team = useGameStore((state) => state.rewardTeam);
   const boonPick = useGameStore((state) => state.boonPick);
   if (!menu || boonPick) return null;
-  const title =
-    recruitmentStage && recruitDraft
-      ? 'Choose a Recruit'
-      : recruitmentStage
-        ? `Guest Survived Stage ${recruitmentStage}`
-        : stageClear?.blessing
-          ? 'A Blessing'
-          : 'Spoils of Battle';
+  return (
+    <RewardScreenPanel
+      menu={menu}
+      stageClear={stageClear}
+      recruitmentStage={recruitmentStage}
+      recruitDraft={recruitDraft}
+      team={team ?? []}
+    />
+  );
+}
+
+const isButton = (action: RewardAction) =>
+  action.kind === 'skip' || action.kind === 'reroll' || action.kind === 'decline' || action.kind === 'banish';
+
+function RewardScreenPanel({
+  menu,
+  stageClear,
+  recruitmentStage,
+  recruitDraft,
+  team,
+}: {
+  menu: Menu<RewardAction>;
+  stageClear: StageClearView | null;
+  recruitmentStage: number | null;
+  recruitDraft: boolean;
+  team: readonly TeamUnitView[];
+}) {
+  const recruiting = recruitmentStage !== null;
+  const blessing = stageClear?.blessing ?? null;
   const entries = menu.actions.map((action, index) => ({ action, index, selected: index === menu.selectedIndex }));
-  const isButton = (action: RewardAction) =>
-    action.kind === 'skip' || action.kind === 'reroll' || action.kind === 'decline';
   const cards = entries.filter(({ action }) => !isButton(action));
   const buttons = entries.filter(({ action }) => isButton(action));
-  const choicesStyle = { '--reward-cards': Math.max(1, cards.length) } as CSSProperties;
+  const selected = menu.actions[menu.selectedIndex] ?? null;
+  const selectedIsCard = selected !== null && !isButton(selected);
+  const phase = recruiting ? 'Recruit' : blessing ? 'Blessing' : 'Spoils';
+  const stage = stageClear?.stage ?? recruitmentStage;
+  const heading = recruiting
+    ? recruitDraft
+      ? 'Choose a recruit'
+      : 'The guest asks to join'
+    : blessing
+      ? `${blessing} offers its blessing`
+      : 'Pick one';
+  const headingNote = recruiting
+    ? recruitDraft
+      ? 'quirk and all · the others move on'
+      : 'or send them on their way'
+    : cards.length > 1
+      ? `the other ${cards.length === 2 ? 'one is' : `${cards.length - 1} are`} lost`
+      : '';
+  const takeLabel = !selected
+    ? 'Take'
+    : isButton(selected)
+      ? selected.label
+      : recruiting
+        ? `Recruit ${selected.label}`
+        : `Take ${selected.label}`;
+  const hints: readonly KeyHintEntry[] = [
+    [cards.length > 1 ? `1–${Math.min(9, cards.length)}` : '1', 'Choose'],
+    ['←→', 'Browse'],
+    ['Enter', recruiting ? 'Recruit' : 'Take'],
+  ];
 
   return (
-    <div className="pause-overlay">
-      <div className="reward-screen__scroll">
-        <section
-          className={`panel reward-screen${stageClear ? ' reward-screen--purse' : ''}`}
-          aria-label={recruitmentStage ? 'Choose a recruit' : 'Choose a reward'}
-        >
-          <h2 className="reward-screen__title">{title}</h2>
-          <p className="reward-screen__summary">
-            {recruitmentStage && recruitDraft ? (
-              'Pick one to join the warband, quirk and all.'
-            ) : stageClear?.blessing ? (
-              `${stageClear.blessing} offers its blessing.`
-            ) : stageClear ? (
-              <>
-                Stage {stageClear.stage} cleared:{' '}
-                <Gold amount={stageClear.gold} sign="+" className="reward-screen__coin" />
-                {stageClear.flawless && <span className="reward-screen__flawless"> Flawless!</span>}
-              </>
-            ) : (
-              'The guest asks to join the warband.'
-            )}
+    <div className="reward-screen" role="dialog" aria-label={recruiting ? 'Choose a recruit' : 'Choose a reward'}>
+      <header className="reward-screen__strip">
+        <span className="reward-screen__phase">{phase}</span>
+        <span className="reward-screen__vrule" aria-hidden="true" />
+        <p className="reward-screen__where">
+          {stage !== null && stage !== undefined && `Stage ${stage}`}
+          {stageClear?.site && (
+            <>
+              {' · '}
+              <span className="reward-screen__site">{stageClear.site.name}</span>
+              {stageClear.site.region && ` · ${stageClear.site.region}`}
+            </>
+          )}
+        </p>
+        {stageClear && (
+          <p className="reward-screen__purse" title={`${stageClear.totalGold} gold in the purse`}>
+            <GlyphIcon kind="gold" />
+            {stageClear.totalGold}
+            {stageClear.gold > 0 && <span className="reward-screen__purse-gain"> +{stageClear.gold}</span>}
+            <span className="visually-hidden"> gold</span>
           </p>
-          {team && team.length > 0 && (
-            <RewardTeam team={team} preview={menu.actions[menu.selectedIndex]?.healthAfter ?? null} />
-          )}
-          <ul
-            className={`reward-screen__choices${cards.length === 1 ? ' reward-screen__choices--single' : ''}`}
-            style={choicesStyle}
-          >
-            {cards.map(({ action: reward, index, selected }) => (
-              <li
-                key={reward.id}
-                className={`reward-card reward-card--${reward.kind}${selected ? ' reward-card--selected' : ''}`}
-                aria-current={selected ? 'true' : undefined}
-                {...menuItemPointerProps('rewardMenu', index)}
-              >
-                <div className="reward-card__head">
-                  <RewardPicture reward={reward} selected={selected} />
-                  <div className="reward-card__name">
-                    <span className="reward-card__kind">{reward.tag ?? reward.kind}</span>
-                    <h3 className="reward-card__label">{reward.label}</h3>
-                  </div>
+        )}
+      </header>
+
+      <div className="reward-screen__page">
+        {stageClear && !blessing && !recruiting && <Tally clear={stageClear} />}
+
+        <h3 className="reward-screen__heading">
+          <span>{heading}</span>
+          <span className="reward-screen__heading-note">{headingNote}</span>
+        </h3>
+        <ul
+          className={`reward-screen__offers${cards.length === 1 ? ' reward-screen__offers--single' : ''}`}
+          style={{ '--reward-cards': Math.max(1, cards.length) } as CSSProperties}
+        >
+          {cards.map(({ action: reward, index, selected }, place) => (
+            <li
+              key={reward.id}
+              className={`reward-plate reward-plate--${reward.kind}${selected ? ' reward-plate--selected' : ''}`}
+              aria-current={selected ? 'true' : undefined}
+              {...menuItemPointerProps('rewardMenu', index)}
+            >
+              <span className="reward-plate__chosen" aria-hidden="true">
+                Chosen
+              </span>
+              {place < 9 && <kbd className="reward-plate__key">{place + 1}</kbd>}
+              <div className="reward-plate__top">
+                <RewardPicture reward={reward} selected={selected} />
+                <div className="reward-plate__lines">
+                  <h4 className="reward-plate__name">{reward.label}</h4>
+                  <span className="reward-plate__kind">{reward.tag ?? reward.kind}</span>
                 </div>
-                <p className="reward-card__description">{reward.description}</p>
-                {reward.stats ? (
-                  <dl className="reward-card__numbers reward-card__numbers--stats">
-                    {reward.stats.map((stat) => (
-                      <div key={stat.label} className="reward-card__number">
-                        <dt>
-                          <StatLabel label={stat.label} />
-                        </dt>
-                        <dd>{stat.value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                ) : (
-                  reward.facts && <RewardFacts facts={reward.facts} />
-                )}
-              </li>
-            ))}
-          </ul>
-          <footer className="reward-screen__foot">
-            <KeyHint
-              className="reward-screen__hint"
-              entries={[
-                ['←→', 'Choose'],
-                ['Enter', recruitmentStage ? 'Recruit' : 'Take'],
-              ]}
-            />
-            <div className="reward-screen__buttons">
-              {buttons.map(({ action, index, selected }) => (
-                <button
-                  key={action.id}
-                  type="button"
-                  className={`panel reward-button${selected ? ' reward-button--selected' : ''}`}
-                  aria-current={selected ? 'true' : undefined}
-                  aria-disabled={action.disabled ? 'true' : undefined}
-                  title={action.description}
-                  tabIndex={-1}
-                  {...menuItemPointerProps('rewardMenu', index)}
-                >
-                  {action.label}
-                  {action.gold && (
-                    <Gold
-                      amount={action.gold.amount}
-                      sign={action.gold.gain ? '+' : undefined}
-                      className="reward-button__gold"
-                    />
-                  )}
-                </button>
+              </div>
+              <p className="reward-plate__description">{reward.description}</p>
+              {reward.stats ? (
+                <dl className="reward-plate__stats">
+                  {reward.stats.map((stat) => (
+                    <div key={stat.label} className="reward-plate__stat">
+                      <dt>
+                        <StatLabel label={stat.label} />
+                      </dt>
+                      <dd>{stat.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : (
+                <RewardFacts facts={reward.facts ?? []} />
+              )}
+            </li>
+          ))}
+        </ul>
+
+        {team.length > 0 && (
+          <>
+            <h3 className="reward-screen__heading reward-screen__heading--team">
+              <span>Warband</span>
+              <span className="reward-screen__heading-note">{describeLevelUps(stageClear)}</span>
+            </h3>
+            <ul className="reward-screen__team" aria-label="Warband">
+              {team.map((unit, index) => (
+                <TeamTile
+                  key={unit.id}
+                  unit={unit}
+                  after={selected?.healthAfter?.[index] ?? null}
+                  leveled={stageClear?.levelUps.some((levelUp) => levelUp.name === unit.name) ?? false}
+                />
               ))}
-            </div>
-          </footer>
-          {stageClear && (
-            <p className="reward-screen__purse" title={`${stageClear.totalGold} gold`}>
-              <GlyphIcon kind="gold" />
-              {stageClear.totalGold}
-              <span className="visually-hidden"> gold in the purse</span>
-            </p>
-          )}
-        </section>
+            </ul>
+          </>
+        )}
       </div>
+
+      <footer className="reward-screen__bar">
+        <KeyHint className="reward-screen__hints" entries={hints} />
+        <p className="reward-screen__line">{selected?.description ?? ''}</p>
+        {buttons.map(({ action, index, selected }) => (
+          <button
+            key={action.id}
+            type="button"
+            className={`battle-bar__button reward-screen__button${selected ? ' reward-screen__button--selected' : ''}`}
+            aria-current={selected ? 'true' : undefined}
+            disabled={action.disabled}
+            title={action.description}
+            tabIndex={-1}
+            {...menuItemPointerProps('rewardMenu', index)}
+          >
+            {action.label}
+            {action.gold && (
+              <span className="reward-screen__button-gold">
+                <GlyphIcon kind="gold" />
+                {action.gold.gain ? '+' : ''}
+                {action.gold.amount}
+              </span>
+            )}
+          </button>
+        ))}
+        <button
+          type="button"
+          className="battle-bar__button battle-bar__button--end reward-screen__take"
+          disabled={!selected || selected.disabled}
+          onClick={(event) => {
+            event.stopPropagation();
+            gameCommands.send({ type: 'select-menu', menu: 'rewardMenu', index: menu.selectedIndex });
+          }}
+        >
+          {selectedIsCard ? takeLabel : (selected?.label ?? 'Take')}
+        </button>
+      </footer>
     </div>
   );
 }
 
-// A sum of gold as the rest of the UI shows it: the coin, then the number.
-function Gold({ amount, sign, className }: { amount: string | number; sign?: '+'; className?: string }) {
+// The battle's numbers in a row of tiles: the outcome lit, then the turns
+// against the limit, kills, HP lost, losses and the gold paid. Without the
+// battle (the screen reopened for a saved run) the numbers show a dash.
+function Tally({ clear }: { clear: StageClearView }) {
+  const tally = clear.tally;
+  const dash = '—';
   return (
-    <span className={className ? `reward-gold ${className}` : 'reward-gold'}>
+    <ul className="reward-screen__tally">
+      <li className="reward-screen__tile reward-screen__tile--outcome">
+        <span className="reward-screen__tile-label">Outcome</span>
+        <b>Victory</b>
+      </li>
+      <li className="reward-screen__tile">
+        <span className="reward-screen__tile-label">Turns</span>
+        <b>
+          {tally ? tally.turns : dash}
+          {tally?.turnLimit !== null && tally?.turnLimit !== undefined && <small>/{tally.turnLimit}</small>}
+        </b>
+      </li>
+      <li className="reward-screen__tile">
+        <span className="reward-screen__tile-label">Kills</span>
+        <b>{tally ? tally.kills : dash}</b>
+      </li>
+      <li className="reward-screen__tile">
+        <span className="reward-screen__tile-label">HP lost</span>
+        <b>{tally ? tally.hpLost : dash}</b>
+      </li>
+      <li className={`reward-screen__tile${tally && tally.losses > 0 ? ' reward-screen__tile--bad' : ''}`}>
+        <span className="reward-screen__tile-label">Losses</span>
+        <b>{tally ? tally.losses : dash}</b>
+      </li>
+      <li className="reward-screen__tile reward-screen__tile--gold">
+        <span className="reward-screen__tile-label">Gold{clear.flawless && ' · flawless'}</span>
+        <b>
+          <GlyphIcon kind="gold" />+{clear.gold}
+        </b>
+      </li>
+    </ul>
+  );
+}
+
+function describeLevelUps(clear: StageClearView | null): string {
+  const count = clear?.levelUps.length ?? 0;
+  if (count === 0) return 'as it stands';
+  if (count === 1) return `${clear!.levelUps[0].name} levelled up`;
+  return `${count} level ups`;
+}
+
+// A unit's tile on the warband row: sprite, serif name, level (marked
+// when the clear raised it), the HP bar (blinking what a healing reward
+// would add) and the XP track under it.
+function TeamTile({
+  unit,
+  after,
+  leveled,
+}: {
+  unit: TeamUnitView;
+  after: { health: number; maxHealth: number } | null;
+  leveled: boolean;
+}) {
+  const max = after?.maxHealth ?? unit.maxHealth;
+  const kept = max > 0 ? (unit.health / max) * 100 : 0;
+  const gained = after && max > 0 ? (Math.max(0, after.health - unit.health) / max) * 100 : 0;
+  const experience = unit.experienceForLevel > 0 ? (unit.experience / unit.experienceForLevel) * 100 : 0;
+  const hp = `HP ${unit.health}/${unit.maxHealth}`;
+  const healed = after && gained > 0 ? `, ${after.health}/${after.maxHealth} after` : '';
+  const hurt = unit.health < unit.maxHealth;
+  return (
+    <li
+      className={`reward-screen__member${leveled ? ' reward-screen__member--leveled' : ''}`}
+      title={`${unit.name}, ${unit.unitClass}\nLv ${unit.level} · ${unit.experience}/${unit.experienceForLevel} XP\n${hp}`}
+    >
+      <span className="reward-screen__member-sprite" aria-hidden="true">
+        <UnitSprite sprite={unit.sprite} />
+      </span>
+      <span className="reward-screen__member-head">
+        <span className={`reward-screen__member-name${hurt ? ' reward-screen__member-name--hurt' : ''}`}>
+          {unit.name}
+        </span>
+        <span className="reward-screen__member-level">
+          <span className="visually-hidden">Level </span>
+          LV <b>{unit.level}</b>
+          {leveled && <span className="reward-screen__member-up"> ↑</span>}
+        </span>
+      </span>
+      <span className="reward-screen__member-hp" aria-hidden="true">
+        <span className="reward-screen__member-kept" style={{ width: `${kept}%` }} />
+        <span className="reward-screen__member-gained" style={{ width: `${gained}%` }} />
+      </span>
+      <span className="reward-screen__member-xp" aria-hidden="true">
+        <span style={{ width: `${experience}%` }} />
+      </span>
+      <span className="visually-hidden">
+        {hp}
+        {healed}
+      </span>
+    </li>
+  );
+}
+
+// A sum of gold as the rest of the UI shows it: the coin, then the number.
+function Gold({ amount }: { amount: string | number }) {
+  return (
+    <span className="reward-screen__gold">
       <GlyphIcon kind="gold" />
-      {sign}
       {amount}
       <span className="visually-hidden"> gold</span>
     </span>
   );
 }
 
-// A card's numbers block: each fact's label and value, "value ▸ after" when
-// the reward changes it, a sum of gold with the coin.
+// A plate's numbers block, pinned to its foot: each fact's label and
+// value, "value ➜ after" when the reward changes it, a sum of gold with
+// the coin. Always laid out, so plates with none line up with the rest.
 function RewardFacts({ facts }: { facts: readonly RewardFact[] }) {
   const show = (fact: RewardFact, value: string | number) => (fact.gold ? <Gold amount={value} /> : value);
   return (
-    <dl className="reward-card__numbers">
+    <dl className="reward-plate__facts">
       {facts.map((fact) => (
-        <div key={fact.label} className={`reward-card__number${fact.wide ? ' reward-card__number--wide' : ''}`}>
+        <div key={fact.label} className="reward-plate__fact">
           <dt>{fact.label}</dt>
           <dd>
             {show(fact, fact.value)}
             {fact.after !== undefined && (
-              <span className="reward-card__after">
-                {' ▸ '}
-                {show(fact, fact.after)}
-              </span>
+              <>
+                <span className="reward-plate__arrow" aria-hidden="true">
+                  {' ➜ '}
+                </span>
+                <span className="visually-hidden"> becomes </span>
+                <span className="reward-plate__after">{show(fact, fact.after)}</span>
+              </>
             )}
           </dd>
         </div>
@@ -195,15 +376,15 @@ function RewardFacts({ facts }: { facts: readonly RewardFact[] }) {
   );
 }
 
-// A card's picture, one tile big beside its name: a recruit's unit
+// A plate's picture, two tiles big beside its name: a recruit's unit
 // (idling while picked), the item a Supplies, Arms or Seal reward gives,
 // the relic a Relic reward gives, the keystone a Keystone reward gives,
 // else the reward kind's icon.
 function RewardPicture({ reward, selected }: { reward: RewardAction; selected: boolean }) {
   if (reward.sprite) {
     return (
-      <span className="reward-card__sprite" aria-hidden="true">
-        <UnitSprite sprite={reward.sprite} animated={selected} />
+      <span className="reward-plate__picture" aria-hidden="true">
+        <UnitSprite sprite={reward.sprite} scale={2} animated={selected} />
       </span>
     );
   }
@@ -213,8 +394,8 @@ function RewardPicture({ reward, selected }: { reward: RewardAction; selected: b
       (reward.keystoneId && KEYSTONE_ICON_URLS[reward.keystoneId]) ??
       REWARD_ICON_URLS[reward.kind]);
   return (
-    <span className="reward-card__sprite" aria-hidden="true">
-      {url && <img className="reward-card__icon" src={url} alt="" width={32} height={32} />}
+    <span className="reward-plate__picture" aria-hidden="true">
+      {url && <img className="reward-plate__icon" src={url} alt="" width={64} height={64} />}
     </span>
   );
 }
