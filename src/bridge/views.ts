@@ -24,7 +24,8 @@ import type { RunState, UnitSnapshot } from '../game/warband/run.ts';
 import { describeReward, previewRewardHealth, type Reward, type RewardKind } from '../game/warband/rewards.ts';
 import { getRewardFacts, type RewardFact } from '../game/warband/rewardFacts.ts';
 import type { MenuAction } from '../game/actionMenu.ts';
-import { getUnitSkills } from '../game/skills.ts';
+import { describeSkill, getUnitSkills } from '../game/skills.ts';
+import { getPromotions, PROMOTION_LEVEL } from '../game/promotions.ts';
 import { getStandingCombatBonus } from '../game/modifiers.ts';
 import { getStatusModifiers, STATUSES } from '../game/statuses.ts';
 import { findBoon, getTakenBoonList, type BoonKind } from '../game/warband/boons.ts';
@@ -37,7 +38,7 @@ import { findKeystone } from '../game/warband/keystones.ts';
 import type { Unit, UnitRank } from '../game/Unit.ts';
 import { UNIT_CLASSES } from '../game/unitClasses.ts';
 import { getItemSprite, getUnitSprite } from '../game/tileset.ts';
-import { MASTER_SEAL } from '../game/items.ts';
+import { MASTER_SEAL, MAX_INVENTORY_SLOTS, type Item } from '../game/items.ts';
 import { GEAR_SLOT_LABELS, GEAR_SLOTS, getWornGear, NO_EQUIPMENT, type GearSlot } from '../game/equipment.ts';
 import { GEAR_DESCRIPTIONS } from '../game/gearKits.ts';
 import { getClassPassive } from '../game/classPassives.ts';
@@ -90,11 +91,37 @@ export interface UnitView {
   statuses: readonly { id: string; label: string; description: string }[];
 }
 
-// One stat on the unit info screen and its value (stats have no caps).
+// One stat on the unit info screen and its value (stats have no caps),
+// with its growth: the percent of a point it gains a level (experience.ts).
 export interface StatLineView {
   id: GrowthStat;
   label: string;
   value: number;
+  growth: number;
+}
+
+// What a unit carries against its strength, for the sheet's Carry line:
+// its weapon's weight plus its armor's, its strength, and the movement
+// the overload costs it (combatStats.ts).
+export interface LoadView {
+  weight: number;
+  strength: number;
+  movementPenalty: number;
+}
+
+// A class the unit can promote to (promotions.ts), with its art.
+export interface PromotionPathView {
+  id: string;
+  label: string;
+  sprite: string;
+}
+
+// A potion in the unit's bag, with a line on what it does.
+export interface BagItemView {
+  id: string;
+  label: string;
+  quantity: number;
+  description: string;
 }
 
 // The equipped weapon's full numbers, for the unit info screen.
@@ -140,6 +167,8 @@ export interface SkillView {
   label: string;
   manaCost: number;
   range: number;
+  // What it does, in a line (describeSkill).
+  description: string;
 }
 
 // The unit info screen's full stat sheet: everything the hover panel shows
@@ -151,6 +180,16 @@ export interface SkillView {
 // (warband/quirks.ts).
 export interface UnitDetailView extends UnitView {
   stats: readonly StatLineView[];
+  // Max HP's growth, for the sheet's HP row (the stat rows carry theirs).
+  healthGrowth: number;
+  load: LoadView;
+  // The classes it can promote to, and the level that opens them; none
+  // for a promoted class or a monster.
+  promotions: readonly PromotionPathView[];
+  promotionLevel: number;
+  // The potions in its bag with what they do, and how many it can hold.
+  bag: readonly BagItemView[];
+  bagSlots: number;
   damageType: DamageType;
   attack: number;
   hit: number;
@@ -520,7 +559,27 @@ export function toUnitDetailView(unit: Unit | null | undefined, boss: BossRules 
   };
   return Object.freeze({
     ...view,
-    stats: Object.freeze(DETAIL_STATS.map(([id, label]) => Object.freeze({ id, label, value: unit[id] }))),
+    stats: Object.freeze(
+      DETAIL_STATS.map(([id, label]) => Object.freeze({ id, label, value: unit[id], growth: unit.growths[id] ?? 0 })),
+    ),
+    healthGrowth: unit.growths.health ?? 0,
+    load: Object.freeze({
+      weight: (weapon?.weight ?? 0) + unit.armorWeight,
+      strength: unit.strength,
+      movementPenalty: getLoadMovementPenalty(unit),
+    }),
+    promotions: Object.freeze(
+      getPromotions(unit.unitClass).map(({ id, label }) =>
+        Object.freeze({ id, label, sprite: getUnitSprite(id, unit.faction) }),
+      ),
+    ),
+    promotionLevel: PROMOTION_LEVEL,
+    bag: Object.freeze(
+      (unit.items ?? []).map(({ item, quantity }) =>
+        Object.freeze({ id: item.id, label: item.label, quantity, description: describeBagItem(item) }),
+      ),
+    ),
+    bagSlots: MAX_INVENTORY_SLOTS,
     damageType,
     attack: unit[DAMAGE_TYPES[damageType].power] + (weapon?.power ?? 0) + bonus.damage,
     hit: getHit({ ...rates, bonus }),
@@ -555,12 +614,27 @@ export function toUnitDetailView(unit: Unit | null | undefined, boss: BossRules 
     ),
     weaponTypes: unit.weaponTypes,
     skills: Object.freeze(
-      getUnitSkills(unit).map(({ id, label, manaCost, range }) => Object.freeze({ id, label, manaCost, range })),
+      getUnitSkills(unit).map((skill) =>
+        Object.freeze({
+          id: skill.id,
+          label: skill.label,
+          manaCost: skill.manaCost,
+          range: skill.range,
+          description: describeSkill(skill),
+        }),
+      ),
     ),
     secondaryClass: unit.secondaryClass && getClassLabel(unit.secondaryClass),
     passives: Object.freeze([...getPassiveViews(unit), ...getBossRuleViews(boss)]),
     quirk: quirk && Object.freeze({ label: quirk.name, description: quirk.description }),
   });
+}
+
+// What a bag item does, in a line: a potion's recovery; a seal's use.
+function describeBagItem(item: Item): string {
+  if (item.kind === 'consumable') return `Restores up to ${item.amount} ${item.stat === 'health' ? 'HP' : 'MP'}`;
+  if (item.kind === 'seal') return 'Spent at camp on a second promotion';
+  return '';
 }
 
 function toWeaponDetailView(weapon: Weapon): WeaponDetailView {
