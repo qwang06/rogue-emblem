@@ -32,6 +32,7 @@ import { WeaponMenu } from './WeaponMenu.tsx';
 import { LevelUpPanel } from './LevelUpPanel.tsx';
 import { LoadingScreen } from './LoadingScreen.tsx';
 import { MainMenuButton } from './MainMenuButton.tsx';
+import { DeployCallout } from './DeployCallout.tsx';
 import { ObjectiveScreen } from './ObjectiveScreen.tsx';
 import { OverworldScreen } from './OverworldScreen.tsx';
 import { PageHeader } from './PageHeader.tsx';
@@ -132,6 +133,7 @@ export function App() {
                 <MapBackButton />
                 <AutoCommandQueue />
                 <DeploymentMenu />
+                <DeployCallout />
                 <RosterMenu />
                 <ActionMenu />
                 <WeaponMenu />

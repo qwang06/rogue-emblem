@@ -1894,7 +1894,8 @@ kbd {
 @media (max-width: 44rem) {
   .battle-dock,
   .battle-side,
-  .battle-bar {
+  .battle-bar,
+  .hud .deploy-callout {
     display: none;
   }
 
@@ -6028,4 +6029,115 @@ textarea.draft-input {
   position: absolute;
   top: 0;
   right: 0;
+}
+
+/* ---- Deployment callout ---- */
+
+/* At the foot of the board, over the command bar's deployment chips: a
+   gold-ruled ink tag saying what to do, with an arrow bobbing down at the
+   chips. It sits in the stage's bottom-left, where the chips start. */
+.hud .deploy-callout {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  pointer-events: none;
+  animation: deploy-callout-bob 1.4s ease-in-out infinite;
+}
+
+.deploy-callout__text {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 7px 12px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--accent);
+  background: rgb(15 17 32 / 92%);
+  border: 1px solid var(--accent);
+  box-shadow:
+    0 0 0 3px rgb(15 17 32 / 70%),
+    0 0 14px rgb(240 181 65 / 35%);
+}
+
+.deploy-callout__keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  color: var(--fg-dim);
+}
+
+.deploy-callout__keys kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 1.125rem;
+  height: 1.0625rem;
+  padding: 1px 4px 0;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  line-height: 1;
+  color: var(--accent);
+  background: #1d1c2a;
+  border: 1px solid rgb(138 109 59 / 85%);
+  border-bottom-width: 2px;
+  border-bottom-color: #5a4526;
+  border-radius: 2px;
+}
+
+.deploy-callout__keys kbd:not(:first-child) {
+  margin-left: 6px;
+}
+
+/* A gold triangle under the tag's left end, pointing at the chips. */
+.deploy-callout__arrow {
+  width: 0;
+  height: 0;
+  margin-left: 22px;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 9px solid var(--accent);
+}
+
+@keyframes deploy-callout-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(5px);
+  }
+}
+
+/* The deployment chips glow in time with the callout until one is picked. */
+.command-row--attention .command-chip {
+  animation: command-chip-attention 1.4s ease-in-out infinite;
+}
+
+@keyframes command-chip-attention {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 1px rgb(138 109 59 / 45%);
+  }
+  50% {
+    border-color: var(--accent);
+    box-shadow:
+      inset 0 0 0 1px rgb(240 181 65 / 70%),
+      inset 0 0 10px rgb(240 181 65 / 35%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud .deploy-callout,
+  .command-row--attention .command-chip {
+    animation: none;
+  }
 }
