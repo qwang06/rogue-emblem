@@ -15,7 +15,12 @@
 
 .overworld {
   --ink: #4a301a;
+  /* The map's lettering is the one place the UI leaves Silver: names on
+     the map, the realm's name and the site banner's title. */
   --map-face: 'IM Fell English SC', Georgia, serif;
+  /* The leather's text: warm parchment for words, tan for labels. */
+  --map-fg: #f3e2bc;
+  --map-label: #c8a870;
   position: fixed;
   inset: var(--below-header) 0 0;
   z-index: 10;
@@ -56,14 +61,14 @@
   font-size: 1.5rem;
   font-weight: normal;
   line-height: 1.1;
-  color: #f3e2bc;
+  color: var(--map-fg);
   text-shadow: 0 2px 0 #000;
 }
 
 .overworld__stat {
   margin: 0;
   white-space: nowrap;
-  color: #c8a870;
+  color: var(--map-label);
 }
 
 .overworld__gold {
@@ -303,7 +308,7 @@
   font-size: max(0.7rem, calc(var(--tile) * 0.42));
   line-height: 1.1;
   white-space: nowrap;
-  color: #fff8e8;
+  color: var(--fg-bright);
   text-shadow:
     0 0 2px #1a0f07,
     1px 1px 0 #1a0f07,
@@ -426,22 +431,32 @@
   }
 }
 
-/* The highlighted site's banner: its kind and stage, its name over a gold
-   rule, a line on what happens there and the battle's facts. A fixed
-   height, so swapping sites never moves the map. */
+/* The highlighted site's banner: its kind and stage and its name over a
+   gold rule across the top, then a line on what happens there beside the
+   battle's facts, one to a line, so none of it is cut off. A fixed height,
+   so swapping sites never moves the map. */
 .overworld__banner {
   flex: none;
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 5fr);
+  grid-template-rows: auto auto 1fr;
+  column-gap: 20px;
   height: 6.4rem;
   box-sizing: border-box;
   padding: 2px 18px 0;
   overflow: hidden;
-  color: #f3e2bc;
+  color: var(--map-fg);
+}
+
+.overworld__kind,
+.overworld__name {
+  grid-column: 1 / -1;
 }
 
 .overworld__kind {
   margin: 0;
   font-size: 0.75rem;
-  color: #c8a870;
+  color: var(--map-label);
 }
 
 .overworld__name {
@@ -455,64 +470,70 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #fff8e8;
+  color: var(--fg-bright);
   text-shadow: 0 2px 0 #000;
   border-bottom: var(--px) solid;
-  border-image: linear-gradient(90deg, #e8b030, #e8b03080 60%, transparent) 1;
+  border-image: linear-gradient(
+      90deg,
+      var(--accent),
+      color-mix(in srgb, var(--accent) 50%, transparent) 60%,
+      transparent
+    )
+    1;
 }
 
+/* Up to three lines; the longest blurb takes two at 1280 wide. */
 .overworld__blurb {
-  margin: 0 0 4px;
+  display: -webkit-box;
+  margin: 0;
   font-size: 0.85rem;
-  white-space: nowrap;
+  line-height: 1.2;
   overflow: hidden;
-  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
+/* Label and value in two columns; a long enemy list wraps to a second
+   line rather than being cut. */
 .overworld__facts {
-  display: flex;
-  gap: 2px 18px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: start;
+  gap: 1px 8px;
   margin: 0;
   font-size: 0.75rem;
-  min-width: 0;
+  line-height: 1.2;
 }
 
 .overworld__facts > div {
-  display: flex;
-  gap: 6px;
-  min-width: 0;
+  display: contents;
 }
 
 .overworld__facts dt {
-  color: #c8a870;
+  color: var(--map-label);
 }
 
 .overworld__facts dd {
+  display: -webkit-box;
   margin: 0;
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
-/* On a phone the facts stack, one to a line. */
+/* On a phone the blurb and the facts stack. */
 @media (max-width: 640px) {
   .overworld__banner {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto 1fr;
     height: 9.6rem;
     padding: 0 8px;
   }
 
-  /* The blurb wraps to two lines, always laid out at two. */
   .overworld__blurb {
-    display: -webkit-box;
     height: 2.4em;
-    line-height: 1.2;
-    white-space: normal;
-    -webkit-box-orient: vertical;
+    margin-bottom: 4px;
     -webkit-line-clamp: 2;
-  }
-
-  .overworld__facts {
-    flex-direction: column;
   }
 }
 

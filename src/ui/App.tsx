@@ -115,10 +115,11 @@ export function App() {
           <div className="stage" onContextMenu={cancelOnRightClick} onWheel={scrollOverlayOnWheel}>
             <div id="game" role="img" aria-label="Battle map" />
             <div className="hud">
-              {/* First, so every other overlay paints over it. */}
+              {/* The map's own labels first, so every window paints over them. */}
+              <MapTags />
+              {/* Then the unit panel, so every other overlay paints over it. */}
               <UnitPanel />
               {generator && <MapGeneratorPanel {...generator} />}
-              <MapTags />
               <MapBackButton />
               <AutoCommandQueue />
               <DeploymentMenu />

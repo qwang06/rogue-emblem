@@ -63,7 +63,8 @@
   /* The game's bars: green HP, gold EXP (kept clear of the cyan MP). */
   --hp: #48c048;
   --exp: #e8b830;
-  /* The blue selection bar for item rows, with its light text. */
+  /* The push tag's blue (rows no longer select on it: see --selection),
+     and the cream text on map tags and badges. */
   --bar: #3858b0;
   --bar-fg: #fff8e8;
   --rule: var(--px) solid var(--muted);
@@ -1713,16 +1714,12 @@ kbd {
   visibility: visible;
 }
 
-/* Item and weapon rows select on the GBA's blue bar, in light text. */
-.weapon-menu__item.action-menu__item--selected,
-.item-menu__item.action-menu__item--selected {
-  color: var(--bar-fg);
-  background: var(--bar);
-}
-
+/* Item and weapon rows select like every other list (the slate band and
+   gold ring of `.action-menu__item--selected`), with their uses and cost
+   brightened on it. */
 .action-menu__item--selected .weapon-menu__uses,
 .item-menu__item.action-menu__item--selected .skill-menu__cost {
-  color: var(--bar-fg);
+  color: var(--fg);
 }
 
 .weapon-menu__side {
@@ -1925,7 +1922,9 @@ kbd {
   white-space: nowrap;
   pointer-events: none;
   color: var(--bar-fg);
-  background: var(--red);
+  /* A deep red, not the bright text red, so the light number reads on it
+     (5:1). */
+  background: #b8302a;
   box-shadow: 0 0 0 var(--px) var(--desktop);
 }
 
@@ -1937,7 +1936,7 @@ kbd {
 }
 
 .map-tag--hazard {
-  background: var(--orange);
+  background: #a84e14;
 }
 
 .map-tag--push {
@@ -4133,6 +4132,18 @@ textarea.draft-input {
   border-top: var(--rule);
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
+}
+
+/* A recruit's seven stats take two rows across a card wide enough for
+   four columns, so the card isn't cut by the footer on a short stage. */
+.reward-card {
+  container-type: inline-size;
+}
+
+@container (min-width: 12rem) {
+  .reward-card__numbers--stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .reward-card__number {

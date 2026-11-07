@@ -1,4 +1,6 @@
-.auto-command-queue {
+/* An ink window like every other (.panel draws the frame), that the
+   pointer passes through. */
+.panel.auto-command-queue {
   position: absolute;
   right: 8px;
   bottom: 8px;
@@ -6,10 +8,8 @@
   box-sizing: border-box;
   width: min(13rem, calc(100% - 16px));
   min-height: 4.6rem;
-  padding: 5px 8px;
+  padding: 2px 4px;
   color: var(--fg);
-  background: var(--bg);
-  border: var(--border);
   box-shadow: var(--lift);
   font-size: 0.7rem;
   line-height: 1.25;
@@ -42,7 +42,7 @@
 }
 
 @media (max-width: 36rem) {
-  .auto-command-queue {
+  .panel.auto-command-queue {
     right: 4px;
     bottom: 4px;
     width: min(11rem, calc(100% - 8px));
