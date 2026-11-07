@@ -131,9 +131,44 @@ write(
   ),
 );
 
+// ---- The field windows (the shared look since the 2026-11 overhaul): the
+// slate frame again, with a deep ink fill and gold gems, for every window;
+// the same frame with a gold rim marks the focused or chosen one. Both share
+// the fill, so moving focus changes only the rim.
+const INK = {
+  outline: '#151729',
+  rimLight: RIM_LIGHT,
+  rim: RIM,
+  ring: '#151729',
+  gemLight: '#ffee83',
+  gem: '#f0b541',
+  fill: '#22263d',
+};
+write(`${UI}/frame-ink.png`, recolor(SLATE, banner(INK)));
+write(
+  `${UI}/frame-ink-gold.png`,
+  recolor(
+    SLATE,
+    banner({
+      ...INK,
+      outline: '#3d2416',
+      rimLight: '#ffee83',
+      rim: '#f0b541',
+      ring: '#3d2416',
+      gemLight: '#92e8c0',
+      gem: '#4fa4b8',
+    }),
+  ),
+);
+
 // ---- A window title's name plate: the rose plate with teal gems, 48x13, a
 // 3-slice with 8px pointed ends (border-image-slice: 0 8 fill).
 write(`${UI}/name-plate.png`, cut(0, 50, 48, 13));
+
+// ---- A field window's title tab: the sheet's gold flat label (46x13,
+// slanted ends), a 3-slice with 6px ends (border-image-slice: 0 6 fill),
+// dark text on gold.
+write(`${UI}/title-tab.png`, cut(577, 50, 46, 13));
 
 // ---- A gauge's trough (HP, MP, EXP bars), 48x9: outline and light rim on
 // top (2 rows), a 4-row dark trough, rim, outline and drop shadow below (3
@@ -159,6 +194,40 @@ write(`${UI}/arrow-up.png`, cut(54, 133, 5, 5));
 write(`${UI}/button.png`, cut(150, 161, 20, 15));
 write(`${UI}/button-hover.png`, cut(182, 161, 20, 15));
 write(`${UI}/button-pressed.png`, cut(214, 161, 20, 15));
+
+// The same three buttons recolored slate for the field windows and header.
+const BUTTON_SLATE = [
+  [
+    `${UI}/button-slate.png`,
+    cut(150, 161, 20, 15),
+    { '#52333f': '#151729', '#bd6a62': '#404973', '#d09c8e': '#686f99', '#ffae70': '#a3a7c2', '#8f4d57': '#2f3557' },
+  ],
+  [
+    `${UI}/button-slate-hover.png`,
+    cut(182, 161, 20, 15),
+    {
+      '#ffee83': '#ffee83',
+      '#52333f': '#151729',
+      '#cf752b': '#565f93',
+      '#ffae70': '#a3a7c2',
+      '#ffc2a1': '#d6d9ea',
+      '#ab5130': '#404973',
+    },
+  ],
+  [
+    `${UI}/button-slate-pressed.png`,
+    cut(214, 161, 20, 15),
+    {
+      '#52333f': '#151729',
+      '#633d4c': '#22263d',
+      '#8f4d57': '#2f3557',
+      '#a47d72': '#404973',
+      '#bd6a62': '#4e5582',
+      '#d09c8e': '#686f99',
+    },
+  ],
+];
+for (const [file, rows, swaps] of BUTTON_SLATE) write(file, recolor(rows, swaps));
 
 // ---- A checkbox, 10x11: the rose square, empty and with its teal gem.
 write(`${UI}/checkbox.png`, cut(3, 147, 10, 11));

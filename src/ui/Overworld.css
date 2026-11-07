@@ -24,7 +24,7 @@
   gap: 6px;
   padding: 8px 10px 10px;
   box-sizing: border-box;
-  background: radial-gradient(ellipse at 50% 40%, #3a2414 0%, #1a0f07 100%);
+  background: radial-gradient(ellipse at 50% 40%, #232842 0%, #0d0f19 100%);
   color: var(--fg);
 }
 
@@ -587,6 +587,7 @@
 
 .overworld-event__choice--selected {
   background: var(--selection);
+  box-shadow: var(--selection-ring);
 }
 
 .overworld-event__choice--selected::before {

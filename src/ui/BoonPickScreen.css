@@ -306,6 +306,7 @@
 
 .boon-pick__boon--selected {
   background: var(--selection);
+  box-shadow: var(--selection-ring);
   border-color: var(--accent);
 }
 
@@ -431,6 +432,7 @@
 
 .boon-pick__redraw--selected {
   background: var(--selection);
+  box-shadow: var(--selection-ring);
   border-color: var(--accent);
   color: var(--accent);
 }

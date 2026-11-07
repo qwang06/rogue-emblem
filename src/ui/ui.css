@@ -15,42 +15,49 @@
   descent-override: 19%;
 }
 
-/* A GBA tactics look: windows are peach parchment in a rose-brown frame
-   with teal corner gems (the UI asset sheet), text is a chunky pixel font
-   in dark plum, and the selection cue is a cream hand pointing at the row. The page around
-   the map is dark wood, so anything drawn straight on it (the header, the
-   title and config pages) uses the light text set in `.on-dark`. */
+/* The look (2026-11 overhaul): Into the Breach's field windows with
+   Tactics Ogre's pages. Every window is a deep ink box in a slate frame
+   with gold gems, its title on a gold tab, so the colors that carry
+   meaning (the sides, HP, gold, damage) are the brightest things on
+   screen. Text that is read rather than scanned (dialog, a unit's full
+   sheet) sits on a parchment page (`.frame--page`). Gold marks what has
+   focus: a gold rim on the chosen card (`.frame--focus`), a gold band and
+   ring on the chosen row, the cream hand beside it. The page around the
+   map is the darkest ink, so windows lift off it. */
 :root {
   /* One art pixel. Borders, the pointer and other pixel art are sized in
      whole multiples of it so their pixels stay square and crisp. */
   --px: 2px;
-  /* Surfaces: the wood behind everything, a window's parchment, a raised
-     strip inside one, and the selected row's band. */
-  --desktop: #2a1a10;
-  --bg: #ffc2a1;
-  --bg-light: #f5ad8c;
-  --selection: #f2a283;
-  /* Lines: a window's rose-brown frame, and the gold trim that marks the
-     focused one. */
-  --muted: #8f4d57;
-  --accent: #b8801c;
-  /* Text, strongest first, for parchment. */
-  --fg-bright: #3d2936;
-  --fg: #52333f;
-  --fg-dim: #9a6460;
+  /* Surfaces: the page behind everything, a window's ink, a raised strip
+     inside one, and the chosen row's band. */
+  --desktop: #12141f;
+  --ink: #22263d;
+  --bg: #22263d;
+  --bg-light: #2f3557;
+  --selection: #3b4373;
+  /* The chosen row's ring, drawn inside it so it takes no room. */
+  --selection-ring: inset 0 0 0 var(--px) rgb(240 181 65 / 75%);
+  /* Lines: a rule inside a window, and the gold that marks focus. */
+  --muted: #4e5582;
+  --accent: #f0b541;
+  /* Text, strongest first, for ink. */
+  --fg-bright: #fff6e2;
+  --fg: #e4dcc8;
+  --fg-dim: #9ea3c6;
   /* Palette colors, each with one job: blue is the player's side, red the
-     enemy's, green health and the guests (allies the AI plays), cyan mana, yellow gold and gains, magenta
-     experience and level ups. Dark enough to read on parchment. */
-  --blue: #2f5fc8;
-  --red: #c0342a;
-  --green: #2e9a3a;
-  --cyan: #1c86a8;
-  --yellow: #a86a08;
-  --magenta: #8a3ab8;
-  --orange: #c8601c;
-  --red-bg: rgb(192 52 42 / 14%);
-  --blue-bg: rgb(47 95 200 / 12%);
-  --green-bg: rgb(46 154 58 / 14%);
+     enemy's, green health and the guests (allies the AI plays), cyan mana,
+     yellow gold and gains, magenta experience and level ups. Bright, to
+     read on ink. */
+  --blue: #7fa6ff;
+  --red: #ff6f61;
+  --green: #8fd45a;
+  --cyan: #5fd8ee;
+  --yellow: #f6c445;
+  --magenta: #d595ff;
+  --orange: #ff9a4a;
+  --red-bg: rgb(230 69 57 / 22%);
+  --blue-bg: rgb(104 140 255 / 20%);
+  --green-bg: rgb(99 171 63 / 22%);
   /* The game's bars: green HP, gold EXP (kept clear of the cyan MP). */
   --hp: #48c048;
   --exp: #e8b830;
@@ -68,7 +75,7 @@
   --radius: 0;
   --radius-sm: 0;
   /* Lifts windows that float over the map off it: a hard pixel drop. */
-  --lift: var(--px) var(--px) 0 rgb(0 0 0 / 35%);
+  --lift: calc(2 * var(--px)) calc(2 * var(--px)) 0 rgb(0 0 0 / 45%);
   /* The selection cue: a cream hand (11x8 art pixels), drawn hanging off
      the left of the row it points at. */
   --pointer: url('../assets/ui/hand-pointer.png');
@@ -83,33 +90,17 @@
   --hp-fill: linear-gradient(#c8d45d 50%, #63ab3f 50%);
   --mp-fill: linear-gradient(#92e8c0 50%, #4fa4b8 50%);
   --exp-fill: linear-gradient(#ffee83 50%, #f0b541 50%);
-  /* Text on the sheet's rose buttons (.header-button). */
+  /* Text on the slate buttons (.header-button), and on a gold title tab. */
   --button-fg: #fff1e0;
+  --tab-fg: #2a1a10;
   /* A window's Back / Close tab (.menu-exit), wide enough for either. */
   --menu-exit-width: 4.5rem;
 }
 
-/* Windows set the parchment tokens again, so one opened from the header
-   (a popover) reads dark on light like every other. */
+/* Windows set the ink tokens again, so one nested in a page reads light
+   on dark like every other. */
 .panel,
-.frame {
-  --fg-bright: #3d2936;
-  --fg: #52333f;
-  --fg-dim: #9a6460;
-  --accent: #b8801c;
-  --selection: #f2a283;
-  --muted: #8f4d57;
-  --bg: #ffc2a1;
-  --blue: #2f5fc8;
-  --red: #c0342a;
-  --green: #2e9a3a;
-  --cyan: #1c86a8;
-  --yellow: #a86a08;
-  --magenta: #8a3ab8;
-}
-
-/* Light text for anything drawn straight on the dark wood, or on a blue
-   banner. */
+.frame,
 .on-dark,
 .page-header,
 .title-screen,
@@ -117,19 +108,45 @@
 .frame--banner,
 .frame--banner-red,
 .frame--banner-green {
-  --fg-bright: #fff3d6;
-  --fg: #f0d9a8;
-  --fg-dim: #b0946c;
-  --accent: #e8b030;
-  --selection: #4a3020;
-  --muted: #7a5a3a;
-  --bg: #3a2416;
-  --blue: #7aa2f7;
-  --red: #f7768e;
-  --green: #9ece6a;
-  --cyan: #4fd6f0;
-  --yellow: #e8b030;
-  --magenta: #c8a0f8;
+  --fg-bright: #fff6e2;
+  --fg: #e4dcc8;
+  --fg-dim: #9ea3c6;
+  --accent: #f0b541;
+  --selection: #3b4373;
+  --muted: #4e5582;
+  --bg: #22263d;
+  --bg-light: #2f3557;
+  --blue: #7fa6ff;
+  --red: #ff6f61;
+  --green: #8fd45a;
+  --cyan: #5fd8ee;
+  --yellow: #f6c445;
+  --magenta: #d595ff;
+}
+
+/* A page: parchment and dark plum text, for what is read rather than
+   scanned (the dialog box, a unit's full sheet). */
+.frame--page,
+.panel--page {
+  --fg-bright: #3d2936;
+  --fg: #52333f;
+  --fg-dim: #9a6460;
+  --accent: #b8801c;
+  --selection: #f2a283;
+  --selection-ring: inset 0 0 0 var(--px) rgb(143 77 87 / 60%);
+  --muted: #c48a7e;
+  --bg: #ffc2a1;
+  --bg-light: #f5ad8c;
+  --blue: #2f5fc8;
+  --red: #c0342a;
+  --green: #2e9a3a;
+  --cyan: #1c86a8;
+  --yellow: #a86a08;
+  --magenta: #8a3ab8;
+  --orange: #c8601c;
+  --red-bg: rgb(192 52 42 / 14%);
+  --blue-bg: rgb(47 95 200 / 12%);
+  --green-bg: rgb(46 154 58 / 14%);
 }
 
 /* Pixel art is never smoothed. */
@@ -255,7 +272,7 @@ body {
   text-shadow: 0 var(--px) 0 rgb(61 41 54 / 55%);
   background: transparent;
   border: 1px solid transparent;
-  border-image: url('../assets/ui/button.png') 4 4 5 fill / calc(4 * var(--px)) calc(4 * var(--px))
+  border-image: url('../assets/ui/button-slate.png') 4 4 5 fill / calc(4 * var(--px)) calc(4 * var(--px))
     calc(5 * var(--px)) / var(--px) stretch;
   image-rendering: pixelated;
   border-radius: 0;
@@ -270,14 +287,14 @@ a.header-button {
 
 .header-button:hover {
   color: var(--button-fg);
-  border-image-source: url('../assets/ui/button-hover.png');
+  border-image-source: url('../assets/ui/button-slate-hover.png');
 }
 
 .header-button:active,
 .header-button[aria-pressed='true'],
 .header-button[aria-expanded='true'] {
   color: var(--button-fg);
-  border-image-source: url('../assets/ui/button-pressed.png');
+  border-image-source: url('../assets/ui/button-slate-pressed.png');
 }
 
 /* A button that can't act on this screen stays in place, faded, so the
@@ -286,7 +303,7 @@ a.header-button {
 .header-button:disabled:hover {
   opacity: 0.5;
   cursor: default;
-  border-image-source: url('../assets/ui/button.png');
+  border-image-source: url('../assets/ui/button-slate.png');
 }
 
 .header-button:focus-visible {
@@ -516,8 +533,18 @@ a.header-button {
   background: none;
   border-style: solid;
   border-width: calc(10 * var(--px));
-  border-image: url('../assets/ui/frame-parchment.png') 10 fill / calc(10 * var(--px)) stretch;
+  border-image: url('../assets/ui/frame-ink.png') 10 fill / calc(10 * var(--px)) stretch;
   image-rendering: pixelated;
+}
+
+.frame--page,
+.panel--page {
+  border-image-source: url('../assets/ui/frame-parchment.png');
+}
+
+/* The focused or chosen window: the same box with a gold rim. */
+.frame--focus {
+  border-image-source: url('../assets/ui/frame-ink-gold.png');
 }
 
 .frame--banner {
@@ -541,9 +568,9 @@ a.header-button {
   background: none;
 }
 
-/* A window's title is a name plate on its top frame, as on the GBA: the
-   asset sheet's rose plate with pointed, gem-studded ends (a 3-slice, 13
-   art pixels tall), in light caps, which takes no room in the window. */
+/* A window's title is a gold tab on its top frame: the asset sheet's gold
+   flat label with slanted ends (a 3-slice, 13 art pixels tall), in dark
+   caps, which takes no room in the window. */
 .pause-menu__title,
 .roster-menu__title,
 .title-menu__heading,
@@ -572,11 +599,11 @@ a.header-button {
   white-space: nowrap;
   text-align: left;
   text-transform: uppercase;
-  color: #ffc2a1;
+  color: var(--tab-fg);
   background: none;
   border-style: solid;
-  border-width: 0 calc(8 * var(--px));
-  border-image: url('../assets/ui/name-plate.png') 0 8 fill / 0 calc(8 * var(--px)) stretch;
+  border-width: 0 calc(6 * var(--px));
+  border-image: url('../assets/ui/title-tab.png') 0 6 fill / 0 calc(6 * var(--px)) stretch;
   image-rendering: pixelated;
 }
 
@@ -1053,6 +1080,7 @@ kbd {
 .action-menu__item--selected {
   color: var(--fg-bright);
   background: var(--selection);
+  box-shadow: var(--selection-ring);
 }
 
 .action-menu__item--selected::before {
@@ -1838,6 +1866,7 @@ kbd {
 .map-generator__select:hover,
 .map-generator__button:hover {
   background: var(--selection);
+  box-shadow: var(--selection-ring);
 }
 
 .map-generator__button:active {
@@ -2336,22 +2365,22 @@ kbd {
   color: var(--fg);
 }
 
-/* Each entry sits on its own dark wood chip with light text, so it stays
-   readable on parchment and when the hint floats over the map's bright
-   terrain; its key cap is a parchment plate. */
+/* Each entry sits on its own ink chip with light text, so it stays
+   readable on any window and when the hint floats over the map's bright
+   terrain; its key cap is a gold plate. */
 .key-hint__entry {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
   padding: 2px 8px 2px 2px;
-  color: #f0d9a8;
-  background: #3a2416;
+  color: #e4dcc8;
+  background: #1b1e33;
   border-radius: var(--radius-sm);
 }
 
 .key-hint__entry kbd {
-  color: #2a170a;
-  background: #f0d9a8;
+  color: #2a1a10;
+  background: #f0b541;
 }
 
 /* ---- Objective screen ---------------------------------------------- */
@@ -2777,6 +2806,7 @@ kbd {
 .title-menu__item--selected {
   color: var(--fg-bright);
   background: var(--selection);
+  box-shadow: var(--selection-ring);
 }
 
 /* The gauntlet pointing at the selected entry hangs off the card's left
@@ -2918,6 +2948,7 @@ kbd {
   color: var(--accent);
   border-color: var(--accent);
   background: var(--selection);
+  box-shadow: var(--selection-ring);
 }
 
 .name-field__button:focus-visible {
@@ -4013,6 +4044,7 @@ textarea.draft-input {
    screen (see "UI layout" in AGENTS.md). */
 .reward-card--selected {
   background: var(--selection);
+  box-shadow: var(--selection-ring);
   border-color: var(--accent);
 }
 
@@ -4176,6 +4208,7 @@ textarea.draft-input {
 .reward-button--selected {
   color: var(--fg-bright);
   background: var(--selection);
+  box-shadow: var(--selection-ring);
   border-color: var(--accent);
 }
 
