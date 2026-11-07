@@ -251,7 +251,10 @@ export function BattleBar() {
     <footer className="battle-bar">
       <div className="battle-bar__main">
         {menu ? (
-          <ul className="command-row" aria-label="Commands">
+          <ul
+            className={`command-row${menu.field === 'deploymentMenu' ? ' command-row--attention' : ''}`}
+            aria-label="Commands"
+          >
             {menu.actions.map((action, index) => {
               const selected = index === menu.selectedIndex;
               const classes = ['command-chip'];
