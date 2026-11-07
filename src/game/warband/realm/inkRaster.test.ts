@@ -17,6 +17,8 @@ function inkOf(columns: number, rows: number, water: number[] = [], extra: Parti
     water: grid.cells.map((_, i) => water.includes(i)),
     placements: [],
     roads: [],
+    rivers: [],
+    bands: [{ season: 'summer', from: 0, to: columns }],
     labels: [],
     ...extra,
   };
@@ -88,5 +90,41 @@ describe('paintRealmInk', () => {
     expect(pixel(image, 6, 7)).toEqual([255, 0, 0, 255]);
     expect(pixel(image, 7, 8)).not.toEqual([255, 0, 0, 255]);
     expect(pixel(image, 0, 0)).toEqual([255, 0, 0, 255]);
+  });
+});
+
+describe('seasons on the paper', () => {
+  it('paints each band in its season’s paper, blending across their edge', () => {
+    const bands = [
+      { season: 'summer' as const, from: 0, to: 8 },
+      { season: 'winter' as const, from: 8, to: 16 },
+    ];
+    const image = paintRealmInk(inkOf(16, 2, [], { bands }), 9, STAMPS);
+    const summer = pixel(image, 2 * TILE_SIZE, 20);
+    const winter = pixel(image, 14 * TILE_SIZE, 20);
+    // Winter's paper is paler and less yellow than summer's.
+    expect(winter[2]).toBeGreaterThan(summer[2] + 20);
+    const edge = pixel(image, 8 * TILE_SIZE, 20);
+    expect(edge[2]).toBeGreaterThan(summer[2]);
+    expect(edge[2]).toBeLessThan(winter[2]);
+  });
+
+  it('draws a river as ink with water inside, and the border inside the edge', () => {
+    const ink = inkOf(4, 4, [], {
+      rivers: [
+        {
+          tiles: [],
+          line: [
+            { x: 64, y: 16 },
+            { x: 64, y: 112 },
+          ],
+        },
+      ],
+    });
+    const image = paintRealmInk(ink, 5, STAMPS);
+    expect(near(pixel(image, 64, 64), INK_COLORS.water, 2)).toBe(true);
+    expect(near(pixel(image, 66, 64), INK_COLORS.ink, 2)).toBe(true);
+    expect(near(pixel(image, 6, 64), INK_COLORS.ink, 30)).toBe(true);
+    expect(near(pixel(image, 9, 64), INK_COLORS.ink, 30)).toBe(false);
   });
 });

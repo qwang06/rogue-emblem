@@ -258,133 +258,146 @@ function Overworld({
         </button>
       </header>
 
-      <div className="overworld__viewport" ref={viewportRef}>
-        <div
-          className="overworld__map"
-          style={{ width: view.width * scale, height: view.height * scale, '--tile': `${scale}px` } as CSSProperties}
-        >
-          <RealmCanvas realm={realm} ink={ink} zoom={zoom} />
-          {ink.labels.map((label) => (
-            <span
-              key={label.text}
-              className={`overworld__land overworld__land--${label.kind}`}
-              style={at(label)}
+      <div className="overworld__window">
+        <div className="overworld__viewport" ref={viewportRef}>
+          <div
+            className="overworld__map"
+            style={{ width: view.width * scale, height: view.height * scale, '--tile': `${scale}px` } as CSSProperties}
+          >
+            <RealmCanvas realm={realm} ink={ink} zoom={zoom} />
+            {ink.labels.map((label) => (
+              <span
+                key={label.text}
+                className={`overworld__land overworld__land--${label.kind}`}
+                style={at(label)}
+                aria-hidden="true"
+              >
+                {label.text}
+              </span>
+            ))}
+            <svg
+              className="overworld__routes"
+              viewBox={`0 0 ${view.width * TILE_SIZE} ${view.height * TILE_SIZE}`}
               aria-hidden="true"
             >
-              {label.text}
-            </span>
-          ))}
-          <svg
-            className="overworld__routes"
-            viewBox={`0 0 ${view.width * TILE_SIZE} ${view.height * TILE_SIZE}`}
-            aria-hidden="true"
-          >
-            {view.choices.length > 0 && (
-              <>
-                <defs>
-                  <filter id="overworld-soft" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur stdDeviation={TILE_SIZE * 0.7} />
-                  </filter>
-                  <mask id="overworld-reach" maskUnits="userSpaceOnUse" x="0" y="0" width={mapWidth} height={mapHeight}>
-                    <rect width={mapWidth} height={mapHeight} fill="#fff" />
-                    <g filter="url(#overworld-soft)">
-                      {current && <circle cx={tileCenter(current).x} cy={tileCenter(current).y} r={TILE_SIZE * 2.4} />}
-                      {routes.choices.map((line, i) => (
-                        <polyline
-                          key={`m${i}`}
-                          className="overworld__reach"
-                          points={toPoints(line)}
-                          strokeWidth={TILE_SIZE * 2.2}
-                        />
-                      ))}
-                      {view.sites
-                        .filter((site) => site.state === 'choice')
-                        .map((site) => (
-                          <circle key={site.id} cx={tileCenter(site).x} cy={tileCenter(site).y} r={TILE_SIZE * 2.6} />
+              {view.choices.length > 0 && (
+                <>
+                  <defs>
+                    <filter id="overworld-soft" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur stdDeviation={TILE_SIZE * 0.7} />
+                    </filter>
+                    <mask
+                      id="overworld-reach"
+                      maskUnits="userSpaceOnUse"
+                      x="0"
+                      y="0"
+                      width={mapWidth}
+                      height={mapHeight}
+                    >
+                      <rect width={mapWidth} height={mapHeight} fill="#fff" />
+                      <g filter="url(#overworld-soft)">
+                        {current && (
+                          <circle cx={tileCenter(current).x} cy={tileCenter(current).y} r={TILE_SIZE * 2.4} />
+                        )}
+                        {routes.choices.map((line, i) => (
+                          <polyline
+                            key={`m${i}`}
+                            className="overworld__reach"
+                            points={toPoints(line)}
+                            strokeWidth={TILE_SIZE * 2.2}
+                          />
                         ))}
-                    </g>
-                  </mask>
-                </defs>
-                <rect className="overworld__veil" width={mapWidth} height={mapHeight} mask="url(#overworld-reach)" />
-              </>
-            )}
-            {routes.travelled.map((line, i) => (
-              <polyline
-                key={`t${i}`}
-                className="overworld__route overworld__route--travelled"
-                points={toPoints(line)}
-              />
-            ))}
-            {!walk &&
-              routes.choices.map((line, i) =>
-                i === selected ? null : (
-                  <g key={`c${i}`}>
-                    <polyline className="overworld__route overworld__route--choice-edge" points={toPoints(line)} />
-                    <polyline className="overworld__route overworld__route--choice" points={toPoints(line)} />
-                  </g>
-                ),
+                        {view.sites
+                          .filter((site) => site.state === 'choice')
+                          .map((site) => (
+                            <circle key={site.id} cx={tileCenter(site).x} cy={tileCenter(site).y} r={TILE_SIZE * 2.6} />
+                          ))}
+                      </g>
+                    </mask>
+                  </defs>
+                  <rect className="overworld__veil" width={mapWidth} height={mapHeight} mask="url(#overworld-reach)" />
+                </>
               )}
-            {(walk ? walk.line : routes.choices[selected]) && (
-              <>
+              {routes.travelled.map((line, i) => (
                 <polyline
-                  className="overworld__route overworld__route--chosen-edge"
-                  points={toPoints(walk ? walk.line : routes.choices[selected])}
+                  key={`t${i}`}
+                  className="overworld__route overworld__route--travelled"
+                  points={toPoints(line)}
                 />
-                <polyline
-                  className="overworld__route overworld__route--chosen"
-                  points={toPoints(walk ? walk.line : routes.choices[selected])}
-                />
-              </>
-            )}
-          </svg>
-          {view.sites.map((site) => {
-            const index = view.choices.findIndex((c) => c.siteId === site.id);
-            const isSelected = index >= 0 && index === selected && !walk;
-            const classes = ['overworld__site', `overworld__site--${site.state}`, `overworld__site--${site.kind}`];
-            if (isSelected) classes.push('overworld__site--selected');
-            const choiceCard = index >= 0 && !walk ? view.choices[index] : null;
-            const labelled = site.state === 'current' || site.kind === 'hold';
-            return (
-              <button
-                key={site.id}
-                type="button"
-                className={classes.join(' ')}
-                style={at(tileCenter(site))}
-                aria-label={site.name}
-                disabled={index < 0 || walk !== null}
-                onMouseEnter={() => index >= 0 && !walk && setSelected(index)}
-                onClick={() => index >= 0 && travel(index)}
-              >
-                {index >= 0 && !walk && <span className="overworld__ring" aria-hidden="true" />}
-                <img
-                  className="overworld__icon"
-                  src={getSiteIconUrl(site.kind, site.season)}
-                  alt=""
-                  draggable={false}
-                />
-                <span className={`overworld__pennant overworld__pennant--${pennantOf(site)}`} aria-hidden="true" />
-                {choiceCard && (
-                  <span className={`overworld__callout${isSelected ? '' : ' overworld__callout--dim'}`}>
-                    <kbd className="overworld__callout-key">{index + 1}</kbd>
-                    {site.name}
-                    <span className="overworld__callout-kind">
-                      {isSelected ? `${choiceCard.kindLabel} · next` : choiceCard.kindLabel}
-                    </span>
-                  </span>
+              ))}
+              {!walk &&
+                routes.choices.map((line, i) =>
+                  i === selected ? null : (
+                    <g key={`c${i}`}>
+                      <polyline className="overworld__route overworld__route--choice-edge" points={toPoints(line)} />
+                      <polyline className="overworld__route overworld__route--choice" points={toPoints(line)} />
+                    </g>
+                  ),
                 )}
-                {labelled && !choiceCard && <span className="overworld__label">{site.name}</span>}
-              </button>
-            );
-          })}
-          {view.leaderSprite && (
-            <span
-              className={walk ? 'overworld__leader overworld__leader--walking' : 'overworld__leader'}
-              style={at(leaderAt)}
-            >
-              <UnitSprite sprite={view.leaderSprite} scale={zoom} animated />
-            </span>
-          )}
+              {(walk ? walk.line : routes.choices[selected]) && (
+                <>
+                  <polyline
+                    className="overworld__route overworld__route--chosen-edge"
+                    points={toPoints(walk ? walk.line : routes.choices[selected])}
+                  />
+                  <polyline
+                    className="overworld__route overworld__route--chosen"
+                    points={toPoints(walk ? walk.line : routes.choices[selected])}
+                  />
+                </>
+              )}
+            </svg>
+            {view.sites.map((site) => {
+              const index = view.choices.findIndex((c) => c.siteId === site.id);
+              const isSelected = index >= 0 && index === selected && !walk;
+              const classes = ['overworld__site', `overworld__site--${site.state}`, `overworld__site--${site.kind}`];
+              if (isSelected) classes.push('overworld__site--selected');
+              const choiceCard = index >= 0 && !walk ? view.choices[index] : null;
+              const labelled = site.state === 'current' || site.kind === 'hold';
+              return (
+                <button
+                  key={site.id}
+                  type="button"
+                  className={classes.join(' ')}
+                  style={at(tileCenter(site))}
+                  aria-label={site.name}
+                  disabled={index < 0 || walk !== null}
+                  onMouseEnter={() => index >= 0 && !walk && setSelected(index)}
+                  onClick={() => index >= 0 && travel(index)}
+                >
+                  {index >= 0 && !walk && <span className="overworld__ring" aria-hidden="true" />}
+                  <img
+                    className="overworld__icon"
+                    src={getSiteIconUrl(site.kind, site.season)}
+                    alt=""
+                    draggable={false}
+                  />
+                  <span className={`overworld__pennant overworld__pennant--${pennantOf(site)}`} aria-hidden="true" />
+                  {choiceCard && (
+                    <span className={`overworld__callout${isSelected ? '' : ' overworld__callout--dim'}`}>
+                      <kbd className="overworld__callout-key">{index + 1}</kbd>
+                      {site.name}
+                      <span className="overworld__callout-kind">
+                        {isSelected ? `${choiceCard.kindLabel} · next` : choiceCard.kindLabel}
+                      </span>
+                    </span>
+                  )}
+                  {labelled && !choiceCard && <span className="overworld__label">{site.name}</span>}
+                </button>
+              );
+            })}
+            {view.leaderSprite && (
+              <span
+                className={walk ? 'overworld__leader overworld__leader--walking' : 'overworld__leader'}
+                style={at(leaderAt)}
+              >
+                <UnitSprite sprite={view.leaderSprite} scale={zoom} animated />
+              </span>
+            )}
+          </div>
         </div>
+        <ScaleBar tiles={view.width} />
+        <CompassRose />
       </div>
 
       <RouteCard view={view} choice={choice} selected={selected} />
@@ -403,6 +416,59 @@ function Overworld({
       {run.pendingEvent && <EventPanel run={run} autoPlay={autoPlay} onDone={onRun} />}
       {rosterOpen && <OverworldRoster run={run} onRun={onRoster} onClose={() => setRosterOpen(false)} />}
     </div>
+  );
+}
+
+// The map's furniture, pinned to the window's corners over the map: a
+// compass rose at the bottom right, inked like the map's symbols.
+function CompassRose() {
+  return (
+    <svg className="overworld__compass" viewBox="-50 -50 100 100" aria-hidden="true">
+      <circle r="46" className="overworld__compass-disc" />
+      <circle r="40" className="overworld__compass-ring" />
+      <circle r="31" className="overworld__compass-ring overworld__compass-ring--thin" />
+      <g className="overworld__compass-minor">
+        <path d="M0 -34 L5 -5 L34 0 L5 5 L0 34 L-5 5 L-34 0 L-5 -5 Z" transform="rotate(45)" />
+      </g>
+      <g className="overworld__compass-major">
+        <path d="M0 -44 L5 -5 L0 0 L-5 -5 Z" />
+        <path d="M0 -44 L5 -5 L0 0 Z" className="overworld__compass-shade" />
+        <path d="M44 0 L5 5 L0 0 L5 -5 Z" />
+        <path d="M44 0 L5 5 L0 0 Z" className="overworld__compass-shade" />
+        <path d="M0 44 L-5 5 L0 0 L5 5 Z" />
+        <path d="M0 44 L-5 5 L0 0 Z" className="overworld__compass-shade" />
+        <path d="M-44 0 L-5 -5 L0 0 L-5 5 Z" />
+        <path d="M-44 0 L-5 -5 L0 0 Z" className="overworld__compass-shade" />
+      </g>
+      <circle r="3" className="overworld__compass-pin" />
+      <text x="0" y="-30" className="overworld__compass-letter">
+        N
+      </text>
+    </svg>
+  );
+}
+
+// A scale bar at the bottom left: so many leagues to the map's width,
+// alternately inked, with the realm's breadth in days of march.
+const LEAGUES_PER_TILE = 1;
+function ScaleBar({ tiles }: { tiles: number }) {
+  const segments = 4;
+  const leagues = Math.max(1, Math.round((tiles * LEAGUES_PER_TILE) / 10 / segments)) * segments;
+  const perSegment = leagues / segments;
+  return (
+    <p className="overworld__scale" aria-hidden="true">
+      <span className="overworld__scale-bar">
+        {Array.from({ length: segments }, (_, i) => (
+          <i key={i} />
+        ))}
+      </span>
+      <span className="overworld__scale-ticks">
+        {Array.from({ length: segments + 1 }, (_, i) => (
+          <b key={i}>{i * perSegment}</b>
+        ))}
+      </span>
+      <span className="overworld__scale-label">leagues</span>
+    </p>
   );
 }
 

@@ -8,10 +8,12 @@ import {
   getRealmInk,
   getRoadChains,
   getRouteLine,
+  getSeasonBands,
   hashCell,
   INK_RULES,
   INK_STAMP_SIZE,
   pointAlong,
+  SEASON_INK,
   simplifyLine,
   smoothLine,
   wobbleLine,
@@ -34,6 +36,8 @@ function tinyRealm(terrain: string[]): Realm {
     grid: { ...grid, cells: grid.cells.map((cell, i) => ({ ...cell, terrain: terrain[i] })) },
     sites: [],
     roads: [],
+    rivers: [],
+    seasons: ['summer', 'summer'],
     buildings: [],
     palette: 'a-orange',
   };
@@ -239,5 +243,67 @@ describe('hashCell', () => {
     }
     expect(hashCell(9, 3, 4, 1)).toBe(hashCell(9, 3, 4, 1));
     expect(new Set(rolls).size).toBeGreaterThan(190);
+  });
+});
+
+describe('seasons and rivers on the map', () => {
+  it('bands the map by the depths’ seasons, runs of one season joined, covering every column', () => {
+    for (const realm of REALMS) {
+      const bands = getSeasonBands(realm);
+      expect(bands[0].from).toBe(0);
+      expect(bands[bands.length - 1].to).toBe(realm.grid.width);
+      for (let i = 1; i < bands.length; i++) {
+        expect(bands[i].from).toBe(bands[i - 1].to);
+        expect(bands[i].season).not.toBe(bands[i - 1].season);
+      }
+      expect(new Set(bands.map((band) => band.season))).toEqual(new Set(realm.seasons));
+    }
+    expect(getSeasonBands(tinyRealm(['grass', 'grass', 'grass']))).toEqual([{ season: 'summer', from: 0, to: 3 }]);
+  });
+
+  it('draws each season’s own trees and peaks in its band', () => {
+    const winter = REALMS.map((realm) => ({
+      realm,
+      band: getSeasonBands(realm).find((b) => b.season === 'winter'),
+    })).find(({ band }) => band);
+    if (!winter?.band) return;
+    const { from, to } = winter.band;
+    const inBand = getRealmInk(winter.realm).placements.filter(
+      (p) => p.x + INK_STAMP_SIZE / 2 >= (from + 1) * TILE_SIZE && p.x + INK_STAMP_SIZE / 2 < (to - 1) * TILE_SIZE,
+    );
+    const stamps = new Set(inBand.map((p) => p.stamp));
+    expect(
+      [...stamps].some((s) => SEASON_INK.winter.trees.includes(s) || SEASON_INK.winter.mountains.includes(s)),
+    ).toBe(true);
+    expect(stamps.has('grass-1') || stamps.has('grass-2')).toBe(false);
+  });
+
+  it('lines each river through its tiles and bridges every road it crosses', () => {
+    for (const realm of REALMS) {
+      const ink = getRealmInk(realm);
+      expect(ink.rivers).toHaveLength(realm.rivers.length);
+      const roadTiles = new Set(
+        [...realm.roads.flatMap((road) => road.path), ...realm.sites].map((p) => `${p.x},${p.y}`),
+      );
+      for (const [i, river] of ink.rivers.entries()) {
+        expect(river.tiles).toEqual(realm.rivers[i]);
+        expect(river.line[0]).toEqual(center(river.tiles[0]));
+        expect(river.line[river.line.length - 1]).toEqual(center(river.tiles[river.tiles.length - 1]));
+        for (const tile of river.tiles.slice(1, -1)) {
+          if (!roadTiles.has(`${tile.x},${tile.y}`)) continue;
+          const bridge = ink.placements.find(
+            (p) =>
+              (p.stamp === 'bridge-h' || p.stamp === 'bridge-v') &&
+              p.x === tile.x * TILE_SIZE &&
+              p.y === tile.y * TILE_SIZE,
+          );
+          expect(bridge).toBeDefined();
+          // Both the river and the road pass through the middle of the bridge's tile.
+          const middle = center(tile);
+          expect(river.line.some((p) => p.x === middle.x && p.y === middle.y)).toBe(true);
+          expect(ink.roads.some((road) => road.line.some((p) => p.x === middle.x && p.y === middle.y))).toBe(true);
+        }
+      }
+    }
   });
 });

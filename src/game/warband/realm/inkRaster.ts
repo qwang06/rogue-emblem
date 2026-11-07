@@ -1,14 +1,17 @@
 // Paints a realm's parchment map (realmInk.ts) into an RGBA pixel buffer:
-// mottled parchment, lakes as a darker wash with a thick ink coast and a
-// faint red line offset outside it (as on the Tactics Ogre map), roads as
-// pale lines edged in ink, then the map symbols back to front. The
+// mottled parchment in the paper of each season's band (blended where
+// they meet along a ragged edge), a faint graticule, lakes as a darker
+// wash with a thick ink coast and a faint red line offset outside it (as
+// on the Tactics Ogre map), rivers as thin water lines edged in ink
+// widening to their mouths, roads as pale lines edged in ink, the map
+// symbols back to front, over a double ink border inside the edge. The
 // overworld screen puts the buffer on a canvas; the realm preview script
 // writes it to a PNG. Pure: no DOM, the same inputs give the same pixels.
 
-import { TILE_SIZE } from '../../tileset.ts';
+import { TILE_SIZE, type Season } from '../../tileset.ts';
 import { createSeededRng } from '../../rng.ts';
 import { createValueNoise } from './realmTerrain.ts';
-import { hashCell, type InkStamp, type RealmInk } from './realmInk.ts';
+import { hashCell, type InkBand, type InkStamp, type RealmInk } from './realmInk.ts';
 
 export interface RgbaImage {
   width: number;
@@ -30,6 +33,45 @@ export const INK_COLORS = Object.freeze({
   road: [244, 232, 200] as Rgb,
   roadEdge: [92, 62, 34] as Rgb,
 });
+
+// The paper and water of each season's stretch of the map.
+export interface SeasonPaper {
+  light: Rgb;
+  dark: Rgb;
+  water: Rgb;
+  waterDeep: Rgb;
+}
+
+const SUMMER_PAPER: SeasonPaper = {
+  light: INK_COLORS.paperLight,
+  dark: INK_COLORS.paperDark,
+  water: INK_COLORS.water,
+  waterDeep: INK_COLORS.waterDeep,
+};
+
+export const SEASON_PAPER: Readonly<Record<Season, SeasonPaper>> = Object.freeze({
+  summer: SUMMER_PAPER,
+  // Warmer, a little redder paper.
+  autumn: { light: [238, 212, 162], dark: [212, 168, 112], water: [182, 166, 130], waterDeep: [154, 140, 110] },
+  // Pale, cool paper, like frost on the page.
+  winter: { light: [241, 237, 226], dark: [212, 208, 194], water: [184, 188, 182], waterDeep: [158, 164, 160] },
+  // Scorched paper, dark water.
+  underworld: { light: [206, 170, 130], dark: [160, 118, 82], water: [138, 120, 100], waterDeep: [108, 94, 80] },
+  starship: SUMMER_PAPER,
+});
+
+// How the seasons' bands meet: the edge wanders this many tiles either
+// way, and the papers blend over this many tiles across it.
+const BAND_RAGGED = 2;
+const BAND_BLEND = 1.5;
+// The graticule: a hairline every this many tiles, mixed this faintly.
+const GRATICULE = { columns: 8, rows: 6, ink: 0.13 };
+// The border: a thick line this far in from the edge, a thin one further in.
+const BORDER = { outer: 6, outerWidth: 2, inner: 12, innerWidth: 1 };
+// A river's half-widths at its source and its mouth: the ink edge, and
+// the water inside.
+const RIVER_EDGE = [2.1, 2.9] as const;
+const RIVER_FILL = [0.9, 1.6] as const;
 
 // Pixel distances from the coast: the ink line's width, where the red line
 // outside it runs, and how far in the water darkens.
@@ -54,8 +96,12 @@ export function paintRealmInk(ink: RealmInk, seed: number, stamps: Readonly<Reco
   const { width, height } = ink;
   const data = new Uint8ClampedArray(width * height * 4);
   const image = { width, height, data };
-  paintParchment(image, seed);
-  paintWater(image, ink, seed);
+  const paper = createPaper(ink.bands, width, height, seed);
+  paintParchment(image, seed, paper);
+  paintGraticule(image);
+  paintWater(image, ink, seed, paper);
+  for (const river of ink.rivers) paintRiver(image, river.line, paper);
+  paintBorder(image);
   for (const road of ink.roads) paintLine(image, road.line, ROAD_EDGE, INK_COLORS.roadEdge);
   for (const road of ink.roads) paintLine(image, road.line, ROAD_FILL, INK_COLORS.road);
   for (const { stamp, x, y } of ink.placements) blit(image, stamps[stamp], x, y);
@@ -63,17 +109,55 @@ export function paintRealmInk(ink: RealmInk, seed: number, stamps: Readonly<Reco
   return image;
 }
 
+// The paper at any pixel: the season band's paper there, blended with the
+// next band's over BAND_BLEND tiles across their edge, which noise makes
+// wander so the seasons don't meet along a ruled line.
+type Paper = (x: number, y: number, part: keyof SeasonPaper) => Rgb;
+
+function createPaper(bands: readonly InkBand[], width: number, height: number, seed: number): Paper {
+  const papers = bands.map((band) => SEASON_PAPER[band.season]);
+  if (papers.length <= 1) {
+    const only = papers[0] ?? SUMMER_PAPER;
+    return (_x, _y, part) => only[part];
+  }
+  const ragged = createValueNoise(width, height, 96, createSeededRng((seed ^ 0x62616e64) >>> 0));
+  const blended: [number, number, number][] = [
+    [0, 0, 0],
+    [0, 0, 0],
+    [0, 0, 0],
+  ];
+  let slot = 0;
+  return (x, y, part) => {
+    const u = x / TILE_SIZE + (ragged(x, y) - 0.5) * 2 * BAND_RAGGED;
+    let i = 0;
+    while (i < bands.length - 1 && u >= bands[i].to) i++;
+    // How far past the band's start and before its end, as blend weights
+    // toward the bands either side.
+    const toPrev = i > 0 ? clamp01(0.5 - (u - bands[i].from) / BAND_BLEND) : 0;
+    const toNext = i < bands.length - 1 ? clamp01(0.5 - (bands[i].to - u) / BAND_BLEND) : 0;
+    const own = papers[i][part];
+    if (toPrev === 0 && toNext === 0) return own;
+    const other = toPrev > 0 ? papers[i - 1][part] : papers[i + 1][part];
+    const weight = toPrev > 0 ? toPrev : toNext;
+    const out = blended[slot];
+    slot = (slot + 1) % blended.length;
+    for (let c = 0; c < 3; c++) out[c] = own[c] + (other[c] - own[c]) * weight;
+    return out;
+  };
+}
+
 // Parchment: two shades blended by soft noise, with a little grain.
-function paintParchment(image: RgbaImage, seed: number): void {
+function paintParchment(image: RgbaImage, seed: number, paper: Paper): void {
   const { width, height, data } = image;
   const rng = createSeededRng((seed ^ 0x70617065) >>> 0);
   const broad = createValueNoise(width, height, 160, rng);
   const fine = createValueNoise(width, height, 36, rng);
-  const { paperLight: light, paperDark: dark } = INK_COLORS;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const t = clamp01((broad(x, y) * 0.7 + fine(x, y) * 0.3 - 0.25) * 1.6);
       const grain = (hashCell(seed, x, y, 7) - 0.5) * 8;
+      const light = paper(x, y, 'light');
+      const dark = paper(x, y, 'dark');
       const i = (y * width + x) * 4;
       for (let c = 0; c < 3; c++) data[i + c] = light[c] + (dark[c] - light[c]) * t + grain;
       data[i + 3] = 255;
@@ -81,9 +165,42 @@ function paintParchment(image: RgbaImage, seed: number): void {
   }
 }
 
+// Faint ruled lines across the paper, as a chart's graticule, under
+// everything else.
+function paintGraticule(image: RgbaImage): void {
+  const { width, height, data } = image;
+  for (let x = GRATICULE.columns * TILE_SIZE; x < width; x += GRATICULE.columns * TILE_SIZE)
+    for (let y = 0; y < height; y++) mix(data, (y * width + x) * 4, INK_COLORS.ink, GRATICULE.ink);
+  for (let y = GRATICULE.rows * TILE_SIZE; y < height; y += GRATICULE.rows * TILE_SIZE)
+    for (let x = 0; x < width; x++) mix(data, (y * width + x) * 4, INK_COLORS.ink, GRATICULE.ink);
+}
+
+// A double ink line just inside the map's edge.
+function paintBorder(image: RgbaImage): void {
+  const { width, height, data } = image;
+  const ring = (inset: number, lineWidth: number, amount: number) => {
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const edge = Math.min(x, y, width - 1 - x, height - 1 - y);
+        if (edge >= inset && edge < inset + lineWidth) mix(data, (y * width + x) * 4, INK_COLORS.ink, amount);
+      }
+    }
+  };
+  ring(BORDER.outer, BORDER.outerWidth, 0.9);
+  ring(BORDER.inner, BORDER.innerWidth, 0.7);
+}
+
+// A river: an ink line with water inside, both widening from its source
+// to its mouth.
+function paintRiver(image: RgbaImage, line: readonly { x: number; y: number }[], paper: Paper): void {
+  const widen = (from: number, to: number) => (t: number) => from + (to - from) * t;
+  paintLine(image, line, widen(RIVER_EDGE[0], RIVER_EDGE[1]), INK_COLORS.ink);
+  paintLine(image, line, widen(RIVER_FILL[0], RIVER_FILL[1]), (x, y) => paper(x, y, 'water'));
+}
+
 // Lakes: the water cells' mask, blended between cell centers and roughened
 // with noise so coasts curve, then colored by distance from the coast.
-function paintWater(image: RgbaImage, ink: RealmInk, seed: number): void {
+function paintWater(image: RgbaImage, ink: RealmInk, seed: number, paper: Paper): void {
   const { width, height, data } = image;
   const columns = Math.round(width / TILE_SIZE);
   const rows = Math.round(height / TILE_SIZE);
@@ -114,8 +231,10 @@ function paintWater(image: RgbaImage, ink: RealmInk, seed: number): void {
       if (d <= COAST_INK) setRgb(data, i, INK_COLORS.ink);
       else {
         const deep = clamp01((d - COAST_INK) / DEEP_FROM);
-        mix(data, i, INK_COLORS.water, 0.85);
-        mix(data, i, INK_COLORS.waterDeep, deep * 0.8);
+        const x = p % width;
+        const y = (p - x) / width;
+        mix(data, i, paper(x, y, 'water'), 0.85);
+        mix(data, i, paper(x, y, 'waterDeep'), deep * 0.8);
       }
     } else if (d >= COAST_RED[0] && d <= COAST_RED[1]) mix(data, i, INK_COLORS.coastRed, 0.55);
   }
@@ -164,27 +283,46 @@ function distanceToEdge(wet: Uint8Array, width: number, height: number): Uint16A
   return distance;
 }
 
-// A line along `points`, `radius` pixels either side of it, in `color`.
-function paintLine(image: RgbaImage, points: readonly { x: number; y: number }[], radius: number, color: Rgb): void {
-  const r = Math.ceil(radius);
-  const dot = (cx: number, cy: number) => {
+// A line along `points`, `radius` pixels either side of it (a number, or
+// a function of how far along the line, 0 to 1), in `color` (a color, or
+// one per pixel).
+function paintLine(
+  image: RgbaImage,
+  points: readonly { x: number; y: number }[],
+  radius: number | ((t: number) => number),
+  color: Rgb | ((x: number, y: number) => Rgb),
+): void {
+  const radiusAt = typeof radius === 'number' ? () => radius : radius;
+  const colorAt = typeof color === 'function' ? color : () => color;
+  const dot = (cx: number, cy: number, t: number) => {
+    const size = radiusAt(t);
+    const r = Math.ceil(size);
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {
-        if (dx * dx + dy * dy > radius * radius) continue;
+        if (dx * dx + dy * dy > size * size) continue;
         const x = Math.round(cx) + dx;
         const y = Math.round(cy) + dy;
         if (x < 0 || y < 0 || x >= image.width || y >= image.height) continue;
-        setRgb(image.data, (y * image.width + x) * 4, color);
+        setRgb(image.data, (y * image.width + x) * 4, colorAt(x, y));
       }
     }
   };
+  let length = 0;
+  for (let i = 0; i < points.length - 1; i++)
+    length += Math.hypot(points[i + 1].x - points[i].x, points[i + 1].y - points[i].y);
+  let walked = 0;
   for (let i = 0; i < points.length - 1; i++) {
     const a = points[i];
     const b = points[i + 1];
-    const steps = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) * 2));
-    for (let s = 0; s <= steps; s++) dot(a.x + ((b.x - a.x) * s) / steps, a.y + ((b.y - a.y) * s) / steps);
+    const span = Math.hypot(b.x - a.x, b.y - a.y);
+    const steps = Math.max(1, Math.ceil(span * 2));
+    for (let s = 0; s <= steps; s++) {
+      const f = s / steps;
+      dot(a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f, length > 0 ? (walked + span * f) / length : 0);
+    }
+    walked += span;
   }
-  if (points.length === 1) dot(points[0].x, points[0].y);
+  if (points.length === 1) dot(points[0].x, points[0].y, 0);
 }
 
 // `stamp` over the image with its top-left at (x, y), alpha blended.

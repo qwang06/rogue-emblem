@@ -9,8 +9,9 @@
 import type { Rng } from '../../combatStats.ts';
 import type { Point } from '../../grid.ts';
 import { createSeededRng, randomItem } from '../../rng.ts';
-import { TILE_SIZE } from '../../tileset.ts';
-import type { Realm } from './realm.ts';
+import { TILE_SIZE, type Season } from '../../tileset.ts';
+import { REALM_COLUMN_SPACING, REALM_MARGIN, type Realm } from './realm.ts';
+import { riverCrossings } from './realmRivers.ts';
 import { getRoadNetwork } from './realmRoutes.ts';
 import type { RealmTerrain } from './realmTerrain.ts';
 
@@ -20,15 +21,68 @@ export const INK_STAMPS = [
   'tree-pine-2',
   'tree-round-1',
   'tree-round-2',
+  'tree-pine-snow-1',
+  'tree-pine-snow-2',
+  'tree-bare-1',
+  'tree-bare-2',
   'mountain-1',
   'mountain-2',
   'mountain-3',
+  'mountain-snow-1',
+  'mountain-snow-2',
+  'mountain-snow-3',
   'hill-1',
   'grass-1',
   'grass-2',
+  'crack-1',
+  'crack-2',
   'waves-1',
+  'bridge-h',
+  'bridge-v',
 ] as const;
 export type InkStamp = (typeof INK_STAMPS)[number];
+
+// The symbols each season draws: its trees, its peaks, the tufts on open
+// ground (none where the ground is bare) and what else marks the ground
+// there, with how likely an open cell is to get one.
+export interface SeasonInk {
+  trees: readonly InkStamp[];
+  mountains: readonly InkStamp[];
+  tufts: readonly InkStamp[];
+  ground: readonly InkStamp[];
+  groundChance: number;
+}
+
+const SUMMER_INK: SeasonInk = {
+  trees: ['tree-pine-1', 'tree-pine-2', 'tree-round-1', 'tree-round-2'],
+  mountains: ['mountain-1', 'mountain-2', 'mountain-3'],
+  tufts: ['grass-1', 'grass-2'],
+  ground: [],
+  groundChance: 0,
+};
+
+export const SEASON_INK: Readonly<Record<Season, SeasonInk>> = Object.freeze({
+  summer: SUMMER_INK,
+  // Autumn woods are mostly broadleaf.
+  autumn: { ...SUMMER_INK, trees: ['tree-round-1', 'tree-round-2', 'tree-round-1', 'tree-pine-1'] },
+  // Winter: snow on the pines and the peaks, bare trees, no grass.
+  winter: {
+    trees: ['tree-pine-snow-1', 'tree-pine-snow-2', 'tree-bare-1', 'tree-bare-2'],
+    mountains: ['mountain-snow-1', 'mountain-snow-2', 'mountain-snow-3'],
+    tufts: [],
+    ground: [],
+    groundChance: 0,
+  },
+  // The underworld: dead trees and cracked ground.
+  underworld: {
+    trees: ['tree-bare-1', 'tree-bare-2'],
+    mountains: ['mountain-1', 'mountain-2', 'mountain-3'],
+    tufts: [],
+    ground: ['crack-1', 'crack-2'],
+    groundChance: 0.14,
+  },
+  starship: SUMMER_INK,
+});
 
 // The size every stamp is drawn at, in map pixels.
 export const INK_STAMP_SIZE = 32;
@@ -55,6 +109,22 @@ export interface InkRoad {
   line: readonly Point[];
 }
 
+// A river: its tiles from source to mouth, and the line drawn for it in
+// pixels, which runs through the middle of every tile where it crosses a
+// road, so the bridge stamped there sits over both.
+export interface InkRiver {
+  tiles: readonly Point[];
+  line: readonly Point[];
+}
+
+// A stretch of the map in one season, by columns of tiles: from `from`
+// up to (not including) `to`. The paper changes color with the season.
+export interface InkBand {
+  season: Season;
+  from: number;
+  to: number;
+}
+
 export interface RealmInk {
   // The map's size, in pixels.
   width: number;
@@ -66,6 +136,9 @@ export interface RealmInk {
   // The road network in stretches between sites and forks: each
   // stretch's tiles, and the smoothed line drawn for it, in pixels.
   roads: readonly InkRoad[];
+  rivers: readonly InkRiver[];
+  // West to east, covering every column.
+  bands: readonly InkBand[];
   labels: readonly InkLabel[];
 }
 
@@ -93,6 +166,8 @@ export const INK_RULES = Object.freeze({
   // How far (in tiles) a road wanders either side of its course, as if
   // drawn by hand.
   roadWobble: 0.3,
+  // A river wanders more than a road.
+  riverWobble: 0.45,
 });
 
 const inkCache = new WeakMap<Realm, RealmInk>();
@@ -108,6 +183,8 @@ export function getRealmInk(realm: Realm): RealmInk {
       ? undefined
       : (grid.cells[y * grid.width + x].terrain as RealmTerrain);
   const siteTiles = new Set(realm.sites.map((site) => `${site.x},${site.y}`));
+  const bands = getSeasonBands(realm);
+  const seasonAt = (x: number) => SEASON_INK[(bands.find((band) => x >= band.from && x < band.to) ?? bands[0]).season];
   const placements: InkPlacement[] = [];
   const half = TILE_SIZE / 2;
 
@@ -116,20 +193,20 @@ export function getRealmInk(realm: Realm): RealmInk {
     const terrain = cell.terrain as RealmTerrain;
     const left = x * TILE_SIZE;
     const top = y * TILE_SIZE;
+    const season = seasonAt(x);
     const roll = (k: number) => hashCell(realm.seed, x, y, k);
     const jitter = (k: number, spread: number) => Math.round((roll(k) - 0.5) * 2 * spread);
     if (terrain === 'forest') {
       for (let i = 0; i < INK_RULES.treesPerForest; i++) {
-        const stamp = pick<InkStamp>(roll(10 + i), ['tree-pine-1', 'tree-pine-2', 'tree-round-1', 'tree-round-2']);
         placements.push({
-          stamp,
+          stamp: pick(roll(10 + i), season.trees),
           x: left + (i === 0 ? -6 : 6) + jitter(20 + i, 4),
           y: top + (i === 0 ? -6 : 4) + jitter(30 + i, 3),
         });
       }
     } else if (terrain === 'mountain') {
       placements.push({
-        stamp: pick<InkStamp>(roll(1), ['mountain-1', 'mountain-2', 'mountain-3']),
+        stamp: pick(roll(1), season.mountains),
         x: left + jitter(2, 3),
         y: top - 6 + jitter(3, 2),
       });
@@ -141,25 +218,40 @@ export function getRealmInk(realm: Realm): RealmInk {
         placements.push({ stamp: 'waves-1', x: left + jitter(2, 4), y: top + jitter(3, 4) });
     } else if ((terrain === 'meadow' || terrain === 'grass') && !siteTiles.has(`${x},${y}`)) {
       const chance = terrain === 'meadow' ? INK_RULES.meadowTuft : INK_RULES.grassTuft;
-      if (roll(1) < chance)
+      if (season.tufts.length > 0 && roll(1) < chance)
         placements.push({
-          stamp: pick<InkStamp>(roll(2), ['grass-1', 'grass-2']),
+          stamp: pick(roll(2), season.tufts),
           x: left + jitter(3, 8),
           y: top + jitter(4, 8),
         });
+      else if (season.ground.length > 0 && roll(6) < season.groundChance)
+        placements.push({ stamp: pick(roll(7), season.ground), x: left + jitter(8, 6), y: top + jitter(9, 6) });
     }
   }
+
+  // Rivers, their lines pinned to the middle of every tile where they
+  // cross a road, with a bridge stamped there across the river.
+  const roadTiles = new Set([...realm.roads.flatMap((road) => road.path), ...realm.sites].map((p) => `${p.x},${p.y}`));
+  const toPixels = (point: Point) => ({ x: point.x * TILE_SIZE + half, y: point.y * TILE_SIZE + half });
+  const crossingTiles = new Set<string>();
+  const rivers = realm.rivers.map((tiles) => {
+    const crossings = riverCrossings(tiles, roadTiles);
+    for (const { tile, northSouth } of crossings) {
+      crossingTiles.add(`${tile.x},${tile.y}`);
+      placements.push({ stamp: northSouth ? 'bridge-h' : 'bridge-v', x: tile.x * TILE_SIZE, y: tile.y * TILE_SIZE });
+    }
+    const pins = new Set(crossings.map(({ tile }) => `${tile.x},${tile.y}`));
+    return Object.freeze({
+      tiles: Object.freeze([...tiles]),
+      line: Object.freeze(drawLine(tiles, pins, realm.seed ^ 0x72697665, INK_RULES.riverWobble).map(toPixels)),
+    });
+  });
   placements.sort((a, b) => a.y - b.y || a.x - b.x);
 
-  const roads = getRoadChains(realm).map((tiles) =>
+  const roads = getRoadChains(realm, crossingTiles).map((tiles) =>
     Object.freeze({
       tiles: Object.freeze(tiles),
-      line: Object.freeze(
-        smoothLine(
-          wobbleLine(simplifyLine(tiles, INK_RULES.roadSimplify), realm.seed, INK_RULES.roadWobble),
-          INK_RULES.roadSmoothing,
-        ).map((point) => ({ x: point.x * TILE_SIZE + half, y: point.y * TILE_SIZE + half })),
-      ),
+      line: Object.freeze(drawLine(tiles, new Set(), realm.seed, INK_RULES.roadWobble).map(toPixels)),
     }),
   );
 
@@ -169,10 +261,48 @@ export function getRealmInk(realm: Realm): RealmInk {
     water: Object.freeze(grid.cells.map((cell) => cell.terrain === 'water')),
     placements: Object.freeze(placements.map((placement) => Object.freeze(placement))),
     roads: Object.freeze(roads),
+    rivers: Object.freeze(rivers),
+    bands: Object.freeze(bands),
     labels: Object.freeze(nameFeatures(realm)),
   });
   inkCache.set(realm, ink);
   return ink;
+}
+
+// The hand-drawn line (in tiles) for a run of `tiles`: its steps
+// straightened into slopes, wobbled and rounded off, in stretches between
+// the `pins` (tile keys) it must pass through exactly.
+function drawLine(tiles: readonly Point[], pins: ReadonlySet<string>, seed: number, wobble: number): Point[] {
+  const line: Point[] = [];
+  let start = 0;
+  for (let i = 1; i < tiles.length; i++) {
+    if (i < tiles.length - 1 && !pins.has(`${tiles[i].x},${tiles[i].y}`)) continue;
+    const stretch = smoothLine(
+      wobbleLine(simplifyLine(tiles.slice(start, i + 1), INK_RULES.roadSimplify), seed, wobble),
+      INK_RULES.roadSmoothing,
+    );
+    line.push(...(line.length > 0 ? stretch.slice(1) : stretch));
+    start = i;
+  }
+  return line.length > 0 ? line : tiles.map(({ x, y }) => ({ x, y }));
+}
+
+// The map's seasons as bands of columns: each depth's season (realm.ts)
+// from halfway to the column before it to halfway to the next, runs of
+// the same season joined. A realm with no seasons is all summer.
+export function getSeasonBands(realm: Realm): InkBand[] {
+  const columns = realm.grid.width;
+  const seasons = realm.seasons.length > 0 ? realm.seasons : (['summer'] as const);
+  const bands: InkBand[] = [];
+  for (let d = 0; d < seasons.length; d++) {
+    const from = d === 0 ? 0 : REALM_MARGIN + (d - 0.5) * REALM_COLUMN_SPACING;
+    const to = d === seasons.length - 1 ? columns : REALM_MARGIN + (d + 0.5) * REALM_COLUMN_SPACING;
+    const last = bands[bands.length - 1];
+    if (last && last.season === seasons[d]) last.to = to;
+    else bands.push({ season: seasons[d], from, to });
+  }
+  bands[bands.length - 1].to = columns;
+  return bands;
 }
 
 // The drawn line for a route of road tiles (a site's tile, the road's
@@ -225,14 +355,14 @@ export function pointAlong(line: readonly Point[], t: number): Point {
 }
 
 // The realm's roads as one network, cut into chains of tiles (in tile
-// coordinates) that run between sites, forks and dead ends, so road two
-// routes share is drawn once. Tiles only join when a road steps from one
+// coordinates) that run between sites, forks, dead ends and the tiles in
+// `breaks` (where a river crosses), so road two routes share is drawn once. Tiles only join when a road steps from one
 // to the other, never because two roads run side by side.
-export function getRoadChains(realm: Realm): Point[][] {
+export function getRoadChains(realm: Realm, breaks: ReadonlySet<string> = new Set()): Point[][] {
   const key = (p: Point) => `${p.x},${p.y}`;
   const { links, points } = getRoadNetwork(realm);
   const sites = new Set(realm.sites.map(key));
-  const isNode = (k: string) => sites.has(k) || links.get(k)!.size !== 2;
+  const isNode = (k: string) => sites.has(k) || breaks.has(k) || links.get(k)!.size !== 2;
   const walked = new Set<string>();
   const chains: Point[][] = [];
   const walk = (start: string, next: string) => {
